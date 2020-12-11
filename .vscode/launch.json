@@ -5,11 +5,35 @@
 {
 	"version": "0.2.0",
 	"configurations": [
+
+		{
+			"name": "Python: Attach to 5678",
+			"type": "python",
+			"request": "attach",
+			"connect": {
+				"host": "localhost",
+				"port": 5678
+			},
+		},
+		{
+			"name": "Python: Attach Prompt",
+			"type": "python",
+			"request": "attach",
+			"connect": {
+				"host": "localhost",
+				"port": "${input:portNumber}"
+			},
+		},
 		{
 			"name": "Python: robotcode.server",
 			"type": "python",
 			"request": "launch",
-			"module": "robotcode.server"
+			"module": "robotcode.server",
+			"args": [
+				"--mode",
+				"tcp",
+				"--debug"
+			]
 		},
 		{
 			"name": "Run Extension",
@@ -21,7 +45,7 @@
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"
 			],
-			"preLaunchTask": "${defaultBuildTask}"
+			"preLaunchTask": "npm: compile"
 		},
 		{
 			"name": "Extension Tests",
@@ -29,13 +53,20 @@
 			"request": "launch",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--extensionTestsPath=${workspaceFolder}/out/test/suite/index",
-				"--"
+				"--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
 			],
 			"outFiles": [
 				"${workspaceFolder}/out/test/**/*.js"
 			],
-			"preLaunchTask": "${defaultBuildTask}"
+			"preLaunchTask": "npm: compile"
+		}
+	],
+	"inputs": [
+		{
+			"type": "promptString",
+			"id": "portNumber",
+			"description": "debugpy portnumber",
+			"default": "5678"
 		}
 	]
 }
