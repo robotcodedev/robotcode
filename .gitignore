@@ -265,3 +265,6 @@ dist
 .pnp.*
 
 *.vsix
+
+# playground files
+playground/

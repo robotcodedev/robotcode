@@ -32,7 +32,8 @@
 			"args": [
 				"--mode",
 				"tcp",
-				"--debug"
+				"--debug",
+				"--debug-json"
 			]
 		},
 		{
@@ -66,7 +67,7 @@
 			"type": "promptString",
 			"id": "portNumber",
 			"description": "debugpy portnumber",
-			"default": "5678"
+			"default": "5678",			
 		}
 	]
 }

@@ -11,27 +11,6 @@ const OUTPUT_CHANNEL = vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
 var extensionPath: string | undefined = undefined;
 var pythonLanguageServerMain: string | undefined;
 
-// async function getPythonPath(document: vscode.TextDocument): Promise<string> {
-//     try {
-//         const extension = vscode.extensions.getExtension("ms-python.python");
-//         if (!extension) {
-//             return Constants.python;
-//         }
-//         const usingNewInterpreterStorage = extension.packageJSON?.featureFlags?.usingNewInterpreterStorage;
-//         if (usingNewInterpreterStorage) {
-//             if (!extension.isActive) {
-//                 await extension.activate();
-//             }
-//             const pythonPath = extension.exports.settings.getExecutionCommand(document?.uri).join(" ");
-//             return pythonPath;
-//         } else {
-//             return this.getConfiguration("python", document).get<string>("pythonPath");
-//         }
-//     } catch (error) {
-//         return Constants.python;
-//     }
-// }
-
 let clients: Map<string, langclient.LanguageClient> = new Map();
 
 let _sortedWorkspaceFolders: string[] | undefined;
@@ -76,11 +55,13 @@ function startLanguageClientForDocument(document: vscode.TextDocument) {
     let uri = document.uri;
 
     let folder = vscode.workspace.getWorkspaceFolder(uri);
+
     // Files outside a folder can't be handled. This might depend on the language.
     // Single file languages like JSON might handle files outside the workspace folders.
     if (!folder) {
         return;
     }
+
     // If we have nested workspace folders we only start a server on the outer most workspace folder.
     folder = getOuterMostWorkspaceFolder(folder);
 
@@ -153,12 +134,12 @@ function getServerOptionsStdIo(folder: vscode.WorkspaceFolder, document: vscode.
         //"--debugpy-wait-for-client"
     ];
 
-     const serverOptions: langclient.ServerOptions = {
+    const serverOptions: langclient.ServerOptions = {
         command: pythonPath.join(" "),
         args: args.concat(serverArgs),
         options: {
             cwd: folder.uri.fsPath,
-            //detached: true            
+            // detached: true
         }
     };
     return serverOptions;
@@ -170,15 +151,13 @@ export async function activate(context: vscode.ExtensionContext) {
     extensionPath = context.extensionPath;
 
     pythonLanguageServerMain = context.asAbsolutePath(path.join('robotcode', 'server', '__main__.py'));
-    OUTPUT_CHANNEL.appendLine(`using python module ${module}`);
 
-    OUTPUT_CHANNEL.appendLine("Activate RobotCode Extension.");
-
+    OUTPUT_CHANNEL.appendLine("Try to activate Python extension.");
     const extension = vscode.extensions.getExtension('ms-python.python')!;
 
     //if (!extension?.isActive) {
     await extension.activate().then(function () {
-        OUTPUT_CHANNEL.appendLine("python is active");
+        OUTPUT_CHANNEL.appendLine("Python Extension is active");
     });
     //}
 
@@ -224,6 +203,7 @@ export async function activate(context: vscode.ExtensionContext) {
     });
 
 }
+
 
 export function deactivate(): Thenable<void> {
     let promises: Thenable<void>[] = [];

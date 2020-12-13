@@ -1,12 +1,14 @@
 import json
 import logging
 import queue
-import threading
+
 from collections import deque
-from typing import Any, Callable, Deque, Optional
+from typing import Any, BinaryIO, Callable, Deque, Optional
 from concurrent.futures import ThreadPoolExecutor
 
-log = logging.getLogger(__name__)
+__all__ = ["JSONRPC2ProtocolError", "JSONRPC2Error", "ReadWriter", "JSONRPC2Connection"]
+
+_log = logging.getLogger(__name__)
 
 
 class JSONRPC2ProtocolError(Exception):
@@ -21,31 +23,18 @@ class JSONRPC2Error(Exception):
 
 
 class ReadWriter:
-    def __init__(self, reader, writer):
+    def __init__(self, reader: BinaryIO, writer: BinaryIO):
         self.reader = reader
         self.writer = writer
 
-    def readline(self, *args) -> str:
-        return self.reader.readline(*args).decode("utf-8")
+    def readline(self, *args) -> bytes:
+        return self.reader.readline(*args)
 
-    def read(self, *args) -> str:
-        return self.reader.read(*args).decode("utf-8")
+    def read(self, *args) -> bytes:
+        return self.reader.readline(*args)
 
-    def write(self, out: str):
-        self.writer.write(out.encode("utf-8"))
-        self.writer.flush()
-
-
-class TCPReadWriter(ReadWriter):
-    def readline(self, *args) -> str:
-        data = self.reader.readline(*args)
-        return data.decode("utf-8")
-
-    def read(self, *args) -> str:
-        return self.reader.read(*args).decode("utf-8")
-
-    def write(self, out: str):
-        self.writer.write(out.encode())
+    def write(self, out: bytes):
+        self.writer.write(out)
         self.writer.flush()
 
 
@@ -68,15 +57,26 @@ class JSONRPC2Connection:
                     "Invalid Content-Length header: {}".format(value))
 
     def _receive(self) -> Any:
-        line = self.conn.readline()
+        message = ""
+
+        line = self.conn.readline().decode("ascii")
+        message += line
+
         if line == "":
             raise EOFError()
         length = self._read_header_content_length(line)
         # Keep reading headers until we find the sentinel line for the JSON
         # request.
         while line != "\r\n":
-            line = self.conn.readline()
-        body = self.conn.read(length)        
+            # TODO: read ContenType and switch char encoding
+            line = self.conn.readline().decode("ascii")
+            message += line
+
+        body = self.conn.read(length).decode("utf-8")
+        message += body
+
+        _log.debug("RECEIVED %s", message)
+
         return json.loads(body)
 
     def read_message(self, want=None) -> Any:
@@ -103,14 +103,14 @@ class JSONRPC2Connection:
             self._msg_buffer.append(msg)
 
     def _send(self, body: Any):
-        body = json.dumps(body, separators=(",", ":"))
-        content_length = len(body)
+        body_str = json.dumps(body, separators=(",", ":"))
+        content_length = len(body_str)
         response = (
             "Content-Length: {}\r\n"
-            "Content-Type: application/vscode-jsonrpc; charset=utf8\r\n\r\n"
-            "{}".format(content_length, body))
-        self.conn.write(response)
-        log.debug("SEND %s", body)
+            "Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n\r\n"
+            "{}".format(content_length, body_str))
+        self.conn.write(response.encode("utf-8"))
+        _log.debug("SEND %s", response)
 
     def write_response(self, rid, result):
         body = {
@@ -120,21 +120,23 @@ class JSONRPC2Connection:
         }
         self._send(body)
 
-    def write_error(self, rid, code, message, data=None):
-        e = {
+    def write_error(self, rid: int, code: int, message: str, data: Any = None):
+        error = {
             "code": code,
             "message": message,
         }
         if data is not None:
-            e["data"] = data
+            error["data"] = data
+
         body = {
             "jsonrpc": "2.0",
-            "id": rid,
-            "error": e,
+            'id': rid,
+            "error": error,
         }
+
         self._send(body)
 
-    def send_request(self, method: str, params):
+    def send_request(self, method: str, params: Any, check_error: bool = True):
         rid = self._next_id
         self._next_id += 1
         body = {
@@ -144,7 +146,13 @@ class JSONRPC2Connection:
             "params": params,
         }
         self._send(body)
-        return self.read_message(want=lambda msg: msg.get("id") == rid)
+        result = self.read_message(want=lambda msg: msg.get("id") == rid)
+
+        if check_error and "error" in result:
+            error = result["error"]
+            raise JSONRPC2Error(error.get("code", None), error.get("message", None), error.get("data", None))
+
+        return result
 
     def send_notification(self, method: str, params):
         body = {
@@ -154,13 +162,16 @@ class JSONRPC2Connection:
         }
         self._send(body)
 
-    _thread_pool: Optional[ThreadPoolExecutor] = None
+    __thread_pool: Optional[ThreadPoolExecutor] = None
 
-    @classmethod
-    def sumbit(cls, callable: Callable[..., Any]):
-        if cls._thread_pool is None:
-            cls._thread_pool = ThreadPoolExecutor(thread_name_prefix="jsonrpc")
-        return cls._thread_pool.submit(callable)
+    def __submit(self, callable: Callable[..., Any]):
+        if self.__thread_pool is None:
+            self.__thread_pool = ThreadPoolExecutor(thread_name_prefix="jsonrpc")
+        return self.__thread_pool.submit(callable)
+
+    def __del__(self):
+        if self.__thread_pool is not None:
+            self.__thread_pool.shutdown(wait=False, cancel_futures=True)
 
     def send_request_batch(self, requests):
         """Pipelines requests and returns responses.
@@ -190,9 +201,7 @@ class JSONRPC2Connection:
             # Sentinel value to indicate we are done
             q.put(None)
 
-        # threading.Thread(target=send).start()
-
-        self.sumbit(send)
+        self.__submit(send)
 
         while True:
             rid = q.get()

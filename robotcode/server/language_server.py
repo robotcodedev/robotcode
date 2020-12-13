@@ -4,46 +4,45 @@ from typing import Any, Dict, List, Optional
 
 from .jsonrpc import JSONRPC2Error
 
-from robotcode.server.langserverbase import LanguageServerBase
+from robotcode.server.language_server_base import LanguageServerBase
 from .lsp import MessageType, TextDocumentSyncKind, to_dict, LSPErrCode
+from .workspace_handler import WorkSpaceHandler
+from .text_document_handler import TextDocumentHandler
 
-logger = logging.getLogger(__name__)
-logger.propagate = True
+__all__ = ["ServerError", "LanguageServer"]
 
-logging.getLogger("robotcode.server.jsonrpc").propagate = False
+_log = logging.getLogger(__name__)
 
 # flake8: noqa: N815
 
 
 class ServerError(Exception):
-    def __init__(self, server_error_message, json_rpc_error):
-        self.server_error_message: str = server_error_message
-        self.json_rpc_error: JSONRPC2Error = json_rpc_error
+    def __init__(self, message: str, json_rpc_error: JSONRPC2Error):
+        self.message = message
+        self.json_rpc_error = json_rpc_error
 
 
-def _log_call(func):
+class LanguageServer(WorkSpaceHandler, TextDocumentHandler, LanguageServerBase):
+    def _get_logger(self) -> logging.Logger:
+        return _log
 
-    def wrapper(*args, **kwargs):
-        self: LanguageServer = args[0]
-        msg = f"Calling {func.__qualname__}({', '.join(repr(a) for a in args)}{(', '+', '.join(f'{str(k)}={repr(v)}' for k,v in kwargs.items())) if len(kwargs)>0 else ''})"
-        logger.debug(msg)
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
-class LanguageServer(LanguageServerBase):
+    @LanguageServerBase._debug_call
     def run(self):
         while self.running:
             try:
                 request = self.conn.read_message()
-                self.handle(request)
+                self._handle(request)
             except EOFError:
                 break
+            except ConnectionError as e:
+                _log.exception(e)
+                break
             except Exception as e:
-                logger.error("Unexpected error: %s", e, exc_info=True)
+                _log.exception(e)
 
-    def handle(self, client_query):
+        self.running = False
+
+    def _handle(self, client_query):
         is_a_request = "id" in client_query
 
         if self.premature_request(client_query, is_a_request):
@@ -59,53 +58,65 @@ class LanguageServer(LanguageServerBase):
                 self.conn.write_response(client_query["id"], response)
 
         except ServerError as e:
-            logger.error(e.server_error_message)
-
-            let_client_know_of_errors = False
-            if let_client_know_of_errors:
+            _log.exception(e)
+            if is_a_request:
                 self.conn.write_error(
                     client_query["id"],
                     code=e.json_rpc_error.code,
                     message=str(e.json_rpc_error.message),
-                    data=e.json_rpc_error.data)
+                    data=e.json_rpc_error.data
+                )
+        except BaseException as e:
+            if is_a_request:
+                self.conn.write_error(
+                    client_query["id"],
+                    code=LSPErrCode.UnknownError,
+                    message=str(e)
+                )
+            raise
 
     def premature_request(self, client_query, is_a_request):
         if not self.initialization_request_received and \
                 client_query.get("method", None) not in ["initialize", "exit"]:
-            logger.warning(
+            _log.warning(
                 "Client sent a request/notification without initializing")
             if is_a_request:
                 self.conn.write_error(
                     client_query["id"],
                     code=LSPErrCode.ServerNotInitialized,
                     message="",
-                    data={})
+                    data={}
+                )
             return True
         else:
             return False
 
     def duplicate_initialization(self, client_query, is_a_request):
         if self.initialization_request_received and client_query.get("method", None) == "initialize":
-            logger.warning("Client sent duplicate initialization")
+            _log.warning("Client sent duplicate initialization")
             if is_a_request:
                 self.conn.write_error(
                     client_query["id"],
                     code=LSPErrCode.InvalidRequest,
                     message="Client sent duplicate initialization",
-                    data={})
+                    data={}
+                )
             return True
         else:
             return False
 
     def _dispatch(self, client_query):
-        method_name = "serve_" + \
-            client_query.get("method", "noMethod").replace("/", "_")
-        try:
-            f = getattr(self, method_name)
-        except AttributeError:
+        if not "method" in client_query:
+            msg = "Method not specified."
+            raise ServerError(msg, JSONRPC2Error(LSPErrCode.MethodNotFound, msg))
+
+        method_name = "serve_" + client_query.get("method").replace("/", "_")
+
+        f = getattr(self, method_name, None)
+
+        if f is None or not callable(f):
             msg = f"Unknown method: {client_query['method']}"
-            raise ServerError(server_error_message=msg,
-                              json_rpc_error=JSONRPC2Error(code=LSPErrCode.MethodNotFound, message=msg))
+            raise ServerError(msg, JSONRPC2Error(LSPErrCode.MethodNotFound, msg))
 
         return f(**(client_query.get("params", None) or {}))
 
@@ -113,7 +124,7 @@ class LanguageServer(LanguageServerBase):
         self.conn.send_notification(
             "window/logMessage", {"type": type, "message": message})
 
-    @_log_call
+    @LanguageServerBase._debug_call
     def serve_initialize(self,
                          capabilities: Dict[str, Any] = None,
                          rootPath: Optional[str] = None,
@@ -126,15 +137,16 @@ class LanguageServer(LanguageServerBase):
         self.initialization_request_received = True
 
         self.client_capabilities = capabilities or {}
-        self.root_path = rootPath
-        self.root_uri = rootUri
         self.process_id = processId
         self.trace = trace
         self.client_info = clientInfo
 
+        self.workspace = self.create_workspace(
+            root_uri=rootUri, root_path=rootPath, workspace_folders=workspaceFolders)
+
         return {
             "capabilities": {
-                "textDocumentSync": TextDocumentSyncKind.Full,
+                "textDocumentSync": TextDocumentSyncKind.Full.value,
                 #  Avoid complexity of incremental updates for now
                 # "completionProvider": {
                 #     "resolveProvider": True,
