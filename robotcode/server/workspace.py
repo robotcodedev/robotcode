@@ -1,9 +1,10 @@
-from robotcode.server.lsp import ConfigurationItem, ConfigurationParams
-import typing
 from typing import Any, Dict, List, Optional
 
+from .lsp import ConfigurationItem, ConfigurationParams
+
+import typing
 if typing.TYPE_CHECKING:
-    from robotcode.server.language_server_base import LanguageServerBase
+    from .language_server_base import LanguageServerBase
 
 __all__ = ["Workspace"]
 

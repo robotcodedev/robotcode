@@ -1,32 +1,37 @@
 import argparse
 import pathlib
 import logging
-from logging.handlers import RotatingFileHandler
 import socketserver
 import sys
 import os
+
+from logging.handlers import RotatingFileHandler
 
 __file__ = os.path.abspath(__file__)
 if __file__.endswith((".pyc", ".pyo")):
     __file__ = __file__[:-1]
 
+if __name__ == '__main__' and __package__ is None:
+    from pathlib import Path
+    file = Path(__file__).resolve()
+    parent, top = file.parent, file.parents[2]
 
-try:
-    import robotcode.server  # noqa: F401
-except ImportError:
-    # Automatically add it to the path if __main__ is being executed.
-    p = os.path.dirname(os.path.dirname(
-        os.path.dirname(os.path.abspath(__file__))))
+    print(top)
+    sys.path.append(str(top))
+    try:
+        sys.path.remove(str(parent))
+    except ValueError:  # Already removed
+        pass
 
-    sys.path.append(p)
-
-
-from robotcode.server.jsonrpc import ReadWriter
-from robotcode.server.language_server import LanguageServer
+    __package__ = 'robotcode.server'
 
 
-from robotcode.__version__ import __version__
-from robotcode.server.jsonrpc import JSONRPC2Connection
+from .jsonrpc import ReadWriter
+from .language_server import LanguageServer
+
+
+from ..__version__ import __version__
+from .jsonrpc import JSONRPC2Connection
 
 _log = logging.getLogger("robotcode.server")
 
@@ -43,11 +48,6 @@ class LangserverTCPTransport(socketserver.StreamRequestHandler):
 
 class ForkingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     pass
-
-
-def get_version():
-
-    return __version__
 
 
 def get_log_handler(logfile):
@@ -110,7 +110,14 @@ def main():
     parser.add_argument("--debugpy-wait-for-client", action="store_true",
                         help="waits for debugpy client to connect")
 
+    parser.add_argument("--version", action="store_true",
+                        help="shows the version and exits")
+
     args = parser.parse_args()
+
+    if args.version:
+        print(__version__)
+        return
 
     logging.basicConfig(
         level=(logging.DEBUG if args.debug else logging.WARNING))

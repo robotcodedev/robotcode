@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from .jsonrpc import JSONRPC2Error
 
-from robotcode.server.language_server_base import LanguageServerBase
+from .language_server_base import LanguageServerBase
 from .lsp import MessageType, TextDocumentSyncKind, to_dict, LSPErrCode
 from .workspace_handler import WorkSpaceHandler
 from .text_document_handler import TextDocumentHandler

@@ -5,7 +5,13 @@
 {
 	"version": "0.2.0",
 	"configurations": [
-
+		{
+			"name": "Python: Current File",
+			"type": "python",
+			"request": "launch",
+			"program": "${file}",
+			"console": "integratedTerminal"
+		},
 		{
 			"name": "Python: Attach to 5678",
 			"type": "python",
@@ -67,7 +73,7 @@
 			"type": "promptString",
 			"id": "portNumber",
 			"description": "debugpy portnumber",
-			"default": "5678",			
+			"default": "5678",
 		}
 	]
 }
