@@ -1,62 +1,46 @@
 import argparse
-import pathlib
 import logging
-import socketserver
-import sys
 import os
-
+import pathlib
+import sys
 from logging.handlers import RotatingFileHandler
 
 __file__ = os.path.abspath(__file__)
 if __file__.endswith((".pyc", ".pyo")):
     __file__ = __file__[:-1]
 
-if __name__ == '__main__' and __package__ is None:
+if __name__ == "__main__" and __package__ is None or __package__ == "":
     from pathlib import Path
+
     file = Path(__file__).resolve()
     parent, top = file.parent, file.parents[2]
 
-    print(top)
     sys.path.append(str(top))
     try:
         sys.path.remove(str(parent))
     except ValueError:  # Already removed
         pass
 
-    __package__ = 'robotcode.server'
+    __package__ = "robotcode.server"
 
 
-from .jsonrpc import ReadWriter
-from .language_server import LanguageServer
+from .. import __version__
+from .logging_helpers import define_logger
 
 
-from ..__version__ import __version__
-from .jsonrpc import JSONRPC2Connection
-
-_log = logging.getLogger("robotcode.server")
-
-
-class LangserverTCPTransport(socketserver.StreamRequestHandler):
-
-    config = None
-
-    def handle(self):
-        conn = JSONRPC2Connection(ReadWriter(self.rfile, self.wfile))
-        s = LanguageServer(conn=conn)
-        s.run()
+@define_logger(name=__package__)
+def logger() -> logging.Logger:
+    ...
 
 
-class ForkingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
-    pass
-
-
-def get_log_handler(logfile):
+def get_log_handler(logfile: str):
     log_fn = pathlib.Path(logfile)
     roll_over = log_fn.exists()
 
     handler = RotatingFileHandler(log_fn, backupCount=5)
     formatter = logging.Formatter(
-        fmt='[%(levelname)-7s] %(asctime)s (%(name)s) %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+        fmt="[%(levelname)-7s] %(asctime)s (%(name)s) %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    )
     handler.setFormatter(formatter)
 
     if roll_over:
@@ -65,7 +49,7 @@ def get_log_handler(logfile):
     return handler
 
 
-def find_free_port():
+def find_free_port() -> int:
     import socket
     from contextlib import closing
 
@@ -75,7 +59,7 @@ def find_free_port():
         return s.getsockname()[1]
 
 
-def check_free_port(port):
+def check_free_port(port: int):
     import socket
     from contextlib import closing
 
@@ -85,33 +69,49 @@ def check_free_port(port):
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             return s.getsockname()[1]
         except BaseException as e:
-            _log.exception(e)
+            logger.exception(e)
             return find_free_port()
 
 
+def start_debugpy(port: int, wait_for_client: bool):
+    try:
+        import debugpy
+
+        real_port = check_free_port(port)
+        logger.info(f"start debugpy session on port {real_port}")
+        debugpy.listen(real_port)
+
+        if wait_for_client:
+            logger.info("wait for debugpy client")
+            debugpy.wait_for_client()
+    except ImportError:
+        logger.warning("Module debugpy is not installed. If you want to debug python code, please install it.\n")
+
+
+def correct_external_library_paths():
+    try:
+        __import__("pydantic")
+    except ImportError:
+        logger.debug("pydantic library not found, add our external path to sys.path")
+
+        external_path = Path(file.parents[1], "external")
+        sys.path.append(str(external_path))
+
+
 def main():
-    parser = argparse.ArgumentParser(description="RobotCode Language Server",
-                                     prog="robotcode.server")
+    parser = argparse.ArgumentParser(description="RobotCode Language Server", prog="robotcode.server")
 
-    parser.add_argument(
-        "-m", "--mode", default="stdio", help="communication (stdio|tcp)")
-    parser.add_argument(
-        "-p", "--port", default=4389, help="server listen port (tcp)", type=int)
-    parser.add_argument("--debug", action="store_true",
-                        help="show debug messages")
-    parser.add_argument("--debug-json-rpc", action="store_true",
-                        help="show json-rpc debug messages")
-    parser.add_argument("--log-file", default=None,
-                        help="enables logging to file")
-    parser.add_argument("--debugpy", action="store_true",
-                        help="starts a debugpy session")
-    parser.add_argument("--debugpy-port", default=5678,
-                        help="sets the port for debugpy session", type=int)
-    parser.add_argument("--debugpy-wait-for-client", action="store_true",
-                        help="waits for debugpy client to connect")
+    parser.add_argument("-m", "--mode", default="stdio", help="communication (stdio|tcp)")
+    parser.add_argument("-p", "--port", default=6601, help="server listen port (tcp)", type=int)
+    parser.add_argument("--debug", action="store_true", help="show debug messages")
+    parser.add_argument("--debug-json-rpc", action="store_true", help="show json-rpc debug messages")
+    parser.add_argument("--debug-json-rpc-data", action="store_true", help="show json-rpc data debug messages")
+    parser.add_argument("--log-file", default=None, help="enables logging to file")
+    parser.add_argument("--debugpy", action="store_true", help="starts a debugpy session")
+    parser.add_argument("--debugpy-port", default=5678, help="sets the port for debugpy session", type=int)
+    parser.add_argument("--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect")
 
-    parser.add_argument("--version", action="store_true",
-                        help="shows the version and exits")
+    parser.add_argument("--version", action="store_true", help="shows the version and exits")
 
     args = parser.parse_args()
 
@@ -119,46 +119,40 @@ def main():
         print(__version__)
         return
 
-    logging.basicConfig(
-        level=(logging.DEBUG if args.debug else logging.WARNING))
+    logging.basicConfig(level=(logging.DEBUG if args.debug else logging.WARNING))
     if args.log_file is not None:
-        _log.addHandler(get_log_handler(args.log_file))
+        logger.logger.addHandler(get_log_handler(args.log_file))
 
     if not args.debug_json_rpc:
-        logging.getLogger("robotcode.server.jsonrpc").propagate = False
+        logging.getLogger("robotcode.server.jsonrpc2_server").propagate = False
 
-    _log.info(f"Starting with args={args}")
+    if not args.debug_json_rpc_data:
+        logging.getLogger("robotcode.server.jsonrpc2_server.JsonRPCProtocol.data").propagate = False
+
+    logger.info(f"Starting with args={args}")
     if args.debugpy:
-        try:
-            import debugpy
+        start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)
 
-            port = check_free_port(args.debugpy_port)
+    correct_external_library_paths()
 
-            _log.info(f"start debugpy session on port {port}")
-            debugpy.listen(port)
+    start_server(args.mode, args.port)
 
-            if args.debugpy_wait_for_client:
-                _log.info("wait for debugpy client")
-                debugpy.wait_for_client()
-        except ImportError:
-            _log.warning(
-                "Module debugpy is not installed. If you want to debug python code, please install it.\n")
 
-    if args.mode == "stdio":
-        _log.info("Reading on stdin, writing on stdout")
-        s = LanguageServer(
-            conn=JSONRPC2Connection(ReadWriter(sys.stdin.buffer, sys.stdout.buffer)))
-        s.run()
-    elif args.mode == "tcp":
-        host, port = "127.0.0.1", args.port
-        _log.info("Accepting TCP connections on %s:%s", host, port)
-        ForkingTCPServer.allow_reuse_address = True
-        ForkingTCPServer.daemon_threads = True
-        s = ForkingTCPServer((host, port), LangserverTCPTransport)
-        try:
-            s.serve_forever()
-        finally:
-            s.shutdown()
+def start_server(mode, port):
+    from .language_server import LanguageServer
+
+    server = LanguageServer()
+
+    if mode == "stdio":
+        server.start_io()
+    elif mode == "tcp":
+        server.start_tcp("127.0.0.1", port)
+    try:
+        server.run()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.shutdown()
 
 
 if __name__ == "__main__":

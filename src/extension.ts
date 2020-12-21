@@ -1,9 +1,10 @@
 import * as net from 'net';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import * as langclient from 'vscode-languageclient';
 
-const DEFAULT_TCP_PORT = 4389;
+import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
+
+const DEFAULT_TCP_PORT = 6601;
 const CONFIG_SECTION = "robotcode";
 const OUTPUT_CHANNEL_NAME = "RobotCode";
 const OUTPUT_CHANNEL = vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
@@ -11,7 +12,7 @@ const OUTPUT_CHANNEL = vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
 var extensionPath: string | undefined = undefined;
 var pythonLanguageServerMain: string | undefined;
 
-let clients: Map<string, langclient.LanguageClient> = new Map();
+let clients: Map<string, LanguageClient> = new Map();
 
 let _sortedWorkspaceFolders: string[] | undefined;
 function sortedWorkspaceFolders(): string[] {
@@ -70,9 +71,9 @@ function startLanguageClientForDocument(document: vscode.TextDocument) {
 
         let mode = config.get<string>("language-server.mode", "stdio");
 
-        const serverOptions: langclient.ServerOptions = mode === 'tcp' ? getServerOptionsTCP(folder) : getServerOptionsStdIo(folder, document);
+        const serverOptions: ServerOptions = mode === 'tcp' ? getServerOptionsTCP(folder) : getServerOptionsStdIo(folder, document);
 
-        let clientOptions: langclient.LanguageClientOptions = {
+        let clientOptions: LanguageClientOptions = {
             documentSelector: [
                 { scheme: 'file', language: 'robotframework', pattern: `${folder.uri.fsPath}/**/*` }
             ],
@@ -83,7 +84,7 @@ function startLanguageClientForDocument(document: vscode.TextDocument) {
             workspaceFolder: folder,
             outputChannel: OUTPUT_CHANNEL
         };
-        let client = new langclient.LanguageClient(`RobotCode Language Server Client ${mode}`, serverOptions, clientOptions);
+        let client = new LanguageClient(`RobotCode Language Server Client ${mode}`, serverOptions, clientOptions);
 
         client.start();
 
@@ -97,7 +98,7 @@ function getServerOptionsTCP(folder: vscode.WorkspaceFolder) {
     if (port === 0) {
         port = DEFAULT_TCP_PORT;
     }
-    const serverOptions: langclient.ServerOptions = function () {
+    const serverOptions: ServerOptions = function () {
         return new Promise((resolve, reject) => {
             var client = new net.Socket();
             client.on("error", function (err) {
@@ -134,7 +135,7 @@ function getServerOptionsStdIo(folder: vscode.WorkspaceFolder, document: vscode.
         //"--debugpy-wait-for-client"
     ];
 
-    const serverOptions: langclient.ServerOptions = {
+    const serverOptions: ServerOptions = {
         command: pythonPath.join(" "),
         args: args.concat(serverArgs),
         options: {
@@ -145,7 +146,8 @@ function getServerOptionsStdIo(folder: vscode.WorkspaceFolder, document: vscode.
     return serverOptions;
 }
 
-export async function activate(context: vscode.ExtensionContext) {
+
+export async function activateAsync(context: vscode.ExtensionContext) {
 
     OUTPUT_CHANNEL.appendLine("Activate RobotCode Extension.");
     extensionPath = context.extensionPath;
@@ -155,18 +157,15 @@ export async function activate(context: vscode.ExtensionContext) {
     OUTPUT_CHANNEL.appendLine("Try to activate Python extension.");
     const extension = vscode.extensions.getExtension('ms-python.python')!;
 
-    //if (!extension?.isActive) {
     await extension.activate().then(function () {
         OUTPUT_CHANNEL.appendLine("Python Extension is active");
     });
-    //}
 
     context.subscriptions.push(extension.exports.settings.onDidChangeExecutionDetails((uri: vscode.Uri) => {
         OUTPUT_CHANNEL.appendLine(uri.toString());
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('robotcode.helloWorld', async (resource, some) => {
-
 
         const p = extension.exports.settings.getExecutionDetails();
         OUTPUT_CHANNEL.appendLine(p.execCommand.join());
@@ -200,10 +199,20 @@ export async function activate(context: vscode.ExtensionContext) {
                 return;
             }
         }
-    });
-
+    });    
 }
 
+
+function displayProgress(promise: Promise<any>) {
+    const progressOptions: vscode.ProgressOptions = { location: vscode.ProgressLocation.Window, title: "RobotCode extension loading ..." };
+    vscode.window.withProgress(progressOptions, () => promise);
+}
+
+export async function activate(context: vscode.ExtensionContext) {
+
+    displayProgress(activateAsync(context));
+
+}
 
 export function deactivate(): Thenable<void> {
     let promises: Thenable<void>[] = [];

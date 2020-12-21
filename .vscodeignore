@@ -10,7 +10,8 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 
-# pythong output
+# python output
 dist
 **/__pycache__
 **/.mypy_cache
+**/.pytest_cache

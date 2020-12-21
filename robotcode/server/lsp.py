@@ -33,7 +33,7 @@ def to_dict(v) -> Any:
 
 
 class LSPObject:
-    def to_dict(self) ->Any:
+    def to_dict(self) -> Any:
         return to_dict(self)
 
 

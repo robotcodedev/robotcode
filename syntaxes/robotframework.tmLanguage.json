@@ -8,7 +8,7 @@
             "begin": "(?i)^(\\*+ ?(?:Settings|Setting)[ *]*)(?= {2,}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "entity.name.type.class.robot"
+                    "name": "entity.name.namespace.robot"
                 }
             },
             "end": "^(?=\\*)",
@@ -91,10 +91,10 @@
             "name": "meta.setting.tags.robot"
         },
         "settings_table_setting_imports": {
-            "begin": "(?i)^(Library|Resource|Variables|Metadata)(?: {2,}| ?\\t)+(.*?)(?= {2}| ?\\t| ?$)",
+            "begin": "(?i)^(Library|Resource|Variables)(?: {2,}| ?\\t)+(.*?)(?= {2}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "storage.type.setting.robot"
+                    "name": "keyword.control.import.robot"
                 },
                 "2": {
                     "name": "entity.other.inherited-class.robot"
@@ -122,7 +122,7 @@
             "name": "meta.setting.imports.robot"
         },
         "settings_table_setting_keywordCalls": {
-            "begin": "(?i)^(Suite Setup|Suite Teardown|Test Setup|Task Setup|Test Teardown|Task Teardown|Test Template|Task Template)(?: {2,}| ?\\t)+(.*?)(?= {2}| ?\\t| ?$)",
+            "begin": "(?i)^(Suite Setup|Suite Teardown|Test Setup|Task Setup|Test Teardown|Task Teardown|Test Template|Task Template|Metadata)(?: {2,}| ?\\t)+(.*?)(?= {2}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
                     "name": "storage.type.setting.robot"
@@ -178,7 +178,7 @@
             "begin": "(?i)^(\\*+ ?(?:Variables|Variable)[ *]*)(?= {2,}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "entity.name.type.class.robot"
+                    "name": "entity.name.namespace.robot"
                 }
             },
             "end": "^(?=\\*)",
@@ -245,7 +245,7 @@
             "begin": "(?i)^(\\*+ ?(?:Test Cases|Test Case|Tasks|Task)[ *]*)(?= {2,}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "entity.name.type.class.robot"
+                    "name": "entity.name.namespace.robot"
                 }
             },
             "end": "^(?=\\*)",
@@ -302,7 +302,7 @@
             "begin": "(?i)^(\\*+ ?(?:Keywords|Keyword)[ *]*)(?= {2,}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "entity.name.type.class.robot"
+                    "name": "entity.name.namespace.robot"
                 }
             },
             "end": "^(?=\\*)",
@@ -360,7 +360,7 @@
             "begin": "(?i)^(\\*+\\s*comments?[\\s*].*)",
             "beginCaptures": {
                 "1": {
-                    "name": "entity.name.type.class.robot"
+                    "name": "entity.name.namespace.robot"
                 }
             },
             "contentName": "comment.line.robot",
@@ -446,7 +446,7 @@
             "begin": "^(?i)(?:\\s)+(FOR)",
             "beginCaptures": {
                 "1": {
-                    "name": "keyword.control.robot"
+                    "name": "keyword.control.conditional.robot"
                 }
             },
             "contentName": "string.quoted.single.robot",
@@ -473,7 +473,7 @@
             "begin": "(?<=\\s)(IN ENUMERATE|IN RANGE|IN ZIP|IN)",
             "beginCaptures": {
                 "1": {
-                    "name": "keyword.control.robot"
+                    "name": "keyword.operator.robot"
                 }
             },
             "contentName": "string.quoted.single.robot",
@@ -502,7 +502,7 @@
             "begin": "^(?i)(?:\\s)+(IF)",
             "beginCaptures": {
                 "1": {
-                    "name": "keyword.control.robot"
+                    "name": "keyword.control.conditional.robot"
                 }
             },
             "contentName": "string.quoted.single.robot",
@@ -527,7 +527,7 @@
             "begin": "^(?i)(?:\\s)+(ELSE)",
             "beginCaptures": {
                 "1": {
-                    "name": "keyword.control.robot"
+                    "name": "keyword.control.conditional.robot"
                 }
             },
             "contentName": "string.quoted.single.robot",
@@ -549,7 +549,7 @@
             "begin": "^(?i)(?:\\s)+(ELSE IF)",
             "beginCaptures": {
                 "1": {
-                    "name": "keyword.control.robot"
+                    "name": "keyword.control.conditional.robot"
                 }
             },
             "contentName": "string.quoted.single.robot",
@@ -574,7 +574,7 @@
             "begin": "^(?i)(?:\\s)+(END)",
             "beginCaptures": {
                 "1": {
-                    "name": "keyword.control.robot"
+                    "name": "keyword.control.conditional.robot"
                 }
             },
             "contentName": "string.quoted.single.robot",

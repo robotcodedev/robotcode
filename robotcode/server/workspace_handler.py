@@ -7,10 +7,9 @@ __all__ = ["WorkSpaceHandler"]
 
 
 class WorkSpaceHandler(LanguageServerBase):
-    def create_workspace(self,
-                         root_uri: Optional[str],
-                         root_path: Optional[str],
-                         workspace_folders: Optional[List[str]]) -> Workspace:
+    def create_workspace(
+        self, root_uri: Optional[str], root_path: Optional[str], workspace_folders: Optional[List[str]]
+    ) -> Workspace:
         return Workspace(self, root_uri=root_uri, root_path=root_path, workspace_folders=workspace_folders)
 
     @LanguageServerBase._debug_call

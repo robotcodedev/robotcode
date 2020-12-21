@@ -1,0 +1,1 @@
+contains libraries which might not be present if the LanguageServer was started from the VSCode Extension.
