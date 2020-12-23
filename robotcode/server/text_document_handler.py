@@ -5,7 +5,7 @@ from .language_server_base import LanguageServerBase
 
 class TextDocumentItem(TypedDict):
     uri: str
-    languageId: str     # noqa: N815
+    languageId: str  # noqa: N815
     version: int
     text: str
 
@@ -35,4 +35,5 @@ class TextDocumentHandler(LanguageServerBase):
     @LanguageServerBase._debug_call
     def serve_textDocument_didOpen(self, textDocument: TextDocumentItem, *args, **kwargs):  # noqa: N802, N803
         self.documents[textDocument["uri"]] = TextDocument(
-            textDocument["uri"], textDocument["languageId"], textDocument["version"], textDocument["text"])
+            textDocument["uri"], textDocument["languageId"], textDocument["version"], textDocument["text"]
+        )

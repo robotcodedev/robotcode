@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import cast
+from typing import List, Union, cast
 
 import pytest
 
@@ -19,7 +19,7 @@ class DummyJsonRPCProtocol(JsonRPCProtocol):
     handled_message = None
     sended_message = None
 
-    def handle_message(self, message: JsonRPCMessage):
+    def handle_message(self, message: Union[JsonRPCMessage, List[JsonRPCMessage]]):
         self.handled_message = message
 
     def send_data(self, message: JsonRPCMessage):

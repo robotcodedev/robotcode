@@ -1,76 +1,60 @@
-from .jsonrpc2_server import (
-    JsonRPCErrors,
-    JsonRPCNotification,
-    JsonRPCRequestMessage,
-    JsonRPCResponseMessage,
-    JsonRPCServer,
+from robotcode.server.types import (
+    ClientCapabilities,
+    InitializeParams,
+    InitializeResult,
+    ServerCapabilities,
+    TextDocumentSyncKind,
+    WorkspaceFoldersServerCapabilities,
 )
 from .. import __version__
-from .logging_helpers import define_logger
-import logging
-import inspect
+from .jsonrpc2_server import JsonRPCServer, rpc_method
+from .logging_helpers import LoggerInstance
+import uuid
 
 
 class LanguageServer(JsonRPCServer):
-    @define_logger
-    def logger(self) -> logging.Logger:
-        ...
 
-    @logger.call
-    def handle_request(self, message: JsonRPCRequestMessage):
+    _logger = LoggerInstance()
 
-        method_name = "serve_" + message.method
+    @rpc_method(param_type=InitializeParams)
+    @_logger.call
+    def initialize(self, process_id: str, params: InitializeParams, /, *, capabilities: ClientCapabilities, **kwargs):
 
-        f = getattr(self, method_name, None)
+        return InitializeResult(
+            capabilities=ServerCapabilities(
+                text_document_sync=TextDocumentSyncKind.FULL,
+                workspace=ServerCapabilities.Workspace(
+                    workspace_folders=WorkspaceFoldersServerCapabilities(
+                        supported=True, change_notifications=str(uuid.uuid4())
+                    )
+                ),
+            ),
+            server_info=InitializeResult.ServerInfo(name="robotcode LanguageServer", version=__version__),
+        )
 
-        if f is None or not callable(f):
-            self.send_error(
-                JsonRPCErrors.METHOD_NOT_FOUND,
-                f"Unknown method: {message.method}",
-                id=message.id,
-            )
-            return
-
-        self.logger.info(str(inspect.signature(f)))
-
-        try:
-            self.send_response(message.id, f(**(message.params or {})))
-        except BaseException as e:
-            self.send_error(JsonRPCErrors.INTERNAL_ERROR, str(e), id=message.id)
-
-    @logger.call
-    def handle_notification(self, message: JsonRPCNotification):
-        pass
-
-    @logger.call
-    def handle_respose(self, message: JsonRPCResponseMessage):
-        pass
-
-    @logger.call
-    def serve_initialize(self, **kwargs):
-        return {
-            "capabilities": {
-                "textDocumentSync": 1,
-                #  Avoid complexity of incremental updates for now
-                # "completionProvider": {
-                #     "resolveProvider": True,
-                #     "triggerCharacters": [".", "/"]
-                # },
-                # "hoverProvider": True,
-                # "definitionProvider": True,
-                # "referencesProvider": True,
-                # "documentSymbolProvider": True,
-                # "workspaceSymbolProvider": True,
-                # "streaming": True,
-                # "codeActionProvider": {
-                #     "codeActionKinds": ["source"]
-                # },
-                # "documentFormattingProvider": True,
-                "workspace": {"workspaceFolders": {"supported": True, "changeNotifications": True}},
-                "documentHighlightProvider": True
-                # https://github.com/sourcegraph/language-server-protocol/blob/master/extension-files.md#files-extensions-to-lsp
-                # This is not in the spec yet
-                # "xfilesProvider": True
-            },
-            "serverInfo": {"name": "robotcode LanguageServer", "version": __version__},
-        }
+        # return {
+        #     "capabilities": {
+        #         "textDocumentSync": 1,
+        #         #  Avoid complexity of incremental updates for now
+        #         # "completionProvider": {
+        #         #     "resolveProvider": True,
+        #         #     "triggerCharacters": [".", "/"]
+        #         # },
+        #         # "hoverProvider": True,
+        #         # "definitionProvider": True,
+        #         # "referencesProvider": True,
+        #         # "documentSymbolProvider": True,
+        #         # "workspaceSymbolProvider": True,
+        #         # "streaming": True,
+        #         # "codeActionProvider": {
+        #         #     "codeActionKinds": ["source"]
+        #         # },
+        #         # "documentFormattingProvider": True,
+        #         "workspace": {"workspaceFolders": {"supported": True, "changeNotifications": True}},
+        #         "documentHighlightProvider": True
+        #         # https://github.com/sourcegraph/language-server-protocol/blob/master/extension-files.md#files-extensions-to-lsp
+        #         # This is not in the spec yet
+        #         # "xfilesProvider": True
+        #     },
+        #     "serverInfo": {"name": "robotcode LanguageServer", "version": __version__},
+        # }

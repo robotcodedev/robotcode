@@ -39,7 +39,9 @@
 				"--mode",
 				"tcp",
 				"--debug",
-				"--debug-json"
+				"--debug-json-rpc",
+				"--debug-json-rpc-data",
+				"--debug-colored"
 			]
 		},
 		{

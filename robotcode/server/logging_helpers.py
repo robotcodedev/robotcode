@@ -2,10 +2,10 @@ import functools
 import inspect
 import logging
 from types import FunctionType, MethodType
-from typing import Any, Callable, List, Mapping, Optional, Type, Union, cast
+from typing import Any, Callable, List, Mapping, Optional, Type, TypeVar, Union, cast, overload
 import collections
 
-__all__ = ["DefineLoggerDescriptor", "define_logger"]
+__all__ = ["LoggerInstance"]
 
 
 def get_class_that_defined_method(meth: Callable):
@@ -33,24 +33,26 @@ def _get_callable_has_self_or_cls_parameter(func: Any):
     return False
 
 
-def get_unwrapped_func(func: Callable):
+def get_unwrapped_func(func: Callable[..., Any]) -> Callable[..., Any]:
     result = inspect.unwrap(func)
     if isinstance(result, (staticmethod, classmethod)):
-        result = result.__func__
+        return get_unwrapped_func(result.__func__)
     return result
 
 
-_LoggerEntry = collections.namedtuple("_LoggerEntry", "level prefix condition")
+_LoggerEntry = collections.namedtuple("_LoggerEntry", "level prefix condition states")
 
 
 class _HasLoggerEntries:
     __logging_entries__: List[_LoggerEntry]
 
 
-_FUNC_TYPE = Union[Callable[..., logging.Logger], staticmethod, classmethod, None]
+_FUNC_TYPE = Union[Callable[[], logging.Logger], Callable[[], None], staticmethod, None]
+
+_F = TypeVar("_F", bound=Callable[..., Any])
 
 
-class DefineLoggerDescriptor(logging.LoggerAdapter):
+class LoggerInstance(logging.LoggerAdapter):
     __func: _FUNC_TYPE = None
     __name: Optional[str] = None
     __level: Union[int, str] = logging.NOTSET
@@ -79,26 +81,16 @@ class DefineLoggerDescriptor(logging.LoggerAdapter):
         self.__postfix = postfix
         self.extra = extra
 
-    def log(self, level: int, msg: Any, *args, **kwargs):
-        if self.isEnabledFor(level):
-            super().log(level, msg() if callable(msg) else msg, *args, **kwargs)
-
-    def __init_logger(self) -> "DefineLoggerDescriptor":
+    def __init_logger(self) -> "LoggerInstance":
         if self.__logger is None:
             returned_logger = None
 
             if self.__func is not None:
 
-                if self.__owner is None:
-                    returned_logger = self.__func()
+                if isinstance(self.__func, staticmethod):
+                    returned_logger = cast(staticmethod, self.__func).__func__()
                 else:
-                    if self.__func is not None:
-                        if isinstance(self.__func, staticmethod):
-                            returned_logger = cast(staticmethod, self.__func).__func__()
-                        elif isinstance(self.__func, classmethod):
-                            returned_logger = cast(classmethod, self.__func).__func__(type(self.__owner))
-                        else:
-                            returned_logger = self.__func(self.__owner)
+                    returned_logger = self.__func()
 
             self.__logger = (
                 returned_logger
@@ -106,8 +98,13 @@ class DefineLoggerDescriptor(logging.LoggerAdapter):
                 else logging.getLogger(
                     self.__name
                     if self.__name is not None
-                    else self.__func.__module__
-                    + ("" if self.__owner is None else "." + self.__owner.__qualname__)
+                    else (
+                        ("" if self.__owner is None else self.__owner.__module__ + "." + self.__owner.__qualname__)
+                        if self.__owner is not None
+                        else get_unwrapped_func(self.__func).__module__
+                        if self.__func is not None
+                        else "<unknown>"
+                    )
                     + self.__postfix
                 )
             )
@@ -120,7 +117,7 @@ class DefineLoggerDescriptor(logging.LoggerAdapter):
         return self
 
     @property
-    def logger(self) -> Optional[logging.Logger]:
+    def logger(self) -> Optional[logging.Logger]:  # type: ignore
         if self.__logger is None:
             self.__init_logger()
 
@@ -130,95 +127,143 @@ class DefineLoggerDescriptor(logging.LoggerAdapter):
         self.__owner = owner
         self.__owner_name = name
 
-    def __call__(self, _func: _FUNC_TYPE = None) -> "DefineLoggerDescriptor":
+    def __call__(self, _func: _FUNC_TYPE = None) -> "LoggerInstance":
         if _func is not None:
             self.__func = _func
 
         return self
 
-    def __get__(self, obj: Any, objtype: Type) -> "DefineLoggerDescriptor":
+    def __get__(self, obj: Any, objtype: Type) -> "LoggerInstance":
         return self
 
+    def log(self, level: int, msg: Any, *args, **kwargs):
+        if self.isEnabledFor(level):
+            super().log(level, msg() if callable(msg) else msg, *args, **kwargs)
+
+    # Bare decorator usage
+    @overload
+    def call(self, __func: _F) -> _F:
+        ...
+
+    # Decorator with arguments
+    @overload
     def call(
         self,
-        _func: Optional[Callable[..., Any]] = None,
         *,
         level: int = logging.DEBUG,
         prefix: str = "",
         condition: Optional[Callable[..., bool]] = None,
+        entering=True,
+        exiting=True,
+        exception=True,
+    ) -> Callable[[_F], _F]:
+        ...
+
+    def call(
+        self,
+        _func: Callable[..., Any] = None,
+        *,
+        level: int = logging.DEBUG,
+        prefix: str = "",
+        condition: Optional[Callable[..., bool]] = None,
+        entering=True,
+        exiting=False,
+        exception=False,
         **kwargs,
-    ) -> Callable[..., Any]:
-        def _decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+    ) -> Callable[[_F], _F]:
+        def _decorator(func: Callable[..., Any]):
             unwrapped_func = inspect.unwrap(func)
 
             if not hasattr(unwrapped_func, "__logging_entries__"):
                 unwrapped_func.__logging_entries__ = []
 
-            unwrapped_func.__logging_entries__.append(_LoggerEntry(level=level, prefix=prefix, condition=condition))
+            unwrapped_func.__logging_entries__.append(
+                _LoggerEntry(
+                    level=level,
+                    prefix=prefix,
+                    condition=condition,
+                    states={"entering": entering, "exiting": exiting, "exception": exception},
+                )
+            )
 
             skipt_first_arg = _get_callable_has_self_or_cls_parameter(unwrapped_func)
 
             @functools.wraps(func)
-            def __wrapper(*wrapper_args, **wrapper_kwargs) -> Callable[..., Any]:
+            def _wrapper(*wrapper_args, **wrapper_kwargs) -> Any:
 
                 if isinstance(unwrapped_func, staticmethod):
                     real_args = wrapper_args[1:]
-                    real_func = unwrapped_func.__func__
-                elif isinstance(unwrapped_func, classmethod):
-                    real_args = (type(wrapper_args[0]), *wrapper_args[1:])
                     real_func = unwrapped_func.__func__
                 else:
                     real_args = wrapper_args
                     real_func = unwrapped_func
 
-                if hasattr(unwrapped_func, "__logging_entries__"):
-                    self.__init_logger()
+                def has_logging_entries():
+                    return hasattr(unwrapped_func, "__logging_entries__")
 
-                    if isinstance(unwrapped_func, (staticmethod, classmethod)):
-                        func_name = (
+                def func_name():
+                    if isinstance(unwrapped_func, staticmethod):
+                        return (
                             unwrapped_func.__func__.__qualname__
                             if self.__owner or self.__name is None
                             else unwrapped_func.__func__.__name__
                         )
                     else:
-                        func_name = (
+                        return (
                             unwrapped_func.__qualname__
                             if self.__owner is None or self.__name
                             else unwrapped_func.__name__
                         )
 
-                    for c in cast(_HasLoggerEntries, unwrapped_func).__logging_entries__:
-                        if (c.condition is None or c.condition(*real_args, **wrapper_kwargs)):
+                def get_logging_entries():
+                    return cast(_HasLoggerEntries, unwrapped_func).__logging_entries__
 
-                            def build_message():
-                                message_args = wrapper_args[1:] if skipt_first_arg else wrapper_args
-
-                                return "{0}{1}({2}{3}{4})".format(
-                                    c.prefix,
-                                    func_name,
-                                    ", ".join(repr(a) for a in message_args),
-                                    (", " if len(message_args) > 0 and len(wrapper_kwargs) > 0 else ""),
-                                    (
-                                        ", ".join(f"{str(k)}={repr(v)}" for k, v in wrapper_kwargs.items())
-                                        if len(wrapper_kwargs) > 0
-                                        else ""
-                                    ),
+                def log(message, *, state, log_level=None, **log_kwargs):
+                    if has_logging_entries():
+                        for c in get_logging_entries():
+                            if c.states[state] and (c.condition is None or c.condition(*real_args, **wrapper_kwargs)):
+                                state_msg = (state + " ") if state != "entering" or c.states["exiting"] else ""
+                                self.log(
+                                    log_level if log_level is not None else c.level,
+                                    lambda: f"{state_msg}{prefix}{message()}",
+                                    **{**kwargs, **log_kwargs},
                                 )
-                            self.log(c.level, build_message, **kwargs)
+
+                def build_enter_message():
+                    message_args = wrapper_args[1:] if skipt_first_arg else wrapper_args
+
+                    return "{0}({1}{2}{3})".format(
+                        func_name(),
+                        ", ".join(repr(a) for a in message_args),
+                        (", " if len(message_args) > 0 and len(wrapper_kwargs) > 0 else ""),
+                        (
+                            ", ".join(f"{str(k)}={repr(v)}" for k, v in wrapper_kwargs.items())
+                            if len(wrapper_kwargs) > 0
+                            else ""
+                        ),
+                    )
+
+                def build_exit_message(res):
+                    return "{0}(...) -> {1}".format(func_name(), repr(res))
+
+                def build_exception_message(e):
+                    return "{0}(...)->{1}".format(func_name(), e)
+
+                log(build_enter_message, state="entering")
 
                 result = None
                 try:
                     result = real_func(*real_args, **wrapper_kwargs)
-                except BaseException:
+                except BaseException as e:
+                    ex = e
+                    log(lambda: build_exception_message(ex), log_level=logging.ERROR, state="exception", exc_info=True)
                     raise
-
+                else:
+                    log(lambda: build_exit_message(result), state="exiting")
                 return result
 
-            return __wrapper
+            return _wrapper
 
         if _func is None:
             return _decorator
         return _decorator(_func)
-
-
-define_logger = DefineLoggerDescriptor

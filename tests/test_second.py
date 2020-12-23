@@ -279,7 +279,7 @@ def test_something():
             },
         },
         "trace": "off",
-        "workspaceFolders": [{"uri": "file:///c%3A/tmp/robottest", "name": "robottest"}],        
+        "workspaceFolders": [{"uri": "file:///c%3A/tmp/robottest", "name": "robottest"}],
     }
 
     p = InitializeParams(**params)

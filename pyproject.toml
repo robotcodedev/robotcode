@@ -4,12 +4,13 @@ version = "0.0.1"
 description = ""
 authors = ["Daniel Biehl <daniel.biehl@imbus.de>"]
 include = ["robotcode/py.typed", "README.md"]
+exclude = ["robotcode/external"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
 black = "^20.8b1"
 pydantic = "^1.7.3"
-
+coloredlogs = { version = "^15.0", optional = true }
 
 [tool.poetry.dev-dependencies]
 robotframework = "^3.2.2"
@@ -51,6 +52,7 @@ exclude = '''
     | build
     | dist
     | out
+    | robotcode/external
   )/  
 )
 '''

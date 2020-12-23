@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 from .lsp import ConfigurationItem, ConfigurationParams
 
 import typing
+
 if typing.TYPE_CHECKING:
     from .language_server_base import LanguageServerBase
 
@@ -10,11 +11,13 @@ __all__ = ["Workspace"]
 
 
 class Workspace:
-    def __init__(self,
-                 server: "LanguageServerBase",
-                 root_uri: Optional[str],
-                 root_path: Optional[str],
-                 workspace_folders: Optional[List[str]]):
+    def __init__(
+        self,
+        server: "LanguageServerBase",
+        root_uri: Optional[str],
+        root_path: Optional[str],
+        workspace_folders: Optional[List[str]],
+    ):
         self.server = server
         self.root_uri = root_uri
         self.root_path = root_path
@@ -34,6 +37,5 @@ class Workspace:
 
     def get_configuration(self, section: str, scope_uri: Optional[str] = None):
         return self.server.conn.send_request(
-            "workspace/configuration",
-            ConfigurationParams(ConfigurationItem(section, scope_uri)).to_dict()
+            "workspace/configuration", ConfigurationParams(ConfigurationItem(section, scope_uri)).to_dict()
         ).get("result", None)

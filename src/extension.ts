@@ -189,7 +189,7 @@ export async function activateAsync(context: vscode.ExtensionContext) {
     }));
 
     vscode.workspace.onDidChangeConfiguration(event => {
-        for (let s of ["robotcode.language-server.mode", "robotcode.language-server.tcp-port", "robotcode.language-server.args", "robotcode.language-server.python"]) {
+        for (let s of ["robotcode.language-server.mode", "robotcode.language-server.tcp-port", "robotcode.language-server.args", "robotcode.language-server.python", "python.pythonPath"]) {
             if (event.affectsConfiguration(s)) {
                 vscode.window.showWarningMessage('Please use the "Reload Window" action for changes in ' + s + ' to take effect.', ...["Reload Window"]).then((selection) => {
                     if (selection === "Reload Window") {

@@ -13,7 +13,7 @@ class Model(BaseModel):
     class Config:
 
         allow_population_by_field_name = True
-        use_enum_values = True
+        # use_enum_values = True
 
         @classmethod
         def alias_generator(cls, string: str) -> str:
@@ -522,3 +522,103 @@ class InitializeParams(WorkDoneProgressParams):
     capabilities: ClientCapabilities
     trace: Optional[TraceValue] = None
     workspace_folders: List[WorkspaceFolder] = []
+
+
+class InitializeError(Model):
+    retry: bool
+
+
+class WorkspaceFoldersServerCapabilities(Model):
+    supported: Optional[bool] = None
+    change_notifications: Union[str, bool, None] = None
+
+
+class FileOperationPatternKind(Enum):
+    FILE = "file"
+    FOLDER = "folder"
+
+
+class FileOperationPatternOptions(Model):
+    ignore_case: Optional[bool] = None
+
+
+class FileOperationPattern(Model):
+    glob: str
+    matches: Optional[FileOperationPatternKind]
+    options: Optional[FileOperationPatternOptions]
+
+
+class FileOperationFilter(Model):
+    scheme: Optional[str] = None
+    pattern: FileOperationPattern
+
+
+class FileOperationRegistrationOptions(Model):
+    filters: List[FileOperationFilter]
+
+
+class TextDocumentSyncKind(Enum):
+    NONE = 0
+    FULL = 1
+    INCREMENTAL = 2
+
+
+class TextDocumentSyncOptions(Model):
+    open_close: Optional[bool] = None
+    change: Optional[TextDocumentSyncKind] = None
+
+
+class ServerCapabilities(Model):
+    text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None]
+    # completion_provider: Optional[CompletionOptions] = None
+    # hover_provider: Optional[boolean, HoverOptions] = None
+    # signature_help_provider: Optional[SignatureHelpOptions] = None
+    # declaration_provider: Union[bool, DeclarationOptions, DeclarationRegistrationOptions, None] = None
+    # definition_provider: Union[bool, DefinitionOptions, None] = None
+    # implementation_provider: Union[bool, ImplementationOptions, ImplementationRegistrationOptions, None] = None
+    # references_provider: Union[bool, ReferenceOptions, None] = None
+    # document_highlight_provider: Union[bool, DocumentHighlightOptions, None] = None
+    # document_symbol_provider: Union[bool, DocumentSymbolOptions] = None
+    # code_action_provider: Union[bool, CodeActionOptions] = None
+    # code_lens_provider: Optional[CodeLensOptions] = None
+    # document_link_provider: Optional[DocumentLinkOptions] = None
+    # color_provider: Union[bool, DocumentColorOptions, DocumentColorRegistrationOptions, None] = None
+    # document_formatting_provider: Union[bool, DocumentFormattingOptions, None] = None
+    # document_range_formatting_provider: Union[bool, DocumentRangeFormattingOptions, None] = None
+    # document_on_type_formatting_provider: Optional[DocumentOnTypeFormattingOptions] = None
+    # rename_provider: Union[bool, RenameOptions, None] = None
+    # folding_range_provider: Union[bool, FoldingRangeOptions, FoldingRangeRegistrationOptions, None] = None
+    # selection_range_provider: Union[bool, SelectionRangeOptions, SelectionRangeRegistrationOptions, None] = None
+    # linked_editing_range_provider: Union[
+    #     boolean, LinkedEditingRangeOptions, LinkedEditingRangeRegistrationOptions, None
+    # ] = None
+    # call_hierarchy_provider: Union[boolean, CallHierarchyOptions, CallHierarchyRegistrationOptions, None] = None
+    # semantic_tokens_provider: Union[SemanticTokensOptions, SemanticTokensRegistrationOptions, None] = None
+    # moniker_provider: Union[bool, MonikerOptions, MonikerRegistrationOptions, None] = None
+    # workspace_symbol_provider: Union[boolean, WorkspaceSymbolOptions, None] = None
+
+    class Workspace(Model):
+        workspace_folders: Optional[WorkspaceFoldersServerCapabilities] = None
+
+        class _FileOperations(Model):
+            did_create: Optional[FileOperationRegistrationOptions] = None
+            will_create: Optional[FileOperationRegistrationOptions] = None
+            did_rename: Optional[FileOperationRegistrationOptions] = None
+            will_rename: Optional[FileOperationRegistrationOptions] = None
+            did_delete: Optional[FileOperationRegistrationOptions] = None
+            will_delete: Optional[FileOperationRegistrationOptions] = None
+
+        file_operations: Optional[_FileOperations] = None
+
+    workspace: Optional[Workspace] = None
+    experimental: Optional[Any] = None
+
+
+class InitializeResult(Model):
+    capabilities: ServerCapabilities
+
+    class ServerInfo(Model):
+        name: str
+        version: Optional[str] = None
+
+    server_info: Optional[ServerInfo] = None

@@ -25,12 +25,10 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
 
 
 from .. import __version__
-from .logging_helpers import define_logger
+from .logging_helpers import LoggerInstance
 
 
-@define_logger(name=__package__)
-def logger() -> logging.Logger:
-    ...
+_logger = LoggerInstance(name=__package__)
 
 
 def get_log_handler(logfile: str):
@@ -69,7 +67,7 @@ def check_free_port(port: int):
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             return s.getsockname()[1]
         except BaseException as e:
-            logger.exception(e)
+            _logger.exception(e)
             return find_free_port()
 
 
@@ -78,21 +76,21 @@ def start_debugpy(port: int, wait_for_client: bool):
         import debugpy
 
         real_port = check_free_port(port)
-        logger.info(f"start debugpy session on port {real_port}")
+        _logger.info(f"start debugpy session on port {real_port}")
         debugpy.listen(real_port)
 
         if wait_for_client:
-            logger.info("wait for debugpy client")
+            _logger.info("wait for debugpy client")
             debugpy.wait_for_client()
     except ImportError:
-        logger.warning("Module debugpy is not installed. If you want to debug python code, please install it.\n")
+        _logger.warning("Module debugpy is not installed. If you want to debug python code, please install it.\n")
 
 
 def correct_external_library_paths():
     try:
         __import__("pydantic")
     except ImportError:
-        logger.debug("pydantic library not found, add our external path to sys.path")
+        _logger.debug("pydantic library not found, add our external path to sys.path")
 
         external_path = Path(file.parents[1], "external")
         sys.path.append(str(external_path))
@@ -110,6 +108,7 @@ def main():
     parser.add_argument("--debugpy", action="store_true", help="starts a debugpy session")
     parser.add_argument("--debugpy-port", default=5678, help="sets the port for debugpy session", type=int)
     parser.add_argument("--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect")
+    parser.add_argument("--debug-colored", action="store_true", help="colored output for logs")
 
     parser.add_argument("--version", action="store_true", help="shows the version and exits")
 
@@ -119,9 +118,21 @@ def main():
         print(__version__)
         return
 
-    logging.basicConfig(level=(logging.DEBUG if args.debug else logging.WARNING))
+    log_initialized = False
+    if args.debug_colored:
+        try:
+            import coloredlogs
+
+            coloredlogs.install(level=(logging.DEBUG if args.debug else logging.WARNING))
+            log_initialized = True
+        except BaseException:
+            pass
+
+    if not log_initialized:
+        logging.basicConfig(level=(logging.DEBUG if args.debug else logging.WARNING))
+
     if args.log_file is not None:
-        logger.logger.addHandler(get_log_handler(args.log_file))
+        _logger.logger.addHandler(get_log_handler(args.log_file))
 
     if not args.debug_json_rpc:
         logging.getLogger("robotcode.server.jsonrpc2_server").propagate = False
@@ -129,7 +140,7 @@ def main():
     if not args.debug_json_rpc_data:
         logging.getLogger("robotcode.server.jsonrpc2_server.JsonRPCProtocol.data").propagate = False
 
-    logger.info(f"Starting with args={args}")
+    _logger.info(f"Starting with args={args}")
     if args.debugpy:
         start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)
 
