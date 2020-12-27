@@ -24,6 +24,7 @@ autopep8 = "^1.5.4"
 pylint = "^2.6.0"
 debugpy = "^1.2.0"
 rope = "^0.18.0"
+pytest-asyncio = "^0.14.0"
 
 [tool.poetry-dynamic-versioning]
 enable = true

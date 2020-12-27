@@ -17,7 +17,6 @@ class Model(BaseModel):
 
         @classmethod
         def alias_generator(cls, string: str) -> str:
-            # this is the same as `alias_generator = to_camel` above
             string = re.sub(r"^[\-_\.]", "", str(string))
             if not string:
                 return string
@@ -521,7 +520,7 @@ class InitializeParams(WorkDoneProgressParams):
     initialization_options: Optional[Any] = None
     capabilities: ClientCapabilities
     trace: Optional[TraceValue] = None
-    workspace_folders: List[WorkspaceFolder] = []
+    workspace_folders: Optional[List[WorkspaceFolder]] = None
 
 
 class InitializeError(Model):
@@ -622,3 +621,51 @@ class InitializeResult(Model):
         version: Optional[str] = None
 
     server_info: Optional[ServerInfo] = None
+
+
+class InitializedParams(Model):
+    pass
+
+
+class DidChangeConfigurationParams(Model):
+    settings: Any
+
+
+class TextDocumentItem(Model):
+    uri: DocumentUri
+    language_id: str
+    version: int
+    text: str
+
+
+class DidOpenTextDocumentParams(Model):
+    text_document: TextDocumentItem
+
+
+class ConfigurationItem(Model):
+    scope_uri: Optional[DocumentUri]
+    section: Optional[str]
+
+
+class ConfigurationParams(Model):
+    items: List[ConfigurationItem]
+
+
+class MessageType(IntEnum):
+    Error = 1
+    Warning = 2
+    Info = 3
+    Log = 4
+
+
+class ShowMessageParams(Model):
+    type: MessageType
+    message: str
+
+
+class MessageActionItem(Model):
+    title: str
+
+
+class ShowMessageRequestParams(ShowMessageParams):
+    actions: Optional[List[MessageActionItem]] = None

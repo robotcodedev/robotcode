@@ -20,6 +20,7 @@
 				"host": "localhost",
 				"port": 5678
 			},
+			"justMyCode": false
 		},
 		{
 			"name": "Python: Attach Prompt",

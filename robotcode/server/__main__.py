@@ -4,13 +4,13 @@ import os
 import pathlib
 import sys
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 __file__ = os.path.abspath(__file__)
 if __file__.endswith((".pyc", ".pyo")):
     __file__ = __file__[:-1]
 
 if __name__ == "__main__" and __package__ is None or __package__ == "":
-    from pathlib import Path
 
     file = Path(__file__).resolve()
     parent, top = file.parent, file.parents[2]
@@ -27,8 +27,15 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
 from .. import __version__
 from .logging_helpers import LoggerInstance
 
-
 _logger = LoggerInstance(name=__package__)
+
+try:
+    __import__("pydantic")
+except ImportError:
+    _logger.debug("pydantic library not found, add our external path to sys.path")
+    file = Path(__file__).resolve()
+    external_path = Path(file.parents[1], "external")
+    sys.path.append(str(external_path))
 
 
 def get_log_handler(logfile: str):
@@ -67,7 +74,7 @@ def check_free_port(port: int):
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             return s.getsockname()[1]
         except BaseException as e:
-            _logger.exception(e)
+            _logger.warning(e, stack_info=True)
             return find_free_port()
 
 
@@ -86,20 +93,22 @@ def start_debugpy(port: int, wait_for_client: bool):
         _logger.warning("Module debugpy is not installed. If you want to debug python code, please install it.\n")
 
 
-def correct_external_library_paths():
-    try:
-        __import__("pydantic")
-    except ImportError:
-        _logger.debug("pydantic library not found, add our external path to sys.path")
-
-        external_path = Path(file.parents[1], "external")
-        sys.path.append(str(external_path))
-
-
 def main():
-    parser = argparse.ArgumentParser(description="RobotCode Language Server", prog="robotcode.server")
+    from .jsonrpc2_server import JsonRpcServerMode
 
-    parser.add_argument("-m", "--mode", default="stdio", help="communication (stdio|tcp)")
+    parser = argparse.ArgumentParser(
+        description="RobotCode Language Server",
+        prog="robotcode.server",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+
+    parser.add_argument(
+        "-m",
+        "--mode",
+        default=JsonRpcServerMode.STDIO.value,
+        choices=list(e.value for e in JsonRpcServerMode),
+        help="communication mode",
+    )
     parser.add_argument("-p", "--port", default=6601, help="server listen port (tcp)", type=int)
     parser.add_argument("--debug", action="store_true", help="show debug messages")
     parser.add_argument("--debug-json-rpc", action="store_true", help="show json-rpc debug messages")
@@ -144,26 +153,18 @@ def main():
     if args.debugpy:
         start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)
 
-    correct_external_library_paths()
-
     start_server(args.mode, args.port)
 
 
 def start_server(mode, port):
+    from .jsonrpc2_server import JsonRpcServerMode, TcpParams
     from .language_server import LanguageServer
 
-    server = LanguageServer()
-
-    if mode == "stdio":
-        server.start_io()
-    elif mode == "tcp":
-        server.start_tcp("127.0.0.1", port)
-    try:
-        server.run()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.shutdown()
+    with LanguageServer(mode=JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port)) as server:
+        try:
+            server.run()
+        except KeyboardInterrupt:
+            pass
 
 
 if __name__ == "__main__":

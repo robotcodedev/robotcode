@@ -55,40 +55,45 @@ function startLanguageClientForDocument(document: vscode.TextDocument) {
 
     let uri = document.uri;
 
-    let folder = vscode.workspace.getWorkspaceFolder(uri);
+    let workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
 
     // Files outside a folder can't be handled. This might depend on the language.
     // Single file languages like JSON might handle files outside the workspace folders.
-    if (!folder) {
+    if (!workspaceFolder) {
         return;
     }
 
     // If we have nested workspace folders we only start a server on the outer most workspace folder.
-    folder = getOuterMostWorkspaceFolder(folder);
+    workspaceFolder = getOuterMostWorkspaceFolder(workspaceFolder);
 
-    if (!clients.has(folder.uri.toString())) {
+    if (!clients.has(workspaceFolder.uri.toString())) {
         let config = vscode.workspace.getConfiguration(CONFIG_SECTION, document);
 
         let mode = config.get<string>("language-server.mode", "stdio");
 
-        const serverOptions: ServerOptions = mode === 'tcp' ? getServerOptionsTCP(folder) : getServerOptionsStdIo(folder, document);
+        const serverOptions: ServerOptions = mode === 'tcp' ? getServerOptionsTCP(workspaceFolder) : getServerOptionsStdIo(workspaceFolder, document);
+        let name = `RobotCode Language Server mode=${mode} for workspace "${workspaceFolder.name}"`;
+
+        // TODO: set the output channel only if we are running with debug and not in tcp mode
+        let outputChannel = mode === 'stdio' ? vscode.window.createOutputChannel(name) : undefined;
 
         let clientOptions: LanguageClientOptions = {
             documentSelector: [
-                { scheme: 'file', language: 'robotframework', pattern: `${folder.uri.fsPath}/**/*` }
+                { scheme: 'file', language: 'robotframework', pattern: `${workspaceFolder.uri.fsPath}/**/*` }
             ],
             synchronize: {
-                configurationSection: [CONFIG_SECTION]
+                configurationSection: [CONFIG_SECTION, "python"]
             },
             diagnosticCollectionName: 'robotcode',
-            workspaceFolder: folder,
-            outputChannel: OUTPUT_CHANNEL
+            workspaceFolder: workspaceFolder,
+            outputChannel: outputChannel
         };
-        let client = new LanguageClient(`RobotCode Language Server Client ${mode}`, serverOptions, clientOptions);
+        OUTPUT_CHANNEL.appendLine(`start Language client: ${name}`);
+        let client = new LanguageClient(name, serverOptions, clientOptions);
 
         client.start();
 
-        clients.set(folder.uri.toString(), client);
+        clients.set(workspaceFolder.uri.toString(), client);
     }
 }
 
@@ -103,7 +108,7 @@ function getServerOptionsTCP(folder: vscode.WorkspaceFolder) {
             var client = new net.Socket();
             client.on("error", function (err) {
                 reject(err);
-            });
+            });            
             client.connect(port, "127.0.0.1", function () {
                 resolve({
                     reader: client,
@@ -199,7 +204,7 @@ export async function activateAsync(context: vscode.ExtensionContext) {
                 return;
             }
         }
-    });    
+    });
 }
 
 

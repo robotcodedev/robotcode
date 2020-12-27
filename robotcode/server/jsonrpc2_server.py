@@ -3,15 +3,17 @@ import inspect
 import json
 import re
 import sys
+import uuid
 from abc import ABC
 from asyncio.events import AbstractEventLoop, AbstractServer
-from concurrent.futures import ThreadPoolExecutor
+from enum import Enum
 from threading import Event
 from typing import (
     Any,
     BinaryIO,
     Callable,
     Dict,
+    Generator,
     List,
     Mapping,
     NamedTuple,
@@ -25,22 +27,28 @@ from typing import (
     overload,
     runtime_checkable,
 )
+from _pytest.mark import param
 
 from pydantic import BaseModel, Field
+from pydantic.typing import is_callable_type
 
 from .logging_helpers import LoggerInstance
 
 __all__ = [
+    "JsonRPCErrors",
     "JsonRPCMessage",
     "JsonRPCNotification",
-    "JsonRPCRequestMessage",
-    "JsonRPCResponseMessage",
-    "JsonRPCErrorMessage",
+    "JsonRPCRequest",
+    "JsonRPCResponse",
+    "JsonRPCError",
+    "JsonRPCErrorObject",
     "JsonRPCProtocol",
     "JsonRPCServer",
     "JsonRPCException",
     "JsonRPCParseError",
     "InvalidProtocolVersionException",
+    "rpc_method",
+    "RpcRegistry",
 ]
 
 
@@ -66,13 +74,13 @@ class JsonRPCNotification(JsonRPCMessage):
     params: Optional[Any] = None
 
 
-class JsonRPCRequestMessage(JsonRPCMessage):
+class JsonRPCRequest(JsonRPCMessage):
     id: Union[str, int, None] = Field(...)
     method: str = Field(...)
     params: Optional[Any] = None
 
 
-class JsonRPCResponseMessage(JsonRPCMessage):
+class JsonRPCResponse(JsonRPCMessage):
     id: Union[str, int, None] = Field(...)
     result: Any = Field(...)
 
@@ -83,11 +91,11 @@ class JsonRPCErrorObject(BaseModel):
     data: Optional[Any] = None
 
 
-class JsonRPCErrorMessage(JsonRPCResponseMessage):
+class JsonRPCError(JsonRPCResponse):
     """A class that represents json rpc response message."""
 
     error: JsonRPCErrorObject = Field(...)
-    result: Optional[Any]
+    result: Optional[Any] = None
 
 
 class JsonRPCException(Exception):
@@ -102,37 +110,183 @@ class InvalidProtocolVersionException(JsonRPCParseError):
     pass
 
 
-def json_rpc_message_from_dict(data: Dict[Any, Any]) -> JsonRPCMessage:
-    if "jsonrpc" in data:
-        if data["jsonrpc"] != PROTOCOL_VERSION:
-            raise InvalidProtocolVersionException("Invalid JSON-RPC2 protocol version.")
+class RpcMethodEntry(NamedTuple):
+    name: str
+    method: Callable[..., Any]
+    param_type: Optional[Type]
 
-        if "id" in data:
-            if "method" in data:
-                return JsonRPCRequestMessage(**data)
-            else:
-                if "error" in data:
-                    error = data.pop("error")
-                    return JsonRPCErrorMessage(error=JsonRPCErrorObject(**error), **data)
 
-                return JsonRPCResponseMessage(**data)
+@runtime_checkable
+class RpcMethod(Protocol):
+    __rpc_method__: RpcMethodEntry
+
+
+TCallable = TypeVar("TCallable", bound=Callable[..., Any])
+
+
+@overload
+def rpc_method(func: Callable[..., Any]) -> Callable[[TCallable], TCallable]:
+    ...
+
+
+@overload
+def rpc_method(*, name: str = None, param_type: Type = object) -> Callable[[TCallable], TCallable]:
+    ...
+
+
+def rpc_method(
+    func: Callable[..., Any] = None, *, name: str = None, param_type: Type = object
+) -> Callable[[TCallable], TCallable]:
+    def _decorator(_func: Callable[..., Any]):
+
+        if inspect.isclass(func):
+            raise Exception(f"Not supported type {type(_func)}.")
+
+        if isinstance(_func, classmethod):
+            f = cast(classmethod, _func).__func__
+        elif isinstance(_func, staticmethod):
+            f = cast(staticmethod, _func).__func__
         else:
-            return JsonRPCNotification(**data)
-    raise JsonRPCException("Invalid JSON-RPC2 Message")
+            f = _func
+
+        real_name = name if name is not None else f.__name__ if f is not None else None
+        if real_name is None or not real_name:
+            raise Exception("name is empty.")
+
+        cast(RpcMethod, f).__rpc_method__ = RpcMethodEntry(real_name, f, param_type)
+
+        return _func
+
+    if func is None:
+        return _decorator
+    return cast(Callable[[TCallable], TCallable], _decorator(func))
+
+
+class RpcRegistry:
+    def __init__(self, owner: Any = None, parent: "RpcRegistry" = None):
+        self.__initialized = False
+        self.__owner = owner
+        self.__owner_name = ""
+        self.__parent = parent
+        self.__methods: Dict[str, RpcMethodEntry] = {}
+        self.__childs: Dict[Tuple[Any, Type], RpcRegistry] = {}
+
+    def __set_name__(self, owner: Any, name: str):
+        self.__owner = owner
+        self.__owner_name = name
+
+    def __get__(self, obj: Any, objtype: Type) -> "RpcRegistry":
+        if obj is None and objtype == self.__owner:
+            return self
+
+        if (obj, objtype) not in self.__childs:
+            self.__childs[(obj, objtype)] = RpcRegistry(obj, self)
+
+        return self.__childs[(obj, objtype)]
+
+    def __ensure_initialized(self):
+        if not self.__initialized:
+            self.__methods = {
+                cast(RpcMethod, getattr(self.__owner, k)).__rpc_method__.name: RpcMethodEntry(
+                    cast(RpcMethod, getattr(self.__owner, k)).__rpc_method__.name,
+                    getattr(self.__owner, k),
+                    cast(RpcMethod, getattr(self.__owner, k)).__rpc_method__.param_type,
+                )
+                for k in dir(self.__owner)
+                if isinstance(getattr(self.__owner, k), RpcMethod)
+            }
+        self.__initialized = True
+
+    @property
+    def methods(self) -> Dict[str, RpcMethodEntry]:
+        self.__ensure_initialized()
+
+        if self.__parent is not None:
+            return {**self.__parent.__methods, **self.__methods}
+
+        return self.__methods
+
+    def add_method(self, name: str, func: Callable[..., Any], param_type: Type = None):
+        self.__ensure_initialized()
+
+        self.__methods[name] = RpcMethodEntry(name, func, param_type)
+
+    def remove_method(self, name: str):
+        self.__ensure_initialized()
+        return self.__methods.pop(name, None)
+
+    def get_entry(self, name: str):
+        self.__ensure_initialized()
+        return self.__methods.get(name, None)
+
+    def get_method(self, name: str):
+        result = self.get_entry(name)
+        if result is None:
+            return None
+        return result.method
+
+    def get_param_type(self, name: str):
+        result = self.get_entry(name)
+        if result is None:
+            return None
+        return result.param_type
+
+
+def _json_rpc_message_from_dict(
+    data: Union[Dict[Any, Any], List[Dict[Any, Any]]]
+) -> Generator[JsonRPCMessage, None, None]:
+    def inner(d):
+        if "jsonrpc" in d:
+            if d["jsonrpc"] != PROTOCOL_VERSION:
+                raise InvalidProtocolVersionException("Invalid JSON-RPC2 protocol version.")
+
+            if "id" in d:
+                if "method" in d:
+                    return JsonRPCRequest(**d)
+                else:
+                    if "error" in d:
+                        error = d.pop("error")
+                        return JsonRPCError(error=JsonRPCErrorObject(**error), **d)
+
+                    return JsonRPCResponse(**d)
+            else:
+                return JsonRPCNotification(**d)
+        raise JsonRPCException("Invalid JSON-RPC2 Message")
+
+    if isinstance(data, list):
+        for e in data:
+            yield inner(e)
+    else:
+        yield inner(data)
+
+
+T = TypeVar("T")
+TResult = TypeVar("TResult")
+
+
+class _RequestFuturesEntry(NamedTuple):
+    future: asyncio.Future
+    result_type: Optional[Type[Any]]
 
 
 class JsonRPCProtocol(asyncio.Protocol):
+
     _logger = LoggerInstance()
     _message_logger = LoggerInstance(postfix=".message")
+    registry = RpcRegistry()
 
     def __init__(self, server: Optional["JsonRPCServer"]):
         self.server = server
         self.transport: Optional[asyncio.Transport] = None
+        self._request_futures: Dict[Union[str, int], _RequestFuturesEntry] = {}
         self._message_buf = bytes()
 
     @_logger.call
     def connection_made(self, transport: asyncio.BaseTransport):
         self.transport = cast(asyncio.Transport, transport)
+
+    def eof_received(self):
+        pass
 
     CHARSET = "utf-8"
     CONTENT_TYPE = "application/vscode-jsonrpc"
@@ -170,21 +324,38 @@ class JsonRPCProtocol(asyncio.Protocol):
 
             body, data = body[:length], body[length:]
             self._message_buf = bytes()
-            message = None
             try:
-                message = json_rpc_message_from_dict(json.loads(body.decode(charset)))
+                self._handle_messages_generator(_json_rpc_message_from_dict(json.loads(body.decode(charset))))
             except BaseException as e:
+                self._logger.exception(e)
                 self.send_error(JsonRPCErrors.PARSE_ERROR, str(e))
-                return
 
-            self.handle_message(message)
+    def _handle_messages_generator(self, generator: Generator[JsonRPCMessage, None, None]):
+        def done(f: asyncio.Future):
+            ex = f.exception()
+            if ex is not None:
+                self._logger.exception(ex)
 
-    def eof_received(self):
-        pass
+        for m in generator:
+            future = asyncio.ensure_future(
+                self.handle_message(m), loop=self.server.loop if self.server is not None else None
+            )
+            future.add_done_callback(done)
+
+    @_logger.call
+    async def handle_message(self, message: JsonRPCMessage):
+        if isinstance(message, JsonRPCRequest):
+            await self.handle_request(message)
+        elif isinstance(message, JsonRPCNotification):
+            await self.handle_notification(message)
+        elif isinstance(message, JsonRPCError):
+            await self.handle_error(message)
+        elif isinstance(message, JsonRPCResponse):
+            await self.handle_response(message)
 
     @_logger.call
     def send_response(self, id: Optional[Union[str, int, None]], result: Optional[Any] = None):
-        self.send_data(JsonRPCResponseMessage(id=id, result=result))
+        self.send_data(JsonRPCResponse(id=id, result=result))
 
     @_logger.call
     def send_error(
@@ -199,7 +370,7 @@ class JsonRPCProtocol(asyncio.Protocol):
             error_obj.data = data
 
         self.send_data(
-            JsonRPCErrorMessage(
+            JsonRPCError(
                 id=id,
                 error=error_obj,
             )
@@ -222,153 +393,149 @@ class JsonRPCProtocol(asyncio.Protocol):
         if self.transport is not None:
             self.transport.write(header + body)
 
-    @_logger.call
-    def handle_message(self, message: Union[JsonRPCMessage, List[JsonRPCMessage]]):
-        if isinstance(message, list):
-            for m in message:
-                self.handle_message(m)
-        elif isinstance(message, JsonRPCRequestMessage):
-            self.handle_request(message)
-        elif isinstance(message, JsonRPCNotification):
-            self.handle_notification(message)
-        elif isinstance(message, JsonRPCNotification):
-            self.handle_notification(message)
-        elif isinstance(message, JsonRPCResponseMessage):
-            self.handle_respose(message)
+    def send_request(self, method: str, params: Any, return_type: Type[TResult] = None) -> asyncio.Future[TResult]:
+        result: asyncio.Future[TResult] = (
+            self.server.loop if self.server is not None else asyncio.get_event_loop()
+        ).create_future()
+
+        id = str(uuid.uuid4())
+
+        self._request_futures[id] = _RequestFuturesEntry(result, return_type)
+
+        self.send_data(JsonRPCRequest(id=id, method=method, params=params))
+
+        return result
+
+    async def send_request_async(self, method: str, params: Any, return_type: Type[TResult] = None) -> TResult:
+        return await self.send_request(method, params, return_type)
+
+    def send_notification(self, method: str, params: Any):
+        self.send_data(JsonRPCNotification(method=method, params=params))
+
+    @staticmethod
+    def _convert_value(value: Any, type: Optional[Type[TResult]]) -> Any:
+        if type is None:
+            return value
+
+        if isinstance(value, type):
+            return value
+
+        if issubclass(type, BaseModel):
+            return type.parse_obj(value)
+
+        if callable(type):
+            return cast(Callable[..., Any], type)(value)
+
+        return value
+
+    @_logger.call(exception=True)
+    async def handle_response(self, message: JsonRPCResponse):
+        if message.id is None:
+            error = "Invalid response. Response id is null"
+            self._logger.warning(error)
+            self.send_error(JsonRPCErrors.INTERNAL_ERROR, error)
+            return
+
+        entry = self._request_futures.pop(message.id, None)
+        if entry is None:
+            error = f"Invalid response. Could not find id '{message.id}' in our request list"
+            self._logger.warning(error)
+            self.send_error(JsonRPCErrors.INTERNAL_ERROR, error)
+            return
+
+        try:
+            entry.future.set_result(self._convert_value(message.result, entry.result_type))
+        except BaseException as e:
+            entry.future.set_exception(e)
 
     @_logger.call
-    def handle_request(self, message: JsonRPCRequestMessage):
-        if self.server is not None:
-            self.server.handle_request(message)
+    async def handle_error(self, message: JsonRPCError):
+        raise NotImplementedError()
 
-    @_logger.call
-    def handle_notification(self, message: JsonRPCNotification):
-        if self.server is not None:
-            self.server.handle_notification(message)
+    def _convert_params(
+        self, callable: Callable[..., Any], param_type: Optional[Type], params: Any
+    ) -> Tuple[List, Dict[str, Any]]:
+        if params is None:
+            return ([], {})
+        if param_type is None:
+            if isinstance(params, Mapping):
+                return ([], dict(**params))
+            else:
+                return ([params], {})
 
-    @_logger.call
-    def handle_respose(self, message: JsonRPCResponseMessage):
-        if self.server is not None:
-            self.server.handle_respose(message)
-
-
-class RpcMethodEntry(NamedTuple):
-    method: Callable[..., Any]
-    param_type: Type
-
-
-@runtime_checkable
-class RpcMethod(Protocol):
-    __rpc_method__: RpcMethodEntry
-
-
-F = TypeVar("F", bound=Callable[..., Any])
-
-
-@overload
-def rpc_method(func: Callable[..., Any]) -> Callable[[F], F]:
-    ...
-
-
-@overload
-def rpc_method(*, name: str = None, param_type: Type = object) -> Callable[[F], F]:
-    ...
-
-
-def rpc_method(func: Callable[..., Any] = None, *, name: str = None, param_type: Type = object) -> Callable[[F], F]:
-    def _decorator(_func: Callable[..., Any]):
-
-        if inspect.isclass(func):
-            raise Exception(f"Not supported type {type(_func)}.")
-
-        if isinstance(_func, classmethod):
-            f = cast(classmethod, _func).__func__
-        elif isinstance(_func, staticmethod):
-            f = cast(staticmethod, _func).__func__
+        # try to convert the dict to correct type
+        if issubclass(type, BaseModel):
+            converted_params = param_type.parse_obj(params)
         else:
-            f = _func
+            converted_params = param_type(**params)
 
-        real_name = name if name is not None else f.__name__ if f is not None else None
-        if real_name is None or not real_name:
-            raise Exception("name is empty.")
+        signature = inspect.signature(callable)
 
-        cast(RpcMethod, f).__rpc_method__ = RpcMethodEntry(f, param_type)
+        has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in signature.parameters.values())
 
-        return _func
+        kw_args = {}
+        args = []
+        params_added = False
+        rest = list(converted_params.__dict__.keys())
+        for v in signature.parameters.values():
+            if v.name in converted_params.__dict__:
+                if v.kind == inspect.Parameter.POSITIONAL_ONLY:
+                    args.append(getattr(converted_params, v.name))
+                elif has_var_kw:
+                    kw_args[v.name] = getattr(converted_params, v.name)
+                rest.remove(v.name)
+            elif v.name == "params":
+                if v.kind == inspect.Parameter.POSITIONAL_ONLY:
+                    args.append(converted_params)
+                    params_added = True
+                else:
+                    kw_args[v.name] = converted_params
+                    params_added = True
+        if has_var_kw:
+            for r in rest:
+                kw_args[r] = getattr(converted_params, r)
+            if not params_added:
+                kw_args["params"] = converted_params
+        return (args, kw_args)
 
-    if func is None:
-        return _decorator
-    return cast(Callable[[F], F], _decorator(func))
+    async def handle_request(self, message: JsonRPCRequest):
+        e = self.registry.get_entry(message.method)
 
+        if e is None or not callable(e.method):
+            self.send_error(
+                JsonRPCErrors.METHOD_NOT_FOUND,
+                f"Unknown method: {message.method}",
+                id=message.id,
+            )
+            return
 
-class RpcRegistry:
-    __owner: Any = None
-    __owner_name: str = ""
+        try:
+            params = self._convert_params(e.method, e.param_type, message.params)
 
-    def __init__(self, owner: Any = None, parent: "RpcRegistry" = None):
-        self.__initialized = False
-        self.__owner = owner
-        self.__parent = parent
-        self.__methods: Dict[str, RpcMethodEntry] = {}
-        self.__childs: Dict[Tuple[Any, Type], RpcRegistry] = {}
+            # if asyncio.iscoroutinefunction(e.method):
+            #     result = await e.method(*params[0], **params[1])
+            # else:
+            result = e.method(*params[0], **params[1])
 
-    def __set_name__(self, owner: Any, name: str):
-        self.__owner = owner
-        self.__owner_name = name
+            if inspect.isawaitable(result):
+                self.send_response(message.id, await result)
+            else:
+                self.send_response(message.id, result)
+        except BaseException as e:
+            self.send_error(JsonRPCErrors.INTERNAL_ERROR, str(e), id=message.id)
 
-    def __get__(self, obj: Any, objtype: Type) -> "RpcRegistry":
-        if obj is None and objtype == self.__owner:
-            return self
+    async def handle_notification(self, message: JsonRPCNotification):
+        e = self.registry.get_entry(message.method)
 
-        if (obj, objtype) not in self.__childs:
-            self.__childs[(obj, objtype)] = RpcRegistry(obj, self)
+        if e is None or not callable(e.method):
+            self._logger.warning(f"Unknown method: {message.method}")
+            # self.send_error(JsonRPCErrors.METHOD_NOT_FOUND, f"Unknown method: {message.method}")
+            return
 
-        return self.__childs[(obj, objtype)]
-
-    def __ensure_initialized(self):
-        if not self.__initialized:
-            self.__methods = {
-                k: RpcMethodEntry(
-                    getattr(self.__owner, k), cast(RpcMethod, getattr(self.__owner, k)).__rpc_method__.param_type
-                )
-                for k in dir(self.__owner)
-                if isinstance(getattr(self.__owner, k), RpcMethod)
-            }
-        self.__initialized = True
-
-    @property
-    def methods(self) -> Dict[str, RpcMethodEntry]:
-        self.__ensure_initialized()
-
-        if self.__parent is not None:
-            return {**self.__parent.__methods, **self.__methods}
-
-        return self.__methods
-
-    def add_method(self, name: str, func: Callable[..., Any], param_type: Type = object):
-        self.__ensure_initialized()
-
-        self.__methods[name] = RpcMethodEntry(func, param_type)
-
-    def remove_method(self, name: str):
-        self.__ensure_initialized()
-        return self.__methods.pop(name, None)
-
-    def get_entry(self, name: str):
-        self.__ensure_initialized()
-        return self.__methods.get(name, None)
-
-    def get_method(self, name: str):
-        result = self.get_entry(name)
-        if result is None:
-            return None
-        return result.method
-
-    def get_param_type(self, name: str):
-        result = self.get_entry(name)
-        if result is None:
-            return None
-        return result.param_type
+        params = self._convert_params(e.method, e.param_type, message.params)
+        result = e.method(*params[0], **params[1])
+        if inspect.isawaitable(result):
+            await result
 
 
 class StdOutTransportAdapter(asyncio.Transport):
@@ -386,52 +553,88 @@ class StdOutTransportAdapter(asyncio.Transport):
         self.wfile.flush()
 
 
+class JsonRpcServerMode(Enum):
+    STDIO = "stdio"
+    TCP = "tcp"
+
+
+class StdIoParams(NamedTuple):
+    stdin: Optional[BinaryIO] = None
+    stdout: Optional[BinaryIO] = None
+
+
+TCP_DEFAULT_PORT = 6601
+
+
+class TcpParams(NamedTuple):
+    host: Optional[str] = None
+    port: int = TCP_DEFAULT_PORT
+
+
 class JsonRPCServer(ABC):
     def __init__(
         self,
+        mode: JsonRpcServerMode = JsonRpcServerMode.STDIO,
+        stdio_params: StdIoParams = StdIoParams(None, None),
+        tcp_params: TcpParams = TcpParams(None, TCP_DEFAULT_PORT),
         protocol_cls: Type[JsonRPCProtocol] = JsonRPCProtocol,
         loop: Optional[AbstractEventLoop] = None,
         max_workers: Optional[int] = None,
     ):
+        self.mode = mode
+        self.stdio_params = stdio_params
+        self.tcp_params = tcp_params
         self._max_workers = max_workers
+        self._protocol_cls = protocol_cls
+
         self._run_func: Optional[Callable[[], None]] = None
         self._server: Optional[AbstractServer] = None
 
         self._stop_event = Event()
 
-        self._thread_pool_executor: Optional[ThreadPoolExecutor] = None
-
-        self._loop = loop or asyncio.get_event_loop()
+        self.loop = loop or asyncio.get_event_loop()
 
         # self.loop.set_debug(True)
 
-        try:
-            asyncio.get_child_watcher().attach_loop(self._loop)
-        except NotImplementedError:
-            pass
-
-        self._protocol = protocol_cls(self)
+    def __del__(self):
+        self.close()
 
     _logger = LoggerInstance()
-    registry = RpcRegistry()
+
+    def start(self):
+        if self.mode == JsonRpcServerMode.STDIO:
+            self.start_stdio(self.stdio_params.stdin, self.stdio_params.stdout)
+        elif self.mode == JsonRpcServerMode.TCP:
+            self.start_tcp(self.tcp_params.host, self.tcp_params.port)
+        else:
+            raise JsonRPCException(f"Unknown server mode {self.mode}")
 
     @_logger.call
-    def shutdown(self):
+    def close(self):
         if self._stop_event is not None:
             self._stop_event.set()
 
-        if self._thread_pool_executor:
-            self._thread_pool_executor.shutdown()
-
         if self._server:
             self._server.close()
-            self._loop.run_until_complete(self._server.wait_closed())
+            self.loop.run_until_complete(self._server.wait_closed())
+            self._server = None
 
-        self._loop.close()
+        if not self.loop.is_closed():
+            self.loop.close()
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.close()
+        return False
 
     @_logger.call
-    def start_io(self, stdin: Optional[BinaryIO] = None, stdout: Optional[BinaryIO] = None):
-        async def aio_readline(rfile: BinaryIO):
+    def start_stdio(self, stdin: Optional[BinaryIO] = None, stdout: Optional[BinaryIO] = None):
+        self.mode = JsonRpcServerMode.STDIO
+
+        async def aio_readline(rfile: BinaryIO, protocol: JsonRPCProtocol):
             """Reads data from stdin in separate thread (asynchronously)."""
 
             while not self._stop_event.is_set() and not rfile.closed:
@@ -439,121 +642,29 @@ class JsonRPCServer(ABC):
                 def read():
                     return rfile.read(1)
 
-                self._protocol.data_received(await self._loop.run_in_executor(None, read))
+                protocol.data_received(await self.loop.run_in_executor(None, read))
 
         transport = StdOutTransportAdapter(stdin or sys.stdin.buffer, stdout or sys.stdout.buffer)
-        self._protocol.connection_made(transport)
+        protocol = self._protocol_cls(self)
+        protocol.connection_made(transport)
 
         def run_io():
-            self._loop.run_until_complete(aio_readline(stdin or sys.stdin.buffer))
+            self.loop.run_until_complete(aio_readline(stdin or sys.stdin.buffer, protocol))
 
         self._run_func = run_io
 
     @_logger.call
-    def start_tcp(self, host: str, port: int):
-        self._server = self._loop.run_until_complete(self._loop.create_server(lambda: self._protocol, host, port))
+    def start_tcp(self, host: Optional[str] = None, port: int = TCP_DEFAULT_PORT):
+        self.mode = JsonRpcServerMode.TCP
 
-        self._run_func = self._loop.run_forever
+        self._server = self.loop.run_until_complete(
+            self.loop.create_server(lambda: self._protocol_cls(self), host, port)
+        )
+
+        self._run_func = self.loop.run_forever
 
     def run(self):
         if self._run_func is None:
             self._logger.warning("server is not started.")
             return
         self._run_func()
-
-    @property
-    def thread_pool_executor(self) -> ThreadPoolExecutor:
-        """Returns thread pool instance (lazy initialization)."""
-        if not self._thread_pool_executor:
-            self._thread_pool_executor = ThreadPoolExecutor(
-                max_workers=self._max_workers,
-                thread_name_prefix=type(self).__qualname__,
-            )
-
-        return self._thread_pool_executor
-
-    def send_data(self, message: JsonRPCMessage):
-        self._protocol.send_data(message)
-
-    def send_error(
-        self,
-        code: int,
-        message: str,
-        id: Optional[Union[str, int, None]] = None,
-        data: Optional[Any] = None,
-    ):
-        self._protocol.send_error(code, message, id, data)
-
-    def send_response(self, id: Optional[Union[str, int, None]], result: Optional[Any] = None):
-        self._protocol.send_response(id, result)
-
-    def _convert_params(
-        self, callable: Callable[..., Any], param_type: Type, params: Any
-    ) -> Tuple[List, Dict[str, Any]]:
-        if params is None:
-            return ([], {})
-        if param_type == object:
-            if isinstance(params, Mapping):
-                return ([], dict(**params))
-
-        # try to convert the dict to correct type
-        converted = param_type(**(params or {}))
-
-        signature = inspect.signature(callable)
-
-        has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in signature.parameters.values())
-
-        kw_args = {}
-        args = []
-        params_added = False
-        rest = list(converted.__dict__.keys())
-        for v in signature.parameters.values():
-            if v.name in converted.__dict__:
-                if v.kind == inspect.Parameter.POSITIONAL_ONLY:
-                    args.append(getattr(converted, v.name))
-                elif has_var_kw:
-                    kw_args[v.name] = getattr(converted, v.name)
-                rest.remove(v.name)
-            elif v.name == "params":
-                if v.kind == inspect.Parameter.POSITIONAL_ONLY:
-                    args.append(converted)
-                    params_added = True
-        if has_var_kw:
-            for r in rest:
-                kw_args[r] = getattr(converted, r)
-            if not params_added:
-                kw_args["params"] = converted
-        return (args, kw_args)
-
-    def handle_request(self, message: JsonRPCRequestMessage):
-        e = self.registry.get_entry(message.method)
-
-        if e is None or not callable(e.method):
-            self.send_error(
-                JsonRPCErrors.METHOD_NOT_FOUND,
-                f"Unknown method: {message.method}",
-                id=message.id,
-            )
-            return
-
-        try:
-            params = self._convert_params(e.method, e.param_type, message.params)
-            self.send_response(message.id, e.method(*params[0], **params[1]))
-        except BaseException as e:
-            self.send_error(JsonRPCErrors.INTERNAL_ERROR, str(e), id=message.id)
-
-    def handle_notification(self, message: JsonRPCNotification):
-        e = self.registry.get_entry(message.method)
-
-        if e is None or not callable(e.method):
-            self.send_error(JsonRPCErrors.METHOD_NOT_FOUND, f"Unknown method: {message.method}")
-            return
-
-        try:
-            params = self._convert_params(e.method, e.param_type, message.params)
-            e.method(*params[0], **params[1])
-        except BaseException as e:
-            self.send_error(JsonRPCErrors.INTERNAL_ERROR, str(e), id=None)
-
-    def handle_respose(self, message: JsonRPCResponseMessage):
-        pass
