@@ -14,7 +14,6 @@ coloredlogs = { version = "^15.0", optional = true }
 
 [tool.poetry.dev-dependencies]
 robotframework = "^3.2.2"
-pytest = "^5.2"
 mypy = "^0.790"
 flake8 = "^3.8.4"
 black = "^20.8b1"
@@ -25,6 +24,7 @@ pylint = "^2.6.0"
 debugpy = "^1.2.0"
 rope = "^0.18.0"
 pytest-asyncio = "^0.14.0"
+pytest = "^6.2.1"
 
 [tool.poetry-dynamic-versioning]
 enable = true
@@ -57,3 +57,10 @@ exclude = '''
   )/  
 )
 '''
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -vv"
+testpaths = [
+    "tests",    
+]

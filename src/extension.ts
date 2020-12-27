@@ -214,9 +214,7 @@ function displayProgress(promise: Promise<any>) {
 }
 
 export async function activate(context: vscode.ExtensionContext) {
-
     displayProgress(activateAsync(context));
-
 }
 
 export function deactivate(): Thenable<void> {

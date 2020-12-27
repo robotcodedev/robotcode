@@ -1,10 +1,8 @@
+import asyncio
 import json
-from robotcode.server.types import MessageActionItem
 from typing import List, Optional, cast
 
 import pytest
-import asyncio
-
 
 from robotcode.server.jsonrpc2_server import (
     JsonRPCError,
@@ -16,6 +14,7 @@ from robotcode.server.jsonrpc2_server import (
     JsonRPCResponse,
     JsonRPCServer,
 )
+from robotcode.server.types import MessageActionItem
 
 
 class DummyJsonRPCProtocol(JsonRPCProtocol):
