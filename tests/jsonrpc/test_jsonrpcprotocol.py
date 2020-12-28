@@ -1,6 +1,6 @@
 import asyncio
 import json
-from typing import List, Optional, cast
+from typing import Any, Dict, List, Optional, cast
 
 import pytest
 
@@ -153,6 +153,26 @@ async def test_receive_invalid_id_in_response_should_send_an_error():
 
 
 @pytest.mark.asyncio
+async def test_send_request_receive_response_should_without_param_type_work():
+    protocol = DummyJsonRPCProtocol(None)
+
+    r = protocol.send_request("dummy/method", ["dummy", "data"])
+
+    msg = JsonRPCResponse(
+        id=cast(JsonRPCRequest, protocol.sended_message).id, result=MessageActionItem(title="hi there")
+    )
+    json_message = msg.json().encode("utf-8")
+    header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
+    data = header + json_message
+    await protocol.data_received_async(data)
+
+    a = await asyncio.wait_for(r, 10)
+
+    assert isinstance(a, dict)
+    assert a == {"title": "hi there"}
+
+
+@pytest.mark.asyncio
 async def test_receive_response_should_work_with_pydantic_model():
     protocol = DummyJsonRPCProtocol(None)
 
@@ -172,10 +192,48 @@ async def test_receive_response_should_work_with_pydantic_model():
 
 
 @pytest.mark.asyncio
-async def test_receive_response_should_work_with_pydantic_model_in_list():
+async def test_receive_response_should_work_with_converter():
+    protocol = DummyJsonRPCProtocol(None)
+
+    r = protocol.send_request("dummy/method", ["dummy", "data"], lambda v: [MessageActionItem.parse_obj(e) for e in v])
+
+    msg = JsonRPCResponse(
+        id=cast(JsonRPCRequest, protocol.sended_message).id, result=[MessageActionItem(title="hi there")]
+    )
+    json_message = msg.json().encode("utf-8")
+    header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
+    data = header + json_message
+    await protocol.data_received_async(data)
+
+    a = await asyncio.wait_for(r, 10)
+
+    assert a == [MessageActionItem(title="hi there")]
+
+
+@pytest.mark.asyncio
+async def test_receive_response_should_work_with_generic_list():
     protocol = DummyJsonRPCProtocol(None)
 
     r = protocol.send_request("dummy/method", ["dummy", "data"], List[MessageActionItem])
+
+    msg = JsonRPCResponse(
+        id=cast(JsonRPCRequest, protocol.sended_message).id, result=[MessageActionItem(title="hi there")]
+    )
+    json_message = msg.json().encode("utf-8")
+    header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
+    data = header + json_message
+    await protocol.data_received_async(data)
+
+    a = await asyncio.wait_for(r, 10)
+
+    assert a == [MessageActionItem(title="hi there")]
+
+
+@pytest.mark.asyncio
+async def test_receive_response_with_generic_dict_should_return_unchanged():
+    protocol = DummyJsonRPCProtocol(None)
+
+    r = protocol.send_request("dummy/method", ["dummy", "data"], List[Dict[str, Any]])
 
     msg = JsonRPCResponse(
         id=cast(JsonRPCRequest, protocol.sended_message).id, result=[MessageActionItem(title="hi there")]

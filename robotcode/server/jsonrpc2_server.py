@@ -27,10 +27,9 @@ from typing import (
     overload,
     runtime_checkable,
 )
-from _pytest.mark import param
 
 from pydantic import BaseModel, Field
-from pydantic.typing import is_callable_type
+from pydantic.typing import get_origin, get_args
 
 from .logging_helpers import LoggerInstance
 
@@ -266,7 +265,36 @@ TResult = TypeVar("TResult")
 
 class _RequestFuturesEntry(NamedTuple):
     future: asyncio.Future
-    result_type: Optional[Type[Any]]
+    result_type: Union[Type, Callable[[Any], Any], None]
+
+
+def _try_convert_value(value: Any, value_type_or_converter: Union[Type[Any], Callable[[Any], Any], None]) -> Any:
+    if value_type_or_converter is None or value_type_or_converter == Any:
+        return value
+    if isinstance(value_type_or_converter, type):
+        if isinstance(value, value_type_or_converter):
+            return value
+
+        if issubclass(value_type_or_converter, BaseModel):
+            return value_type_or_converter.parse_obj(value)
+    elif get_origin(cast(Type, value_type_or_converter)) == list and isinstance(value, list):
+        p = get_args(cast(Type, value_type_or_converter))
+        if len(p) > 0:
+            return [_try_convert_value(e, p[0]) for e in value]
+        else:
+            return value
+    elif get_origin(cast(Type, value_type_or_converter)) == dict and isinstance(value, dict):
+        p = get_args(cast(Type, value_type_or_converter))
+        if len(p) > 1:
+            return {_try_convert_value(k, p[0]): _try_convert_value(v, p[1]) for k, v in value.items()}
+        else:
+            return value
+    elif get_origin(cast(Type, value_type_or_converter)) is not None:
+        return get_origin(cast(Type, value_type_or_converter))(value)
+    elif callable(value_type_or_converter):
+        return value_type_or_converter(value)
+
+    return value
 
 
 class JsonRPCProtocol(asyncio.Protocol):
@@ -393,14 +421,19 @@ class JsonRPCProtocol(asyncio.Protocol):
         if self.transport is not None:
             self.transport.write(header + body)
 
-    def send_request(self, method: str, params: Any, return_type: Type[TResult] = None) -> asyncio.Future[TResult]:
+    def send_request(
+        self,
+        method: str,
+        params: Any,
+        return_type_or_converter: Union[Type[TResult], Callable[[Any], TResult], None] = None,
+    ) -> asyncio.Future[TResult]:
         result: asyncio.Future[TResult] = (
             self.server.loop if self.server is not None else asyncio.get_event_loop()
         ).create_future()
 
         id = str(uuid.uuid4())
 
-        self._request_futures[id] = _RequestFuturesEntry(result, return_type)
+        self._request_futures[id] = _RequestFuturesEntry(result, return_type_or_converter)
 
         self.send_data(JsonRPCRequest(id=id, method=method, params=params))
 
@@ -411,22 +444,6 @@ class JsonRPCProtocol(asyncio.Protocol):
 
     def send_notification(self, method: str, params: Any):
         self.send_data(JsonRPCNotification(method=method, params=params))
-
-    @staticmethod
-    def _convert_value(value: Any, type: Optional[Type[TResult]]) -> Any:
-        if type is None:
-            return value
-
-        if isinstance(value, type):
-            return value
-
-        if issubclass(type, BaseModel):
-            return type.parse_obj(value)
-
-        if callable(type):
-            return cast(Callable[..., Any], type)(value)
-
-        return value
 
     @_logger.call(exception=True)
     async def handle_response(self, message: JsonRPCResponse):
@@ -444,7 +461,7 @@ class JsonRPCProtocol(asyncio.Protocol):
             return
 
         try:
-            entry.future.set_result(self._convert_value(message.result, entry.result_type))
+            entry.future.set_result(_try_convert_value(message.result, entry.result_type))
         except BaseException as e:
             entry.future.set_exception(e)
 

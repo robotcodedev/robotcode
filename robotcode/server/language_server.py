@@ -41,7 +41,7 @@ class WindowProtocol(JsonRPCProtocol):
         return await self.send_request(
             "window/showMessageRequest",
             ShowMessageRequestParams(type=type, message=message, actions=[MessageActionItem(title=a) for a in actions]),
-            return_type=MessageActionItem,
+            return_type_or_converter=MessageActionItem,
         )
 
 
