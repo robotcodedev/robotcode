@@ -10,7 +10,8 @@
 			"type": "python",
 			"request": "launch",
 			"program": "${file}",
-			"console": "integratedTerminal"
+			"console": "integratedTerminal",
+			"justMyCode": false
 		},
 		{
 			"name": "Python: Attach to 5678",

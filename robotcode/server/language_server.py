@@ -1,57 +1,71 @@
+import uuid
 from asyncio.events import AbstractEventLoop
 from typing import List, Optional, Type
-import uuid
 
+from .. import __version__
+from ..utils.logging import LoggingDescriptor
+from .jsonrpc2_server import (
+    JsonRPCException,
+    TCP_DEFAULT_PORT,
+    JsonRPCProtocol,
+    JsonRPCServer,
+    JsonRpcServerMode,
+    ProtocolPartDescriptor,
+    StdIoParams,
+    TcpParams,
+    rpc_method,
+)
 from .types import (
     ClientCapabilities,
     InitializedParams,
     InitializeParams,
     InitializeResult,
-    MessageActionItem,
-    MessageType,
+    SaveOptions,
     ServerCapabilities,
-    ShowMessageParams,
-    ShowMessageRequestParams,
     TextDocumentSyncKind,
+    TextDocumentSyncOptions,
     WorkspaceFolder,
     WorkspaceFoldersServerCapabilities,
 )
-
-from .. import __version__
-from .jsonrpc2_server import (
-    JsonRPCProtocol,
-    JsonRPCServer,
-    JsonRpcServerMode,
-    StdIoParams,
-    TCP_DEFAULT_PORT,
-    TcpParams,
-    rpc_method,
-)
-from .logging_helpers import LoggerInstance
-from .workspace_handler import WorkSpaceProtocol
+from .window import WindowProtocolPart
+from .workspace import WorkSpaceProtocolPart
+from .documents import TextDocumentProtocolPart
 
 
-class WindowProtocol(JsonRPCProtocol):
-    def show_message(self, message: str, type: MessageType = MessageType.Info):
-        self.send_notification("window/showMessage", ShowMessageParams(type=type, message=message))
+class LanguageServerException(JsonRPCException):
+    pass
 
-    async def show_message_request(
-        self, message: str, actions: List[str] = [], type: MessageType = MessageType.Info
-    ) -> MessageActionItem:
-        return await self.send_request(
-            "window/showMessageRequest",
-            ShowMessageRequestParams(type=type, message=message, actions=[MessageActionItem(title=a) for a in actions]),
-            return_type_or_converter=MessageActionItem,
+
+class LanguageServerProtocol(JsonRPCProtocol):
+
+    _logger = LoggingDescriptor()
+
+    def __init__(self, server: Optional[JsonRPCServer]):
+        super().__init__(server)
+        self.client_capabilities: Optional[ClientCapabilities] = None
+        self.shutdown_received = False
+        self.capabilities = ServerCapabilities(
+            text_document_sync=TextDocumentSyncOptions(
+                open_close=True,
+                change=TextDocumentSyncKind.INCREMENTAL,
+                will_save=True,
+                will_save_wait_until=True,
+                save=SaveOptions(include_text=True),
+            ),
+            workspace=ServerCapabilities.Workspace(
+                workspace_folders=WorkspaceFoldersServerCapabilities(
+                    supported=True, change_notifications=str(uuid.uuid4())
+                )
+            ),
         )
 
+    window = ProtocolPartDescriptor(WindowProtocolPart)
+    workspace = ProtocolPartDescriptor(WorkSpaceProtocolPart)
+    documents = ProtocolPartDescriptor(TextDocumentProtocolPart)
 
-class LanguageServerProtocol(WindowProtocol, WorkSpaceProtocol, JsonRPCProtocol):
-    client_capabilities: Optional[ClientCapabilities] = None
-    _logger = LoggerInstance()
-
-    @rpc_method(param_type=InitializeParams)
+    @rpc_method(name="initialize", param_type=InitializeParams)
     @_logger.call
-    def initialize(
+    def _initialize(
         self,
         capabilities: ClientCapabilities,
         root_path: Optional[str] = None,
@@ -60,37 +74,26 @@ class LanguageServerProtocol(WindowProtocol, WorkSpaceProtocol, JsonRPCProtocol)
         **kwargs,
     ):
         self.client_capabilities = capabilities
-        self.workspace = self.create_workspace(
-            root_uri=root_uri, root_path=root_path, workspace_folders=workspace_folders
-        )
+        self.workspace.init(root_uri=root_uri, root_path=root_path, workspace_folders=workspace_folders)
+
         return InitializeResult(
-            capabilities=ServerCapabilities(
-                text_document_sync=TextDocumentSyncKind.FULL,
-                workspace=ServerCapabilities.Workspace(
-                    workspace_folders=WorkspaceFoldersServerCapabilities(
-                        supported=True, change_notifications=str(uuid.uuid4())
-                    )
-                ),
-            ),
+            capabilities=self.capabilities,
             server_info=InitializeResult.ServerInfo(name="robotcode LanguageServer", version=__version__),
         )
 
-    @rpc_method(param_type=InitializedParams)
+    @rpc_method(name="initialized", param_type=InitializedParams)
     @_logger.call
-    async def initialized(self, params: InitializedParams):
+    async def _initialized(self, params: InitializedParams):
         pass
 
-    shutdown_received = False
-
-    @rpc_method
+    @rpc_method(name="shutdown")
     @_logger.call
     def shutdown(self):
-        self.workspace = None
         self.shutdown_received = True
 
-    @rpc_method
+    @rpc_method(name="exit")
     @_logger.call
-    def exit(self):
+    def _exit(self):
         raise SystemExit(0 if self.shutdown_received else 1)
 
 
@@ -102,7 +105,6 @@ class LanguageServer(JsonRPCServer):
         tcp_params: TcpParams = TcpParams(None, TCP_DEFAULT_PORT),
         protocol_cls: Type[JsonRPCProtocol] = LanguageServerProtocol,
         loop: Optional[AbstractEventLoop] = None,
-        max_workers: Optional[int] = None,
     ):
         super().__init__(
             mode=mode,
@@ -110,5 +112,4 @@ class LanguageServer(JsonRPCServer):
             tcp_params=tcp_params,
             protocol_cls=protocol_cls,
             loop=loop,
-            max_workers=max_workers,
         )

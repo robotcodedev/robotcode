@@ -7,9 +7,13 @@ from pydantic import BaseModel
 
 ProgressToken = Union[str, int]
 DocumentUri = str
+URI = str
 
 
 class Model(BaseModel):
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+
     class Config:
 
         allow_population_by_field_name = True
@@ -562,9 +566,32 @@ class TextDocumentSyncKind(Enum):
     INCREMENTAL = 2
 
 
+class SaveOptions(Model):
+    include_text: Optional[bool]
+
+
 class TextDocumentSyncOptions(Model):
+    def __init__(
+        self,
+        open_close: Optional[bool] = None,
+        change: Optional[TextDocumentSyncKind] = None,
+        will_save: Optional[bool] = None,
+        will_save_wait_until: Optional[bool] = None,
+        save: Union[bool, SaveOptions, None] = None,
+    ) -> None:
+        super().__init__(  # type: ignore
+            open_close=open_close,
+            change=change,
+            will_save=will_save,
+            will_save_wait_until=will_save_wait_until,
+            save=save,
+        )
+
     open_close: Optional[bool] = None
     change: Optional[TextDocumentSyncKind] = None
+    will_save: Optional[bool] = None
+    will_save_wait_until: Optional[bool] = None
+    save: Union[bool, SaveOptions, None] = None
 
 
 class ServerCapabilities(Model):
@@ -631,6 +658,75 @@ class DidChangeConfigurationParams(Model):
     settings: Any
 
 
+class Position(Model):
+    def __init__(self, line: int, character: int) -> None:
+        super().__init__(line=line, character=character)  # type: ignore
+
+    line: int
+    character: int
+
+    def __ge__(self, other):
+        line_gt = self.line > other.line
+
+        if line_gt:
+            return line_gt
+
+        if self.line == other.line:
+            return self.character >= other.character
+
+        return False
+
+    def __gt__(self, other):
+        line_gt = self.line > other.line
+
+        if line_gt:
+            return line_gt
+
+        if self.line == other.line:
+            return self.character > other.character
+
+        return False
+
+    def __le__(self, other):
+        line_lt = self.line < other.line
+
+        if line_lt:
+            return line_lt
+
+        if self.line == other.line:
+            return self.character <= other.character
+
+        return False
+
+    def __lt__(self, other):
+        line_lt = self.line < other.line
+
+        if line_lt:
+            return line_lt
+
+        if self.line == other.line:
+            return self.character < other.character
+
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __iter__(self):
+        return iter((self.line, self.character))
+
+
+class Range(Model):
+    def __init__(self, start: Position, end: Position) -> None:
+        super().__init__(start=start, end=end)  # type: ignore
+
+    start: Position
+    end: Position
+
+    def __iter__(self):
+        return iter((self.start, self.end))
+
+
 class TextDocumentItem(Model):
     uri: DocumentUri
     language_id: str
@@ -640,6 +736,41 @@ class TextDocumentItem(Model):
 
 class DidOpenTextDocumentParams(Model):
     text_document: TextDocumentItem
+
+
+class TextDocumentIdentifier(Model):
+    uri: DocumentUri
+
+
+class OptionalVersionedTextDocumentIdentifier(TextDocumentIdentifier):
+    version: Optional[int] = None
+
+
+class VersionedTextDocumentIdentifier(TextDocumentIdentifier):
+    version: int
+
+
+class DidCloseTextDocumentParams(Model):
+    text_document: TextDocumentIdentifier
+
+
+class TextDocumentContentRangeChangeEvent(Model):
+    range: Range
+    range_length: Optional[int] = None
+
+    text: str
+
+
+class TextDocumentContentTextChangeEvent(Model):
+    text: str
+
+
+TextDocumentContentChangeEvent = Union[TextDocumentContentRangeChangeEvent, TextDocumentContentTextChangeEvent]
+
+
+class DidChangeTextDocumentParams(Model):
+    text_document: VersionedTextDocumentIdentifier
+    content_changes: List[TextDocumentContentChangeEvent]
 
 
 class ConfigurationItem(Model):
@@ -663,9 +794,49 @@ class ShowMessageParams(Model):
     message: str
 
 
+class LogMessageParams(Model):
+    type: MessageType
+    message: str
+
+
 class MessageActionItem(Model):
     title: str
 
 
 class ShowMessageRequestParams(ShowMessageParams):
     actions: Optional[List[MessageActionItem]] = None
+
+
+class ShowDocumentParams(Model):
+    uri: URI
+    external: Optional[bool] = None
+    take_focus: Optional[bool] = None
+    selection: Optional[Range] = None
+
+
+class ShowDocumentResult(Model):
+    success: bool
+
+
+class TextDocumentSaveReason(IntEnum):
+    Manual = 1
+    AfterDelay = 2
+    FocusOut = 3
+
+
+class WillSaveTextDocumentParams(Model):
+    text_document: TextDocumentIdentifier
+    reason: TextDocumentSaveReason
+
+
+class TextEdit(Model):
+    def __init__(self, range: Range, new_text: str) -> None:
+        super().__init__(range=range, new_text=new_text)  # type: ignore
+
+    range: Range
+    new_text: str
+
+
+class DidSaveTextDocumentParams(Model):
+    text_document: TextDocumentIdentifier
+    text: Optional[str] = None

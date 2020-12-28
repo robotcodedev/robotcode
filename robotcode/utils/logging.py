@@ -5,7 +5,7 @@ from types import FunctionType, MethodType
 from typing import Any, Callable, List, Mapping, Optional, Type, TypeVar, Union, cast, overload
 import collections
 
-__all__ = ["LoggerInstance"]
+__all__ = ["LoggingDescriptor"]
 
 
 def get_class_that_defined_method(meth: Callable):
@@ -52,7 +52,7 @@ _FUNC_TYPE = Union[Callable[[], logging.Logger], Callable[[], None], staticmetho
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 
-class LoggerInstance(logging.LoggerAdapter):
+class LoggingDescriptor(logging.LoggerAdapter):
     __func: _FUNC_TYPE = None
     __name: Optional[str] = None
     __level: Union[int, str] = logging.NOTSET
@@ -81,7 +81,7 @@ class LoggerInstance(logging.LoggerAdapter):
         self.__postfix = postfix
         self.extra = extra
 
-    def __init_logger(self) -> "LoggerInstance":
+    def __init_logger(self) -> "LoggingDescriptor":
         if self.__logger is None:
             returned_logger = None
 
@@ -127,17 +127,17 @@ class LoggerInstance(logging.LoggerAdapter):
         self.__owner = owner
         self.__owner_name = name
 
-    def __call__(self, _func: _FUNC_TYPE = None) -> "LoggerInstance":
+    def __call__(self, _func: _FUNC_TYPE = None) -> "LoggingDescriptor":
         if _func is not None:
             self.__func = _func
 
         return self
 
-    def __get__(self, obj: Any, objtype: Type) -> "LoggerInstance":
+    def __get__(self, obj: Any, objtype: Type) -> "LoggingDescriptor":
         return self
 
-    def log(self, level: int, msg: Any, *args, **kwargs):
-        if self.isEnabledFor(level):
+    def log(self, level: int, msg: Any, condition: Callable[[], bool] = None, *args, **kwargs):
+        if self.isEnabledFor(level) and (condition is not None and condition() or condition is None):
             super().log(level, msg() if callable(msg) else msg, *args, **kwargs)
 
     # Bare decorator usage
@@ -221,11 +221,15 @@ class LoggerInstance(logging.LoggerAdapter):
                 def log(message, *, state, log_level=None, **log_kwargs):
                     if has_logging_entries():
                         for c in get_logging_entries():
-                            if c.states[state] and (c.condition is None or c.condition(*real_args, **wrapper_kwargs)):
-                                state_msg = (state + " ") if state != "entering" or c.states["exiting"] else ""
+                            if c.states[state]:
+
+                                def state_msg():
+                                    return (state + " ") if state != "entering" or c.states["exiting"] else ""
+
                                 self.log(
                                     log_level if log_level is not None else c.level,
-                                    lambda: f"{state_msg}{prefix}{message()}",
+                                    lambda: f"{state_msg()}{prefix}{message()}",
+                                    condition=lambda: c.condition is None or c.condition(*real_args, **wrapper_kwargs),
                                     **{**kwargs, **log_kwargs},
                                 )
 

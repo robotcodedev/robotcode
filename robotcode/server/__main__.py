@@ -25,9 +25,9 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
 
 
 from .. import __version__
-from .logging_helpers import LoggerInstance
+from ..utils.logging import LoggingDescriptor
 
-_logger = LoggerInstance(name=__package__)
+_logger = LoggingDescriptor(name=__package__)
 
 try:
     __import__("pydantic")

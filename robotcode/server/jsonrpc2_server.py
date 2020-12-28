@@ -14,11 +14,13 @@ from typing import (
     Callable,
     Dict,
     Generator,
+    Generic,
     List,
     Mapping,
     NamedTuple,
     Optional,
     Protocol,
+    Set,
     Tuple,
     Type,
     TypeVar,
@@ -29,9 +31,9 @@ from typing import (
 )
 
 from pydantic import BaseModel, Field
-from pydantic.typing import get_origin, get_args
+from pydantic.typing import get_args, get_origin
 
-from .logging_helpers import LoggerInstance
+from ..utils.logging import LoggingDescriptor
 
 __all__ = [
     "JsonRPCErrors",
@@ -48,7 +50,11 @@ __all__ = [
     "InvalidProtocolVersionException",
     "rpc_method",
     "RpcRegistry",
+    "JsonRPCProtocolPart",
 ]
+
+T = TypeVar("T")
+TResult = TypeVar("TResult")
 
 
 class JsonRPCErrors:
@@ -129,12 +135,12 @@ def rpc_method(func: Callable[..., Any]) -> Callable[[TCallable], TCallable]:
 
 
 @overload
-def rpc_method(*, name: str = None, param_type: Type = object) -> Callable[[TCallable], TCallable]:
+def rpc_method(*, name: str = None, param_type: Type = None) -> Callable[[TCallable], TCallable]:
     ...
 
 
 def rpc_method(
-    func: Callable[..., Any] = None, *, name: str = None, param_type: Type = object
+    func: Callable[..., Any] = None, *, name: str = None, param_type: Type = None
 ) -> Callable[[TCallable], TCallable]:
     def _decorator(_func: Callable[..., Any]):
 
@@ -169,6 +175,8 @@ class RpcRegistry:
         self.__parent = parent
         self.__methods: Dict[str, RpcMethodEntry] = {}
         self.__childs: Dict[Tuple[Any, Type], RpcRegistry] = {}
+        self.__class_parts: Set[Type] = set()
+        self.__class_part_instances: Dict[Type, Any] = {}
 
     def __set_name__(self, owner: Any, name: str):
         self.__owner = owner
@@ -179,21 +187,38 @@ class RpcRegistry:
             return self
 
         if (obj, objtype) not in self.__childs:
-            self.__childs[(obj, objtype)] = RpcRegistry(obj, self)
+            self.__childs[(obj, objtype)] = RpcRegistry(obj or objtype, self)
 
         return self.__childs[(obj, objtype)]
 
+    def add_class_part(self, class_type: Type):
+        self.__class_parts.add(class_type)
+
+    def get_part_instance(self, class_type: Type[TResult], *args, **kwargs) -> TResult:
+        if class_type not in self.__class_part_instances:
+            self.__class_part_instances[class_type] = cast(Callable[..., Any], class_type)(*args, **kwargs)
+        return self.__class_part_instances[class_type]
+
     def __ensure_initialized(self):
-        if not self.__initialized:
-            self.__methods = {
-                cast(RpcMethod, getattr(self.__owner, k)).__rpc_method__.name: RpcMethodEntry(
-                    cast(RpcMethod, getattr(self.__owner, k)).__rpc_method__.name,
-                    getattr(self.__owner, k),
-                    cast(RpcMethod, getattr(self.__owner, k)).__rpc_method__.param_type,
+        def get_methods(obj):
+            return {
+                cast(RpcMethod, getattr(obj, k)).__rpc_method__.name: RpcMethodEntry(
+                    cast(RpcMethod, getattr(obj, k)).__rpc_method__.name,
+                    getattr(obj, k),
+                    cast(RpcMethod, getattr(obj, k)).__rpc_method__.param_type,
                 )
-                for k in dir(self.__owner)
-                if isinstance(getattr(self.__owner, k), RpcMethod)
+                for k in dir(obj)
+                if isinstance(getattr(obj, k), RpcMethod)
             }
+
+        if not self.__initialized:
+            self.__methods = get_methods(self.__owner)
+            for e in self.__class_parts:
+                self.__methods.update(get_methods(e))
+
+            for e in self.__class_part_instances.values():
+                self.__methods.update(get_methods(e))
+
         self.__initialized = True
 
     @property
@@ -201,7 +226,7 @@ class RpcRegistry:
         self.__ensure_initialized()
 
         if self.__parent is not None:
-            return {**self.__parent.__methods, **self.__methods}
+            return {**self.__parent.methods, **self.__methods}
 
         return self.__methods
 
@@ -259,10 +284,6 @@ def _json_rpc_message_from_dict(
         yield inner(data)
 
 
-T = TypeVar("T")
-TResult = TypeVar("TResult")
-
-
 class _RequestFuturesEntry(NamedTuple):
     future: asyncio.Future
     result_type: Union[Type, Callable[[Any], Any], None]
@@ -299,8 +320,8 @@ def _try_convert_value(value: Any, value_type_or_converter: Union[Type[Any], Cal
 
 class JsonRPCProtocol(asyncio.Protocol):
 
-    _logger = LoggerInstance()
-    _message_logger = LoggerInstance(postfix=".message")
+    _logger = LoggingDescriptor()
+    _message_logger = LoggingDescriptor(postfix=".message")
     registry = RpcRegistry()
 
     def __init__(self, server: Optional["JsonRPCServer"]):
@@ -539,6 +560,7 @@ class JsonRPCProtocol(asyncio.Protocol):
             else:
                 self.send_response(message.id, result)
         except BaseException as e:
+            self._logger.exception(e)
             self.send_error(JsonRPCErrors.INTERNAL_ERROR, str(e), id=message.id)
 
     async def handle_notification(self, message: JsonRPCNotification):
@@ -548,11 +570,44 @@ class JsonRPCProtocol(asyncio.Protocol):
             self._logger.warning(f"Unknown method: {message.method}")
             # self.send_error(JsonRPCErrors.METHOD_NOT_FOUND, f"Unknown method: {message.method}")
             return
+        try:
+            params = self._convert_params(e.method, e.param_type, message.params)
+            result = e.method(*params[0], **params[1])
+            if inspect.isawaitable(result):
+                await result
+        except BaseException as e:
+            self._logger.exception(e)
 
-        params = self._convert_params(e.method, e.param_type, message.params)
-        result = e.method(*params[0], **params[1])
-        if inspect.isawaitable(result):
-            await result
+
+TProtocol = TypeVar("TProtocol", bound=(JsonRPCProtocol))
+
+
+class GenericJsonRPCProtocolPart(Generic[TProtocol]):
+    def __init__(self, protocol: TProtocol) -> None:
+        super().__init__()
+        self.protocol = protocol
+
+
+class JsonRPCProtocolPart(GenericJsonRPCProtocolPart[JsonRPCProtocol]):
+    pass
+
+
+TProtocolPart = TypeVar("TProtocolPart", bound=GenericJsonRPCProtocolPart)
+
+
+class ProtocolPartDescriptor(Generic[TProtocolPart]):
+    def __init__(self, instance_type: Type[TProtocolPart]):
+        self._instance_type = instance_type
+
+    def __set_name__(self, owner: Type[JsonRPCProtocol], name):
+        if not issubclass(owner, JsonRPCProtocol):
+            raise AttributeError()
+        owner.registry.add_class_part(self._instance_type)
+
+    def __get__(self, obj: Optional[JsonRPCProtocol], objtype: Type[JsonRPCProtocol]) -> TProtocolPart:
+        if obj is not None:
+            return obj.registry.get_part_instance(self._instance_type, obj)
+        return self._instance_type  # type: ignore
 
 
 class StdOutTransportAdapter(asyncio.Transport):
@@ -596,12 +651,10 @@ class JsonRPCServer(ABC):
         tcp_params: TcpParams = TcpParams(None, TCP_DEFAULT_PORT),
         protocol_cls: Type[JsonRPCProtocol] = JsonRPCProtocol,
         loop: Optional[AbstractEventLoop] = None,
-        max_workers: Optional[int] = None,
     ):
         self.mode = mode
         self.stdio_params = stdio_params
         self.tcp_params = tcp_params
-        self._max_workers = max_workers
         self._protocol_cls = protocol_cls
 
         self._run_func: Optional[Callable[[], None]] = None
@@ -616,7 +669,7 @@ class JsonRPCServer(ABC):
     def __del__(self):
         self.close()
 
-    _logger = LoggerInstance()
+    _logger = LoggingDescriptor()
 
     def start(self):
         if self.mode == JsonRpcServerMode.STDIO:
