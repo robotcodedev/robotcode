@@ -3,6 +3,7 @@ import logging
 import os
 import pathlib
 import sys
+import logging.config
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -74,7 +75,7 @@ def check_free_port(port: int):
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             return s.getsockname()[1]
         except BaseException as e:
-            _logger.warning(e, stack_info=True)
+            _logger.warning(str(e), stack_info=True)
             return find_free_port()
 
 
@@ -93,8 +94,19 @@ def start_debugpy(port: int, wait_for_client: bool):
         _logger.warning("Module debugpy is not installed. If you want to debug python code, please install it.\n")
 
 
+def start_server(mode, port):
+    from .jsonrpc2 import JsonRpcServerMode, TcpParams
+    from .language_server import LanguageServer
+
+    with LanguageServer(mode=JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port)) as server:
+        try:
+            server.run()
+        except KeyboardInterrupt:
+            pass
+
+
 def main():
-    from .jsonrpc2_server import JsonRpcServerMode
+    from .jsonrpc2 import JsonRpcServerMode
 
     parser = argparse.ArgumentParser(
         description="RobotCode Language Server",
@@ -111,13 +123,16 @@ def main():
     )
     parser.add_argument("-p", "--port", default=6601, help="server listen port (tcp)", type=int)
     parser.add_argument("--debug", action="store_true", help="show debug messages")
+    parser.add_argument("--debug-colored", action="store_true", help="colored output for logs")
     parser.add_argument("--debug-json-rpc", action="store_true", help="show json-rpc debug messages")
-    parser.add_argument("--debug-json-rpc-data", action="store_true", help="show json-rpc data debug messages")
+    parser.add_argument("--debug-json-rpc-data", action="store_true", help="show json-rpc messages debug messages")
+    parser.add_argument("--debug-language-server", action="store_true", help="show language server debug messages")
+    parser.add_argument("--debug-language-server-parts", action="store_true", help="show language server parts debug messages")
+    parser.add_argument("--log-config", default=None, help="reads logging configuration from file")
     parser.add_argument("--log-file", default=None, help="enables logging to file")
     parser.add_argument("--debugpy", action="store_true", help="starts a debugpy session")
     parser.add_argument("--debugpy-port", default=5678, help="sets the port for debugpy session", type=int)
     parser.add_argument("--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect")
-    parser.add_argument("--debug-colored", action="store_true", help="colored output for logs")
 
     parser.add_argument("--version", action="store_true", help="shows the version and exits")
 
@@ -127,44 +142,45 @@ def main():
         print(__version__)
         return
 
-    log_initialized = False
-    if args.debug_colored:
-        try:
-            import coloredlogs
+    if args.log_config is not None:
+        if not os.path.exists(args.log_config):
+            raise FileNotFoundError(f"Log-config file '{args.log_config}' not exists.")
 
-            coloredlogs.install(level=(logging.DEBUG if args.debug else logging.WARNING))
-            log_initialized = True
-        except BaseException:
-            pass
+        logging.config.fileConfig(args.log_config, disable_existing_loggers=True)
+    else:
+        log_initialized = False
+        if args.debug_colored:
+            try:
+                import coloredlogs
 
-    if not log_initialized:
-        logging.basicConfig(level=(logging.DEBUG if args.debug else logging.WARNING))
+                coloredlogs.install(level=(logging.DEBUG if args.debug else logging.WARNING))
+                log_initialized = True
+            except BaseException:
+                pass
 
-    if args.log_file is not None:
-        _logger.logger.addHandler(get_log_handler(args.log_file))
+        if not log_initialized:
+            logging.basicConfig(level=(logging.DEBUG if args.debug else logging.WARNING))
 
-    if not args.debug_json_rpc:
-        logging.getLogger("robotcode.server.jsonrpc2_server").propagate = False
+        if args.log_file is not None:
+            _logger.logger.addHandler(get_log_handler(args.log_file))
 
-    if not args.debug_json_rpc_data:
-        logging.getLogger("robotcode.server.jsonrpc2_server.JsonRPCProtocol.data").propagate = False
+        if not args.debug_json_rpc:
+            logging.getLogger("robotcode.server.jsonrpc2").propagate = False
+
+        if not args.debug_json_rpc_data:
+            logging.getLogger("robotcode.server.jsonrpc2.server.JsonRPCProtocol.message").propagate = False
+
+        if not args.debug_language_server:
+            logging.getLogger("robotcode.server.language_server").propagate = False
+
+        if not args.debug_language_server_parts:
+            logging.getLogger("robotcode.server.language_server.parts").propagate = False
 
     _logger.info(f"Starting with args={args}")
     if args.debugpy:
         start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)
 
     start_server(args.mode, args.port)
-
-
-def start_server(mode, port):
-    from .jsonrpc2_server import JsonRpcServerMode, TcpParams
-    from .language_server import LanguageServer
-
-    with LanguageServer(mode=JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port)) as server:
-        try:
-            server.run()
-        except KeyboardInterrupt:
-            pass
 
 
 if __name__ == "__main__":

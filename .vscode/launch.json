@@ -40,10 +40,11 @@
 			"args": [
 				"--mode",
 				"tcp",
-				"--debug",
-				"--debug-json-rpc",
-				"--debug-json-rpc-data",
-				"--debug-colored"
+				"--log-config", "log.ini"
+				//"--debug",
+				// "--debug-json-rpc",
+				// "--debug-json-rpc-data",
+				//"--debug-colored"
 			]
 		},
 		{

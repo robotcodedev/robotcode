@@ -2,7 +2,7 @@ import functools
 import inspect
 import logging
 from types import FunctionType, MethodType
-from typing import Any, Callable, List, Mapping, Optional, Type, TypeVar, Union, cast, overload
+from typing import Any, Callable, List, Optional, Type, TypeVar, Union, cast, overload
 import collections
 
 __all__ = ["LoggingDescriptor"]
@@ -52,7 +52,7 @@ _FUNC_TYPE = Union[Callable[[], logging.Logger], Callable[[], None], staticmetho
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 
-class LoggingDescriptor(logging.LoggerAdapter):
+class LoggingDescriptor:
     __func: _FUNC_TYPE = None
     __name: Optional[str] = None
     __level: Union[int, str] = logging.NOTSET
@@ -68,9 +68,7 @@ class LoggingDescriptor(logging.LoggerAdapter):
         name: Optional[str] = None,
         postfix: str = "",
         level: Union[int, str] = logging.NOTSET,
-        extra: Mapping[str, Any] = {},
     ) -> None:
-
         self.__func = _func
 
         if _func is not None:
@@ -79,7 +77,6 @@ class LoggingDescriptor(logging.LoggerAdapter):
         self.__name = name
         self.__level = level
         self.__postfix = postfix
-        self.extra = extra
 
     def __init_logger(self) -> "LoggingDescriptor":
         if self.__logger is None:
@@ -112,14 +109,17 @@ class LoggingDescriptor(logging.LoggerAdapter):
             if self.__logger is None:
                 raise NotImplementedError("Can't get or create a Logger object")
 
-            self.setLevel(self.__level)
+            self.set_level(self.__level)
 
         return self
 
     @property
-    def logger(self) -> Optional[logging.Logger]:  # type: ignore
+    def logger(self) -> logging.Logger:
         if self.__logger is None:
             self.__init_logger()
+
+        if self.__logger is None:
+            raise Exception("Logger not initialized")
 
         return self.__logger
 
@@ -137,15 +137,59 @@ class LoggingDescriptor(logging.LoggerAdapter):
         return self
 
     def log(self, level: int, msg: Any, condition: Callable[[], bool] = None, *args, **kwargs):
-        if self.isEnabledFor(level) and (condition is not None and condition() or condition is None):
-            super().log(level, msg() if callable(msg) else msg, *args, **kwargs)
+        if self.is_enabled_for(level) and (condition is not None and condition() or condition is None):
+            self.logger.log(level, msg() if callable(msg) else msg, *args, **kwargs)
 
-    # Bare decorator usage
+    def debug(self, msg: Union[str, Callable[[], str]], condition: Callable[[], bool] = None, *args, **kwargs):
+        self.log(logging.DEBUG, msg, condition, *args, **kwargs)
+
+    def info(self, msg: Union[str, Callable[[], str]], condition: Callable[[], bool] = None, *args, **kwargs):
+        self.log(logging.INFO, msg, condition, *args, **kwargs)
+
+    def warning(self, msg: Union[str, Callable[[], str]], condition: Callable[[], bool] = None, *args, **kwargs):
+        self.log(logging.WARNING, msg, condition, *args, **kwargs)
+
+    def error(self, msg: Union[str, Callable[[], str]], condition: Callable[[], bool] = None, *args, **kwargs):
+        self.log(logging.ERROR, msg, condition, *args, **kwargs)
+
+    def exception(
+        self,
+        msg: Union[BaseException, str, Callable[[], str]],
+        condition: Callable[[], bool] = None,
+        exc_info=True,
+        *args,
+        **kwargs,
+    ):
+        self.log(logging.ERROR, msg, condition, *args, exc_info=exc_info, **kwargs)
+
+    def critical(self, msg: Union[str, Callable[[], str]], condition: Callable[[], bool] = None, *args, **kwargs):
+        self.log(logging.CRITICAL, msg, condition, *args, **kwargs)
+
+    def is_enabled_for(self, level):
+        return self.logger.isEnabledFor(level)
+
+    def set_level(self, level):
+        self.logger.setLevel(level)
+
+    def get_effective_level(self):
+        return self.logger.getEffectiveLevel()
+
+    def has_handlers(self):
+        return self.logger.hasHandlers()
+
+    @property
+    def name(self):
+        return self.logger.name
+
+    def __repr__(self):
+        logger = self.logger
+        level = logging.getLevelName(logger.getEffectiveLevel())
+        return f"{self.__class__.__name__}(name={repr(logger.name)}, level={repr(level)})"
+
     @overload
     def call(self, __func: _F) -> _F:
         ...
 
-    # Decorator with arguments
     @overload
     def call(
         self,
@@ -186,7 +230,7 @@ class LoggingDescriptor(logging.LoggerAdapter):
                 )
             )
 
-            skipt_first_arg = _get_callable_has_self_or_cls_parameter(unwrapped_func)
+            skip_first_arg = _get_callable_has_self_or_cls_parameter(unwrapped_func)
 
             @functools.wraps(func)
             def _wrapper(*wrapper_args, **wrapper_kwargs) -> Any:
@@ -234,7 +278,7 @@ class LoggingDescriptor(logging.LoggerAdapter):
                                 )
 
                 def build_enter_message():
-                    message_args = wrapper_args[1:] if skipt_first_arg else wrapper_args
+                    message_args = wrapper_args[1:] if skip_first_arg else wrapper_args
 
                     return "{0}({1}{2}{3})".format(
                         func_name(),
@@ -250,8 +294,8 @@ class LoggingDescriptor(logging.LoggerAdapter):
                 def build_exit_message(res):
                     return "{0}(...) -> {1}".format(func_name(), repr(res))
 
-                def build_exception_message(e):
-                    return "{0}(...)->{1}".format(func_name(), e)
+                def build_exception_message(exception):
+                    return "{0}(...)->{1}".format(func_name(), exception)
 
                 log(build_enter_message, state="entering")
 

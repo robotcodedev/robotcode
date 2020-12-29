@@ -1,20 +1,12 @@
 import uuid
-from asyncio.events import AbstractEventLoop
-from typing import List, Optional, Type
+from typing import List, Optional
 
-from .. import __version__
-from ..utils.logging import LoggingDescriptor
-from .jsonrpc2_server import (
-    JsonRPCException,
-    TCP_DEFAULT_PORT,
-    JsonRPCProtocol,
-    JsonRPCServer,
-    JsonRpcServerMode,
-    ProtocolPartDescriptor,
-    StdIoParams,
-    TcpParams,
-    rpc_method,
-)
+from ... import __version__
+from ...utils.logging import LoggingDescriptor
+from ..jsonrpc2 import JsonRPCException, JsonRPCProtocol, JsonRPCServer, ProtocolPartDescriptor, rpc_method
+from .parts.documents import TextDocumentProtocolPart
+from .parts.window import WindowProtocolPart
+from .parts.workspace import WorkSpaceProtocolPart
 from .types import (
     ClientCapabilities,
     InitializedParams,
@@ -27,9 +19,8 @@ from .types import (
     WorkspaceFolder,
     WorkspaceFoldersServerCapabilities,
 )
-from .window import WindowProtocolPart
-from .workspace import WorkSpaceProtocolPart
-from .documents import TextDocumentProtocolPart
+
+__all__ = ["LanguageServerException", "LanguageServerProtocol"]
 
 
 class LanguageServerException(JsonRPCException):
@@ -95,21 +86,3 @@ class LanguageServerProtocol(JsonRPCProtocol):
     @_logger.call
     def _exit(self):
         raise SystemExit(0 if self.shutdown_received else 1)
-
-
-class LanguageServer(JsonRPCServer):
-    def __init__(
-        self,
-        mode: JsonRpcServerMode = JsonRpcServerMode.STDIO,
-        stdio_params: StdIoParams = StdIoParams(None, None),
-        tcp_params: TcpParams = TcpParams(None, TCP_DEFAULT_PORT),
-        protocol_cls: Type[JsonRPCProtocol] = LanguageServerProtocol,
-        loop: Optional[AbstractEventLoop] = None,
-    ):
-        super().__init__(
-            mode=mode,
-            stdio_params=stdio_params,
-            tcp_params=tcp_params,
-            protocol_cls=protocol_cls,
-            loop=loop,
-        )

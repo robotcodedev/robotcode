@@ -33,7 +33,7 @@ from typing import (
 from pydantic import BaseModel, Field
 from pydantic.typing import get_args, get_origin
 
-from ..utils.logging import LoggingDescriptor
+from ...utils.logging import LoggingDescriptor
 
 __all__ = [
     "JsonRPCErrors",
@@ -51,6 +51,13 @@ __all__ = [
     "rpc_method",
     "RpcRegistry",
     "JsonRPCProtocolPart",
+    "ProtocolPartDescriptor",
+    "GenericJsonRPCProtocolPart",
+    "TProtocol",
+    "JsonRpcServerMode",
+    "StdIoParams",
+    "TcpParams",
+    "TCP_DEFAULT_PORT",
 ]
 
 T = TypeVar("T")

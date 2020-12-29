@@ -2,7 +2,6 @@ import re
 from enum import Enum, IntEnum
 from typing import Any, Dict, List, Optional, Union
 
-
 from pydantic import BaseModel
 
 ProgressToken = Union[str, int]
