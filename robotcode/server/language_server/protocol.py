@@ -30,6 +30,9 @@ class LanguageServerException(JsonRPCException):
 class LanguageServerProtocol(JsonRPCProtocol):
 
     _logger = LoggingDescriptor()
+    window = ProtocolPartDescriptor(WindowProtocolPart)
+    workspace = ProtocolPartDescriptor(WorkSpaceProtocolPart)
+    documents = ProtocolPartDescriptor(TextDocumentProtocolPart)
 
     def __init__(self, server: Optional[JsonRPCServer]):
         super().__init__(server)
@@ -49,10 +52,6 @@ class LanguageServerProtocol(JsonRPCProtocol):
                 )
             ),
         )
-
-    window = ProtocolPartDescriptor(WindowProtocolPart)
-    workspace = ProtocolPartDescriptor(WorkSpaceProtocolPart)
-    documents = ProtocolPartDescriptor(TextDocumentProtocolPart)
 
     @rpc_method(name="initialize", param_type=InitializeParams)
     @_logger.call

@@ -127,7 +127,9 @@ def main():
     parser.add_argument("--debug-json-rpc", action="store_true", help="show json-rpc debug messages")
     parser.add_argument("--debug-json-rpc-data", action="store_true", help="show json-rpc messages debug messages")
     parser.add_argument("--debug-language-server", action="store_true", help="show language server debug messages")
-    parser.add_argument("--debug-language-server-parts", action="store_true", help="show language server parts debug messages")
+    parser.add_argument(
+        "--debug-language-server-parts", action="store_true", help="show language server parts debug messages"
+    )
     parser.add_argument("--log-config", default=None, help="reads logging configuration from file")
     parser.add_argument("--log-file", default=None, help="enables logging to file")
     parser.add_argument("--debugpy", action="store_true", help="starts a debugpy session")

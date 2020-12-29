@@ -259,12 +259,9 @@ class LoggingDescriptor:
                             else unwrapped_func.__name__
                         )
 
-                def get_logging_entries():
-                    return cast(_HasLoggerEntries, unwrapped_func).__logging_entries__
-
                 def log(message, *, state, log_level=None, **log_kwargs):
                     if has_logging_entries():
-                        for c in get_logging_entries():
+                        for c in cast(_HasLoggerEntries, unwrapped_func).__logging_entries__:
                             if c.states[state]:
 
                                 def state_msg():

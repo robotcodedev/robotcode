@@ -557,9 +557,6 @@ class JsonRPCProtocol(asyncio.Protocol):
         try:
             params = self._convert_params(e.method, e.param_type, message.params)
 
-            # if asyncio.iscoroutinefunction(e.method):
-            #     result = await e.method(*params[0], **params[1])
-            # else:
             result = e.method(*params[0], **params[1])
 
             if inspect.isawaitable(result):
