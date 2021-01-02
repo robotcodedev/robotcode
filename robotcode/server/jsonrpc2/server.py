@@ -4,6 +4,7 @@ import json
 import re
 import sys
 import uuid
+import weakref
 from abc import ABC
 from asyncio.events import AbstractEventLoop, AbstractServer
 from enum import Enum
@@ -34,6 +35,7 @@ from pydantic import BaseModel, Field
 from pydantic.typing import get_args, get_origin
 
 from ...utils.logging import LoggingDescriptor
+from ...utils.async_event import AsyncEvent
 
 __all__ = [
     "JsonRPCErrors",
@@ -174,6 +176,16 @@ def rpc_method(
     return cast(Callable[[TCallable], TCallable], _decorator(func))
 
 
+@runtime_checkable
+class HasRpcRegistry(Protocol):
+    __rpc_registry__: "RpcRegistry"
+
+
+@runtime_checkable
+class HasClassRpcRegistry(Protocol):
+    __class_rpc_registry__: "RpcRegistry"
+
+
 class RpcRegistry:
     def __init__(self, owner: Any = None, parent: "RpcRegistry" = None):
         self.__initialized = False
@@ -181,9 +193,11 @@ class RpcRegistry:
         self.__owner_name = ""
         self.__parent = parent
         self.__methods: Dict[str, RpcMethodEntry] = {}
-        self.__childs: Dict[Tuple[Any, Type], RpcRegistry] = {}
         self.__class_parts: Set[Type] = set()
         self.__class_part_instances: Dict[Type, Any] = {}
+
+    def __del__(self):
+        pass
 
     def __set_name__(self, owner: Any, name: str):
         self.__owner = owner
@@ -193,10 +207,16 @@ class RpcRegistry:
         if obj is None and objtype == self.__owner:
             return self
 
-        if (obj, objtype) not in self.__childs:
-            self.__childs[(obj, objtype)] = RpcRegistry(obj or objtype, self)
+        if obj is not None:
+            if not isinstance(obj, HasRpcRegistry):
+                cast(HasRpcRegistry, obj).__rpc_registry__ = RpcRegistry(obj, self)
 
-        return self.__childs[(obj, objtype)]
+            return cast(HasRpcRegistry, obj).__rpc_registry__
+
+        if not isinstance(objtype, HasClassRpcRegistry):
+            cast(HasClassRpcRegistry, objtype).__class_rpc_registry__ = RpcRegistry(objtype, self)
+
+        return cast(HasClassRpcRegistry, objtype).__class_rpc_registry__
 
     def add_class_part(self, class_type: Type):
         self.__class_parts.add(class_type)
@@ -325,6 +345,53 @@ def _try_convert_value(value: Any, value_type_or_converter: Union[Type[Any], Cal
     return value
 
 
+def _convert_params(
+    callable: Callable[..., Any], param_type: Optional[Type], params: Any
+) -> Tuple[List, Dict[str, Any]]:
+    if params is None:
+        return ([], {})
+    if param_type is None:
+        if isinstance(params, Mapping):
+            return ([], dict(**params))
+        else:
+            return ([params], {})
+
+    # try to convert the dict to correct type
+    if issubclass(type, BaseModel):
+        converted_params = param_type.parse_obj(params)
+    else:
+        converted_params = param_type(**params)
+
+    signature = inspect.signature(callable)
+
+    has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in signature.parameters.values())
+
+    kw_args = {}
+    args = []
+    params_added = False
+    rest = list(converted_params.__dict__.keys())
+    for v in signature.parameters.values():
+        if v.name in converted_params.__dict__:
+            if v.kind == inspect.Parameter.POSITIONAL_ONLY:
+                args.append(getattr(converted_params, v.name))
+            elif has_var_kw:
+                kw_args[v.name] = getattr(converted_params, v.name)
+            rest.remove(v.name)
+        elif v.name == "params":
+            if v.kind == inspect.Parameter.POSITIONAL_ONLY:
+                args.append(converted_params)
+                params_added = True
+            else:
+                kw_args[v.name] = converted_params
+                params_added = True
+    if has_var_kw:
+        for r in rest:
+            kw_args[r] = getattr(converted_params, r)
+        if not params_added:
+            kw_args["params"] = converted_params
+    return (args, kw_args)
+
+
 class JsonRPCProtocol(asyncio.Protocol):
 
     _logger = LoggingDescriptor()
@@ -336,11 +403,22 @@ class JsonRPCProtocol(asyncio.Protocol):
         self.transport: Optional[asyncio.Transport] = None
         self._request_futures: Dict[Union[str, int], _RequestFuturesEntry] = {}
         self._message_buf = bytes()
+        self.connection_made_event = AsyncEvent[Callable[[Any], Any]]()
+        self.connection_lost_event = AsyncEvent[Callable[[Any], Any]]()
+
+    def __del__(self):
+        pass
 
     @_logger.call
     def connection_made(self, transport: asyncio.BaseTransport):
         self.transport = cast(asyncio.Transport, transport)
+        asyncio.ensure_future(self.connection_made_event(self))
 
+    @_logger.call
+    def connection_lost(self, exc):
+        asyncio.ensure_future(self.connection_made_event(self))
+
+    @_logger.call
     def eof_received(self):
         pass
 
@@ -497,52 +575,6 @@ class JsonRPCProtocol(asyncio.Protocol):
     async def handle_error(self, message: JsonRPCError):
         raise NotImplementedError()
 
-    def _convert_params(
-        self, callable: Callable[..., Any], param_type: Optional[Type], params: Any
-    ) -> Tuple[List, Dict[str, Any]]:
-        if params is None:
-            return ([], {})
-        if param_type is None:
-            if isinstance(params, Mapping):
-                return ([], dict(**params))
-            else:
-                return ([params], {})
-
-        # try to convert the dict to correct type
-        if issubclass(type, BaseModel):
-            converted_params = param_type.parse_obj(params)
-        else:
-            converted_params = param_type(**params)
-
-        signature = inspect.signature(callable)
-
-        has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in signature.parameters.values())
-
-        kw_args = {}
-        args = []
-        params_added = False
-        rest = list(converted_params.__dict__.keys())
-        for v in signature.parameters.values():
-            if v.name in converted_params.__dict__:
-                if v.kind == inspect.Parameter.POSITIONAL_ONLY:
-                    args.append(getattr(converted_params, v.name))
-                elif has_var_kw:
-                    kw_args[v.name] = getattr(converted_params, v.name)
-                rest.remove(v.name)
-            elif v.name == "params":
-                if v.kind == inspect.Parameter.POSITIONAL_ONLY:
-                    args.append(converted_params)
-                    params_added = True
-                else:
-                    kw_args[v.name] = converted_params
-                    params_added = True
-        if has_var_kw:
-            for r in rest:
-                kw_args[r] = getattr(converted_params, r)
-            if not params_added:
-                kw_args["params"] = converted_params
-        return (args, kw_args)
-
     async def handle_request(self, message: JsonRPCRequest):
         e = self.registry.get_entry(message.method)
 
@@ -555,7 +587,7 @@ class JsonRPCProtocol(asyncio.Protocol):
             return
 
         try:
-            params = self._convert_params(e.method, e.param_type, message.params)
+            params = _convert_params(e.method, e.param_type, message.params)
 
             result = e.method(*params[0], **params[1])
 
@@ -575,7 +607,7 @@ class JsonRPCProtocol(asyncio.Protocol):
             # self.send_error(JsonRPCErrors.METHOD_NOT_FOUND, f"Unknown method: {message.method}")
             return
         try:
-            params = self._convert_params(e.method, e.param_type, message.params)
+            params = _convert_params(e.method, e.param_type, message.params)
             result = e.method(*params[0], **params[1])
             if inspect.isawaitable(result):
                 await result
@@ -589,7 +621,11 @@ TProtocol = TypeVar("TProtocol", bound=(JsonRPCProtocol))
 class GenericJsonRPCProtocolPart(Generic[TProtocol]):
     def __init__(self, protocol: TProtocol) -> None:
         super().__init__()
-        self.protocol = protocol
+        self._protocol = weakref.ref(protocol)
+
+    @property
+    def protocol(self) -> TProtocol:
+        return self._protocol()
 
 
 class JsonRPCProtocolPart(GenericJsonRPCProtocolPart[JsonRPCProtocol]):

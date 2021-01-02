@@ -1,9 +1,11 @@
 import uuid
-from typing import List, Optional
+from typing import Any, Callable, List, Optional
 
 from ... import __version__
+from ...utils.async_event import AsyncEvent
 from ...utils.logging import LoggingDescriptor
 from ..jsonrpc2 import JsonRPCException, JsonRPCProtocol, JsonRPCServer, ProtocolPartDescriptor, rpc_method
+from .parts.diagnostics import DiagnosticsProtocolPart
 from .parts.documents import TextDocumentProtocolPart
 from .parts.window import WindowProtocolPart
 from .parts.workspace import WorkSpaceProtocolPart
@@ -33,6 +35,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     window = ProtocolPartDescriptor(WindowProtocolPart)
     workspace = ProtocolPartDescriptor(WorkSpaceProtocolPart)
     documents = ProtocolPartDescriptor(TextDocumentProtocolPart)
+    diagnostics = ProtocolPartDescriptor(DiagnosticsProtocolPart)
 
     def __init__(self, server: Optional[JsonRPCServer]):
         super().__init__(server)
@@ -52,6 +55,8 @@ class LanguageServerProtocol(JsonRPCProtocol):
                 )
             ),
         )
+
+        self.shutdown_event = AsyncEvent[Callable[[Any], Any]]()
 
     @rpc_method(name="initialize", param_type=InitializeParams)
     @_logger.call
@@ -78,8 +83,9 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     @rpc_method(name="shutdown")
     @_logger.call
-    def shutdown(self):
+    async def shutdown(self):
         self.shutdown_received = True
+        await self.shutdown_event(self)
 
     @rpc_method(name="exit")
     @_logger.call
