@@ -1,52 +1,61 @@
+from abc import ABC
 import asyncio
 from inspect import ismethod
 from types import MethodType
-from typing import Any, Callable, Generic, MutableSet, TypeVar, Union, cast
+from typing import Any, AsyncGenerator, Callable, Generic, List, MutableSet, TypeVar, Union, cast
 import weakref
+import threading
 
-__all__ = ["TCallback", "AsyncEvent"]
+__all__ = ["TCallback", "AsyncEventGenerator", "AsyncEvent"]
 
-TCallback = TypeVar("TCallback", bound=Union[Callable[..., Any], MethodType])
+TResult = TypeVar("TResult")
+TCallback = TypeVar("TCallback", bound=Union[Callable[..., Any]])
 
 
-class AsyncEvent(Generic[TCallback]):
-    def __init__(self):
-        self.listeners: weakref.WeakSet[TCallback] = weakref.WeakSet()
-        self.methods_listeners: MutableSet[weakref.WeakMethod] = set()
+class AsyncEventGeneratorBase(Generic[TCallback, TResult], ABC):
+    def __init__(self) -> None:
+        self.lock = threading.Lock()
 
-    def add(self, callback: TCallback):
-        def remove_method(method):
-            self.methods_listeners.remove(method)
+        self.methods_listeners: MutableSet[weakref.ref[Any]] = set()
 
-        if ismethod(callback):
-            self.methods_listeners.add(weakref.WeakMethod(cast(MethodType, callback), remove_method))
-        else:
-            self.listeners.add(callback)
+    def add(self, callback: TCallback) -> None:
+        def remove_listener(ref: Any) -> None:
+            with self.lock:
+                self.methods_listeners.remove(ref)
 
-    def remove(self, callback: TCallback):
-        if ismethod(callback):
-            self.methods_listeners.remove(weakref.WeakMethod(cast(MethodType, callback)))
-        else:
-            self.listeners.remove(callback)
+        with self.lock:
+            if ismethod(callback):
+                self.methods_listeners.add(weakref.WeakMethod(cast(MethodType, callback), remove_listener))
+            else:
+                self.methods_listeners.add(weakref.ref(callback, remove_listener))
 
-    def __iadd__(self, callback: TCallback):
-        """Shortcut for using += to add a listener."""
-        self.add(callback)
-        return self
+    def remove(self, callback: TCallback) -> None:
+        with self.lock:
+            if ismethod(callback):
+                self.methods_listeners.remove(weakref.WeakMethod(cast(MethodType, callback)))
+            else:
+                self.methods_listeners.remove(weakref.ref(callback))
 
-    def __isub__(self, callback: TCallback):
-        self.remove(callback)
-        return self
+    async def _notify(self, *args: Any, **kwargs: Any) -> AsyncGenerator[TResult, None]:
+        for method_listener in self.methods_listeners:
+            method = method_listener()
+            if method is not None:
+                result = method(*args, **kwargs)
+                if asyncio.iscoroutine(result):
+                    result = await result
 
-    async def __call__(self, *args, **kwargs):
-        return await self.notify(*args, **kwargs)
+                yield result
 
-    async def notify(self, *args, **kwargs):
-        for listener in self.listeners:
-            result = listener(*args, **kwargs)
-            if asyncio.iscoroutine(result):
-                result = await result
-        for listener in self.methods_listeners:
-            result = listener()(*args, **kwargs)
-            if asyncio.iscoroutine(result):
-                result = await result
+
+class AsyncEventGenerator(AsyncEventGeneratorBase[TCallback, TResult]):
+    def __call__(self, *args: Any, **kwargs: Any) -> "AsyncGenerator[TResult, None]":
+        return self._notify(*args, **kwargs)
+
+
+class AsyncEventWithResultList(AsyncEventGeneratorBase[TCallback, TResult]):
+    async def __call__(self, *args: Any, **kwargs: Any) -> List[TResult]:
+        return [a async for a in self._notify(*args, **kwargs)]
+
+
+class AsyncEvent(AsyncEventWithResultList[TCallback, Any]):
+    pass

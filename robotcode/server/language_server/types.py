@@ -1,6 +1,6 @@
 import re
 from enum import Enum, IntEnum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Generator, Iterator, List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -402,7 +402,7 @@ class SemanticTokensClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
     class _Requests(Model):
-        range: Union[bool, Dict, None]
+        range: Union[bool, Dict[Any, Any], None]
 
         class _Full(Model):
             delta: Optional[bool] = None
@@ -664,7 +664,7 @@ class Position(Model):
     line: int
     character: int
 
-    def __ge__(self, other):
+    def __ge__(self, other: "Position") -> bool:
         line_gt = self.line > other.line
 
         if line_gt:
@@ -675,7 +675,7 @@ class Position(Model):
 
         return False
 
-    def __gt__(self, other):
+    def __gt__(self, other: "Position") -> bool:
         line_gt = self.line > other.line
 
         if line_gt:
@@ -686,7 +686,7 @@ class Position(Model):
 
         return False
 
-    def __le__(self, other):
+    def __le__(self, other: "Position") -> bool:
         line_lt = self.line < other.line
 
         if line_lt:
@@ -697,7 +697,7 @@ class Position(Model):
 
         return False
 
-    def __lt__(self, other):
+    def __lt__(self, other: "Position") -> bool:
         line_lt = self.line < other.line
 
         if line_lt:
@@ -708,10 +708,10 @@ class Position(Model):
 
         return False
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[int]:  # type: ignore
         return iter((self.line, self.character))
 
 
@@ -722,7 +722,7 @@ class Range(Model):
     start: Position
     end: Position
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Position]:  # type: ignore
         return iter((self.start, self.end))
 
 

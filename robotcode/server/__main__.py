@@ -6,6 +6,7 @@ import sys
 import logging.config
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import cast
 
 __file__ = os.path.abspath(__file__)
 if __file__.endswith((".pyc", ".pyo")):
@@ -25,7 +26,7 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
     __package__ = "robotcode.server"
 
 
-from .. import __version__
+from .._version import __version__
 from ..utils.logging import LoggingDescriptor
 
 _logger = LoggingDescriptor(name=__package__)
@@ -39,7 +40,7 @@ except ImportError:
     sys.path.append(str(external_path))
 
 
-def get_log_handler(logfile: str):
+def get_log_handler(logfile: str) -> logging.FileHandler:
     log_fn = pathlib.Path(logfile)
     roll_over = log_fn.exists()
 
@@ -62,10 +63,10 @@ def find_free_port() -> int:
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
         s.bind(("127.0.0.1", 0))
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
+        return cast(int, s.getsockname()[1])
 
 
-def check_free_port(port: int):
+def check_free_port(port: int) -> int:
     import socket
     from contextlib import closing
 
@@ -73,13 +74,13 @@ def check_free_port(port: int):
         try:
             s.bind(("127.0.0.1", port))
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            return s.getsockname()[1]
+            return cast(int, s.getsockname()[1])
         except BaseException as e:
             _logger.warning(str(e), stack_info=True)
             return find_free_port()
 
 
-def start_debugpy(port: int, wait_for_client: bool):
+def start_debugpy(port: int, wait_for_client: bool) -> None:
     try:
         import debugpy
 
@@ -94,9 +95,9 @@ def start_debugpy(port: int, wait_for_client: bool):
         _logger.warning("Module debugpy is not installed. If you want to debug python code, please install it.\n")
 
 
-def start_server(mode, port):
-    from .jsonrpc2 import JsonRpcServerMode, TcpParams
-    from .language_server import LanguageServer
+def start_server(mode: str, port: int) -> None:
+    from .jsonrpc2.server import JsonRpcServerMode, TcpParams
+    from .language_server.server import LanguageServer
 
     with LanguageServer(mode=JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port)) as server:
         try:
@@ -105,8 +106,12 @@ def start_server(mode, port):
             pass
 
 
-def main():
-    from .jsonrpc2 import JsonRpcServerMode
+def main() -> None:
+    import gc
+
+    gc.set_threshold(1, 1, 1)
+
+    from .jsonrpc2.server import JsonRpcServerMode
 
     parser = argparse.ArgumentParser(
         description="RobotCode Language Server",

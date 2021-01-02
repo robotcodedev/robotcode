@@ -1,14 +1,14 @@
 import uuid
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Coroutine, List, Optional, Union
 
-from ... import __version__
+from ..._version import __version__
 from ...utils.async_event import AsyncEvent
 from ...utils.logging import LoggingDescriptor
-from ..jsonrpc2 import JsonRPCException, JsonRPCProtocol, JsonRPCServer, ProtocolPartDescriptor, rpc_method
+from ..jsonrpc2.protocol import JsonRPCException, JsonRPCProtocol, ProtocolPartDescriptor, rpc_method
+from ..jsonrpc2.server import JsonRPCServer
 from .parts.diagnostics import DiagnosticsProtocolPart
 from .parts.documents import TextDocumentProtocolPart
 from .parts.window import WindowProtocolPart
-from .parts.workspace import WorkSpaceProtocolPart
 from .types import (
     ClientCapabilities,
     InitializedParams,
@@ -21,6 +21,7 @@ from .types import (
     WorkspaceFolder,
     WorkspaceFoldersServerCapabilities,
 )
+from .workspace import Workspace
 
 __all__ = ["LanguageServerException", "LanguageServerProtocol"]
 
@@ -33,12 +34,12 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     _logger = LoggingDescriptor()
     window = ProtocolPartDescriptor(WindowProtocolPart)
-    workspace = ProtocolPartDescriptor(WorkSpaceProtocolPart)
     documents = ProtocolPartDescriptor(TextDocumentProtocolPart)
     diagnostics = ProtocolPartDescriptor(DiagnosticsProtocolPart)
 
     def __init__(self, server: Optional[JsonRPCServer]):
         super().__init__(server)
+        self._workspace: Optional[Workspace] = None
         self.client_capabilities: Optional[ClientCapabilities] = None
         self.shutdown_received = False
         self.capabilities = ServerCapabilities(
@@ -56,7 +57,10 @@ class LanguageServerProtocol(JsonRPCProtocol):
             ),
         )
 
-        self.shutdown_event = AsyncEvent[Callable[[Any], Any]]()
+        self.shutdown_event = AsyncEvent[Callable[[LanguageServerProtocol], Union[Coroutine[Any, Any, None], None]]]()
+
+    def workspace(self) -> Optional[Workspace]:
+        return self._workspace
 
     @rpc_method(name="initialize", param_type=InitializeParams)
     @_logger.call
@@ -65,11 +69,12 @@ class LanguageServerProtocol(JsonRPCProtocol):
         capabilities: ClientCapabilities,
         root_path: Optional[str] = None,
         root_uri: Optional[str] = None,
+        initialization_options: Optional[Any] = None,
         workspace_folders: Optional[List[WorkspaceFolder]] = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> InitializeResult:
         self.client_capabilities = capabilities
-        self.workspace.init(root_uri=root_uri, root_path=root_path, workspace_folders=workspace_folders)
+        self._workspace = Workspace(self, root_uri=root_uri, root_path=root_path, workspace_folders=workspace_folders)
 
         return InitializeResult(
             capabilities=self.capabilities,
@@ -77,17 +82,16 @@ class LanguageServerProtocol(JsonRPCProtocol):
         )
 
     @rpc_method(name="initialized", param_type=InitializedParams)
-    @_logger.call
-    async def _initialized(self, params: InitializedParams):
+    async def _initialized(self, params: InitializedParams) -> None:
         pass
 
     @rpc_method(name="shutdown")
     @_logger.call
-    async def shutdown(self):
+    async def shutdown(self) -> None:
         self.shutdown_received = True
         await self.shutdown_event(self)
 
     @rpc_method(name="exit")
     @_logger.call
-    def _exit(self):
+    def _exit(self) -> None:
         raise SystemExit(0 if self.shutdown_received else 1)

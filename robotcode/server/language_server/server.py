@@ -1,10 +1,15 @@
 from asyncio import AbstractEventLoop
 from typing import Optional, Type
 
-from ..jsonrpc2 import TCP_DEFAULT_PORT, JsonRPCProtocol, JsonRPCServer, JsonRpcServerMode, StdIoParams, TcpParams
+
+from ..jsonrpc2.protocol import JsonRPCProtocol
+from ..jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, StdIoParams, TcpParams
+
 from .protocol import LanguageServerProtocol
 
-__all__ = ["LanguageServer"]
+__all__ = ["LanguageServer", "TCP_DEFAULT_PORT"]
+
+TCP_DEFAULT_PORT = 6601
 
 
 class LanguageServer(JsonRPCServer):
