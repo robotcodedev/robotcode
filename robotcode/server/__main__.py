@@ -29,6 +29,11 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
 from .._version import __version__
 from ..utils.logging import LoggingDescriptor
 
+
+TRACE = logging.DEBUG - 6
+logging.addLevelName(TRACE, "TRACE")
+LoggingDescriptor.set_call_tracing_default_level(TRACE)
+
 _logger = LoggingDescriptor(name=__package__)
 
 try:
@@ -111,43 +116,52 @@ def main() -> None:
 
     gc.set_threshold(1, 1, 1)
 
-    from .jsonrpc2.server import JsonRpcServerMode
-
     parser = argparse.ArgumentParser(
         description="RobotCode Language Server",
         prog="robotcode.server",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
+    parser.add_argument("--version", action="store_true", help="shows the version and exits")
     parser.add_argument(
         "-m",
         "--mode",
-        default=JsonRpcServerMode.STDIO.value,
-        choices=list(e.value for e in JsonRpcServerMode),
+        default="stdio",
+        choices=["stdio", "tcp"],
         help="communication mode",
     )
     parser.add_argument("-p", "--port", default=6601, help="server listen port (tcp)", type=int)
     parser.add_argument("--debug", action="store_true", help="show debug messages")
-    parser.add_argument("--debug-colored", action="store_true", help="colored output for logs")
     parser.add_argument("--debug-json-rpc", action="store_true", help="show json-rpc debug messages")
     parser.add_argument("--debug-json-rpc-data", action="store_true", help="show json-rpc messages debug messages")
     parser.add_argument("--debug-language-server", action="store_true", help="show language server debug messages")
     parser.add_argument(
         "--debug-language-server-parts", action="store_true", help="show language server parts debug messages"
     )
+    parser.add_argument("--log-colored", action="store_true", help="colored output for logs")
     parser.add_argument("--log-config", default=None, help="reads logging configuration from file")
     parser.add_argument("--log-file", default=None, help="enables logging to file")
     parser.add_argument("--debugpy", action="store_true", help="starts a debugpy session")
     parser.add_argument("--debugpy-port", default=5678, help="sets the port for debugpy session", type=int)
     parser.add_argument("--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect")
+    parser.add_argument("--call-tracing", action="store_true", help="enables log tracing of method calls")
 
-    parser.add_argument("--version", action="store_true", help="shows the version and exits")
+    parser.add_argument(
+        "--call-tracing-default-level", default="TRACE", help="sets the default level for call tracing", metavar="LEVEL"
+    )
 
     args = parser.parse_args()
 
     if args.version:
         print(__version__)
         return
+
+    if args.call_tracing:
+        LoggingDescriptor.set_call_tracing(True)
+    if args.call_tracing_default_level:
+        LoggingDescriptor.set_call_tracing_default_level(
+            logging._checkLevel(args.call_tracing_default_level)  # type: ignore
+        )
 
     if args.log_config is not None:
         if not os.path.exists(args.log_config):
@@ -156,7 +170,7 @@ def main() -> None:
         logging.config.fileConfig(args.log_config, disable_existing_loggers=True)
     else:
         log_initialized = False
-        if args.debug_colored:
+        if args.log_colored:
             try:
                 import coloredlogs
 

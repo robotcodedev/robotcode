@@ -5,16 +5,7 @@ from types import FunctionType, MethodType
 from typing import Any, Callable, List, Optional, Type, TypeVar, Union, cast, overload
 import collections
 
-__all__ = ["LoggingDescriptor", "CALL_TRACING_ENABLED"]
-
-VERBOSE = logging.DEBUG - 5
-logging.addLevelName(VERBOSE, "VERBOSE")
-
-TRACE = logging.DEBUG - 6
-logging.addLevelName(TRACE, "TRACE")
-
-CALL_TRACING_ENABLED = True
-CALL_TRACING_DEFAULT_LEVEL = TRACE
+__all__ = ["LoggingDescriptor"]
 
 
 def get_class_that_defined_method(meth: Callable[..., Any]) -> Optional[Type[Any]]:
@@ -227,6 +218,18 @@ class LoggingDescriptor:
         level = logging.getLevelName(logger.getEffectiveLevel())
         return f"{self.__class__.__name__}(name={repr(logger.name)}, level={repr(level)})"
 
+    _call_tracing_enabled = False
+    _call_tracing_default_level = logging.DEBUG
+
+    @classmethod
+    def set_call_tracing(cls, value: bool) -> None:
+        cls._call_tracing_enabled = value
+
+    @classmethod
+    def set_call_tracing_default_level(cls, level: int) -> None:
+        
+        cls._call_tracing_default_level = level
+
     @overload
     def call(self, _func: _F) -> _F:
         ...
@@ -235,7 +238,7 @@ class LoggingDescriptor:
     def call(
         self,
         *,
-        level: int = CALL_TRACING_DEFAULT_LEVEL,
+        level: Optional[int] = None,
         prefix: str = "",
         condition: Optional[Callable[..., bool]] = None,
         entering: bool = True,
@@ -248,7 +251,7 @@ class LoggingDescriptor:
         self,
         _func: Optional[_F] = None,
         *,
-        level: int = CALL_TRACING_DEFAULT_LEVEL,
+        level: Optional[int] = None,
         prefix: str = "",
         condition: Optional[Callable[..., bool]] = None,
         entering: bool = True,
@@ -256,6 +259,10 @@ class LoggingDescriptor:
         exception: bool = False,
         **kwargs: Any,
     ) -> Callable[[_F], _F]:
+
+        if level is None:
+            level = type(self)._call_tracing_default_level
+
         def _decorator(func: _F) -> Callable[[_F], _F]:
             unwrapped_func = inspect.unwrap(func)
 
@@ -356,6 +363,6 @@ class LoggingDescriptor:
             return func
 
         if _func is None:
-            return cast(Callable[[_F], _F], _decorator if CALL_TRACING_ENABLED else _empty__decorator)
+            return cast(Callable[[_F], _F], _decorator if type(self)._call_tracing_enabled else _empty__decorator)
 
-        return _decorator(_func) if CALL_TRACING_ENABLED else _empty__decorator(_func)
+        return _decorator(_func) if type(self)._call_tracing_enabled else _empty__decorator(_func)
