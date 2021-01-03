@@ -394,18 +394,18 @@ class JsonRPCProtocol(asyncio.Protocol):
     _message_logger = LoggingDescriptor(postfix=".message")
     registry = RpcRegistry()
 
-    def __init__(self, server: Optional["JsonRPCServer"]):
+    def __init__(self, server: Optional["JsonRPCServer[Any]"]):
         self.server = server
         self.transport: Optional[asyncio.Transport] = None
         self._request_futures: Dict[Union[str, int], _RequestFuturesEntry] = {}
         self._message_buf = bytes()
-        self.connection_made_event = AsyncEvent[Callable[["JsonRPCProtocol", asyncio.BaseTransport], None]]()
-        self.connection_lost_event = AsyncEvent[Callable[["JsonRPCProtocol", BaseException], Any]]()
+        self.connection_made_event = AsyncEvent["JsonRPCProtocol", asyncio.BaseTransport]()
+        self.connection_lost_event = AsyncEvent["JsonRPCProtocol", BaseException]()
 
     @_logger.call
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = cast(asyncio.Transport, transport)
-        asyncio.ensure_future(self.connection_made_event(self))
+        asyncio.ensure_future(self.connection_made_event(self, transport))
 
     @_logger.call
     def connection_lost(self, exc: Optional[BaseException]) -> None:

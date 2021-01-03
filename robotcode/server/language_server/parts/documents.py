@@ -1,4 +1,4 @@
-from typing import Any, Callable, TYPE_CHECKING, Dict, List, Optional
+from typing import Any, TYPE_CHECKING, Dict, List, Optional
 
 from ....utils.logging import LoggingDescriptor
 from ....utils.async_event import AsyncEvent
@@ -41,10 +41,10 @@ class TextDocumentProtocolPart(GenericJsonRPCProtocolPart["LanguageServerProtoco
     def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
         self._documents: Dict[DocumentUri, TextDocument] = {}
-        self.did_open_event = AsyncEvent[Callable[["TextDocumentProtocolPart", TextDocument], Any]]()
-        self.did_close_event = AsyncEvent[Callable[["TextDocumentProtocolPart", TextDocument], Any]]()
-        self.did_change_event = AsyncEvent[Callable[["TextDocumentProtocolPart", TextDocument], Any]]()
-        self.did_save_event = AsyncEvent[Callable[["TextDocumentProtocolPart", TextDocument], Any]]()
+        self.did_open_event = AsyncEvent["TextDocumentProtocolPart", TextDocument]()
+        self.did_close_event = AsyncEvent["TextDocumentProtocolPart", TextDocument]()
+        self.did_change_event = AsyncEvent["TextDocumentProtocolPart", TextDocument]()
+        self.did_save_event = AsyncEvent["TextDocumentProtocolPart", TextDocument]()
 
     @rpc_method(name="textDocument/didOpen", param_type=DidOpenTextDocumentParams)
     @_logger.call

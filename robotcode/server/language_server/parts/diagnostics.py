@@ -1,10 +1,11 @@
 import asyncio
-from typing import Callable, TYPE_CHECKING, Any, Dict, Optional
+from typing import List, TYPE_CHECKING, Any, Callable, Dict, Optional
 
+from ....utils.async_event import AsyncEventTask
 from ....utils.logging import LoggingDescriptor
-from ...jsonrpc2.protocol import JsonRPCProtocol, GenericJsonRPCProtocolPart
+from ...jsonrpc2.protocol import GenericJsonRPCProtocolPart, JsonRPCProtocol
 from ..text_document import TextDocument
-from ..types import DocumentUri
+from ..types import Diagnostic, DocumentUri, PublishDiagnosticsParams
 
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol
@@ -32,7 +33,6 @@ class PublishDiagnosticsEntry:
                 self._task.set_name(f"Diagnostics for {document}")
 
                 def _done(t: asyncio.Task[Any]) -> None:
-                    assert self._task == t
                     self._task = None
 
                 self._task.add_done_callback(_done)
@@ -91,6 +91,8 @@ class DiagnosticsProtocolPart(GenericJsonRPCProtocolPart["LanguageServerProtocol
         self._task_lock = asyncio.Lock()
         self._start_lock_lock = asyncio.Lock()
 
+        self.collect_diagnostics_event = AsyncEventTask[DiagnosticsProtocolPart, TextDocument, List[Diagnostic]]()
+
         self.parent.connection_lost_event.add(self.on_connection_lost)
         self.parent.shutdown_event.add(self.on_shutdown)
         self.parent.documents.did_open_event.add(self.on_did_open)
@@ -103,7 +105,7 @@ class DiagnosticsProtocolPart(GenericJsonRPCProtocolPart["LanguageServerProtocol
         await self._cancel_all_tasks()
 
     @_logger.call
-    async def on_shutdown(self, sender: "LanguageServerProtocol") -> None:
+    async def on_shutdown(self, sender: "LanguageServerProtocol", dummy: None) -> None:
         await self._cancel_all_tasks()
 
     def __del__(self) -> None:
@@ -159,16 +161,25 @@ class DiagnosticsProtocolPart(GenericJsonRPCProtocolPart["LanguageServerProtocol
 
     @_logger.call
     async def publish_diagnostics(self, document: TextDocument) -> None:
-        self._logger.info(f"start {document}")
-        i = 0
-        try:
-            while True:
-                await asyncio.sleep(1)
+        diagnostics: List[Diagnostic] = []
 
-                self._logger.info(f"{document} dumum {i}")
-                i += 1
-                if i == 5:
-                    break
+        def send_diagnostics(result: Optional[List[Diagnostic]], exception: Optional[BaseException]) -> None:
+            nonlocal diagnostics
+
+            if result is not None:
+                diagnostics += result
+                self.parent.send_notification(
+                    "textDocument/publishDiagnostics",
+                    PublishDiagnosticsParams(uri=document.uri, version=document.version, diagnostics=diagnostics),
+                )
+
+        def callback(result: Optional[List[Diagnostic]], exception: Optional[BaseException]) -> None:
+            asyncio.get_event_loop().call_soon_threadsafe(send_diagnostics, result, exception)
+
+        self._logger.info(f"start {document}")
+        try:
+            r = await self.collect_diagnostics_event(self, document, result_callback=callback)
+            print(r)
         except asyncio.CancelledError:
             self._logger.info(f"canceled {document}")
             raise

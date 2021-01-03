@@ -19,7 +19,7 @@ from robotcode.server.language_server.types import MessageActionItem
 
 
 class DummyJsonRPCProtocol(JsonRPCProtocol):
-    def __init__(self, server: Optional[JsonRPCServer]):
+    def __init__(self, server: Optional[JsonRPCServer['DummyJsonRPCProtocol']]):
         super().__init__(server)
         self.handled_messages: List[JsonRPCMessage] = []
         self.sended_message: Optional[JsonRPCMessage] = None

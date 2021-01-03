@@ -227,7 +227,7 @@ class LoggingDescriptor:
 
     @classmethod
     def set_call_tracing_default_level(cls, level: int) -> None:
-        
+
         cls._call_tracing_default_level = level
 
     @overload

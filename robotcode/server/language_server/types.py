@@ -1,6 +1,6 @@
 import re
 from enum import Enum, IntEnum
-from typing import Any, Dict, Generator, Iterator, List, Optional, Union
+from typing import Any, Dict, Iterator, List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -839,3 +839,42 @@ class TextEdit(Model):
 class DidSaveTextDocumentParams(Model):
     text_document: TextDocumentIdentifier
     text: Optional[str] = None
+
+
+class DiagnosticSeverity(Enum):
+    ERROR = 1
+    WARNING = 2
+    INFORMATION = 3
+    HINT = 4
+
+
+class CodeDescription(Model):
+    href: URI
+
+
+class Location(Model):
+    uri: DocumentUri
+    range: Range
+
+
+class DiagnosticRelatedInformation(Model):
+    location: Location
+    message: str
+
+
+class Diagnostic(Model):
+    range: Range
+    message: str
+    severity: Optional[DiagnosticSeverity] = None
+    code: Union[int, str, None] = None
+    code_description: Optional[CodeDescription] = None
+    source: Optional[str] = None
+    tags: Optional[List[DiagnosticTag]] = None
+    related_information: Optional[List[DiagnosticRelatedInformation]] = None
+    data: Optional[Any] = None
+
+
+class PublishDiagnosticsParams(Model):
+    uri: DocumentUri
+    version: Optional[int] = None
+    diagnostics: List[Diagnostic]

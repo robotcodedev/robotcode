@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, Callable, Coroutine, List, Optional, Union
+from typing import Any, List, Optional
 
 from ..._version import __version__
 from ...utils.async_event import AsyncEvent
@@ -37,7 +37,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     documents = ProtocolPartDescriptor(TextDocumentProtocolPart)
     diagnostics = ProtocolPartDescriptor(DiagnosticsProtocolPart)
 
-    def __init__(self, server: Optional[JsonRPCServer]):
+    def __init__(self, server: Optional[JsonRPCServer["LanguageServerProtocol"]]):
         super().__init__(server)
         self._workspace: Optional[Workspace] = None
         self.client_capabilities: Optional[ClientCapabilities] = None
@@ -57,7 +57,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
             ),
         )
 
-        self.shutdown_event = AsyncEvent[Callable[[LanguageServerProtocol], Union[Coroutine[Any, Any, None], None]]]()
+        self.shutdown_event = AsyncEvent[LanguageServerProtocol, None]()
 
     def workspace(self) -> Optional[Workspace]:
         return self._workspace

@@ -3,10 +3,10 @@ import asyncio
 import sys
 from enum import Enum
 from types import TracebackType
-from typing import BinaryIO, Callable, Literal, NamedTuple, Optional, Type
+from typing import BinaryIO, Callable, Generic, Literal, NamedTuple, Optional, Type
 
 from ...utils.logging import LoggingDescriptor
-from .protocol import JsonRPCException, JsonRPCProtocol
+from .protocol import JsonRPCException, JsonRPCProtocol, TProtocol
 
 __all__ = ["StdOutTransportAdapter", "JsonRpcServerMode", "StdIoParams", "TcpParams", "JsonRPCServer"]
 
@@ -40,19 +40,17 @@ class TcpParams(NamedTuple):
     port: int = 0
 
 
-class JsonRPCServer(abc.ABC):
+class JsonRPCServer(Generic[TProtocol], abc.ABC):
     def __init__(
         self,
         mode: JsonRpcServerMode = JsonRpcServerMode.STDIO,
         stdio_params: StdIoParams = StdIoParams(None, None),
         tcp_params: TcpParams = TcpParams(None, 0),
-        protocol_cls: Type[JsonRPCProtocol] = JsonRPCProtocol,
         loop: Optional[asyncio.AbstractEventLoop] = None,
     ):
         self.mode = mode
         self.stdio_params = stdio_params
         self.tcp_params = tcp_params
-        self._protocol_cls = protocol_cls
 
         self._run_func: Optional[Callable[[], None]] = None
         self._server: Optional[asyncio.AbstractServer] = None
@@ -89,7 +87,7 @@ class JsonRPCServer(abc.ABC):
         if not self.loop.is_closed():
             self.loop.close()
 
-    def __enter__(self) -> "JsonRPCServer":
+    def __enter__(self) -> "JsonRPCServer[TProtocol]":
         self.start()
         return self
 
@@ -101,6 +99,10 @@ class JsonRPCServer(abc.ABC):
     ) -> Literal[False]:
         self.close()
         return False
+
+    @abc.abstractmethod
+    def create_protocol(self) -> TProtocol:
+        ...
 
     @_logger.call
     def start_stdio(self, stdin: Optional[BinaryIO] = None, stdout: Optional[BinaryIO] = None) -> None:
@@ -117,7 +119,9 @@ class JsonRPCServer(abc.ABC):
                 protocol.data_received(await self.loop.run_in_executor(None, read))
 
         transport = StdOutTransportAdapter(stdin or sys.stdin.buffer, stdout or sys.stdout.buffer)
-        protocol = self._protocol_cls(self)
+
+        protocol = self.create_protocol()
+
         protocol.connection_made(transport)
 
         def run_io() -> None:
@@ -129,9 +133,7 @@ class JsonRPCServer(abc.ABC):
     def start_tcp(self, host: Optional[str] = None, port: int = 0) -> None:
         self.mode = JsonRpcServerMode.TCP
 
-        self._server = self.loop.run_until_complete(
-            self.loop.create_server(lambda: self._protocol_cls(self), host, port)
-        )
+        self._server = self.loop.run_until_complete(self.loop.create_server(lambda: self.create_protocol(), host, port))
         self._run_func = self.loop.run_forever
 
     def run(self) -> None:

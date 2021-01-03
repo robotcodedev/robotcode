@@ -65,10 +65,10 @@ class TextDocument:
         self.version = text_document.version if text_document is not None else version if version is not None else -1
         self._text = text_document.text if text_document is not None else text if text is not None else ""
 
-    def copy(self) -> 'TextDocument':
+    def copy(self) -> "TextDocument":
         return TextDocument(uri=self.uri, language_id=self.language_id, version=self.version, text=self.text)
 
-    async def copy_async(self) -> 'TextDocument':
+    async def copy_async(self) -> "TextDocument":
         async with self._lock:
             return self.copy()
 
