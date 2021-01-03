@@ -5,7 +5,16 @@ from types import FunctionType, MethodType
 from typing import Any, Callable, List, Optional, Type, TypeVar, Union, cast, overload
 import collections
 
-__all__ = ["LoggingDescriptor"]
+__all__ = ["LoggingDescriptor", "CALL_TRACING_ENABLED"]
+
+VERBOSE = logging.DEBUG - 5
+logging.addLevelName(VERBOSE, "VERBOSE")
+
+TRACE = logging.DEBUG - 6
+logging.addLevelName(TRACE, "TRACE")
+
+CALL_TRACING_ENABLED = True
+CALL_TRACING_DEFAULT_LEVEL = TRACE
 
 
 def get_class_that_defined_method(meth: Callable[..., Any]) -> Optional[Type[Any]]:
@@ -226,7 +235,7 @@ class LoggingDescriptor:
     def call(
         self,
         *,
-        level: int = logging.DEBUG,
+        level: int = CALL_TRACING_DEFAULT_LEVEL,
         prefix: str = "",
         condition: Optional[Callable[..., bool]] = None,
         entering: bool = True,
@@ -239,7 +248,7 @@ class LoggingDescriptor:
         self,
         _func: Optional[_F] = None,
         *,
-        level: int = logging.DEBUG,
+        level: int = CALL_TRACING_DEFAULT_LEVEL,
         prefix: str = "",
         condition: Optional[Callable[..., bool]] = None,
         entering: bool = True,
@@ -343,6 +352,10 @@ class LoggingDescriptor:
 
             return _wrapper
 
+        def _empty__decorator(func: _F) -> Callable[[_F], _F]:
+            return func
+
         if _func is None:
-            return cast(Callable[[_F], _F], _decorator)
-        return _decorator(_func)
+            return cast(Callable[[_F], _F], _decorator if CALL_TRACING_ENABLED else _empty__decorator)
+
+        return _decorator(_func) if CALL_TRACING_ENABLED else _empty__decorator(_func)
