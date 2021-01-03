@@ -1,6 +1,5 @@
 import asyncio
-import logging
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
+from typing import Callable, TYPE_CHECKING, Any, Dict, Optional
 
 from ....utils.logging import LoggingDescriptor
 from ...jsonrpc2.protocol import JsonRPCProtocol, GenericJsonRPCProtocolPart
@@ -12,14 +11,83 @@ if TYPE_CHECKING:
 
 __all__ = ["DiagnosticsProtocolPart"]
 
+DIAGNOSTICS_DEBOUNCE = 0.75
 
-class DiagnosticsProtocolPart(GenericJsonRPCProtocolPart['LanguageServerProtocol']):
+
+class PublishDiagnosticsEntry:
+    _logger = LoggingDescriptor()
+
+    def __init__(self, document: TextDocument, task_factory: Callable[..., asyncio.Task[Any]]) -> None:
+
+        self._document = document
+        self._task_factory = task_factory
+
+        self._task: Optional[asyncio.Task[Any]] = None
+
+        @PublishDiagnosticsEntry._logger.call
+        def create_task() -> None:
+            self._task = self._task_factory()
+
+            if self._task is not None:
+                self._task.set_name(f"Diagnostics for {document}")
+
+                def _done(t: asyncio.Task[Any]) -> None:
+                    assert self._task == t
+                    self._task = None
+
+                self._task.add_done_callback(_done)
+
+        self._timer_handle: asyncio.TimerHandle = asyncio.get_event_loop().call_later(DIAGNOSTICS_DEBOUNCE, create_task)
+
+    def __del__(self) -> None:
+        self.cancel(_from_del=True)
+
+    @property
+    def document(self) -> TextDocument:
+        return self._document
+
+    @property
+    def task(self) -> Optional[asyncio.Task[Any]]:
+        return self._task
+
+    def __str__(self) -> str:
+        return f"{type(self)}(document={repr(self.document)}, task={repr(self.task)})"
+
+    def __repr__(self) -> str:
+        return f"{type(self)}(document={repr(self.document)}, task={repr(self.task)})"
+
+    @_logger.call(condition=lambda self, _from_del=False: not _from_del)
+    def cancel(self, *, _from_del: Optional[bool] = False) -> None:
+        self._timer_handle.cancel()
+
+        if self.task is None:
+            return
+
+        async def cancel() -> None:
+            if self.task is None:
+                return
+
+            t = self.task
+            self._task = None
+            if not t.done():
+                t.cancel()
+                try:
+                    await t
+                except asyncio.CancelledError:
+                    pass
+                except BaseException:
+                    pass
+
+        asyncio.ensure_future(cancel())
+
+
+class DiagnosticsProtocolPart(GenericJsonRPCProtocolPart["LanguageServerProtocol"]):
     _logger = LoggingDescriptor()
 
     def __init__(self, protocol: "LanguageServerProtocol") -> None:
         super().__init__(protocol)
 
-        self._running_diagnosistcs_tasks: Dict[DocumentUri, Tuple[asyncio.Task[Any], Optional[int]]] = {}
+        self._running_diagnosistcs: Dict[DocumentUri, PublishDiagnosticsEntry] = {}
         self._task_lock = asyncio.Lock()
         self._start_lock_lock = asyncio.Lock()
 
@@ -32,96 +100,72 @@ class DiagnosticsProtocolPart(GenericJsonRPCProtocolPart['LanguageServerProtocol
 
     @_logger.call
     async def on_connection_lost(self, sender: JsonRPCProtocol, ex: BaseException) -> None:
-        await self.cancel_all_tasks()
+        await self._cancel_all_tasks()
 
     @_logger.call
-    async def on_shutdown(self, sender: 'LanguageServerProtocol') -> None:
-        await self.cancel_all_tasks()
+    async def on_shutdown(self, sender: "LanguageServerProtocol") -> None:
+        await self._cancel_all_tasks()
 
     def __del__(self) -> None:
-        if len(self._running_diagnosistcs_tasks) > 0:
+        if len(self._running_diagnosistcs) > 0:
             self._logger.warning("there are running tasks")
 
     @_logger.call
-    async def cancel_all_tasks(self) -> None:
+    async def _cancel_all_tasks(self) -> None:
         tasks_copy = None
         async with self._task_lock:
-            tasks_copy = self._running_diagnosistcs_tasks.copy()
-            self._running_diagnosistcs_tasks = {}
+            tasks_copy = self._running_diagnosistcs.copy()
+            self._running_diagnosistcs = {}
         if tasks_copy is not None:
-            for task, _ in tasks_copy.values():
-                task.cancel()
+            for v in tasks_copy.values():
+                self._cancel_entry(v)
 
-    @_logger.call(level=logging.INFO)
+    @_logger.call(condition=lambda self, entry: entry is not None)
+    def _cancel_entry(self, entry: Optional[PublishDiagnosticsEntry]) -> None:
+        if entry is None:
+            return
+
+        entry.cancel()
+
+    @_logger.call
     async def on_did_open(self, sender: Any, document: TextDocument) -> None:
-        await self.start_collect_diagnostics_task(document)
+        await self.start_publish_diagnostics_task(document)
 
     @_logger.call
     async def on_did_save(self, sender: Any, document: TextDocument) -> None:
-        await self.start_collect_diagnostics_task(document)
+        await self.start_publish_diagnostics_task(document)
 
     @_logger.call
     async def on_did_close(self, sender: Any, document: TextDocument) -> None:
-        pass
-
-    @_logger.call(level=logging.INFO)
-    async def on_did_change(self, sender: Any, document: TextDocument) -> None:
-        await self.start_collect_diagnostics_task(document)
+        async with self._task_lock:
+            e = self._running_diagnosistcs.pop(document.uri, None)
+            self._cancel_entry(e)
 
     @_logger.call
-    async def start_collect_diagnostics_task(self, document: TextDocument) -> None:
-        document = document.copy()
+    async def on_did_change(self, sender: Any, document: TextDocument) -> None:
+        await self.start_publish_diagnostics_task(document)
 
-        async def done_callback(t: asyncio.Task[Any]) -> None:
-            async with self._task_lock:
-                if self._running_diagnosistcs_tasks.get(document.uri, (None, None))[0] == t:
-                    self._running_diagnosistcs_tasks.pop(document.uri, None)
-
-        def call_done_callback(t: asyncio.Task[Any]) -> None:
-            asyncio.ensure_future(done_callback(t))
-
-        # async with self._start_lock_lock:
-        if self.parent.server is None:
-            return
-
+    @_logger.call
+    async def start_publish_diagnostics_task(self, document: TextDocument) -> None:
         async with self._task_lock:
+            self._cancel_entry(self._running_diagnosistcs.get(document.uri, None))
 
-            (running_task, version) = self._running_diagnosistcs_tasks.get(document.uri, (None, None))
-
-            if document.version == version:
-                self._logger.info(f"allready run diagnostics task for document {document} and version {version}")
-                return
-
-            if running_task is not None and not running_task.done():
-                self._logger.info(f"cancel task {document} version {version}")
-                running_task.cancel()
-                try:
-                    await running_task
-                except asyncio.CancelledError:
-                    pass
-                except BaseException:
-                    pass
-            else:
-                pass
-
-            task = asyncio.create_task(
-                self.collect_diagnostics(document),
-                # name=f"collect diagnostics for {document}",
+            self._running_diagnosistcs[document.uri] = PublishDiagnosticsEntry(
+                document,
+                lambda: asyncio.create_task(
+                    self.publish_diagnostics(document),
+                ),
             )
 
-            self._logger.info(f"create task {document} version {version}")
-            task.add_done_callback(call_done_callback)
-            self._running_diagnosistcs_tasks[document.uri] = (task, document.version)
-
     @_logger.call
-    async def collect_diagnostics(self, document: TextDocument) -> None:
+    async def publish_diagnostics(self, document: TextDocument) -> None:
         self._logger.info(f"start {document}")
         i = 0
         try:
             while True:
                 await asyncio.sleep(1)
 
-                # self._logger.info(f"{document} dumum {i}")
+                self._logger.info(f"{document} dumum {i}")
                 i += 1
                 if i == 5:
                     break

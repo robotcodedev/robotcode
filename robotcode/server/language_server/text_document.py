@@ -62,11 +62,15 @@ class TextDocument:
         self.language_id = (
             text_document.language_id if text_document is not None else language_id if language_id is not None else ""
         )
-        self.version = text_document.version if text_document is not None else version if version is not None else 0
+        self.version = text_document.version if text_document is not None else version if version is not None else -1
         self._text = text_document.text if text_document is not None else text if text is not None else ""
 
-    def copy(self) -> "TextDocument":
+    def copy(self) -> 'TextDocument':
         return TextDocument(uri=self.uri, language_id=self.language_id, version=self.version, text=self.text)
+
+    async def copy_async(self) -> 'TextDocument':
+        async with self._lock:
+            return self.copy()
 
     def __str__(self) -> str:
         return super().__str__()
@@ -78,6 +82,11 @@ class TextDocument:
             f"version={repr(self.version)}, "
             f"text={repr(self.text) if len(self.text)<10 else repr(self.text[:10]+'...')})"
         )
+
+    @property
+    async def text_async(self) -> str:
+        async with self._lock:
+            return self.text
 
     @property
     def text(self) -> str:

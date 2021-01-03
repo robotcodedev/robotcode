@@ -8,7 +8,7 @@ import weakref
 
 from typing import (
     Any,
-    Callable, Coroutine,
+    Callable,
     Dict,
     Generator,
     Generic,
@@ -399,8 +399,8 @@ class JsonRPCProtocol(asyncio.Protocol):
         self.transport: Optional[asyncio.Transport] = None
         self._request_futures: Dict[Union[str, int], _RequestFuturesEntry] = {}
         self._message_buf = bytes()
-        self.connection_made_event = AsyncEvent[Callable[['JsonRPCProtocol', asyncio.BaseTransport], None]]()
-        self.connection_lost_event = AsyncEvent[Callable[['JsonRPCProtocol', BaseException], Any]]()
+        self.connection_made_event = AsyncEvent[Callable[["JsonRPCProtocol", asyncio.BaseTransport], None]]()
+        self.connection_lost_event = AsyncEvent[Callable[["JsonRPCProtocol", BaseException], Any]]()
 
     @_logger.call
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
@@ -524,7 +524,7 @@ class JsonRPCProtocol(asyncio.Protocol):
         self,
         method: str,
         params: Any,
-        return_type_or_converter: Union[Type[TResult], Callable[[Any], TResult], None] = Dict[Any, Any],
+        return_type_or_converter: Union[Type[TResult], Callable[[Any], TResult], None] = None,
     ) -> asyncio.Future[TResult]:
         result: asyncio.Future[TResult] = (
             self.server.loop if self.server is not None else asyncio.get_event_loop()

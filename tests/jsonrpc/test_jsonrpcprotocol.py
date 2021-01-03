@@ -157,7 +157,7 @@ async def test_receive_invalid_id_in_response_should_send_an_error() -> None:
 async def test_send_request_receive_response_should_work_without_param_type_work() -> None:
     protocol = DummyJsonRPCProtocol(None)
 
-    r = protocol.send_request("dummy/method", ["dummy", "data"])
+    r: Any = protocol.send_request("dummy/method", ["dummy", "data"])
 
     msg = JsonRPCResponse(
         id=cast(JsonRPCRequest, protocol.sended_message).id, result=MessageActionItem(title="hi there")
