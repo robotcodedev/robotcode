@@ -101,10 +101,10 @@ def start_debugpy(port: int, wait_for_client: bool) -> None:
 
 
 def start_server(mode: str, port: int) -> None:
-    from .jsonrpc2.server import JsonRpcServerMode, TcpParams
-    from .language_server.server import LanguageServer
+    from ..jsonrpc2.server import JsonRpcServerMode, TcpParams
+    from ..robotframework.server import RobotLanguageServer
 
-    with LanguageServer(mode=JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port)) as server:
+    with RobotLanguageServer(mode=JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port)) as server:
         try:
             server.run()
         except KeyboardInterrupt:
@@ -186,16 +186,16 @@ def main() -> None:
             _logger.logger.addHandler(get_log_handler(args.log_file))
 
         if not args.debug_json_rpc:
-            logging.getLogger("robotcode.server.jsonrpc2").propagate = False
+            logging.getLogger("robotcode.jsonrpc2").propagate = False
 
         if not args.debug_json_rpc_data:
-            logging.getLogger("robotcode.server.jsonrpc2.server.JsonRPCProtocol.message").propagate = False
+            logging.getLogger("robotcode.jsonrpc2.server.JsonRPCProtocol.message").propagate = False
 
         if not args.debug_language_server:
-            logging.getLogger("robotcode.server.language_server").propagate = False
+            logging.getLogger("robotcode.language_server").propagate = False
 
         if not args.debug_language_server_parts:
-            logging.getLogger("robotcode.server.language_server.parts").propagate = False
+            logging.getLogger("robotcode.language_server.parts").propagate = False
 
     _logger.info(f"Starting with args={args}")
     if args.debugpy:

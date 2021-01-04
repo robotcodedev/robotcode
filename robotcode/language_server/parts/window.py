@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from ...jsonrpc2.protocol import JsonRPCProtocolPart
+from robotcode.jsonrpc2.protocol import JsonRPCProtocolPart
 from ..types import (
     URI,
     LogMessageParams,

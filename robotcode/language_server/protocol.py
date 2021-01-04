@@ -1,9 +1,9 @@
 import uuid
 from typing import Any, List, Optional
 
-from ..._version import __version__
-from ...utils.async_event import AsyncEvent
-from ...utils.logging import LoggingDescriptor
+from .._version import __version__
+from ..utils.async_event import AsyncEvent
+from ..utils.logging import LoggingDescriptor
 from ..jsonrpc2.protocol import JsonRPCException, JsonRPCProtocol, ProtocolPartDescriptor, rpc_method
 from ..jsonrpc2.server import JsonRPCServer
 from .parts.diagnostics import DiagnosticsProtocolPart
@@ -33,6 +33,7 @@ class LanguageServerException(JsonRPCException):
 class LanguageServerProtocol(JsonRPCProtocol):
 
     _logger = LoggingDescriptor()
+
     window = ProtocolPartDescriptor(WindowProtocolPart)
     documents = ProtocolPartDescriptor(TextDocumentProtocolPart)
     diagnostics = ProtocolPartDescriptor(DiagnosticsProtocolPart)

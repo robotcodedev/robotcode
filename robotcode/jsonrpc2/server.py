@@ -5,7 +5,7 @@ from enum import Enum
 from types import TracebackType
 from typing import BinaryIO, Callable, Generic, Literal, NamedTuple, Optional, Type
 
-from ...utils.logging import LoggingDescriptor
+from ..utils.logging import LoggingDescriptor
 from .protocol import JsonRPCException, JsonRPCProtocol, TProtocol
 
 __all__ = ["StdOutTransportAdapter", "JsonRpcServerMode", "StdIoParams", "TcpParams", "JsonRPCServer"]
@@ -13,6 +13,7 @@ __all__ = ["StdOutTransportAdapter", "JsonRpcServerMode", "StdIoParams", "TcpPar
 
 class StdOutTransportAdapter(asyncio.Transport):
     def __init__(self, rfile: BinaryIO, wfile: BinaryIO) -> None:
+        super().__init__()
         self.rfile = rfile
         self.wfile = wfile
 
@@ -46,7 +47,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         mode: JsonRpcServerMode = JsonRpcServerMode.STDIO,
         stdio_params: StdIoParams = StdIoParams(None, None),
         tcp_params: TcpParams = TcpParams(None, 0),
-        loop: Optional[asyncio.AbstractEventLoop] = None,
     ):
         self.mode = mode
         self.stdio_params = stdio_params
@@ -57,7 +57,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
         self._stop_event = asyncio.Event()
 
-        self.loop = loop or asyncio.get_event_loop()
+        self.loop = asyncio.get_event_loop()
 
         # self.loop.set_debug(True)
 

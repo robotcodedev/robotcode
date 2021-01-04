@@ -5,7 +5,7 @@ from typing import Any, Dict, Generator, List, Optional, cast
 
 import pytest
 
-from robotcode.server.jsonrpc2.protocol import (
+from robotcode.jsonrpc2.protocol import (
     JsonRPCError,
     JsonRPCErrorObject,
     JsonRPCErrors,
@@ -14,12 +14,12 @@ from robotcode.server.jsonrpc2.protocol import (
     JsonRPCRequest,
     JsonRPCResponse,
 )
-from robotcode.server.jsonrpc2.server import JsonRPCServer
-from robotcode.server.language_server.types import MessageActionItem
+from robotcode.jsonrpc2.server import JsonRPCServer
+from robotcode.language_server.types import MessageActionItem
 
 
 class DummyJsonRPCProtocol(JsonRPCProtocol):
-    def __init__(self, server: Optional[JsonRPCServer['DummyJsonRPCProtocol']]):
+    def __init__(self, server: Optional[JsonRPCServer["DummyJsonRPCProtocol"]]):
         super().__init__(server)
         self.handled_messages: List[JsonRPCMessage] = []
         self.sended_message: Optional[JsonRPCMessage] = None

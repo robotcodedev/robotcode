@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional
 
-from ...utils.logging import LoggingDescriptor
 from ..jsonrpc2.protocol import JsonRPCProtocol, JsonRPCProtocolPart, rpc_method
+from ..utils.logging import LoggingDescriptor
 from .types import ConfigurationItem, ConfigurationParams, DidChangeConfigurationParams, WorkspaceFolder
 
 

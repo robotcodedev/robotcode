@@ -1,36 +1,16 @@
-from asyncio import AbstractEventLoop, CancelledError
+from asyncio import CancelledError
 import asyncio
 
-from typing import Any, List, Optional
+from typing import Any, List
 
-from ...utils.logging import LoggingDescriptor
-from ..jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, StdIoParams, TcpParams
-from .protocol import LanguageServerProtocol
-from .text_document import TextDocument
-from .types import Diagnostic, DiagnosticSeverity, Position, Range
+from ..language_server.text_document import TextDocument
+from ..language_server.types import Diagnostic, DiagnosticSeverity, Position, Range
 
-__all__ = ["LanguageServer", "TCP_DEFAULT_PORT"]
-
-TCP_DEFAULT_PORT = 6601
+from ..language_server.server import LanguageServer
+from ..language_server.protocol import LanguageServerProtocol
 
 
-class LanguageServer(JsonRPCServer[LanguageServerProtocol]):
-    _logger = LoggingDescriptor()
-
-    def __init__(
-        self,
-        mode: JsonRpcServerMode = JsonRpcServerMode.STDIO,
-        stdio_params: StdIoParams = StdIoParams(None, None),
-        tcp_params: TcpParams = TcpParams(None, TCP_DEFAULT_PORT),
-        loop: Optional[AbstractEventLoop] = None,
-    ):
-        super().__init__(
-            mode=mode,
-            stdio_params=stdio_params,
-            tcp_params=tcp_params,
-            loop=loop,
-        )
-
+class RobotLanguageServer(LanguageServer[LanguageServerProtocol]):
     def create_protocol(self) -> LanguageServerProtocol:
         result = LanguageServerProtocol(self)
         result.diagnostics.collect_diagnostics_event.add(self.collect_dummy_diagnostics)

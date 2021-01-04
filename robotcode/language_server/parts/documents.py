@@ -1,7 +1,7 @@
 from typing import Any, TYPE_CHECKING, Dict, List, Optional
 
-from ....utils.logging import LoggingDescriptor
-from ....utils.async_event import AsyncEvent
+from ...utils.logging import LoggingDescriptor
+from ...utils.async_event import AsyncEvent
 from ...jsonrpc2.protocol import GenericJsonRPCProtocolPart, JsonRPCException, rpc_method
 from ..types import (
     DidChangeTextDocumentParams,

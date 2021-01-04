@@ -31,8 +31,8 @@ from typing import (
 from pydantic import BaseModel, Field
 from pydantic.typing import get_args, get_origin
 
-from ...utils.logging import LoggingDescriptor
-from ...utils.async_event import AsyncEvent
+from ..utils.logging import LoggingDescriptor
+from ..utils.async_event import AsyncEvent
 
 __all__ = [
     "JsonRPCErrors",

@@ -1,8 +1,8 @@
 import asyncio
 from typing import List, TYPE_CHECKING, Any, Callable, Dict, Optional
 
-from ....utils.async_event import AsyncEventTask
-from ....utils.logging import LoggingDescriptor
+from ...utils.async_event import AsyncEventTask
+from ...utils.logging import LoggingDescriptor
 from ...jsonrpc2.protocol import GenericJsonRPCProtocolPart, JsonRPCProtocol
 from ..text_document import TextDocument
 from ..types import Diagnostic, DocumentUri, PublishDiagnosticsParams
@@ -178,8 +178,7 @@ class DiagnosticsProtocolPart(GenericJsonRPCProtocolPart["LanguageServerProtocol
 
         self._logger.info(f"start {document}")
         try:
-            r = await self.collect_diagnostics_event(self, document, result_callback=callback)
-            print(r)
+            await self.collect_diagnostics_event(self, document, result_callback=callback)            
         except asyncio.CancelledError:
             self._logger.info(f"canceled {document}")
             raise

@@ -2,7 +2,7 @@ import asyncio
 import io
 from typing import List, Optional, overload
 
-from ...utils.logging import LoggingDescriptor
+from ..utils.logging import LoggingDescriptor
 from .types import (
     DocumentUri,
     Position,
