@@ -176,12 +176,9 @@ class HasRpcRegistry(Protocol):
     __rpc_registry__: "RpcRegistry"
 
 
-@runtime_checkable
-class HasClassRpcRegistry(Protocol):
-    __class_rpc_registry__: "RpcRegistry"
-
-
 class RpcRegistry:
+    _class_registries: Dict[Type[Any], "RpcRegistry"] = {}
+
     def __init__(self, owner: Any = None, parent: Optional["RpcRegistry"] = None):
         self.__owner = owner
         self.__owner_name = ""
@@ -205,10 +202,10 @@ class RpcRegistry:
 
             return cast(HasRpcRegistry, obj).__rpc_registry__
 
-        if not isinstance(objtype, HasClassRpcRegistry):
-            cast(HasClassRpcRegistry, objtype).__class_rpc_registry__ = RpcRegistry(objtype, self)
+        if objtype not in RpcRegistry._class_registries:
+            RpcRegistry._class_registries[objtype] = RpcRegistry(objtype, self)
 
-        return cast(HasClassRpcRegistry, objtype).__class_rpc_registry__
+        return RpcRegistry._class_registries[objtype]
 
     def _reset(self) -> None:
         self.__methods.clear()
@@ -640,8 +637,10 @@ class HasPartInstance(Protocol, Generic[TProtocolPart]):
 
 
 class ProtocolPartDescriptor(Generic[TProtocolPart]):
-    def __init__(self, instance_type: Type[TProtocolPart]):
+    def __init__(self, instance_type: Type[TProtocolPart], *args: Any, **kwargs: Any):
         self._instance_type = instance_type
+        self._instance_args = args
+        self._instance_kwargs = kwargs
 
     def __set_name__(self, owner: Type[JsonRPCProtocol], name: str) -> None:
         if not issubclass(owner, JsonRPCProtocol):
@@ -656,7 +655,7 @@ class ProtocolPartDescriptor(Generic[TProtocolPart]):
             if self._instance_type not in cast(HasPartInstance[TProtocolPart], obj).__rpc_part_instances__:
                 cast(HasPartInstance[TProtocolPart], obj).__rpc_part_instances__[
                     self._instance_type
-                ] = self._instance_type(obj)
+                ] = self._instance_type(*(obj, *self._instance_args), **self._instance_kwargs)
 
             return cast(HasPartInstance[TProtocolPart], obj).__rpc_part_instances__[self._instance_type]
 

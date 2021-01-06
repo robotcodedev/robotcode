@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from robotcode.jsonrpc2.protocol import JsonRPCProtocolPart
+
 from ..types import (
     URI,
     LogMessageParams,
@@ -12,9 +12,10 @@ from ..types import (
     ShowMessageParams,
     ShowMessageRequestParams,
 )
+from .protocol_part import LanguageServerProtocolPart
 
 
-class WindowProtocolPart(JsonRPCProtocolPart):
+class WindowProtocolPart(LanguageServerProtocolPart):
     def show_message(self, message: str, type: MessageType = MessageType.Info) -> None:
         self.parent.send_notification("window/showMessage", ShowMessageParams(type=type, message=message))
 

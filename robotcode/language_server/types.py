@@ -878,3 +878,7 @@ class PublishDiagnosticsParams(Model):
     uri: DocumentUri
     version: Optional[int] = None
     diagnostics: List[Diagnostic]
+
+
+class SetTraceParams(Model):
+    value: TraceValue

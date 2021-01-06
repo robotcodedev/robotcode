@@ -12,7 +12,7 @@ TCP_DEFAULT_PORT = 6601
 TProtocol = TypeVar("TProtocol", bound=(LanguageServerProtocol))
 
 
-class LanguageServer(JsonRPCServer[TProtocol]):
+class LanguageServerBase(JsonRPCServer[TProtocol]):
     _logger = LoggingDescriptor()
 
     def __init__(
@@ -26,3 +26,8 @@ class LanguageServer(JsonRPCServer[TProtocol]):
             stdio_params=stdio_params,
             tcp_params=tcp_params,
         )
+
+
+class LanguageServer(LanguageServerBase[LanguageServerProtocol]):
+    def create_protocol(self) -> LanguageServerProtocol:
+        return LanguageServerProtocol(self)

@@ -186,7 +186,14 @@ class LoggingDescriptor:
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        self.log(logging.ERROR, msg, condition, *args, exc_info=exc_info, **kwargs)
+        if isinstance(msg, BaseException):
+            sm = str(msg)
+            s = type(msg).__qualname__
+            if sm:
+                s += ": " + sm
+            self.log(logging.ERROR, s, condition, *args, exc_info=exc_info, **kwargs)
+        else:
+            self.log(logging.ERROR, msg, condition, *args, exc_info=exc_info, **kwargs)
 
     def critical(
         self,

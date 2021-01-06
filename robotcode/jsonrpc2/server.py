@@ -5,6 +5,7 @@ from enum import Enum
 from types import TracebackType
 from typing import BinaryIO, Callable, Generic, Literal, NamedTuple, Optional, Type
 
+
 from ..utils.logging import LoggingDescriptor
 from .protocol import JsonRPCException, JsonRPCProtocol, TProtocol
 
