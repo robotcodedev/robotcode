@@ -1,4 +1,4 @@
-from typing import Any, Callable, Generic, TYPE_CHECKING, Dict, List, Optional, Type, TypeVar, Union
+from typing import Any, Iterator, Mapping, TYPE_CHECKING, Dict, List, Optional
 
 from ...utils.logging import LoggingDescriptor
 from ...utils.async_event import AsyncEvent
@@ -29,40 +29,45 @@ if TYPE_CHECKING:
 
 from .protocol_part import LanguageServerProtocolPart
 
-__all__ = ["TextDocumentProtocolPart", "LanguageServerDocumentException", "TDocument"]
+__all__ = ["TextDocumentProtocolPart", "LanguageServerDocumentException"]
 
 
 class LanguageServerDocumentException(JsonRPCException):
     pass
 
 
-TDocument = TypeVar("TDocument", bound=TextDocument)
-
-
-class TextDocumentProtocolPart(LanguageServerProtocolPart, Generic[TDocument]):
+class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, TextDocument]):
 
     _logger = LoggingDescriptor()
 
-    def __init__(
-        self,
-        parent: "LanguageServerProtocol",
-        document_factory: Union[Type[TDocument], Callable[[TextDocumentItem], TDocument]],
-    ) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
-        self._document_factory = document_factory
         self._documents: Dict[DocumentUri, TextDocument] = {}
-        self.did_open_event = AsyncEvent[TextDocumentProtocolPart[TDocument], TDocument]()
-        self.did_close_event = AsyncEvent[TextDocumentProtocolPart[TDocument], TDocument]()
-        self.did_change_event = AsyncEvent[TextDocumentProtocolPart[TDocument], TDocument]()
-        self.did_save_event = AsyncEvent[TextDocumentProtocolPart[TDocument], TDocument]()
+        self.did_open_event = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
+        self.did_close_event = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
+        self.did_change_event = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
+        self.did_save_event = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
 
-    def create_document(self, text_document: TextDocumentItem) -> TDocument:
-        return self._document_factory(text_document)
+    def __getitem__(self, k: str) -> Any:
+        return self._documents.__getitem__(k)
+
+    def __len__(self) -> int:
+        return self._documents.__len__()
+
+    def __iter__(self) -> Iterator[DocumentUri]:
+        return self._documents.__iter__()
+
+    def __hash__(self) -> int:
+        return id(self)
+
+    def _create_document(self, text_document: TextDocumentItem) -> TextDocument:
+        return TextDocument(text_document)
 
     @rpc_method(name="textDocument/didOpen", param_type=DidOpenTextDocumentParams)
     @_logger.call
     async def _text_document_did_open(self, text_document: TextDocumentItem, *args: Any, **kwargs: Any) -> None:
-        document = TextDocument(text_document)
+        document = self._create_document(text_document)
+
         self._documents[text_document.uri] = document
 
         await self.did_open_event(self, document)

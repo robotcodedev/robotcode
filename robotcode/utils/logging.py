@@ -1,9 +1,11 @@
+from enum import Enum
 import functools
 import inspect
 import logging
 from types import FunctionType, MethodType
 from typing import Any, Callable, List, Optional, Type, TypeVar, Union, cast, overload
 import collections
+import time
 
 __all__ = ["LoggingDescriptor"]
 
@@ -50,6 +52,12 @@ class _HasLoggerEntries:
 _FUNC_TYPE = Union[Callable[[], logging.Logger], Callable[[], None], staticmethod, None]
 
 _F = TypeVar("_F", bound=Callable[..., Any])
+
+
+class CallState(Enum):
+    ENTERING = "entering"
+    EXITING = "exiting"
+    EXCEPTION = "exception"
 
 
 class LoggingDescriptor:
@@ -251,6 +259,7 @@ class LoggingDescriptor:
         entering: bool = True,
         exiting: bool = False,
         exception: bool = False,
+        timed: bool = False,
     ) -> Callable[[_F], _F]:
         ...
 
@@ -264,6 +273,7 @@ class LoggingDescriptor:
         entering: bool = True,
         exiting: bool = False,
         exception: bool = False,
+        timed: bool = False,
         **kwargs: Any,
     ) -> Callable[[_F], _F]:
 
@@ -281,7 +291,7 @@ class LoggingDescriptor:
                     level=level,
                     prefix=prefix,
                     condition=condition,
-                    states={"entering": entering, "exiting": exiting, "exception": exception},
+                    states={CallState.ENTERING: entering, CallState.EXITING: exiting, CallState.EXCEPTION: exception},
                 )
             )
 
@@ -315,14 +325,22 @@ class LoggingDescriptor:
                         )
 
                 def log(
-                    message: Callable[[], str], *, state: str, log_level: Optional[int] = None, **log_kwargs: Any
+                    message: Callable[[], str],
+                    *,
+                    state: CallState,
+                    log_level: Optional[int] = None,
+                    **log_kwargs: Any,
                 ) -> None:
                     if has_logging_entries():
                         for c in cast(_HasLoggerEntries, unwrapped_func).__logging_entries__:
                             if c.states[state]:
 
                                 def state_msg() -> str:
-                                    return (state + " ") if state != "entering" or c.states["exiting"] else ""
+                                    return (
+                                        (str(state.value) + " ")
+                                        if state != CallState.ENTERING or c.states[CallState.EXITING]
+                                        else ""
+                                    )
 
                                 self.log(
                                     log_level if log_level is not None else c.level,
@@ -345,23 +363,42 @@ class LoggingDescriptor:
                         ),
                     )
 
-                def build_exit_message(res: Any) -> str:
-                    return "{0}(...) -> {1}".format(func_name(), repr(res))
+                def build_exit_message(res: Any, duration: Optional[float]) -> str:
+                    return "{0}(...) -> {1}{2}".format(
+                        func_name(), repr(res), f" duration: {duration}" if duration is not None else ""
+                    )
 
                 def build_exception_message(exception: BaseException) -> str:
                     return "{0}(...)->{1}".format(func_name(), exception)
 
-                log(build_enter_message, state="entering")
+                log(build_enter_message, state=CallState.ENTERING)
 
                 result = None
                 try:
+                    start_time: float = 0
+                    end_time: float = 0
+                    if timed:
+                        start_time = time.time()
+
                     result = real_func(*real_args, **wrapper_kwargs)
+
+                    if timed:
+                        end_time = time.time()
+
                 except BaseException as e:
                     ex = e
-                    log(lambda: build_exception_message(ex), log_level=logging.ERROR, state="exception", exc_info=True)
+                    log(
+                        lambda: build_exception_message(ex),
+                        log_level=logging.ERROR,
+                        state=CallState.EXCEPTION,
+                        exc_info=True,
+                    )
                     raise
                 else:
-                    log(lambda: build_exit_message(result), state="exiting")
+                    log(
+                        lambda: build_exit_message(result, end_time - start_time if timed else None),
+                        state=CallState.EXITING,
+                    )
                 return result
 
             return _wrapper

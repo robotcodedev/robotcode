@@ -3,6 +3,8 @@ import io
 from typing import List, Optional, overload
 
 from ..utils.logging import LoggingDescriptor
+from ..utils.uri import Uri
+
 from .types import (
     DocumentUri,
     Position,
@@ -42,14 +44,14 @@ class TextDocument:
         ...
 
     @overload
-    def __init__(self, *, uri: DocumentUri, language_id: str, version: int, text: str) -> None:
+    def __init__(self, *, document_uri: DocumentUri, language_id: str, version: int, text: str) -> None:
         ...
 
     def __init__(
         self,
         text_document: Optional[TextDocumentItem] = None,
         *,
-        uri: Optional[DocumentUri] = None,
+        document_uri: Optional[DocumentUri] = None,
         language_id: Optional[str] = None,
         version: Optional[int] = None,
         text: Optional[str] = None,
@@ -58,7 +60,11 @@ class TextDocument:
 
         self._lock = asyncio.Lock()
 
-        self.uri = text_document.uri if text_document is not None else uri if uri is not None else ""
+        self.document_uri = (
+            text_document.uri if text_document is not None else document_uri if document_uri is not None else ""
+        )
+        self.uri = Uri(self.document_uri)
+
         self.language_id = (
             text_document.language_id if text_document is not None else language_id if language_id is not None else ""
         )
@@ -66,7 +72,9 @@ class TextDocument:
         self._text = text_document.text if text_document is not None else text if text is not None else ""
 
     def copy(self) -> "TextDocument":
-        return TextDocument(uri=self.uri, language_id=self.language_id, version=self.version, text=self.text)
+        return TextDocument(
+            document_uri=self.document_uri, language_id=self.language_id, version=self.version, text=self.text
+        )
 
     async def copy_async(self) -> "TextDocument":
         async with self._lock:
@@ -82,11 +90,6 @@ class TextDocument:
             f"version={repr(self.version)}, "
             f"text={repr(self.text) if len(self.text)<10 else repr(self.text[:10]+'...')})"
         )
-
-    @property
-    async def text_async(self) -> str:
-        async with self._lock:
-            return self.text
 
     @property
     def text(self) -> str:

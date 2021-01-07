@@ -9,9 +9,11 @@ from ..utils.logging import LoggingDescriptor
 from .parts.diagnostics import DiagnosticsProtocolPart
 from .parts.documents import TextDocumentProtocolPart
 from .parts.window import WindowProtocolPart
-from .text_document import TextDocument
+from .parts.folding_range import FoldingRangeProtocolPart
+
 from .types import (
     ClientCapabilities,
+    FoldingRangeRegistrationOptions,
     InitializedParams,
     InitializeParams,
     InitializeResult,
@@ -38,8 +40,9 @@ class LanguageServerProtocol(JsonRPCProtocol):
     _logger = LoggingDescriptor()
 
     window = ProtocolPartDescriptor(WindowProtocolPart)
-    documents = ProtocolPartDescriptor(TextDocumentProtocolPart[TextDocument], TextDocument)
-    diagnostics = ProtocolPartDescriptor(DiagnosticsProtocolPart[TextDocument])
+    documents = ProtocolPartDescriptor(TextDocumentProtocolPart)
+    diagnostics = ProtocolPartDescriptor(DiagnosticsProtocolPart)
+    folding_range = ProtocolPartDescriptor(FoldingRangeProtocolPart)
 
     def __init__(self, server: Optional[JsonRPCServer[Any]]):
         super().__init__(server)
@@ -54,6 +57,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
                 will_save_wait_until=True,
                 save=SaveOptions(include_text=True),
             ),
+            folding_range_provider=FoldingRangeRegistrationOptions(work_done_progress=True, id=str(uuid.uuid4())),
             workspace=ServerCapabilities.Workspace(
                 workspace_folders=WorkspaceFoldersServerCapabilities(
                     supported=True, change_notifications=str(uuid.uuid4())
@@ -124,5 +128,5 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     @rpc_method(name="$/setTrace", param_type=SetTraceParams)
     @_logger.call
-    def set_trace(self, value: TraceValue) -> None:
+    def set_trace(self, value: TraceValue, **kwargs: Any) -> None:
         self.trace = value

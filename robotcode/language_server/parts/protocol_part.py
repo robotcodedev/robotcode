@@ -7,4 +7,5 @@ if TYPE_CHECKING:
 
 
 class LanguageServerProtocolPart(GenericJsonRPCProtocolPart["LanguageServerProtocol"]):
-    pass
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
+        super().__init__(parent)

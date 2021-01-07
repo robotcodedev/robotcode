@@ -5,7 +5,20 @@ from abc import ABC
 from concurrent.futures import ThreadPoolExecutor
 from inspect import isawaitable, ismethod
 from types import MethodType
-from typing import Any, AsyncGenerator, Awaitable, Callable, Generic, List, MutableSet, Optional, TypeVar, Union, cast
+from typing import (
+    Any,
+    AsyncGenerator,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Generic,
+    List,
+    MutableSet,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
+)
 
 __all__ = [
     "AsyncEventGenerator",
@@ -45,7 +58,7 @@ class AsyncEventGeneratorBase(Generic[TSender, TParam, TResult], ABC):
             else:
                 self.methods_listeners.remove(weakref.ref(callback))
 
-    async def _notify(self, *args: Any, **kwargs: Any) -> AsyncGenerator[TResult, None]:
+    async def _notify(self, *args: Any, **kwargs: Any) -> AsyncIterator[TResult]:
         for method_listener in self.methods_listeners:
             method = method_listener()
             if method is not None:
@@ -57,7 +70,7 @@ class AsyncEventGeneratorBase(Generic[TSender, TParam, TResult], ABC):
 
 
 class AsyncEventGenerator(AsyncEventGeneratorBase[TSender, TParam, TResult]):
-    def __call__(self, *args: Any, **kwargs: Any) -> "AsyncGenerator[TResult, None]":
+    def __call__(self, *args: Any, **kwargs: Any) -> AsyncIterator[TResult]:
         return self._notify(*args, **kwargs)
 
 
@@ -83,7 +96,7 @@ class AsyncTaskEventGeneratorBase(
         param: TParam,
         *,
         result_callback: Optional[Callable[[Optional[TResult], Optional[BaseException]], Any]] = None,
-    ) -> AsyncGenerator[TResult, None]:
+    ) -> AsyncIterator[TResult]:
         def _done(f: asyncio.Future[TResult]) -> None:
             if result_callback is not None:
                 try:
@@ -113,7 +126,7 @@ class AsyncTaskEventGenerator(AsyncTaskEventGeneratorBase[TSender, TParam, TResu
         param: TParam,
         *,
         result_callback: Optional[Callable[[Optional[TResult], Optional[BaseException]], Any]] = None,
-    ) -> "AsyncGenerator[TResult, None]":
+    ) -> AsyncIterator[TResult]:
         return self._notify(sender, param, result_callback=result_callback)
 
 
@@ -126,33 +139,6 @@ class AsyncTaskEvent(AsyncTaskEventGeneratorBase[TSender, TParam, TResult]):
         result_callback: Optional[Callable[[Optional[TResult], Optional[BaseException]], Any]] = None,
     ) -> List[TResult]:
         return [e async for e in self._notify(sender, param, result_callback=result_callback)]
-
-
-def run_in_thread(
-    executor: ThreadPoolExecutor, coro: Union[asyncio.Future[TResult], Awaitable[TResult]]
-) -> asyncio.Future[TResult]:
-    def run(loop: asyncio.AbstractEventLoop) -> None:
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_forever()
-        except KeyboardInterrupt:
-            print("Yeah")
-        finally:
-            loop.close()
-
-    loop = asyncio.new_event_loop()
-    executor.submit(run, loop)
-    result = asyncio.wrap_future(asyncio.run_coroutine_threadsafe(coro, loop=loop))
-
-    def stop_loop(t: asyncio.Future[TResult]) -> None:
-        async def loop_stop() -> bool:
-            loop.stop()
-            return True
-
-        asyncio.run_coroutine_threadsafe(loop_stop(), loop=loop)
-
-    result.add_done_callback(stop_loop)
-    return result
 
 
 class AsyncThreadingEventGeneratorBase(
@@ -178,6 +164,31 @@ class AsyncThreadingEventGeneratorBase(
         if self._own_executor:
             self.executor.shutdown(False)
 
+    @staticmethod
+    def _run_in_asyncio_thread(
+        executor: ThreadPoolExecutor, coro: Union[asyncio.Future[TResult], Awaitable[TResult]]
+    ) -> asyncio.Future[TResult]:
+        def run(loop: asyncio.AbstractEventLoop) -> None:
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_forever()
+            finally:
+                loop.close()
+
+        loop = asyncio.new_event_loop()
+        executor.submit(run, loop)
+        result = asyncio.wrap_future(asyncio.run_coroutine_threadsafe(coro, loop=loop))
+
+        def stop_loop(t: asyncio.Future[TResult]) -> None:
+            async def loop_stop() -> bool:
+                loop.stop()
+                return True
+
+            asyncio.run_coroutine_threadsafe(loop_stop(), loop=loop)
+
+        result.add_done_callback(stop_loop)
+        return result
+
     async def _notify(  # type: ignore
         self,
         sender: TSender,
@@ -196,7 +207,7 @@ class AsyncThreadingEventGeneratorBase(
         for method_listener in self.methods_listeners:
             method = method_listener()
             if method is not None:
-                future = run_in_thread(self.executor, method(sender, param))
+                future = self._run_in_asyncio_thread(self.executor, method(sender, param))
                 if result_callback is not None:
                     future.add_done_callback(_done)
                 awaitables.append(future)

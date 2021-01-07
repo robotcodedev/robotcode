@@ -138,9 +138,14 @@ def main() -> None:
     parser.add_argument(
         "--debug-language-server-parts", action="store_true", help="show language server parts debug messages"
     )
+    parser.add_argument(
+        "--debug-robotframework", action="store_true", help="show robotframework language server debug messages"
+    )
+    parser.add_argument("--debug-asyncio", action="store_true", help="show asyncio debug messages")
     parser.add_argument("--log-colored", action="store_true", help="colored output for logs")
     parser.add_argument("--log-config", default=None, help="reads logging configuration from file")
     parser.add_argument("--log-file", default=None, help="enables logging to file")
+    parser.add_argument("--log-level", default="DEBUG", help="sets the overall log level")
     parser.add_argument("--debugpy", action="store_true", help="starts a debugpy session")
     parser.add_argument("--debugpy-port", default=5678, help="sets the port for debugpy session", type=int)
     parser.add_argument("--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect")
@@ -169,21 +174,26 @@ def main() -> None:
 
         logging.config.fileConfig(args.log_config, disable_existing_loggers=True)
     else:
+        log_level = logging._checkLevel(args.log_level) if args.debug else logging.WARNING  # type: ignore
+
         log_initialized = False
         if args.log_colored:
             try:
                 import coloredlogs
 
-                coloredlogs.install(level=(logging.DEBUG if args.debug else logging.WARNING))
+                coloredlogs.install(level=log_level)
                 log_initialized = True
             except BaseException:
                 pass
 
         if not log_initialized:
-            logging.basicConfig(level=(logging.DEBUG if args.debug else logging.WARNING))
+            logging.basicConfig(level=log_level)
 
         if args.log_file is not None:
             _logger.logger.addHandler(get_log_handler(args.log_file))
+
+        if not args.debug_asyncio:
+            logging.getLogger("asyncio").propagate = False
 
         if not args.debug_json_rpc:
             logging.getLogger("robotcode.jsonrpc2").propagate = False
@@ -196,6 +206,9 @@ def main() -> None:
 
         if not args.debug_language_server_parts:
             logging.getLogger("robotcode.language_server.parts").propagate = False
+
+        if not args.debug_robotframework:
+            logging.getLogger("robotcode.robotframework").propagate = False
 
     _logger.info(f"Starting with args={args}")
     if args.debugpy:

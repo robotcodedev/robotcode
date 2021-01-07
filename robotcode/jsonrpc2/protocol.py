@@ -350,7 +350,7 @@ def _convert_params(
             return ([params], {})
 
     # try to convert the dict to correct type
-    if issubclass(type, BaseModel):
+    if issubclass(param_type, BaseModel):
         converted_params = param_type.parse_obj(params)
     else:
         converted_params = param_type(**params)
@@ -367,7 +367,7 @@ def _convert_params(
         if v.name in converted_params.__dict__:
             if v.kind == inspect.Parameter.POSITIONAL_ONLY:
                 args.append(getattr(converted_params, v.name))
-            elif has_var_kw:
+            else:
                 kw_args[v.name] = getattr(converted_params, v.name)
             rest.remove(v.name)
         elif v.name == "params":

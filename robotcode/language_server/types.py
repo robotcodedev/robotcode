@@ -593,6 +593,37 @@ class TextDocumentSyncOptions(Model):
     save: Union[bool, SaveOptions, None] = None
 
 
+class WorkDoneProgressOptions(Model):
+    work_done_progress: Optional[bool] = None
+
+
+class DocumentFilter(Model):
+    language: Optional[str] = None
+    scheme: Optional[str] = None
+    pattern: Optional[str] = None
+
+
+DocumentSelector = List[DocumentFilter]
+
+
+class TextDocumentRegistrationOptions(Model):
+    document_selector: Optional[DocumentSelector] = None
+
+
+class StaticRegistrationOptions(Model):
+    id: Optional[str] = None
+
+
+class FoldingRangeOptions(WorkDoneProgressOptions):
+    pass
+
+
+class FoldingRangeRegistrationOptions(
+    TextDocumentRegistrationOptions, FoldingRangeOptions, StaticRegistrationOptions, Model
+):
+    pass
+
+
 class ServerCapabilities(Model):
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None]
     # completion_provider: Optional[CompletionOptions] = None
@@ -612,7 +643,7 @@ class ServerCapabilities(Model):
     # document_range_formatting_provider: Union[bool, DocumentRangeFormattingOptions, None] = None
     # document_on_type_formatting_provider: Optional[DocumentOnTypeFormattingOptions] = None
     # rename_provider: Union[bool, RenameOptions, None] = None
-    # folding_range_provider: Union[bool, FoldingRangeOptions, FoldingRangeRegistrationOptions, None] = None
+    folding_range_provider: Union[bool, FoldingRangeOptions, FoldingRangeRegistrationOptions, None] = None
     # selection_range_provider: Union[bool, SelectionRangeOptions, SelectionRangeRegistrationOptions, None] = None
     # linked_editing_range_provider: Union[
     #     boolean, LinkedEditingRangeOptions, LinkedEditingRangeRegistrationOptions, None
@@ -882,3 +913,37 @@ class PublishDiagnosticsParams(Model):
 
 class SetTraceParams(Model):
     value: TraceValue
+
+
+class FoldingRangeParams(WorkDoneProgressParams):
+    text_document: TextDocumentIdentifier
+
+
+class FoldingRangeKind(Enum):
+    Comment = "comment"
+    Imports = "imports"
+    Region = "region"
+
+
+class FoldingRange(Model):
+    def __init__(
+        self,
+        start_line: int,
+        end_line: int,
+        start_character: Optional[int] = None,
+        end_character: Optional[int] = None,
+        kind: Union[FoldingRangeKind, str, None] = None,
+    ) -> None:
+        super().__init__(  # type: ignore
+            start_line=start_line,
+            start_character=start_character,
+            end_line=end_line,
+            end_character=end_character,
+            kind=kind,
+        )
+
+    start_line: int
+    start_character: Optional[int] = None
+    end_line: int
+    end_character: Optional[int] = None
+    kind: Union[FoldingRangeKind, str, None] = None
