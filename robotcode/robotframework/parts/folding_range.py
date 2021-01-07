@@ -22,26 +22,49 @@ class RobotFoldingRangeProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageSer
         from ..utils.async_visitor import AsyncVisitor
 
         class Visitor(AsyncVisitor):
-            def __init__(self) -> None:
+            def __init__(self, parent: "RobotFoldingRangeProtocolPart") -> None:
                 super().__init__()
+                self.parent = parent
+                self.line_folding_only = True
+                if self.parent.parent.client_capabilities is not None:
+                    if self.parent.parent.client_capabilities.text_document is not None:
+                        if self.parent.parent.client_capabilities.text_document.folding_range is not None:
+                            if (
+                                self.parent.parent.client_capabilities.text_document.folding_range.line_folding_only
+                                is not None
+                            ):
+                                self.line_folding_only = (
+                                    self.parent.parent.client_capabilities.text_document.folding_range.line_folding_only
+                                )
+
                 self.foldings: List[FoldingRange] = []
 
             @classmethod
-            async def find_from(cls, model: ast.AST) -> List[FoldingRange]:
-                finder = cls()
+            async def find_from(cls, model: ast.AST, parent: "RobotFoldingRangeProtocolPart") -> List[FoldingRange]:
+                finder = cls(parent)
                 await finder.visit(model)
                 return finder.foldings
 
             def __apend(self, node: ast.AST, kind: str) -> None:
-                self.foldings.append(
-                    FoldingRange(
-                        start_line=node.lineno - 1,
-                        end_line=node.end_lineno - 1 if node.end_lineno is not None else node.lineno - 1,
-                        start_character=node.col_offset,
-                        end_character=node.end_col_offset,
-                        kind=kind,
+                if not self.line_folding_only:
+                    self.foldings.append(
+                        
+                        FoldingRange(
+                            start_line=node.lineno - 1,
+                            end_line=node.end_lineno - 1 if node.end_lineno is not None else node.lineno - 1,
+                            start_character=node.col_offset if not self.line_folding_only else None,
+                            end_character=node.end_col_offset if not self.line_folding_only else None,
+                            kind=kind,
+                        )
                     )
-                )
+                else:
+                    self.foldings.append(
+                        FoldingRange(
+                            start_line=node.lineno - 1,
+                            end_line=node.end_lineno - 1 if node.end_lineno is not None else node.lineno - 1,                        
+                            kind=kind,
+                        )
+                    )
 
             async def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
                 self.__apend(node, kind="section")
@@ -72,4 +95,4 @@ class RobotFoldingRangeProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageSer
                 self.__apend(node, kind="if")
                 await self.generic_visit(node)
 
-        return await Visitor.find_from(await self.parent.model_cache.get_model(document))
+        return await Visitor.find_from(await self.parent.model_cache.get_model(document), self)

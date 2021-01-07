@@ -199,7 +199,7 @@ def main() -> None:
             logging.getLogger("robotcode.jsonrpc2").propagate = False
 
         if not args.debug_json_rpc_data:
-            logging.getLogger("robotcode.jsonrpc2.server.JsonRPCProtocol.message").propagate = False
+            logging.getLogger("robotcode.jsonrpc2.protocol.JsonRPCProtocol.message").propagate = False
 
         if not args.debug_language_server:
             logging.getLogger("robotcode.language_server").propagate = False

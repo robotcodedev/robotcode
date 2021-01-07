@@ -926,22 +926,6 @@ class FoldingRangeKind(Enum):
 
 
 class FoldingRange(Model):
-    def __init__(
-        self,
-        start_line: int,
-        end_line: int,
-        start_character: Optional[int] = None,
-        end_character: Optional[int] = None,
-        kind: Union[FoldingRangeKind, str, None] = None,
-    ) -> None:
-        super().__init__(  # type: ignore
-            start_line=start_line,
-            start_character=start_character,
-            end_line=end_line,
-            end_character=end_character,
-            kind=kind,
-        )
-
     start_line: int
     start_character: Optional[int] = None
     end_line: int
