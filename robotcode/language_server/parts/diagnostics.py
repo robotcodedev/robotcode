@@ -94,14 +94,14 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self._task_lock = asyncio.Lock()
         self._start_lock_lock = asyncio.Lock()
 
-        self.collect_diagnostics_event = AsyncThreadingEvent[DiagnosticsProtocolPart, TextDocument, List[Diagnostic]]()
+        self.collect_diagnostics = AsyncThreadingEvent[DiagnosticsProtocolPart, TextDocument, List[Diagnostic]]()
 
-        self.parent.connection_lost_event.add(self.on_connection_lost)
-        self.parent.shutdown_event.add(self.on_shutdown)
-        self.parent.documents.did_open_event.add(self.on_did_open)
-        self.parent.documents.did_change_event.add(self.on_did_change)
-        self.parent.documents.did_close_event.add(self.on_did_close)
-        self.parent.documents.did_save_event.add(self.on_did_save)
+        self.parent.on_connection_lost.add(self.on_connection_lost)
+        self.parent.on_shutdown.add(self.on_shutdown)
+        self.parent.documents.did_open.add(self.on_did_open)
+        self.parent.documents.did_change.add(self.on_did_change)
+        self.parent.documents.did_close.add(self.on_did_close)
+        self.parent.documents.did_save.add(self.on_did_save)
 
     @_logger.call
     async def on_connection_lost(self, sender: JsonRPCProtocol, ex: BaseException) -> None:
@@ -186,6 +186,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             loop.call_soon_threadsafe(send_diagnostics, result, exception)
 
         try:
-            await self.collect_diagnostics_event(self, document, result_callback=callback)
+            await self.collect_diagnostics(self, document, result_callback=callback)
         except asyncio.CancelledError:
             raise

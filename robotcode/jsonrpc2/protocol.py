@@ -424,17 +424,17 @@ class JsonRPCProtocol(asyncio.Protocol):
         self.transport: Optional[asyncio.Transport] = None
         self._request_futures: Dict[Union[str, int], _RequestFuturesEntry] = {}
         self._message_buf = bytes()
-        self.connection_made_event = AsyncEvent["JsonRPCProtocol", asyncio.BaseTransport]()
-        self.connection_lost_event = AsyncEvent["JsonRPCProtocol", BaseException]()
+        self.on_connection_made = AsyncEvent["JsonRPCProtocol", asyncio.BaseTransport]()
+        self.on_connection_lost = AsyncEvent["JsonRPCProtocol", BaseException]()
 
     @_logger.call
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = cast(asyncio.Transport, transport)
-        asyncio.ensure_future(self.connection_made_event(self, transport))
+        asyncio.ensure_future(self.on_connection_made(self, transport))
 
     @_logger.call
     def connection_lost(self, exc: Optional[BaseException]) -> None:
-        asyncio.ensure_future(self.connection_lost_event(self, exc))
+        asyncio.ensure_future(self.on_connection_lost(self, exc))
 
     @_logger.call
     def eof_received(self) -> None:

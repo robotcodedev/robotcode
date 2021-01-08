@@ -656,7 +656,7 @@ class ServerCapabilities(Model):
     class Workspace(Model):
         workspace_folders: Optional[WorkspaceFoldersServerCapabilities] = None
 
-        class _FileOperations(Model):
+        class FileOperations(Model):
             did_create: Optional[FileOperationRegistrationOptions] = None
             will_create: Optional[FileOperationRegistrationOptions] = None
             did_rename: Optional[FileOperationRegistrationOptions] = None
@@ -664,7 +664,7 @@ class ServerCapabilities(Model):
             did_delete: Optional[FileOperationRegistrationOptions] = None
             will_delete: Optional[FileOperationRegistrationOptions] = None
 
-        file_operations: Optional[_FileOperations] = None
+        file_operations: Optional[FileOperations] = None
 
     workspace: Optional[Workspace] = None
     experimental: Optional[Any] = None
@@ -931,3 +931,28 @@ class FoldingRange(Model):
     end_line: int
     end_character: Optional[int] = None
     kind: Union[FoldingRangeKind, str, None] = None
+
+
+class FileCreate(Model):
+    uri: str
+
+
+class CreateFilesParams(Model):
+    files: List[FileCreate]
+
+
+class FileRename(Model):
+    old_uri: str
+    new_uri: str
+
+
+class RenameFilesParams(Model):
+    files: List[FileRename]
+
+
+class FileDelete(Model):
+    uri: str
+
+
+class DeleteFilesParams(Model):
+    files: List[FileDelete]

@@ -20,12 +20,12 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities
     def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
         self._documents: Dict[DocumentUri, TextDocument] = {}
-        self.collect_folding_range_event = AsyncThreadingEvent[
+        self.collect_folding_range = AsyncThreadingEvent[
             FoldingRangeProtocolPart, TextDocument, List[FoldingRange]
         ]()
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
-        if len(self.collect_folding_range_event.listeners):
+        if len(self.collect_folding_range.listeners):
             capabilities.folding_range_provider = True
 
     @rpc_method(name="textDocument/foldingRange", param_type=FoldingRangeParams)
@@ -35,7 +35,7 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities
 
         results: List[FoldingRange] = []
 
-        for e in await self.collect_folding_range_event(self, self.parent.documents[text_document.uri]):
+        for e in await self.collect_folding_range(self, self.parent.documents[text_document.uri]):
             results += e
 
         return results

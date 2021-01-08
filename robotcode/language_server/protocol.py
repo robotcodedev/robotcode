@@ -1,4 +1,3 @@
-import uuid
 from typing import Any, List, Optional, cast
 
 from .._version import __version__
@@ -20,6 +19,7 @@ from .parts.folding_range import FoldingRangeProtocolPart
 from .parts.window import WindowProtocolPart
 from .types import (
     ClientCapabilities,
+    ClientInfo,
     InitializedParams,
     InitializeError,
     InitializeParams,
@@ -31,7 +31,6 @@ from .types import (
     TextDocumentSyncOptions,
     TraceValue,
     WorkspaceFolder,
-    WorkspaceFoldersServerCapabilities,
 )
 from .workspace import Workspace
 
@@ -53,6 +52,9 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     def __init__(self, server: Optional[JsonRPCServer[Any]]):
         super().__init__(server)
+
+        self.initialization_options: Any = None
+        self.client_info: Optional[ClientInfo] = None
         self._workspace: Optional[Workspace] = None
         self.client_capabilities: Optional[ClientCapabilities] = None
         self.shutdown_received = False
@@ -64,16 +66,10 @@ class LanguageServerProtocol(JsonRPCProtocol):
                 will_save=True,
                 will_save_wait_until=True,
                 save=SaveOptions(include_text=True),
-            ),
-            # folding_range_provider=FoldingRangeRegistrationOptions(work_done_progress=True, id=str(uuid.uuid4())),
-            workspace=ServerCapabilities.Workspace(
-                workspace_folders=WorkspaceFoldersServerCapabilities(
-                    supported=True, change_notifications=str(uuid.uuid4())
-                )
-            ),
+            )
         )
 
-        self.shutdown_event = AsyncEvent[LanguageServerProtocol, None]()
+        self.on_shutdown = AsyncEvent[LanguageServerProtocol, None]()
         self._trace = TraceValue.OFF
 
     @property
@@ -111,16 +107,18 @@ class LanguageServerProtocol(JsonRPCProtocol):
         root_uri: Optional[str] = None,
         initialization_options: Optional[Any] = None,
         trace: Optional[TraceValue] = None,
+        client_info: Optional[ClientInfo] = None,
         workspace_folders: Optional[List[WorkspaceFolder]] = None,
         **kwargs: Any,
     ) -> InitializeResult:
 
         self.trace = trace or TraceValue.OFF
+        self.client_info = client_info
 
         self.client_capabilities = capabilities
 
         self._workspace = Workspace(self, root_uri=root_uri, root_path=root_path, workspace_folders=workspace_folders)
-
+        self.initialization_options = initialization_options
         try:
             self.on_initialize(initialization_options)
         except KeyboardInterrupt:
@@ -151,7 +149,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     @_logger.call
     async def shutdown(self) -> None:
         self.shutdown_received = True
-        await self.shutdown_event(self, None)
+        await self.on_shutdown(self, None)
 
     @rpc_method(name="exit")
     @_logger.call

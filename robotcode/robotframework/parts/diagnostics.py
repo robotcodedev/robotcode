@@ -20,7 +20,7 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
 
         # parent.diagnostics.collect_diagnostics_event.add(self.collect_token_errors)
         # parent.diagnostics.collect_diagnostics_event.add(self.collect_model_errors)
-        parent.diagnostics.collect_diagnostics_event.add(self.collect_walk_model_errors)
+        parent.diagnostics.collect_diagnostics.add(self.collect_walk_model_errors)
 
     def _create_error(self, node: ast.AST, msg: str, source: Optional[str] = None) -> Diagnostic:
         return Diagnostic(
@@ -41,7 +41,7 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
 
         result: List[Diagnostic] = []
 
-        async for e in self.parent.model_cache.get_tokens(document):
+        async for e in self.parent.model_token_cache.get_tokens(document):
             if e.type in [Token.ERROR, Token.FATAL_ERROR]:
                 result.append(
                     Diagnostic(
@@ -85,7 +85,7 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
                         self.errors.append(self.parent._create_error(node, e, "robot.visitor"))
                 await super().generic_visit(node)
 
-        return await Visitor.find_from(await self.parent.model_cache.get_model(document), self)
+        return await Visitor.find_from(await self.parent.model_token_cache.get_model(document), self)
 
     @_logger.call
     async def collect_walk_model_errors(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
@@ -93,7 +93,7 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
 
         result: List[Diagnostic] = []
 
-        async for node in walk(await self.parent.model_cache.get_model(document)):
+        async for node in walk(await self.parent.model_token_cache.get_model(document)):
             error = getattr(node, "error", None)
             if error is not None:
                 result.append(self._create_error(node, error))

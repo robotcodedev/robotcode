@@ -43,10 +43,10 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
     def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
         self._documents: Dict[DocumentUri, TextDocument] = {}
-        self.did_open_event = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
-        self.did_close_event = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
-        self.did_change_event = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
-        self.did_save_event = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
+        self.did_open = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
+        self.did_close = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
+        self.did_change = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
+        self.did_save = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
 
     def __getitem__(self, k: str) -> Any:
         return self._documents.__getitem__(k)
@@ -70,7 +70,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
 
         self._documents[text_document.uri] = document
 
-        await self.did_open_event(self, document)
+        await self.did_open(self, document)
 
     @rpc_method(name="textDocument/didClose", param_type=DidCloseTextDocumentParams)
     @_logger.call
@@ -80,7 +80,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         self._logger.warning(lambda: f"Document {text_document.uri} is not opened.", condition=lambda: document is None)
 
         if document is not None:
-            await self.did_close_event(self, document)
+            await self.did_close(self, document)
 
     @rpc_method(name="textDocument/willSave", param_type=WillSaveTextDocumentParams)
     @_logger.call
@@ -100,7 +100,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         if document is not None and text is not None:
             await document.apply_full_change(None, text)
 
-        await self.did_save_event(self, document)
+        await self.did_save(self, document)
 
     @rpc_method(name="textDocument/willSaveWaitUntil", param_type=WillSaveTextDocumentParams)
     @_logger.call
@@ -150,4 +150,4 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
                     f"for document {text_document.uri}."
                 )
 
-        await self.did_change_event(self, document)
+        await self.did_change(self, document)

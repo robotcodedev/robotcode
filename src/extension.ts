@@ -9,7 +9,7 @@ const CONFIG_SECTION = "robotcode";
 const OUTPUT_CHANNEL_NAME = "RobotCode";
 const OUTPUT_CHANNEL = vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
 
-var extensionPath: string | undefined = undefined;
+var extensionContext: vscode.ExtensionContext | undefined = undefined;
 var pythonLanguageServerMain: string | undefined;
 
 let clients: Map<string, LanguageClient> = new Map();
@@ -74,7 +74,7 @@ function startLanguageClientForDocument(document: vscode.TextDocument) {
         const serverOptions: ServerOptions = mode === 'tcp' ? getServerOptionsTCP(workspaceFolder) : getServerOptionsStdIo(workspaceFolder, document);
         let name = `RobotCode Language Server mode=${mode} for workspace "${workspaceFolder.name}"`;
 
-        // TODO: set the output channel only if we are running with debug and not in tcp mode
+        // set the output channel only if we are running with debug and not in tcp mode
         let outputChannel = mode === 'stdio' ? vscode.window.createOutputChannel(name) : undefined;
 
         let clientOptions: LanguageClientOptions = {
@@ -83,6 +83,10 @@ function startLanguageClientForDocument(document: vscode.TextDocument) {
             ],
             synchronize: {
                 configurationSection: [CONFIG_SECTION, "python"]
+            },
+            initializationOptions: {                
+                "storageUri": extensionContext?.storageUri?.toString(),                
+                "globalStorageUri": extensionContext?.globalStorageUri?.toString()
             },
             diagnosticCollectionName: 'robotcode',
             workspaceFolder: workspaceFolder,
@@ -123,7 +127,6 @@ function getServerOptionsTCP(folder: vscode.WorkspaceFolder) {
 function getServerOptionsStdIo(folder: vscode.WorkspaceFolder, document: vscode.TextDocument) {
 
     let config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
-    let port = config.get<number>("language-server.tcp-port", DEFAULT_TCP_PORT);
     let serverArgs = config.get<Array<string>>("language-server.args", []);
     const extension = vscode.extensions.getExtension('ms-python.python')!;
     const pythonPath: string[] = extension.exports.settings.getExecutionDetails(document.uri)?.execCommand;
@@ -155,7 +158,7 @@ function getServerOptionsStdIo(folder: vscode.WorkspaceFolder, document: vscode.
 export async function activateAsync(context: vscode.ExtensionContext) {
 
     OUTPUT_CHANNEL.appendLine("Activate RobotCode Extension.");
-    extensionPath = context.extensionPath;
+    extensionContext = context;    
 
     pythonLanguageServerMain = context.asAbsolutePath(path.join('robotcode', 'server', '__main__.py'));
 

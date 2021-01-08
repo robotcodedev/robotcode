@@ -16,7 +16,7 @@ class RobotFoldingRangeProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageSer
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
 
-        parent.folding_range.collect_folding_range_event.add(self.collect_folding_ranges)
+        parent.folding_range.collect_folding_range.add(self.collect_folding_ranges)
 
     async def collect_folding_ranges(self, sender: Any, document: TextDocument) -> List[FoldingRange]:
 
@@ -95,4 +95,4 @@ class RobotFoldingRangeProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageSer
                 self.__apend(node, kind="if")
                 await self.generic_visit(node)
 
-        return await Visitor.find_from(await self.parent.model_cache.get_model(document), self)
+        return await Visitor.find_from(await self.parent.model_token_cache.get_model(document), self)

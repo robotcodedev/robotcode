@@ -1,10 +1,12 @@
 import ast
+import asyncio
 import io
 import weakref
-import asyncio
-
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple, TypeVar, cast
+from typing import TYPE_CHECKING, Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple, TypeVar, cast
+
+if TYPE_CHECKING:
+    from robot.parsing.lexer import Token
 
 from ...language_server.parts.protocol_part import LanguageServerProtocolPart
 from ...language_server.protocol import LanguageServerProtocol
@@ -24,7 +26,7 @@ class _Entry:
     tokens: Optional[List[Any]] = None
 
 
-class ModelCache(LanguageServerProtocolPart):
+class ModelTokenCache(LanguageServerProtocolPart):
     def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
         self._lock = asyncio.Lock()
@@ -51,20 +53,19 @@ class ModelCache(LanguageServerProtocolPart):
 
             return await setter(self._entries[(document_ref, version)])
 
-    async def get_tokens(self, document: TextDocument) -> AsyncIterator[Any]:
+    async def get_tokens(self, document: TextDocument) -> AsyncIterator["Token"]:
         for e in await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(self._get_tokens(document), self._loop)):
             yield e
 
     async def _get_tokens(self, document: TextDocument) -> List[Any]:
         import robot.api
-        from robot.parsing.lexer import Token
 
         async def get_tokens() -> AsyncIterator[Token]:
             with io.StringIO(document.text) as content:
                 for t in robot.api.get_tokens(content, tokenize_variables=True):
                     yield t
 
-        async def setter(e: _Entry) -> List[Any]:
+        async def setter(e: _Entry) -> List["Token"]:
             if e.tokens is None:
                 e.tokens = [e async for e in get_tokens()]
             return e.tokens
