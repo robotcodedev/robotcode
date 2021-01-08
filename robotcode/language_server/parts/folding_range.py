@@ -1,16 +1,11 @@
-from typing import Any, TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
-from ...utils.logging import LoggingDescriptor
-from ...utils.async_event import AsyncThreadingEvent
 from ...jsonrpc2.protocol import rpc_method
-from ..types import (
-    DocumentUri,
-    FoldingRange,
-    FoldingRangeParams,
-    TextDocumentIdentifier,
-)
-
+from ...utils.async_event import AsyncThreadingEvent
+from ...utils.logging import LoggingDescriptor
+from ..has_extend_capabilities import HasExtendCapabilities
 from ..text_document import TextDocument
+from ..types import DocumentUri, FoldingRange, FoldingRangeParams, ServerCapabilities, TextDocumentIdentifier
 
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol
@@ -18,7 +13,7 @@ if TYPE_CHECKING:
 from .protocol_part import LanguageServerProtocolPart
 
 
-class FoldingRangeProtocolPart(LanguageServerProtocolPart):
+class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
     _logger = LoggingDescriptor()
 
@@ -28,6 +23,10 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart):
         self.collect_folding_range_event = AsyncThreadingEvent[
             FoldingRangeProtocolPart, TextDocument, List[FoldingRange]
         ]()
+
+    def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
+        if len(self.collect_folding_range_event.listeners):
+            capabilities.folding_range_provider = True
 
     @rpc_method(name="textDocument/foldingRange", param_type=FoldingRangeParams)
     async def _text_document_folding_range(

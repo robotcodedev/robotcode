@@ -76,8 +76,8 @@ class PublishDiagnosticsEntry:
                 t.cancel()
                 try:
                     await t
-                except asyncio.CancelledError:
-                    pass
+                except KeyboardInterrupt:
+                    raise
                 except BaseException:
                     pass
 

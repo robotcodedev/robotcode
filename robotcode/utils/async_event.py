@@ -38,28 +38,28 @@ class AsyncEventGeneratorBase(Generic[TSender, TParam, TResult], ABC):
     def __init__(self) -> None:
         self.lock = threading.Lock()
 
-        self.methods_listeners: MutableSet[weakref.ref[Any]] = set()
+        self.listeners: MutableSet[weakref.ref[Any]] = set()
 
     def add(self, callback: Callable[[TSender, TParam], TResult]) -> None:
         def remove_listener(ref: Any) -> None:
             with self.lock:
-                self.methods_listeners.remove(ref)
+                self.listeners.remove(ref)
 
         with self.lock:
             if ismethod(callback):
-                self.methods_listeners.add(weakref.WeakMethod(cast(MethodType, callback), remove_listener))
+                self.listeners.add(weakref.WeakMethod(cast(MethodType, callback), remove_listener))
             else:
-                self.methods_listeners.add(weakref.ref(callback, remove_listener))
+                self.listeners.add(weakref.ref(callback, remove_listener))
 
     def remove(self, callback: Callable[[TSender, TParam], TResult]) -> None:
         with self.lock:
             if ismethod(callback):
-                self.methods_listeners.remove(weakref.WeakMethod(cast(MethodType, callback)))
+                self.listeners.remove(weakref.WeakMethod(cast(MethodType, callback)))
             else:
-                self.methods_listeners.remove(weakref.ref(callback))
+                self.listeners.remove(weakref.ref(callback))
 
     async def _notify(self, *args: Any, **kwargs: Any) -> AsyncIterator[TResult]:
-        for method_listener in self.methods_listeners:
+        for method_listener in self.listeners:
             method = method_listener()
             if method is not None:
                 result = method(*args, **kwargs)
@@ -101,11 +101,13 @@ class AsyncTaskEventGeneratorBase(
             if result_callback is not None:
                 try:
                     result_callback(f.result(), f.exception())
+                except KeyboardInterrupt:
+                    raise
                 except BaseException as e:
                     result_callback(None, e)
 
         awaitables: List[asyncio.Future[TResult]] = []
-        for method_listener in self.methods_listeners:
+        for method_listener in self.listeners:
             method = method_listener()
             if method is not None:
                 future = asyncio.ensure_future(method(sender, param))
@@ -200,11 +202,13 @@ class AsyncThreadingEventGeneratorBase(
             if result_callback is not None:
                 try:
                     result_callback(f.result(), f.exception())
+                except KeyboardInterrupt:
+                    raise
                 except BaseException as e:
                     result_callback(None, e)
 
         awaitables: List[asyncio.Future[TResult]] = []
-        for method_listener in self.methods_listeners:
+        for method_listener in self.listeners:
             method = method_listener()
             if method is not None:
                 future = self._run_in_asyncio_thread(self.executor, method(sender, param))

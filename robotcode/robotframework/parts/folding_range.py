@@ -15,6 +15,7 @@ class RobotFoldingRangeProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageSer
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
+
         parent.folding_range.collect_folding_range_event.add(self.collect_folding_ranges)
 
     async def collect_folding_ranges(self, sender: Any, document: TextDocument) -> List[FoldingRange]:
@@ -48,7 +49,6 @@ class RobotFoldingRangeProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageSer
             def __apend(self, node: ast.AST, kind: str) -> None:
                 if not self.line_folding_only:
                     self.foldings.append(
-                        
                         FoldingRange(
                             start_line=node.lineno - 1,
                             end_line=node.end_lineno - 1 if node.end_lineno is not None else node.lineno - 1,
@@ -61,7 +61,7 @@ class RobotFoldingRangeProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageSer
                     self.foldings.append(
                         FoldingRange(
                             start_line=node.lineno - 1,
-                            end_line=node.end_lineno - 1 if node.end_lineno is not None else node.lineno - 1,                        
+                            end_line=node.end_lineno - 1 if node.end_lineno is not None else node.lineno - 1,
                             kind=kind,
                         )
                     )

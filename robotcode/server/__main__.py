@@ -183,7 +183,7 @@ def main() -> None:
 
                 coloredlogs.install(level=log_level)
                 log_initialized = True
-            except BaseException:
+            except ImportError:
                 pass
 
         if not log_initialized:

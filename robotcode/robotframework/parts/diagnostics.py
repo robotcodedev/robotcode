@@ -22,7 +22,7 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
         # parent.diagnostics.collect_diagnostics_event.add(self.collect_model_errors)
         parent.diagnostics.collect_diagnostics_event.add(self.collect_walk_model_errors)
 
-    def _create_error(self, node: ast.AST, msg: str, source: Optional[str] = None) -> Diagnostic:        
+    def _create_error(self, node: ast.AST, msg: str, source: Optional[str] = None) -> Diagnostic:
         return Diagnostic(
             range=Range(
                 start=Position(line=node.lineno - 1, character=node.col_offset),

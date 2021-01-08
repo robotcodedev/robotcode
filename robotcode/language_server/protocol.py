@@ -1,20 +1,27 @@
 import uuid
-from typing import Any, List, Optional
+from typing import Any, List, Optional, cast
 
 from .._version import __version__
-from ..jsonrpc2.protocol import JsonRPCException, JsonRPCProtocol, ProtocolPartDescriptor, rpc_method
+from ..jsonrpc2.protocol import (
+    JsonRPCErrorException,
+    JsonRPCErrors,
+    JsonRPCException,
+    JsonRPCProtocol,
+    ProtocolPartDescriptor,
+    rpc_method,
+)
 from ..jsonrpc2.server import JsonRPCServer
 from ..utils.async_event import AsyncEvent
 from ..utils.logging import LoggingDescriptor
+from .has_extend_capabilities import HasExtendCapabilities
 from .parts.diagnostics import DiagnosticsProtocolPart
 from .parts.documents import TextDocumentProtocolPart
-from .parts.window import WindowProtocolPart
 from .parts.folding_range import FoldingRangeProtocolPart
-
+from .parts.window import WindowProtocolPart
 from .types import (
     ClientCapabilities,
-    FoldingRangeRegistrationOptions,
     InitializedParams,
+    InitializeError,
     InitializeParams,
     InitializeResult,
     SaveOptions,
@@ -28,7 +35,7 @@ from .types import (
 )
 from .workspace import Workspace
 
-__all__ = ["LanguageServerException", "LanguageServerProtocol"]
+__all__ = ["LanguageServerException", "LanguageServerProtocol", "HasExtendCapabilities"]
 
 
 class LanguageServerException(JsonRPCException):
@@ -49,7 +56,8 @@ class LanguageServerProtocol(JsonRPCProtocol):
         self._workspace: Optional[Workspace] = None
         self.client_capabilities: Optional[ClientCapabilities] = None
         self.shutdown_received = False
-        self.capabilities = ServerCapabilities(
+        self._capabilites: Optional[ServerCapabilities] = None
+        self._base_capabilities = ServerCapabilities(
             text_document_sync=TextDocumentSyncOptions(
                 open_close=True,
                 change=TextDocumentSyncKind.INCREMENTAL,
@@ -57,7 +65,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
                 will_save_wait_until=True,
                 save=SaveOptions(include_text=True),
             ),
-            folding_range_provider=FoldingRangeRegistrationOptions(work_done_progress=True, id=str(uuid.uuid4())),
+            # folding_range_provider=FoldingRangeRegistrationOptions(work_done_progress=True, id=str(uuid.uuid4())),
             workspace=ServerCapabilities.Workspace(
                 workspace_folders=WorkspaceFoldersServerCapabilities(
                     supported=True, change_notifications=str(uuid.uuid4())
@@ -79,6 +87,21 @@ class LanguageServerProtocol(JsonRPCProtocol):
     def workspace(self) -> Optional[Workspace]:
         return self._workspace
 
+    @property
+    def capabilities(self) -> ServerCapabilities:
+        if self._capabilites is None:
+            self._capabilites = self._collect_capabilities()
+        return self._capabilites
+
+    def _collect_capabilities(self) -> ServerCapabilities:
+        capas = self._base_capabilities.copy()
+
+        for p in self.registry.parts:
+            if isinstance(p, HasExtendCapabilities):
+                cast(HasExtendCapabilities, p).extend_capabilities(capas)
+
+        return capas
+
     @rpc_method(name="initialize", param_type=InitializeParams)
     @_logger.call
     def _initialize(
@@ -98,7 +121,16 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
         self._workspace = Workspace(self, root_uri=root_uri, root_path=root_path, workspace_folders=workspace_folders)
 
-        self.on_initialize(initialization_options)
+        try:
+            self.on_initialize(initialization_options)
+        except KeyboardInterrupt:
+            raise
+        except JsonRPCErrorException:
+            raise
+        except BaseException as e:
+            raise JsonRPCErrorException(
+                JsonRPCErrors.INTERNAL_ERROR, f"Cant't start language server: {e}", InitializeError(retry=True)
+            ) from e
 
         return InitializeResult(
             capabilities=self.capabilities,
