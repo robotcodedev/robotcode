@@ -2,7 +2,7 @@ import asyncio
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 from ...jsonrpc2.protocol import JsonRPCProtocol
-from ...utils.async_event import AsyncThreadingEvent
+from ...utils.async_event import async_threading_event_iterator
 from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
 from ..text_document import TextDocument
@@ -94,8 +94,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self._task_lock = asyncio.Lock()
         self._start_lock_lock = asyncio.Lock()
 
-        self.collect_diagnostics = AsyncThreadingEvent[DiagnosticsProtocolPart, TextDocument, List[Diagnostic]]()
-
         self.parent.on_connection_lost.add(self.on_connection_lost)
         self.parent.on_shutdown.add(self.on_shutdown)
         self.parent.documents.did_open.add(self.on_did_open)
@@ -103,12 +101,16 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.parent.documents.did_close.add(self.on_did_close)
         self.parent.documents.did_save.add(self.on_did_save)
 
+    @async_threading_event_iterator
+    async def collect_diagnostics(sender, document: TextDocument) -> List[Diagnostic]:
+        ...
+
     @_logger.call
-    async def on_connection_lost(self, sender: JsonRPCProtocol, ex: BaseException) -> None:
+    async def on_connection_lost(self, sender: JsonRPCProtocol, exc: Optional[BaseException]) -> None:
         await self._cancel_all_tasks()
 
     @_logger.call
-    async def on_shutdown(self, sender: "LanguageServerProtocol", param: Any) -> None:
+    async def on_shutdown(self, sender: "LanguageServerProtocol") -> None:
         await self._cancel_all_tasks()
 
     def __del__(self) -> None:
@@ -166,12 +168,11 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     @_logger.call
     async def publish_diagnostics(self, document: TextDocument) -> None:
         diagnostics: List[Diagnostic] = []
-        loop = asyncio.get_event_loop()
 
-        def send_diagnostics(result: Optional[List[Diagnostic]], exception: Optional[BaseException]) -> None:
-            nonlocal diagnostics
-
-            if result is not None:
+        async for result in self.collect_diagnostics(self, document):
+            if isinstance(result, BaseException):
+                self._logger.exception(result, exc_info=result)
+            else:
                 diagnostics += result
                 self.parent.send_notification(
                     "textDocument/publishDiagnostics",
@@ -179,13 +180,3 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                         uri=document.document_uri, version=document.version, diagnostics=diagnostics
                     ),
                 )
-            if exception is not None and type(exception) != asyncio.CancelledError:
-                self._logger.exception(exception, exc_info=False)
-
-        def callback(result: Optional[List[Diagnostic]], exception: Optional[BaseException]) -> None:
-            loop.call_soon_threadsafe(send_diagnostics, result, exception)
-
-        try:
-            await self.collect_diagnostics(self, document, result_callback=callback)
-        except asyncio.CancelledError:
-            raise

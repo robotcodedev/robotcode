@@ -26,3 +26,11 @@ def get_methods(
     instance_or_type: Any, predicate: Optional[Callable[[Callable[..., Any]], bool]] = None
 ) -> List[Callable[..., Any]]:
     return [m for m in iter_methods(instance_or_type, predicate)]
+
+
+_lambda_type = type(lambda: 0)
+_lamda_name = (lambda: 0).__name__
+
+
+def is_lambda(v: Any) -> bool:
+    return isinstance(v, _lambda_type) and v.__name__ == _lamda_name

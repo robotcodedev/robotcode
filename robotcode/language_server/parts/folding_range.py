@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any, Dict, List
 
 from ...jsonrpc2.protocol import rpc_method
-from ...utils.async_event import AsyncThreadingEvent
+from ...utils.async_event import async_threading_event
 from ...utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
 from ..text_document import TextDocument
@@ -20,9 +20,10 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities
     def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
         self._documents: Dict[DocumentUri, TextDocument] = {}
-        self.collect_folding_range = AsyncThreadingEvent[
-            FoldingRangeProtocolPart, TextDocument, List[FoldingRange]
-        ]()
+
+    @async_threading_event
+    async def collect_folding_range(sender, document: TextDocument) -> List[FoldingRange]:
+        ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect_folding_range.listeners):
@@ -35,7 +36,10 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities
 
         results: List[FoldingRange] = []
 
-        for e in await self.collect_folding_range(self, self.parent.documents[text_document.uri]):
-            results += e
+        for result in await self.collect_folding_range(self, self.parent.documents[text_document.uri]):
+            if isinstance(result, BaseException):
+                self._logger.exception(result, exc_info=result)
+            else:
+                results += result
 
         return results

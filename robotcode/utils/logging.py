@@ -190,7 +190,7 @@ class LoggingDescriptor:
         self,
         msg: Union[BaseException, str, Callable[[], str]],
         condition: Optional[Callable[[], bool]] = None,
-        exc_info: bool = True,
+        exc_info: Any = True,
         *args: Any,
         **kwargs: Any,
     ) -> None:

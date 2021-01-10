@@ -1,8 +1,8 @@
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from ..jsonrpc2.protocol import JsonRPCProtocol, JsonRPCProtocolPart, rpc_method
-from ..utils.async_event import AsyncEvent
+from ..utils.async_event import async_event
 from ..utils.logging import LoggingDescriptor
 from .types import (
     ConfigurationItem,
@@ -18,8 +18,10 @@ from .types import (
     FileRename,
     RenameFilesParams,
     ServerCapabilities,
+    TextEdit,
     WorkspaceFolder,
     WorkspaceFoldersServerCapabilities,
+    WorkspaceEdit,
 )
 
 
@@ -38,13 +40,6 @@ class Workspace(JsonRPCProtocolPart):
         self.root_path = root_path
         self.workspace_folders = workspace_folders
         self._settings: Dict[str, Any] = {}
-
-        self.will_create_files = AsyncEvent[Workspace, List[str]]()
-        self.did_create_files = AsyncEvent[Workspace, List[str]]()
-        self.will_rename_files = AsyncEvent[Workspace, List[Tuple[str, str]]]()
-        self.did_rename_files = AsyncEvent[Workspace, List[Tuple[str, str]]]()
-        self.will_delete_files = AsyncEvent[Workspace, List[str]]()
-        self.did_delete_files = AsyncEvent[Workspace, List[str]]()
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         capabilities.workspace = ServerCapabilities.Workspace(
@@ -86,10 +81,47 @@ class Workspace(JsonRPCProtocolPart):
     def _workspace_did_change_configuration(self, settings: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
         self.settings = settings
 
+    @async_event
+    def will_create_files(sender, files: List[str]) -> Mapping[str, TextEdit]:
+        ...
+
+    @async_event
+    def did_create_files(sender, files: List[str]) -> None:
+        ...
+
+    @async_event
+    def will_rename_files(sender, files: List[Tuple[str, str]]) -> None:
+        ...
+
+    @async_event
+    def did_rename_files(sender, files: List[Tuple[str, str]]) -> None:
+        ...
+
+    @async_event
+    def will_delete_files(sender, files: List[str]) -> None:
+        ...
+
+    @async_event
+    def did_delete_files(sender, files: List[str]) -> None:
+        ...
+
     @rpc_method(name="workspace/willCreateFiles", param_type=CreateFilesParams)
     @_logger.call
-    async def _workspace_will_create_files(self, files: List[FileCreate], *args: Any, **kwargs: Any) -> None:
-        await self.will_create_files(self, list(f.uri for f in files))
+    async def _workspace_will_create_files(
+        self, files: List[FileCreate], *args: Any, **kwargs: Any
+    ) -> Optional[WorkspaceEdit]:
+        results = await self.will_create_files(self, list(f.uri for f in files))
+        if len(results) == 0:
+            return None
+
+        result: Dict[str, List[TextEdit]] = {}
+        for e in results:
+            if e is not None and isinstance(e, Mapping):
+                result.update(e)
+
+        # TODO: support full WorkspaceEdit
+
+        return WorkspaceEdit(changes=result)
 
     @rpc_method(name="workspace/didCreateFiles", param_type=CreateFilesParams)
     @_logger.call
@@ -101,6 +133,8 @@ class Workspace(JsonRPCProtocolPart):
     async def _workspace_will_rename_files(self, files: List[FileRename], *args: Any, **kwargs: Any) -> None:
         await self.will_rename_files(self, list((f.old_uri, f.new_uri) for f in files))
 
+        # TODO: return WorkspaceEdit
+
     @rpc_method(name="workspace/didRenameFiles", param_type=RenameFilesParams)
     @_logger.call
     async def _workspace_did_rename_files(self, files: List[FileRename], *args: Any, **kwargs: Any) -> None:
@@ -110,6 +144,8 @@ class Workspace(JsonRPCProtocolPart):
     @_logger.call
     async def _workspace_will_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
         await self.will_delete_files(self, list(f.uri for f in files))
+
+        # TODO: return WorkspaceEdit
 
     @rpc_method(name="workspace/didDeleteFiles", param_type=DeleteFilesParams)
     @_logger.call

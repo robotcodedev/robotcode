@@ -1,6 +1,6 @@
 import re
 from enum import Enum, IntEnum
-from typing import Any, Dict, Iterator, List, Optional, Union
+from typing import Any, Dict, Iterator, List, Literal, Optional, Union
 
 from pydantic import BaseModel
 
@@ -860,9 +860,6 @@ class WillSaveTextDocumentParams(Model):
 
 
 class TextEdit(Model):
-    def __init__(self, range: Range, new_text: str) -> None:
-        super().__init__(range=range, new_text=new_text)  # type: ignore
-
     range: Range
     new_text: str
 
@@ -956,3 +953,64 @@ class FileDelete(Model):
 
 class DeleteFilesParams(Model):
     files: List[FileDelete]
+
+
+ChangeAnnotationIdentifier = str
+
+
+class CreateFileOptions(Model):
+    overwrite: Optional[bool] = None
+    ignore_if_exists: Optional[bool] = None
+
+
+class CreateFile(Model):
+    kind: Literal["create"]
+    uri: DocumentUri
+    options: Optional[CreateFileOptions]
+    annotation_id: ChangeAnnotationIdentifier
+
+
+class RenameFileOptions(Model):
+    overwrite: Optional[bool] = None
+    ignore_if_exists: Optional[bool] = None
+
+
+class RenameFile(Model):
+    kind: Literal["rename"]
+    old_uri: DocumentUri
+    new_uri: DocumentUri
+    options: Optional[RenameFileOptions]
+    annotation_id: ChangeAnnotationIdentifier
+
+
+class DeleteFileOptions(Model):
+    recursive: Optional[bool] = None
+    ignore_if_exists: Optional[bool] = None
+
+
+class DeleteFile(Model):
+    kind: Literal["delete"]
+    uri: DocumentUri
+    options: Optional[DeleteFileOptions]
+    annotation_id: ChangeAnnotationIdentifier
+
+
+class AnnotatedTextEdit(TextEdit):
+    annotation_id: ChangeAnnotationIdentifier
+
+
+class TextDocumentEdit(Model):
+    text_document: OptionalVersionedTextDocumentIdentifier
+    edits: Union[TextEdit, AnnotatedTextEdit]
+
+
+class ChangeAnnotation(Model):
+    label: str
+    needs_confirmation: Optional[bool] = None
+    description: Optional[str] = None
+
+
+class WorkspaceEdit(Model):
+    changes: Optional[Dict[DocumentUri, List[TextEdit]]] = None
+    document_changes: Union[List[TextDocumentEdit], TextDocumentEdit, CreateFile, RenameFile, DeleteFile, None] = None
+    change_annotations: Optional[Dict[ChangeAnnotationIdentifier, ChangeAnnotation]] = None

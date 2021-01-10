@@ -18,8 +18,8 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
 
         self.source_name = "robotcode"
 
-        # parent.diagnostics.collect_diagnostics_event.add(self.collect_token_errors)
-        # parent.diagnostics.collect_diagnostics_event.add(self.collect_model_errors)
+        parent.diagnostics.collect_diagnostics.add(self.collect_token_errors)
+        parent.diagnostics.collect_diagnostics.add(self.collect_model_errors)
         parent.diagnostics.collect_diagnostics.add(self.collect_walk_model_errors)
 
     def _create_error(self, node: ast.AST, msg: str, source: Optional[str] = None) -> Diagnostic:
@@ -31,8 +31,6 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
             message=msg,
             severity=DiagnosticSeverity.ERROR,
             source=source if source is not None else self.source_name,
-            # code=1,
-            # code_description=CodeDescription(href="http://www.blah.de"),
         )
 
     @_logger.call
@@ -52,8 +50,6 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
                         message=e.error,
                         severity=DiagnosticSeverity.ERROR,
                         source="robot.tokens",
-                        # code=1,
-                        # code_description=CodeDescription(href="http://www.blah.de"),
                     )
                 )
 

@@ -29,7 +29,7 @@ from typing import (
 from pydantic import BaseModel, Field
 from pydantic.typing import get_args, get_origin
 
-from ..utils.async_event import AsyncEvent
+from ..utils.async_event import async_event
 from ..utils.inspect import iter_methods
 from ..utils.logging import LoggingDescriptor
 
@@ -424,8 +424,14 @@ class JsonRPCProtocol(asyncio.Protocol):
         self.transport: Optional[asyncio.Transport] = None
         self._request_futures: Dict[Union[str, int], _RequestFuturesEntry] = {}
         self._message_buf = bytes()
-        self.on_connection_made = AsyncEvent["JsonRPCProtocol", asyncio.BaseTransport]()
-        self.on_connection_lost = AsyncEvent["JsonRPCProtocol", BaseException]()
+
+    @async_event
+    async def on_connection_made(sender, transport: asyncio.BaseTransport) -> None:
+        ...
+
+    @async_event
+    async def on_connection_lost(sender, exc: Optional[BaseException]) -> None:
+        ...
 
     @_logger.call
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
@@ -488,7 +494,7 @@ class JsonRPCProtocol(asyncio.Protocol):
         def done(f: asyncio.Future[Any]) -> None:
             ex = f.exception()
             if ex is not None:
-                self._logger.exception(ex)
+                self._logger.exception(ex, exc_info=ex)
 
         for m in generator:
             future = asyncio.ensure_future(

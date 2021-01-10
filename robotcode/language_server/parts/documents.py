@@ -1,7 +1,7 @@
 from typing import Any, Iterator, Mapping, TYPE_CHECKING, Dict, List, Optional
 
 from ...utils.logging import LoggingDescriptor
-from ...utils.async_event import AsyncEvent
+from ...utils.async_event import async_event
 from ...jsonrpc2.protocol import JsonRPCException, rpc_method
 from ..types import (
     DidChangeTextDocumentParams,
@@ -43,10 +43,22 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
     def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
         self._documents: Dict[DocumentUri, TextDocument] = {}
-        self.did_open = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
-        self.did_close = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
-        self.did_change = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
-        self.did_save = AsyncEvent[TextDocumentProtocolPart, TextDocument]()
+
+    @async_event
+    async def did_open(sender, document: TextDocument) -> None:
+        ...
+
+    @async_event
+    async def did_close(sender, document: TextDocument) -> None:
+        ...
+
+    @async_event
+    async def did_change(sender, document: TextDocument) -> None:
+        ...
+
+    @async_event
+    async def did_save(sender, document: TextDocument) -> None:
+        ...
 
     def __getitem__(self, k: str) -> Any:
         return self._documents.__getitem__(k)

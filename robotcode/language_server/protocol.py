@@ -10,7 +10,7 @@ from ..jsonrpc2.protocol import (
     rpc_method,
 )
 from ..jsonrpc2.server import JsonRPCServer
-from ..utils.async_event import AsyncEvent
+from ..utils.async_event import async_event
 from ..utils.logging import LoggingDescriptor
 from .has_extend_capabilities import HasExtendCapabilities
 from .parts.diagnostics import DiagnosticsProtocolPart
@@ -69,8 +69,11 @@ class LanguageServerProtocol(JsonRPCProtocol):
             )
         )
 
-        self.on_shutdown = AsyncEvent[LanguageServerProtocol, None]()
         self._trace = TraceValue.OFF
+
+    @async_event
+    async def on_shutdown(sender) -> None:
+        ...
 
     @property
     def trace(self) -> TraceValue:
@@ -80,6 +83,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     def trace(self, value: TraceValue) -> None:
         self._trace = value
 
+    @property
     def workspace(self) -> Optional[Workspace]:
         return self._workspace
 
@@ -118,6 +122,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         self.client_capabilities = capabilities
 
         self._workspace = Workspace(self, root_uri=root_uri, root_path=root_path, workspace_folders=workspace_folders)
+
         self.initialization_options = initialization_options
         try:
             self.on_initialize(initialization_options)
@@ -149,7 +154,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     @_logger.call
     async def shutdown(self) -> None:
         self.shutdown_received = True
-        await self.on_shutdown(self, None)
+        await self.on_shutdown(self)
 
     @rpc_method(name="exit")
     @_logger.call
