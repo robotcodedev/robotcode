@@ -33,11 +33,12 @@ __all__ = [
     "async_threading_event_iterator",
     "async_threading_event",
 ]
+
 _TResult = TypeVar("_TResult")
-_TCallable = TypeVar("_TCallable", bound=Callable[..., Any])
+_TCallable = TypeVar("_TCallable", bound=Callable[..., Union[Any, AsyncIterator[Any]]])
 
 
-class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult], ABC):
+class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
     def __init__(self) -> None:
         self.lock = threading.Lock()
 
@@ -88,6 +89,7 @@ _TEvent = TypeVar("_TEvent")
 
 class AsyncEventDescriptorBase(Generic[_F, _TResult, _TEvent]):
     def __init__(self, _func: _F, factory: Callable[..., _TEvent], *factory_args: Any, **factory_kwargs: Any) -> None:
+        self._func = _func
         self.__factory = factory
         self.__event: Optional[_TEvent] = None
         self.__factory_args = factory_args
@@ -221,7 +223,10 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
     ) -> asyncio.Future[_TResult]:
         def run(loop: asyncio.AbstractEventLoop) -> None:
             if method_name is not None:
-                threading.current_thread().name += f"->{method_name}(...)"
+                threading.current_thread().name = (
+                    self.__thread_name_prefix() if callable(self.__thread_name_prefix) else self.__thread_name_prefix
+                ) + f"->{method_name}(...)"
+
             asyncio.set_event_loop(loop)
             try:
                 loop.run_forever()

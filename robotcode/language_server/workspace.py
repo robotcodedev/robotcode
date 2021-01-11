@@ -82,27 +82,27 @@ class Workspace(JsonRPCProtocolPart):
         self.settings = settings
 
     @async_event
-    def will_create_files(sender, files: List[str]) -> Mapping[str, TextEdit]:
+    async def will_create_files(sender, files: List[str]) -> Mapping[str, TextEdit]:
         ...
 
     @async_event
-    def did_create_files(sender, files: List[str]) -> None:
+    async def did_create_files(sender, files: List[str]) -> None:
         ...
 
     @async_event
-    def will_rename_files(sender, files: List[Tuple[str, str]]) -> None:
+    async def will_rename_files(sender, files: List[Tuple[str, str]]) -> None:
         ...
 
     @async_event
-    def did_rename_files(sender, files: List[Tuple[str, str]]) -> None:
+    async def did_rename_files(sender, files: List[Tuple[str, str]]) -> None:
         ...
 
     @async_event
-    def will_delete_files(sender, files: List[str]) -> None:
+    async def will_delete_files(sender, files: List[str]) -> None:
         ...
 
     @async_event
-    def did_delete_files(sender, files: List[str]) -> None:
+    async def did_delete_files(sender, files: List[str]) -> None:
         ...
 
     @rpc_method(name="workspace/willCreateFiles", param_type=CreateFilesParams)

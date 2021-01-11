@@ -112,7 +112,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         if document is not None and text is not None:
             await document.apply_full_change(None, text)
 
-        await self.did_save(self, document)
+            await self.did_save(self, document)
 
     @rpc_method(name="textDocument/willSaveWaitUntil", param_type=WillSaveTextDocumentParams)
     @_logger.call
