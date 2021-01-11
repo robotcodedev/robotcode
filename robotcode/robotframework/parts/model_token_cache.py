@@ -60,7 +60,7 @@ class ModelTokenCache(LanguageServerProtocolPart):
     async def _get_tokens(self, document: TextDocument) -> List[Any]:
         import robot.api
 
-        async def get_tokens() -> AsyncIterator[Token]:
+        async def get_tokens() -> AsyncIterator["Token"]:
             with io.StringIO(document.text) as content:
                 for t in robot.api.get_tokens(content, tokenize_variables=True):
                     yield t

@@ -169,7 +169,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     async def publish_diagnostics(self, document: TextDocument) -> None:
         diagnostics: List[Diagnostic] = []
 
-        async for result in self.collect_diagnostics(self, document):
+        async for result in self.collect_diagnostics(self, document, ignore_exceptions=False):
             if isinstance(result, BaseException):
                 self._logger.exception(result, exc_info=result)
             else:

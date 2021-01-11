@@ -83,12 +83,13 @@ class AsyncEvent(AsyncEventResultIteratorBase[_TCallable, _TResult]):
         return [a async for a in self._notify(*args, **kwargs)]
 
 
-_F = TypeVar("_F", bound=Callable[..., Any])
 _TEvent = TypeVar("_TEvent")
 
 
-class AsyncEventDescriptorBase(Generic[_F, _TResult, _TEvent]):
-    def __init__(self, _func: _F, factory: Callable[..., _TEvent], *factory_args: Any, **factory_kwargs: Any) -> None:
+class AsyncEventDescriptorBase(Generic[_TCallable, _TResult, _TEvent]):
+    def __init__(
+        self, _func: _TCallable, factory: Callable[..., _TEvent], *factory_args: Any, **factory_kwargs: Any
+    ) -> None:
         self._func = _func
         self.__factory = factory
         self.__event: Optional[_TEvent] = None
@@ -111,14 +112,14 @@ class AsyncEventDescriptorBase(Generic[_F, _TResult, _TEvent]):
         return self.__event
 
 
-class async_event_iterator(AsyncEventDescriptorBase[_F, Any, AsyncEventIterator[_F, Any]]):  # noqa: N801
-    def __init__(self, _func: _F) -> None:
-        super().__init__(_func, AsyncEventIterator[_F, _TResult])
+class async_event_iterator(AsyncEventDescriptorBase[_TCallable, Any, AsyncEventIterator[_TCallable, Any]]):  # noqa: N801
+    def __init__(self, _func: _TCallable) -> None:
+        super().__init__(_func, AsyncEventIterator[_TCallable, _TResult])
 
 
-class async_event(AsyncEventDescriptorBase[_F, Any, AsyncEvent[_F, Any]]):  # noqa: N801
-    def __init__(self, _func: _F) -> None:
-        super().__init__(_func, AsyncEvent[_F, _TResult])
+class async_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncEvent[_TCallable, Any]]):  # noqa: N801
+    def __init__(self, _func: _TCallable) -> None:
+        super().__init__(_func, AsyncEvent[_TCallable, _TResult])
 
 
 class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallable, _TResult], ABC):
@@ -188,9 +189,9 @@ def _get_name_prefix(descriptor: AsyncEventDescriptorBase[Any, Any, Any]) -> str
     return f"{descriptor._owner.__qualname__}.{descriptor._owner_name}"
 
 
-class async_tasking_event_iterator(AsyncEventDescriptorBase[_F, Any, AsyncTaskingEventIterator[_F, Any]]):  # noqa: N801
-    def __init__(self, _func: _F) -> None:
-        super().__init__(_func, AsyncTaskingEventIterator[_F, Any], task_name_prefix=lambda: _get_name_prefix(self))
+class async_tasking_event_iterator(AsyncEventDescriptorBase[_TCallable, Any, AsyncTaskingEventIterator[_TCallable, Any]]):  # noqa: N801
+    def __init__(self, _func: _TCallable) -> None:
+        super().__init__(_func, AsyncTaskingEventIterator[_TCallable, Any], task_name_prefix=lambda: _get_name_prefix(self))
 
 
 class AsyncTaskingEvent(AsyncTaskingEventResultIteratorBase[_TCallable, _TResult]):
@@ -198,9 +199,9 @@ class AsyncTaskingEvent(AsyncTaskingEventResultIteratorBase[_TCallable, _TResult
         return [a async for a in self._notify(*args, **kwargs)]
 
 
-class async_tasking_event(AsyncEventDescriptorBase[_F, Any, AsyncTaskingEvent[_F, Any]]):  # noqa: N801
-    def __init__(self, _func: _F) -> None:
-        super().__init__(_func, AsyncTaskingEvent[_F, Any], task_name_prefix=lambda: _get_name_prefix(self))
+class async_tasking_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncTaskingEvent[_TCallable, Any]]):  # noqa: N801
+    def __init__(self, _func: _TCallable) -> None:
+        super().__init__(_func, AsyncTaskingEvent[_TCallable, Any], task_name_prefix=lambda: _get_name_prefix(self))
 
 
 class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallable, _TResult], ABC):
@@ -312,10 +313,10 @@ class AsyncThreadingEventIterator(AsyncThreadingEventResultIteratorBase[_TCallab
 
 
 class async_threading_event_iterator(  # noqa: N801
-    AsyncEventDescriptorBase[_F, Any, AsyncThreadingEventIterator[_F, Any]]
+    AsyncEventDescriptorBase[_TCallable, Any, AsyncThreadingEventIterator[_TCallable, Any]]
 ):
-    def __init__(self, _func: _F) -> None:
-        super().__init__(_func, AsyncThreadingEventIterator[_F, Any], thread_name_prefix=lambda: _get_name_prefix(self))
+    def __init__(self, _func: _TCallable) -> None:
+        super().__init__(_func, AsyncThreadingEventIterator[_TCallable, Any], thread_name_prefix=lambda: _get_name_prefix(self))
 
 
 class AsyncThreadingEvent(AsyncThreadingEventResultIteratorBase[_TCallable, _TResult]):
@@ -323,6 +324,6 @@ class AsyncThreadingEvent(AsyncThreadingEventResultIteratorBase[_TCallable, _TRe
         return [a async for a in self._notify(*args, **kwargs)]
 
 
-class async_threading_event(AsyncEventDescriptorBase[_F, Any, AsyncThreadingEvent[_F, Any]]):  # noqa: N801
-    def __init__(self, _func: _F) -> None:
-        super().__init__(_func, AsyncThreadingEvent[_F, Any], thread_name_prefix=lambda: _get_name_prefix(self))
+class async_threading_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncThreadingEvent[_TCallable, Any]]):  # noqa: N801
+    def __init__(self, _func: _TCallable) -> None:
+        super().__init__(_func, AsyncThreadingEvent[_TCallable, Any], thread_name_prefix=lambda: _get_name_prefix(self))
