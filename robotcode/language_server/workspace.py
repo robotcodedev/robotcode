@@ -76,10 +76,15 @@ class Workspace(JsonRPCProtocolPart):
     def settings(self, value: Dict[str, Any]) -> None:
         self._settings = value
 
+    @async_event
+    async def did_change_configuration(sender, settings: Dict[str, Any]) -> None:
+        ...
+
     @rpc_method(name="workspace/didChangeConfiguration", param_type=DidChangeConfigurationParams)
     @_logger.call
-    def _workspace_did_change_configuration(self, settings: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
+    async def _workspace_did_change_configuration(self, settings: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
         self.settings = settings
+        await self.did_change_configuration(self, settings)
 
     @async_event
     async def will_create_files(sender, files: List[str]) -> Mapping[str, TextEdit]:

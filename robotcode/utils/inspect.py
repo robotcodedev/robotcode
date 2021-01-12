@@ -1,4 +1,4 @@
-from typing import Any, Callable, Iterator, List, Optional
+from typing import Any, Callable, Iterator, List, Optional, TypeVar, cast
 import inspect
 
 
@@ -34,3 +34,16 @@ _lamda_name = (lambda: 0).__name__
 
 def is_lambda(v: Any) -> bool:
     return isinstance(v, _lambda_type) and v.__name__ == _lamda_name
+
+
+_TCallable = TypeVar("_TCallable", bound=Callable[..., Any])
+
+
+def ensure_coroutine(func: _TCallable) -> _TCallable:
+    async def wrapper(*fargs: Any, **fkwargs: Any) -> Any:
+        return func(*fargs, **fkwargs)
+
+    if inspect.iscoroutinefunction(func) or inspect.iscoroutinefunction(inspect.unwrap(func)):
+        return func
+
+    return cast("_TCallable", wrapper)

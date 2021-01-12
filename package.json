@@ -84,6 +84,30 @@
 						"default": "",
 						"description": "Specifies the path to the python executable to be used for the Language Server. If no path is specified, try to get it from \"python\" extension. Requires a VSCode restart to take effect.",
 						"scope": "resource"
+					},
+					"robotcode.robot.args": {
+						"type": "array",
+						"default": [
+							"--outputdir",
+							"results"
+						],
+						"items": {
+							"type": "string"
+						},
+						"description": "Specifies the arguments to be passed to robot module.",
+						"scope": "resource"
+					},
+					"robotcode.robot.pythonpath": {
+						"type": "array",
+						"default": [
+							"./lib",
+							"./resources"
+						],
+						"items": {
+							"type": "string"
+						},
+						"description": "Specifies additional python paths to robotframework. Corresponds to the '--pythonpath' option of the robot module.",
+						"scope": "resource"
 					}
 				}
 			}

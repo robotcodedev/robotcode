@@ -2,7 +2,7 @@ import re
 from enum import Enum, IntEnum
 from typing import Any, Dict, Iterator, List, Literal, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 ProgressToken = Union[str, int]
 DocumentUri = str
@@ -28,6 +28,10 @@ class Model(BaseModel):
                 lambda matched: str(matched.group(1)).upper(),
                 string[1:],
             )
+
+
+class CancelParams(Model):
+    id: Union[int, str] = Field(...)
 
 
 class WorkDoneProgressParams(Model):

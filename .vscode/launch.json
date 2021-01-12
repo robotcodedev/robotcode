@@ -49,6 +49,17 @@
 			]
 		},
 		{
+			"name": "Python: robot.libdoc",
+			"type": "python",
+			"request": "launch",
+			"module": "robot.libdoc",
+			"justMyCode": false,
+			"args": [
+				"./playground/second.py",
+				"list",				
+			]
+		},
+		{
 			"name": "Run Extension",
 			"type": "extensionHost",
 			"request": "launch",

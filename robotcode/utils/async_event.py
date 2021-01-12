@@ -1,9 +1,9 @@
 import asyncio
-from concurrent.futures.thread import ThreadPoolExecutor
 import inspect
 import threading
 import weakref
 from abc import ABC
+from concurrent.futures.thread import ThreadPoolExecutor
 from types import MethodType
 from typing import (
     Any,
@@ -19,6 +19,8 @@ from typing import (
     Union,
     cast,
 )
+
+from ..utils.inspect import ensure_coroutine
 
 __all__ = [
     "AsyncEventIterator",
@@ -112,7 +114,9 @@ class AsyncEventDescriptorBase(Generic[_TCallable, _TResult, _TEvent]):
         return self.__event
 
 
-class async_event_iterator(AsyncEventDescriptorBase[_TCallable, Any, AsyncEventIterator[_TCallable, Any]]):  # noqa: N801
+class async_event_iterator(  # noqa: N801
+    AsyncEventDescriptorBase[_TCallable, Any, AsyncEventIterator[_TCallable, Any]]
+):
     def __init__(self, _func: _TCallable) -> None:
         super().__init__(_func, AsyncEventIterator[_TCallable, _TResult])
 
@@ -131,15 +135,9 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
         self,
         *args: Any,
         result_callback: Optional[Callable[[Optional[_TResult], Optional[BaseException]], Any]] = None,
-        ignore_exceptions: Optional[bool] = True,
+        return_exceptions: Optional[bool] = True,
         **kwargs: Any,
     ) -> AsyncIterator[Union[_TResult, BaseException]]:
-        def wrap_to_coro(f: _TCallable) -> Any:
-            async def wrapper(*fargs: Any, **fkwargs: Any) -> Any:
-                return f(*fargs, **fkwargs)
-
-            return wrapper
-
         def _done(f: asyncio.Future[_TResult]) -> None:
             if result_callback is not None:
                 try:
@@ -153,13 +151,7 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
         for method_listener in self.listeners:
             method = method_listener()
             if method is not None:
-                future = asyncio.ensure_future(
-                    method(*args, **kwargs)
-                    if inspect.iscoroutinefunction(method)
-                    or inspect.isawaitable(method)
-                    or inspect.iscoroutinefunction(inspect.unwrap(method))
-                    else wrap_to_coro(method)(*args, **kwargs)
-                )
+                future = asyncio.ensure_future(ensure_coroutine(method)(*args, **kwargs))
                 if isinstance(future, asyncio.Task):
                     future.set_name(
                         f"{self._task_name_prefix() if callable(self._task_name_prefix) else self._task_name_prefix}"
@@ -172,9 +164,14 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
         for a in asyncio.as_completed(awaitables):
             try:
                 yield await a
-            except BaseException as e:
-                if not ignore_exceptions:
+            except asyncio.CancelledError as e:
+                if not return_exceptions:
                     yield e
+            except BaseException as e:
+                if not return_exceptions:
+                    yield e
+                else:
+                    raise
 
 
 class AsyncTaskingEventIterator(AsyncTaskingEventResultIteratorBase[_TCallable, _TResult]):
@@ -189,9 +186,13 @@ def _get_name_prefix(descriptor: AsyncEventDescriptorBase[Any, Any, Any]) -> str
     return f"{descriptor._owner.__qualname__}.{descriptor._owner_name}"
 
 
-class async_tasking_event_iterator(AsyncEventDescriptorBase[_TCallable, Any, AsyncTaskingEventIterator[_TCallable, Any]]):  # noqa: N801
+class async_tasking_event_iterator(  # noqa: N801
+    AsyncEventDescriptorBase[_TCallable, Any, AsyncTaskingEventIterator[_TCallable, Any]]
+):
     def __init__(self, _func: _TCallable) -> None:
-        super().__init__(_func, AsyncTaskingEventIterator[_TCallable, Any], task_name_prefix=lambda: _get_name_prefix(self))
+        super().__init__(
+            _func, AsyncTaskingEventIterator[_TCallable, Any], task_name_prefix=lambda: _get_name_prefix(self)
+        )
 
 
 class AsyncTaskingEvent(AsyncTaskingEventResultIteratorBase[_TCallable, _TResult]):
@@ -255,15 +256,9 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
         *args: Any,
         result_callback: Optional[Callable[[Optional[_TResult], Optional[BaseException]], Any]] = None,
         executor: Optional[ThreadPoolExecutor] = None,
-        ignore_exceptions: Optional[bool] = True,
+        return_exceptions: Optional[bool] = True,
         **kwargs: Any,
     ) -> AsyncIterator[Union[_TResult, BaseException]]:
-        def wrap_to_coro(f: _TCallable) -> Any:
-            async def wrapper(*fargs: Any, **fkwargs: Any) -> Any:
-                return f(*fargs, **fkwargs)
-
-            return wrapper
-
         def _done(f: asyncio.Future[_TResult]) -> None:
             if result_callback is not None:
                 try:
@@ -288,11 +283,7 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
             if method is not None:
                 future = self._run_in_asyncio_thread(
                     executor,
-                    method(*args, **kwargs)
-                    if inspect.iscoroutinefunction(method)
-                    or inspect.isawaitable(method)
-                    or inspect.iscoroutinefunction(inspect.unwrap(method))
-                    else wrap_to_coro(method)(*args, **kwargs),
+                    ensure_coroutine(method)(*args, **kwargs),
                     method.__qualname__,
                 )
                 if result_callback is not None:
@@ -302,9 +293,14 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
         for a in asyncio.as_completed(awaitables):
             try:
                 yield await a
-            except BaseException as e:
-                if not ignore_exceptions:
+            except asyncio.CancelledError as e:
+                if not return_exceptions:
                     yield e
+            except BaseException as e:
+                if not return_exceptions:
+                    yield e
+                else:
+                    raise
 
 
 class AsyncThreadingEventIterator(AsyncThreadingEventResultIteratorBase[_TCallable, _TResult]):
@@ -316,7 +312,9 @@ class async_threading_event_iterator(  # noqa: N801
     AsyncEventDescriptorBase[_TCallable, Any, AsyncThreadingEventIterator[_TCallable, Any]]
 ):
     def __init__(self, _func: _TCallable) -> None:
-        super().__init__(_func, AsyncThreadingEventIterator[_TCallable, Any], thread_name_prefix=lambda: _get_name_prefix(self))
+        super().__init__(
+            _func, AsyncThreadingEventIterator[_TCallable, Any], thread_name_prefix=lambda: _get_name_prefix(self)
+        )
 
 
 class AsyncThreadingEvent(AsyncThreadingEventResultIteratorBase[_TCallable, _TResult]):
@@ -324,6 +322,8 @@ class AsyncThreadingEvent(AsyncThreadingEventResultIteratorBase[_TCallable, _TRe
         return [a async for a in self._notify(*args, **kwargs)]
 
 
-class async_threading_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncThreadingEvent[_TCallable, Any]]):  # noqa: N801
+class async_threading_event(  # noqa: N801
+    AsyncEventDescriptorBase[_TCallable, Any, AsyncThreadingEvent[_TCallable, Any]]
+):
     def __init__(self, _func: _TCallable) -> None:
         super().__init__(_func, AsyncThreadingEvent[_TCallable, Any], thread_name_prefix=lambda: _get_name_prefix(self))

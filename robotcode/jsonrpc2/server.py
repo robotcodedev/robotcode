@@ -62,6 +62,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
         # self.loop.set_debug(True)
 
+    @property
     def __del__(self) -> None:
         self.close()
 

@@ -28,7 +28,7 @@ class WindowProtocolPart(LanguageServerProtocolPart):
         return await self.parent.send_request(
             "window/showMessageRequest",
             ShowMessageRequestParams(type=type, message=message, actions=[MessageActionItem(title=a) for a in actions]),
-            return_type_or_converter=MessageActionItem,
+            MessageActionItem,
         )
 
     async def show_document(
@@ -42,6 +42,6 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             await self.parent.send_request(
                 "window/showDocument",
                 ShowDocumentParams(uri=uri, external=external, take_focus=take_focus, selection=selection),
-                return_type_or_converter=ShowDocumentResult,
+                ShowDocumentResult,
             )
         ).success

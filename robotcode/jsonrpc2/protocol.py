@@ -1,4 +1,5 @@
 import asyncio
+from collections import OrderedDict
 import inspect
 import json
 import re
@@ -30,7 +31,7 @@ from pydantic import BaseModel, Field
 from pydantic.typing import get_args, get_origin
 
 from ..utils.async_event import async_event
-from ..utils.inspect import iter_methods
+from ..utils.inspect import ensure_coroutine, iter_methods
 from ..utils.logging import LoggingDescriptor
 
 __all__ = [
@@ -84,13 +85,13 @@ class JsonRPCNotification(JsonRPCMessage):
 
 
 class JsonRPCRequest(JsonRPCMessage):
-    id: Union[str, int, None] = Field(...)
+    id: Union[int, str, None] = Field(...)
     method: str = Field(...)
     params: Optional[Any] = None
 
 
 class JsonRPCResponse(JsonRPCMessage):
-    id: Union[str, int, None] = Field(...)
+    id: Union[int, str, None] = Field(...)
     result: Any = Field(...)
 
 
@@ -332,7 +333,7 @@ def _json_rpc_message_from_dict(
         yield inner(data)
 
 
-class _RequestFuturesEntry(NamedTuple):
+class _SendedRequestEntry(NamedTuple):
     future: asyncio.Future[Any]
     result_type: Union[Type[Any], Callable[[Any], Any], None]
 
@@ -422,7 +423,10 @@ class JsonRPCProtocol(asyncio.Protocol):
     def __init__(self, server: Optional["JsonRPCServer[Any]"]):
         self.server = server
         self.transport: Optional[asyncio.Transport] = None
-        self._request_futures: Dict[Union[str, int], _RequestFuturesEntry] = {}
+        self._sended_request_lock = asyncio.Lock()
+        self._sended_request: OrderedDict[Union[str, int], _SendedRequestEntry] = OrderedDict()
+        self._received_request_lock = asyncio.Lock()
+        self._received_request: OrderedDict[Union[str, int, None], asyncio.Future[Any]] = OrderedDict()
         self._message_buf = bytes()
 
     @async_event
@@ -559,13 +563,12 @@ class JsonRPCProtocol(asyncio.Protocol):
         params: Any,
         return_type_or_converter: Union[Type[TResult], Callable[[Any], TResult], None] = None,
     ) -> asyncio.Future[TResult]:
-        result: asyncio.Future[TResult] = (
-            self.server.loop if self.server is not None else asyncio.get_event_loop()
-        ).create_future()
+
+        result: asyncio.Future[TResult] = asyncio.get_event_loop().create_future()
 
         id = str(uuid.uuid4())
 
-        self._request_futures[id] = _RequestFuturesEntry(result, return_type_or_converter)
+        self._sended_request[id] = _SendedRequestEntry(result, return_type_or_converter)
 
         self.send_data(JsonRPCRequest(id=id, method=method, params=params))
 
@@ -587,7 +590,9 @@ class JsonRPCProtocol(asyncio.Protocol):
             self.send_error(JsonRPCErrors.INTERNAL_ERROR, error)
             return
 
-        entry = self._request_futures.pop(message.id, None)
+        async with self._sended_request_lock:
+            entry = self._sended_request.pop(message.id, None)
+
         if entry is None:
             error = f"Invalid response. Could not find id '{message.id}' in our request list"
             self._logger.warning(error)
@@ -619,12 +624,19 @@ class JsonRPCProtocol(asyncio.Protocol):
         try:
             params = _convert_params(e.method, e.param_type, message.params)
 
-            result = e.method(*params[0], **params[1])
+            result = asyncio.ensure_future(ensure_coroutine(e.method)(*params[0], **params[1]))
 
-            if inspect.isawaitable(result):
+            async with self._received_request_lock:
+                self._received_request[message.id] = result
+
+            try:
                 self.send_response(message.id, await result)
-            else:
-                self.send_response(message.id, result)
+            finally:
+                async with self._received_request_lock:
+                    self._received_request.pop(message.id, None)
+
+        except asyncio.CancelledError:
+            self._logger.info(f"request message {repr(message)} canceled")
         except KeyboardInterrupt:
             raise
         except JsonRPCErrorException as ex:
@@ -633,6 +645,12 @@ class JsonRPCProtocol(asyncio.Protocol):
         except BaseException as e:
             self._logger.exception(e)
             self.send_error(JsonRPCErrors.INTERNAL_ERROR, str(e), id=message.id)
+
+    async def cancel_received_request(self, id: Union[int, str, None]) -> None:
+        async with self._received_request_lock:
+            future = self._received_request.get(id, None)
+            if future is not None and not future.cancelled():
+                future.cancel()
 
     async def handle_notification(self, message: JsonRPCNotification) -> None:
         e = self.registry.get_entry(message.method)

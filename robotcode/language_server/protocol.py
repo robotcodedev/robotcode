@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, cast
+from typing import Any, List, Optional, Union, cast
 
 from .._version import __version__
 from ..jsonrpc2.protocol import (
@@ -18,6 +18,7 @@ from .parts.documents import TextDocumentProtocolPart
 from .parts.folding_range import FoldingRangeProtocolPart
 from .parts.window import WindowProtocolPart
 from .types import (
+    CancelParams,
     ClientCapabilities,
     ClientInfo,
     InitializedParams,
@@ -163,5 +164,10 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     @rpc_method(name="$/setTrace", param_type=SetTraceParams)
     @_logger.call
-    def set_trace(self, value: TraceValue, **kwargs: Any) -> None:
+    def _set_trace(self, value: TraceValue, **kwargs: Any) -> None:
         self.trace = value
+
+    @rpc_method(name="$/cancelRequest", param_type=CancelParams)
+    @_logger.call
+    async def _cancel_request(self, id: Union[int, str], **kwargs: Any) -> None:
+        await self.cancel_received_request(id)
