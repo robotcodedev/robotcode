@@ -488,7 +488,7 @@ class JsonRPCProtocol(asyncio.Protocol):
             self._message_buf = bytes()
             try:
                 self._handle_messages_generator(_json_rpc_message_from_dict(json.loads(body.decode(charset))))
-            except KeyboardInterrupt:
+            except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
                 self._logger.exception(e)
@@ -601,7 +601,7 @@ class JsonRPCProtocol(asyncio.Protocol):
 
         try:
             entry.future.set_result(_try_convert_value(message.result, entry.result_type))
-        except KeyboardInterrupt:
+        except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             entry.future.set_exception(e)
@@ -637,7 +637,7 @@ class JsonRPCProtocol(asyncio.Protocol):
 
         except asyncio.CancelledError:
             self._logger.info(f"request message {repr(message)} canceled")
-        except KeyboardInterrupt:
+        except (SystemExit, KeyboardInterrupt):
             raise
         except JsonRPCErrorException as ex:
             self._logger.exception(ex)
@@ -664,7 +664,7 @@ class JsonRPCProtocol(asyncio.Protocol):
             result = e.method(*params[0], **params[1])
             if inspect.isawaitable(result):
                 await result
-        except KeyboardInterrupt:
+        except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             self._logger.exception(e)

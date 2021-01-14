@@ -6,6 +6,7 @@ from ...language_server.text_document import TextDocument
 from ...language_server.types import Diagnostic, DiagnosticSeverity, Position, Range
 from ...utils.logging import LoggingDescriptor
 
+
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
@@ -18,9 +19,11 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
 
         self.source_name = "robotcode"
 
-        parent.diagnostics.collect_diagnostics.add(self.collect_token_errors)
-        parent.diagnostics.collect_diagnostics.add(self.collect_model_errors)
+        # parent.diagnostics.collect_diagnostics.add(self.collect_token_errors)
+        # parent.diagnostics.collect_diagnostics.add(self.collect_model_errors)
         parent.diagnostics.collect_diagnostics.add(self.collect_walk_model_errors)
+
+        parent.diagnostics.collect_diagnostics.add(self.collect_diagnostics)
 
     def _create_error(self, node: ast.AST, msg: str, source: Optional[str] = None) -> Diagnostic:
         return Diagnostic(
@@ -97,5 +100,13 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
             if errors is not None:
                 for e in errors:
                     result.append(self._create_error(node, e))
+
+        return result
+
+    @_logger.call
+    async def collect_diagnostics(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
+        namespace = await self.parent.model_token_cache.get_namespace(document)
+
+        result: List[Diagnostic] = await namespace.get_diagnostisc()
 
         return result

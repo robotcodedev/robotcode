@@ -80,6 +80,8 @@ def check_free_port(port: int) -> int:
             s.bind(("127.0.0.1", port))
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             return cast(int, s.getsockname()[1])
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except BaseException as e:
             _logger.warning(str(e), stack_info=True)
             return find_free_port()
@@ -107,7 +109,7 @@ def start_server(mode: str, port: int) -> None:
     with RobotLanguageServer(mode=JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port)) as server:
         try:
             server.run()
-        except KeyboardInterrupt:
+        except (SystemExit, KeyboardInterrupt):
             pass
 
 

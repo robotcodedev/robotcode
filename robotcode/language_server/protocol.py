@@ -33,7 +33,7 @@ from .types import (
     TraceValue,
     WorkspaceFolder,
 )
-from .workspace import Workspace
+from .parts.workspace import Workspace
 
 __all__ = ["LanguageServerException", "LanguageServerProtocol", "HasExtendCapabilities"]
 
@@ -127,7 +127,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         self.initialization_options = initialization_options
         try:
             self.on_initialize(initialization_options)
-        except KeyboardInterrupt:
+        except (SystemExit, KeyboardInterrupt):
             raise
         except JsonRPCErrorException:
             raise

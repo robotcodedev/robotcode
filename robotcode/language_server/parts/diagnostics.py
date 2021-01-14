@@ -76,7 +76,7 @@ class PublishDiagnosticsEntry:
                 t.cancel()
                 try:
                     await t
-                except KeyboardInterrupt:
+                except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException:
                     pass

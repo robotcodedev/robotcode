@@ -1,10 +1,10 @@
 import uuid
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
-from ..jsonrpc2.protocol import JsonRPCProtocol, JsonRPCProtocolPart, rpc_method
-from ..utils.async_event import async_event
-from ..utils.logging import LoggingDescriptor
-from .types import (
+from ...jsonrpc2.protocol import JsonRPCProtocol, JsonRPCProtocolPart, rpc_method
+from ...utils.async_event import async_event
+from ...utils.logging import LoggingDescriptor
+from ..types import (
     ConfigurationItem,
     ConfigurationParams,
     CreateFilesParams,

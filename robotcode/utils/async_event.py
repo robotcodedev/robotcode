@@ -142,7 +142,7 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
             if result_callback is not None:
                 try:
                     result_callback(f.result(), f.exception())
-                except KeyboardInterrupt:
+                except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException as e:
                     result_callback(None, e)
@@ -167,6 +167,8 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
             except asyncio.CancelledError as e:
                 if not return_exceptions:
                     yield e
+            except (SystemExit, KeyboardInterrupt):
+                raise
             except BaseException as e:
                 if not return_exceptions:
                     yield e
@@ -215,7 +217,7 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
 
     def __del__(self) -> None:
         if self.__executor:
-            self.__executor.shutdown(False)
+            self.__executor.shutdown(True, cancel_futures=True)
 
     def _run_in_asyncio_thread(
         self,
@@ -263,7 +265,7 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
             if result_callback is not None:
                 try:
                     result_callback(f.result(), f.exception())
-                except KeyboardInterrupt:
+                except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException as e:
                     result_callback(None, e)
@@ -296,6 +298,8 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
             except asyncio.CancelledError as e:
                 if not return_exceptions:
                     yield e
+            except (SystemExit, KeyboardInterrupt):
+                raise
             except BaseException as e:
                 if not return_exceptions:
                     yield e

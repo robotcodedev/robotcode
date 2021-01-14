@@ -59,6 +59,21 @@ async def test_receive_a_request_message_should_work() -> None:
 
 
 @pytest.mark.asyncio
+async def test_receive_a_request_message_should_work_with_string_id() -> None:
+    protocol = DummyJsonRPCProtocol(None)
+
+    message = JsonRPCRequest(id="this is an id", method="doSomething", params={})
+
+    json_message = message.json().encode("utf-8")
+    header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
+    data = header + json_message
+
+    await protocol.data_received_async(data)
+
+    assert protocol.handled_messages == [message]
+
+
+@pytest.mark.asyncio
 async def test_receive_a_batch_request_should_work() -> None:
     protocol = DummyJsonRPCProtocol(None)
 

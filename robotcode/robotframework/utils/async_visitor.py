@@ -1,14 +1,12 @@
 import ast
-from typing import Any, AsyncGenerator, AsyncIterator, Callable, Optional, Type, cast
+from .async_ast import iter_child_nodes, iter_fields
+
+from typing import Any, AsyncIterator, Callable, Optional, Type, cast
 
 __all__ = ["AsyncVisitor", "walk"]
 
 
-async def walk(node: ast.AST) -> AsyncGenerator[ast.AST, None]:
-    async def iter_child_nodes(node: ast.AST) -> AsyncIterator[ast.AST]:
-        for n in ast.iter_child_nodes(node):
-            yield n
-
+async def walk(node: ast.AST) -> AsyncIterator[ast.AST]:
     from collections import deque
 
     todo = deque([node])
@@ -41,7 +39,7 @@ class AsyncVisitor(VisitorFinder):
 
     async def generic_visit(self, node: ast.AST) -> None:
         """Called if no explicit visitor function exists for a node."""
-        for field, value in ast.iter_fields(node):
+        async for field, value in iter_fields(node):
             if isinstance(value, list):
                 for item in value:
                     if isinstance(item, ast.AST):
