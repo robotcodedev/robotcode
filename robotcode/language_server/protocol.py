@@ -156,6 +156,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     async def shutdown(self) -> None:
         self.shutdown_received = True
         await self.on_shutdown(self)
+        self.server.close_protocol(self)
 
     @rpc_method(name="exit")
     @_logger.call

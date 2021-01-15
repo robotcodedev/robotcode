@@ -105,6 +105,10 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
     @abc.abstractmethod
     def create_protocol(self) -> TProtocol:
         ...
+    
+    def close_protocol(self, protocol: TProtocol) -> None:
+        if self.mode == JsonRpcServerMode.STDIO:
+            self.close()
 
     @_logger.call
     def start_stdio(self, stdin: Optional[BinaryIO] = None, stdout: Optional[BinaryIO] = None) -> None:
@@ -117,7 +121,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
                 def read() -> bytes:
                     return rfile.read(1)
-
+               
                 protocol.data_received(await self.loop.run_in_executor(None, read))
 
         transport = StdOutTransportAdapter(stdin or sys.stdin.buffer, stdout or sys.stdout.buffer)
