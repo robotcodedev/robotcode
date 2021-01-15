@@ -217,7 +217,7 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
 
     def __del__(self) -> None:
         if self.__executor:
-            self.__executor.shutdown(True, cancel_futures=True)
+            self.__executor.shutdown(False, cancel_futures=True)
 
     def _run_in_asyncio_thread(
         self,
