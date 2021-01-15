@@ -10,7 +10,6 @@ exclude = ["robotcode/external"]
 python = "^3.8"
 black = "^20.8b1"
 pydantic = "^1.7.3"
-coloredlogs = { version = "^15.0", optional = true }
 
 [tool.poetry.dev-dependencies]
 robotframework = "^3.2.2"
@@ -25,6 +24,7 @@ debugpy = "^1.2.0"
 rope = "^0.18.0"
 pytest-asyncio = "^0.14.0"
 pytest = "^6.2.1"
+coloredlogs = "^15.0"
 
 [tool.poetry-dynamic-versioning]
 enable = true
