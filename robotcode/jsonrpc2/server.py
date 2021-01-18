@@ -1,12 +1,11 @@
-import threading
 import abc
 import asyncio
-import sys
+import concurrent.futures
 import io
+import sys
 from enum import Enum
 from types import TracebackType
 from typing import BinaryIO, Callable, Generic, Literal, NamedTuple, Optional, Type, cast
-import concurrent.futures
 
 from ..utils.logging import LoggingDescriptor
 from .protocol import JsonRPCException, JsonRPCProtocol, TProtocol
@@ -54,9 +53,10 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         self._stop_event: Optional[asyncio.Event] = None
 
         self.loop = asyncio.get_event_loop()
-        self.thread: Optional[threading.Thread] = None
+
         self.stdio_future: Optional[concurrent.futures.Future] = None
-        # self.loop.set_debug(True)
+
+        self.loop.set_debug(True)
 
     @property
     def __del__(self) -> None:
@@ -82,9 +82,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
             self._server.close()
             self.loop.run_until_complete(self._server.wait_closed())
             self._server = None
-
-        if self.thread is not None:
-            self.thread.join(1)
 
         if self.stdio_future is not None:
             self.stdio_future.cancel()
@@ -155,9 +152,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
         def run_io() -> None:
             self._stop_event = asyncio.Event()
-
-            # self.thread = threading.Thread(target=threading_read, name="stdio_read", args=(sys.stdin.buffer, protocol))
-            # self.thread.start()
 
             future = self.loop.run_in_executor(None, threading_read, sys.stdin.buffer, protocol)
 
