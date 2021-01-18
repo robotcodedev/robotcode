@@ -4,7 +4,6 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple, cast
 from pathlib import Path
-import threading
 from ...language_server.types import Diagnostic, DiagnosticSeverity, Range, Position
 
 from ...utils.async_itertools import async_chain
@@ -116,12 +115,12 @@ class Namespace:
         self.library_manager = library_manager
         self.model = model
         self.source = source
-        self._libraries_lock = threading.RLock()
+        self._libraries_lock = asyncio.Lock()
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
         self._initialzed = False
         self._model_library_doc: Optional[LibraryDoc] = None
 
-        self._diagnostics_lock = threading.RLock()
+        self._diagnostics_lock = asyncio.Lock()
         self._diagnostics: List[Diagnostic] = []
 
         self._keywords: Optional[List[KeywordDoc]] = None
@@ -129,11 +128,11 @@ class Namespace:
     async def get_diagnostisc(self) -> List[Diagnostic]:
         await self._ensure_initialized()
 
-        with self._diagnostics_lock:
+        async with self._diagnostics_lock:
             return self._diagnostics
 
     async def get_libraries(self) -> OrderedDict[str, LibraryEntry]:
-        with self._libraries_lock:
+        async with self._libraries_lock:
             return self._libraries
 
     async def _ensure_initialized(self) -> None:
@@ -157,7 +156,7 @@ class Namespace:
                 raise
             except BaseException as e:
                 if add_diagnostics:
-                    with self._diagnostics_lock:
+                    async with self._diagnostics_lock:
                         self._diagnostics.append(
                             Diagnostic(
                                 range=Range(
@@ -178,7 +177,7 @@ class Namespace:
         self, name: str, args: Tuple[Any, ...], alias: Optional[str], base_dir: str
     ) -> Optional[LibraryDoc]:
         library = await self.library_manager.get_doc_from_library(name, args, base_dir=str(Path(self.source).parent))
-        with self._libraries_lock:
+        async with self._libraries_lock:
             self._libraries[alias or library.name or name] = LibraryEntry(
                 name=library.name, library_doc=library, args=args, alias=alias
             )
@@ -202,7 +201,7 @@ class Namespace:
 
         library = await self._import_self(model, source)
 
-        with self._libraries_lock:
+        async with self._libraries_lock:
             self._libraries[library.name or name] = LibraryEntry(
                 name=library.name, library_doc=library, args=(), alias=None
             )
@@ -224,7 +223,7 @@ class Namespace:
         await self._ensure_initialized()
         if self._keywords is None:
 
-            with self._libraries_lock:
+            async with self._libraries_lock:
                 self._keywords = [
                     e
                     async for e in async_chain(

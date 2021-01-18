@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any, Dict, List
 
 from ...jsonrpc2.protocol import rpc_method
-from ...utils.async_event import async_threading_event
+from ...utils.async_event import async_tasking_event
 from ...utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
 from ..text_document import TextDocument
@@ -21,7 +21,7 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities
         super().__init__(parent)
         self._documents: Dict[DocumentUri, TextDocument] = {}
 
-    @async_threading_event
+    @async_tasking_event
     async def collect_folding_range(sender, document: TextDocument) -> List[FoldingRange]:
         ...
 

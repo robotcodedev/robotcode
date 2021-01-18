@@ -1,10 +1,10 @@
 import asyncio
-from collections import OrderedDict
 import inspect
 import json
 import re
-import uuid
+import threading
 import weakref
+from collections import OrderedDict
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -420,12 +420,14 @@ class JsonRPCProtocol(asyncio.Protocol):
     _message_logger = LoggingDescriptor(postfix=".message")
     registry = RpcRegistry()
 
-    def __init__(self, server: Optional["JsonRPCServer[Any]"]):
+    def __init__(self, server: "JsonRPCServer[Any]"):
         self.server = server
-        self.transport: Optional[asyncio.Transport] = None
-        self._sended_request_lock = asyncio.Lock()
+        self.read_transport: Optional[asyncio.ReadTransport] = None
+        self.write_transport: Optional[asyncio.WriteTransport] = None
+        self._sended_request_lock = threading.RLock()
         self._sended_request: OrderedDict[Union[str, int], _SendedRequestEntry] = OrderedDict()
-        self._received_request_lock = asyncio.Lock()
+        self._sended_request_count = 0
+        self._received_request_lock = threading.RLock()
         self._received_request: OrderedDict[Union[str, int, None], asyncio.Future[Any]] = OrderedDict()
         self._message_buf = bytes()
 
@@ -439,7 +441,12 @@ class JsonRPCProtocol(asyncio.Protocol):
 
     @_logger.call
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
-        self.transport = cast(asyncio.Transport, transport)
+        super().connection_made(transport)
+        if isinstance(transport, asyncio.ReadTransport):
+            self.read_transport = transport
+        if isinstance(transport, asyncio.WriteTransport):
+            self.write_transport = transport
+
         asyncio.ensure_future(self.on_connection_made(self, transport))
 
     @_logger.call
@@ -554,8 +561,8 @@ class JsonRPCProtocol(asyncio.Protocol):
             lambda: "write ->\n" + (header.decode("ascii") + body.decode(self.CHARSET)).replace("\r\n", "\n")
         )
 
-        if self.transport is not None:
-            self.transport.write(header + body)
+        if self.write_transport is not None:
+            self.write_transport.write(header + body)
 
     def send_request(
         self,
@@ -566,9 +573,11 @@ class JsonRPCProtocol(asyncio.Protocol):
 
         result: asyncio.Future[TResult] = asyncio.get_event_loop().create_future()
 
-        id = str(uuid.uuid4())
+        with self._sended_request_lock:
+            self._sended_request_count += 1
+            id = self._sended_request_count
 
-        self._sended_request[id] = _SendedRequestEntry(result, return_type_or_converter)
+            self._sended_request[id] = _SendedRequestEntry(result, return_type_or_converter)
 
         self.send_data(JsonRPCRequest(id=id, method=method, params=params))
 
@@ -590,7 +599,7 @@ class JsonRPCProtocol(asyncio.Protocol):
             self.send_error(JsonRPCErrors.INTERNAL_ERROR, error)
             return
 
-        async with self._sended_request_lock:
+        with self._sended_request_lock:
             entry = self._sended_request.pop(message.id, None)
 
         if entry is None:
@@ -626,13 +635,13 @@ class JsonRPCProtocol(asyncio.Protocol):
 
             result = asyncio.ensure_future(ensure_coroutine(e.method)(*params[0], **params[1]))
 
-            async with self._received_request_lock:
+            with self._received_request_lock:
                 self._received_request[message.id] = result
 
             try:
                 self.send_response(message.id, await result)
             finally:
-                async with self._received_request_lock:
+                with self._received_request_lock:
                     self._received_request.pop(message.id, None)
 
         except asyncio.CancelledError:
@@ -647,10 +656,10 @@ class JsonRPCProtocol(asyncio.Protocol):
             self.send_error(JsonRPCErrors.INTERNAL_ERROR, str(e), id=message.id)
 
     async def cancel_received_request(self, id: Union[int, str, None]) -> None:
-        async with self._received_request_lock:
+        with self._received_request_lock:
             future = self._received_request.get(id, None)
-            if future is not None and not future.cancelled():
-                future.cancel()
+        if future is not None and not future.cancelled():
+            future.cancel()
 
     async def handle_notification(self, message: JsonRPCNotification) -> None:
         e = self.registry.get_entry(message.method)

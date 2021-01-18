@@ -2,7 +2,7 @@ import asyncio
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 from ...jsonrpc2.protocol import JsonRPCProtocol
-from ...utils.async_event import async_threading_event_iterator
+from ...utils.async_event import async_tasking_event_iterator
 from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
 from ..text_document import TextDocument
@@ -101,7 +101,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.parent.documents.did_close.add(self.on_did_close)
         self.parent.documents.did_save.add(self.on_did_save)
 
-    @async_threading_event_iterator
+    @async_tasking_event_iterator
     async def collect_diagnostics(sender, document: TextDocument) -> List[Diagnostic]:
         ...
 

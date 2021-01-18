@@ -2,7 +2,6 @@ import ast
 import asyncio
 import io
 import weakref
-import threading
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple, TypeVar, cast
 
@@ -15,6 +14,7 @@ from ...language_server.text_document import TextDocument
 
 from ..diagnostics.namespace import Namespace
 from ..diagnostics.library_manager import LibraryManager
+from ..configuration import RobotcodeConfig
 
 _TResult = TypeVar("_TResult")
 
@@ -34,21 +34,22 @@ class _Entry:
 class ModelTokenCache(LanguageServerProtocolPart):
     def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
-        self._lock = threading.RLock()
+        self._lock = asyncio.Lock()
         self._entries: Dict[Tuple[weakref.ref[TextDocument], int], _Entry] = {}
         self._loop = asyncio.get_event_loop()
         self._library_manager = LibraryManager()
 
     async def __get_entry(self, document: TextDocument, setter: Callable[[_Entry], Awaitable[_TResult]]) -> _TResult:
+        version = document.version
+
         async def remove_safe(r: weakref.ref[TextDocument], v: int) -> None:
-            with self._lock:
+            async with self._lock:
                 self._entries.pop((r, v))
 
-        with self._lock:
-            version = document.version
+        def remove(r: weakref.ref[TextDocument]) -> None:
+            asyncio.ensure_future(remove_safe(r, version))
 
-            def remove(r: weakref.ref[TextDocument]) -> None:
-                asyncio.run_coroutine_threadsafe(remove_safe(r, version), self._loop)
+        async with self._lock:
 
             document_ref = weakref.ref(document, remove)
 
@@ -79,9 +80,6 @@ class ModelTokenCache(LanguageServerProtocolPart):
         return await self.__get_entry(document, setter)
 
     async def get_model(self, document: TextDocument) -> ast.AST:
-        return await self._get_model(document)
-
-    async def _get_model(self, document: TextDocument) -> ast.AST:
         async def setter(e: _Entry) -> ast.AST:
             if e.model is None:
                 e.model = await self.__get_model(document)
@@ -106,21 +104,26 @@ class ModelTokenCache(LanguageServerProtocolPart):
                 raise UnknownFileTypeError(str(document.uri))
 
     async def get_namespace(self, document: TextDocument) -> Namespace:
-        return await self._get_namespace(document)
-
-    async def _get_namespace(self, document: TextDocument) -> Namespace:
         async def setter(e: _Entry) -> Namespace:
             if e.namespace is None:
-                e.namespace = await self.__get_namespace(document)
+                e.namespace, e.model = await self.__get_namespace(document, e.model)
             return e.namespace
 
         return await self.__get_entry(document, setter)
 
-    async def get_library_manager(self, document: TextDocument) -> LibraryManager:
-        # TODO: library manger per workspace folder
-        return self._library_manager
-
-    async def __get_namespace(self, document: TextDocument) -> Namespace:
+    async def __get_namespace(self, document: TextDocument, model: Optional[ast.AST]) -> Tuple[Namespace, ast.AST]:
         library_manager = await self.get_library_manager(document)
 
-        return Namespace(library_manager, await self.get_model(document), document.uri.to_path_str())
+        model = await self.__get_model(document) if model is None else model
+        return Namespace(library_manager, model, document.uri.to_path_str()), model
+
+    async def get_library_manager(self, document: TextDocument) -> LibraryManager:
+        # TODO: library manger per workspace folder
+
+        folder = self.parent.workspace.get_workspace_folder(document.uri)
+
+        a = await self.parent.workspace.get_configuration("robotcode", None if folder is None else folder.uri)
+
+        conf = RobotcodeConfig.parse_obj(a)
+
+        return self._library_manager

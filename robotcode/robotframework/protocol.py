@@ -31,7 +31,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     robot_diagnostics = ProtocolPartDescriptor(RobotDiagnosticsProtocolPart)
     folding_ranges = ProtocolPartDescriptor(RobotFoldingRangeProtocolPart)
 
-    def __init__(self, server: Optional["RobotLanguageServer"]):
+    def __init__(self, server: "RobotLanguageServer"):
         super().__init__(server)
         self.options = Options()
 

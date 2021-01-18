@@ -1,15 +1,17 @@
+import threading
 import abc
 import asyncio
 import sys
+import io
 from enum import Enum
 from types import TracebackType
-from typing import BinaryIO, Callable, Generic, Literal, NamedTuple, Optional, Type
-
+from typing import BinaryIO, Callable, Generic, Literal, NamedTuple, Optional, Type, cast
+import concurrent.futures
 
 from ..utils.logging import LoggingDescriptor
 from .protocol import JsonRPCException, JsonRPCProtocol, TProtocol
 
-__all__ = ["StdOutTransportAdapter", "JsonRpcServerMode", "StdIoParams", "TcpParams", "JsonRPCServer"]
+__all__ = ["StdOutTransportAdapter", "JsonRpcServerMode", "TcpParams", "JsonRPCServer"]
 
 
 class StdOutTransportAdapter(asyncio.Transport):
@@ -32,11 +34,6 @@ class JsonRpcServerMode(Enum):
     TCP = "tcp"
 
 
-class StdIoParams(NamedTuple):
-    stdin: Optional[BinaryIO] = None
-    stdout: Optional[BinaryIO] = None
-
-
 class TcpParams(NamedTuple):
     host: Optional[str] = None
     port: int = 0
@@ -46,11 +43,9 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
     def __init__(
         self,
         mode: JsonRpcServerMode = JsonRpcServerMode.STDIO,
-        stdio_params: StdIoParams = StdIoParams(None, None),
         tcp_params: TcpParams = TcpParams(None, 0),
     ):
         self.mode = mode
-        self.stdio_params = stdio_params
         self.tcp_params = tcp_params
 
         self._run_func: Optional[Callable[[], None]] = None
@@ -59,7 +54,8 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         self._stop_event: Optional[asyncio.Event] = None
 
         self.loop = asyncio.get_event_loop()
-
+        self.thread: Optional[threading.Thread] = None
+        self.stdio_future: Optional[concurrent.futures.Future] = None
         # self.loop.set_debug(True)
 
     @property
@@ -68,9 +64,10 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
     _logger = LoggingDescriptor()
 
+    @_logger.call
     def start(self) -> None:
         if self.mode == JsonRpcServerMode.STDIO:
-            self.start_stdio(self.stdio_params.stdin, self.stdio_params.stdout)
+            self.start_stdio()
         elif self.mode == JsonRpcServerMode.TCP:
             self.start_tcp(self.tcp_params.host, self.tcp_params.port)
         else:
@@ -85,6 +82,12 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
             self._server.close()
             self.loop.run_until_complete(self._server.wait_closed())
             self._server = None
+
+        if self.thread is not None:
+            self.thread.join(1)
+
+        if self.stdio_future is not None:
+            self.stdio_future.cancel()
 
         if not self.loop.is_closed():
             self.loop.close()
@@ -111,20 +114,40 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
             self._stop_event.set()
 
     @_logger.call
-    def start_stdio(self, stdin: Optional[BinaryIO] = None, stdout: Optional[BinaryIO] = None) -> None:
+    def start_stdio(self) -> None:
         self.mode = JsonRpcServerMode.STDIO
 
-        async def aio_readline(rfile: BinaryIO, protocol: JsonRPCProtocol) -> None:
+        async def aio_read(rfile: BinaryIO, protocol: JsonRPCProtocol) -> None:
             """Reads data from stdin in separate thread (asynchronously)."""
 
+            def read_unbuffered() -> bytes:
+                return rfile.read(1)
+
+            def read_buffered() -> bytes:
+                return cast(io.BufferedReader, rfile).read1(500)
+
+            read_func = read_unbuffered
+            if isinstance(rfile, io.BufferedReader):
+                read_func = read_buffered
+
             while self._stop_event is not None and not self._stop_event.is_set() and not rfile.closed:
+                protocol.data_received(await self.loop.run_in_executor(None, read_func))
 
-                def read() -> bytes:
-                    return rfile.read(1)
+        def threading_read(rfile: BinaryIO, protocol: JsonRPCProtocol) -> None:
+            def read_unbuffered() -> bytes:
+                return rfile.read(1)
 
-                protocol.data_received(await self.loop.run_in_executor(None, read))
+            def read_buffered() -> bytes:
+                return cast(io.BufferedReader, rfile).read1(500)
 
-        transport = StdOutTransportAdapter(stdin or sys.stdin.buffer, stdout or sys.stdout.buffer)
+            read_func = read_unbuffered
+            if isinstance(rfile, io.BufferedReader):
+                read_func = read_buffered
+
+            while self._stop_event is not None and not self._stop_event.is_set() and not rfile.closed:
+                self.loop.call_soon_threadsafe(protocol.data_received, read_func())
+
+        transport = StdOutTransportAdapter(sys.stdin.buffer, sys.stdout.buffer)
 
         protocol = self.create_protocol()
 
@@ -132,7 +155,13 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
         def run_io() -> None:
             self._stop_event = asyncio.Event()
-            self.loop.run_until_complete(aio_readline(stdin or sys.stdin.buffer, protocol))
+
+            # self.thread = threading.Thread(target=threading_read, name="stdio_read", args=(sys.stdin.buffer, protocol))
+            # self.thread.start()
+
+            future = self.loop.run_in_executor(None, threading_read, sys.stdin.buffer, protocol)
+
+            self.loop.run_until_complete(future)
 
         self._run_func = run_io
 
@@ -143,6 +172,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         self._server = self.loop.run_until_complete(self.loop.create_server(lambda: self.create_protocol(), host, port))
         self._run_func = self.loop.run_forever
 
+    @_logger.call
     def run(self) -> None:
         if self._run_func is None:
             self._logger.warning("server is not started.")

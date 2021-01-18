@@ -133,17 +133,18 @@ def main() -> None:
         help="communication mode",
     )
     parser.add_argument("-p", "--port", default=6601, help="server listen port (tcp)", type=int)
-    parser.add_argument("--debug", action="store_true", help="show debug messages")
-    parser.add_argument("--debug-json-rpc", action="store_true", help="show json-rpc debug messages")
-    parser.add_argument("--debug-json-rpc-data", action="store_true", help="show json-rpc messages debug messages")
-    parser.add_argument("--debug-language-server", action="store_true", help="show language server debug messages")
+    parser.add_argument("--log", action="store_true", help="enable logging")
+    parser.add_argument("--log-json-rpc", action="store_true", help="show json-rpc log messages")
+    parser.add_argument("--log-json-rpc-data", action="store_true", help="show json-rpc messages log messages")
+    parser.add_argument("--log-language-server", action="store_true", help="show language server log messages")
     parser.add_argument(
-        "--debug-language-server-parts", action="store_true", help="show language server parts debug messages"
+        "--log-language-server-parts", action="store_true", help="show language server parts log messages"
     )
     parser.add_argument(
-        "--debug-robotframework", action="store_true", help="show robotframework language server debug messages"
+        "--log-robotframework", action="store_true", help="show robotframework language server log messages"
     )
-    parser.add_argument("--debug-asyncio", action="store_true", help="show asyncio debug messages")
+    parser.add_argument("--debug-asyncio", action="store_true", help="enable async io debugging messages")
+    parser.add_argument("--log-asyncio", action="store_true", help="show asyncio log messages")
     parser.add_argument("--log-colored", action="store_true", help="colored output for logs")
     parser.add_argument("--log-config", default=None, help="reads logging configuration from file")
     parser.add_argument("--log-file", default=None, help="enables logging to file")
@@ -176,7 +177,7 @@ def main() -> None:
 
         logging.config.fileConfig(args.log_config, disable_existing_loggers=True)
     else:
-        log_level = logging._checkLevel(args.log_level) if args.debug else logging.WARNING  # type: ignore
+        log_level = logging._checkLevel(args.log_level) if args.log else logging.WARNING  # type: ignore
 
         log_initialized = False
         if args.log_colored:
@@ -194,22 +195,25 @@ def main() -> None:
         if args.log_file is not None:
             _logger.logger.addHandler(get_log_handler(args.log_file))
 
-        if not args.debug_asyncio:
+        if args.debug_asyncio:
+            os.environ["PYTHONASYNCIODEBUG"] = "1"
+
+        if not args.log_asyncio:
             logging.getLogger("asyncio").propagate = False
 
-        if not args.debug_json_rpc:
+        if not args.log_json_rpc:
             logging.getLogger("robotcode.jsonrpc2").propagate = False
 
-        if not args.debug_json_rpc_data:
+        if not args.log_json_rpc_data:
             logging.getLogger("robotcode.jsonrpc2.protocol.JsonRPCProtocol.message").propagate = False
 
-        if not args.debug_language_server:
+        if not args.log_language_server:
             logging.getLogger("robotcode.language_server").propagate = False
 
-        if not args.debug_language_server_parts:
+        if not args.log_language_server_parts:
             logging.getLogger("robotcode.language_server.parts").propagate = False
 
-        if not args.debug_robotframework:
+        if not args.log_robotframework:
             logging.getLogger("robotcode.robotframework").propagate = False
 
     _logger.info(f"Starting with args={args}")

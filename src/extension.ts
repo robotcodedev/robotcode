@@ -16,7 +16,7 @@ let clients: Map<string, LanguageClient> = new Map();
 
 let _sortedWorkspaceFolders: string[] | undefined;
 function sortedWorkspaceFolders(): string[] {
-    if (_sortedWorkspaceFolders === void 0) {
+    if (_sortedWorkspaceFolders === undefined) {
         _sortedWorkspaceFolders = vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.map(folder => {
             let result = folder.uri.toString();
             if (result.charAt(result.length - 1) !== '/') {

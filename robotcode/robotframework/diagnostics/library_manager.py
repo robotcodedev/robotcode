@@ -1,11 +1,11 @@
 import ast
 import asyncio
-from collections import OrderedDict
 import os
-from concurrent.futures.process import ProcessPoolExecutor
+from collections import OrderedDict
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any, Optional, Sequence, Tuple
-import threading
+from multiprocessing import Pool
 
 DEFAULT_LIBRARIES = ("BuiltIn", "Reserved", "Easter")
 
@@ -48,11 +48,19 @@ def _is_library_by_path(path: str) -> bool:
 def _get_library_doc(
     name: str, args: Optional[Tuple[Any, ...]] = None, working_dir: str = ".", base_dir: str = "."
 ) -> LibraryDoc:
+    import sys
     from pathlib import Path
 
     from robot.libdocpkg.robotbuilder import KeywordDocBuilder
     from robot.running.testlibraries import TestLibrary
     from robot.utils.robotpath import find_file
+
+    # correct sys path
+    file = Path(__file__).resolve()
+    top = file.parents[3]
+
+    for p in filter(lambda v: Path(v).is_relative_to(top), sys.path.copy()):
+        sys.path.remove(p)
 
     wd = Path(working_dir)
     os.chdir(wd)
@@ -86,10 +94,6 @@ def _get_library_doc(
     return libdoc
 
 
-def _dummy() -> None:
-    pass
-
-
 @dataclass
 class _LibraryEntry:
     name: str
@@ -103,25 +107,33 @@ class LibraryManager:
     def __init__(self) -> None:
         super().__init__()
         self.process_pool = ProcessPoolExecutor()
-        self._libaries_lock = threading.RLock()
+        self._libaries_lock = asyncio.Lock()
         self._libaries: OrderedDict[_LibraryEntry, LibraryDoc] = OrderedDict()
-
-        try:
-            self.process_pool.submit(_dummy).result(0)
-        except BaseException as e:
-            print(e)
+        self.loop = asyncio.get_event_loop()
+        self.pool = Pool()
 
     def __del__(self) -> None:
-        self.process_pool.shutdown(True, cancel_futures=True)
+        self.process_pool.shutdown(False)
+        self.pool.close()
 
     async def get_doc_from_library(self, name: str, args: Tuple[Any, ...] = (), base_dir: str = ".") -> LibraryDoc:
         entry = _LibraryEntry(name, args)
 
-        with self._libaries_lock:
-            if entry not in self._libaries:
-                self._libaries[entry] = await asyncio.get_event_loop().run_in_executor(
+        async def get() -> LibraryDoc:
+            return await asyncio.wait_for(
+                asyncio.get_event_loop().run_in_executor(
                     self.process_pool, _get_library_doc, name, args, ".", base_dir
+                ),
+                10,
+            )
+
+        async with self._libaries_lock:
+            if entry not in self._libaries:
+                # self._libaries[entry] = await get()
+                self._libaries[entry] = self.pool.apply_async(_get_library_doc, args=(name, args, ".", base_dir)).get(
+                    10
                 )
+
             return self._libaries[entry]
 
     async def get_doc_from_model(

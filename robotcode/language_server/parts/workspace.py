@@ -1,9 +1,10 @@
 import uuid
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
 from ...jsonrpc2.protocol import JsonRPCProtocol, JsonRPCProtocolPart, rpc_method
 from ...utils.async_event import async_event
 from ...utils.logging import LoggingDescriptor
+from ...utils.uri import Uri
 from ..types import (
     ConfigurationItem,
     ConfigurationParams,
@@ -19,9 +20,9 @@ from ..types import (
     RenameFilesParams,
     ServerCapabilities,
     TextEdit,
+    WorkspaceEdit,
     WorkspaceFolder,
     WorkspaceFoldersServerCapabilities,
-    WorkspaceEdit,
 )
 
 
@@ -38,7 +39,7 @@ class Workspace(JsonRPCProtocolPart):
         super().__init__(parent)
         self.root_uri = root_uri
         self.root_path = root_path
-        self.workspace_folders = workspace_folders
+        self.workspace_folders: List[WorkspaceFolder] = workspace_folders or []
         self._settings: Dict[str, Any] = {}
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
@@ -157,12 +158,33 @@ class Workspace(JsonRPCProtocolPart):
     async def _workspace_did_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
         await self.did_delete_files(self, list(f.uri for f in files))
 
-    async def get_configuration(self, section: str, scope_uri: Optional[str] = None) -> List[Any]:
+    async def get_configuration(self, section: str, scope_uri: Union[str, Uri, None] = None) -> Any:
         return (
             await self.parent.send_request(
                 "workspace/configuration",
-                ConfigurationParams(items=[ConfigurationItem(scope_uri=scope_uri, section=section)]),
+                ConfigurationParams(
+                    items=[
+                        ConfigurationItem(
+                            scope_uri=str(scope_uri) if isinstance(scope_uri, Uri) else scope_uri, section=section
+                        )
+                    ]
+                ),
                 list,
             )
-            or []
+        )[0]
+
+    def get_workspace_folder(self, uri: Union[Uri, str]) -> Optional[WorkspaceFolder]:
+        if isinstance(uri, str):
+            uri = Uri(uri)
+
+        uri_path = uri.to_path()
+        result = sorted(
+            [f for f in self.workspace_folders if uri_path.is_relative_to(Uri(f.uri).to_path())],
+            key=lambda v1: len(v1.uri),
+            reverse=True,
         )
+
+        if len(result) > 0:
+            return result[0]
+
+        return None

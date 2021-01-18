@@ -1,7 +1,7 @@
 import asyncio
 import inspect
-import threading
 import weakref
+import threading
 from abc import ABC
 from concurrent.futures.thread import ThreadPoolExecutor
 from types import MethodType
@@ -42,14 +42,17 @@ _TCallable = TypeVar("_TCallable", bound=Callable[..., Union[Any, AsyncIterator[
 
 class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
     def __init__(self) -> None:
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
 
         self.listeners: MutableSet[weakref.ref[Any]] = set()
 
     def add(self, callback: _TCallable) -> None:
-        def remove_listener(ref: Any) -> None:
+        async def remove_safe(ref: Any) -> None:
             with self.lock:
                 self.listeners.remove(ref)
+
+        def remove_listener(ref: Any) -> None:
+            asyncio.ensure_future(remove_safe(ref))
 
         with self.lock:
             if inspect.ismethod(callback):
@@ -217,7 +220,7 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
 
     def __del__(self) -> None:
         if self.__executor:
-            self.__executor.shutdown(False, cancel_futures=True)
+            self.__executor.shutdown(False)
 
     def _run_in_asyncio_thread(
         self,
@@ -238,6 +241,8 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
                 loop.close()
 
         loop = asyncio.new_event_loop()
+
+        # loop.set_debug(True)
 
         executor.submit(run, loop)
 

@@ -33,13 +33,31 @@
 			},
 		},
 		{
-			"name": "Python: robotcode.server",
+			"name": "Python: robotcode.server tcp",
 			"type": "python",
 			"request": "launch",
 			"module": "robotcode.server",
+			"justMyCode": false,
 			"args": [
 				"--mode",
 				"tcp",
+				"--call-tracing",
+				"--log-config", "log.ini"
+				//"--debug",
+				// "--debug-json-rpc",
+				// "--debug-json-rpc-data",
+				//"--debug-colored"
+			]
+		},
+		{
+			"name": "Python: robotcode.server stdio",
+			"type": "python",
+			"request": "launch",
+			"module": "robotcode.server",
+			"justMyCode": false,
+			"args": [
+				"--mode",
+				"stdio",
 				"--call-tracing",
 				"--log-config", "log.ini"
 				//"--debug",

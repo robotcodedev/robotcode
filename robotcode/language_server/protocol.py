@@ -51,7 +51,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     diagnostics = ProtocolPartDescriptor(DiagnosticsProtocolPart)
     folding_range = ProtocolPartDescriptor(FoldingRangeProtocolPart)
 
-    def __init__(self, server: Optional[JsonRPCServer[Any]]):
+    def __init__(self, server: JsonRPCServer[Any]):
         super().__init__(server)
 
         self.initialization_options: Any = None
@@ -85,7 +85,10 @@ class LanguageServerProtocol(JsonRPCProtocol):
         self._trace = value
 
     @property
-    def workspace(self) -> Optional[Workspace]:
+    def workspace(self) -> Workspace:
+        if self._workspace is None:
+            raise LanguageServerException(f"{type(self).__name__} not initialized")
+
         return self._workspace
 
     @property
@@ -105,7 +108,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     @rpc_method(name="initialize", param_type=InitializeParams)
     @_logger.call
-    def _initialize(
+    async def _initialize(
         self,
         capabilities: ClientCapabilities,
         root_path: Optional[str] = None,
@@ -161,12 +164,12 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     @rpc_method(name="exit")
     @_logger.call
-    def _exit(self) -> None:
+    async def _exit(self) -> None:
         raise SystemExit(0 if self.shutdown_received else 1)
 
     @rpc_method(name="$/setTrace", param_type=SetTraceParams)
     @_logger.call
-    def _set_trace(self, value: TraceValue, **kwargs: Any) -> None:
+    async def _set_trace(self, value: TraceValue, **kwargs: Any) -> None:
         self.trace = value
 
     @rpc_method(name="$/cancelRequest", param_type=CancelParams)
