@@ -19,8 +19,16 @@ class RobotImportError(Exception):
 
 
 @dataclass
+class Token:
+    line_no: int
+    col_offset: int
+    end_col_offset: int
+
+
+@dataclass
 class Import:
     name: str
+    name_token: Token
     line_no: int
     col_offset: int
     end_lineno: int
@@ -57,11 +65,15 @@ class ImportVisitor(AsyncVisitor):
 
     async def visit_LibraryImport(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.model.statements import LibraryImport as RobotLibraryImport
+        from robot.parsing.lexer.tokens import Token as RobotToken
 
         n = cast(RobotLibraryImport, node)
+        name = n.get_token(RobotToken.NAME)
+
         self._results.append(
             LibraryImport(
                 name=str(n.name),
+                name_token=Token(line_no=name.lineno, col_offset=name.col_offset, end_col_offset=name.end_col_offset),
                 args=n.args,
                 alias=n.alias,
                 line_no=node.lineno,
@@ -73,11 +85,15 @@ class ImportVisitor(AsyncVisitor):
 
     async def visit_ResourceImport(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.model.statements import ResourceImport as RobotResourceImport
+        from robot.parsing.lexer.tokens import Token as RobotToken
 
         n = cast(RobotResourceImport, node)
+        name = n.get_token(RobotToken.NAME)
+
         self._results.append(
             ResourceImport(
                 name=str(n.name),
+                name_token=Token(line_no=name.lineno, col_offset=name.col_offset, end_col_offset=name.end_col_offset),
                 line_no=node.lineno,
                 col_offset=node.col_offset,
                 end_lineno=node.end_lineno if node.end_lineno is not None else -1,
@@ -87,11 +103,15 @@ class ImportVisitor(AsyncVisitor):
 
     async def visit_VariablesImport(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.model.statements import VariablesImport as RobotVariablesImport
+        from robot.parsing.lexer.tokens import Token as RobotToken
 
         n = cast(RobotVariablesImport, node)
+        name = n.get_token(RobotToken.NAME)
+
         self._results.append(
             VariablesImport(
                 name=str(n.name),
+                name_token=Token(line_no=name.lineno, col_offset=name.col_offset, end_col_offset=name.end_col_offset),
                 args=n.args,
                 line_no=node.lineno,
                 col_offset=node.col_offset,
@@ -160,8 +180,12 @@ class Namespace:
                         self._diagnostics.append(
                             Diagnostic(
                                 range=Range(
-                                    start=Position(line=value.line_no - 1, character=value.col_offset),
-                                    end=Position(line=value.end_lineno - 1, character=value.end_col_offset),
+                                    start=Position(
+                                        line=value.name_token.line_no - 1, character=value.name_token.col_offset
+                                    ),
+                                    end=Position(
+                                        line=value.name_token.line_no - 1, character=value.name_token.end_col_offset
+                                    ),
                                 ),
                                 message=str(e),
                                 severity=DiagnosticSeverity.ERROR,
