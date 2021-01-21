@@ -21,9 +21,9 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
 
         # parent.diagnostics.collect_diagnostics.add(self.collect_token_errors)
         # parent.diagnostics.collect_diagnostics.add(self.collect_model_errors)
-        parent.diagnostics.collect_diagnostics.add(self.collect_walk_model_errors)
+        parent.diagnostics.collect.add(self.collect_walk_model_errors)
 
-        parent.diagnostics.collect_diagnostics.add(self.collect_diagnostics)
+        parent.diagnostics.collect.add(self.collect_diagnostics)
 
     def _create_error(self, node: ast.AST, msg: str, source: Optional[str] = None) -> Diagnostic:
         return Diagnostic(

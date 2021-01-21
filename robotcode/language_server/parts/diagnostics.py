@@ -102,7 +102,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.parent.documents.did_save.add(self.on_did_save)
 
     @async_tasking_event_iterator
-    async def collect_diagnostics(sender, document: TextDocument) -> List[Diagnostic]:
+    async def collect(sender, document: TextDocument) -> List[Diagnostic]:
         ...
 
     @_logger.call
@@ -169,7 +169,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     async def publish_diagnostics(self, document: TextDocument) -> None:
         diagnostics: List[Diagnostic] = []
 
-        async for result in self.collect_diagnostics(self, document):
+        async for result in self.collect(self, document):
             if isinstance(result, BaseException):
                 if not isinstance(result, asyncio.CancelledError):
                     self._logger.exception(result, exc_info=result)

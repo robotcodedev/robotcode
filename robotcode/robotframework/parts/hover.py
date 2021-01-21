@@ -1,10 +1,9 @@
-from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 from ...jsonrpc2.protocol import GenericJsonRPCProtocolPart
 from ...language_server.text_document import TextDocument
-from ...language_server.types import Location, LocationLink, Position
+from ...language_server.types import Hover, MarkupContent, MarkupKind, Position
 from ...utils.logging import LoggingDescriptor
-from ...utils.uri import Uri
 from ..utils.ast import range_from_node, range_from_token, range_from_token_or_node
 from ..utils.async_visitor import walk
 
@@ -12,25 +11,22 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 
-class RobotDefinitionProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServerProtocol"]):
+class RobotHoverProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServerProtocol"]):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
 
-        parent.definition.collect.add(self.collect_definitions)
+        parent.hover.collect.add(self.collect_hover)
 
-    async def collect_definitions(
-        self, sender: Any, document: TextDocument, position: Position
-    ) -> Optional[Union[Location, List[Location], List[LocationLink]]]:
+    async def collect_hover(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import (
-            KeywordCall,
+        from robot.parsing.model.statements import (  # TODO VariablesImport,
             Fixture,
-            TestTemplate,
+            KeywordCall,
             LibraryImport,
             ResourceImport,
-            # TODO VariablesImport,
+            TestTemplate,
         )
 
         result_nodes = [
@@ -55,15 +51,12 @@ class RobotDefinitionProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServe
                         if namespace is None:
                             return None
                         keyword_doc = await namespace.find_keyword(node.keyword)
-                        if keyword_doc is not None and keyword_doc.source is not None:
-                            return [
-                                LocationLink(
-                                    origin_selection_range=range_from_token_or_node(node, keyword_token),
-                                    target_uri=str(Uri.from_path_str(keyword_doc.source)),
-                                    target_range=keyword_doc.range(),
-                                    target_selection_range=keyword_doc.range(),
-                                )
-                            ]
+                        if keyword_doc is not None:
+                            return Hover(
+                                contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
+                                range=range_from_token_or_node(node, keyword_token),
+                            )
+
             elif isinstance(result_node, Fixture):
                 node = cast(Fixture, result_node)
                 if node.name:
@@ -77,15 +70,11 @@ class RobotDefinitionProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServe
                         if namespace is None:
                             return None
                         keyword_doc = await namespace.find_keyword(node.name)
-                        if keyword_doc is not None and keyword_doc.source is not None:
-                            return [
-                                LocationLink(
-                                    origin_selection_range=range_from_token_or_node(node, keyword_token),
-                                    target_uri=str(Uri.from_path_str(keyword_doc.source)),
-                                    target_range=keyword_doc.range(),
-                                    target_selection_range=keyword_doc.range(),
-                                )
-                            ]
+                        if keyword_doc is not None:
+                            return Hover(
+                                contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
+                                range=range_from_token_or_node(node, keyword_token),
+                            )
             elif isinstance(result_node, TestTemplate):
                 node = cast(TestTemplate, result_node)
                 if node.value:
@@ -100,15 +89,11 @@ class RobotDefinitionProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServe
                             return None
 
                         keyword_doc = await namespace.find_keyword(node.value)
-                        if keyword_doc is not None and keyword_doc.source is not None:
-                            return [
-                                LocationLink(
-                                    origin_selection_range=range_from_token_or_node(node, keyword_token),
-                                    target_uri=str(Uri.from_path_str(keyword_doc.source)),
-                                    target_range=keyword_doc.range(),
-                                    target_selection_range=keyword_doc.range(),
-                                )
-                            ]
+                        if keyword_doc is not None:
+                            return Hover(
+                                contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
+                                range=range_from_token_or_node(node, keyword_token),
+                            )
             elif isinstance(result_node, LibraryImport):
                 node = cast(LibraryImport, result_node)
                 if node.name:
@@ -130,15 +115,14 @@ class RobotDefinitionProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServe
 
                         if len(libdocs) == 1:
                             libdoc = libdocs[0]
-                            if libdoc.source is not None:
-                                return [
-                                    LocationLink(
-                                        origin_selection_range=range_from_token_or_node(node, name_token),
-                                        target_uri=str(Uri.from_path_str(libdoc.source)),
-                                        target_range=libdoc.range(),
-                                        target_selection_range=libdoc.range(),
-                                    )
-                                ]
+                            return Hover(
+                                contents=MarkupContent(
+                                    kind=MarkupKind.MARKDOWN,
+                                    value=libdoc.to_markdown(),
+                                ),
+                                range=range_from_token_or_node(node, name_token),
+                            )
+
             elif isinstance(result_node, ResourceImport):
                 node = cast(ResourceImport, result_node)
                 if node.name:
@@ -160,14 +144,12 @@ class RobotDefinitionProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServe
 
                         if len(libdocs) == 1:
                             libdoc = libdocs[0]
-                            if libdoc.source is not None:
-                                return [
-                                    LocationLink(
-                                        origin_selection_range=range_from_token_or_node(node, name_token),
-                                        target_uri=str(Uri.from_path_str(libdoc.source)),
-                                        target_range=libdoc.range(),
-                                        target_selection_range=libdoc.range(),
-                                    )
-                                ]
+                            return Hover(
+                                contents=MarkupContent(
+                                    kind=MarkupKind.MARKDOWN,
+                                    value=libdoc.to_markdown(),
+                                ),
+                                range=range_from_token_or_node(node, name_token),
+                            )
 
         return None

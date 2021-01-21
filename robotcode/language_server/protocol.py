@@ -17,8 +17,10 @@ from .parts.definition import DefinitionProtocolPart
 from .parts.diagnostics import DiagnosticsProtocolPart
 from .parts.documents import TextDocumentProtocolPart
 from .parts.folding_range import FoldingRangeProtocolPart
+from .parts.hover import HoverProtocolPart
 from .parts.window import WindowProtocolPart
 from .parts.workspace import Workspace
+
 from .types import (
     CancelParams,
     ClientCapabilities,
@@ -51,7 +53,8 @@ class LanguageServerProtocol(JsonRPCProtocol):
     documents = ProtocolPartDescriptor(TextDocumentProtocolPart)
     diagnostics = ProtocolPartDescriptor(DiagnosticsProtocolPart)
     folding_ranges = ProtocolPartDescriptor(FoldingRangeProtocolPart)
-    definitions = ProtocolPartDescriptor(DefinitionProtocolPart)
+    definition = ProtocolPartDescriptor(DefinitionProtocolPart)
+    hover = ProtocolPartDescriptor(HoverProtocolPart)
 
     def __init__(self, server: JsonRPCServer[Any]):
         super().__init__(server)

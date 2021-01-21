@@ -31,7 +31,7 @@ class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         self.link_support = False
 
     @async_tasking_event
-    async def collect_definitions(
+    async def collect(
         sender, document: TextDocument, position: Position
     ) -> Optional[Union[Location, List[Location], List[LocationLink]]]:
         ...
@@ -44,7 +44,7 @@ class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         ):
             self.link_support = self.parent.client_capabilities.text_document.definition.link_support or False
 
-        if len(self.collect_definitions.listeners):
+        if len(self.collect.listeners):
             capabilities.definition_provider = True
 
     @rpc_method(name="textDocument/definition", param_type=DefinitionParams)
@@ -55,7 +55,7 @@ class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         locations: List[Location] = []
         location_links: List[LocationLink] = []
 
-        for result in await self.collect_definitions(self, self.parent.documents[text_document.uri], position):
+        for result in await self.collect(self, self.parent.documents[text_document.uri], position):
             if isinstance(result, BaseException):
                 self._logger.exception(result, exc_info=result)
             else:

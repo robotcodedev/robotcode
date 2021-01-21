@@ -280,8 +280,8 @@ class Namespace:
     async def get_resources(self) -> OrderedDict[str, LibraryEntry]:
         await self._ensure_initialized()
 
-        async with self._libraries_lock:
-            return self._libraries
+        async with self._resources_lock:
+            return self._resources
 
     async def _ensure_initialized(self) -> None:
         if not self._initialzed:
@@ -467,12 +467,15 @@ class KeywordFinder:
         self.errors: List[ErrorEntry] = []
 
     async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
-        result = await self._find_keyword(name)
-        if result is None:
-            self.errors.append(
-                ErrorEntry(f"No keyword with name {repr(name)} found.", DiagnosticSeverity.ERROR, "KeywordError")
-            )
-        return result
+        try:
+            result = await self._find_keyword(name)
+            if result is None:
+                self.errors.append(
+                    ErrorEntry(f"No keyword with name {repr(name)} found.", DiagnosticSeverity.ERROR, "KeywordError")
+                )
+            return result
+        except CancelSearch:
+            return None
 
     async def _find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
         if not name:
@@ -484,16 +487,10 @@ class KeywordFinder:
 
         result = await self._get_keyword_from_self(name)
         if not result and "." in name:
-            try:
-                result = await self._get_explicit_keyword(name)
-            except CancelSearch:
-                return None
+            result = await self._get_explicit_keyword(name)
 
         if not result:
-            try:
-                result = await self._get_implicit_keyword(name)
-            except CancelSearch:
-                return None
+            result = await self._get_implicit_keyword(name)
 
         if not result:
             result = await self._get_bdd_style_keyword(name)
@@ -523,6 +520,7 @@ class KeywordFinder:
                 )
             )
             raise CancelSearch()
+
         return found[0][1] if found else None
 
     async def _find_keywords(self, owner_name: str, name: str) -> Sequence[Tuple[LibraryEntry, KeywordDoc]]:

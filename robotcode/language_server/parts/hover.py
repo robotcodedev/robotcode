@@ -5,7 +5,14 @@ from ...utils.async_event import async_tasking_event
 from ...utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
 from ..text_document import TextDocument
-from ..types import DocumentUri, FoldingRange, FoldingRangeParams, ServerCapabilities, TextDocumentIdentifier
+from ..types import (
+    DocumentUri,
+    Hover,
+    HoverParams,
+    Position,
+    ServerCapabilities,
+    TextDocumentIdentifier,
+)
 
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol
@@ -13,7 +20,7 @@ if TYPE_CHECKING:
 from .protocol_part import LanguageServerProtocolPart
 
 
-class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
     _logger = LoggingDescriptor()
 
@@ -22,27 +29,30 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities
         self._documents: Dict[DocumentUri, TextDocument] = {}
 
     @async_tasking_event
-    async def collect(sender, document: TextDocument) -> Optional[List[FoldingRange]]:
+    async def collect(sender, document: TextDocument, position: Position) -> Optional[Hover]:
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect.listeners):
-            capabilities.folding_range_provider = True
+            capabilities.hover_provider = True
 
-    @rpc_method(name="textDocument/foldingRange", param_type=FoldingRangeParams)
-    async def _text_document_folding_range(
-        self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
-    ) -> Optional[List[FoldingRange]]:
+    @rpc_method(name="textDocument/hover", param_type=HoverParams)
+    async def _text_document_hover(
+        self, text_document: TextDocumentIdentifier, position: Position, *args: Any, **kwargs: Any
+    ) -> Optional[Hover]:
 
-        results: List[FoldingRange] = []
+        results: List[Hover] = []
 
-        for result in await self.collect(self, self.parent.documents[text_document.uri]):
+        for result in await self.collect(self, self.parent.documents[text_document.uri], position):
             if isinstance(result, BaseException):
                 self._logger.exception(result, exc_info=result)
             else:
                 if result is not None:
-                    results += result
+                    results.append(result)
 
-        if len(results) == 0:
-            return None
-        return results
+        if len(results) > 0:
+            # TODO: can we combine hover results?
+            if results[-1].contents:
+                return results[-1]
+
+        return None

@@ -55,6 +55,19 @@ class KeywordDoc:
             end=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
         )
 
+    def to_markdown(self) -> str:
+        result = "```python\n"
+
+        result += f"def {self.name}({', '.join(self.args)})"
+
+        result += "\n```"
+
+        if self.doc:
+            result += "\n"
+            result += self.doc
+
+        return result
+
 
 class KeywordMatcher:
     def __init__(self, name: str) -> None:
@@ -152,6 +165,20 @@ class LibraryDoc:
             end=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
         )
 
+    def to_markdown(self) -> str:
+        result = ""
+
+        if self.inits:
+            result += "```python\n"
+            result += "\n".join(f"def {i.name}({', '.join(i.args)})" for i in self.inits.values())
+            result += "\n```"
+
+        if self.doc:
+            result += "\n"
+            result += self.doc
+
+        return result
+
 
 def is_library_by_path(path: str) -> bool:
     return path.lower().endswith((".py", ".java", ".class", "/", os.sep))
@@ -208,8 +235,8 @@ def get_library_doc(
         {
             kw.name: KeywordDoc(
                 libdoc,
-                name=kw.name,
-                args=tuple(kw.args),
+                name=libdoc.name,
+                args=tuple(str(a) for a in kw.args),
                 doc=kw.doc,
                 tags=tuple(kw.tags),
                 source=kw.source,
@@ -227,7 +254,7 @@ def get_library_doc(
                 kw.name: KeywordDoc(
                     libdoc,
                     name=kw.name,
-                    args=tuple(kw.args),
+                    args=tuple(str(a) for a in kw.args),
                     doc=kw.doc,
                     tags=tuple(kw.tags),
                     source=kw.source,

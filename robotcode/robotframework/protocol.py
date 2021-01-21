@@ -7,6 +7,7 @@ from ..utils.logging import LoggingDescriptor
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
 from .parts.folding_range import RobotFoldingRangeProtocolPart
 from .parts.definition import RobotDefinitionProtocolPart
+from .parts.hover import RobotHoverProtocolPart
 from .parts.model_token_cache import ModelTokenCache
 
 if TYPE_CHECKING:
@@ -31,7 +32,8 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     model_token_cache = ProtocolPartDescriptor(ModelTokenCache)
     _robot_diagnostics = ProtocolPartDescriptor(RobotDiagnosticsProtocolPart)
     _robot_folding_ranges = ProtocolPartDescriptor(RobotFoldingRangeProtocolPart)
-    _robot_definitions = ProtocolPartDescriptor(RobotDefinitionProtocolPart)
+    _robot_definition = ProtocolPartDescriptor(RobotDefinitionProtocolPart)
+    _robot_hover = ProtocolPartDescriptor(RobotHoverProtocolPart)
 
     def __init__(self, server: "RobotLanguageServer"):
         super().__init__(server)

@@ -136,7 +136,7 @@ class LibraryManager:
                 kw.name: KeywordDoc(
                     libdoc,
                     name=kw.name,
-                    args=tuple(kw.args),
+                    args=tuple(str(a) for a in kw.args),
                     doc=kw.doc,
                     tags=tuple(kw.tags),
                     source=kw.source,
@@ -151,7 +151,7 @@ class LibraryManager:
                 kw.name: KeywordDoc(
                     libdoc,
                     name=kw.name,
-                    args=tuple(kw.args),
+                    args=tuple(str(a) for a in kw.args),
                     doc=kw.doc,
                     tags=tuple(kw.tags),
                     source=kw.source,

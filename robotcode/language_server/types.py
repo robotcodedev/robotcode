@@ -632,10 +632,14 @@ class DefinitionOptions(WorkDoneProgressOptions):
     pass
 
 
+class HoverOptions(WorkDoneProgressOptions):
+    pass
+
+
 class ServerCapabilities(Model):
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None]
     # completion_provider: Optional[CompletionOptions] = None
-    # hover_provider: Optional[boolean, HoverOptions] = None
+    hover_provider: Union[bool, HoverOptions, None] = None
     # signature_help_provider: Optional[SignatureHelpOptions] = None
     # declaration_provider: Union[bool, DeclarationOptions, DeclarationRegistrationOptions, None] = None
     definition_provider: Union[bool, DefinitionOptions, None] = None
@@ -1039,3 +1043,25 @@ class TextDocumentPositionParams(Model):
 
 class DefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
     pass
+
+
+class HoverParams(TextDocumentPositionParams, WorkDoneProgressParams):
+    pass
+
+
+class MarkedStringType(Model):
+    language: str
+    value: str
+
+
+MarkedString = Union[str, MarkedStringType]
+
+
+class MarkupContent(Model):
+    kind: MarkupKind
+    value: str
+
+
+class Hover(Model):
+    contents: Union[MarkedString, List[MarkedString], MarkupContent]
+    range: Optional[Range] = None
