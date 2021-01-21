@@ -1,101 +1,22 @@
 import ast
 import asyncio
-import os
+import multiprocessing
+import multiprocessing.pool
+import weakref
 from collections import OrderedDict
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import Any, Optional, Sequence, Tuple
-from multiprocessing import Pool
+from typing import Any, List, Optional, Tuple
+
+from ...utils.uri import Uri
+from ..configuration import RobotConfig
+from ..utils.async_visitor import walk
+from .library_doc import Error, KeywordDoc, LibraryDoc, find_file, get_library_doc, KeywordStore
 
 DEFAULT_LIBRARIES = ("BuiltIn", "Reserved", "Easter")
 
 
-@dataclass
-class KeywordDoc:
-    name: str = ""
-    args: Tuple[Any, ...] = ()
-    doc: str = ""
-    tags: Tuple[str, ...] = ()
-    source: Optional[str] = None
-    lineno: int = -1
-
-    def __str__(self) -> str:
-        return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
-
-
-@dataclass
-class LibraryDoc:
-    name: str = ""
-    doc: str = ""
-    version: str = ""
-    type: str = "LIBRARY"
-    scope: str = "TEST"
-    named_args: bool = True
-    doc_format: str = "ROBOT"
-    source: Optional[str] = None
-    lineno: int = -1
-    inits: Sequence[KeywordDoc] = ()
-    keywords: Sequence[KeywordDoc] = ()
-
-    def __str__(self) -> str:
-        return self.name
-
-
-def _is_library_by_path(path: str) -> bool:
-    return path.lower().endswith((".py", ".java", ".class", "/", os.sep))
-
-
-def _get_library_doc(
-    name: str, args: Optional[Tuple[Any, ...]] = None, working_dir: str = ".", base_dir: str = "."
-) -> LibraryDoc:
-    import sys
-    from pathlib import Path
-
-    from robot.libdocpkg.robotbuilder import KeywordDocBuilder
-    from robot.running.testlibraries import TestLibrary
-    from robot.utils.robotpath import find_file
-
-    # correct sys path
-    file = Path(__file__).resolve()
-    top = file.parents[3]
-
-    for p in filter(lambda v: Path(v).is_relative_to(top), sys.path.copy()):
-        sys.path.remove(p)
-
-    wd = Path(working_dir)
-    os.chdir(wd)
-
-    if _is_library_by_path(name):
-        name = find_file(name, base_dir or ".", "Library")
-
-    lib = TestLibrary(name, args)
-    libdoc = LibraryDoc(
-        name=str(lib.name),
-        doc=str(lib.doc),
-        version=str(lib.version),
-        scope=str(lib.scope),
-        doc_format=str(lib.doc_format),
-        source=lib.source,
-        lineno=lib.lineno,
-    )
-    libdoc.inits = [
-        KeywordDoc(
-            name=kw.name, args=tuple(kw.args), doc=kw.doc, tags=tuple(kw.tags), source=kw.source, lineno=kw.lineno
-        )
-        for kw in [KeywordDocBuilder().build_keyword(lib.init)]
-    ]
-    libdoc.keywords = [
-        KeywordDoc(
-            name=kw.name, args=tuple(kw.args), doc=kw.doc, tags=tuple(kw.tags), source=kw.source, lineno=kw.lineno
-        )
-        for kw in KeywordDocBuilder().build_keywords(lib)
-    ]
-
-    return libdoc
-
-
-@dataclass
-class _LibraryEntry:
+@dataclass()
+class _EntryKey:
     name: str
     args: Tuple[Any, ...]
 
@@ -103,68 +24,152 @@ class _LibraryEntry:
         return hash((self.name, self.args))
 
 
-class LibraryManager:
-    def __init__(self) -> None:
+class _Entry:
+    def __init__(self, doc: LibraryDoc) -> None:
         super().__init__()
-        self.process_pool = ProcessPoolExecutor()
+        self.doc = doc
+        self.references: weakref.WeakSet[Any] = weakref.WeakSet()
+
+
+class LibraryManager:
+
+    __pool: multiprocessing.pool.Pool = multiprocessing.Pool()
+
+    @classmethod
+    def get_global_pool(cls) -> multiprocessing.pool.Pool:
+        return cls.__pool
+
+    def __init__(self, folder: Uri, config: Optional[RobotConfig]) -> None:
+        super().__init__()
+        self.folder = folder
+        self.config = config
         self._libaries_lock = asyncio.Lock()
-        self._libaries: OrderedDict[_LibraryEntry, LibraryDoc] = OrderedDict()
+        self._libaries: OrderedDict[_EntryKey, _Entry] = OrderedDict()
         self.loop = asyncio.get_event_loop()
-        self.pool = Pool()
 
-    def __del__(self) -> None:
-        self.process_pool.shutdown(False)
-        self.pool.close()
+    @property
+    def pool(self) -> multiprocessing.pool.Pool:
+        return self.get_global_pool()
 
-    async def get_doc_from_library(self, name: str, args: Tuple[Any, ...] = (), base_dir: str = ".") -> LibraryDoc:
-        entry = _LibraryEntry(name, args)
+    def __check_entry(self, entry_key: _EntryKey) -> None:
+        async def check() -> None:
+            async with self._libaries_lock:
+                entry = self._libaries.get(entry_key, None)
+                if entry is not None:
+                    if len(entry.references) == 0:
+                        self._libaries.pop(entry_key, None)
 
-        async def get() -> LibraryDoc:
-            return await asyncio.wait_for(
-                asyncio.get_event_loop().run_in_executor(
-                    self.process_pool, _get_library_doc, name, args, ".", base_dir
-                ),
-                10,
-            )
+        asyncio.run_coroutine_threadsafe(check(), loop=self.loop)
+
+    async def get_doc_from_library(
+        self, sentinel: Any, name: str, args: Tuple[Any, ...] = (), base_dir: str = "."
+    ) -> LibraryDoc:
+        entry_key = _EntryKey(name, args)
 
         async with self._libaries_lock:
-            if entry not in self._libaries:
-                # self._libaries[entry] = await get()
-                self._libaries[entry] = self.pool.apply_async(_get_library_doc, args=(name, args, ".", base_dir)).get(
-                    10
+            if entry_key not in self._libaries:
+                self._libaries[entry_key] = _Entry(
+                    self.pool.apply_async(
+                        get_library_doc,
+                        args=(
+                            name,
+                            args,
+                            self.folder.to_path_str(),
+                            base_dir,
+                            self.config.pythonpath if self.config is not None else None,
+                        ),
+                    ).get(100)
                 )
 
-            return self._libaries[entry]
+            entry = self._libaries[entry_key]
+
+            if sentinel is not None:
+                entry.references.add(sentinel)
+                weakref.finalize(sentinel, self.__check_entry, entry_key)
+
+            return entry.doc
 
     async def get_doc_from_model(
-        self, model: ast.AST, source: str, type: str = "RESOURCE", scope: str = "GLOBAL"
+        self, model: ast.AST, source: str, model_type: str = "RESOURCE", scope: str = "GLOBAL"
     ) -> LibraryDoc:
 
         from robot.libdocpkg.robotbuilder import KeywordDocBuilder
         from robot.running.builder.transformers import ResourceBuilder
         from robot.running.model import ResourceFile
+        from robot.running.usererrorhandler import UserErrorHandler
         from robot.running.userkeyword import UserLibrary
+
+        errors: List[Error] = []
+
+        async for node in walk(model):
+            error = getattr(node, "error", None)
+            if error is not None:
+                errors.append(Error(f"Error in file '{source}' on line {node.lineno}: {error}", "ModelError"))
+            node_error = getattr(node, "errors", None)
+            if node_error is not None:
+                for e in node_error:
+                    errors.append(Error(f"Error in file '{source}' on line {node.lineno}: {e}", "ModelError"))
 
         res = ResourceFile(source=source)
 
         ResourceBuilder(res).visit(model)
 
-        lib = UserLibrary(res)
+        class MyUserLibrary(UserLibrary):  # type: ignore
+            def _log_creating_failed(self, handler: UserErrorHandler, error: BaseException) -> None:
+                errors.append(
+                    Error(
+                        "Error in %s '%s': Creating keyword '%s' failed: %s"
+                        % (self.source_type.lower(), self.source, handler.name, str(error)),
+                        type(error).__qualname__,
+                    )
+                )
 
-        libdoc = LibraryDoc(name=lib.name or "", doc=lib.doc, type=type, scope=scope, source=source, lineno=1)
+        lib = MyUserLibrary(res)
 
-        libdoc.keywords = [
-            KeywordDoc(
-                name=kw.name, args=tuple(kw.args), doc=kw.doc, tags=tuple(kw.tags), source=kw.source, lineno=kw.lineno
-            )
-            for kw in KeywordDocBuilder().build_keywords(lib)
-        ]
+        libdoc = LibraryDoc(
+            name=lib.name or "", doc=lib.doc, type=model_type, scope=scope, source=source, lineno=1, errors=errors
+        )
 
-        libdoc.keywords = [
-            KeywordDoc(
-                name=kw.name, args=tuple(kw.args), doc=kw.doc, tags=tuple(kw.tags), source=kw.source, lineno=kw.lineno
-            )
-            for kw in KeywordDocBuilder(resource=type == "RESOURCE").build_keywords(lib)
-        ]
+        libdoc.keywords = KeywordStore(
+            {
+                kw.name: KeywordDoc(
+                    libdoc,
+                    name=kw.name,
+                    args=tuple(kw.args),
+                    doc=kw.doc,
+                    tags=tuple(kw.tags),
+                    source=kw.source,
+                    line_no=kw.lineno,
+                )
+                for kw in KeywordDocBuilder().build_keywords(lib)
+            }
+        )
+
+        libdoc.keywords = KeywordStore(
+            {
+                kw.name: KeywordDoc(
+                    libdoc,
+                    name=kw.name,
+                    args=tuple(kw.args),
+                    doc=kw.doc,
+                    tags=tuple(kw.tags),
+                    source=kw.source,
+                    line_no=kw.lineno,
+                )
+                for kw in KeywordDocBuilder(resource=model_type == "RESOURCE").build_keywords(lib)
+            }
+        )
 
         return libdoc
+
+    async def find_file(self, name: str, base_dir: str = ".", file_type: str = "Resource") -> str:
+        return self.pool.apply_async(
+            find_file,
+            args=(
+                name,
+                self.folder.to_path_str(),
+                base_dir,
+                self.config.pythonpath if self.config is not None else None,
+                file_type,
+            ),
+        ).get(10)

@@ -111,10 +111,11 @@ class AsyncEventDescriptorBase(Generic[_TCallable, _TResult, _TEvent]):
         if obj is None:
             return self  # type: ignore
 
-        if self.__event is None:
-            self.__event = self.__factory(*self.__factory_args, **self.__factory_kwargs)
+        name = f"__async_event_{self._owner_name}__"
+        if not hasattr(obj, name):
+            setattr(obj, name, self.__factory(*self.__factory_args, **self.__factory_kwargs))
 
-        return self.__event
+        return cast("_TEvent", getattr(obj, name))
 
 
 class async_event_iterator(  # noqa: N801

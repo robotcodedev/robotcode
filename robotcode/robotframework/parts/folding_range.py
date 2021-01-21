@@ -95,4 +95,4 @@ class RobotFoldingRangeProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageSer
                 self.__apend(node, kind="if")
                 await self.generic_visit(node)
 
-        return await Visitor.find_from(await self.parent.model_token_cache.get_model(document), self)
+        return await Visitor.find_from(await self.parent.model_token_cache.get_model(document.freeze()), self)

@@ -155,7 +155,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     @_logger.call
     async def start_publish_diagnostics_task(self, document: TextDocument) -> None:
         async with self._task_lock:
-            doc = await document.copy_async()
+            doc = await document.freeze_async()
             self._cancel_entry(self._running_diagnosistcs.get(doc.uri, None))
 
             self._running_diagnosistcs[doc.uri] = PublishDiagnosticsEntry(

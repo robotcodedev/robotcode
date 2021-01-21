@@ -1,16 +1,11 @@
 import asyncio
 import io
+import weakref
 from typing import List, Optional, overload
 
 from ..utils.logging import LoggingDescriptor
 from ..utils.uri import Uri
-
-from .types import (
-    DocumentUri,
-    Position,
-    Range,
-    TextDocumentItem,
-)
+from .types import DocumentUri, Position, Range, TextDocumentItem
 
 
 def _utf16_unit_offset(chars: str) -> int:
@@ -44,7 +39,15 @@ class TextDocument:
         ...
 
     @overload
-    def __init__(self, *, document_uri: DocumentUri, language_id: str, version: int, text: str) -> None:
+    def __init__(
+        self,
+        *,
+        document_uri: DocumentUri,
+        language_id: str,
+        version: int,
+        text: str,
+        parent: Optional["TextDocument"] = None,
+    ) -> None:
         ...
 
     def __init__(
@@ -55,6 +58,7 @@ class TextDocument:
         language_id: Optional[str] = None,
         version: Optional[int] = None,
         text: Optional[str] = None,
+        parent: Optional["TextDocument"] = None,
     ) -> None:
         super().__init__()
 
@@ -71,14 +75,29 @@ class TextDocument:
         self.version = text_document.version if text_document is not None else version if version is not None else -1
         self._text = text_document.text if text_document is not None else text if text is not None else ""
 
-    def copy(self) -> "TextDocument":
+        self._parent: Optional[weakref.ReferenceType[TextDocument]] = None
+        if parent is not None:
+            self._parent = weakref.ref(parent)
+
+    @property
+    def parent(self) -> Optional["TextDocument"]:
+        if self._parent is None:
+            return None
+
+        return self._parent()
+
+    def freeze(self) -> "TextDocument":
         return TextDocument(
-            document_uri=self.document_uri, language_id=self.language_id, version=self.version, text=self.text
+            document_uri=self.document_uri,
+            language_id=self.language_id,
+            version=self.version,
+            text=self.text,
+            parent=self,
         )
 
-    async def copy_async(self) -> "TextDocument":
+    async def freeze_async(self) -> "TextDocument":
         async with self._lock:
-            return self.copy()
+            return self.freeze()
 
     def __str__(self) -> str:
         return super().__str__()

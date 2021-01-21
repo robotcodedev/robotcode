@@ -34,6 +34,7 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
             message=msg,
             severity=DiagnosticSeverity.ERROR,
             source=source if source is not None else self.source_name,
+            code="ModelError",
         )
 
     @_logger.call
@@ -106,6 +107,8 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
     @_logger.call
     async def collect_diagnostics(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
         namespace = await self.parent.model_token_cache.get_namespace(document)
+        if namespace is None:
+            return []
 
         result: List[Diagnostic] = await namespace.get_diagnostisc()
 

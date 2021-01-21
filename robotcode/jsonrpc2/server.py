@@ -1,6 +1,6 @@
 import abc
 import asyncio
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 import io
 import sys
 from enum import Enum
@@ -54,9 +54,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
         self.loop = asyncio.get_event_loop()
 
-        self.stdio_future: Optional[concurrent.futures.Future] = None
-
-        self.loop.set_debug(True)
+        # self.loop.set_debug(True)
 
     @property
     def __del__(self) -> None:
@@ -82,9 +80,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
             self._server.close()
             self.loop.run_until_complete(self._server.wait_closed())
             self._server = None
-
-        if self.stdio_future is not None:
-            self.stdio_future.cancel()
 
         if not self.loop.is_closed():
             self.loop.close()
@@ -153,9 +148,10 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         def run_io() -> None:
             self._stop_event = asyncio.Event()
 
-            future = self.loop.run_in_executor(None, threading_read, sys.stdin.buffer, protocol)
+            with ThreadPoolExecutor(thread_name_prefix="stdio_reader") as pool:
+                future = self.loop.run_in_executor(pool, threading_read, sys.stdin.buffer, protocol)
 
-            self.loop.run_until_complete(future)
+                self.loop.run_until_complete(future)
 
         self._run_func = run_io
 

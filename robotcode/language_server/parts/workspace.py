@@ -21,9 +21,16 @@ from ..types import (
     ServerCapabilities,
     TextEdit,
     WorkspaceEdit,
-    WorkspaceFolder,
+    WorkspaceFolder as TypesWorkspaceFolder,
     WorkspaceFoldersServerCapabilities,
 )
+
+
+class WorkspaceFolder:
+    def __init__(self, name: str, uri: Uri) -> None:
+        super().__init__()
+        self.name = name
+        self.uri = uri
 
 
 class Workspace(JsonRPCProtocolPart):
@@ -34,12 +41,14 @@ class Workspace(JsonRPCProtocolPart):
         parent: JsonRPCProtocol,
         root_uri: Optional[str],
         root_path: Optional[str],
-        workspace_folders: Optional[List[WorkspaceFolder]] = None,
+        workspace_folders: Optional[List[TypesWorkspaceFolder]] = None,
     ):
         super().__init__(parent)
         self.root_uri = root_uri
         self.root_path = root_path
-        self.workspace_folders: List[WorkspaceFolder] = workspace_folders or []
+        self.workspace_folders: List[WorkspaceFolder] = (
+            [WorkspaceFolder(w.name, Uri(w.uri)) for w in workspace_folders] if workspace_folders is not None else []
+        )
         self._settings: Dict[str, Any] = {}
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
@@ -177,9 +186,8 @@ class Workspace(JsonRPCProtocolPart):
         if isinstance(uri, str):
             uri = Uri(uri)
 
-        uri_path = uri.to_path()
         result = sorted(
-            [f for f in self.workspace_folders if uri_path.is_relative_to(Uri(f.uri).to_path())],
+            [f for f in self.workspace_folders if uri.is_relative_to(f.uri)],
             key=lambda v1: len(v1.uri),
             reverse=True,
         )

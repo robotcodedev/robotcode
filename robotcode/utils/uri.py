@@ -161,3 +161,6 @@ class Uri(Mapping[str, str]):
     def __iter__(self) -> Iterator[str]:
         for f in fields(self._parts):
             yield f.name
+
+    def is_relative_to(self, uri: "Uri") -> bool:
+        return self.to_path().is_relative_to(uri.to_path())
