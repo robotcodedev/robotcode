@@ -16,7 +16,7 @@ class RobotFoldingRangeProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageSer
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
 
-        parent.folding_range.collect_folding_range.add(self.collect_folding_ranges)
+        parent.folding_ranges.collect_folding_ranges.add(self.collect_folding_ranges)
 
     async def collect_folding_ranges(self, sender: Any, document: TextDocument) -> List[FoldingRange]:
 

@@ -6,6 +6,7 @@ from ..language_server.types import Model
 from ..utils.logging import LoggingDescriptor
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
 from .parts.folding_range import RobotFoldingRangeProtocolPart
+from .parts.definition import RobotDefinitionProtocolPart
 from .parts.model_token_cache import ModelTokenCache
 
 if TYPE_CHECKING:
@@ -28,8 +29,9 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     _logger = LoggingDescriptor()
 
     model_token_cache = ProtocolPartDescriptor(ModelTokenCache)
-    robot_diagnostics = ProtocolPartDescriptor(RobotDiagnosticsProtocolPart)
-    folding_ranges = ProtocolPartDescriptor(RobotFoldingRangeProtocolPart)
+    _robot_diagnostics = ProtocolPartDescriptor(RobotDiagnosticsProtocolPart)
+    _robot_folding_ranges = ProtocolPartDescriptor(RobotFoldingRangeProtocolPart)
+    _robot_definitions = ProtocolPartDescriptor(RobotDefinitionProtocolPart)
 
     def __init__(self, server: "RobotLanguageServer"):
         super().__init__(server)
@@ -38,6 +40,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     @_logger.call
     def on_initialize(self, initialization_options: Optional[Any] = None) -> None:
         check_robotframework()
+
         if initialization_options is not None:
             self.options = Options.parse_obj(initialization_options)
 

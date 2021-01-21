@@ -135,6 +135,10 @@ class Uri(Mapping[str, str]):
     def query(self) -> str:
         return self._parts.query
 
+    @classmethod
+    def from_path_str(cls, path: str) -> "Uri":
+        return cls.from_path(Path(path))
+
     @staticmethod
     def from_path(path: Path) -> "Uri":
         result = Uri(path.as_uri())

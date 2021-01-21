@@ -59,7 +59,8 @@ class LibraryManager:
                     if len(entry.references) == 0:
                         self._libaries.pop(entry_key, None)
 
-        asyncio.run_coroutine_threadsafe(check(), loop=self.loop)
+        if self.loop.is_running():
+            asyncio.run_coroutine_threadsafe(check(), loop=self.loop)
 
     async def get_doc_from_library(
         self, sentinel: Any, name: str, args: Tuple[Any, ...] = (), base_dir: str = "."
@@ -127,7 +128,7 @@ class LibraryManager:
         lib = MyUserLibrary(res)
 
         libdoc = LibraryDoc(
-            name=lib.name or "", doc=lib.doc, type=model_type, scope=scope, source=source, lineno=1, errors=errors
+            name=lib.name or "", doc=lib.doc, type=model_type, scope=scope, source=source, line_no=1, errors=errors
         )
 
         libdoc.keywords = KeywordStore(

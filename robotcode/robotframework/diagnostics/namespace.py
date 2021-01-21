@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, AsyncIterator, List, NamedTuple, Optional, Sequence, Tuple, cast
 
 from ...language_server.types import Diagnostic, DiagnosticSeverity, Position, Range
+from ..utils.ast import range_from_token_or_node
 from ...utils.async_itertools import async_chain
 from ..utils.async_visitor import AsyncVisitor
 from .library_doc import KeywordDoc, LibraryDoc
@@ -89,7 +90,7 @@ class ImportVisitor(AsyncVisitor):
         from robot.parsing.model.statements import LibraryImport as RobotLibraryImport
 
         n = cast(RobotLibraryImport, node)
-        name = n.get_token(RobotToken.NAME)
+        name = cast(RobotToken, n.get_token(RobotToken.NAME))
 
         self._results.append(
             LibraryImport(
@@ -111,7 +112,7 @@ class ImportVisitor(AsyncVisitor):
         from robot.parsing.model.statements import ResourceImport as RobotResourceImport
 
         n = cast(RobotResourceImport, node)
-        name = n.get_token(RobotToken.NAME)
+        name = cast(RobotToken, n.get_token(RobotToken.NAME))
 
         self._results.append(
             ResourceImport(
@@ -131,7 +132,7 @@ class ImportVisitor(AsyncVisitor):
         from robot.parsing.model.statements import VariablesImport as RobotVariablesImport
 
         n = cast(RobotVariablesImport, node)
-        name = n.get_token(RobotToken.NAME)
+        name = cast(RobotToken, n.get_token(RobotToken.NAME))
 
         self._results.append(
             VariablesImport(
@@ -169,18 +170,7 @@ class KeywordAnalyzer(AsyncVisitor):
             for e in finder.errors:
                 self._results.append(
                     Diagnostic(
-                        range=Range(
-                            start=Position(
-                                line=keyword_token.lineno - 1 if keyword_token is not None else value.lineno - 1,
-                                character=keyword_token.col_offset if keyword_token is not None else value.col_offset,
-                            ),
-                            end=Position(
-                                line=keyword_token.lineno - 1 if keyword_token is not None else value.end_lineno - 1,
-                                character=keyword_token.end_col_offset
-                                if keyword_token is not None
-                                else value.end_col_offset,
-                            ),
-                        ),
+                        range=range_from_token_or_node(value, keyword_token),
                         message=e.message,
                         severity=e.severity,
                         source="Robot",
@@ -193,18 +183,7 @@ class KeywordAnalyzer(AsyncVisitor):
         except BaseException as e:
             self._results.append(
                 Diagnostic(
-                    range=Range(
-                        start=Position(
-                            line=keyword_token.lineno - 1 if keyword_token is not None else value.lineno - 1,
-                            character=keyword_token.col_offset if keyword_token is not None else value.col_offset,
-                        ),
-                        end=Position(
-                            line=keyword_token.lineno - 1 if keyword_token is not None else value.end_lineno - 1,
-                            character=keyword_token.end_col_offset
-                            if keyword_token is not None
-                            else value.end_col_offset,
-                        ),
-                    ),
+                    range=range_from_token_or_node(value, keyword_token),
                     message=str(e),
                     severity=DiagnosticSeverity.ERROR,
                     source="Robot",
@@ -229,18 +208,7 @@ class KeywordAnalyzer(AsyncVisitor):
             for e in finder.errors:
                 self._results.append(
                     Diagnostic(
-                        range=Range(
-                            start=Position(
-                                line=keyword_token.lineno - 1 if keyword_token is not None else value.lineno - 1,
-                                character=keyword_token.col_offset if keyword_token is not None else value.col_offset,
-                            ),
-                            end=Position(
-                                line=keyword_token.lineno - 1 if keyword_token is not None else value.end_lineno - 1,
-                                character=keyword_token.end_col_offset
-                                if keyword_token is not None
-                                else value.end_col_offset,
-                            ),
-                        ),
+                        range=range_from_token_or_node(value, keyword_token),
                         message=e.message,
                         severity=e.severity,
                         source="Robot",
@@ -252,18 +220,7 @@ class KeywordAnalyzer(AsyncVisitor):
         except BaseException as e:
             self._results.append(
                 Diagnostic(
-                    range=Range(
-                        start=Position(
-                            line=keyword_token.lineno - 1 if keyword_token is not None else value.lineno - 1,
-                            character=keyword_token.col_offset if keyword_token is not None else value.col_offset,
-                        ),
-                        end=Position(
-                            line=keyword_token.lineno - 1 if keyword_token is not None else value.end_lineno - 1,
-                            character=keyword_token.end_col_offset
-                            if keyword_token is not None
-                            else value.end_col_offset,
-                        ),
-                    ),
+                    range=range_from_token_or_node(value, keyword_token),
                     message=str(e),
                     severity=DiagnosticSeverity.ERROR,
                     source="Robot",
@@ -277,6 +234,7 @@ class KeywordAnalyzer(AsyncVisitor):
 @dataclass
 class LibraryEntry:
     name: str
+    import_name: str
     library_doc: LibraryDoc
     args: Tuple[Any, ...] = ()
     alias: Optional[str] = None
@@ -314,6 +272,14 @@ class Namespace:
             return self._diagnostics
 
     async def get_libraries(self) -> OrderedDict[str, LibraryEntry]:
+        await self._ensure_initialized()
+
+        async with self._libraries_lock:
+            return self._libraries
+
+    async def get_resources(self) -> OrderedDict[str, LibraryEntry]:
+        await self._ensure_initialized()
+
         async with self._libraries_lock:
             return self._libraries
 
@@ -419,7 +385,7 @@ class Namespace:
         )
         async with self._libraries_lock:
             self._libraries[alias or library.name or name] = LibraryEntry(
-                name=library.name, library_doc=library, args=args, alias=alias
+                name=library.name, import_name=name, library_doc=library, args=args, alias=alias
             )
 
         return library
@@ -442,7 +408,7 @@ class Namespace:
 
         async with self._resources_lock:
             self._resources[library.name or name] = LibraryEntry(
-                name=library.name, library_doc=library, args=(), alias=None
+                name=library.name, import_name=name, library_doc=library, args=(), alias=None
             )
 
         return library
@@ -479,6 +445,9 @@ class Namespace:
             self._analyzed = True
 
             self._diagnostics += await KeywordAnalyzer().get(self.model, self)
+
+    async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
+        return await KeywordFinder(self).find_keyword(name)
 
 
 class ErrorEntry(NamedTuple):

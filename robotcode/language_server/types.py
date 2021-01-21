@@ -628,13 +628,17 @@ class FoldingRangeRegistrationOptions(
     pass
 
 
+class DefinitionOptions(WorkDoneProgressOptions):
+    pass
+
+
 class ServerCapabilities(Model):
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None]
     # completion_provider: Optional[CompletionOptions] = None
     # hover_provider: Optional[boolean, HoverOptions] = None
     # signature_help_provider: Optional[SignatureHelpOptions] = None
     # declaration_provider: Union[bool, DeclarationOptions, DeclarationRegistrationOptions, None] = None
-    # definition_provider: Union[bool, DefinitionOptions, None] = None
+    definition_provider: Union[bool, DefinitionOptions, None] = None
     # implementation_provider: Union[bool, ImplementationOptions, ImplementationRegistrationOptions, None] = None
     # references_provider: Union[bool, ReferenceOptions, None] = None
     # document_highlight_provider: Union[bool, DocumentHighlightOptions, None] = None
@@ -693,9 +697,6 @@ class DidChangeConfigurationParams(Model):
 
 
 class Position(Model):
-    def __init__(self, line: int, character: int) -> None:
-        super().__init__(line=line, character=character)  # type: ignore
-
     line: int
     character: int
 
@@ -749,11 +750,11 @@ class Position(Model):
     def __iter__(self) -> Iterator[int]:  # type: ignore
         return iter((self.line, self.character))
 
+    def is_in_range(self, range: "Range") -> bool:
+        return self >= range.start and self <= range.end
+
 
 class Range(Model):
-    def __init__(self, start: Position, end: Position) -> None:
-        super().__init__(start=start, end=end)  # type: ignore
-
     start: Position
     end: Position
 
@@ -889,6 +890,13 @@ class Location(Model):
     range: Range
 
 
+class LocationLink(Model):
+    origin_selection_range: Optional[Range]
+    target_uri: DocumentUri
+    target_range: Range
+    target_selection_range: Range
+
+
 class DiagnosticRelatedInformation(Model):
     location: Location
     message: str
@@ -1018,3 +1026,16 @@ class WorkspaceEdit(Model):
     changes: Optional[Dict[DocumentUri, List[TextEdit]]] = None
     document_changes: Union[List[TextDocumentEdit], TextDocumentEdit, CreateFile, RenameFile, DeleteFile, None] = None
     change_annotations: Optional[Dict[ChangeAnnotationIdentifier, ChangeAnnotation]] = None
+
+
+class PartialResultParams(Model):
+    partial_result_token: Optional[ProgressToken]
+
+
+class TextDocumentPositionParams(Model):
+    text_document: TextDocumentIdentifier
+    position: Position
+
+
+class DefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+    pass

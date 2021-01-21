@@ -13,6 +13,8 @@ from typing import (
     cast,
 )
 
+from ...language_server.types import Range, Position
+
 __all__ = ["KeywordDoc", "LibraryDoc", "is_library_by_path", "get_library_doc", "find_file"]
 
 
@@ -46,6 +48,12 @@ class KeywordDoc:
 
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
+
+    def range(self) -> Range:
+        return Range(
+            start=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
+            end=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
+        )
 
 
 class KeywordMatcher:
@@ -129,7 +137,7 @@ class LibraryDoc:
     named_args: bool = True
     doc_format: str = "ROBOT"
     source: Optional[str] = None
-    lineno: int = -1
+    line_no: int = -1
     inits: KeywordStore = field(default_factory=lambda: KeywordStore({}))
     keywords: KeywordStore = field(default_factory=lambda: KeywordStore({}))
 
@@ -137,6 +145,12 @@ class LibraryDoc:
 
     def __str__(self) -> str:
         return self.name
+
+    def range(self) -> Range:
+        return Range(
+            start=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
+            end=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
+        )
 
 
 def is_library_by_path(path: str) -> bool:
@@ -187,7 +201,7 @@ def get_library_doc(
         scope=str(lib.scope),
         doc_format=str(lib.doc_format),
         source=lib.source,
-        lineno=lib.lineno,
+        line_no=lib.lineno,
     )
 
     libdoc.inits = KeywordStore(

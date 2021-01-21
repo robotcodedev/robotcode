@@ -13,10 +13,12 @@ from ..jsonrpc2.server import JsonRPCServer
 from ..utils.async_event import async_event
 from ..utils.logging import LoggingDescriptor
 from .has_extend_capabilities import HasExtendCapabilities
+from .parts.definition import DefinitionProtocolPart
 from .parts.diagnostics import DiagnosticsProtocolPart
 from .parts.documents import TextDocumentProtocolPart
 from .parts.folding_range import FoldingRangeProtocolPart
 from .parts.window import WindowProtocolPart
+from .parts.workspace import Workspace
 from .types import (
     CancelParams,
     ClientCapabilities,
@@ -33,7 +35,6 @@ from .types import (
     TraceValue,
     WorkspaceFolder,
 )
-from .parts.workspace import Workspace
 
 __all__ = ["LanguageServerException", "LanguageServerProtocol", "HasExtendCapabilities"]
 
@@ -49,7 +50,8 @@ class LanguageServerProtocol(JsonRPCProtocol):
     window = ProtocolPartDescriptor(WindowProtocolPart)
     documents = ProtocolPartDescriptor(TextDocumentProtocolPart)
     diagnostics = ProtocolPartDescriptor(DiagnosticsProtocolPart)
-    folding_range = ProtocolPartDescriptor(FoldingRangeProtocolPart)
+    folding_ranges = ProtocolPartDescriptor(FoldingRangeProtocolPart)
+    definitions = ProtocolPartDescriptor(DefinitionProtocolPart)
 
     def __init__(self, server: JsonRPCServer[Any]):
         super().__init__(server)
