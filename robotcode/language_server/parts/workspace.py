@@ -1,8 +1,9 @@
 import asyncio
 import uuid
-from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
+from dataclasses import dataclass
+from typing import Callable, Coroutine, TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple, Union
 
-from ...jsonrpc2.protocol import JsonRPCProtocol, JsonRPCProtocolPart, rpc_method
+from ...jsonrpc2.protocol import rpc_method
 from ...utils.async_event import async_event
 from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
@@ -12,23 +13,40 @@ from ..types import (
     CreateFilesParams,
     DeleteFilesParams,
     DidChangeConfigurationParams,
+    DidChangeWatchedFilesParams,
+    DidChangeWatchedFilesRegistrationOptions,
     DidChangeWorkspaceFoldersParams,
     DocumentUri,
     FileCreate,
     FileDelete,
+    FileEvent,
     FileOperationFilter,
     FileOperationPattern,
     FileOperationRegistrationOptions,
     FileRename,
+    FileSystemWatcher,
     RenameFilesParams,
     ServerCapabilities,
     TextEdit,
+    WatchKind,
     WorkspaceEdit,
 )
 from ..types import WorkspaceFolder as TypesWorkspaceFolder
 from ..types import WorkspaceFoldersChangeEvent, WorkspaceFoldersServerCapabilities
+from .protocol_part import LanguageServerProtocolPart
 
 __all__ = ["WorkspaceFolder", "Workspace"]
+
+if TYPE_CHECKING:
+    from ..protocol import LanguageServerProtocol
+
+
+@dataclass
+class FileWatcherEntry:
+    id: str
+    callback: Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]]
+    glob_pattern: str
+    kind: Optional[WatchKind] = None
 
 
 class WorkspaceFolder:
@@ -39,12 +57,12 @@ class WorkspaceFolder:
         self.document_uri = document_uri
 
 
-class Workspace(JsonRPCProtocolPart):
+class Workspace(LanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
     def __init__(
         self,
-        parent: JsonRPCProtocol,
+        parent: "LanguageServerProtocol",
         root_uri: Optional[str],
         root_path: Optional[str],
         workspace_folders: Optional[List[TypesWorkspaceFolder]] = None,
@@ -59,6 +77,8 @@ class Workspace(JsonRPCProtocolPart):
             else []
         )
         self._settings: Dict[str, Any] = {}
+
+        self._file_watchers: Dict[str, FileWatcherEntry] = {}
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         capabilities.workspace = ServerCapabilities.Workspace(
@@ -225,3 +245,36 @@ class Workspace(JsonRPCProtocolPart):
 
             for a in event.added:
                 self.workspace_folders.append(WorkspaceFolder(a.name, Uri(a.uri), a.uri))
+
+    @async_event
+    async def did_change_watched_files(sender, changes: List[FileEvent]) -> None:
+        ...
+
+    @rpc_method(name="workspace/didChangeWatchedFiles", param_type=DidChangeWatchedFilesParams)
+    @_logger.call
+    async def _workspace_did_change_watched_files(self, changes: List[FileEvent], *args: Any, **kwargs: Any) -> None:
+        await self.did_change_watched_files(self, changes)
+
+    async def add_file_watcher(
+        self,
+        callback: Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
+        glob_pattern: str,
+        kind: Optional[WatchKind] = None,
+    ) -> str:
+        entry = FileWatcherEntry(id=str(uuid.uuid4()), callback=callback, glob_pattern=glob_pattern, kind=kind)
+
+        self.did_change_watched_files.add(callback)  # type: ignore
+
+        watchers = [FileSystemWatcher(glob_pattern=glob_pattern, kind=kind)]
+        await self.parent.register_capability(
+            entry.id, "workspace/didChangeWatchedFiles", DidChangeWatchedFilesRegistrationOptions(watchers=watchers)
+        )
+        self._file_watchers[entry.id] = entry
+
+        return entry.id
+
+    async def remove_file_watcher(self, id: str) -> None:
+        entry = self._file_watchers.pop(id, None)
+        if entry is not None:
+            self.did_change_watched_files.remove(entry.callback)  # type: ignore
+            await self.parent.unregister_capability(entry.id, "workspace/didChangeWatchedFiles")

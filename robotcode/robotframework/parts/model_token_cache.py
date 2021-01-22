@@ -148,5 +148,5 @@ class ModelTokenCache(LanguageServerProtocolPart):
                     await self.parent.workspace.get_configuration("robotcode", folder.uri)
                 )
 
-                self._library_managers[folder] = LibraryManager(folder.uri, config.robot)
+                self._library_managers[folder] = LibraryManager(self.parent.workspace, folder.uri, config.robot)
             return self._library_managers[folder]

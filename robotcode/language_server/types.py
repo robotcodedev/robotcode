@@ -1,5 +1,5 @@
 import re
-from enum import Enum, IntEnum
+from enum import Enum, IntEnum, IntFlag
 from typing import Any, Dict, Iterator, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
@@ -1093,3 +1093,33 @@ class Unregistration(Model):
 
 class UnregistrationParams(Model):
     unregisterations: List[Unregistration]
+
+
+class WatchKind(IntFlag):
+    CREATE = 1
+    CHANGE = 2
+    DELETE = 4
+
+
+class FileSystemWatcher(Model):
+    glob_pattern: str
+    kind: Optional[WatchKind]
+
+
+class DidChangeWatchedFilesRegistrationOptions(Model):
+    watchers: List[FileSystemWatcher]
+
+
+class FileChangeType(IntEnum):
+    CREATED = 1
+    CHANGED = 2
+    DELETED = 3
+
+
+class FileEvent(Model):
+    uri: DocumentUri
+    type: int
+
+
+class DidChangeWatchedFilesParams(Model):
+    changes: List[FileEvent]

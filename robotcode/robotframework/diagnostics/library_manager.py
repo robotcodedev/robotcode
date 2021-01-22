@@ -6,11 +6,14 @@ import weakref
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple
+from pathlib import Path
 
+from ...language_server.parts.workspace import Workspace
+from ...language_server.types import FileChangeType, FileEvent
 from ...utils.uri import Uri
 from ..configuration import RobotConfig
 from ..utils.async_visitor import walk
-from .library_doc import Error, KeywordDoc, LibraryDoc, find_file, get_library_doc, KeywordStore
+from .library_doc import Error, KeywordDoc, KeywordStore, LibraryDoc, find_file, get_library_doc
 
 DEFAULT_LIBRARIES = ("BuiltIn", "Reserved", "Easter")
 
@@ -25,10 +28,11 @@ class _EntryKey:
 
 
 class _Entry:
-    def __init__(self, doc: LibraryDoc) -> None:
+    def __init__(self, doc: LibraryDoc, watcher_id: Optional[str] = None) -> None:
         super().__init__()
         self.doc = doc
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
+        self.watcher_id = watcher_id
 
 
 class LibraryManager:
@@ -39,8 +43,9 @@ class LibraryManager:
     def get_global_pool(cls) -> multiprocessing.pool.Pool:
         return cls.__pool
 
-    def __init__(self, folder: Uri, config: Optional[RobotConfig]) -> None:
+    def __init__(self, workspace: Workspace, folder: Uri, config: Optional[RobotConfig]) -> None:
         super().__init__()
+        self.workspace = workspace
         self.folder = folder
         self.config = config
         self._libaries_lock = asyncio.Lock()
@@ -57,10 +62,25 @@ class LibraryManager:
                 entry = self._libaries.get(entry_key, None)
                 if entry is not None:
                     if len(entry.references) == 0:
-                        self._libaries.pop(entry_key, None)
+                        entry = self._libaries.pop(entry_key, None)
+                        if entry is not None and entry.watcher_id is not None:
+                            await self.workspace.remove_file_watcher(entry.watcher_id)
 
         if self.loop.is_running():
             asyncio.run_coroutine_threadsafe(check(), loop=self.loop)
+
+    async def did_change_watched_files(self, sender: Any, changes: List[FileEvent]) -> None:
+        for change in changes:
+            if change.type in [FileChangeType.CHANGED, FileChangeType.DELETED]:
+                async with self._libaries_lock:
+                    to_remove: List[_EntryKey] = [
+                        k
+                        for k, v in self._libaries.items()
+                        if v.doc.source is not None and Path(v.doc.source) == Uri(change.uri).to_path()
+                    ]
+
+                    for r in to_remove:
+                        self._libaries.pop(r)
 
     async def get_doc_from_library(
         self, sentinel: Any, name: str, args: Tuple[Any, ...] = (), base_dir: str = "."
@@ -69,18 +89,22 @@ class LibraryManager:
 
         async with self._libaries_lock:
             if entry_key not in self._libaries:
-                self._libaries[entry_key] = _Entry(
-                    self.pool.apply_async(
-                        get_library_doc,
-                        args=(
-                            name,
-                            args,
-                            self.folder.to_path_str(),
-                            base_dir,
-                            self.config.pythonpath if self.config is not None else None,
-                        ),
-                    ).get(100)
-                )
+
+                lib_doc = self.pool.apply_async(
+                    get_library_doc,
+                    args=(
+                        name,
+                        args,
+                        self.folder.to_path_str(),
+                        base_dir,
+                        self.config.pythonpath if self.config is not None else None,
+                    ),
+                ).get(100)
+
+                if lib_doc.source is not None:
+                    self._libaries[entry_key] = _Entry(
+                        lib_doc, await self.workspace.add_file_watcher(self.did_change_watched_files, lib_doc.source)
+                    )
 
             entry = self._libaries[entry_key]
 

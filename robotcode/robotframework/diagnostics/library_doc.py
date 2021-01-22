@@ -1,19 +1,12 @@
+import importlib
+from pathlib import Path
 import os
+import sys
 from dataclasses import dataclass, field
-from typing import (
-    AbstractSet,
-    Any,
-    Iterator,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    ValuesView,
-    cast,
-)
+from types import ModuleType
+from typing import AbstractSet, Any, Iterator, List, Mapping, Optional, Sequence, Set, Tuple, ValuesView, cast
 
-from ...language_server.types import Range, Position
+from ...language_server.types import Position, Range
 
 __all__ = ["KeywordDoc", "LibraryDoc", "is_library_by_path", "get_library_doc", "find_file"]
 
@@ -185,8 +178,14 @@ def is_library_by_path(path: str) -> bool:
 
 
 def _update_sys_path(working_dir: str = ".", pythonpath: Optional[List[str]] = None) -> None:
-    import sys
-    from pathlib import Path
+
+    global _PRELOADED_MODULES
+
+    if _PRELOADED_MODULES is None:
+        _PRELOADED_MODULES = set(sys.modules.values())
+    else:
+        for m in set(sys.modules.values()) - _PRELOADED_MODULES:
+            importlib.reload(m)
 
     file = Path(__file__).resolve()
     top = file.parents[3]
@@ -201,6 +200,9 @@ def _update_sys_path(working_dir: str = ".", pythonpath: Optional[List[str]] = N
             if p in sys.path:
                 sys.path.remove(p)
             sys.path.insert(0, str(Path(p).absolute()))
+
+
+_PRELOADED_MODULES: Optional[Set[ModuleType]] = None
 
 
 def get_library_doc(
@@ -221,6 +223,7 @@ def get_library_doc(
         name = robot_find_file(name, base_dir or ".", "Library")
 
     lib = TestLibrary(name, args, create_handlers=False)
+
     libdoc = LibraryDoc(
         name=str(lib.name),
         doc=str(lib.doc),
