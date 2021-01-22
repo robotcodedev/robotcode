@@ -1065,3 +1065,12 @@ class MarkupContent(Model):
 class Hover(Model):
     contents: Union[MarkedString, List[MarkedString], MarkupContent]
     range: Optional[Range] = None
+
+
+class WorkspaceFoldersChangeEvent(Model):
+    added: List[WorkspaceFolder]
+    removed: List[WorkspaceFolder]
+
+
+class DidChangeWorkspaceFoldersParams(Model):
+    event: WorkspaceFoldersChangeEvent

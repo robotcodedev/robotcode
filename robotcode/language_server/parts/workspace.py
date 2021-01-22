@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
@@ -11,6 +12,8 @@ from ..types import (
     CreateFilesParams,
     DeleteFilesParams,
     DidChangeConfigurationParams,
+    DidChangeWorkspaceFoldersParams,
+    DocumentUri,
     FileCreate,
     FileDelete,
     FileOperationFilter,
@@ -21,16 +24,19 @@ from ..types import (
     ServerCapabilities,
     TextEdit,
     WorkspaceEdit,
-    WorkspaceFolder as TypesWorkspaceFolder,
-    WorkspaceFoldersServerCapabilities,
 )
+from ..types import WorkspaceFolder as TypesWorkspaceFolder
+from ..types import WorkspaceFoldersChangeEvent, WorkspaceFoldersServerCapabilities
+
+__all__ = ["WorkspaceFolder", "Workspace"]
 
 
 class WorkspaceFolder:
-    def __init__(self, name: str, uri: Uri) -> None:
+    def __init__(self, name: str, uri: Uri, document_uri: DocumentUri) -> None:
         super().__init__()
         self.name = name
         self.uri = uri
+        self.document_uri = document_uri
 
 
 class Workspace(JsonRPCProtocolPart):
@@ -46,8 +52,11 @@ class Workspace(JsonRPCProtocolPart):
         super().__init__(parent)
         self.root_uri = root_uri
         self.root_path = root_path
+        self.workspace_folders_lock = asyncio.Lock()
         self.workspace_folders: List[WorkspaceFolder] = (
-            [WorkspaceFolder(w.name, Uri(w.uri)) for w in workspace_folders] if workspace_folders is not None else []
+            [WorkspaceFolder(w.name, Uri(w.uri), w.uri) for w in workspace_folders]
+            if workspace_folders is not None
+            else []
         )
         self._settings: Dict[str, Any] = {}
 
@@ -196,3 +205,23 @@ class Workspace(JsonRPCProtocolPart):
             return result[0]
 
         return None
+
+    @rpc_method(name="workspace/didChangeWorkspaceFolders", param_type=DidChangeWorkspaceFoldersParams)
+    @_logger.call
+    async def _workspace_did_change_workspace_folders(
+        self, event: WorkspaceFoldersChangeEvent, *args: Any, **kwargs: Any
+    ) -> None:
+
+        async with self.workspace_folders_lock:
+            to_remove: List[WorkspaceFolder] = []
+            for removed in event.removed:
+                to_remove += [w for w in self.workspace_folders if w.uri == removed.uri]
+
+            for removed in event.added:
+                to_remove += [w for w in self.workspace_folders if w.uri == removed.uri]
+
+            for r in to_remove:
+                self.workspace_folders.remove(r)
+
+            for a in event.added:
+                self.workspace_folders.append(WorkspaceFolder(a.name, Uri(a.uri), a.uri))
