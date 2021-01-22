@@ -1074,3 +1074,22 @@ class WorkspaceFoldersChangeEvent(Model):
 
 class DidChangeWorkspaceFoldersParams(Model):
     event: WorkspaceFoldersChangeEvent
+
+
+class Registration(Model):
+    id: str
+    method: str
+    register_options: Optional[Any]
+
+
+class RegistrationParams(Model):
+    registrations: List[Registration]
+
+
+class Unregistration(Model):
+    id: str
+    method: str
+
+
+class UnregistrationParams(Model):
+    unregisterations: List[Unregistration]

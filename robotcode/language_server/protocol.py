@@ -29,12 +29,16 @@ from .types import (
     InitializeError,
     InitializeParams,
     InitializeResult,
+    Registration,
+    RegistrationParams,
     SaveOptions,
     ServerCapabilities,
     SetTraceParams,
     TextDocumentSyncKind,
     TextDocumentSyncOptions,
     TraceValue,
+    Unregistration,
+    UnregistrationParams,
     WorkspaceFolder,
 )
 
@@ -181,3 +185,21 @@ class LanguageServerProtocol(JsonRPCProtocol):
     @_logger.call
     async def _cancel_request(self, id: Union[int, str], **kwargs: Any) -> None:
         await self.cancel_received_request(id)
+
+    async def register_capability(self, id: str, method: str, register_options: Optional[Any]) -> None:
+        await self.register_capabilities([Registration(id=id, method=method, register_options=register_options)])
+
+    async def register_capabilities(self, registrations: List[Registration]) -> None:
+        if not registrations:
+            return
+        await self.send_request_async("client/registerCapability", RegistrationParams(registrations=registrations))
+
+    async def unregister_capability(self, id: str, method: str) -> None:
+        await self.unregister_capabilities([Unregistration(id=id, method=method)])
+
+    async def unregister_capabilities(self, unregisterations: List[Unregistration]) -> None:
+        if not unregisterations:
+            return
+        await self.send_request_async(
+            "client/unregisterCapability", UnregistrationParams(unregisterations=unregisterations)
+        )
