@@ -1,6 +1,5 @@
 import asyncio
 import uuid
-from dataclasses import dataclass
 from typing import Callable, Coroutine, TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple, Union
 
 from ...jsonrpc2.protocol import rpc_method
@@ -41,12 +40,18 @@ if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol
 
 
-@dataclass
 class FileWatcherEntry:
-    id: str
-    callback: Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]]
-    glob_pattern: str
-    kind: Optional[WatchKind] = None
+    def __init__(self, id: str, glob_pattern: str, kind: Optional[WatchKind] = None) -> None:
+        self.id = id
+        self.glob_pattern = glob_pattern
+        self.kind = kind
+
+    @async_event
+    async def callback(sender, changes: List[FileEvent]) -> None:
+        ...
+
+    async def call(self, sender: Any, changes: List[FileEvent]) -> None:
+        await self.callback(sender, changes)
 
 
 class WorkspaceFolder:
@@ -261,20 +266,31 @@ class Workspace(LanguageServerProtocolPart):
         glob_pattern: str,
         kind: Optional[WatchKind] = None,
     ) -> str:
-        entry = FileWatcherEntry(id=str(uuid.uuid4()), callback=callback, glob_pattern=glob_pattern, kind=kind)
 
-        self.did_change_watched_files.add(callback)  # type: ignore
+        entry = FileWatcherEntry(id=str(uuid.uuid4()), glob_pattern=glob_pattern, kind=kind)
+        entry.callback.add(callback)  # type: ignore
 
-        watchers = [FileSystemWatcher(glob_pattern=glob_pattern, kind=kind)]
-        await self.parent.register_capability(
-            entry.id, "workspace/didChangeWatchedFiles", DidChangeWatchedFilesRegistrationOptions(watchers=watchers)
-        )
-        self._file_watchers[entry.id] = entry
+        current_entries = [e for e in self._file_watchers.values() if e.glob_pattern == glob_pattern and e.kind == kind]
+        if len(current_entries) > 0:
+            current = current_entries[0]
+            if callback not in self.did_change_watched_files:
+                current.callback.add(entry.call)
+                self.did_change_watched_files.add(current.call)
+
+        else:
+            self.did_change_watched_files.add(callback)  # type: ignore
+
+            watchers = [FileSystemWatcher(glob_pattern=glob_pattern, kind=kind)]
+            await self.parent.register_capability(
+                entry.id, "workspace/didChangeWatchedFiles", DidChangeWatchedFilesRegistrationOptions(watchers=watchers)
+            )
+
+            self._file_watchers[entry.id] = entry
 
         return entry.id
 
     async def remove_file_watcher(self, id: str) -> None:
         entry = self._file_watchers.pop(id, None)
-        if entry is not None:
+        if entry is not None and len(entry.callback.listeners) <= 1:
             self.did_change_watched_files.remove(entry.callback)  # type: ignore
             await self.parent.unregister_capability(entry.id, "workspace/didChangeWatchedFiles")

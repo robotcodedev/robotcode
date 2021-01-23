@@ -4,7 +4,7 @@ import weakref
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, AsyncIterator, List, NamedTuple, Optional, Sequence, Tuple, cast
+from typing import Any, AsyncIterator, Callable, List, NamedTuple, Optional, Sequence, Tuple, cast
 
 from ...language_server.types import Diagnostic, DiagnosticSeverity, Position, Range
 from ..utils.ast import range_from_token_or_node
@@ -241,11 +241,22 @@ class LibraryEntry:
 
 
 class Namespace:
-    def __init__(self, library_manager: LibraryManager, model: ast.AST, source: str, sentinel: Any) -> None:
+    def __init__(
+        self,
+        library_manager: LibraryManager,
+        model: ast.AST,
+        source: str,
+        sentinel: Any,
+        invalidated_callback: Callable[["Namespace"], None],
+    ) -> None:
         super().__init__()
         self.library_manager = library_manager
+        self.library_manager.libraries_removed.add(self.libraries_removed)
         self.model = model
         self.source = source
+        self._sentinel = weakref.ref(sentinel)
+        self.invalidated_callback = invalidated_callback
+
         self._libraries_lock = asyncio.Lock()
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
         self._resources_lock = asyncio.Lock()
@@ -258,10 +269,12 @@ class Namespace:
         self._diagnostics: List[Diagnostic] = []
 
         self._keywords: Optional[List[KeywordDoc]] = None
-        self._sentinel = weakref.ref(sentinel)
 
         # TODO: how to get the search order from model
         self.search_order: Tuple[str, ...] = ()
+
+    async def libraries_removed(self, sender: Any, library_sources: List[str]) -> None:
+        self.invalidated_callback(self)
 
     async def get_diagnostisc(self) -> List[Diagnostic]:
         await self._ensure_initialized()

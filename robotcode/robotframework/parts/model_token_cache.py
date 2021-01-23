@@ -50,7 +50,8 @@ class ModelTokenCache(LanguageServerProtocolPart):
                 self._entries.pop((r, v))
 
         def remove(r: weakref.ref[TextDocument]) -> None:
-            asyncio.run_coroutine_threadsafe(remove_safe(r, version), self._loop)
+            if self._loop.is_running():
+                asyncio.run_coroutine_threadsafe(remove_safe(r, version), self._loop)
 
         async with self._lock:
 
@@ -126,6 +127,13 @@ class ModelTokenCache(LanguageServerProtocolPart):
 
         return await self.__get_entry(document, setter)
 
+    async def __invalidate_namespace(self, document: TextDocument, namespace: Namespace) -> None:
+        async def setter(e: _Entry) -> None:
+            e.namespace = None
+
+        await self.__get_entry(document, setter)
+        await self.parent.diagnostics.publish_diagnostics(document)
+
     async def __get_namespace(
         self, document: TextDocument, model: Optional[ast.AST]
     ) -> Tuple[Optional[Namespace], ast.AST]:
@@ -135,7 +143,14 @@ class ModelTokenCache(LanguageServerProtocolPart):
         if library_manager is None:
             return (None, model)
 
-        return Namespace(library_manager, model, document.uri.to_path_str(), document.parent or document), model
+        def invalidate(namespace: Namespace) -> None:
+            if self._loop.is_running():
+                asyncio.run_coroutine_threadsafe(self.__invalidate_namespace(document, namespace), self._loop)
+
+        return (
+            Namespace(library_manager, model, document.uri.to_path_str(), document or document, invalidate),
+            model,
+        )
 
     async def get_library_manager(self, document: TextDocument) -> Optional[LibraryManager]:
         folder = self.parent.workspace.get_workspace_folder(document.uri)

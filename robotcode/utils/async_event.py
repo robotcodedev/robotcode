@@ -45,6 +45,7 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
         self.lock = threading.RLock()
 
         self.listeners: MutableSet[weakref.ref[Any]] = set()
+        self._loop = asyncio.get_event_loop()
 
     def add(self, callback: _TCallable) -> None:
         async def remove_safe(ref: Any) -> None:
@@ -52,7 +53,8 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
                 self.listeners.remove(ref)
 
         def remove_listener(ref: Any) -> None:
-            asyncio.ensure_future(remove_safe(ref))
+            if self._loop.is_running():
+                asyncio.run_coroutine_threadsafe(remove_safe(ref), self._loop)
 
         with self.lock:
             if inspect.ismethod(callback):
@@ -66,6 +68,12 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
                 self.listeners.remove(weakref.WeakMethod(cast(MethodType, callback)))
             else:
                 self.listeners.remove(weakref.ref(callback))
+
+    def __contains__(self, obj: Any) -> bool:
+        if inspect.ismethod(obj):
+            return weakref.WeakMethod(cast(MethodType, obj)) in self.listeners
+        else:
+            return weakref.ref(obj) in self.listeners
 
     async def _notify(self, *args: Any, **kwargs: Any) -> AsyncIterator[_TResult]:
         for method_listener in self.listeners:

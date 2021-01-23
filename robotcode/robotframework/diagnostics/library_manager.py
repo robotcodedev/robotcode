@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple
 from pathlib import Path
 
+from ...utils.async_event import async_tasking_event
+
 from ...language_server.parts.workspace import Workspace
 from ...language_server.types import FileChangeType, FileEvent
 from ...utils.uri import Uri
@@ -69,18 +71,25 @@ class LibraryManager:
         if self.loop.is_running():
             asyncio.run_coroutine_threadsafe(check(), loop=self.loop)
 
+    @async_tasking_event
+    async def libraries_removed(sender, library_sources: List[str]) -> None:
+        ...
+
     async def did_change_watched_files(self, sender: Any, changes: List[FileEvent]) -> None:
+        to_remove: List[Tuple[_EntryKey, _Entry]] = []
         for change in changes:
             if change.type in [FileChangeType.CHANGED, FileChangeType.DELETED]:
                 async with self._libaries_lock:
-                    to_remove: List[_EntryKey] = [
-                        k
+                    to_remove += [
+                        (k, v)
                         for k, v in self._libaries.items()
                         if v.doc.source is not None and Path(v.doc.source) == Uri(change.uri).to_path()
                     ]
 
-                    for r in to_remove:
-                        self._libaries.pop(r)
+        if to_remove:
+            for r in to_remove:
+                self._libaries.pop(r[0], None)
+            await self.libraries_removed(self, [entry[1].doc.source for entry in to_remove])
 
     async def get_doc_from_library(
         self, sentinel: Any, name: str, args: Tuple[Any, ...] = (), base_dir: str = "."
