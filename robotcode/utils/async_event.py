@@ -11,6 +11,7 @@ from typing import (
     Awaitable,
     Callable,
     Generic,
+    Iterator,
     List,
     MutableSet,
     Optional,
@@ -75,8 +76,18 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
         else:
             return weakref.ref(obj) in self.listeners
 
+    def __len__(self) -> int:
+        return len(self.listeners)
+
+    def __iter__(self) -> Iterator[weakref.ref[Any]]:
+        return self.listeners.__iter__()
+
+    async def __aiter__(self) -> AsyncIterator[weakref.ref[Any]]:
+        for e in self.listeners:
+            yield e
+
     async def _notify(self, *args: Any, **kwargs: Any) -> AsyncIterator[_TResult]:
-        for method_listener in self.listeners:
+        for method_listener in set(self):
             method = method_listener()
             if method is not None:
                 result = method(*args, **kwargs)
@@ -160,7 +171,7 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
                     result_callback(None, e)
 
         awaitables: List[asyncio.Future[_TResult]] = []
-        for method_listener in self.listeners:
+        for method_listener in set(self):
             method = method_listener()
             if method is not None:
                 future = asyncio.ensure_future(ensure_coroutine(method)(*args, **kwargs))
@@ -294,7 +305,7 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
             executor = self.__executor
 
         awaitables: List[asyncio.Future[_TResult]] = []
-        for method_listener in self.listeners:
+        for method_listener in set(self):
             method = method_listener()
             if method is not None:
                 future = self._run_in_asyncio_thread(

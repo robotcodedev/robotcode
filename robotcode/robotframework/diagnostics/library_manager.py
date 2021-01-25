@@ -10,7 +10,7 @@ from pathlib import Path
 
 from ...utils.async_event import async_tasking_event
 
-from ...language_server.parts.workspace import Workspace
+from ...language_server.parts.workspace import Workspace, FileWatcherEntry
 from ...language_server.types import FileChangeType, FileEvent
 from ...utils.uri import Uri
 from ..configuration import RobotConfig
@@ -30,11 +30,11 @@ class _EntryKey:
 
 
 class _Entry:
-    def __init__(self, doc: LibraryDoc, watcher_id: Optional[str] = None) -> None:
+    def __init__(self, doc: LibraryDoc, file_watcher: Optional[FileWatcherEntry] = None) -> None:
         super().__init__()
         self.doc = doc
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
-        self.watcher_id = watcher_id
+        self.file_watcher = file_watcher
 
 
 class LibraryManager:
@@ -52,24 +52,22 @@ class LibraryManager:
         self.config = config
         self._libaries_lock = asyncio.Lock()
         self._libaries: OrderedDict[_EntryKey, _Entry] = OrderedDict()
-        self.loop = asyncio.get_event_loop()
+        self._loop = asyncio.get_event_loop()
 
     @property
     def pool(self) -> multiprocessing.pool.Pool:
         return self.get_global_pool()
 
-    def __check_entry(self, entry_key: _EntryKey) -> None:
-        async def check() -> None:
+    def __remove_entry(self, entry_key: _EntryKey, entry: _Entry) -> None:
+        async def check(k: _EntryKey, e: _Entry) -> None:
             async with self._libaries_lock:
-                entry = self._libaries.get(entry_key, None)
-                if entry is not None:
-                    if len(entry.references) == 0:
-                        entry = self._libaries.pop(entry_key, None)
-                        if entry is not None and entry.watcher_id is not None:
-                            await self.workspace.remove_file_watcher(entry.watcher_id)
+                self._libaries.pop(k, None)
 
-        if self.loop.is_running():
-            asyncio.run_coroutine_threadsafe(check(), loop=self.loop)
+            if e is not None and e.file_watcher is not None:
+                await self.workspace.remove_file_watcher(e.file_watcher)
+
+        if self._loop.is_running():
+            asyncio.run_coroutine_threadsafe(check(entry_key, entry), loop=self._loop)
 
     @async_tasking_event
     async def libraries_removed(sender, library_sources: List[str]) -> None:
@@ -87,8 +85,10 @@ class LibraryManager:
                     ]
 
         if to_remove:
-            for r in to_remove:
-                self._libaries.pop(r[0], None)
+            async with self._libaries_lock:
+                for r in to_remove:
+                    self.__remove_entry(*r)
+
             await self.libraries_removed(self, [entry[1].doc.source for entry in to_remove])
 
     async def get_doc_from_library(
@@ -119,7 +119,7 @@ class LibraryManager:
 
             if sentinel is not None:
                 entry.references.add(sentinel)
-                weakref.finalize(sentinel, self.__check_entry, entry_key)
+                weakref.finalize(sentinel, self.__remove_entry, entry_key, entry)
 
             return entry.doc
 

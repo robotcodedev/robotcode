@@ -45,9 +45,8 @@ class ModelTokenCache(LanguageServerProtocolPart):
     async def __get_entry(self, document: TextDocument, setter: Callable[[_Entry], Awaitable[_TResult]]) -> _TResult:
         version = document.version
 
-        async def remove_safe(r: weakref.ref[TextDocument], v: int) -> None:
-            async with self._lock:
-                self._entries.pop((r, v))
+        async def remove_safe(r: weakref.ref[TextDocument], v: int) -> None:            
+            self._entries.pop((r, v))
 
         def remove(r: weakref.ref[TextDocument]) -> None:
             if self._loop.is_running():

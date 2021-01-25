@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 from typing import Callable, Coroutine, TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple, Union
+import weakref
 
 from ...jsonrpc2.protocol import rpc_method
 from ...utils.async_event import async_event
@@ -41,17 +42,26 @@ if TYPE_CHECKING:
 
 
 class FileWatcherEntry:
-    def __init__(self, id: str, glob_pattern: str, kind: Optional[WatchKind] = None) -> None:
+    def __init__(
+        self,
+        id: str,
+        callback: Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
+        glob_pattern: str,
+        kind: Optional[WatchKind] = None,
+    ) -> None:
         self.id = id
+        self.callback = callback
         self.glob_pattern = glob_pattern
         self.kind = kind
+        self.parent: Optional[FileWatcherEntry] = None
+        self.finalizer: Any = None
 
     @async_event
-    async def callback(sender, changes: List[FileEvent]) -> None:
+    async def child_callbacks(sender, changes: List[FileEvent]) -> None:
         ...
 
-    async def call(self, sender: Any, changes: List[FileEvent]) -> None:
-        await self.callback(sender, changes)
+    async def call_childrens(self, sender: Any, changes: List[FileEvent]) -> None:
+        await self.child_callbacks(sender, changes)
 
 
 class WorkspaceFolder:
@@ -83,7 +93,8 @@ class Workspace(LanguageServerProtocolPart):
         )
         self._settings: Dict[str, Any] = {}
 
-        self._file_watchers: Dict[str, FileWatcherEntry] = {}
+        self._file_watchers: weakref.WeakSet[FileWatcherEntry] = weakref.WeakSet()
+        self._loop = asyncio.get_event_loop()
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         capabilities.workspace = ServerCapabilities.Workspace(
@@ -265,18 +276,21 @@ class Workspace(LanguageServerProtocolPart):
         callback: Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
         glob_pattern: str,
         kind: Optional[WatchKind] = None,
-    ) -> str:
+    ) -> FileWatcherEntry:
 
-        entry = FileWatcherEntry(id=str(uuid.uuid4()), glob_pattern=glob_pattern, kind=kind)
-        entry.callback.add(callback)  # type: ignore
+        entry = FileWatcherEntry(id=str(uuid.uuid4()), callback=callback, glob_pattern=glob_pattern, kind=kind)
 
-        current_entries = [e for e in self._file_watchers.values() if e.glob_pattern == glob_pattern and e.kind == kind]
-        if len(current_entries) > 0:
-            current = current_entries[0]
+        current_entry = next(
+            (e for e in self._file_watchers if e.glob_pattern == glob_pattern and e.kind == kind), None
+        )
+        if current_entry is not None:
             if callback not in self.did_change_watched_files:
-                current.callback.add(entry.call)
-                self.did_change_watched_files.add(current.call)
+                current_entry.child_callbacks.add(callback)  # type: ignore
 
+            entry.parent = current_entry
+
+            if len(current_entry.child_callbacks) > 0:
+                self.did_change_watched_files.add(current_entry.call_childrens)
         else:
             self.did_change_watched_files.add(callback)  # type: ignore
 
@@ -285,12 +299,23 @@ class Workspace(LanguageServerProtocolPart):
                 entry.id, "workspace/didChangeWatchedFiles", DidChangeWatchedFilesRegistrationOptions(watchers=watchers)
             )
 
-            self._file_watchers[entry.id] = entry
+        def remove() -> None:
+            if self._loop.is_running():
+                asyncio.run_coroutine_threadsafe(self.remove_file_watcher(entry), self._loop).result()
 
-        return entry.id
+        weakref.finalize(entry, remove)
 
-    async def remove_file_watcher(self, id: str) -> None:
-        entry = self._file_watchers.pop(id, None)
-        if entry is not None and len(entry.callback.listeners) <= 1:
+        self._file_watchers.add(entry)
+
+        return entry
+
+    async def remove_file_watcher(self, entry: FileWatcherEntry) -> None:
+        self._file_watchers.remove(entry)
+
+        if entry.parent is not None:
+            entry.parent.child_callbacks.remove(entry.callback)  # type: ignore
+            if len(entry.child_callbacks) == 0:
+                self.did_change_watched_files.remove(entry.call)  # type: ignore
+        elif len(entry.child_callbacks) == 0:
             self.did_change_watched_files.remove(entry.callback)  # type: ignore
             await self.parent.unregister_capability(entry.id, "workspace/didChangeWatchedFiles")
