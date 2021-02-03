@@ -1,18 +1,12 @@
-from typing import Optional, TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from ...jsonrpc2.protocol import rpc_method
 from ...utils.async_event import async_tasking_event
 from ...utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
+from ..language import HasLanguageId
 from ..text_document import TextDocument
-from ..types import (
-    DocumentUri,
-    Hover,
-    HoverParams,
-    Position,
-    ServerCapabilities,
-    TextDocumentIdentifier,
-)
+from ..types import DocumentUri, Hover, HoverParams, Position, ServerCapabilities, TextDocumentIdentifier
 
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol
@@ -42,8 +36,13 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     ) -> Optional[Hover]:
 
         results: List[Hover] = []
-
-        for result in await self.collect(self, self.parent.documents[text_document.uri], position):
+        document = self.parent.documents[text_document.uri]
+        for result in await self.collect(
+            self,
+            document,
+            position,
+            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+        ):
             if isinstance(result, BaseException):
                 self._logger.exception(result, exc_info=result)
             else:

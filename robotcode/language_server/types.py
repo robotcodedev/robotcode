@@ -618,6 +618,10 @@ class StaticRegistrationOptions(Model):
     id: Optional[str] = None
 
 
+class TextDocumentChangeRegistrationOptions(TextDocumentRegistrationOptions):
+    sync_kind: TextDocumentSyncKind
+
+
 class FoldingRangeOptions(WorkDoneProgressOptions):
     pass
 

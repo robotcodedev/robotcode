@@ -38,7 +38,7 @@ __all__ = [
 ]
 
 _TResult = TypeVar("_TResult")
-_TCallable = TypeVar("_TCallable", bound=Callable[..., Union[Any, AsyncIterator[Any]]])
+_TCallable = TypeVar("_TCallable", bound=Callable[..., Any])
 
 
 class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
@@ -159,6 +159,7 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
         *args: Any,
         result_callback: Optional[Callable[[Optional[_TResult], Optional[BaseException]], Any]] = None,
         return_exceptions: Optional[bool] = True,
+        callback_filter: Optional[Callable[[_TCallable], bool]] = None,
         **kwargs: Any,
     ) -> AsyncIterator[Union[_TResult, BaseException]]:
         def _done(f: asyncio.Future[_TResult]) -> None:
@@ -171,8 +172,10 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
                     result_callback(None, e)
 
         awaitables: List[asyncio.Future[_TResult]] = []
-        for method_listener in set(self):
-            method = method_listener()
+        for method in filter(
+            lambda x: callback_filter(x) if callback_filter is not None else True,
+            filter(lambda x: x is not None, [cast("_TCallable", p()) for p in set(self.listeners)]),
+        ):
             if method is not None:
                 future = asyncio.ensure_future(ensure_coroutine(method)(*args, **kwargs))
                 if isinstance(future, asyncio.Task):
@@ -284,6 +287,7 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
         result_callback: Optional[Callable[[Optional[_TResult], Optional[BaseException]], Any]] = None,
         executor: Optional[ThreadPoolExecutor] = None,
         return_exceptions: Optional[bool] = True,
+        callback_filter: Optional[Callable[[_TCallable], bool]] = None,
         **kwargs: Any,
     ) -> AsyncIterator[Union[_TResult, BaseException]]:
         def _done(f: asyncio.Future[_TResult]) -> None:
@@ -305,8 +309,10 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
             executor = self.__executor
 
         awaitables: List[asyncio.Future[_TResult]] = []
-        for method_listener in set(self):
-            method = method_listener()
+        for method in filter(
+            lambda x: callback_filter(x) if callback_filter is not None else True,
+            filter(lambda x: x is not None, [cast("_TCallable", p()) for p in set(self.listeners)]),
+        ):
             if method is not None:
                 future = self._run_in_asyncio_thread(
                     executor,

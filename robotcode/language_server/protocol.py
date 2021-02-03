@@ -138,7 +138,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
         self.initialization_options = initialization_options
         try:
-            self.on_initialize(initialization_options)
+            await self.on_initialize(initialization_options)
         except (SystemExit, KeyboardInterrupt):
             raise
         except JsonRPCErrorException:
@@ -153,14 +153,14 @@ class LanguageServerProtocol(JsonRPCProtocol):
             server_info=InitializeResult.ServerInfo(name="robotcode LanguageServer", version=__version__),
         )
 
-    def on_initialize(self, initialization_options: Optional[Any] = None) -> None:
+    async def on_initialize(self, initialization_options: Optional[Any] = None) -> None:
         pass
 
     @rpc_method(name="initialized", param_type=InitializedParams)
     async def _initialized(self, params: InitializedParams) -> None:
-        self.on_initialized()
+        await self.on_initialized()
 
-    def on_initialized(self) -> None:
+    async def on_initialized(self) -> None:
         pass
 
     @rpc_method(name="shutdown")

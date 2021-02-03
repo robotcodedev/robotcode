@@ -1,17 +1,16 @@
 import ast
 import asyncio
-import multiprocessing
-import multiprocessing.pool
 import weakref
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple
 from pathlib import Path
+from typing import Any, List, Optional, Tuple
 
-from ...utils.async_event import async_tasking_event
+import multiprocessing
 
-from ...language_server.parts.workspace import Workspace, FileWatcherEntry
+from ...language_server.parts.workspace import FileWatcherEntry, Workspace
 from ...language_server.types import FileChangeType, FileEvent
+from ...utils.async_event import async_tasking_event
 from ...utils.uri import Uri
 from ..configuration import RobotConfig
 from ..utils.async_visitor import walk
@@ -38,12 +37,7 @@ class _Entry:
 
 
 class LibraryManager:
-
-    __pool: multiprocessing.pool.Pool = multiprocessing.Pool()
-
-    @classmethod
-    def get_global_pool(cls) -> multiprocessing.pool.Pool:
-        return cls.__pool
+    _pool = multiprocessing.Pool()
 
     def __init__(self, workspace: Workspace, folder: Uri, config: Optional[RobotConfig]) -> None:
         super().__init__()
@@ -56,7 +50,7 @@ class LibraryManager:
 
     @property
     def pool(self) -> multiprocessing.pool.Pool:
-        return self.get_global_pool()
+        return self._pool
 
     def __remove_entry(self, entry_key: _EntryKey, entry: _Entry) -> None:
         async def check(k: _EntryKey, e: _Entry) -> None:
@@ -98,9 +92,10 @@ class LibraryManager:
 
         async with self._libaries_lock:
             if entry_key not in self._libaries:
-
                 lib_doc = self.pool.apply_async(
                     get_library_doc,
+                    # aiomultiprocess.Worker(
+                    #     target=get_library_doc,
                     args=(
                         name,
                         args,
@@ -199,6 +194,8 @@ class LibraryManager:
     async def find_file(self, name: str, base_dir: str = ".", file_type: str = "Resource") -> str:
         return self.pool.apply_async(
             find_file,
+            # aiomultiprocess.Worker(
+            #     target=find_file,
             args=(
                 name,
                 self.folder.to_path_str(),

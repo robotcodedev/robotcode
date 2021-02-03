@@ -5,6 +5,7 @@ from ...jsonrpc2.protocol import JsonRPCProtocol
 from ...utils.async_event import async_tasking_event_iterator
 from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
+from ..language import HasLanguageId
 from ..text_document import TextDocument
 from ..types import Diagnostic, PublishDiagnosticsParams
 
@@ -169,7 +170,11 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     async def publish_diagnostics(self, document: TextDocument) -> None:
         diagnostics: List[Diagnostic] = []
 
-        async for result in self.collect(self, document):
+        async for result in self.collect(
+            self,
+            document,
+            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+        ):
             if isinstance(result, BaseException):
                 if not isinstance(result, asyncio.CancelledError):
                     self._logger.exception(result, exc_info=result)

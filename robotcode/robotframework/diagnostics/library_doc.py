@@ -1,8 +1,8 @@
 import importlib
-from pathlib import Path
 import os
 import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 from types import ModuleType
 from typing import AbstractSet, Any, Iterator, List, Mapping, Optional, Sequence, Set, Tuple, ValuesView, cast
 
@@ -162,12 +162,11 @@ class LibraryDoc:
         result = ""
 
         if self.inits:
-            result += "```python\n"
-            result += "\n".join(f"def {i.name}({', '.join(i.args)})" for i in self.inits.values())
-            result += "\n```"
+            result += "\n\n---\n".join(i.to_markdown() for i in self.inits.values())
 
         if self.doc:
-            result += "\n"
+            if result:
+                result += "\n\n---\n"
             result += self.doc
 
         return result
@@ -185,7 +184,10 @@ def _update_sys_path(working_dir: str = ".", pythonpath: Optional[List[str]] = N
         _PRELOADED_MODULES = set(sys.modules.values())
     else:
         for m in set(sys.modules.values()) - _PRELOADED_MODULES:
-            importlib.reload(m)
+            try:
+                importlib.reload(m)
+            except BaseException:
+                pass
 
     file = Path(__file__).resolve()
     top = file.parents[3]
@@ -214,42 +216,68 @@ def get_library_doc(
 ) -> LibraryDoc:
 
     from robot.libdocpkg.robotbuilder import KeywordDocBuilder
-    from robot.running.testlibraries import TestLibrary
+    from robot.libraries import STDLIBS
+    from robot.output import LOGGER
+    from robot.running.outputcapture import OutputCapturer
+    from robot.running.testlibraries import _get_lib_class
+    from robot.utils import Importer
     from robot.utils.robotpath import find_file as robot_find_file
+
+    def get_test_library(
+        name: str,
+        args: Optional[Tuple[Any, ...]] = None,
+        variables: Any = None,
+        create_handlers: bool = True,
+        logger: Any = LOGGER,
+    ) -> Any:
+        if name in STDLIBS:
+            import_name = "robot.libraries." + name
+        else:
+            import_name = name
+        with OutputCapturer(library_import=True):
+            importer = Importer("test library")
+            libcode, source = importer.import_class_or_module(import_name, return_source=True)
+        libclass = _get_lib_class(libcode)
+        lib = libclass(libcode, name, args or [], source, logger, variables)
+        if create_handlers:
+            lib.create_handlers()
+        return lib
 
     _update_sys_path(working_dir, pythonpath)
 
     if is_library_by_path(name):
         name = robot_find_file(name, base_dir or ".", "Library")
 
-    lib = TestLibrary(name, args, create_handlers=False)
+    lib = get_test_library(name, args, create_handlers=False)
 
     libdoc = LibraryDoc(
         name=str(lib.name),
-        doc=str(lib.doc),
-        version=str(lib.version),
-        scope=str(lib.scope),
-        doc_format=str(lib.doc_format),
         source=lib.source,
-        line_no=lib.lineno,
-    )
-
-    libdoc.inits = KeywordStore(
-        {
-            kw.name: KeywordDoc(
-                libdoc,
-                name=libdoc.name,
-                args=tuple(str(a) for a in kw.args),
-                doc=kw.doc,
-                tags=tuple(kw.tags),
-                source=kw.source,
-                line_no=kw.lineno,
-            )
-            for kw in [KeywordDocBuilder().build_keyword(lib.init)]
-        }
     )
 
     try:
+
+        libdoc.inits = KeywordStore(
+            {
+                kw.name: KeywordDoc(
+                    libdoc,
+                    name=libdoc.name,
+                    args=tuple(str(a) for a in kw.args),
+                    doc=kw.doc,
+                    tags=tuple(kw.tags),
+                    source=kw.source,
+                    line_no=kw.lineno,
+                )
+                for kw in [KeywordDocBuilder().build_keyword(lib.init)]
+            }
+        )
+
+        libdoc.line_no = lib.lineno
+        libdoc.doc = str(lib.doc)
+        libdoc.version = str(lib.version)
+        libdoc.scope = str(lib.scope)
+        libdoc.doc_format = str(lib.doc_format)
+
         lib.create_handlers()
 
         libdoc.keywords = KeywordStore(

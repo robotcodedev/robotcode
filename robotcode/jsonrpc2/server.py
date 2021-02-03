@@ -109,35 +109,24 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
     def start_stdio(self) -> None:
         self.mode = JsonRpcServerMode.STDIO
 
-        async def aio_read(rfile: BinaryIO, protocol: JsonRPCProtocol) -> None:
-            """Reads data from stdin in separate thread (asynchronously)."""
-
-            def read_unbuffered() -> bytes:
-                return rfile.read(1)
-
-            def read_buffered() -> bytes:
-                return cast(io.BufferedReader, rfile).read1(500)
-
-            read_func = read_unbuffered
-            if isinstance(rfile, io.BufferedReader):
-                read_func = read_buffered
-
-            while self._stop_event is not None and not self._stop_event.is_set() and not rfile.closed:
-                protocol.data_received(await self.loop.run_in_executor(None, read_func))
-
         def threading_read(rfile: BinaryIO, protocol: JsonRPCProtocol) -> None:
+            async def call(data: bytes) -> None:
+                protocol.data_received(data)
+
             def read_unbuffered() -> bytes:
                 return rfile.read(1)
 
             def read_buffered() -> bytes:
-                return cast(io.BufferedReader, rfile).read1(500)
+                return cast(io.BufferedReader, rfile).read1(1000)
 
             read_func = read_unbuffered
             if isinstance(rfile, io.BufferedReader):
                 read_func = read_buffered
 
             while self._stop_event is not None and not self._stop_event.is_set() and not rfile.closed:
-                self.loop.call_soon_threadsafe(protocol.data_received, read_func())
+                data = read_func()
+                if data:
+                    asyncio.run_coroutine_threadsafe(call(data), self.loop)
 
         transport = StdOutTransportAdapter(sys.stdin.buffer, sys.stdout.buffer)
 
@@ -148,7 +137,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         def run_io() -> None:
             self._stop_event = asyncio.Event()
 
-            with ThreadPoolExecutor(thread_name_prefix="stdio_reader") as pool:
+            with ThreadPoolExecutor(max_workers=1, thread_name_prefix="stdio_reader") as pool:
                 future = self.loop.run_in_executor(pool, threading_read, sys.stdin.buffer, protocol)
 
                 self.loop.run_until_complete(future)

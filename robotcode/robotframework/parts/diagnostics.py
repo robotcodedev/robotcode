@@ -1,11 +1,11 @@
 import ast
-from typing import Optional, TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from ...jsonrpc2.protocol import GenericJsonRPCProtocolPart
+from ...language_server.language import language_id
 from ...language_server.text_document import TextDocument
 from ...language_server.types import Diagnostic, DiagnosticSeverity, Position, Range
 from ...utils.logging import LoggingDescriptor
-
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -25,6 +25,9 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
 
         parent.diagnostics.collect.add(self.collect_diagnostics)
 
+    def is_robot_language(self, document: TextDocument) -> bool:
+        return document.language_id == "robotframework"
+
     def _create_error(self, node: ast.AST, msg: str, source: Optional[str] = None) -> Diagnostic:
         return Diagnostic(
             range=Range(
@@ -37,6 +40,7 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
             code="ModelError",
         )
 
+    @language_id("robotframework")
     @_logger.call
     async def collect_token_errors(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
         from robot.parsing.lexer.tokens import Token
@@ -59,6 +63,7 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
 
         return result
 
+    @language_id("robotframework")
     @_logger.call
     async def collect_model_errors(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
         from ..utils.async_visitor import AsyncVisitor
@@ -87,6 +92,7 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
 
         return await Visitor.find_from(await self.parent.model_token_cache.get_model(document), self)
 
+    @language_id("robotframework")
     @_logger.call
     async def collect_walk_model_errors(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
         from ..utils.async_visitor import walk
@@ -104,8 +110,10 @@ class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServ
 
         return result
 
+    @language_id("robotframework")
     @_logger.call
     async def collect_diagnostics(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
+
         namespace = await self.parent.model_token_cache.get_namespace(document)
         if namespace is None:
             return []

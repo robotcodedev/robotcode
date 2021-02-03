@@ -2,6 +2,7 @@ import ast
 from typing import TYPE_CHECKING, Any, List
 
 from ...jsonrpc2.protocol import GenericJsonRPCProtocolPart
+from ...language_server.language import language_id
 from ...language_server.text_document import TextDocument
 from ...language_server.types import FoldingRange
 from ...utils.logging import LoggingDescriptor
@@ -18,6 +19,7 @@ class RobotFoldingRangeProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageSer
 
         parent.folding_ranges.collect.add(self.collect_folding_ranges)
 
+    @language_id("robotframework")
     async def collect_folding_ranges(self, sender: Any, document: TextDocument) -> List[FoldingRange]:
 
         from ..utils.async_visitor import AsyncVisitor

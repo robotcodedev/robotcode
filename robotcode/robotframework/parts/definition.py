@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 
 from ...jsonrpc2.protocol import GenericJsonRPCProtocolPart
+from ...language_server.language import language_id
 from ...language_server.text_document import TextDocument
 from ...language_server.types import Location, LocationLink, Position
 from ...utils.logging import LoggingDescriptor
@@ -20,17 +21,17 @@ class RobotDefinitionProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServe
 
         parent.definition.collect.add(self.collect_definitions)
 
+    @language_id("robotframework")
     async def collect_definitions(
         self, sender: Any, document: TextDocument, position: Position
     ) -> Optional[Union[Location, List[Location], List[LocationLink]]]:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import (
-            KeywordCall,
+        from robot.parsing.model.statements import (  # TODO VariablesImport,
             Fixture,
-            TestTemplate,
+            KeywordCall,
             LibraryImport,
             ResourceImport,
-            # TODO VariablesImport,
+            TestTemplate,
         )
 
         result_nodes = [

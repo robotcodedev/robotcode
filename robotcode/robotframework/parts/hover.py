@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Any, Optional, cast
 
 from ...jsonrpc2.protocol import GenericJsonRPCProtocolPart
+from ...language_server.language import language_id
 from ...language_server.text_document import TextDocument
 from ...language_server.types import Hover, MarkupContent, MarkupKind, Position
 from ...utils.logging import LoggingDescriptor
@@ -19,6 +20,7 @@ class RobotHoverProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServerProt
 
         parent.hover.collect.add(self.collect_hover)
 
+    @language_id("robotframework")
     async def collect_hover(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import (  # TODO VariablesImport,
@@ -115,6 +117,7 @@ class RobotHoverProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServerProt
 
                         if len(libdocs) == 1:
                             libdoc = libdocs[0]
+
                             return Hover(
                                 contents=MarkupContent(
                                     kind=MarkupKind.MARKDOWN,

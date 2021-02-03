@@ -6,6 +6,7 @@ from ...utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
 from ..text_document import TextDocument
 from ..types import DocumentUri, FoldingRange, FoldingRangeParams, ServerCapabilities, TextDocumentIdentifier
+from ..language import HasLanguageId
 
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol
@@ -35,8 +36,12 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities
     ) -> Optional[List[FoldingRange]]:
 
         results: List[FoldingRange] = []
-
-        for result in await self.collect(self, self.parent.documents[text_document.uri]):
+        document = self.parent.documents[text_document.uri]
+        for result in await self.collect(
+            self,
+            document,
+            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+        ):
             if isinstance(result, BaseException):
                 self._logger.exception(result, exc_info=result)
             else:
