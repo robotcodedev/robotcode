@@ -1,6 +1,5 @@
 import abc
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import io
 import sys
 from enum import Enum
@@ -109,40 +108,23 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
     def start_stdio(self) -> None:
         self.mode = JsonRpcServerMode.STDIO
 
-        def threading_read(rfile: BinaryIO, protocol: JsonRPCProtocol) -> None:
-            async def call(data: bytes) -> None:
-                protocol.data_received(data)
-
-            def read_unbuffered() -> bytes:
-                return rfile.read(1)
-
-            def read_buffered() -> bytes:
-                return cast(io.BufferedReader, rfile).read1(1000)
-
-            read_func = read_unbuffered
-            if isinstance(rfile, io.BufferedReader):
-                read_func = read_buffered
-
-            while self._stop_event is not None and not self._stop_event.is_set() and not rfile.closed:
-                data = read_func()
-                if data:
-                    asyncio.run_coroutine_threadsafe(call(data), self.loop)
-
-        transport = StdOutTransportAdapter(sys.stdin.buffer, sys.stdout.buffer)
+        transport = StdOutTransportAdapter(sys.__stdin__.buffer, sys.__stdout__.buffer)
 
         protocol = self.create_protocol()
 
         protocol.connection_made(transport)
 
-        def run_io() -> None:
+        def run_io_nonblocking() -> None:
             self._stop_event = asyncio.Event()
 
-            with ThreadPoolExecutor(max_workers=1, thread_name_prefix="stdio_reader") as pool:
-                future = self.loop.run_in_executor(pool, threading_read, sys.stdin.buffer, protocol)
+            async def aio_readline(rfile: BinaryIO, protocol: JsonRPCProtocol) -> None:
+                while self._stop_event is not None and not self._stop_event.is_set() and not rfile.closed:
+                    data = await self.loop.run_in_executor(None, cast(io.BufferedReader, rfile).read1, 1000)
+                    protocol.data_received(data)
 
-                self.loop.run_until_complete(future)
+            self.loop.run_until_complete(aio_readline(sys.__stdin__.buffer, protocol))
 
-        self._run_func = run_io
+        self._run_func = run_io_nonblocking
 
     @_logger.call
     def start_tcp(self, host: Optional[str] = None, port: int = 0) -> None:

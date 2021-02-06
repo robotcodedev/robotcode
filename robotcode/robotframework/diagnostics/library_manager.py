@@ -6,15 +6,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
-import multiprocessing
-
 from ...language_server.parts.workspace import FileWatcherEntry, Workspace
 from ...language_server.types import FileChangeType, FileEvent
 from ...utils.async_event import async_tasking_event
 from ...utils.uri import Uri
 from ..configuration import RobotConfig
 from ..utils.async_visitor import walk
-from .library_doc import Error, KeywordDoc, KeywordStore, LibraryDoc, find_file, get_library_doc
+from .library_doc import Error, KeywordDoc, KeywordStore, LibraryDoc, find_file_external, get_library_doc_external
 
 DEFAULT_LIBRARIES = ("BuiltIn", "Reserved", "Easter")
 
@@ -37,8 +35,6 @@ class _Entry:
 
 
 class LibraryManager:
-    _pool = multiprocessing.Pool()
-
     def __init__(self, workspace: Workspace, folder: Uri, config: Optional[RobotConfig]) -> None:
         super().__init__()
         self.workspace = workspace
@@ -47,10 +43,6 @@ class LibraryManager:
         self._libaries_lock = asyncio.Lock()
         self._libaries: OrderedDict[_EntryKey, _Entry] = OrderedDict()
         self._loop = asyncio.get_event_loop()
-
-    @property
-    def pool(self) -> multiprocessing.pool.Pool:
-        return self._pool
 
     def __remove_entry(self, entry_key: _EntryKey, entry: _Entry) -> None:
         async def check(k: _EntryKey, e: _Entry) -> None:
@@ -79,9 +71,8 @@ class LibraryManager:
                     ]
 
         if to_remove:
-            async with self._libaries_lock:
-                for r in to_remove:
-                    self.__remove_entry(*r)
+            for r in to_remove:
+                self.__remove_entry(*r)
 
             await self.libraries_removed(self, [entry[1].doc.source for entry in to_remove])
 
@@ -90,33 +81,31 @@ class LibraryManager:
     ) -> LibraryDoc:
         entry_key = _EntryKey(name, args)
 
-        async with self._libaries_lock:
-            if entry_key not in self._libaries:
-                lib_doc = self.pool.apply_async(
-                    get_library_doc,
-                    # aiomultiprocess.Worker(
-                    #     target=get_library_doc,
-                    args=(
-                        name,
-                        args,
-                        self.folder.to_path_str(),
-                        base_dir,
-                        self.config.pythonpath if self.config is not None else None,
-                    ),
-                ).get(100)
+        if entry_key not in self._libaries:
+            lib_doc = await get_library_doc_external(
+                name,
+                args,
+                self.folder.to_path_str(),
+                base_dir,
+                self.config.pythonpath if self.config is not None else None,
+                timeout=100,
+            )
 
-                if lib_doc.source is not None:
-                    self._libaries[entry_key] = _Entry(
-                        lib_doc, await self.workspace.add_file_watcher(self.did_change_watched_files, lib_doc.source)
-                    )
+            async with self._libaries_lock:
+                self._libaries[entry_key] = _Entry(
+                    lib_doc,
+                    await self.workspace.add_file_watcher(self.did_change_watched_files, lib_doc.source)
+                    if lib_doc.source is not None
+                    else None,
+                )
 
-            entry = self._libaries[entry_key]
+        entry = self._libaries[entry_key]
 
-            if sentinel is not None:
-                entry.references.add(sentinel)
-                weakref.finalize(sentinel, self.__remove_entry, entry_key, entry)
+        if sentinel is not None:
+            entry.references.add(sentinel)
+            weakref.finalize(sentinel, self.__remove_entry, entry_key, entry)
 
-            return entry.doc
+        return entry.doc
 
     async def get_doc_from_model(
         self, model: ast.AST, source: str, model_type: str = "RESOURCE", scope: str = "GLOBAL"
@@ -133,11 +122,15 @@ class LibraryManager:
         async for node in walk(model):
             error = getattr(node, "error", None)
             if error is not None:
-                errors.append(Error(f"Error in file '{source}' on line {node.lineno}: {error}", "ModelError"))
+                errors.append(
+                    Error(message=f"Error in file '{source}' on line {node.lineno}: {error}", type_name="ModelError")
+                )
             node_error = getattr(node, "errors", None)
             if node_error is not None:
                 for e in node_error:
-                    errors.append(Error(f"Error in file '{source}' on line {node.lineno}: {e}", "ModelError"))
+                    errors.append(
+                        Error(message=f"Error in file '{source}' on line {node.lineno}: {e}", type_name="ModelError")
+                    )
 
         res = ResourceFile(source=source)
 
@@ -147,9 +140,9 @@ class LibraryManager:
             def _log_creating_failed(self, handler: UserErrorHandler, error: BaseException) -> None:
                 errors.append(
                     Error(
-                        "Error in %s '%s': Creating keyword '%s' failed: %s"
+                        message="Error in %s '%s': Creating keyword '%s' failed: %s"
                         % (self.source_type.lower(), self.source, handler.name, str(error)),
-                        type(error).__qualname__,
+                        type_name=type(error).__qualname__,
                     )
                 )
 
@@ -160,24 +153,8 @@ class LibraryManager:
         )
 
         libdoc.keywords = KeywordStore(
-            {
+            keywords={
                 kw.name: KeywordDoc(
-                    libdoc,
-                    name=kw.name,
-                    args=tuple(str(a) for a in kw.args),
-                    doc=kw.doc,
-                    tags=tuple(kw.tags),
-                    source=kw.source,
-                    line_no=kw.lineno,
-                )
-                for kw in KeywordDocBuilder().build_keywords(lib)
-            }
-        )
-
-        libdoc.keywords = KeywordStore(
-            {
-                kw.name: KeywordDoc(
-                    libdoc,
                     name=kw.name,
                     args=tuple(str(a) for a in kw.args),
                     doc=kw.doc,
@@ -192,15 +169,11 @@ class LibraryManager:
         return libdoc
 
     async def find_file(self, name: str, base_dir: str = ".", file_type: str = "Resource") -> str:
-        return self.pool.apply_async(
-            find_file,
-            # aiomultiprocess.Worker(
-            #     target=find_file,
-            args=(
-                name,
-                self.folder.to_path_str(),
-                base_dir,
-                self.config.pythonpath if self.config is not None else None,
-                file_type,
-            ),
-        ).get(10)
+        return await find_file_external(
+            name,
+            self.folder.to_path_str(),
+            base_dir,
+            self.config.pythonpath if self.config is not None else None,
+            file_type,
+            timeout=10,
+        )

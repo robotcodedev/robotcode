@@ -1,65 +1,47 @@
+import asyncio
+import enum
 import importlib
 import os
 import sys
-from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
-from typing import AbstractSet, Any, Iterator, List, Mapping, Optional, Sequence, Set, Tuple, ValuesView, cast
+from typing import (
+    AbstractSet,
+    Any,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    ValuesView,
+    cast,
+)
 
+if __name__ == "__main__" and __package__ is None or __package__ == "":
+
+    file = Path(__file__).resolve()
+    parent, top = file.parent, file.parents[3]
+
+    sys.path.append(str(top))
+    try:
+        sys.path.remove(str(parent))
+    except ValueError:  # Already removed
+        pass
+
+    __package__ = "robotcode.robotframework.diagnostics"
+
+    try:
+        __import__("pydantic")
+    except ImportError:
+        file = Path(__file__).resolve()
+        external_path = Path(file.parents[2], "external")
+        sys.path.append(str(external_path))
+
+from pydantic import BaseModel, Field, PrivateAttr
 from ...language_server.types import Position, Range
 
 __all__ = ["KeywordDoc", "LibraryDoc", "is_library_by_path", "get_library_doc", "find_file"]
-
-
-@dataclass
-class KeywordDoc:
-    def __init__(
-        self,
-        parent: "LibraryDoc",
-        name: str = "",
-        args: Tuple[Any, ...] = (),
-        doc: str = "",
-        tags: Tuple[str, ...] = (),
-        source: Optional[str] = None,
-        line_no: int = -1,
-    ) -> None:
-        self.parent = parent
-        self.name = name
-        self.args = args
-        self.doc = doc
-        self.tags = tags
-        self.source = source
-        self.line_no = line_no
-
-    parent: "LibraryDoc"
-    name: str = ""
-    args: Tuple[Any, ...] = ()
-    doc: str = ""
-    tags: Tuple[str, ...] = ()
-    source: Optional[str] = None
-    line_no: int = -1
-
-    def __str__(self) -> str:
-        return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
-
-    def range(self) -> Range:
-        return Range(
-            start=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
-            end=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
-        )
-
-    def to_markdown(self) -> str:
-        result = "```python\n"
-
-        result += f"def {self.name}({', '.join(self.args)})"
-
-        result += "\n```"
-
-        if self.doc:
-            result += "\n"
-            result += self.doc
-
-        return result
 
 
 class KeywordMatcher:
@@ -96,45 +78,84 @@ class KeywordMatcher:
         )
 
 
-class KeywordStore(Mapping[str, KeywordDoc]):
-    def __init__(self, items: Mapping[str, KeywordDoc]) -> None:
+class Model(BaseModel):
+    class Config:
+        pass
 
-        self._items = {KeywordMatcher(k): v for k, v in items.items()}
 
-    def __getitem__(self, key: str) -> KeywordDoc:
-        for k, v in self._items.items():
+class KeywordDoc(Model):
+    name: str = ""
+    args: Tuple[Any, ...] = ()
+    doc: str = ""
+    tags: Tuple[str, ...] = ()
+    source: Optional[str] = None
+    line_no: int = -1
+
+    def __str__(self) -> str:
+        return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
+
+    def range(self) -> Range:
+        return Range(
+            start=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
+            end=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
+        )
+
+    def to_markdown(self) -> str:
+        result = "```python\n"
+
+        result += f"def {self.name}({', '.join(self.args)})"
+
+        result += "\n```"
+
+        if self.doc:
+            result += "\n"
+            result += self.doc
+
+        return result
+
+
+class KeywordStore(Model):
+    keywords: Dict[str, KeywordDoc] = Field(default_factory=lambda: {})
+    __matchers: Optional[Dict[KeywordMatcher, KeywordDoc]] = PrivateAttr(None)
+
+    @property
+    def _matchers(self) -> Dict[KeywordMatcher, KeywordDoc]:
+        if self.__matchers is None:
+            self.__matchers = {KeywordMatcher(k): v for k, v in self.keywords.items()}
+        return self.__matchers
+
+    def __getitem__(self, key: str) -> "KeywordDoc":
+        for k, v in self._matchers.items():
+            if k == key:
+                return v
+        raise KeyError()
+
+    def __contains__(self, __x: object) -> bool:
+        return any(k == __x for k in self._matchers.keys())
+
+    def items(self) -> AbstractSet[Tuple[str, KeywordDoc]]:
+        return self.keywords.items()
+
+    def keys(self) -> AbstractSet[str]:
+        return self.keywords.keys()
+
+    def values(self) -> ValuesView[KeywordDoc]:
+        return self.keywords.values()
+
+    def get(self, key: str, default: Optional[KeywordDoc] = None) -> Optional[KeywordDoc]:
+        for k, v in self._matchers.items():
             if k == key:
                 return v
 
-        raise KeyError()
-
-    def __len__(self) -> int:
-        return len(self._items)
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(e.name for e in self._items)
-
-    def __contains__(self, __x: object) -> bool:
-        return any(k == __x for k in self._items.keys())
-
-    def items(self) -> AbstractSet[Tuple[str, KeywordDoc]]:
-        return {(k.name, v) for k, v in self._items.items()}
-
-    def keys(self) -> AbstractSet[str]:
-        return {k.name for k in self._items.keys()}
-
-    def values(self) -> ValuesView[KeywordDoc]:
-        return self._items.values()
+        return default
 
 
-@dataclass
-class Error:
+class Error(Model):
     message: str
     type_name: str
 
 
-@dataclass
-class LibraryDoc:
+class LibraryDoc(Model):
     name: str = ""
     doc: str = ""
     version: str = ""
@@ -144,13 +165,10 @@ class LibraryDoc:
     doc_format: str = "ROBOT"
     source: Optional[str] = None
     line_no: int = -1
-    inits: KeywordStore = field(default_factory=lambda: KeywordStore({}))
-    keywords: KeywordStore = field(default_factory=lambda: KeywordStore({}))
+    inits: KeywordStore = KeywordStore()
+    keywords: KeywordStore = KeywordStore()
 
     errors: Optional[Sequence[Error]] = None
-
-    def __str__(self) -> str:
-        return self.name
 
     def range(self) -> Range:
         return Range(
@@ -248,7 +266,10 @@ def get_library_doc(
     if is_library_by_path(name):
         name = robot_find_file(name, base_dir or ".", "Library")
 
-    lib = get_test_library(name, args, create_handlers=False)
+    try:
+        lib = get_test_library(name, args, create_handlers=False)
+    except BaseException as e:
+        return LibraryDoc(name=name, errors=[Error(message=str(e), type_name=type(e).__qualname__)])
 
     libdoc = LibraryDoc(
         name=str(lib.name),
@@ -258,9 +279,8 @@ def get_library_doc(
     try:
 
         libdoc.inits = KeywordStore(
-            {
+            keywords={
                 kw.name: KeywordDoc(
-                    libdoc,
                     name=libdoc.name,
                     args=tuple(str(a) for a in kw.args),
                     doc=kw.doc,
@@ -281,9 +301,8 @@ def get_library_doc(
         lib.create_handlers()
 
         libdoc.keywords = KeywordStore(
-            {
+            keywords={
                 kw.name: KeywordDoc(
-                    libdoc,
                     name=kw.name,
                     args=tuple(str(a) for a in kw.args),
                     doc=kw.doc,
@@ -294,10 +313,11 @@ def get_library_doc(
                 for kw in KeywordDocBuilder().build_keywords(lib)
             }
         )
+
     except (SystemExit, KeyboardInterrupt):
         raise
     except BaseException as e:
-        libdoc.errors = [Error(str(e), type(e).__qualname__)]
+        libdoc.errors = [Error(message=str(e), type_name=type(e).__qualname__)]
 
     return libdoc
 
@@ -314,3 +334,133 @@ def find_file(
     _update_sys_path(working_dir, pythonpath)
 
     return cast(str, robot_find_file(name, base_dir or ".", file_type))
+
+
+class ParameterMethod(enum.Enum):
+    GET_LIB_DOC = 1
+    FIND_NAME = 2
+
+
+class Parameters(BaseModel):
+    method: ParameterMethod
+    name: str
+    args: Optional[Tuple[Any, ...]] = None
+    working_dir: str = "."
+    base_dir: str = "."
+    pythonpath: Optional[List[str]] = None
+    file_type: str = "Resource"
+
+
+class Result(BaseModel):
+    lib_doc_result: Optional[LibraryDoc] = None
+    find_file_result: Optional[str] = None
+    error: Optional[Error] = None
+
+
+class LibraryDocRemoteError(Exception):
+    def __init__(self, message: str, type_name: Optional[str] = None) -> None:
+        super().__init__(message)
+        self.message = message
+        self.type_name = type_name
+
+
+async def _call_standalone(parameters: Parameters, timeout: Optional[float] = None) -> Result:
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        __file__,
+        parameters.json(),
+        stdout=asyncio.subprocess.PIPE,
+        stdin=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
+    stdout, stderr = await asyncio.wait_for(process.communicate(), timeout)
+
+    result = Result.parse_raw(stdout)
+
+    if stderr:
+        raise LibraryDocRemoteError(stderr.decode())
+    if result.error is not None:
+        raise LibraryDocRemoteError(result.error.message, result.error.type_name)
+
+    return result
+
+
+async def get_library_doc_external(
+    name: str,
+    args: Optional[Tuple[Any, ...]] = None,
+    working_dir: str = ".",
+    base_dir: str = ".",
+    pythonpath: Optional[List[str]] = None,
+    timeout: Optional[float] = None,
+) -> LibraryDoc:
+    result = await _call_standalone(
+        Parameters(
+            method=ParameterMethod.GET_LIB_DOC,
+            name=name,
+            args=args,
+            working_dir=working_dir,
+            base_dir=base_dir,
+            pythonpath=pythonpath,
+        ),
+        timeout,
+    )
+    if result.lib_doc_result is None:
+        raise LibraryDocRemoteError("lib_doc is 'None'")
+
+    return result.lib_doc_result
+
+
+async def find_file_external(
+    name: str,
+    working_dir: str = ".",
+    base_dir: str = ".",
+    pythonpath: Optional[List[str]] = None,
+    file_type: str = "Resource",
+    timeout: Optional[float] = None,
+) -> str:
+
+    result = await _call_standalone(
+        Parameters(
+            method=ParameterMethod.FIND_NAME,
+            name=name,
+            working_dir=working_dir,
+            base_dir=base_dir,
+            pythonpath=pythonpath,
+            file_type=file_type,
+        ),
+        timeout,
+    )
+    if result.find_file_result is None:
+        raise LibraryDocRemoteError("find_name is 'None'")
+
+    return result.find_file_result
+
+
+if __name__ == "__main__":
+    try:
+        params = Parameters.parse_raw(sys.argv[1])
+        if params.method == ParameterMethod.GET_LIB_DOC:
+            libdoc = get_library_doc(
+                params.name,
+                args=params.args,
+                working_dir=params.working_dir,
+                base_dir=params.base_dir,
+                pythonpath=params.pythonpath,
+            )
+
+            sys.stdout.write(Result(lib_doc_result=libdoc).json())
+        elif params.method == ParameterMethod.FIND_NAME:
+            result = find_file(
+                params.name,
+                working_dir=params.working_dir,
+                base_dir=params.base_dir,
+                pythonpath=params.pythonpath,
+                file_type=params.file_type,
+            )
+
+            sys.stdout.write(Result(find_file_result=result).json())
+
+    except BaseException as e:
+        sys.stdout.write(Result(error=Error(message=str(e), type_name=type(e).__qualname__)).json())
+        raise

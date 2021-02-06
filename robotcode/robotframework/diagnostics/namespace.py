@@ -240,6 +240,11 @@ class LibraryEntry:
     alias: Optional[str] = None
 
 
+@dataclass
+class ResourceEntry(LibraryEntry):
+    pass
+
+
 class Namespace:
     def __init__(
         self,
@@ -257,15 +262,15 @@ class Namespace:
         self._sentinel = weakref.ref(sentinel)
         self.invalidated_callback = invalidated_callback
 
-        self._libraries_lock = asyncio.Lock()
+        # self._libraries_lock = asyncio.Lock()
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
-        self._resources_lock = asyncio.Lock()
-        self._resources: OrderedDict[str, LibraryEntry] = OrderedDict()
+        # self._resources_lock = asyncio.Lock()
+        self._resources: OrderedDict[str, ResourceEntry] = OrderedDict()
         self._initialzed = False
         self._analyzed = False
         self._self_doc: Optional[LibraryDoc] = None
 
-        self._diagnostics_lock = asyncio.Lock()
+        # self._diagnostics_lock = asyncio.Lock()
         self._diagnostics: List[Diagnostic] = []
 
         self._keywords: Optional[List[KeywordDoc]] = None
@@ -281,20 +286,20 @@ class Namespace:
 
         await self._analyze()
 
-        async with self._diagnostics_lock:
-            return self._diagnostics
+        # async with self._diagnostics_lock:
+        return self._diagnostics
 
     async def get_libraries(self) -> OrderedDict[str, LibraryEntry]:
         await self._ensure_initialized()
 
-        async with self._libraries_lock:
-            return self._libraries
+        # async with self._libraries_lock:
+        return self._libraries
 
-    async def get_resources(self) -> OrderedDict[str, LibraryEntry]:
+    async def get_resources(self) -> OrderedDict[str, ResourceEntry]:
         await self._ensure_initialized()
 
-        async with self._resources_lock:
-            return self._resources
+        # async with self._resources_lock:
+        return self._resources
 
     async def _ensure_initialized(self) -> None:
         if not self._initialzed:
@@ -303,10 +308,9 @@ class Namespace:
             self._self_doc = await self._import_model(self.model, self.source, add_diagnostics=True)
 
     async def _import_imports(self, model: ast.AST, base_dir: str, *, add_diagnostics: bool = False) -> None:
-        for value in await ImportVisitor().get(model):
+        async def _import(value: Import) -> Optional[LibraryEntry]:
+            result: Optional[LibraryEntry] = None
             try:
-                result: Optional[LibraryDoc] = None
-
                 if isinstance(value, LibraryImport):
                     if value.name is None:
                         raise NameSpaceError("Library setting requires value.")
@@ -322,43 +326,8 @@ class Namespace:
                 else:
                     raise DiagnosticsException("Unknown import type.")
 
-                if result is not None and result.errors is not None and add_diagnostics:
-                    for e in result.errors:
-                        async with self._diagnostics_lock:
-                            self._diagnostics.append(
-                                Diagnostic(
-                                    range=Range(
-                                        start=Position(
-                                            line=value.name_token.line_no - 1
-                                            if value.name_token is not None
-                                            else value.line_no - 1,
-                                            character=value.name_token.col_offset
-                                            if value.name_token is not None
-                                            else value.col_offset,
-                                        ),
-                                        end=Position(
-                                            line=value.name_token.line_no - 1
-                                            if value.name_token is not None
-                                            else value.end_line_no - 1,
-                                            character=value.name_token.end_col_offset
-                                            if value.name_token is not None
-                                            else value.end_col_offset,
-                                        ),
-                                    ),
-                                    message=e.message,
-                                    severity=DiagnosticSeverity.ERROR,
-                                    source="Robot",
-                                    code=e.type_name,
-                                )
-                            )
-
-            except asyncio.CancelledError:
-                raise
-            except (SystemExit, KeyboardInterrupt):
-                raise
-            except BaseException as e:
-                if add_diagnostics:
-                    async with self._diagnostics_lock:
+                if result is not None and result.library_doc.errors is not None and add_diagnostics:
+                    for e in result.library_doc.errors:
                         self._diagnostics.append(
                             Diagnostic(
                                 range=Range(
@@ -379,31 +348,100 @@ class Namespace:
                                         else value.end_col_offset,
                                     ),
                                 ),
-                                message=str(e) or type(e).__name__,
+                                message=e.message,
                                 severity=DiagnosticSeverity.ERROR,
                                 source="Robot",
-                                code=type(e).__qualname__,
+                                code=e.type_name,
                             )
                         )
 
+            except asyncio.CancelledError:
+                raise
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                if add_diagnostics:
+                    self._diagnostics.append(
+                        Diagnostic(
+                            range=Range(
+                                start=Position(
+                                    line=value.name_token.line_no - 1
+                                    if value.name_token is not None
+                                    else value.line_no - 1,
+                                    character=value.name_token.col_offset
+                                    if value.name_token is not None
+                                    else value.col_offset,
+                                ),
+                                end=Position(
+                                    line=value.name_token.line_no - 1
+                                    if value.name_token is not None
+                                    else value.end_line_no - 1,
+                                    character=value.name_token.end_col_offset
+                                    if value.name_token is not None
+                                    else value.end_col_offset,
+                                ),
+                            ),
+                            message=str(e) or type(e).__name__,
+                            severity=DiagnosticSeverity.ERROR,
+                            source="Robot",
+                            code=type(e).__qualname__,
+                        )
+                    )
+            return result
+
+        for e in await asyncio.gather(*(_import(v) for v in await ImportVisitor().get(model))):
+            if e is not None:
+                if isinstance(e, ResourceEntry):
+                    self._resources[e.alias or e.name or e.import_name] = e
+                else:
+                    self._libraries[e.alias or e.name or e.import_name] = e
+                # TODO Variables
+
     async def _import_default_libraries(self) -> None:
-        for library in DEFAULT_LIBRARIES:
-            await self._import_library(library, (), None, str(Path(self.source).parent), is_default_library=True)
+        async def _import_lib(library: str) -> Optional[LibraryEntry]:
+            try:
+                return await self._import_library(
+                    library, (), None, str(Path(self.source).parent), is_default_library=True
+                )
+            except asyncio.CancelledError:
+                raise
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                self._diagnostics.append(
+                    Diagnostic(
+                        range=Range(
+                            start=Position(
+                                line=0,
+                                character=0,
+                            ),
+                            end=Position(
+                                line=0,
+                                character=0,
+                            ),
+                        ),
+                        message=f"Can't import default library '{library}': {str(e) or type(e).__name__}",
+                        severity=DiagnosticSeverity.ERROR,
+                        source="Robot",
+                        code=type(e).__qualname__,
+                    )
+                )
+                return None
+
+        for e in await asyncio.gather(*(_import_lib(library) for library in DEFAULT_LIBRARIES)):
+            if e is not None:
+                self._libraries[e.alias or e.name or e.import_name] = e
 
     async def _import_library(
         self, name: str, args: Tuple[Any, ...], alias: Optional[str], base_dir: str, *, is_default_library: bool = False
-    ) -> Optional[LibraryDoc]:
+    ) -> LibraryEntry:
         library = await self.library_manager.get_doc_from_library(
             None if is_default_library else (self._sentinel() or self.model), name, args, base_dir=base_dir
         )
-        async with self._libraries_lock:
-            self._libraries[alias or library.name or name] = LibraryEntry(
-                name=library.name, import_name=name, library_doc=library, args=args, alias=alias
-            )
 
-        return library
+        return LibraryEntry(name=library.name, import_name=name, library_doc=library, args=args, alias=alias)
 
-    async def _import_resource(self, name: str, base_dir: str) -> LibraryDoc:
+    async def _import_resource(self, name: str, base_dir: str) -> ResourceEntry:
         from robot.api import get_resource_model
 
         source = await self.library_manager.find_file(name, base_dir or ".", "Resource")
@@ -417,16 +455,11 @@ class Namespace:
 
         model = get_resource_model(source)
 
-        library = await self._import_model(model, source)
+        resource = await self._import_model(model, source)
 
-        async with self._resources_lock:
-            self._resources[library.name or name] = LibraryEntry(
-                name=library.name, import_name=name, library_doc=library, args=(), alias=None
-            )
+        return ResourceEntry(name=resource.name, import_name=name, library_doc=resource)
 
-        return library
-
-    async def _import_variables(self, name: str, args: Tuple[Any, ...], base_dir: str) -> LibraryDoc:
+    async def _import_variables(self, name: str, args: Tuple[Any, ...], base_dir: str) -> LibraryEntry:
         raise NotImplementedError("_import_variables")
 
     async def _import_model(self, model: ast.AST, source: str, *, add_diagnostics: bool = False) -> LibraryDoc:
@@ -441,15 +474,15 @@ class Namespace:
         await self._ensure_initialized()
         if self._keywords is None:
 
-            async with self._libraries_lock:
-                self._keywords = [
-                    e
-                    async for e in async_chain(
-                        *(e.library_doc.keywords.values() for e in self._libraries.values()),
-                        *(e.library_doc.keywords.values() for e in self._resources.values()),
-                        self._self_doc.keywords.values() if self._self_doc is not None else [],
-                    )
-                ]
+            # async with self._libraries_lock:
+            self._keywords = [
+                e
+                async for e in async_chain(
+                    *(e.library_doc.keywords.values() for e in self._libraries.values()),
+                    *(e.library_doc.keywords.values() for e in self._resources.values()),
+                    self._self_doc.keywords.values() if self._self_doc is not None else [],
+                )
+            ]
 
         return self._keywords
 
@@ -562,7 +595,7 @@ class KeywordFinder:
         return result
 
     async def _get_keyword_from_resource_files(self, name: str) -> Optional[KeywordDoc]:
-        found = [
+        found: List[Tuple[LibraryEntry, KeywordDoc]] = [
             (v, v.library_doc.keywords[name])
             async for v in async_chain(self.namespace._resources.values())
             if name in v.library_doc.keywords
@@ -570,7 +603,7 @@ class KeywordFinder:
         if not found:
             return None
         if len(found) > 1:
-            found = await self._get_runner_based_on_search_order(found)
+            found = await self._get_keyword_based_on_search_order(found)
         if len(found) == 1:
             return found[0][1]
 
@@ -583,7 +616,7 @@ class KeywordFinder:
         )
         raise CancelSearch()
 
-    async def _get_runner_based_on_search_order(
+    async def _get_keyword_based_on_search_order(
         self, entries: List[Tuple[LibraryEntry, KeywordDoc]]
     ) -> List[Tuple[LibraryEntry, KeywordDoc]]:
         from robot.utils.match import eq
@@ -604,7 +637,7 @@ class KeywordFinder:
         if not found:
             return None
         if len(found) > 1:
-            found = await self._get_runner_based_on_search_order(found)
+            found = await self._get_keyword_based_on_search_order(found)
         if len(found) == 2:
             found = await self._filter_stdlib_runner(*found)
         if len(found) == 1:
