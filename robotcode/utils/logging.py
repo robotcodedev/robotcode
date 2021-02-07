@@ -1,11 +1,13 @@
-from enum import Enum
+from __future__ import annotations
+
+import collections
 import functools
 import inspect
 import logging
+import time
+from enum import Enum
 from types import FunctionType, MethodType
 from typing import Any, Callable, List, Optional, Type, TypeVar, Union, cast, overload
-import collections
-import time
 
 __all__ = ["LoggingDescriptor"]
 
@@ -86,7 +88,7 @@ class LoggingDescriptor:
         self.__level = level
         self.__postfix = postfix
 
-    def __init_logger(self) -> "LoggingDescriptor":
+    def __init_logger(self) -> LoggingDescriptor:
         if self.__logger is None:
             returned_logger = None
 
@@ -135,13 +137,13 @@ class LoggingDescriptor:
         self.__owner = owner
         self.__owner_name = name
 
-    def __call__(self, _func: _FUNC_TYPE = None) -> "LoggingDescriptor":
+    def __call__(self, _func: _FUNC_TYPE = None) -> LoggingDescriptor:
         if _func is not None:
             self.__func = _func
 
         return self
 
-    def __get__(self, obj: Any, objtype: Type[Any]) -> "LoggingDescriptor":
+    def __get__(self, obj: Any, objtype: Type[Any]) -> LoggingDescriptor:
         return self
 
     def log(

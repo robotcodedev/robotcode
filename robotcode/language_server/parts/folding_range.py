@@ -1,12 +1,14 @@
-from typing import Optional, TYPE_CHECKING, Any, Dict, List
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from ...jsonrpc2.protocol import rpc_method
 from ...utils.async_event import async_tasking_event
 from ...utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
+from ..language import HasLanguageId
 from ..text_document import TextDocument
 from ..types import DocumentUri, FoldingRange, FoldingRangeParams, ServerCapabilities, TextDocumentIdentifier
-from ..language import HasLanguageId
 
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol
@@ -18,7 +20,7 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities
 
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: "LanguageServerProtocol") -> None:
+    def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)
         self._documents: Dict[DocumentUri, TextDocument] = {}
 

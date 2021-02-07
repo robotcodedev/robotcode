@@ -1,10 +1,12 @@
+from __future__ import annotations
+
+import os
 import re
+from collections.abc import Mapping
+from dataclasses import astuple, dataclass, fields
+from pathlib import Path
 from typing import Any, Iterator, Optional, overload
 from urllib import parse
-import os
-from dataclasses import dataclass, astuple, fields
-from pathlib import Path
-from collections.abc import Mapping
 
 _IS_WIN = os.name == "nt"
 
@@ -136,11 +138,11 @@ class Uri(Mapping[str, str]):
         return self._parts.query
 
     @classmethod
-    def from_path_str(cls, path: str) -> "Uri":
+    def from_path_str(cls, path: str) -> Uri:
         return cls.from_path(Path(path))
 
     @staticmethod
-    def from_path(path: Path) -> "Uri":
+    def from_path(path: Path) -> Uri:
         result = Uri(path.as_uri())
         result._parts.path = parse.quote(parse.unquote(result._parts.path))
         return result

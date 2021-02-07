@@ -14,6 +14,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    Union,
     ValuesView,
     cast,
 )
@@ -41,7 +42,16 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
 from pydantic import BaseModel, Field, PrivateAttr
 from ...language_server.types import Position, Range
 
-__all__ = ["KeywordDoc", "LibraryDoc", "is_library_by_path", "get_library_doc", "find_file"]
+__all__ = [
+    "KeywordDoc",
+    "LibraryDoc",
+    "KeywordStore",
+    "is_library_by_path",
+    "get_library_doc",
+    "find_file",
+    "get_library_doc_external",
+    "find_file_external",
+]
 
 
 class KeywordMatcher:
@@ -241,24 +251,32 @@ def get_library_doc(
     from robot.utils import Importer
     from robot.utils.robotpath import find_file as robot_find_file
 
-    def get_test_library(
+    def import_test_library(
         name: str,
-        args: Optional[Tuple[Any, ...]] = None,
-        variables: Any = None,
-        create_handlers: bool = True,
-        logger: Any = LOGGER,
-    ) -> Any:
+    ) -> Union[Any, Tuple[Any, str]]:
+
         if name in STDLIBS:
             import_name = "robot.libraries." + name
         else:
             import_name = name
         with OutputCapturer(library_import=True):
             importer = Importer("test library")
-            libcode, source = importer.import_class_or_module(import_name, return_source=True)
+            return importer.import_class_or_module(import_name, return_source=True)
+
+    def get_test_library(
+        libcode: Any,
+        source: str,
+        name: str,
+        args: Optional[Tuple[Any, ...]] = None,
+        variables: Any = None,
+        create_handlers: bool = True,
+        logger: Any = LOGGER,
+    ) -> Any:
         libclass = _get_lib_class(libcode)
         lib = libclass(libcode, name, args or [], source, logger, variables)
         if create_handlers:
             lib.create_handlers()
+
         return lib
 
     _update_sys_path(working_dir, pythonpath)
@@ -266,10 +284,12 @@ def get_library_doc(
     if is_library_by_path(name):
         name = robot_find_file(name, base_dir or ".", "Library")
 
+    source = None
     try:
-        lib = get_test_library(name, args, create_handlers=False)
+        libcode, source = import_test_library(name)
+        lib = get_test_library(libcode, source, name, args, create_handlers=False)
     except BaseException as e:
-        return LibraryDoc(name=name, errors=[Error(message=str(e), type_name=type(e).__qualname__)])
+        return LibraryDoc(name=name, source=source, errors=[Error(message=str(e), type_name=type(e).__qualname__)])
 
     libdoc = LibraryDoc(
         name=str(lib.name),

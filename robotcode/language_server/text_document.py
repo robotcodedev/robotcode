@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import io
 import weakref
@@ -46,7 +48,7 @@ class TextDocument:
         language_id: str,
         version: int,
         text: str,
-        parent: Optional["TextDocument"] = None,
+        parent: Optional[TextDocument] = None,
     ) -> None:
         ...
 
@@ -58,7 +60,7 @@ class TextDocument:
         language_id: Optional[str] = None,
         version: Optional[int] = None,
         text: Optional[str] = None,
-        parent: Optional["TextDocument"] = None,
+        parent: Optional[TextDocument] = None,
     ) -> None:
         super().__init__()
 
@@ -80,13 +82,13 @@ class TextDocument:
             self._parent = weakref.ref(parent)
 
     @property
-    def parent(self) -> Optional["TextDocument"]:
+    def parent(self) -> Optional[TextDocument]:
         if self._parent is None:
             return None
 
         return self._parent()
 
-    def freeze(self) -> "TextDocument":
+    def freeze(self) -> TextDocument:
         return TextDocument(
             document_uri=self.document_uri,
             language_id=self.language_id,
@@ -95,7 +97,7 @@ class TextDocument:
             parent=self,
         )
 
-    async def freeze_async(self) -> "TextDocument":
+    async def freeze_async(self) -> TextDocument:
         async with self._lock:
             return self.freeze()
 

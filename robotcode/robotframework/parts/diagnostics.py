@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import ast
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from ...jsonrpc2.protocol import GenericJsonRPCProtocolPart
 from ...language_server.language import language_id
 from ...language_server.text_document import TextDocument
 from ...language_server.types import Diagnostic, DiagnosticSeverity, Position, Range
@@ -10,11 +11,13 @@ from ...utils.logging import LoggingDescriptor
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
+from .protocol_part import RobotLanguageServerProtocolPart
 
-class RobotDiagnosticsProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServerProtocol"]):
+
+class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
+    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
         self.source_name = "robotcode"

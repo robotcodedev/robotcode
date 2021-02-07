@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import asyncio
 import weakref
@@ -252,7 +254,7 @@ class Namespace:
         model: ast.AST,
         source: str,
         sentinel: Any,
-        invalidated_callback: Callable[["Namespace"], None],
+        invalidated_callback: Callable[[Namespace], None],
     ) -> None:
         super().__init__()
         self.library_manager = library_manager

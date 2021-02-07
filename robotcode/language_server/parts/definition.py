@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 from ...jsonrpc2.protocol import rpc_method
@@ -6,14 +8,7 @@ from ...utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
 from ..language import HasLanguageId
 from ..text_document import TextDocument
-from ..types import (
-    DefinitionParams,
-    Location,
-    LocationLink,
-    Position,
-    ServerCapabilities,
-    TextDocumentIdentifier,
-)
+from ..types import DefinitionParams, Location, LocationLink, Position, ServerCapabilities, TextDocumentIdentifier
 
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol
@@ -25,7 +20,7 @@ class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: "LanguageServerProtocol") -> None:
+    def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)
         self.link_support = False
 

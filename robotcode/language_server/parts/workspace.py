@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import uuid
-from typing import Callable, Coroutine, TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple, Union
 import weakref
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Mapping, Optional, Tuple, Union
 
 from ...jsonrpc2.protocol import rpc_method
 from ...utils.async_event import async_event
@@ -77,7 +79,7 @@ class Workspace(LanguageServerProtocolPart):
 
     def __init__(
         self,
-        parent: "LanguageServerProtocol",
+        parent: LanguageServerProtocol,
         root_uri: Optional[str],
         root_path: Optional[str],
         workspace_folders: Optional[List[TypesWorkspaceFolder]] = None,

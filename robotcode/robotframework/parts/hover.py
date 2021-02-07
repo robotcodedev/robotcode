@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Optional, cast
 
-from ...jsonrpc2.protocol import GenericJsonRPCProtocolPart
 from ...language_server.language import language_id
 from ...language_server.text_document import TextDocument
 from ...language_server.types import Hover, MarkupContent, MarkupKind, Position
@@ -11,11 +12,13 @@ from ..utils.async_visitor import walk
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
+from .protocol_part import RobotLanguageServerProtocolPart
 
-class RobotHoverProtocolPart(GenericJsonRPCProtocolPart["RobotLanguageServerProtocol"]):
+
+class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
+    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
         parent.hover.collect.add(self.collect_hover)

@@ -1,8 +1,11 @@
-from typing import Any, Iterator, Mapping, TYPE_CHECKING, Dict, List, Optional
+from __future__ import annotations
 
-from ...utils.logging import LoggingDescriptor
-from ...utils.async_event import async_event
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Mapping, Optional
+
 from ...jsonrpc2.protocol import JsonRPCException, rpc_method
+from ...utils.async_event import async_event
+from ...utils.logging import LoggingDescriptor
+from ..text_document import TextDocument
 from ..types import (
     DidChangeTextDocumentParams,
     DidCloseTextDocumentParams,
@@ -22,8 +25,6 @@ from ..types import (
     WillSaveTextDocumentParams,
 )
 
-from ..text_document import TextDocument
-
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol
 
@@ -40,7 +41,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
 
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: "LanguageServerProtocol") -> None:
+    def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)
         self._documents: Dict[DocumentUri, TextDocument] = {}
 

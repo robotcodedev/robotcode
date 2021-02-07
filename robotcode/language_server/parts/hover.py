@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from ...jsonrpc2.protocol import rpc_method
@@ -18,7 +20,7 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: "LanguageServerProtocol") -> None:
+    def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)
         self._documents: Dict[DocumentUri, TextDocument] = {}
 

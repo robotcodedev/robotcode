@@ -9,6 +9,7 @@ from typing import Any, List, Optional, Tuple
 from ...language_server.parts.workspace import FileWatcherEntry, Workspace
 from ...language_server.types import FileChangeType, FileEvent
 from ...utils.async_event import async_tasking_event
+from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
 from ..configuration import RobotConfig
 from ..utils.async_visitor import walk
@@ -35,6 +36,8 @@ class _Entry:
 
 
 class LibraryManager:
+    _logger = LoggingDescriptor()
+
     def __init__(self, workspace: Workspace, folder: Uri, config: Optional[RobotConfig]) -> None:
         super().__init__()
         self.workspace = workspace
@@ -76,12 +79,15 @@ class LibraryManager:
 
             await self.libraries_removed(self, [entry[1].doc.source for entry in to_remove])
 
+    @_logger.call
     async def get_doc_from_library(
         self, sentinel: Any, name: str, args: Tuple[Any, ...] = (), base_dir: str = "."
     ) -> LibraryDoc:
         entry_key = _EntryKey(name, args)
 
         if entry_key not in self._libaries:
+            self._logger.debug(lambda: f"need to load/reload library {name} with {args}")
+
             lib_doc = await get_library_doc_external(
                 name,
                 args,
@@ -107,6 +113,7 @@ class LibraryManager:
 
         return entry.doc
 
+    @_logger.call
     async def get_doc_from_model(
         self, model: ast.AST, source: str, model_type: str = "RESOURCE", scope: str = "GLOBAL"
     ) -> LibraryDoc:
@@ -168,6 +175,7 @@ class LibraryManager:
 
         return libdoc
 
+    @_logger.call
     async def find_file(self, name: str, base_dir: str = ".", file_type: str = "Resource") -> str:
         return await find_file_external(
             name,

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import asyncio
 import io
@@ -10,12 +12,15 @@ from ...language_server.parts.workspace import WorkspaceFolder
 if TYPE_CHECKING:
     from robot.parsing.lexer import Token
 
-from ...language_server.parts.protocol_part import LanguageServerProtocolPart
-from ...language_server.protocol import LanguageServerProtocol
 from ...language_server.text_document import TextDocument
 from ..configuration import RobotcodeConfig
 from ..diagnostics.library_manager import LibraryManager
 from ..diagnostics.namespace import Namespace
+
+if TYPE_CHECKING:
+    from ..protocol import RobotLanguageServerProtocol
+
+from .protocol_part import RobotLanguageServerProtocolPart
 
 _TResult = TypeVar("_TResult")
 
@@ -32,8 +37,8 @@ class _Entry:
     namespace: Optional[Namespace] = None
 
 
-class ModelTokenCache(LanguageServerProtocolPart):
-    def __init__(self, parent: "LanguageServerProtocol") -> None:
+class ModelTokenCache(RobotLanguageServerProtocolPart):
+    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
         self._lock = asyncio.Lock()
         self._entries: Dict[Tuple[weakref.ref[TextDocument], int], _Entry] = {}

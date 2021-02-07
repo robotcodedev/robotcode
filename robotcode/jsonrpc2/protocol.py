@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import inspect
 import json
@@ -181,20 +183,20 @@ def rpc_method(
 
 @runtime_checkable
 class HasRpcRegistry(Protocol):
-    __rpc_registry__: "RpcRegistry"
+    __rpc_registry__: RpcRegistry
 
 
 class RpcRegistry:
-    _class_registries: Dict[Type[Any], "RpcRegistry"] = {}
+    _class_registries: Dict[Type[Any], RpcRegistry] = {}
 
-    def __init__(self, owner: Any = None, parent: Optional["RpcRegistry"] = None):
+    def __init__(self, owner: Any = None, parent: Optional[RpcRegistry] = None):
         self.__owner = owner
         self.__owner_name = ""
         self.__parent = parent
         self.__methods: Dict[str, RpcMethodEntry] = {}
         self.__initialized = False
         self.__class_parts: Dict[str, Type[Any]] = {}
-        self.__class_part_instances: weakref.WeakSet["GenericJsonRPCProtocolPart[Any]"] = weakref.WeakSet()
+        self.__class_part_instances: weakref.WeakSet[GenericJsonRPCProtocolPart[Any]] = weakref.WeakSet()
 
     def __set_name__(self, owner: Any, name: str) -> None:
         self.__owner = owner
@@ -223,12 +225,12 @@ class RpcRegistry:
         self._reset()
         self.__class_parts[name] = class_type
 
-    def add_class_part_instance(self, instance: "GenericJsonRPCProtocolPart[Any]") -> None:
+    def add_class_part_instance(self, instance: GenericJsonRPCProtocolPart[Any]) -> None:
         self._reset()
         self.__class_part_instances.add(instance)
 
     @property
-    def parts(self) -> Set["GenericJsonRPCProtocolPart[Any]"]:
+    def parts(self) -> Set[GenericJsonRPCProtocolPart[Any]]:
         self.__ensure_initialized()
 
         return set(self.__class_part_instances)

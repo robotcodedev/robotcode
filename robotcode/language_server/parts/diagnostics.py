@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
@@ -88,7 +90,7 @@ class PublishDiagnosticsEntry:
 class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
-    def __init__(self, protocol: "LanguageServerProtocol") -> None:
+    def __init__(self, protocol: LanguageServerProtocol) -> None:
         super().__init__(protocol)
 
         self._running_diagnosistcs: Dict[Uri, PublishDiagnosticsEntry] = {}
@@ -111,7 +113,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         await self._cancel_all_tasks()
 
     @_logger.call
-    async def on_shutdown(self, sender: "LanguageServerProtocol") -> None:
+    async def on_shutdown(self, sender: Any) -> None:
         await self._cancel_all_tasks()
 
     def __del__(self) -> None:
