@@ -100,6 +100,8 @@ class KeywordDoc(Model):
     tags: Tuple[str, ...] = ()
     source: Optional[str] = None
     line_no: int = -1
+    end_line_no: int = -1
+    type: str = "keyword"
 
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
@@ -107,13 +109,16 @@ class KeywordDoc(Model):
     def range(self) -> Range:
         return Range(
             start=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
-            end=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
+            end=Position(
+                line=self.end_line_no - 1 if self.end_line_no >= 0 else self.line_no if self.line_no >= 0 else 0,
+                character=0,
+            ),
         )
 
     def to_markdown(self) -> str:
         result = "```python\n"
 
-        result += f"def {self.name}({', '.join(self.args)})"
+        result += f"({self.type}) \"{self.name}\": ({', '.join(self.args)})"
 
         result += "\n```"
 
@@ -142,6 +147,9 @@ class KeywordStore(Model):
 
     def __contains__(self, __x: object) -> bool:
         return any(k == __x for k in self._matchers.keys())
+
+    def __len__(self) -> int:
+        return len(self.keywords)
 
     def items(self) -> AbstractSet[Tuple[str, KeywordDoc]]:
         return self.keywords.items()
@@ -175,6 +183,7 @@ class LibraryDoc(Model):
     doc_format: str = "ROBOT"
     source: Optional[str] = None
     line_no: int = -1
+    end_line_no: int = -1
     inits: KeywordStore = KeywordStore()
     keywords: KeywordStore = KeywordStore()
 
@@ -183,7 +192,10 @@ class LibraryDoc(Model):
     def range(self) -> Range:
         return Range(
             start=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
-            end=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
+            end=Position(
+                line=self.end_line_no - 1 if self.end_line_no >= 0 else self.line_no if self.line_no >= 0 else 0,
+                character=0,
+            ),
         )
 
     def to_markdown(self) -> str:
@@ -191,6 +203,10 @@ class LibraryDoc(Model):
 
         if self.inits:
             result += "\n\n---\n".join(i.to_markdown() for i in self.inits.values())
+        else:
+            result += "```python\n"
+            result += f'({self.type.lower()}) "{self.name}": ()'
+            result += "\n```"
 
         if self.doc:
             if result:
@@ -296,6 +312,47 @@ def get_library_doc(
         source=lib.source,
     )
 
+    class KeywordWrapper:
+        def __init__(self, kw: Any, source: str) -> None:
+            self.kw = kw
+            self.lib_source = source
+
+        @property
+        def name(self) -> Any:
+            return self.kw.name
+
+        @property
+        def arguments(self) -> Any:
+            return self.kw.arguments
+
+        @property
+        def doc(self) -> Any:
+            try:
+                return self.kw.doc
+            except BaseException:
+                return ""
+
+        @property
+        def tags(self) -> Any:
+            try:
+                return self.kw.tags
+            except BaseException:
+                return []
+
+        @property
+        def source(self) -> Any:
+            try:
+                return self.kw.source
+            except BaseException:
+                return self.lib_source
+
+        @property
+        def lineno(self) -> Any:
+            try:
+                return self.kw.lineno
+            except BaseException:
+                return 0
+
     try:
 
         libdoc.inits = KeywordStore(
@@ -307,8 +364,9 @@ def get_library_doc(
                     tags=tuple(kw.tags),
                     source=kw.source,
                     line_no=kw.lineno,
+                    type="library",
                 )
-                for kw in [KeywordDocBuilder().build_keyword(lib.init)]
+                for kw in [KeywordDocBuilder().build_keyword(KeywordWrapper(lib.init, source))]
             }
         )
 

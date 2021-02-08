@@ -769,6 +769,19 @@ class Range(Model):
     def __iter__(self) -> Iterator[Position]:  # type: ignore
         return iter((self.start, self.end))
 
+    @staticmethod
+    def empty() -> "Range":
+        return Range(
+            start=Position(
+                line=0,
+                character=0,
+            ),
+            end=Position(
+                line=0,
+                character=0,
+            ),
+        )
+
 
 class TextDocumentItem(Model):
     uri: DocumentUri

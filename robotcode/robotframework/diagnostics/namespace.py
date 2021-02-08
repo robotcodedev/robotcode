@@ -9,13 +9,15 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Callable, List, NamedTuple, Optional, Sequence, Tuple, cast
 
 from ...language_server.types import Diagnostic, DiagnosticSeverity, Position, Range
-from ..utils.ast import range_from_token_or_node
+from ..utils.ast import range_from_token_or_node, Token as AstToken
 from ...utils.async_itertools import async_chain
 from ..utils.async_visitor import AsyncVisitor
 from .library_doc import KeywordDoc, LibraryDoc
 from .library_manager import DEFAULT_LIBRARIES, LibraryManager
 
 RESOURCE_EXTENSIONS = (".resource", ".robot", ".txt", ".tsv", ".rst", ".rest")
+
+DIAGNOSTICS_SOURCE_NAME = "RobotCode"
 
 
 class DiagnosticsException(Exception):
@@ -53,6 +55,18 @@ class Import:
     col_offset: int
     end_line_no: int
     end_col_offset: int
+
+    def range(self) -> Range:
+        return Range(
+            start=Position(
+                line=self.name_token.line_no - 1 if self.name_token is not None else self.line_no - 1,
+                character=self.name_token.col_offset if self.name_token is not None else self.col_offset,
+            ),
+            end=Position(
+                line=self.name_token.line_no - 1 if self.name_token is not None else self.end_line_no - 1,
+                character=self.name_token.end_col_offset if self.name_token is not None else self.end_col_offset,
+            ),
+        )
 
 
 @dataclass
@@ -158,24 +172,19 @@ class KeywordAnalyzer(AsyncVisitor):
         await self.visit(model)
         return self._results
 
-    async def visit_Fixture(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.model.statements import Fixture
-        from robot.parsing.lexer.tokens import Token as RobotToken
-
-        value = cast(Fixture, node)
-        keyword_token = cast(RobotToken, value.get_token(RobotToken.NAME))
+    async def _analyze_keyword(self, keyword: Optional[str], value: ast.AST, token: AstToken) -> None:
         try:
             finder = KeywordFinder(self._namespace)
 
-            await finder.find_keyword(value.name)
+            await finder.find_keyword(keyword)
 
-            for e in finder.errors:
+            for e in finder.diagnostics:
                 self._results.append(
                     Diagnostic(
-                        range=range_from_token_or_node(value, keyword_token),
+                        range=range_from_token_or_node(value, token),
                         message=e.message,
                         severity=e.severity,
-                        source="Robot",
+                        source=DIAGNOSTICS_SOURCE_NAME,
                         code=e.code,
                     )
                 )
@@ -185,13 +194,22 @@ class KeywordAnalyzer(AsyncVisitor):
         except BaseException as e:
             self._results.append(
                 Diagnostic(
-                    range=range_from_token_or_node(value, keyword_token),
+                    range=range_from_token_or_node(value, token),
                     message=str(e),
                     severity=DiagnosticSeverity.ERROR,
-                    source="Robot",
+                    source=DIAGNOSTICS_SOURCE_NAME,
                     code=type(e).__qualname__,
                 )
             )
+
+    async def visit_Fixture(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.model.statements import Fixture
+        from robot.parsing.lexer.tokens import Token as RobotToken
+
+        value = cast(Fixture, node)
+        keyword_token = cast(AstToken, value.get_token(RobotToken.NAME))
+
+        await self._analyze_keyword(value.name, value, keyword_token)
 
         await self.generic_visit(node)
 
@@ -202,33 +220,7 @@ class KeywordAnalyzer(AsyncVisitor):
         value = cast(KeywordCall, node)
         keyword_token = cast(RobotToken, value.get_token(RobotToken.KEYWORD))
 
-        try:
-            finder = KeywordFinder(self._namespace)
-
-            await finder.find_keyword(value.keyword)
-
-            for e in finder.errors:
-                self._results.append(
-                    Diagnostic(
-                        range=range_from_token_or_node(value, keyword_token),
-                        message=e.message,
-                        severity=e.severity,
-                        source="Robot",
-                        code=e.code,
-                    )
-                )
-        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
-            raise
-        except BaseException as e:
-            self._results.append(
-                Diagnostic(
-                    range=range_from_token_or_node(value, keyword_token),
-                    message=str(e),
-                    severity=DiagnosticSeverity.ERROR,
-                    source="Robot",
-                    code=type(e).__qualname__,
-                )
-            )
+        await self._analyze_keyword(value.keyword, value, keyword_token)
 
         await self.generic_visit(node)
 
@@ -317,6 +309,15 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Library setting requires value.")
                     result = await self._import_library(value.name, value.args, value.alias, base_dir)
+                    if result.library_doc.errors is None and len(result.library_doc.keywords) == 0:
+                        self._diagnostics.append(
+                            Diagnostic(
+                                range=value.range(),
+                                message=f"Imported library '{value.name}' contains no keywords.",
+                                severity=DiagnosticSeverity.WARNING,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                            )
+                        )
                 elif isinstance(value, ResourceImport):
                     if value.name is None:
                         raise NameSpaceError("Resource setting requires value.")
@@ -328,31 +329,14 @@ class Namespace:
                 else:
                     raise DiagnosticsException("Unknown import type.")
 
-                if result is not None and result.library_doc.errors is not None and add_diagnostics:
+                if result.library_doc.errors is not None and add_diagnostics:
                     for e in result.library_doc.errors:
                         self._diagnostics.append(
                             Diagnostic(
-                                range=Range(
-                                    start=Position(
-                                        line=value.name_token.line_no - 1
-                                        if value.name_token is not None
-                                        else value.line_no - 1,
-                                        character=value.name_token.col_offset
-                                        if value.name_token is not None
-                                        else value.col_offset,
-                                    ),
-                                    end=Position(
-                                        line=value.name_token.line_no - 1
-                                        if value.name_token is not None
-                                        else value.end_line_no - 1,
-                                        character=value.name_token.end_col_offset
-                                        if value.name_token is not None
-                                        else value.end_col_offset,
-                                    ),
-                                ),
+                                range=value.range(),
                                 message=e.message,
                                 severity=DiagnosticSeverity.ERROR,
-                                source="Robot",
+                                source=DIAGNOSTICS_SOURCE_NAME,
                                 code=e.type_name,
                             )
                         )
@@ -365,27 +349,10 @@ class Namespace:
                 if add_diagnostics:
                     self._diagnostics.append(
                         Diagnostic(
-                            range=Range(
-                                start=Position(
-                                    line=value.name_token.line_no - 1
-                                    if value.name_token is not None
-                                    else value.line_no - 1,
-                                    character=value.name_token.col_offset
-                                    if value.name_token is not None
-                                    else value.col_offset,
-                                ),
-                                end=Position(
-                                    line=value.name_token.line_no - 1
-                                    if value.name_token is not None
-                                    else value.end_line_no - 1,
-                                    character=value.name_token.end_col_offset
-                                    if value.name_token is not None
-                                    else value.end_col_offset,
-                                ),
-                            ),
+                            range=value.range(),
                             message=str(e) or type(e).__name__,
                             severity=DiagnosticSeverity.ERROR,
-                            source="Robot",
+                            source=DIAGNOSTICS_SOURCE_NAME,
                             code=type(e).__qualname__,
                         )
                     )
@@ -412,16 +379,7 @@ class Namespace:
             except BaseException as e:
                 self._diagnostics.append(
                     Diagnostic(
-                        range=Range(
-                            start=Position(
-                                line=0,
-                                character=0,
-                            ),
-                            end=Position(
-                                line=0,
-                                character=0,
-                            ),
-                        ),
+                        range=Range.empty(),
                         message=f"Can't import default library '{library}': {str(e) or type(e).__name__}",
                         severity=DiagnosticSeverity.ERROR,
                         source="Robot",
@@ -498,7 +456,7 @@ class Namespace:
         return await KeywordFinder(self).find_keyword(name)
 
 
-class ErrorEntry(NamedTuple):
+class DiagnosticsEntry(NamedTuple):
     message: str
     severity: DiagnosticSeverity
     code: Optional[str] = None
@@ -512,14 +470,16 @@ class KeywordFinder:
     def __init__(self, namespace: Namespace) -> None:
         super().__init__()
         self.namespace = namespace
-        self.errors: List[ErrorEntry] = []
+        self.diagnostics: List[DiagnosticsEntry] = []
 
     async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
         try:
             result = await self._find_keyword(name)
             if result is None:
-                self.errors.append(
-                    ErrorEntry(f"No keyword with name {repr(name)} found.", DiagnosticSeverity.ERROR, "KeywordError")
+                self.diagnostics.append(
+                    DiagnosticsEntry(
+                        f"No keyword with name {repr(name)} found.", DiagnosticSeverity.ERROR, "KeywordError"
+                    )
                 )
             return result
         except CancelSearch:
@@ -527,10 +487,14 @@ class KeywordFinder:
 
     async def _find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
         if not name:
-            self.errors.append(ErrorEntry("Keyword name cannot be empty.", DiagnosticSeverity.ERROR, "KeywordError"))
+            self.diagnostics.append(
+                DiagnosticsEntry("Keyword name cannot be empty.", DiagnosticSeverity.ERROR, "KeywordError")
+            )
             return None
         if not isinstance(name, str):
-            self.errors.append(ErrorEntry("Keyword name must be a string.", DiagnosticSeverity.ERROR, "KeywordError"))
+            self.diagnostics.append(
+                DiagnosticsEntry("Keyword name must be a string.", DiagnosticSeverity.ERROR, "KeywordError")
+            )
             return None
 
         result = await self._get_keyword_from_self(name)
@@ -560,8 +524,8 @@ class KeywordFinder:
         async for owner_name, kw_name in self._yield_owner_and_kw_names(name):
             found.extend(await self._find_keywords(owner_name, kw_name))
         if len(found) > 1:
-            self.errors.append(
-                ErrorEntry(
+            self.diagnostics.append(
+                DiagnosticsEntry(
                     self._create_multiple_keywords_found_message(name, found, implicit=False),
                     DiagnosticSeverity.ERROR,
                     "KeywordError",
@@ -609,8 +573,8 @@ class KeywordFinder:
         if len(found) == 1:
             return found[0][1]
 
-        self.errors.append(
-            ErrorEntry(
+        self.diagnostics.append(
+            DiagnosticsEntry(
                 self._create_multiple_keywords_found_message(name, found),
                 DiagnosticSeverity.ERROR,
                 "KeywordError",
@@ -645,8 +609,8 @@ class KeywordFinder:
         if len(found) == 1:
             return found[0][1]
 
-        self.errors.append(
-            ErrorEntry(
+        self.diagnostics.append(
+            DiagnosticsEntry(
                 self._create_multiple_keywords_found_message(name, found),
                 DiagnosticSeverity.ERROR,
                 "KeywordError",
@@ -667,8 +631,8 @@ class KeywordFinder:
         else:
             return [entry1, entry2]
 
-        self.errors.append(
-            ErrorEntry(
+        self.diagnostics.append(
+            DiagnosticsEntry(
                 self._create_custom_and_standard_keyword_conflict_warning_message(custom, standard),
                 DiagnosticSeverity.WARNING,
                 "KeywordError",
