@@ -55,8 +55,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
         self.loop = asyncio.get_event_loop()
 
-        # self.loop.set_debug(True)
-
     @property
     def __del__(self) -> None:
         self.close()
@@ -127,6 +125,12 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
             self.loop.run_until_complete(aio_readline(sys.__stdin__.buffer, protocol))
 
         self._run_func = run_io_nonblocking
+
+        # protocol = self.create_protocol()
+        # self.loop.run_until_complete(self.loop.connect_write_pipe(lambda: protocol, sys.stdout.buffer))
+        # self.loop.run_until_complete(self.loop.connect_read_pipe(lambda: protocol, sys.stdin.buffer))
+
+        # self._run_func = self.loop.run_forever
 
     @_logger.call
     def start_tcp(self, host: Optional[str] = None, port: int = 0) -> None:

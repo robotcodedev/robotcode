@@ -47,16 +47,18 @@ class LibraryManager:
         self._libaries: OrderedDict[_EntryKey, _Entry] = OrderedDict()
         self._loop = asyncio.get_event_loop()
 
-    def __remove_entry(self, entry_key: _EntryKey, entry: _Entry) -> None:
-        async def check(k: _EntryKey, e: _Entry) -> None:
-            async with self._libaries_lock:
-                self._libaries.pop(k, None)
+    def __remove_entry(self, entry_key: _EntryKey, entry: _Entry, now: bool = False) -> None:
+        async def threadsafe_remove(k: _EntryKey, e: _Entry, n: bool) -> None:
+            if n or len(e.references) == 0:
+                self._logger.debug(lambda: f"remove library {k.name} with {k.args}")
+                async with self._libaries_lock:
+                    self._libaries.pop(k, None)
 
-            if e is not None and e.file_watcher is not None:
-                await self.workspace.remove_file_watcher(e.file_watcher)
+                if e is not None and e.file_watcher is not None:
+                    await self.workspace.remove_file_watcher(e.file_watcher)
 
         if self._loop.is_running():
-            asyncio.run_coroutine_threadsafe(check(entry_key, entry), loop=self._loop)
+            asyncio.run_coroutine_threadsafe(threadsafe_remove(entry_key, entry, now), loop=self._loop)
 
     @async_tasking_event
     async def libraries_removed(sender, library_sources: List[str]) -> None:
@@ -75,7 +77,7 @@ class LibraryManager:
 
         if to_remove:
             for r in to_remove:
-                self.__remove_entry(*r)
+                self.__remove_entry(r[0], r[1], True)
 
             await self.libraries_removed(self, [entry[1].doc.source for entry in to_remove])
 
@@ -86,7 +88,7 @@ class LibraryManager:
         entry_key = _EntryKey(name, args)
 
         if entry_key not in self._libaries:
-            self._logger.debug(lambda: f"need to load/reload library {name} with {args}")
+            self._logger.debug(lambda: f"load/reload library {name} with {args}")
 
             lib_doc = await get_library_doc_external(
                 name,
@@ -94,7 +96,7 @@ class LibraryManager:
                 self.folder.to_path_str(),
                 base_dir,
                 self.config.pythonpath if self.config is not None else None,
-                timeout=100,
+                timeout=30,
             )
 
             async with self._libaries_lock:

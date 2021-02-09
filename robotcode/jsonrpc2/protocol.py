@@ -36,6 +36,9 @@ from ..utils.async_event import async_event
 from ..utils.inspect import ensure_coroutine, iter_methods
 from ..utils.logging import LoggingDescriptor
 
+if TYPE_CHECKING:
+    from .server import JsonRPCServer
+
 __all__ = [
     "JsonRPCErrors",
     "JsonRPCMessage",
@@ -45,7 +48,6 @@ __all__ = [
     "JsonRPCError",
     "JsonRPCErrorObject",
     "JsonRPCProtocol",
-    "JsonRPCServer",
     "JsonRPCException",
     "JsonRPCParseError",
     "InvalidProtocolVersionException",
@@ -56,9 +58,6 @@ __all__ = [
     "GenericJsonRPCProtocolPart",
     "TProtocol",
 ]
-
-if TYPE_CHECKING:
-    from .server import JsonRPCServer
 
 T = TypeVar("T")
 TResult = TypeVar("TResult")
@@ -191,8 +190,6 @@ class RpcRegistry:
 
     def __init__(self, owner: Any = None, parent: Optional[RpcRegistry] = None):
         self.__owner = owner
-        self.__owner_name = ""
-        self.__parent = parent
         self.__methods: Dict[str, RpcMethodEntry] = {}
         self.__initialized = False
         self.__class_parts: Dict[str, Type[Any]] = {}
@@ -200,7 +197,6 @@ class RpcRegistry:
 
     def __set_name__(self, owner: Any, name: str) -> None:
         self.__owner = owner
-        self.__owner_name = name
 
     def __get__(self, obj: Any, objtype: Type[Any]) -> "RpcRegistry":
         if obj is None and objtype == self.__owner:
@@ -208,12 +204,12 @@ class RpcRegistry:
 
         if obj is not None:
             if not isinstance(obj, HasRpcRegistry):
-                cast(HasRpcRegistry, obj).__rpc_registry__ = RpcRegistry(obj, self)
+                cast(HasRpcRegistry, obj).__rpc_registry__ = RpcRegistry(obj)
 
             return cast(HasRpcRegistry, obj).__rpc_registry__
 
         if objtype not in RpcRegistry._class_registries:
-            RpcRegistry._class_registries[objtype] = RpcRegistry(objtype, self)
+            RpcRegistry._class_registries[objtype] = RpcRegistry(objtype)
 
         return RpcRegistry._class_registries[objtype]
 
@@ -349,7 +345,7 @@ def _try_convert_value(value: Any, value_type_or_converter: Union[Type[Any], Cal
 
         if issubclass(value_type_or_converter, BaseModel):
             return value_type_or_converter.parse_obj(value)
-    elif get_origin(cast(Type[Any], value_type_or_converter)) == list and isinstance(value, list):
+    elif get_origin(cast(Type[Any], value_type_or_converter)) == list and isinstance(value, List):
         p = get_args(cast(Type[Any], value_type_or_converter))
         if len(p) > 0:
             return [_try_convert_value(e, p[0]) for e in value]
@@ -456,8 +452,8 @@ class JsonRPCProtocol(asyncio.Protocol):
         asyncio.ensure_future(self.on_connection_lost(self, exc))
 
     @_logger.call
-    def eof_received(self) -> None:
-        pass
+    def eof_received(self) -> Optional[bool]:
+        return False
 
     CHARSET = "utf-8"
     CONTENT_TYPE = "application/vscode-jsonrpc"
@@ -716,12 +712,12 @@ class ProtocolPartDescriptor(Generic[TProtocolPart]):
         self._instance_args = args
         self._instance_kwargs = kwargs
 
-    def __set_name__(self, owner: Type[JsonRPCProtocol], name: str) -> None:
+    def __set_name__(self, owner: Type[Any], name: str) -> None:
         if not issubclass(owner, JsonRPCProtocol):
             raise AttributeError()
         owner.registry.add_class_part(name, self._instance_type)
 
-    def __get__(self, obj: Optional[JsonRPCProtocol], objtype: Type[JsonRPCProtocol]) -> TProtocolPart:
+    def __get__(self, obj: Optional[Any], objtype: Type[Any]) -> TProtocolPart:
         if obj is not None:
             if not isinstance(obj, HasPartInstance):
                 cast(HasPartInstance[TProtocolPart], obj).__rpc_part_instances__ = {}
@@ -730,7 +726,7 @@ class ProtocolPartDescriptor(Generic[TProtocolPart]):
                 instance = self._instance_type(*(obj, *self._instance_args), **self._instance_kwargs)
                 cast(HasPartInstance[TProtocolPart], obj).__rpc_part_instances__[self._instance_type] = instance
 
-                obj.registry.add_class_part_instance(instance)
+                cast(JsonRPCProtocol, obj).registry.add_class_part_instance(instance)
 
             return cast(HasPartInstance[TProtocolPart], obj).__rpc_part_instances__[self._instance_type]
 

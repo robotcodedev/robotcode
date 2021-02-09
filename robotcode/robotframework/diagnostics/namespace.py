@@ -256,15 +256,12 @@ class Namespace:
         self._sentinel = weakref.ref(sentinel)
         self.invalidated_callback = invalidated_callback
 
-        # self._libraries_lock = asyncio.Lock()
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
-        # self._resources_lock = asyncio.Lock()
         self._resources: OrderedDict[str, ResourceEntry] = OrderedDict()
         self._initialzed = False
         self._analyzed = False
         self._self_doc: Optional[LibraryDoc] = None
 
-        # self._diagnostics_lock = asyncio.Lock()
         self._diagnostics: List[Diagnostic] = []
 
         self._keywords: Optional[List[KeywordDoc]] = None
@@ -280,26 +277,23 @@ class Namespace:
 
         await self._analyze()
 
-        # async with self._diagnostics_lock:
         return self._diagnostics
 
     async def get_libraries(self) -> OrderedDict[str, LibraryEntry]:
         await self._ensure_initialized()
 
-        # async with self._libraries_lock:
         return self._libraries
 
     async def get_resources(self) -> OrderedDict[str, ResourceEntry]:
         await self._ensure_initialized()
 
-        # async with self._resources_lock:
         return self._resources
 
     async def _ensure_initialized(self) -> None:
         if not self._initialzed:
             self._initialzed = True
 
-            self._self_doc = await self._import_model(self.model, self.source, add_diagnostics=True)
+            self._self_doc = await self._get_doc_from_model(self.model, self.source, add_diagnostics=True)
 
     async def _import_imports(self, model: ast.AST, base_dir: str, *, add_diagnostics: bool = False) -> None:
         async def _import(value: Import) -> Optional[LibraryEntry]:
@@ -308,7 +302,7 @@ class Namespace:
                 if isinstance(value, LibraryImport):
                     if value.name is None:
                         raise NameSpaceError("Library setting requires value.")
-                    result = await self._import_library(value.name, value.args, value.alias, base_dir)
+                    result = await self._get_library_entry(value.name, value.args, value.alias, base_dir)
                     if result.library_doc.errors is None and len(result.library_doc.keywords) == 0:
                         self._diagnostics.append(
                             Diagnostic(
@@ -321,11 +315,11 @@ class Namespace:
                 elif isinstance(value, ResourceImport):
                     if value.name is None:
                         raise NameSpaceError("Resource setting requires value.")
-                    result = await self._import_resource(value.name, base_dir)
+                    result = await self._get_resource_entry(value.name, base_dir)
                 elif isinstance(value, VariablesImport):
                     if value.name is None:
                         raise NameSpaceError("Variables setting requires value.")
-                    result = await self._import_variables(value.name, value.args, base_dir)
+                    result = await self._get_variables_entry(value.name, value.args, base_dir)
                 else:
                     raise DiagnosticsException("Unknown import type.")
 
@@ -369,7 +363,7 @@ class Namespace:
     async def _import_default_libraries(self) -> None:
         async def _import_lib(library: str) -> Optional[LibraryEntry]:
             try:
-                return await self._import_library(
+                return await self._get_library_entry(
                     library, (), None, str(Path(self.source).parent), is_default_library=True
                 )
             except asyncio.CancelledError:
@@ -392,7 +386,7 @@ class Namespace:
             if e is not None:
                 self._libraries[e.alias or e.name or e.import_name] = e
 
-    async def _import_library(
+    async def _get_library_entry(
         self, name: str, args: Tuple[Any, ...], alias: Optional[str], base_dir: str, *, is_default_library: bool = False
     ) -> LibraryEntry:
         library = await self.library_manager.get_doc_from_library(
@@ -401,7 +395,7 @@ class Namespace:
 
         return LibraryEntry(name=library.name, import_name=name, library_doc=library, args=args, alias=alias)
 
-    async def _import_resource(self, name: str, base_dir: str) -> ResourceEntry:
+    async def _get_resource_entry(self, name: str, base_dir: str) -> ResourceEntry:
         from robot.api import get_resource_model
 
         source = await self.library_manager.find_file(name, base_dir or ".", "Resource")
@@ -415,14 +409,14 @@ class Namespace:
 
         model = get_resource_model(source)
 
-        resource = await self._import_model(model, source)
+        resource = await self._get_doc_from_model(model, source)
 
         return ResourceEntry(name=resource.name, import_name=name, library_doc=resource)
 
-    async def _import_variables(self, name: str, args: Tuple[Any, ...], base_dir: str) -> LibraryEntry:
+    async def _get_variables_entry(self, name: str, args: Tuple[Any, ...], base_dir: str) -> LibraryEntry:
         raise NotImplementedError("_import_variables")
 
-    async def _import_model(self, model: ast.AST, source: str, *, add_diagnostics: bool = False) -> LibraryDoc:
+    async def _get_doc_from_model(self, model: ast.AST, source: str, *, add_diagnostics: bool = False) -> LibraryDoc:
         await self._import_default_libraries()
         await self._import_imports(model, str(Path(source).parent), add_diagnostics=add_diagnostics)
 
@@ -432,9 +426,9 @@ class Namespace:
 
     async def get_keywords(self) -> List[KeywordDoc]:
         await self._ensure_initialized()
+
         if self._keywords is None:
 
-            # async with self._libraries_lock:
             self._keywords = [
                 e
                 async for e in async_chain(
@@ -451,6 +445,7 @@ class Namespace:
             self._analyzed = True
 
             self._diagnostics += await KeywordAnalyzer().get(self.model, self)
+            pass
 
     async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
         return await KeywordFinder(self).find_keyword(name)
