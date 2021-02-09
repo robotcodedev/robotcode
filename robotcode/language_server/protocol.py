@@ -27,6 +27,7 @@ from .types import (
     CancelParams,
     ClientCapabilities,
     ClientInfo,
+    InitializeResultServerInfo,
     InitializedParams,
     InitializeError,
     InitializeParams,
@@ -152,7 +153,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
         return InitializeResult(
             capabilities=self.capabilities,
-            server_info=InitializeResult.ServerInfo(name="robotcode LanguageServer", version=__version__),
+            server_info=InitializeResultServerInfo(name="robotcode LanguageServer", version=__version__),
         )
 
     async def on_initialize(self, initialization_options: Optional[Any] = None) -> None:

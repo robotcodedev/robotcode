@@ -29,6 +29,8 @@ from ..types import (
     FileSystemWatcher,
     RenameFilesParams,
     ServerCapabilities,
+    ServerCapabilitiesWorkspace,
+    ServerCapabilitiesWorkspaceFileOperations,
     TextEdit,
     WatchKind,
     WorkspaceEdit,
@@ -99,11 +101,11 @@ class Workspace(LanguageServerProtocolPart):
         self._loop = asyncio.get_event_loop()
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
-        capabilities.workspace = ServerCapabilities.Workspace(
+        capabilities.workspace = ServerCapabilitiesWorkspace(
             workspace_folders=WorkspaceFoldersServerCapabilities(
                 supported=True, change_notifications=str(uuid.uuid4())
             ),
-            file_operations=ServerCapabilities.Workspace.FileOperations(
+            file_operations=ServerCapabilitiesWorkspaceFileOperations(
                 did_create=FileOperationRegistrationOptions(
                     filters=[FileOperationFilter(pattern=FileOperationPattern(glob="**/*"))]
                 ),

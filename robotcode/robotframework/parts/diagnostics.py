@@ -22,8 +22,8 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         self.source_name = "robotcode"
 
-        # parent.diagnostics.collect_diagnostics.add(self.collect_token_errors)
-        # parent.diagnostics.collect_diagnostics.add(self.collect_model_errors)
+        parent.diagnostics.collect.add(self.collect_token_errors)
+        # parent.diagnostics.collect.add(self.collect_model_errors)
         parent.diagnostics.collect.add(self.collect_walk_model_errors)
 
         parent.diagnostics.collect.add(self.collect_diagnostics)
@@ -60,7 +60,8 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         ),
                         message=e.error,
                         severity=DiagnosticSeverity.ERROR,
-                        source="robot.tokens",
+                        source="robot",
+                        code="TokenError",
                     )
                 )
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 from enum import Enum, IntEnum, IntFlag
 from typing import Any, Dict, Iterator, List, Literal, Optional, Union
@@ -74,16 +76,17 @@ class FailureHandlingKind(Enum):
     UNDO = "undo"
 
 
+class WorkspaceEditClientCapabilitiesChangeAnnotationSupport(Model):
+    groups_on_label: Optional[bool] = None
+
+
 class WorkspaceEditClientCapabilities(Model):
     document_changes: Optional[bool] = None
     resource_operations: Optional[List[ResourceOperationKind]] = None
     failure_handling: Optional[FailureHandlingKind] = None
     normalizes_line_endings: Optional[bool] = None
 
-    class _ChangeAnnotationSupport(Model):
-        groups_on_label: Optional[bool] = None
-
-    change_annotation_support: Optional[_ChangeAnnotationSupport] = None
+    change_annotation_support: Optional[WorkspaceEditClientCapabilitiesChangeAnnotationSupport] = None
 
 
 class DidChangeConfigurationClientCapabilities(Model):
@@ -153,18 +156,18 @@ class InsertTextMode(IntEnum):
     ADJUST_INDENTATION = 2
 
 
+class WorkspaceSymbolClientCapabilitiesSymbolKind(Model):
+    value_set: List[SymbolKind]
+
+
+class WorkspaceSymbolClientCapabilitiesTagSupport(Model):
+    value_set: List[SymbolTag]
+
+
 class WorkspaceSymbolClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
-
-    class _SymbolKind(Model):
-        value_set: List[SymbolKind]
-
-    symbol_kind: Optional[_SymbolKind] = None
-
-    class _TagSupport(Model):
-        value_set: List[SymbolTag]
-
-    tag_support: Optional[_TagSupport] = None
+    symbol_kind: Optional[WorkspaceSymbolClientCapabilitiesSymbolKind] = None
+    tag_support: Optional[WorkspaceSymbolClientCapabilitiesTagSupport] = None
 
 
 class CompletionItemKind(IntEnum):
@@ -195,38 +198,38 @@ class CompletionItemKind(IntEnum):
     TYPEPARAMETER = 25
 
 
+class CompletionClientCapabilitiesCompletionItemTagSupport(Model):
+    value_set: List[CompletionItemTag]
+
+
+class CompletionClientCapabilitiesCompletionItemResolveSupport(Model):
+    properties: List[str]
+
+
+class CompletionClientCapabilitiesCompletionItemInsertTextModeSupport(Model):
+    value_set: List[InsertTextMode]
+
+
+class CompletionClientCapabilitiesCompletionItem(Model):
+    snippet_support: Optional[bool] = None
+    commit_characters_support: Optional[bool] = None
+    documentation_format: Optional[List[MarkupKind]] = None
+    deprecated_support: Optional[bool] = None
+    preselect_support: Optional[bool] = None
+    tag_support: Optional[CompletionClientCapabilitiesCompletionItemTagSupport] = None
+    insert_replace_support: Optional[bool] = None
+    resolve_support: Optional[CompletionClientCapabilitiesCompletionItemResolveSupport]
+    insert_text_mode_support: Optional[CompletionClientCapabilitiesCompletionItemInsertTextModeSupport]
+
+
+class CompletionClientCapabilitiesCompletionItemKind(Model):
+    value_set: Optional[List[CompletionItemKind]] = None
+
+
 class CompletionClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
-
-    class _CompletionItem(Model):
-        snippet_support: Optional[bool] = None
-        commit_characters_support: Optional[bool] = None
-        documentation_format: Optional[List[MarkupKind]] = None
-        deprecated_support: Optional[bool] = None
-        preselect_support: Optional[bool] = None
-
-        class _TagSupport(Model):
-            value_set: List[CompletionItemTag]
-
-        tag_support: Optional[_TagSupport] = None
-        insert_replace_support: Optional[bool] = None
-
-        class _ResolveSupport(Model):
-            properties: List[str]
-
-        resolve_support: Optional[_ResolveSupport]
-
-        class _InsertTextModeSupport(Model):
-            value_set: List[InsertTextMode]
-
-        insert_text_mode_support: Optional[_InsertTextModeSupport]
-
-    completion_item: Optional[_CompletionItem]
-
-    class _CompletionItemKind(Model):
-        value_set: Optional[List[CompletionItemKind]] = None
-
-    completion_item_kind: Optional[_CompletionItemKind]
+    completion_item: Optional[CompletionClientCapabilitiesCompletionItem]
+    completion_item_kind: Optional[CompletionClientCapabilitiesCompletionItemKind]
     context_support: Optional[bool] = None
 
 
@@ -235,19 +238,19 @@ class HoverClientCapabilities(Model):
     content_format: Optional[List[MarkupKind]] = None
 
 
+class SignatureHelpClientCapabilitiesSignatureInformationParameterInformation(Model):
+    label_offset_support: Optional[bool] = None
+
+
+class SignatureHelpClientCapabilitiesSignatureInformation(Model):
+    documentation_format: Optional[List[MarkupKind]] = None
+    parameter_information: Optional[SignatureHelpClientCapabilitiesSignatureInformationParameterInformation] = None
+    active_parameter_support: Optional[bool] = None
+
+
 class SignatureHelpClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
-
-    class _SignatureInformation(Model):
-        documentation_format: Optional[List[MarkupKind]] = None
-
-        class ParameterInformation(Model):
-            label_offset_support: Optional[bool] = None
-
-        parameter_information: Optional[ParameterInformation] = None
-        active_parameter_support: Optional[bool] = None
-
-    signature_information: Optional[_SignatureInformation] = None
+    signature_information: Optional[SignatureHelpClientCapabilitiesSignatureInformation] = None
     context_support: Optional[bool] = None
 
 
@@ -279,19 +282,19 @@ class DocumentHighlightClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
+class DocumentSymbolClientCapabilitiesSymbolKind(Model):
+    value_set: Optional[List[SymbolKind]] = None
+
+
+class DocumentSymbolClientCapabilitiesTagSupport(Model):
+    value_set: List[SymbolTag]
+
+
 class DocumentSymbolClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
-
-    class _SymbolKind(Model):
-        value_set: Optional[List[SymbolKind]] = None
-
-    symbol_kind: Optional[_SymbolKind]
+    symbol_kind: Optional[DocumentSymbolClientCapabilitiesSymbolKind]
     hierarchical_document_symbol_support: Optional[bool] = None
-
-    class _TagSupport(Model):
-        value_set: List[SymbolTag]
-
-    tag_support: Optional[_TagSupport] = None
+    tag_support: Optional[DocumentSymbolClientCapabilitiesTagSupport] = None
     label_support: Optional[bool] = None
 
 
@@ -306,24 +309,25 @@ class CodeActionKind(str):
     SOURCEORGANIZEIMPORTS = "source.organizeImports"
 
 
+class CodeActionClientCapabilitiesCodeActionLiteralSupportCodeActionKind(Model):
+    value_set: Optional[List[CodeActionKind]] = None
+
+
+class CodeActionClientCapabilitiesCodeActionLiteralSupport(Model):
+    code_action_kind: CodeActionClientCapabilitiesCodeActionLiteralSupportCodeActionKind
+
+
+class CodeActionClientCapabilitiesResolveSupport(Model):
+    properties: List[str]
+
+
 class CodeActionClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
-
-    class _CodeActionLiteralSupport(Model):
-        class _CodeActionKind(Model):
-            value_set: Optional[List[CodeActionKind]] = None
-
-        code_action_kind: _CodeActionKind
-
-    code_action_literal_support: Optional[_CodeActionLiteralSupport] = None
+    code_action_literal_support: Optional[CodeActionClientCapabilitiesCodeActionLiteralSupport] = None
     is_preferred_support: Optional[bool] = None
     disabled_support: Optional[bool] = None
     data_support: Optional[bool] = None
-
-    class _ResolveSupport(Model):
-        properties: List[str]
-
-    resolve_support: Optional[_ResolveSupport] = None
+    resolve_support: Optional[CodeActionClientCapabilitiesResolveSupport] = None
     honors_change_annotations: Optional[bool] = None
 
 
@@ -368,13 +372,13 @@ class DiagnosticTag(IntEnum):
     Deprecated = 2
 
 
+class PublishDiagnosticsClientCapabilitiesTagSupport(Model):
+    value_set: List[DiagnosticTag]
+
+
 class PublishDiagnosticsClientCapabilities(Model):
     related_information: Optional[bool] = None
-
-    class _TagSupport(Model):
-        value_set: List[DiagnosticTag]
-
-    tag_support: Optional[_TagSupport] = None
+    tag_support: Optional[PublishDiagnosticsClientCapabilitiesTagSupport] = None
     version_support: Optional[bool] = None
     code_description_support: Optional[bool] = None
     data_support: Optional[bool] = None
@@ -402,19 +406,18 @@ class TokenFormat(Enum):
     Relative = "relative"
 
 
+class SemanticTokensClientCapabilitiesRequestsFull(Model):
+    delta: Optional[bool] = None
+
+
+class SemanticTokensClientCapabilitiesRequests(Model):
+    range: Union[bool, Dict[Any, Any], None]
+    full: Union[SemanticTokensClientCapabilitiesRequestsFull, bool, None] = None
+
+
 class SemanticTokensClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
-
-    class _Requests(Model):
-        range: Union[bool, Dict[Any, Any], None]
-
-        class _Full(Model):
-            delta: Optional[bool] = None
-
-        full: Union[_Full, bool, None] = None
-
-    requests: _Requests
-
+    requests: SemanticTokensClientCapabilitiesRequests
     token_types: List[str]
     token_modifiers: List[str]
     formats: List[TokenFormat]
@@ -455,11 +458,12 @@ class TextDocumentClientCapabilities(Model):
     moniker: Optional[MonikerClientCapabilities] = None
 
 
-class ShowMessageRequestClientCapabilities(Model):
-    class _MessageActionItem(Model):
-        additional_properties_support: Optional[bool] = None
+class ShowMessageRequestClientCapabilitiesMessageActionItem(Model):
+    additional_properties_support: Optional[bool] = None
 
-    message_action_item: Optional[_MessageActionItem] = None
+
+class ShowMessageRequestClientCapabilities(Model):
+    message_action_item: Optional[ShowMessageRequestClientCapabilitiesMessageActionItem] = None
 
 
 class ShowDocumentClientCapabilities(Model):
@@ -476,45 +480,46 @@ class MarkdownClientCapabilities(Model):
     version: Optional[str] = None
 
 
+class ClientCapabilitiesWorkspaceFileOperationsWorkspaceClientCapabilities(Model):
+    dynamic_registration: Optional[bool] = None
+    did_create: Optional[bool] = None
+    will_create: Optional[bool] = None
+    did_rename: Optional[bool] = None
+    will_rename: Optional[bool] = None
+    did_delete: Optional[bool] = None
+    will_delete: Optional[bool] = None
+
+
+class ClientCapabilitiesWorkspace(Model):
+    apply_edit: Optional[bool] = None
+    workspace_edit: Optional[WorkspaceEditClientCapabilities] = None
+    did_change_configuration: Optional[DidChangeConfigurationClientCapabilities] = None
+    did_change_watched_files: Optional[DidChangeWatchedFilesClientCapabilities] = None
+    symbol: Optional[WorkspaceSymbolClientCapabilities] = None
+    execute_command: Optional[ExecuteCommandClientCapabilities] = None
+    workspace_folders: Optional[bool] = None
+    configuration: Optional[bool] = None
+    semantic_tokens: Optional[SemanticTokensWorkspaceClientCapabilities] = None
+    code_lens: Optional[CodeLensWorkspaceClientCapabilities] = None
+    file_operations: Optional[ClientCapabilitiesWorkspaceFileOperationsWorkspaceClientCapabilities]
+
+
+class ClientCapabilitiesWindow(Model):
+    work_done_progress: Optional[bool] = None
+    show_message: Optional[ShowMessageRequestClientCapabilities] = None
+    show_document: Optional[ShowDocumentClientCapabilities] = None
+
+
+class ClientCapabilitiesGeneral(Model):
+    regular_expressions: Optional[RegularExpressionsClientCapabilities] = None
+    markdown: Optional[MarkdownClientCapabilities] = None
+
+
 class ClientCapabilities(Model):
-    class _Workspace(Model):
-        apply_edit: Optional[bool] = None
-        workspace_edit: Optional[WorkspaceEditClientCapabilities] = None
-        did_change_configuration: Optional[DidChangeConfigurationClientCapabilities] = None
-        did_change_watched_files: Optional[DidChangeWatchedFilesClientCapabilities] = None
-        symbol: Optional[WorkspaceSymbolClientCapabilities] = None
-        execute_command: Optional[ExecuteCommandClientCapabilities] = None
-        workspace_folders: Optional[bool] = None
-        configuration: Optional[bool] = None
-        semantic_tokens: Optional[SemanticTokensWorkspaceClientCapabilities] = None
-        code_lens: Optional[CodeLensWorkspaceClientCapabilities] = None
-
-        class _FileOperationsWorkspaceClientCapabilities(Model):
-            dynamic_registration: Optional[bool] = None
-            did_create: Optional[bool] = None
-            will_create: Optional[bool] = None
-            did_rename: Optional[bool] = None
-            will_rename: Optional[bool] = None
-            did_delete: Optional[bool] = None
-            will_delete: Optional[bool] = None
-
-        file_operations: Optional[_FileOperationsWorkspaceClientCapabilities]
-
-    workspace: Optional[_Workspace] = None
+    workspace: Optional[ClientCapabilitiesWorkspace] = None
     text_document: Optional[TextDocumentClientCapabilities] = None
-
-    class _Window(Model):
-        work_done_progress: Optional[bool] = None
-        show_message: Optional[ShowMessageRequestClientCapabilities] = None
-        show_document: Optional[ShowDocumentClientCapabilities] = None
-
-    window: Optional[_Window] = None
-
-    class _General(Model):
-        regular_expressions: Optional[RegularExpressionsClientCapabilities] = None
-        markdown: Optional[MarkdownClientCapabilities] = None
-
-    general: Optional[_General] = None
+    window: Optional[ClientCapabilitiesWindow] = None
+    general: Optional[ClientCapabilitiesGeneral] = None
     experimental: Optional[Any] = None
 
 
@@ -640,6 +645,28 @@ class HoverOptions(WorkDoneProgressOptions):
     pass
 
 
+class WorkspaceSymbolOptions(WorkDoneProgressOptions):
+    pass
+
+
+class DocumentSymbolOptions(WorkDoneProgressOptions):
+    pass
+
+
+class ServerCapabilitiesWorkspaceFileOperations(Model):
+    did_create: Optional[FileOperationRegistrationOptions] = None
+    will_create: Optional[FileOperationRegistrationOptions] = None
+    did_rename: Optional[FileOperationRegistrationOptions] = None
+    will_rename: Optional[FileOperationRegistrationOptions] = None
+    did_delete: Optional[FileOperationRegistrationOptions] = None
+    will_delete: Optional[FileOperationRegistrationOptions] = None
+
+
+class ServerCapabilitiesWorkspace(Model):
+    workspace_folders: Optional[WorkspaceFoldersServerCapabilities] = None
+    file_operations: Optional[ServerCapabilitiesWorkspaceFileOperations] = None
+
+
 class ServerCapabilities(Model):
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None]
     # completion_provider: Optional[CompletionOptions] = None
@@ -650,7 +677,7 @@ class ServerCapabilities(Model):
     # implementation_provider: Union[bool, ImplementationOptions, ImplementationRegistrationOptions, None] = None
     # references_provider: Union[bool, ReferenceOptions, None] = None
     # document_highlight_provider: Union[bool, DocumentHighlightOptions, None] = None
-    # document_symbol_provider: Union[bool, DocumentSymbolOptions] = None
+    document_symbol_provider: Union[bool, DocumentSymbolOptions, None] = None
     # code_action_provider: Union[bool, CodeActionOptions] = None
     # code_lens_provider: Optional[CodeLensOptions] = None
     # document_link_provider: Optional[DocumentLinkOptions] = None
@@ -667,33 +694,19 @@ class ServerCapabilities(Model):
     # call_hierarchy_provider: Union[boolean, CallHierarchyOptions, CallHierarchyRegistrationOptions, None] = None
     # semantic_tokens_provider: Union[SemanticTokensOptions, SemanticTokensRegistrationOptions, None] = None
     # moniker_provider: Union[bool, MonikerOptions, MonikerRegistrationOptions, None] = None
-    # workspace_symbol_provider: Union[boolean, WorkspaceSymbolOptions, None] = None
-
-    class Workspace(Model):
-        workspace_folders: Optional[WorkspaceFoldersServerCapabilities] = None
-
-        class FileOperations(Model):
-            did_create: Optional[FileOperationRegistrationOptions] = None
-            will_create: Optional[FileOperationRegistrationOptions] = None
-            did_rename: Optional[FileOperationRegistrationOptions] = None
-            will_rename: Optional[FileOperationRegistrationOptions] = None
-            did_delete: Optional[FileOperationRegistrationOptions] = None
-            will_delete: Optional[FileOperationRegistrationOptions] = None
-
-        file_operations: Optional[FileOperations] = None
-
-    workspace: Optional[Workspace] = None
+    workspace_symbol_provider: Union[bool, WorkspaceSymbolOptions, None] = None
+    workspace: Optional[ServerCapabilitiesWorkspace] = None
     experimental: Optional[Any] = None
+
+
+class InitializeResultServerInfo(Model):
+    name: str
+    version: Optional[str] = None
 
 
 class InitializeResult(Model):
     capabilities: ServerCapabilities
-
-    class ServerInfo(Model):
-        name: str
-        version: Optional[str] = None
-
-    server_info: Optional[ServerInfo] = None
+    server_info: Optional[InitializeResultServerInfo] = None
 
 
 class InitializedParams(Model):
@@ -1140,3 +1153,7 @@ class FileEvent(Model):
 
 class DidChangeWatchedFilesParams(Model):
     changes: List[FileEvent]
+
+
+class DocumentSymbolRegistrationOptions(TextDocumentRegistrationOptions, DocumentSymbolOptions):
+    pass
