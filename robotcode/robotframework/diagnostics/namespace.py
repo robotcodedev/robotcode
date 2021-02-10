@@ -292,9 +292,9 @@ class Namespace:
     async def _ensure_initialized(self) -> None:
         if not self._initialzed:
             self._initialzed = True
-            
+
             await self._import_default_libraries()
-            
+
             self._self_doc = await self._get_doc_from_model(self.model, self.source, add_diagnostics=True)
 
     async def _import_imports(self, model: ast.AST, base_dir: str, *, add_diagnostics: bool = False) -> None:
@@ -337,9 +337,7 @@ class Namespace:
                             )
                         )
 
-            except asyncio.CancelledError:
-                raise
-            except (SystemExit, KeyboardInterrupt):
+            except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
                 if add_diagnostics:
@@ -408,7 +406,7 @@ class Namespace:
                 f"Invalid resource file extension '{extension}'. "
                 f"Supported extensions are {', '.join(repr(s) for s in RESOURCE_EXTENSIONS)}."
             )
-
+        
         model = get_resource_model(source)
 
         resource = await self._get_doc_from_model(model, source)
@@ -418,7 +416,7 @@ class Namespace:
     async def _get_variables_entry(self, name: str, args: Tuple[Any, ...], base_dir: str) -> LibraryEntry:
         raise NotImplementedError("_import_variables")
 
-    async def _get_doc_from_model(self, model: ast.AST, source: str, *, add_diagnostics: bool = False) -> LibraryDoc:        
+    async def _get_doc_from_model(self, model: ast.AST, source: str, *, add_diagnostics: bool = False) -> LibraryDoc:
         await self._import_imports(model, str(Path(source).parent), add_diagnostics=add_diagnostics)
 
         library_doc = await self.library_manager.get_doc_from_model(model, source)

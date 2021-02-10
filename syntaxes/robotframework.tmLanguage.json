@@ -8,7 +8,7 @@
             "begin": "(?i)^(\\*+ ?(?:Settings|Setting)[ *]*)(?= {2,}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "entity.name.namespace.robot"
+                    "name": "markup.heading"
                 }
             },
             "end": "^(?=\\*)",
@@ -69,7 +69,7 @@
             "begin": "(?i)^(Force Tags|Default Tags)(?= {2}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "storage.type.setting.robot"
+                    "name": "keyword.control.import.robot"
                 }
             },
             "contentName": "entity.name.tag.robot",
@@ -91,13 +91,13 @@
             "name": "meta.setting.tags.robot"
         },
         "settings_table_setting_imports": {
-            "begin": "(?i)^(Library|Resource|Variables)(?: {2,}| ?\\t)+(.*?)(?= {2}| ?\\t| ?$)",
+            "begin": "(?i)^(Library|Resource|Variables)((?: {2,}| ?\\t)+(.*?)(?= {2}| ?\\t| ?$))?",
             "beginCaptures": {
                 "1": {
                     "name": "keyword.control.import.robot"
                 },
-                "2": {
-                    "name": "entity.other.inherited-class.robot"
+                "3": {
+                    "name": "entity.name.namespace.robot"
                 }
             },
             "end": "^(?!\\s*\\.\\.\\.)",
@@ -122,10 +122,10 @@
             "name": "meta.setting.imports.robot"
         },
         "settings_table_setting_keywordCalls": {
-            "begin": "(?i)^(Suite Setup|Suite Teardown|Test Setup|Task Setup|Test Teardown|Task Teardown|Test Template|Task Template|Metadata)(?: {2,}| ?\\t)+(.*?)(?= {2}| ?\\t| ?$)",
+            "begin": "(?i)^(Suite Setup|Suite Teardown|Test Setup|Task Setup|Test Teardown|Task Teardown|Test Template|Task Template|Metadata)((?: {2,}| ?\\t)+(.*?)(?= {2}| ?\\t| ?$))?",
             "beginCaptures": {
                 "1": {
-                    "name": "storage.type.setting.robot"
+                    "name": "keyword.control.import.robot"
                 },
                 "2": {
                     "name": "meta.support.function.robot"
@@ -157,7 +157,7 @@
             "begin": "(?i)^(Documentation)(?= {2}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "storage.type.method.robot"
+                    "name": "keyword.control.import.robot"
                 }
             },
             "contentName": "comment.block.documentation",
@@ -245,7 +245,7 @@
             "begin": "(?i)^(\\*+ ?(?:Test Cases|Test Case|Tasks|Task)[ *]*)(?= {2,}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "entity.name.namespace.robot"
+                    "name": "markup.heading"
                 }
             },
             "end": "^(?=\\*)",
@@ -281,11 +281,8 @@
                     "include": "#function_timeout"
                 },
                 {
-                    "include": "#function_setup"
-                },
-                {
-                    "include": "#function_teardown"
-                },
+                    "include": "#function_fixture"
+                },              
                 {
                     "include": "#function_template"
                 },
@@ -302,7 +299,7 @@
             "begin": "(?i)^(\\*+ ?(?:Keywords|Keyword)[ *]*)(?= {2,}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "entity.name.namespace.robot"
+                    "name": "markup.heading"
                 }
             },
             "end": "^(?=\\*)",
@@ -360,7 +357,7 @@
             "begin": "(?i)^(\\*+\\s*comments?[\\s*].*)",
             "beginCaptures": {
                 "1": {
-                    "name": "entity.name.namespace.robot"
+                    "name": "markup.heading"
                 }
             },
             "contentName": "comment.line.robot",
@@ -688,9 +685,9 @@
             ],
             "name": "meta.function.doc.tags.robot"
         },
-        "function_setup": {
+        "function_fixture": {
             "end": "^(?!\\s*\\.\\.\\.)",
-            "begin": "(?i)^(?:\\s)+(\\[)(setup)(\\])(?: {2}| ?\\t| ?$)(?:\\s)*(.*?)(?: {2}| ?\\t| ?$)",
+            "begin": "(?i)^(?:\\s)+(\\[)(setup|teardown)(\\])((?: {2}| ?\\t| ?$)(?:\\s)*(.*?)(?: {2}| ?\\t| ?$))?",
             "beginCaptures": {
                 "3": {
                     "name": "keyword.operator.robot"
@@ -723,7 +720,7 @@
                     "include": "#line_continuation"
                 }
             ],
-            "name": "meta.function.doc.setup.robot"
+            "name": "meta.function.doc.fixture.robot"
         },
         "function_timeout": {
             "begin": "^(?i)(?:\\s)+(\\[)(timeout)(\\])",
@@ -757,7 +754,7 @@
             "name": "meta.function.doc.timeout.robot"
         },
         "function_documentation": {
-            "begin": "(?i)^(?: {2,}| ?\\t ?)+(\\[)(Documentation)(\\])(?= {2}| ?\\t| ?$)",
+            "begin": "(?i)^(?: {2,}| ?\\t ?)+(\\[)(Documentation)((\\])(?= {2}| ?\\t| ?$))?",
             "beginCaptures": {
                 "3": {
                     "name": "keyword.operator.robot"
@@ -783,43 +780,6 @@
                 }
             ],
             "name": "meta.documentation.robot"
-        },
-        "function_teardown": {
-            "end": "^(?!\\s*\\.\\.\\.)",
-            "begin": "(?i)^(?:\\s)+(\\[)(teardown)(\\])(?: {2}| ?\\t| ?$)(?:\\s)*(.*?)(?: {2}| ?\\t| ?$)",
-            "beginCaptures": {
-                "1": {
-                    "name": "keyword.operator.robot"
-                },
-                "2": {
-                    "name": "storage.type.method.robot"
-                },
-                "3": {
-                    "name": "keyword.operator.robot"
-                },
-                "4": {
-                    "name": "meta.support.function.robot"
-                }
-            },
-            "contentName": "string.quoted.single.robot",
-            "patterns": [
-                {
-                    "include": "#escape"
-                },
-                {
-                    "include": "#comment"
-                },
-                {
-                    "include": "#variables"
-                },
-                {
-                    "include": "#named_argument"
-                },
-                {
-                    "include": "#line_continuation"
-                }
-            ],
-            "name": "meta.function.doc.teardown.robot"
         },
         "function_return": {
             "end": "^(?!\\s*\\.\\.\\.)",
