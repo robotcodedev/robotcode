@@ -173,6 +173,12 @@ class Error(Model):
     type_name: str
 
 
+class ModuleSpec(Model):
+    name: str
+    origin: str
+    submodule_search_locations: Optional[List[str]]
+
+
 class LibraryDoc(Model):
     name: str = ""
     doc: str = ""
@@ -186,8 +192,9 @@ class LibraryDoc(Model):
     end_line_no: int = -1
     inits: KeywordStore = KeywordStore()
     keywords: KeywordStore = KeywordStore()
-
+    module_spec: Optional[ModuleSpec] = None
     errors: Optional[Sequence[Error]] = None
+    python_path: Optional[List[str]] = None
 
     def range(self) -> Range:
         return Range(
@@ -222,12 +229,12 @@ def is_library_by_path(path: str) -> bool:
 
 def _update_sys_path(working_dir: str = ".", pythonpath: Optional[List[str]] = None) -> None:
 
-    global _PRELOADED_MODULES
+    global __PRELOADED_MODULES
 
-    if _PRELOADED_MODULES is None:
-        _PRELOADED_MODULES = set(sys.modules.values())
+    if __PRELOADED_MODULES is None:
+        __PRELOADED_MODULES = set(sys.modules.values())
     else:
-        for m in set(sys.modules.values()) - _PRELOADED_MODULES:
+        for m in set(sys.modules.values()) - __PRELOADED_MODULES:
             try:
                 importlib.reload(m)
             except BaseException:
@@ -248,7 +255,71 @@ def _update_sys_path(working_dir: str = ".", pythonpath: Optional[List[str]] = N
             sys.path.insert(0, str(Path(p).absolute()))
 
 
-_PRELOADED_MODULES: Optional[Set[ModuleType]] = None
+__PRELOADED_MODULES: Optional[Set[ModuleType]] = None
+
+
+def get_module_spec(module_name: str) -> Optional[ModuleSpec]:
+    import importlib.util
+
+    result = None
+    while result is None:
+        try:
+            result = importlib.util.find_spec(module_name)
+        except BaseException:
+            pass
+        if result is None:
+            splitted = module_name.rsplit(".", 1)
+            if len(splitted) <= 1:
+                break
+            module_name = splitted[0]
+
+    if result is not None:
+        return ModuleSpec(
+            name=result.name, origin=result.origin, submodule_search_locations=result.submodule_search_locations
+        )
+    return None
+
+
+class KeywordWrapper:
+    def __init__(self, kw: Any, source: str) -> None:
+        self.kw = kw
+        self.lib_source = source
+
+    @property
+    def name(self) -> Any:
+        return self.kw.name
+
+    @property
+    def arguments(self) -> Any:
+        return self.kw.arguments
+
+    @property
+    def doc(self) -> Any:
+        try:
+            return self.kw.doc
+        except BaseException:
+            return ""
+
+    @property
+    def tags(self) -> Any:
+        try:
+            return self.kw.tags
+        except BaseException:
+            return []
+
+    @property
+    def source(self) -> Any:
+        try:
+            return self.kw.source
+        except BaseException:
+            return self.lib_source
+
+    @property
+    def lineno(self) -> Any:
+        try:
+            return self.kw.lineno
+        except BaseException:
+            return 0
 
 
 def get_library_doc(
@@ -271,13 +342,9 @@ def get_library_doc(
         name: str,
     ) -> Union[Any, Tuple[Any, str]]:
 
-        if name in STDLIBS:
-            import_name = "robot.libraries." + name
-        else:
-            import_name = name
         with OutputCapturer(library_import=True):
             importer = Importer("test library")
-            return importer.import_class_or_module(import_name, return_source=True)
+            return importer.import_class_or_module(name, return_source=True)
 
     def get_test_library(
         libcode: Any,
@@ -297,61 +364,31 @@ def get_library_doc(
 
     _update_sys_path(working_dir, pythonpath)
 
-    if is_library_by_path(name):
-        name = robot_find_file(name, base_dir or ".", "Library")
+    if name in STDLIBS:
+        import_name = "robot.libraries." + name
+    else:
+        import_name = name
+
+    module_spec: Optional[ModuleSpec] = None
+    if is_library_by_path(import_name):
+        import_name = robot_find_file(import_name, base_dir or ".", "Library")
+    else:
+        module_spec = get_module_spec(import_name)
 
     source = None
     try:
-        libcode, source = import_test_library(name)
+        libcode, source = import_test_library(import_name)
         lib = get_test_library(libcode, source, name, args, create_handlers=False)
     except BaseException as e:
-        return LibraryDoc(name=name, source=source, errors=[Error(message=str(e), type_name=type(e).__qualname__)])
+        return LibraryDoc(
+            name=name,
+            source=source,
+            errors=[Error(message=str(e), type_name=type(e).__qualname__)],
+            module_spec=module_spec,
+            python_path=sys.path,
+        )
 
-    libdoc = LibraryDoc(
-        name=str(lib.name),
-        source=lib.source,
-    )
-
-    class KeywordWrapper:
-        def __init__(self, kw: Any, source: str) -> None:
-            self.kw = kw
-            self.lib_source = source
-
-        @property
-        def name(self) -> Any:
-            return self.kw.name
-
-        @property
-        def arguments(self) -> Any:
-            return self.kw.arguments
-
-        @property
-        def doc(self) -> Any:
-            try:
-                return self.kw.doc
-            except BaseException:
-                return ""
-
-        @property
-        def tags(self) -> Any:
-            try:
-                return self.kw.tags
-            except BaseException:
-                return []
-
-        @property
-        def source(self) -> Any:
-            try:
-                return self.kw.source
-            except BaseException:
-                return self.lib_source
-
-        @property
-        def lineno(self) -> Any:
-            try:
-                return self.kw.lineno
-            except BaseException:
-                return 0
+    libdoc = LibraryDoc(name=str(lib.name), source=lib.source, module_spec=module_spec, python_path=sys.path)
 
     try:
 
@@ -513,6 +550,10 @@ async def find_file_external(
         raise LibraryDocRemoteError("find_name is 'None'")
 
     return result.find_file_result
+
+
+def init_pool() -> None:
+    pass
 
 
 if __name__ == "__main__":

@@ -12,6 +12,8 @@ from ...language_server.parts.workspace import WorkspaceFolder
 if TYPE_CHECKING:
     from robot.parsing.lexer import Token
 
+from ...utils.async_event import async_tasking_event
+
 from ...language_server.text_document import TextDocument
 from ..configuration import RobotcodeConfig
 from ..diagnostics.library_manager import LibraryManager
@@ -58,7 +60,6 @@ class ModelTokenCache(RobotLanguageServerProtocolPart):
                 asyncio.run_coroutine_threadsafe(remove_safe(r, version), self._loop)
 
         async with self._lock:
-
             document_ref = weakref.ref(document.parent or document, remove)
 
             if (document_ref, version) not in self._entries or self._entries[
@@ -131,12 +132,16 @@ class ModelTokenCache(RobotLanguageServerProtocolPart):
 
         return await self.__get_entry(document, setter)
 
+    @async_tasking_event
+    async def namespace_invalidated(sender, document: TextDocument) -> None:
+        ...
+
     async def __invalidate_namespace(self, document: TextDocument, namespace: Namespace) -> None:
         async def setter(e: _Entry) -> None:
             e.namespace = None
 
         await self.__get_entry(document, setter)
-        await self.parent.diagnostics.publish_diagnostics(document)
+        await self.namespace_invalidated(self, document)
 
     async def __get_namespace(
         self, document: TextDocument, model: Optional[ast.AST]
@@ -149,10 +154,10 @@ class ModelTokenCache(RobotLanguageServerProtocolPart):
 
         def invalidate(namespace: Namespace) -> None:
             if self._loop.is_running():
-                asyncio.run_coroutine_threadsafe(self.__invalidate_namespace(document, namespace), self._loop)
+                asyncio.ensure_future(self.__invalidate_namespace(document, namespace))
 
         return (
-            Namespace(library_manager, model, document.uri.to_path_str(), document or document, invalidate),
+            Namespace(library_manager, model, str(document.uri.to_path()), document.parent or document, invalidate),
             model,
         )
 

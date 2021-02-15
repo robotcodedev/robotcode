@@ -86,9 +86,9 @@ class Uri(Mapping[str, str]):
         return f"{type(self).__name__}({repr(parse.urlunparse(tuple(self._parts)))})"
 
     def to_path(self) -> Path:
-        return Path(self.to_path_str())
+        return Path(self._to_path_str())
 
-    def to_path_str(self) -> str:
+    def _to_path_str(self) -> str:
         """Returns the filesystem path of the given URI.
         Will handle UNC paths and normalize windows drive letters to lower-case. Also
         uses the platform specific path separator. Will *not* validate the path for
@@ -97,8 +97,9 @@ class Uri(Mapping[str, str]):
         # scheme://netloc/path;parameters?query#fragment
         netloc = parse.unquote(self._parts.netloc)
         path = parse.unquote(self._parts.path)
+
         if self._parts.scheme != "file":
-            raise InvalidUriError("Invalid URI scheme '{self._parts.scheme}'.")
+            raise InvalidUriError(f"Invalid URI scheme '{str(self)}'.")
 
         if netloc and path and self._parts.scheme == "file":
             # unc path: file://shares/c$/far/boo
@@ -167,6 +168,3 @@ class Uri(Mapping[str, str]):
     def __iter__(self) -> Iterator[str]:
         for f in fields(self._parts):
             yield f.name
-
-    def is_relative_to(self, uri: "Uri") -> bool:
-        return self.to_path().is_relative_to(uri.to_path())

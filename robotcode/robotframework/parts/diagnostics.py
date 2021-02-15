@@ -28,6 +28,11 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         parent.diagnostics.collect.add(self.collect_diagnostics)
 
+        parent.model_token_cache.namespace_invalidated.add(self.namespace_invalidated)
+
+    async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
+        await self.parent.diagnostics.start_publish_diagnostics_task(document)
+
     def is_robot_language(self, document: TextDocument) -> bool:
         return document.language_id == "robotframework"
 

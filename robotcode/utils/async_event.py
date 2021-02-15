@@ -65,10 +65,13 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
 
     def remove(self, callback: _TCallable) -> None:
         with self.lock:
-            if inspect.ismethod(callback):
-                self.listeners.remove(weakref.WeakMethod(cast(MethodType, callback)))
-            else:
-                self.listeners.remove(weakref.ref(callback))
+            try:
+                if inspect.ismethod(callback):
+                    self.listeners.remove(weakref.WeakMethod(cast(MethodType, callback)))
+                else:
+                    self.listeners.remove(weakref.ref(callback))
+            except KeyError:
+                pass
 
     def __contains__(self, obj: Any) -> bool:
         if inspect.ismethod(obj):

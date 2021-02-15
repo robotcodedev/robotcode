@@ -1,10 +1,13 @@
+from __future__ import annotations
+
 import ast
 import asyncio
 import weakref
 from collections import OrderedDict
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, Callable, Coroutine, List, Optional, Tuple
 
 from ...language_server.parts.workspace import FileWatcherEntry, Workspace
 from ...language_server.types import FileChangeType, FileEvent
@@ -13,7 +16,7 @@ from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
 from ..configuration import RobotConfig
 from ..utils.async_visitor import walk
-from .library_doc import Error, KeywordDoc, KeywordStore, LibraryDoc, find_file_external, get_library_doc_external
+from .library_doc import Error, KeywordDoc, KeywordStore, LibraryDoc, find_file, get_library_doc, init_pool
 
 DEFAULT_LIBRARIES = ("BuiltIn", "Reserved", "Easter")
 
@@ -28,15 +31,131 @@ class _EntryKey:
 
 
 class _Entry:
-    def __init__(self, doc: LibraryDoc, file_watcher: Optional[FileWatcherEntry] = None) -> None:
+    def __init__(
+        self,
+        name: str,
+        args: Tuple[Any, ...],
+        parent: LibraryManager,
+        load_doc_coroutine: Callable[[], Coroutine[Any, Any, LibraryDoc]],
+    ) -> None:
         super().__init__()
-        self.doc = doc
+        self.name = name
+        self.args = args
+        self.parent = parent
+        self.load_doc_coroutine = load_doc_coroutine
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
-        self.file_watcher = file_watcher
+        self.file_watchers: List[FileWatcherEntry] = []
+        self._doc: Optional[LibraryDoc] = None
+        self._lock = asyncio.Lock()
+
+    async def did_change_watched_files(self, sender: Any, changes: List[FileEvent]) -> None:
+        async with self._lock:
+            if self._doc is None:
+                return
+
+            allready_changed = False
+            allready_deleted = False
+            for change in changes:
+                uri = Uri(change.uri)
+                if uri.scheme != "file":
+                    continue
+
+                path = uri.to_path()
+                if self._doc is not None and (
+                    (
+                        self._doc.module_spec is not None
+                        and self._doc.module_spec.submodule_search_locations is not None
+                        and any(
+                            path.is_relative_to(Path(e).absolute())
+                            for e in self._doc.module_spec.submodule_search_locations
+                        )
+                    )
+                    or (self._doc.source and path.is_relative_to(Path(self._doc.source).parent))
+                    or (
+                        self._doc.module_spec is None
+                        and not self._doc.source
+                        and self._doc.python_path
+                        and any(path.is_relative_to(Path(e).absolute()) for e in self._doc.python_path)
+                    )
+                ):
+                    await self.invalidate()
+                    if change.type in [FileChangeType.CREATED, FileChangeType.CHANGED]:
+                        if not allready_changed:
+                            await self.parent.entry_invalidated(self)
+                            allready_changed = True
+                    elif change.type in [FileChangeType.DELETED]:
+                        if allready_deleted:
+                            await self.parent.entry_deleted(self)
+                            allready_deleted = True
+
+    async def _update(self) -> None:
+        self._doc = await self.load_doc_coroutine()
+
+        if self._doc.module_spec is not None and self._doc.module_spec.submodule_search_locations is not None:
+            self.file_watchers.append(
+                await self.parent.workspace.add_file_watchers(
+                    self.did_change_watched_files,
+                    [
+                        str(Path(location).absolute().joinpath("**"))
+                        for location in self._doc.module_spec.submodule_search_locations
+                    ],
+                )
+            )
+
+            if self._doc.source is not None and Path(self._doc.source).parent in [
+                Path(loc).absolute() for loc in self._doc.module_spec.submodule_search_locations
+            ]:
+                return
+
+        if self._doc.source is not None:
+            self.file_watchers.append(
+                await self.parent.workspace.add_file_watchers(
+                    self.did_change_watched_files, [str(Path(self._doc.source).parent.joinpath("**"))]
+                )
+            )
+
+            return
+
+        if self._doc.python_path is not None:
+            self.file_watchers.append(
+                await self.parent.workspace.add_file_watchers(
+                    self.did_change_watched_files, [str(Path(s).parent.joinpath("**")) for s in self._doc.python_path]
+                )
+            )
+
+    async def invalidate(self) -> None:
+        await self._remove_file_watcher()
+        self._doc = None
+
+    async def _remove_file_watcher(self) -> None:
+        if self.file_watchers is not None:
+            for watcher in self.file_watchers:
+                await self.parent.workspace.remove_file_watcher_entry(watcher)
+        self.file_watchers = []
+
+    async def get_doc(self) -> LibraryDoc:
+        async with self._lock:
+            if self._doc is None:
+                await self._update()
+
+            assert self._doc is not None
+
+            return self._doc
+
+
+# we need this, because ProcessPoolExecutor is not correctly initialized if asyncio is reading from stdin
+def _init_process_pool() -> ProcessPoolExecutor:
+    result = ProcessPoolExecutor(max_workers=1)
+    try:
+        result.submit(init_pool).result(5)
+    except BaseException:
+        pass
+    return result
 
 
 class LibraryManager:
     _logger = LoggingDescriptor()
+    process_pool = _init_process_pool()
 
     def __init__(self, workspace: Workspace, folder: Uri, config: Optional[RobotConfig]) -> None:
         super().__init__()
@@ -50,62 +169,62 @@ class LibraryManager:
     def __remove_entry(self, entry_key: _EntryKey, entry: _Entry, now: bool = False) -> None:
         async def threadsafe_remove(k: _EntryKey, e: _Entry, n: bool) -> None:
             if n or len(e.references) == 0:
-                self._logger.debug(lambda: f"remove library {k.name} with {k.args}")
+                self._logger.debug(lambda: f"remove library {k.name}{repr(k.args)}")
                 async with self._libaries_lock:
                     self._libaries.pop(k, None)
-
-                if e is not None and e.file_watcher is not None:
-                    await self.workspace.remove_file_watcher(e.file_watcher)
 
         if self._loop.is_running():
             asyncio.run_coroutine_threadsafe(threadsafe_remove(entry_key, entry, now), loop=self._loop)
 
     @async_tasking_event
-    async def libraries_removed(sender, library_sources: List[str]) -> None:
+    async def library_deleted(sender, name: str, args: Tuple[Any, ...]) -> None:
         ...
 
-    async def did_change_watched_files(self, sender: Any, changes: List[FileEvent]) -> None:
-        to_remove: List[Tuple[_EntryKey, _Entry]] = []
-        for change in changes:
-            if change.type in [FileChangeType.CHANGED, FileChangeType.DELETED]:
-                async with self._libaries_lock:
-                    to_remove += [
-                        (k, v)
-                        for k, v in self._libaries.items()
-                        if v.doc.source is not None and Path(v.doc.source) == Uri(change.uri).to_path()
-                    ]
+    @async_tasking_event
+    async def library_invalidated(sender, name: str, args: Tuple[Any, ...]) -> None:
+        ...
 
-        if to_remove:
-            for r in to_remove:
-                self.__remove_entry(r[0], r[1], True)
+    async def entry_invalidated(self, entry: _Entry) -> None:
+        await self.library_invalidated(self, entry.name, entry.args)
 
-            await self.libraries_removed(self, [entry[1].doc.source for entry in to_remove])
+    async def entry_deleted(self, entry: _Entry) -> None:
+        self.__remove_entry(_EntryKey(entry.name, entry.args), entry)
+
+        await self.library_deleted(self, entry.name, entry.args)
 
     @_logger.call
     async def get_doc_from_library(
         self, sentinel: Any, name: str, args: Tuple[Any, ...] = (), base_dir: str = "."
     ) -> LibraryDoc:
-        entry_key = _EntryKey(name, args)
+        async with self._libaries_lock:
+            entry_key = _EntryKey(name, args)
 
-        if entry_key not in self._libaries:
-            self._logger.debug(lambda: f"load/reload library {name} with {args}")
+            if entry_key not in self._libaries:
 
-            lib_doc = await get_library_doc_external(
-                name,
-                args,
-                self.folder.to_path_str(),
-                base_dir,
-                self.config.pythonpath if self.config is not None else None,
-                timeout=30,
-            )
+                async def _load_libdoc() -> LibraryDoc:
+                    self._logger.debug(lambda: f"load/reload library {name}{repr(args)}")
 
-            async with self._libaries_lock:
-                self._libaries[entry_key] = _Entry(
-                    lib_doc,
-                    await self.workspace.add_file_watcher(self.did_change_watched_files, lib_doc.source)
-                    if lib_doc.source is not None
-                    else None,
-                )
+                    result = await asyncio.wait_for(
+                        self._loop.run_in_executor(
+                            self.process_pool,
+                            get_library_doc,
+                            name,
+                            args,
+                            str(self.folder.to_path()),
+                            base_dir,
+                            self.config.pythonpath if self.config is not None else None,
+                        ),
+                        30,
+                    )
+
+                    self._logger.debug(
+                        lambda: f"loaded library {result.name} "
+                        f"from source {repr(result.source)} and module spec {repr(result.module_spec)}"
+                    )
+
+                    return result
+
+                self._libaries[entry_key] = entry = _Entry(name, args, self, _load_libdoc)
 
         entry = self._libaries[entry_key]
 
@@ -113,7 +232,7 @@ class LibraryManager:
             entry.references.add(sentinel)
             weakref.finalize(sentinel, self.__remove_entry, entry_key, entry)
 
-        return entry.doc
+        return await entry.get_doc()
 
     @_logger.call
     async def get_doc_from_model(
@@ -179,11 +298,15 @@ class LibraryManager:
 
     @_logger.call
     async def find_file(self, name: str, base_dir: str = ".", file_type: str = "Resource") -> str:
-        return await find_file_external(
-            name,
-            self.folder.to_path_str(),
-            base_dir,
-            self.config.pythonpath if self.config is not None else None,
-            file_type,
-            timeout=10,
+        return await asyncio.wait_for(
+            self._loop.run_in_executor(
+                self.process_pool,
+                find_file,
+                name,
+                str(self.folder.to_path()),
+                base_dir,
+                self.config.pythonpath if self.config is not None else None,
+                file_type,
+            ),
+            30,
         )

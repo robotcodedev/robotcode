@@ -250,7 +250,8 @@ class Namespace:
     ) -> None:
         super().__init__()
         self.library_manager = library_manager
-        self.library_manager.libraries_removed.add(self.libraries_removed)
+        self.library_manager.library_invalidated.add(self.library_invalidated)
+        self.library_manager.library_deleted.add(self.library_invalidated)
         self.model = model
         self.source = source
         self._sentinel = weakref.ref(sentinel)
@@ -269,7 +270,8 @@ class Namespace:
         # TODO: how to get the search order from model
         self.search_order: Tuple[str, ...] = ()
 
-    async def libraries_removed(self, sender: Any, library_sources: List[str]) -> None:
+    async def library_invalidated(self, sender: Any, name: str, args: Tuple[Any, ...]) -> None:
+        # todo check if we need to invalidate?
         self.invalidated_callback(self)
 
     async def get_diagnostisc(self) -> List[Diagnostic]:
@@ -305,7 +307,7 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Library setting requires value.")
                     result = await self._get_library_entry(value.name, value.args, value.alias, base_dir)
-                    if result.library_doc.errors is None and len(result.library_doc.keywords) == 0:
+                    if add_diagnostics and result.library_doc.errors is None and len(result.library_doc.keywords) == 0:
                         self._diagnostics.append(
                             Diagnostic(
                                 range=value.range(),
@@ -406,7 +408,7 @@ class Namespace:
                 f"Invalid resource file extension '{extension}'. "
                 f"Supported extensions are {', '.join(repr(s) for s in RESOURCE_EXTENSIONS)}."
             )
-        
+
         model = get_resource_model(source)
 
         resource = await self._get_doc_from_model(model, source)

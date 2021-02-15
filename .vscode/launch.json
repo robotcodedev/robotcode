@@ -41,7 +41,7 @@
 			"args": [
 				"--mode",
 				"tcp",
-				"--call-tracing",
+				//"--call-tracing",
 				"--log-config", "log.ini"
 				//"--debug",
 				// "--debug-json-rpc",
