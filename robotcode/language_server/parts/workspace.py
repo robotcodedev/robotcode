@@ -70,6 +70,12 @@ class FileWatcherEntry:
     async def call_childrens(self, sender: Any, changes: List[FileEvent]) -> None:
         await self.child_callbacks(sender, changes)
 
+    def __str__(self) -> str:
+        return self.id
+
+    def __repr__(self) -> str:
+        return f"{type(self).__qualname__}(id={repr(self.id)}, watchers={repr(self.watchers)})"
+
 
 class WorkspaceFolder:
     def __init__(self, name: str, uri: Uri, document_uri: DocumentUri) -> None:

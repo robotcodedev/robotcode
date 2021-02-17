@@ -7,7 +7,7 @@ from collections import OrderedDict
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Coroutine, List, Optional, Tuple
+from typing import Any, Callable, Coroutine, Dict, List, NamedTuple, Optional, Tuple
 
 from ...language_server.parts.workspace import FileWatcherEntry, Workspace
 from ...language_server.types import FileChangeType, FileEvent
@@ -47,14 +47,23 @@ class _Entry:
         self.file_watchers: List[FileWatcherEntry] = []
         self._doc: Optional[LibraryDoc] = None
         self._lock = asyncio.Lock()
+        self._loop = asyncio.get_event_loop()
 
-    async def did_change_watched_files(self, sender: Any, changes: List[FileEvent]) -> None:
+    def __del__(self) -> None:
+        if self._loop.is_running():
+            asyncio.run_coroutine_threadsafe(self.invalidate(), self._loop)
+
+    def __repr__(self) -> str:
+        return (
+            f"{type(self).__qualname__}(name={repr(self.name)}, "
+            f"args={repr(self.args)}, file_watchers={repr(self.file_watchers)}, id={repr(id(self))}"
+        )
+
+    async def check_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
         async with self._lock:
             if self._doc is None:
-                return
+                return None
 
-            allready_changed = False
-            allready_deleted = False
             for change in changes:
                 uri = Uri(change.uri)
                 if uri.scheme != "file":
@@ -78,15 +87,11 @@ class _Entry:
                         and any(path.is_relative_to(Path(e).absolute()) for e in self._doc.python_path)
                     )
                 ):
-                    await self.invalidate()
-                    if change.type in [FileChangeType.CREATED, FileChangeType.CHANGED]:
-                        if not allready_changed:
-                            await self.parent.entry_invalidated(self)
-                            allready_changed = True
-                    elif change.type in [FileChangeType.DELETED]:
-                        if allready_deleted:
-                            await self.parent.entry_deleted(self)
-                            allready_deleted = True
+                    await self._invalidate()
+
+                    return change.type
+
+            return None
 
     async def _update(self) -> None:
         self._doc = await self.load_doc_coroutine()
@@ -94,7 +99,7 @@ class _Entry:
         if self._doc.module_spec is not None and self._doc.module_spec.submodule_search_locations is not None:
             self.file_watchers.append(
                 await self.parent.workspace.add_file_watchers(
-                    self.did_change_watched_files,
+                    self.parent.did_change_watched_files,
                     [
                         str(Path(location).absolute().joinpath("**"))
                         for location in self._doc.module_spec.submodule_search_locations
@@ -110,7 +115,7 @@ class _Entry:
         if self._doc.source is not None:
             self.file_watchers.append(
                 await self.parent.workspace.add_file_watchers(
-                    self.did_change_watched_files, [str(Path(self._doc.source).parent.joinpath("**"))]
+                    self.parent.did_change_watched_files, [str(Path(self._doc.source).parent.joinpath("**"))]
                 )
             )
 
@@ -119,11 +124,19 @@ class _Entry:
         if self._doc.python_path is not None:
             self.file_watchers.append(
                 await self.parent.workspace.add_file_watchers(
-                    self.did_change_watched_files, [str(Path(s).parent.joinpath("**")) for s in self._doc.python_path]
+                    self.parent.did_change_watched_files,
+                    [str(Path(s).parent.joinpath("**")) for s in self._doc.python_path],
                 )
             )
 
     async def invalidate(self) -> None:
+        async with self._lock:
+            await self._invalidate()
+
+    async def _invalidate(self) -> None:
+        if self._doc is None and len(self.file_watchers) == 0:
+            return
+
         await self._remove_file_watcher()
         self._doc = None
 
@@ -145,7 +158,7 @@ class _Entry:
 
 # we need this, because ProcessPoolExecutor is not correctly initialized if asyncio is reading from stdin
 def _init_process_pool() -> ProcessPoolExecutor:
-    result = ProcessPoolExecutor(max_workers=1)
+    result = ProcessPoolExecutor()
     try:
         result.submit(init_pool).result(5)
     except BaseException:
@@ -153,8 +166,15 @@ def _init_process_pool() -> ProcessPoolExecutor:
     return result
 
 
+class LibraryChangedParams(NamedTuple):
+    name: str
+    args: Tuple[Any, ...]
+    type: FileChangeType
+
+
 class LibraryManager:
     _logger = LoggingDescriptor()
+
     process_pool = _init_process_pool()
 
     def __init__(self, workspace: Workspace, folder: Uri, config: Optional[RobotConfig]) -> None:
@@ -164,33 +184,33 @@ class LibraryManager:
         self.config = config
         self._libaries_lock = asyncio.Lock()
         self._libaries: OrderedDict[_EntryKey, _Entry] = OrderedDict()
+        self.file_watchers: List[FileWatcherEntry] = []
         self._loop = asyncio.get_event_loop()
+
+    @async_tasking_event
+    async def libraries_changed(sender, params: List[LibraryChangedParams]) -> None:
+        ...
+
+    async def did_change_watched_files(self, sender: Any, changes: List[FileEvent]) -> None:
+        changed: Dict[_EntryKey, FileChangeType] = {}
+
+        for key, entry in self._libaries.items():
+            result = await entry.check_changed(changes)
+            if result is not None:
+                changed[key] = result
+
+        await self.libraries_changed(self, [LibraryChangedParams(k.name, k.args, v) for k, v in changed.items()])
 
     def __remove_entry(self, entry_key: _EntryKey, entry: _Entry, now: bool = False) -> None:
         async def threadsafe_remove(k: _EntryKey, e: _Entry, n: bool) -> None:
             if n or len(e.references) == 0:
                 self._logger.debug(lambda: f"remove library {k.name}{repr(k.args)}")
                 async with self._libaries_lock:
+                    await entry.invalidate()
                     self._libaries.pop(k, None)
 
         if self._loop.is_running():
             asyncio.run_coroutine_threadsafe(threadsafe_remove(entry_key, entry, now), loop=self._loop)
-
-    @async_tasking_event
-    async def library_deleted(sender, name: str, args: Tuple[Any, ...]) -> None:
-        ...
-
-    @async_tasking_event
-    async def library_invalidated(sender, name: str, args: Tuple[Any, ...]) -> None:
-        ...
-
-    async def entry_invalidated(self, entry: _Entry) -> None:
-        await self.library_invalidated(self, entry.name, entry.args)
-
-    async def entry_deleted(self, entry: _Entry) -> None:
-        self.__remove_entry(_EntryKey(entry.name, entry.args), entry)
-
-        await self.library_deleted(self, entry.name, entry.args)
 
     @_logger.call
     async def get_doc_from_library(
@@ -228,7 +248,7 @@ class LibraryManager:
 
         entry = self._libaries[entry_key]
 
-        if sentinel is not None:
+        if sentinel is not None and sentinel not in entry.references:
             entry.references.add(sentinel)
             weakref.finalize(sentinel, self.__remove_entry, entry_key, entry)
 

@@ -25,6 +25,6 @@ class RobotConfig(Model):
     pythonpath: List[str]
 
 
-class RobotcodeConfig(Model):
+class RobotCodeConfig(Model):
     language_server: LanguageServerConfig
     robot: RobotConfig

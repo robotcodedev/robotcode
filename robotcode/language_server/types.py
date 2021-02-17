@@ -1148,7 +1148,7 @@ class FileChangeType(IntEnum):
 
 class FileEvent(Model):
     uri: DocumentUri
-    type: int
+    type: FileChangeType
 
 
 class DidChangeWatchedFilesParams(Model):

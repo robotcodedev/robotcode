@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 from ...utils.async_event import async_tasking_event
 
 from ...language_server.text_document import TextDocument
-from ..configuration import RobotcodeConfig
+from ..configuration import RobotCodeConfig
 from ..diagnostics.library_manager import LibraryManager
 from ..diagnostics.namespace import Namespace
 
@@ -168,7 +168,7 @@ class ModelTokenCache(RobotLanguageServerProtocolPart):
 
         async with self._library_managers_lock:
             if folder not in self._library_managers:
-                config = RobotcodeConfig.parse_obj(
+                config = RobotCodeConfig.parse_obj(
                     await self.parent.workspace.get_configuration("robotcode", folder.uri)
                 )
 

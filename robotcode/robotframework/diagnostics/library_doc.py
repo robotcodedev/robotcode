@@ -250,9 +250,9 @@ def _update_sys_path(working_dir: str = ".", pythonpath: Optional[List[str]] = N
 
     if pythonpath is not None:
         for p in pythonpath:
-            if p in sys.path:
-                sys.path.remove(p)
-            sys.path.insert(0, str(Path(p).absolute()))
+            absolute_path = str(Path(p).absolute())
+            if absolute_path not in sys.path:
+                sys.path.insert(0, absolute_path)
 
 
 __PRELOADED_MODULES: Optional[Set[ModuleType]] = None

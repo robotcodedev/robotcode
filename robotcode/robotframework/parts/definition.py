@@ -63,7 +63,7 @@ class RobotDefinitionProtocolPart(RobotLanguageServerProtocolPart):
                             return [
                                 LocationLink(
                                     origin_selection_range=range_from_token_or_node(node, keyword_token),
-                                    target_uri=str(Uri.from_path_str(keyword_doc.source)),
+                                    target_uri=str(Uri.from_path(keyword_doc.source)),
                                     target_range=keyword_doc.range(),
                                     target_selection_range=keyword_doc.range(),
                                 )
@@ -85,7 +85,7 @@ class RobotDefinitionProtocolPart(RobotLanguageServerProtocolPart):
                             return [
                                 LocationLink(
                                     origin_selection_range=range_from_token_or_node(node, keyword_token),
-                                    target_uri=str(Uri.from_path_str(keyword_doc.source)),
+                                    target_uri=str(Uri.from_path(keyword_doc.source)),
                                     target_range=keyword_doc.range(),
                                     target_selection_range=keyword_doc.range(),
                                 )
@@ -108,7 +108,7 @@ class RobotDefinitionProtocolPart(RobotLanguageServerProtocolPart):
                             return [
                                 LocationLink(
                                     origin_selection_range=range_from_token_or_node(node, keyword_token),
-                                    target_uri=str(Uri.from_path_str(keyword_doc.source)),
+                                    target_uri=str(Uri.from_path(keyword_doc.source)),
                                     target_range=keyword_doc.range(),
                                     target_selection_range=keyword_doc.range(),
                                 )
@@ -138,7 +138,7 @@ class RobotDefinitionProtocolPart(RobotLanguageServerProtocolPart):
                                 return [
                                     LocationLink(
                                         origin_selection_range=range_from_token_or_node(node, name_token),
-                                        target_uri=str(Uri.from_path_str(libdoc.source)),
+                                        target_uri=str(Uri.from_path(libdoc.source)),
                                         target_range=libdoc.range(),
                                         target_selection_range=libdoc.range(),
                                     )
@@ -168,7 +168,7 @@ class RobotDefinitionProtocolPart(RobotLanguageServerProtocolPart):
                                 return [
                                     LocationLink(
                                         origin_selection_range=range_from_token_or_node(node, name_token),
-                                        target_uri=str(Uri.from_path_str(libdoc.source)),
+                                        target_uri=str(Uri.from_path(libdoc.source)),
                                         target_range=libdoc.range(),
                                         target_selection_range=libdoc.range(),
                                     )

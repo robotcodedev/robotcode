@@ -76,7 +76,7 @@
 						"items": {
 							"type": "string"
 						},
-						"description": "Specifies the arguments to be passed to the language server (i.e.: [\"--debug\", \"--log-file=~/robotframework_ls.log\"]). Requires a VSCode restart to take effect.",
+						"description": "Specifies the arguments to be passed to the language server (i.e.: [\"--log\", \"--log-file=~/robotcode.log\"]). Requires a VSCode restart to take effect.",
 						"scope": "resource"
 					},
 					"robotcode.language-server.python": {

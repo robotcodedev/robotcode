@@ -9,11 +9,12 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Callable, List, NamedTuple, Optional, Sequence, Tuple, cast
 
 from ...language_server.types import Diagnostic, DiagnosticSeverity, Position, Range
-from ..utils.ast import range_from_token_or_node, Token as AstToken
 from ...utils.async_itertools import async_chain
+from ..utils.ast import Token as AstToken
+from ..utils.ast import range_from_token_or_node
 from ..utils.async_visitor import AsyncVisitor
 from .library_doc import KeywordDoc, LibraryDoc
-from .library_manager import DEFAULT_LIBRARIES, LibraryManager
+from .library_manager import DEFAULT_LIBRARIES, LibraryChangedParams, LibraryManager
 
 RESOURCE_EXTENSIONS = (".resource", ".robot", ".txt", ".tsv", ".rst", ".rest")
 
@@ -203,8 +204,8 @@ class KeywordAnalyzer(AsyncVisitor):
             )
 
     async def visit_Fixture(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.model.statements import Fixture
         from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Fixture
 
         value = cast(Fixture, node)
         keyword_token = cast(AstToken, value.get_token(RobotToken.NAME))
@@ -214,8 +215,8 @@ class KeywordAnalyzer(AsyncVisitor):
         await self.generic_visit(node)
 
     async def visit_KeywordCall(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.model.statements import KeywordCall
         from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import KeywordCall
 
         value = cast(KeywordCall, node)
         keyword_token = cast(RobotToken, value.get_token(RobotToken.KEYWORD))
@@ -250,8 +251,7 @@ class Namespace:
     ) -> None:
         super().__init__()
         self.library_manager = library_manager
-        self.library_manager.library_invalidated.add(self.library_invalidated)
-        self.library_manager.library_deleted.add(self.library_invalidated)
+        self.library_manager.libraries_changed.add(self.libraries_changed)
         self.model = model
         self.source = source
         self._sentinel = weakref.ref(sentinel)
@@ -270,7 +270,7 @@ class Namespace:
         # TODO: how to get the search order from model
         self.search_order: Tuple[str, ...] = ()
 
-    async def library_invalidated(self, sender: Any, name: str, args: Tuple[Any, ...]) -> None:
+    async def libraries_changed(self, sender: Any, params: List[LibraryChangedParams]) -> None:
         # todo check if we need to invalidate?
         self.invalidated_callback(self)
 
@@ -449,6 +449,8 @@ class Namespace:
             pass
 
     async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
+        await self._ensure_initialized()
+
         return await KeywordFinder(self).find_keyword(name)
 
 
