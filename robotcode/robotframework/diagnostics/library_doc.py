@@ -51,7 +51,17 @@ __all__ = [
     "find_file",
     "get_library_doc_external",
     "find_file_external",
+    "is_embedded_keyword",
 ]
+
+
+def is_embedded_keyword(name: str) -> bool:
+    from robot.running.arguments.embedded import EmbeddedArguments
+
+    if EmbeddedArguments(name):
+        return True
+
+    return False
 
 
 class KeywordMatcher:
@@ -93,6 +103,13 @@ class Model(BaseModel):
         pass
 
 
+class Error(Model):
+    message: str
+    type_name: str
+    source: Optional[str] = None
+    line_no: Optional[int] = None
+
+
 class KeywordDoc(Model):
     name: str = ""
     args: Tuple[Any, ...] = ()
@@ -102,6 +119,8 @@ class KeywordDoc(Model):
     line_no: int = -1
     end_line_no: int = -1
     type: str = "keyword"
+    is_embedded: bool = False
+    errors: Optional[Sequence[Error]] = None
 
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
@@ -166,11 +185,6 @@ class KeywordStore(Model):
                 return v
 
         return default
-
-
-class Error(Model):
-    message: str
-    type_name: str
 
 
 class ModuleSpec(Model):
@@ -424,6 +438,7 @@ def get_library_doc(
                     tags=tuple(kw.tags),
                     source=kw.source,
                     line_no=kw.lineno,
+                    is_embedded=is_embedded_keyword(kw.name),
                 )
                 for kw in KeywordDocBuilder().build_keywords(lib)
             }

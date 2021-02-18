@@ -783,7 +783,7 @@ class Range(Model):
         return iter((self.start, self.end))
 
     @staticmethod
-    def empty() -> "Range":
+    def zero() -> "Range":
         return Range(
             start=Position(
                 line=0,

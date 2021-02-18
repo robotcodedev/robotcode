@@ -3,10 +3,13 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Any, List, Optional
 
+from ..utils.ast import range_from_token
+
 from ...language_server.language import language_id
 from ...language_server.text_document import TextDocument
 from ...language_server.types import Diagnostic, DiagnosticSeverity, Position, Range
 from ...utils.logging import LoggingDescriptor
+
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -55,15 +58,38 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         result: List[Diagnostic] = []
 
-        async for e in self.parent.model_token_cache.get_tokens(document):
-            if e.type in [Token.ERROR, Token.FATAL_ERROR]:
+        async for token in self.parent.model_token_cache.get_tokens(document):
+            if token.type in [Token.ERROR, Token.FATAL_ERROR]:
                 result.append(
                     Diagnostic(
-                        range=Range(
-                            start=Position(line=e.lineno - 1, character=e.col_offset),
-                            end=Position(line=e.lineno - 1, character=e.end_col_offset),
-                        ),
-                        message=e.error,
+                        range=range_from_token(token),
+                        message=token.error,
+                        severity=DiagnosticSeverity.ERROR,
+                        source="robot",
+                        code="TokenError",
+                    )
+                )
+
+            try:
+                for variable_token in token.tokenize_variables():
+                    if variable_token == token:
+                        break
+
+                    if variable_token.type in [Token.ERROR, Token.FATAL_ERROR]:
+                        result.append(
+                            Diagnostic(
+                                range=range_from_token(variable_token),
+                                message=token.error,
+                                severity=DiagnosticSeverity.ERROR,
+                                source="robot",
+                                code="TokenError",
+                            )
+                        )
+            except BaseException as e:
+                result.append(
+                    Diagnostic(
+                        range=range_from_token(token),
+                        message=str(e),
                         severity=DiagnosticSeverity.ERROR,
                         source="robot",
                         code="TokenError",

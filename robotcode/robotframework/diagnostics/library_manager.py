@@ -16,7 +16,16 @@ from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
 from ..configuration import RobotConfig
 from ..utils.async_visitor import walk
-from .library_doc import Error, KeywordDoc, KeywordStore, LibraryDoc, find_file, get_library_doc, init_pool
+from .library_doc import (
+    Error,
+    KeywordDoc,
+    KeywordStore,
+    LibraryDoc,
+    find_file,
+    get_library_doc,
+    init_pool,
+    is_embedded_keyword,
+)
 
 DEFAULT_LIBRARIES = ("BuiltIn", "Reserved", "Easter")
 
@@ -264,6 +273,7 @@ class LibraryManager:
         from robot.running.model import ResourceFile
         from robot.running.usererrorhandler import UserErrorHandler
         from robot.running.userkeyword import UserLibrary
+        from robot.errors import DataError
 
         errors: List[Error] = []
 
@@ -286,13 +296,21 @@ class LibraryManager:
 
         class MyUserLibrary(UserLibrary):  # type: ignore
             def _log_creating_failed(self, handler: UserErrorHandler, error: BaseException) -> None:
-                errors.append(
-                    Error(
-                        message="Error in %s '%s': Creating keyword '%s' failed: %s"
-                        % (self.source_type.lower(), self.source, handler.name, str(error)),
-                        type_name=type(error).__qualname__,
+                pass
+
+            def _create_handler(self, kw: Any) -> Any:
+                try:
+                    return super()._create_handler(kw)
+                except DataError as e:
+                    errors.append(
+                        Error(
+                            message="Creating keyword '%s' failed: %s" % (kw.name, str(e)),
+                            type_name=type(e).__qualname__,
+                            source=kw.source,
+                            line_no=kw.lineno,
+                        )
                     )
-                )
+                    raise
 
         lib = MyUserLibrary(res)
 
@@ -309,6 +327,7 @@ class LibraryManager:
                     tags=tuple(kw.tags),
                     source=kw.source,
                     line_no=kw.lineno,
+                    is_embedded=is_embedded_keyword(kw.name),
                 )
                 for kw in KeywordDocBuilder(resource=model_type == "RESOURCE").build_keywords(lib)
             }

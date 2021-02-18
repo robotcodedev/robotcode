@@ -10,10 +10,10 @@ from typing import Any, AsyncIterator, Callable, List, NamedTuple, Optional, Seq
 
 from ...language_server.types import Diagnostic, DiagnosticSeverity, Position, Range
 from ...utils.async_itertools import async_chain
-from ..utils.ast import Token as AstToken
-from ..utils.ast import range_from_token_or_node
+from ..utils.ast import Token as AstToken, range_from_token_or_node
+
 from ..utils.async_visitor import AsyncVisitor
-from .library_doc import KeywordDoc, LibraryDoc
+from .library_doc import KeywordDoc, LibraryDoc, is_embedded_keyword
 from .library_manager import DEFAULT_LIBRARIES, LibraryChangedParams, LibraryManager
 
 RESOURCE_EXTENSIONS = (".resource", ".robot", ".txt", ".tsv", ".rst", ".rest")
@@ -166,14 +166,14 @@ class ImportVisitor(AsyncVisitor):
         )
 
 
-class KeywordAnalyzer(AsyncVisitor):
+class Analyzer(AsyncVisitor):
     async def get(self, model: ast.AST, namespace: "Namespace") -> List[Diagnostic]:
         self._results: List[Diagnostic] = []
         self._namespace = namespace
         await self.visit(model)
         return self._results
 
-    async def _analyze_keyword(self, keyword: Optional[str], value: ast.AST, token: AstToken) -> None:
+    async def _analyze_keyword_call(self, keyword: Optional[str], value: ast.AST, token: AstToken) -> None:
         try:
             finder = KeywordFinder(self._namespace)
 
@@ -210,7 +210,7 @@ class KeywordAnalyzer(AsyncVisitor):
         value = cast(Fixture, node)
         keyword_token = cast(AstToken, value.get_token(RobotToken.NAME))
 
-        await self._analyze_keyword(value.name, value, keyword_token)
+        await self._analyze_keyword_call(value.name, value, keyword_token)
 
         await self.generic_visit(node)
 
@@ -221,7 +221,28 @@ class KeywordAnalyzer(AsyncVisitor):
         value = cast(KeywordCall, node)
         keyword_token = cast(RobotToken, value.get_token(RobotToken.KEYWORD))
 
-        await self._analyze_keyword(value.keyword, value, keyword_token)
+        await self._analyze_keyword_call(value.keyword, value, keyword_token)
+
+        await self.generic_visit(node)
+
+    async def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.blocks import Keyword
+        from robot.parsing.model.statements import Arguments, KeywordName
+
+        kw = cast(Keyword, node)
+        if kw.name is not None:
+            name_token = cast(KeywordName, kw.header).get_token(RobotToken.KEYWORD_NAME)
+            if is_embedded_keyword(kw.name) and any(isinstance(v, Arguments) and len(v.values) > 0 for v in kw.body):
+                self._results.append(
+                    Diagnostic(
+                        range=range_from_token_or_node(kw, name_token),
+                        message="Keyword cannot have both normal and embedded arguments.",
+                        severity=DiagnosticSeverity.ERROR,
+                        source=DIAGNOSTICS_SOURCE_NAME,
+                        code="KeywordError",
+                    )
+                )
 
         await self.generic_visit(node)
 
@@ -375,7 +396,7 @@ class Namespace:
             except BaseException as e:
                 self._diagnostics.append(
                     Diagnostic(
-                        range=Range.empty(),
+                        range=Range.zero(),
                         message=f"Can't import default library '{library}': {str(e) or type(e).__name__}",
                         severity=DiagnosticSeverity.ERROR,
                         source="Robot",
@@ -445,8 +466,7 @@ class Namespace:
         if not self._analyzed:
             self._analyzed = True
 
-            self._diagnostics += await KeywordAnalyzer().get(self.model, self)
-            pass
+            self._diagnostics += await Analyzer().get(self.model, self)
 
     async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
         await self._ensure_initialized()
@@ -479,6 +499,7 @@ class KeywordFinder:
                         f"No keyword with name {repr(name)} found.", DiagnosticSeverity.ERROR, "KeywordError"
                     )
                 )
+
             return result
         except CancelSearch:
             return None
@@ -660,4 +681,5 @@ class KeywordFinder:
         for prefix in ["given ", "when ", "then ", "and ", "but "]:
             if lower.startswith(prefix):
                 return await self._find_keyword(name[len(prefix) :])  # noqa: E203
+
         return None

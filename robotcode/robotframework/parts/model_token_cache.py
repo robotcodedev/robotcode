@@ -53,7 +53,8 @@ class ModelTokenCache(RobotLanguageServerProtocolPart):
         version = document.version
 
         async def remove_safe(r: weakref.ref[TextDocument], v: int) -> None:
-            self._entries.pop((r, v))
+            async with self._lock:
+                self._entries.pop((r, v))
 
         def remove(r: weakref.ref[TextDocument]) -> None:
             if self._loop.is_running():
@@ -82,13 +83,13 @@ class ModelTokenCache(RobotLanguageServerProtocolPart):
                 suffix = path.suffix.lower()
 
                 if path.name == "__init__.robot":
-                    for t in robot.api.get_init_tokens(content, tokenize_variables=True):
+                    for t in robot.api.get_init_tokens(content):
                         yield t
                 elif suffix == ".robot":
-                    for t in robot.api.get_tokens(content, tokenize_variables=True):
+                    for t in robot.api.get_tokens(content):
                         yield t
                 elif suffix == ".resource":
-                    for t in robot.api.get_resource_tokens(content, tokenize_variables=True):
+                    for t in robot.api.get_resource_tokens(content):
                         yield t
                 else:
                     raise UnknownFileTypeError(str(document.uri))
