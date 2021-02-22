@@ -55,6 +55,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @_logger.call
     async def collect_token_errors(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
         from robot.parsing.lexer.tokens import Token
+        from robot.errors import VariableError
 
         result: List[Diagnostic] = []
 
@@ -85,14 +86,14 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                                 code="TokenError",
                             )
                         )
-            except BaseException as e:
+            except VariableError as e:
                 result.append(
                     Diagnostic(
                         range=range_from_token(token),
                         message=str(e),
                         severity=DiagnosticSeverity.ERROR,
                         source="robot",
-                        code="TokenError",
+                        code=type(e).__qualname__,
                     )
                 )
 

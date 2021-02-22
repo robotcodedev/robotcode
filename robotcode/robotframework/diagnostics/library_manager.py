@@ -88,6 +88,11 @@ class _Entry:
                             for e in self._doc.module_spec.submodule_search_locations
                         )
                     )
+                    or (
+                        self._doc.module_spec is not None
+                        and self._doc.module_spec.origin is not None
+                        and path.is_relative_to(Path(self._doc.module_spec.origin).parent)
+                    )
                     or (self._doc.source and path.is_relative_to(Path(self._doc.source).parent))
                     or (
                         self._doc.module_spec is None
@@ -105,6 +110,15 @@ class _Entry:
     async def _update(self) -> None:
         self._doc = await self.load_doc_coroutine()
 
+        source_or_origin = (
+            self._doc.source
+            if self._doc.source is not None
+            else self._doc.module_spec.origin
+            if self._doc.module_spec is not None
+            else None
+        )
+
+        # we are a module, so add the module path into file watchers
         if self._doc.module_spec is not None and self._doc.module_spec.submodule_search_locations is not None:
             self.file_watchers.append(
                 await self.parent.workspace.add_file_watchers(
@@ -116,25 +130,27 @@ class _Entry:
                 )
             )
 
-            if self._doc.source is not None and Path(self._doc.source).parent in [
+            if source_or_origin is not None and Path(source_or_origin).parent in [
                 Path(loc).absolute() for loc in self._doc.module_spec.submodule_search_locations
             ]:
                 return
 
-        if self._doc.source is not None:
+        # we are a file, so put the parent path to filewatchers
+        if source_or_origin is not None:
             self.file_watchers.append(
                 await self.parent.workspace.add_file_watchers(
-                    self.parent.did_change_watched_files, [str(Path(self._doc.source).parent.joinpath("**"))]
+                    self.parent.did_change_watched_files, [str(Path(source_or_origin).parent.joinpath("**"))]
                 )
             )
 
             return
 
+        # we are not found so, put the pythonpath to filewatchers
         if self._doc.python_path is not None:
             self.file_watchers.append(
                 await self.parent.workspace.add_file_watchers(
                     self.parent.did_change_watched_files,
-                    [str(Path(s).parent.joinpath("**")) for s in self._doc.python_path],
+                    [str(Path(s).joinpath("**")) for s in self._doc.python_path],
                 )
             )
 
@@ -280,15 +296,11 @@ class LibraryManager:
         async for node in walk(model):
             error = getattr(node, "error", None)
             if error is not None:
-                errors.append(
-                    Error(message=f"Error in file '{source}' on line {node.lineno}: {error}", type_name="ModelError")
-                )
+                errors.append(Error(message=error, type_name="ModelError", source=source, line_no=node.lineno))
             node_error = getattr(node, "errors", None)
             if node_error is not None:
                 for e in node_error:
-                    errors.append(
-                        Error(message=f"Error in file '{source}' on line {node.lineno}: {e}", type_name="ModelError")
-                    )
+                    errors.append(Error(message=e, type_name="ModelError", source=source, line_no=node.lineno))
 
         res = ResourceFile(source=source)
 
@@ -300,17 +312,24 @@ class LibraryManager:
 
             def _create_handler(self, kw: Any) -> Any:
                 try:
-                    return super()._create_handler(kw)
+                    handler = super()._create_handler(kw)
+                    setattr(handler, "errors", None)
                 except DataError as e:
-                    errors.append(
-                        Error(
-                            message="Creating keyword '%s' failed: %s" % (kw.name, str(e)),
-                            type_name=type(e).__qualname__,
-                            source=kw.source,
-                            line_no=kw.lineno,
-                        )
+                    err = Error(
+                        message=str(e),
+                        type_name=type(e).__qualname__,
+                        source=kw.source,
+                        line_no=kw.lineno,
                     )
-                    raise
+                    errors.append(err)
+
+                    handler = UserErrorHandler(e, kw.name, self.name)
+                    handler.source = kw.source
+                    handler.lineno = kw.lineno
+
+                    setattr(handler, "errors", [err])
+
+                return handler
 
         lib = MyUserLibrary(res)
 
@@ -320,16 +339,19 @@ class LibraryManager:
 
         libdoc.keywords = KeywordStore(
             keywords={
-                kw.name: KeywordDoc(
-                    name=kw.name,
-                    args=tuple(str(a) for a in kw.args),
-                    doc=kw.doc,
-                    tags=tuple(kw.tags),
-                    source=kw.source,
-                    line_no=kw.lineno,
-                    is_embedded=is_embedded_keyword(kw.name),
+                kw[0].name: KeywordDoc(
+                    name=kw[0].name,
+                    args=tuple(str(a) for a in kw[0].args),
+                    doc=kw[0].doc,
+                    tags=tuple(kw[0].tags),
+                    source=kw[0].source,
+                    line_no=kw[0].lineno,
+                    is_embedded=is_embedded_keyword(kw[0].name),
+                    errors=getattr(kw[1], "errors") if hasattr(kw[1], "errors") else None,
                 )
-                for kw in KeywordDocBuilder(resource=model_type == "RESOURCE").build_keywords(lib)
+                for kw in [
+                    (KeywordDocBuilder(resource=model_type == "RESOURCE").build_keyword(lw), lw) for lw in lib.handlers
+                ]
             }
         )
 

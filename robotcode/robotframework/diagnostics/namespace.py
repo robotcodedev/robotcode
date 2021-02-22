@@ -8,8 +8,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, AsyncIterator, Callable, List, NamedTuple, Optional, Sequence, Tuple, cast
 
-from ...language_server.types import Diagnostic, DiagnosticSeverity, Position, Range
+from ...language_server.types import (
+    Diagnostic,
+    DiagnosticRelatedInformation,
+    DiagnosticSeverity,
+    Location,
+    Position,
+    Range,
+)
 from ...utils.async_itertools import async_chain
+from ...utils.uri import Uri
 from ..utils.ast import Token as AstToken, range_from_token_or_node
 
 from ..utils.async_visitor import AsyncVisitor
@@ -34,10 +42,6 @@ class ImportError(DiagnosticsException):
 
 
 class KeywordError(DiagnosticsException):
-    pass
-
-
-class KeywordWarning(DiagnosticsWarning):
     pass
 
 
@@ -177,7 +181,7 @@ class Analyzer(AsyncVisitor):
         try:
             finder = KeywordFinder(self._namespace)
 
-            await finder.find_keyword(keyword)
+            doc = await finder.find_keyword(keyword)
 
             for e in finder.diagnostics:
                 self._results.append(
@@ -187,6 +191,51 @@ class Analyzer(AsyncVisitor):
                         severity=e.severity,
                         source=DIAGNOSTICS_SOURCE_NAME,
                         code=e.code,
+                    )
+                )
+
+            if doc is not None and doc.errors:
+                self._results.append(
+                    Diagnostic(
+                        range=range_from_token_or_node(value, token),
+                        message="Keyword definition contains errors.",
+                        severity=DiagnosticSeverity.ERROR,
+                        source=DIAGNOSTICS_SOURCE_NAME,
+                        related_information=[
+                            DiagnosticRelatedInformation(
+                                location=Location(
+                                    uri=str(
+                                        Uri.from_path(
+                                            err.source
+                                            if err.source is not None
+                                            else doc.source
+                                            if doc.source is not None
+                                            else "/<unknown>"
+                                        )
+                                    ),
+                                    range=Range(
+                                        start=Position(
+                                            line=err.line_no - 1
+                                            if err.line_no is not None
+                                            else doc.line_no
+                                            if doc.line_no >= 0
+                                            else 0,
+                                            character=0,
+                                        ),
+                                        end=Position(
+                                            line=err.line_no - 1
+                                            if err.line_no is not None
+                                            else doc.line_no
+                                            if doc.line_no >= 0
+                                            else 0,
+                                            character=0,
+                                        ),
+                                    ),
+                                ),
+                                message=err.message,
+                            )
+                            for err in doc.errors
+                        ],
                     )
                 )
 
@@ -348,15 +397,52 @@ class Namespace:
                 else:
                     raise DiagnosticsException("Unknown import type.")
 
-                if result.library_doc.errors is not None and add_diagnostics:
-                    for e in result.library_doc.errors:
+                if result.library_doc.errors and add_diagnostics:
+                    if any(err.source for err in result.library_doc.errors):
                         self._diagnostics.append(
                             Diagnostic(
                                 range=value.range(),
-                                message=e.message,
+                                message="Import definition contains errors.",
                                 severity=DiagnosticSeverity.ERROR,
                                 source=DIAGNOSTICS_SOURCE_NAME,
-                                code=e.type_name,
+                                related_information=[
+                                    DiagnosticRelatedInformation(
+                                        location=Location(
+                                            uri=str(Uri.from_path(err.source)),
+                                            range=Range(
+                                                start=Position(
+                                                    line=err.line_no - 1
+                                                    if err.line_no is not None
+                                                    else result.library_doc.line_no
+                                                    if result.library_doc.line_no >= 0
+                                                    else 0,
+                                                    character=0,
+                                                ),
+                                                end=Position(
+                                                    line=err.line_no - 1
+                                                    if err.line_no is not None
+                                                    else result.library_doc.line_no
+                                                    if result.library_doc.line_no >= 0
+                                                    else 0,
+                                                    character=0,
+                                                ),
+                                            ),
+                                        ),
+                                        message=err.message,
+                                    )
+                                    for err in result.library_doc.errors
+                                    if err.source is not None
+                                ],
+                            )
+                        )
+                    for err in filter(lambda e: e.source is None, result.library_doc.errors):
+                        self._diagnostics.append(
+                            Diagnostic(
+                                range=value.range(),
+                                message=err.message,
+                                severity=DiagnosticSeverity.ERROR,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                                code=err.type_name,
                             )
                         )
 

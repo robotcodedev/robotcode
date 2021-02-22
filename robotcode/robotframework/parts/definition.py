@@ -134,11 +134,12 @@ class RobotDefinitionProtocolPart(RobotLanguageServerProtocolPart):
 
                         if len(libdocs) == 1:
                             libdoc = libdocs[0]
-                            if libdoc.source is not None:
+                            python_source = libdoc.python_source
+                            if python_source is not None:
                                 return [
                                     LocationLink(
                                         origin_selection_range=range_from_token_or_node(node, name_token),
-                                        target_uri=str(Uri.from_path(libdoc.source)),
+                                        target_uri=str(Uri.from_path(python_source)),
                                         target_range=libdoc.range(),
                                         target_selection_range=libdoc.range(),
                                     )
@@ -164,11 +165,12 @@ class RobotDefinitionProtocolPart(RobotLanguageServerProtocolPart):
 
                         if len(libdocs) == 1:
                             libdoc = libdocs[0]
-                            if libdoc.source is not None:
+                            python_source = libdoc.python_source
+                            if python_source is not None:
                                 return [
                                     LocationLink(
                                         origin_selection_range=range_from_token_or_node(node, name_token),
-                                        target_uri=str(Uri.from_path(libdoc.source)),
+                                        target_uri=str(Uri.from_path(python_source)),
                                         target_range=libdoc.range(),
                                         target_selection_range=libdoc.range(),
                                     )

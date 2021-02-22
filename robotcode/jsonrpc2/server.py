@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import abc
 import asyncio
 import io
@@ -125,12 +123,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
             self.loop.run_until_complete(aio_readline(sys.__stdin__.buffer, protocol))
 
         self._run_func = run_io_nonblocking
-
-        # protocol = self.create_protocol()
-        # self.loop.run_until_complete(self.loop.connect_write_pipe(lambda: protocol, sys.stdout.buffer))
-        # self.loop.run_until_complete(self.loop.connect_read_pipe(lambda: protocol, sys.stdin.buffer))
-
-        # self._run_func = self.loop.run_forever
 
     @_logger.call
     def start_tcp(self, host: Optional[str] = None, port: int = 0) -> None:

@@ -8,11 +8,9 @@ exclude = ["robotcode/external"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-black = "^20.8b1"
-pydantic = "^1.7.3"
+robotframework = "^3.2.2"
 
 [tool.poetry.dev-dependencies]
-robotframework = "^3.2.2"
 mypy = "^0.790"
 flake8 = "^3.8.4"
 black = "^20.8b1"
@@ -26,6 +24,8 @@ pytest-asyncio = "^0.14.0"
 pytest = "^6.2.1"
 coloredlogs = "^15.0"
 robotremoteserver = "^1.1"
+Cython = "^0.29.22"
+pydantic = "^1.7.3"
 
 [tool.poetry-dynamic-versioning]
 enable = true

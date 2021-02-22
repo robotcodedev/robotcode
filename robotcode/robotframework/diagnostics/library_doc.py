@@ -1,45 +1,14 @@
-import asyncio
-import enum
 import importlib
 import os
+import re
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import (
-    AbstractSet,
-    Any,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
-    ValuesView,
-    cast,
-)
+from typing import AbstractSet, Any, Dict, List, NamedTuple, Optional, Set, Tuple, Union, ValuesView, cast
 
-if __name__ == "__main__" and __package__ is None or __package__ == "":
-
-    file = Path(__file__).resolve()
-    parent, top = file.parent, file.parents[3]
-
-    sys.path.append(str(top))
-    try:
-        sys.path.remove(str(parent))
-    except ValueError:  # Already removed
-        pass
-
-    __package__ = "robotcode.robotframework.diagnostics"
-
-    try:
-        __import__("pydantic")
-    except ImportError:
-        file = Path(__file__).resolve()
-        external_path = Path(file.parents[2], "external")
-        sys.path.append(str(external_path))
 
 from pydantic import BaseModel, Field, PrivateAttr
+
 from ...language_server.types import Position, Range
 
 __all__ = [
@@ -49,16 +18,18 @@ __all__ = [
     "is_library_by_path",
     "get_library_doc",
     "find_file",
-    "get_library_doc_external",
-    "find_file_external",
     "is_embedded_keyword",
 ]
 
 
 def is_embedded_keyword(name: str) -> bool:
+    from robot.errors import VariableError
     from robot.running.arguments.embedded import EmbeddedArguments
 
-    if EmbeddedArguments(name):
+    try:
+        if EmbeddedArguments(name):
+            return True
+    except VariableError:
         return True
 
     return False
@@ -66,12 +37,16 @@ def is_embedded_keyword(name: str) -> bool:
 
 class KeywordMatcher:
     def __init__(self, name: str) -> None:
+        from robot.errors import VariableError
         from robot.running.arguments.embedded import EmbeddedArguments
         from robot.utils.normalizing import normalize
 
         self.name = name
         self.normalized_name = str(normalize(name, "_"))
-        self.embedded_arguments = EmbeddedArguments(name)
+        try:
+            self.embedded_arguments = EmbeddedArguments(name)
+        except VariableError:
+            self.embedded_arguments = ()
 
     def __eq__(self, o: object) -> bool:
         from robot.utils.normalizing import normalize
@@ -120,7 +95,7 @@ class KeywordDoc(Model):
     end_line_no: int = -1
     type: str = "keyword"
     is_embedded: bool = False
-    errors: Optional[Sequence[Error]] = None
+    errors: Optional[List[Error]] = None
 
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
@@ -189,7 +164,7 @@ class KeywordStore(Model):
 
 class ModuleSpec(Model):
     name: str
-    origin: str
+    origin: Optional[str]
     submodule_search_locations: Optional[List[str]]
 
 
@@ -207,7 +182,7 @@ class LibraryDoc(Model):
     inits: KeywordStore = KeywordStore()
     keywords: KeywordStore = KeywordStore()
     module_spec: Optional[ModuleSpec] = None
-    errors: Optional[Sequence[Error]] = None
+    errors: Optional[List[Error]] = None
     python_path: Optional[List[str]] = None
 
     def range(self) -> Range:
@@ -235,6 +210,22 @@ class LibraryDoc(Model):
             result += self.doc
 
         return result
+
+    @property
+    def python_source(self) -> Optional[str]:
+        if self.source is not None:
+            return self.source
+        if self.module_spec is not None:
+            if self.module_spec.origin is not None:
+                return self.module_spec.origin
+
+            if self.module_spec.submodule_search_locations:
+                for e in self.module_spec.submodule_search_locations:
+                    p = Path(e, "__init__.py")
+                    if p.exists():
+                        return str(p)
+
+        return None
 
 
 def is_library_by_path(path: str) -> bool:
@@ -289,7 +280,11 @@ def get_module_spec(module_name: str) -> Optional[ModuleSpec]:
 
     if result is not None:
         return ModuleSpec(
-            name=result.name, origin=result.origin, submodule_search_locations=result.submodule_search_locations
+            name=result.name,
+            origin=result.origin,
+            submodule_search_locations=[i for i in result.submodule_search_locations]
+            if result.submodule_search_locations
+            else None,
         )
     return None
 
@@ -334,6 +329,50 @@ class KeywordWrapper:
             return self.kw.lineno
         except BaseException:
             return 0
+
+
+class Traceback(NamedTuple):
+    source: str
+    line_no: int
+
+
+class MessageAndTraceback(NamedTuple):
+    message: str
+    traceback: List[Traceback]
+
+
+__RE_MESSAGE = re.compile("^Traceback.*$", re.MULTILINE)
+__RE_TRACEBACK = re.compile('^ +File +"(.*)", +line +([0-9]+).*$', re.MULTILINE)
+
+
+def get_message_and_traceback_from_exception_text(text: str) -> MessageAndTraceback:
+    splitted = __RE_MESSAGE.split(text, 1)
+
+    return MessageAndTraceback(
+        message=splitted[0].strip(),
+        traceback=[Traceback(t.group(1), int(t.group(2))) for t in __RE_TRACEBACK.finditer(splitted[1])]
+        if len(splitted) > 1
+        else [],
+    )
+
+
+def error_from_exception(ex: BaseException, default_source: Optional[str], default_line_no: Optional[int]) -> Error:
+    message_and_traceback = get_message_and_traceback_from_exception_text(str(ex))
+    if message_and_traceback.traceback:
+        tr = message_and_traceback.traceback[-1]
+        return Error(
+            message=str(ex),
+            type_name=type(ex).__qualname__,
+            source=tr.source,
+            line_no=tr.line_no,
+        )
+
+    return Error(
+        message=str(ex),
+        type_name=type(ex).__qualname__,
+        source=default_source,
+        line_no=default_line_no,
+    )
 
 
 def get_library_doc(
@@ -397,7 +436,13 @@ def get_library_doc(
         return LibraryDoc(
             name=name,
             source=source,
-            errors=[Error(message=str(e), type_name=type(e).__qualname__)],
+            errors=[
+                error_from_exception(
+                    e,
+                    source or module_spec.origin if module_spec is not None else None,
+                    1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
+                )
+            ],
             module_spec=module_spec,
             python_path=sys.path,
         )
@@ -447,7 +492,13 @@ def get_library_doc(
     except (SystemExit, KeyboardInterrupt):
         raise
     except BaseException as e:
-        libdoc.errors = [Error(message=str(e), type_name=type(e).__qualname__)]
+        libdoc.errors = [
+            error_from_exception(
+                e,
+                source or module_spec.origin if module_spec is not None else None,
+                1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
+            )
+        ]
 
     return libdoc
 
@@ -466,135 +517,5 @@ def find_file(
     return cast(str, robot_find_file(name, base_dir or ".", file_type))
 
 
-class ParameterMethod(enum.Enum):
-    GET_LIB_DOC = 1
-    FIND_NAME = 2
-
-
-class Parameters(BaseModel):
-    method: ParameterMethod
-    name: str
-    args: Optional[Tuple[Any, ...]] = None
-    working_dir: str = "."
-    base_dir: str = "."
-    pythonpath: Optional[List[str]] = None
-    file_type: str = "Resource"
-
-
-class Result(BaseModel):
-    lib_doc_result: Optional[LibraryDoc] = None
-    find_file_result: Optional[str] = None
-    error: Optional[Error] = None
-
-
-class LibraryDocRemoteError(Exception):
-    def __init__(self, message: str, type_name: Optional[str] = None) -> None:
-        super().__init__(message)
-        self.message = message
-        self.type_name = type_name
-
-
-async def _call_standalone(parameters: Parameters, timeout: Optional[float] = None) -> Result:
-    process = await asyncio.create_subprocess_exec(
-        sys.executable,
-        __file__,
-        parameters.json(),
-        stdout=asyncio.subprocess.PIPE,
-        stdin=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-
-    stdout, stderr = await asyncio.wait_for(process.communicate(), timeout)
-
-    result = Result.parse_raw(stdout)
-
-    if stderr:
-        raise LibraryDocRemoteError(stderr.decode())
-    if result.error is not None:
-        raise LibraryDocRemoteError(result.error.message, result.error.type_name)
-
-    return result
-
-
-async def get_library_doc_external(
-    name: str,
-    args: Optional[Tuple[Any, ...]] = None,
-    working_dir: str = ".",
-    base_dir: str = ".",
-    pythonpath: Optional[List[str]] = None,
-    timeout: Optional[float] = None,
-) -> LibraryDoc:
-    result = await _call_standalone(
-        Parameters(
-            method=ParameterMethod.GET_LIB_DOC,
-            name=name,
-            args=args,
-            working_dir=working_dir,
-            base_dir=base_dir,
-            pythonpath=pythonpath,
-        ),
-        timeout,
-    )
-    if result.lib_doc_result is None:
-        raise LibraryDocRemoteError("lib_doc is 'None'")
-
-    return result.lib_doc_result
-
-
-async def find_file_external(
-    name: str,
-    working_dir: str = ".",
-    base_dir: str = ".",
-    pythonpath: Optional[List[str]] = None,
-    file_type: str = "Resource",
-    timeout: Optional[float] = None,
-) -> str:
-
-    result = await _call_standalone(
-        Parameters(
-            method=ParameterMethod.FIND_NAME,
-            name=name,
-            working_dir=working_dir,
-            base_dir=base_dir,
-            pythonpath=pythonpath,
-            file_type=file_type,
-        ),
-        timeout,
-    )
-    if result.find_file_result is None:
-        raise LibraryDocRemoteError("find_name is 'None'")
-
-    return result.find_file_result
-
-
 def init_pool() -> None:
     pass
-
-
-if __name__ == "__main__":
-    try:
-        params = Parameters.parse_raw(sys.argv[1])
-        if params.method == ParameterMethod.GET_LIB_DOC:
-            libdoc = get_library_doc(
-                params.name,
-                args=params.args,
-                working_dir=params.working_dir,
-                base_dir=params.base_dir,
-                pythonpath=params.pythonpath,
-            )
-
-            sys.stdout.write(Result(lib_doc_result=libdoc).json())
-        elif params.method == ParameterMethod.FIND_NAME:
-            result = find_file(
-                params.name,
-                working_dir=params.working_dir,
-                base_dir=params.base_dir,
-                pythonpath=params.pythonpath,
-                file_type=params.file_type,
-            )
-
-            sys.stdout.write(Result(find_file_result=result).json())
-
-    except BaseException as e:
-        sys.stdout.write(Result(error=Error(message=str(e), type_name=type(e).__qualname__)).json())
-        raise
