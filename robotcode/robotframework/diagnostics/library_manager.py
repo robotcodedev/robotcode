@@ -15,7 +15,7 @@ from ...utils.async_event import async_tasking_event
 from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
 from ..configuration import RobotConfig
-from ..utils.async_visitor import walk
+from ..utils.async_ast import walk
 from .library_doc import (
     Error,
     KeywordDoc,

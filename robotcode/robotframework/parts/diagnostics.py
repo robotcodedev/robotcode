@@ -102,7 +102,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     async def collect_model_errors(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
-        from ..utils.async_visitor import AsyncVisitor
+        from ..utils.async_ast import AsyncVisitor
 
         class Visitor(AsyncVisitor):
             def __init__(self, parent: RobotDiagnosticsProtocolPart) -> None:
@@ -131,7 +131,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     async def collect_walk_model_errors(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
-        from ..utils.async_visitor import walk
+        from ..utils.async_ast import walk
 
         result: List[Diagnostic] = []
 

@@ -94,6 +94,8 @@ class KeywordDoc(Model):
     line_no: int = -1
     end_line_no: int = -1
     type: str = "keyword"
+    libname: Optional[str] = None
+    longname: Optional[str] = None
     is_embedded: bool = False
     errors: Optional[List[Error]] = None
 
@@ -330,6 +332,20 @@ class KeywordWrapper:
         except BaseException:
             return 0
 
+    @property
+    def libname(self) -> Any:
+        try:
+            return self.kw.libname
+        except BaseException:
+            return ""
+
+    @property
+    def longname(self) -> Any:
+        try:
+            return self.kw.longname
+        except BaseException:
+            return ""
+
 
 class Traceback(NamedTuple):
     source: str
@@ -453,16 +469,18 @@ def get_library_doc(
 
         libdoc.inits = KeywordStore(
             keywords={
-                kw.name: KeywordDoc(
+                kw[0].name: KeywordDoc(
                     name=libdoc.name,
-                    args=tuple(str(a) for a in kw.args),
-                    doc=kw.doc,
-                    tags=tuple(kw.tags),
-                    source=kw.source,
-                    line_no=kw.lineno,
+                    args=tuple(str(a) for a in kw[0].args),
+                    doc=kw[0].doc,
+                    tags=tuple(kw[0].tags),
+                    source=kw[0].source,
+                    line_no=kw[0].lineno,
                     type="library",
+                    libname=kw[1].libname,
+                    longname=kw[1].longname,
                 )
-                for kw in [KeywordDocBuilder().build_keyword(KeywordWrapper(lib.init, source))]
+                for kw in [(KeywordDocBuilder().build_keyword(k), k) for k in [KeywordWrapper(lib.init, source)]]
             }
         )
 
@@ -476,16 +494,20 @@ def get_library_doc(
 
         libdoc.keywords = KeywordStore(
             keywords={
-                kw.name: KeywordDoc(
-                    name=kw.name,
-                    args=tuple(str(a) for a in kw.args),
-                    doc=kw.doc,
-                    tags=tuple(kw.tags),
-                    source=kw.source,
-                    line_no=kw.lineno,
-                    is_embedded=is_embedded_keyword(kw.name),
+                kw[0].name: KeywordDoc(
+                    name=kw[0].name,
+                    args=tuple(str(a) for a in kw[0].args),
+                    doc=kw[0].doc,
+                    tags=tuple(kw[0].tags),
+                    source=kw[0].source,
+                    line_no=kw[0].lineno,
+                    libname=kw[1].libname,
+                    longname=kw[1].longname,
+                    is_embedded=is_embedded_keyword(kw[0].name),
                 )
-                for kw in KeywordDocBuilder().build_keywords(lib)
+                for kw in [
+                    (KeywordDocBuilder().build_keyword(k), k) for k in [KeywordWrapper(k, source) for k in lib.handlers]
+                ]
             }
         )
 

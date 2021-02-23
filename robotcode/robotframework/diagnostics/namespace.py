@@ -18,9 +18,10 @@ from ...language_server.types import (
 )
 from ...utils.async_itertools import async_chain
 from ...utils.uri import Uri
-from ..utils.ast import Token as AstToken, range_from_token_or_node
-
-from ..utils.async_visitor import AsyncVisitor
+from ..utils.ast import RUN_KEYWORD_IF_NAME, RUN_KEYWORD_NAMES, RUN_KEYWORD_WITH_CONDITION_NAMES, RUN_KEYWORDS_NAME
+from ..utils.ast import Token as AstToken
+from ..utils.ast import is_non_variable_token, range_from_token_or_node
+from ..utils.async_ast import AsyncVisitor
 from .library_doc import KeywordDoc, LibraryDoc, is_embedded_keyword
 from .library_manager import DEFAULT_LIBRARIES, LibraryChangedParams, LibraryManager
 
@@ -177,11 +178,14 @@ class Analyzer(AsyncVisitor):
         await self.visit(model)
         return self._results
 
-    async def _analyze_keyword_call(self, keyword: Optional[str], value: ast.AST, token: AstToken) -> None:
+    async def _analyze_keyword_call(
+        self, keyword: Optional[str], value: ast.AST, token: AstToken
+    ) -> Optional[KeywordDoc]:
+        result: Optional[KeywordDoc] = None
         try:
             finder = KeywordFinder(self._namespace)
 
-            doc = await finder.find_keyword(keyword)
+            result = await finder.find_keyword(keyword)
 
             for e in finder.diagnostics:
                 self._results.append(
@@ -194,7 +198,7 @@ class Analyzer(AsyncVisitor):
                     )
                 )
 
-            if doc is not None and doc.errors:
+            if result is not None and result.errors:
                 self._results.append(
                     Diagnostic(
                         range=range_from_token_or_node(value, token),
@@ -208,8 +212,8 @@ class Analyzer(AsyncVisitor):
                                         Uri.from_path(
                                             err.source
                                             if err.source is not None
-                                            else doc.source
-                                            if doc.source is not None
+                                            else result.source
+                                            if result.source is not None
                                             else "/<unknown>"
                                         )
                                     ),
@@ -217,16 +221,16 @@ class Analyzer(AsyncVisitor):
                                         start=Position(
                                             line=err.line_no - 1
                                             if err.line_no is not None
-                                            else doc.line_no
-                                            if doc.line_no >= 0
+                                            else result.line_no
+                                            if result.line_no >= 0
                                             else 0,
                                             character=0,
                                         ),
                                         end=Position(
                                             line=err.line_no - 1
                                             if err.line_no is not None
-                                            else doc.line_no
-                                            if doc.line_no >= 0
+                                            else result.line_no
+                                            if result.line_no >= 0
                                             else 0,
                                             character=0,
                                         ),
@@ -234,7 +238,7 @@ class Analyzer(AsyncVisitor):
                                 ),
                                 message=err.message,
                             )
-                            for err in doc.errors
+                            for err in result.errors
                         ],
                     )
                 )
@@ -251,6 +255,27 @@ class Analyzer(AsyncVisitor):
                     code=type(e).__qualname__,
                 )
             )
+        return result
+
+    async def _analyse_run_keyword(
+        self, keyword_doc: KeywordDoc, node: ast.AST, argument_tokens: Tuple[AstToken, ...]
+    ) -> None:
+
+        if keyword_doc.libname == "BuiltIn":
+            if keyword_doc.name in RUN_KEYWORD_NAMES:
+                if len(argument_tokens) > 0 and is_non_variable_token(argument_tokens[0]):
+                    await self._analyze_keyword_call(argument_tokens[0].value, node, argument_tokens[0])
+            elif keyword_doc.name in RUN_KEYWORD_WITH_CONDITION_NAMES:
+                if len(argument_tokens) > 1 and is_non_variable_token(argument_tokens[1]):
+                    await self._analyze_keyword_call(argument_tokens[1].value, node, argument_tokens[1])
+            elif keyword_doc.name == RUN_KEYWORD_IF_NAME:
+                if len(argument_tokens) > 1 and is_non_variable_token(argument_tokens[1]):
+                    await self._analyze_keyword_call(argument_tokens[1].value, node, argument_tokens[1])
+                    # TODO elif and else
+            elif keyword_doc.name == RUN_KEYWORDS_NAME:
+                for t in argument_tokens:
+                    if is_non_variable_token(t):
+                        await self._analyze_keyword_call(t.value, node, t)
 
     async def visit_Fixture(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
@@ -259,7 +284,33 @@ class Analyzer(AsyncVisitor):
         value = cast(Fixture, node)
         keyword_token = cast(AstToken, value.get_token(RobotToken.NAME))
 
-        await self._analyze_keyword_call(value.name, value, keyword_token)
+        result = await self._analyze_keyword_call(value.name, value, keyword_token)
+        if result is not None:
+            await self._analyse_run_keyword(
+                result, node, tuple(cast(AstToken, k) for k in value.get_tokens(RobotToken.ARGUMENT))
+            )
+
+        await self.generic_visit(node)
+
+    async def visit_TestTemplate(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import TestTemplate
+
+        value = cast(TestTemplate, node)
+        keyword_token = cast(AstToken, value.get_token(RobotToken.NAME))
+
+        await self._analyze_keyword_call(value.value, value, keyword_token)
+
+        await self.generic_visit(node)
+
+    async def visit_Template(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Template
+
+        value = cast(Template, node)
+        keyword_token = cast(AstToken, value.get_token(RobotToken.NAME))
+
+        await self._analyze_keyword_call(value.value, value, keyword_token)
 
         await self.generic_visit(node)
 
@@ -270,7 +321,11 @@ class Analyzer(AsyncVisitor):
         value = cast(KeywordCall, node)
         keyword_token = cast(RobotToken, value.get_token(RobotToken.KEYWORD))
 
-        await self._analyze_keyword_call(value.keyword, value, keyword_token)
+        result = await self._analyze_keyword_call(value.keyword, value, keyword_token)
+        if result is not None:
+            await self._analyse_run_keyword(
+                result, node, tuple(cast(AstToken, k) for k in value.get_tokens(RobotToken.ARGUMENT))
+            )
 
         await self.generic_visit(node)
 

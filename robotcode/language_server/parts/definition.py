@@ -27,7 +27,7 @@ class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     @async_tasking_event
     async def collect(
         sender, document: TextDocument, position: Position
-    ) -> Optional[Union[Location, List[Location], List[LocationLink]]]:
+    ) -> Union[Location, List[Location], List[LocationLink], None]:
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
