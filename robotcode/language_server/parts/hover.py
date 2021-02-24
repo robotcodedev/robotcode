@@ -8,7 +8,14 @@ from ...utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
 from ..language import HasLanguageId
 from ..text_document import TextDocument
-from ..types import DocumentUri, Hover, HoverParams, Position, ServerCapabilities, TextDocumentIdentifier
+from ..types import (
+    DocumentUri,
+    Hover,
+    HoverParams,
+    Position,
+    ServerCapabilities,
+    TextDocumentIdentifier,
+)
 
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol

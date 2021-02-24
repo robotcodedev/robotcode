@@ -22,16 +22,15 @@ from .parts.folding_range import FoldingRangeProtocolPart
 from .parts.hover import HoverProtocolPart
 from .parts.window import WindowProtocolPart
 from .parts.workspace import Workspace
-
 from .types import (
     CancelParams,
     ClientCapabilities,
     ClientInfo,
-    InitializeResultServerInfo,
     InitializedParams,
     InitializeError,
     InitializeParams,
     InitializeResult,
+    InitializeResultServerInfo,
     Registration,
     RegistrationParams,
     SaveOptions,

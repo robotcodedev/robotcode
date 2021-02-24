@@ -4,7 +4,16 @@ import io
 import sys
 from enum import Enum
 from types import TracebackType
-from typing import BinaryIO, Callable, Generic, Literal, NamedTuple, Optional, Type, cast
+from typing import (
+    BinaryIO,
+    Callable,
+    Generic,
+    Literal,
+    NamedTuple,
+    Optional,
+    Type,
+    cast,
+)
 
 from ..utils.logging import LoggingDescriptor
 from .protocol import JsonRPCException, JsonRPCProtocol, TProtocol

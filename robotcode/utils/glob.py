@@ -1,7 +1,7 @@
-from typing import Union
 import os
 import re
 from pathlib import Path
+from typing import Union
 
 
 def _glob_pattern_to_re(pattern: str) -> str:

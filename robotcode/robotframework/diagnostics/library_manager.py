@@ -284,12 +284,12 @@ class LibraryManager:
         self, model: ast.AST, source: str, model_type: str = "RESOURCE", scope: str = "GLOBAL"
     ) -> LibraryDoc:
 
+        from robot.errors import DataError
         from robot.libdocpkg.robotbuilder import KeywordDocBuilder
         from robot.running.builder.transformers import ResourceBuilder
         from robot.running.model import ResourceFile
         from robot.running.usererrorhandler import UserErrorHandler
         from robot.running.userkeyword import UserLibrary
-        from robot.errors import DataError
 
         errors: List[Error] = []
 

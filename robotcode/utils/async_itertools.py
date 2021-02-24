@@ -1,4 +1,4 @@
-from typing import AsyncIterator, AsyncIterable, Iterable, TypeVar, Union
+from typing import AsyncIterable, AsyncIterator, Iterable, TypeVar, Union
 
 __all__ = ["async_chain"]
 

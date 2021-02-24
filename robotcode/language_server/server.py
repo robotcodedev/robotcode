@@ -1,8 +1,7 @@
 from typing import TypeVar
 
-from ..utils.logging import LoggingDescriptor
 from ..jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
-
+from ..utils.logging import LoggingDescriptor
 from .protocol import LanguageServerProtocol
 
 __all__ = ["LanguageServer", "TCP_DEFAULT_PORT"]

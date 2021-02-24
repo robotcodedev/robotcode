@@ -5,16 +5,27 @@ import asyncio
 import io
 import weakref
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple, TypeVar, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    cast,
+)
 
 from ...language_server.parts.workspace import WorkspaceFolder
 
 if TYPE_CHECKING:
     from robot.parsing.lexer import Token
 
-from ...utils.async_event import async_tasking_event
-
 from ...language_server.text_document import TextDocument
+from ...utils.async_event import async_tasking_event
 from ..configuration import RobotCodeConfig
 from ..diagnostics.library_manager import LibraryManager
 from ..diagnostics.namespace import Namespace

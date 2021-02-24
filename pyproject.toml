@@ -66,3 +66,9 @@ addopts = "-ra -vv"
 testpaths = [
     "tests",    
 ]
+
+[tool.isort]
+profile = "black"
+src_paths = ["robotcode", "tests"]
+skip_gitignore = true
+skip = ['external']

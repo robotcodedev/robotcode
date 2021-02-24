@@ -1,6 +1,6 @@
 import asyncio
-from asyncio import AbstractEventLoop
 import json
+from asyncio import AbstractEventLoop
 from typing import Any, Dict, Generator, List, Optional, cast
 
 import pytest

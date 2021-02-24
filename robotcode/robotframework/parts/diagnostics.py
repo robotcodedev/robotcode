@@ -3,13 +3,11 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from ..utils.ast import range_from_token
-
 from ...language_server.language import language_id
 from ...language_server.text_document import TextDocument
 from ...language_server.types import Diagnostic, DiagnosticSeverity, Position, Range
 from ...utils.logging import LoggingDescriptor
-
+from ..utils.ast import range_from_token
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -54,8 +52,8 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     async def collect_token_errors(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
-        from robot.parsing.lexer.tokens import Token
         from robot.errors import VariableError
+        from robot.parsing.lexer.tokens import Token
 
         result: List[Diagnostic] = []
 

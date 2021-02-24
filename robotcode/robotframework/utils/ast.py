@@ -1,7 +1,7 @@
 import ast
 from typing import Iterator, Optional, Protocol, runtime_checkable
 
-from ...language_server.types import Range, Position
+from ...language_server.types import Position, Range
 
 
 def range_from_node(node: ast.AST) -> Range:

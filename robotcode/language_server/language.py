@@ -1,6 +1,5 @@
 from typing import Any, Callable, Protocol, TypeVar, runtime_checkable
 
-
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 

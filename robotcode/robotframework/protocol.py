@@ -1,5 +1,5 @@
-from typing import TYPE_CHECKING, Any, Optional
 import uuid
+from typing import TYPE_CHECKING, Any, Optional
 
 from ..jsonrpc2.protocol import ProtocolPartDescriptor
 from ..language_server.protocol import LanguageServerProtocol
@@ -11,9 +11,9 @@ from ..language_server.types import (
     TextDocumentSyncKind,
 )
 from ..utils.logging import LoggingDescriptor
+from .parts.definition import RobotDefinitionProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
 from .parts.folding_range import RobotFoldingRangeProtocolPart
-from .parts.definition import RobotDefinitionProtocolPart
 from .parts.hover import RobotHoverProtocolPart
 from .parts.model_token_cache import ModelTokenCache
 

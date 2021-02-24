@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from ...jsonrpc2.protocol import GenericJsonRPCProtocolPart
-
 from typing import TYPE_CHECKING
+
+from ...jsonrpc2.protocol import GenericJsonRPCProtocolPart
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol

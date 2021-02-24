@@ -4,8 +4,19 @@ import re
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import AbstractSet, Any, Dict, List, NamedTuple, Optional, Set, Tuple, Union, ValuesView, cast
-
+from typing import (
+    AbstractSet,
+    Any,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    ValuesView,
+    cast,
+)
 
 from pydantic import BaseModel, Field, PrivateAttr
 

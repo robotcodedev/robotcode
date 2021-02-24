@@ -1,7 +1,7 @@
 import asyncio
 import inspect
-import weakref
 import threading
+import weakref
 from abc import ABC
 from concurrent.futures.thread import ThreadPoolExecutor
 from types import MethodType

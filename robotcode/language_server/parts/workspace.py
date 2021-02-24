@@ -3,7 +3,19 @@ from __future__ import annotations
 import asyncio
 import uuid
 import weakref
-from typing import NamedTuple, TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Mapping, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Coroutine,
+    Dict,
+    List,
+    Mapping,
+    NamedTuple,
+    Optional,
+    Tuple,
+    Union,
+)
 
 from ...jsonrpc2.protocol import rpc_method
 from ...utils.async_event import async_event

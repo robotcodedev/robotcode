@@ -1,9 +1,9 @@
 import argparse
 import logging
+import logging.config
 import os
 import pathlib
 import sys
-import logging.config
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import cast
@@ -28,7 +28,6 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
 
 from .._version import __version__
 from ..utils.logging import LoggingDescriptor
-
 
 TRACE = logging.DEBUG - 6
 logging.addLevelName(TRACE, "TRACE")

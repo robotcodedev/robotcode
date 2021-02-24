@@ -6,7 +6,17 @@ import weakref
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, AsyncIterator, Callable, List, NamedTuple, Optional, Sequence, Tuple, cast
+from typing import (
+    Any,
+    AsyncIterator,
+    Callable,
+    List,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Tuple,
+    cast,
+)
 
 from ...language_server.types import (
     Diagnostic,
@@ -18,7 +28,12 @@ from ...language_server.types import (
 )
 from ...utils.async_itertools import async_chain
 from ...utils.uri import Uri
-from ..utils.ast import RUN_KEYWORD_IF_NAME, RUN_KEYWORD_NAMES, RUN_KEYWORD_WITH_CONDITION_NAMES, RUN_KEYWORDS_NAME
+from ..utils.ast import (
+    RUN_KEYWORD_IF_NAME,
+    RUN_KEYWORD_NAMES,
+    RUN_KEYWORD_WITH_CONDITION_NAMES,
+    RUN_KEYWORDS_NAME,
+)
 from ..utils.ast import Token as AstToken
 from ..utils.ast import is_non_variable_token, range_from_token_or_node
 from ..utils.async_ast import AsyncVisitor
@@ -151,7 +166,9 @@ class ImportVisitor(AsyncVisitor):
 
     async def visit_VariablesImport(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import VariablesImport as RobotVariablesImport
+        from robot.parsing.model.statements import (
+            VariablesImport as RobotVariablesImport,
+        )
 
         n = cast(RobotVariablesImport, node)
         name = cast(RobotToken, n.get_token(RobotToken.NAME))

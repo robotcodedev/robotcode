@@ -1,6 +1,5 @@
 from typing import List, Optional
 
-
 from ..types import (
     URI,
     LogMessageParams,

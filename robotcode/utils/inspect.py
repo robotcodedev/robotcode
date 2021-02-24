@@ -1,5 +1,5 @@
-from typing import Any, Callable, Iterator, List, Optional, TypeVar, cast
 import inspect
+from typing import Any, Callable, Iterator, List, Optional, TypeVar, cast
 
 
 def iter_methods(

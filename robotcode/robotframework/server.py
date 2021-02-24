@@ -1,5 +1,4 @@
 from ..language_server.server import LanguageServerBase
-
 from .protocol import RobotLanguageServerProtocol
 
 
