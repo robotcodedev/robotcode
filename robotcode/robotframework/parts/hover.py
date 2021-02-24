@@ -8,11 +8,6 @@ from ...language_server.text_document import TextDocument
 from ...language_server.types import Hover, MarkupContent, MarkupKind, Position
 from ...utils.logging import LoggingDescriptor
 from ..utils.ast import (
-    RUN_KEYWORD_IF_NAME,
-    RUN_KEYWORD_NAMES,
-    RUN_KEYWORD_WITH_CONDITION_NAMES,
-    RUN_KEYWORDS_NAME,
-    is_non_variable_token,
     range_from_node,
     range_from_token,
     range_from_token_or_node,
@@ -23,9 +18,10 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 from .protocol_part import RobotLanguageServerProtocolPart
+from .model_helper import ModelHelper
 
 
-class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
+class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
@@ -68,129 +64,58 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
 
         return await method(result_node, document, position)
 
-    async def _hover_KeywordCall_Or_Fixture(  # noqa: N802
-        self, keyword: Optional[str], token_type: str, result_node: ast.AST, document: TextDocument, position: Position
-    ) -> Optional[Hover]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Fixture, KeywordCall
-
-        node = cast(Union[KeywordCall, Fixture], result_node)
-        if keyword:
-
-            keyword_token = cast(RobotToken, node.get_token(token_type))
-            if keyword_token is None:
-                return None
-
-            namespace = await self.parent.model_token_cache.get_namespace(document)
-            if namespace is None:
-                return None
-
-            keyword_doc = await namespace.find_keyword(keyword)
-            if keyword_doc is None:
-                return None
-
-            if position.is_in_range(range_from_token(keyword_token)):
-                return Hover(
-                    contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
-                    range=range_from_token_or_node(node, keyword_token),
-                )
-            else:
-                argument_tokens = node.get_tokens(RobotToken.ARGUMENT)
-
-                while keyword_doc is not None and keyword_doc.libname == "BuiltIn" and argument_tokens:
-                    if (
-                        keyword_doc.name in RUN_KEYWORD_NAMES
-                        and len(argument_tokens) > 0
-                        and is_non_variable_token(argument_tokens[0])
-                    ):
-                        keyword_doc = await namespace.find_keyword(argument_tokens[0].value)
-                        if keyword_doc is None:
-                            return None
-
-                        if position.is_in_range(range_from_token(argument_tokens[0])):
-                            return Hover(
-                                contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
-                                range=range_from_token_or_node(node, argument_tokens[0]),
-                            )
-                        argument_tokens = argument_tokens[1:]
-                    elif (
-                        keyword_doc.name in RUN_KEYWORD_WITH_CONDITION_NAMES
-                        and len(argument_tokens) > 1
-                        and is_non_variable_token(argument_tokens[1])
-                    ):
-                        keyword_doc = await namespace.find_keyword(argument_tokens[1].value)
-                        if keyword_doc is None:
-                            return None
-
-                        if position.is_in_range(range_from_token(argument_tokens[1])):
-                            return Hover(
-                                contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
-                                range=range_from_token_or_node(node, argument_tokens[1]),
-                            )
-                        argument_tokens = argument_tokens[2:]
-                    elif (
-                        keyword_doc.name == RUN_KEYWORD_IF_NAME
-                        and len(argument_tokens) > 1
-                        and is_non_variable_token(argument_tokens[1])
-                    ):
-                        keyword_doc = await namespace.find_keyword(argument_tokens[1].value)
-                        if keyword_doc is None:
-                            return None
-
-                        if position.is_in_range(range_from_token(argument_tokens[1])):
-                            return Hover(
-                                contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
-                                range=range_from_token_or_node(node, argument_tokens[1]),
-                            )
-                        # TODO else/elif
-                        argument_tokens = argument_tokens[2:]
-
-                    elif keyword_doc.name == RUN_KEYWORDS_NAME:
-                        for t in argument_tokens:
-                            if position.is_in_range(range_from_token(t)) and is_non_variable_token(t):
-                                keyword_doc = await namespace.find_keyword(t.value)
-                                if keyword_doc is None:
-                                    return None
-
-                                return Hover(
-                                    contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
-                                    range=range_from_token_or_node(node, t),
-                                )
-                        argument_tokens = []
-                    else:
-                        break
-        return None
-
     async def hover_KeywordCall(  # noqa: N802
-        self, result_node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, document: TextDocument, position: Position
     ) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordCall
 
-        return await self._hover_KeywordCall_Or_Fixture(
-            cast(KeywordCall, result_node).keyword, RobotToken.KEYWORD, result_node, document, position
+        namespace = await self.parent.model_token_cache.get_namespace(document)
+        if namespace is None:
+            return None
+
+        result = await self.get_keyworddoc_and_token_from_position(
+            cast(KeywordCall, node).keyword, RobotToken.KEYWORD, node, namespace, position
         )
 
+        if result is not None:
+            return Hover(
+                contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=result[0].to_markdown()),
+                range=range_from_token_or_node(node, result[1]),
+            )
+        return None
+
     async def hover_Fixture(  # noqa: N802
-        self, result_node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, document: TextDocument, position: Position
     ) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Fixture
 
-        return await self._hover_KeywordCall_Or_Fixture(
-            cast(Fixture, result_node).name, RobotToken.NAME, result_node, document, position
+        namespace = await self.parent.model_token_cache.get_namespace(document)
+        if namespace is None:
+            return None
+
+        result = await self.get_keyworddoc_and_token_from_position(
+            cast(Fixture, node).name, RobotToken.NAME, node, namespace, position
         )
 
+        if result is not None:
+            return Hover(
+                contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=result[0].to_markdown()),
+                range=range_from_token_or_node(node, result[1]),
+            )
+        return None
+
     async def _hover_Template_or_TestTemplate(  # noqa: N802
-        self, result_node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, document: TextDocument, position: Position
     ) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Template, TestTemplate
 
-        node = cast(Union[Template, TestTemplate], result_node)
-        if node.value:
+        template_node = cast(Union[Template, TestTemplate], node)
+        if template_node.value:
 
-            keyword_token = cast(RobotToken, node.get_token(RobotToken.NAME))
+            keyword_token = cast(RobotToken, template_node.get_token(RobotToken.NAME))
             if keyword_token is None:
                 return None
 
@@ -199,11 +124,11 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
                 if namespace is None:
                     return None
 
-                keyword_doc = await namespace.find_keyword(node.value)
+                keyword_doc = await namespace.find_keyword(template_node.value)
                 if keyword_doc is not None:
                     return Hover(
                         contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
-                        range=range_from_token_or_node(node, keyword_token),
+                        range=range_from_token_or_node(template_node, keyword_token),
                     )
         return None
 
@@ -218,15 +143,15 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
         return await self._hover_Template_or_TestTemplate(result_node, document, position)
 
     async def hover_LibraryImport(  # noqa: N802
-        self, result_node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, document: TextDocument, position: Position
     ) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import LibraryImport
 
-        node = cast(LibraryImport, result_node)
-        if node.name:
+        library_node = cast(LibraryImport, node)
+        if library_node.name:
 
-            name_token = cast(RobotToken, node.get_token(RobotToken.NAME))
+            name_token = cast(RobotToken, library_node.get_token(RobotToken.NAME))
             if name_token is None:
                 return None
 
@@ -238,7 +163,9 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
                 libdocs = [
                     entry.library_doc
                     for entry in (await namespace.get_libraries()).values()
-                    if entry.import_name == node.name and entry.args == node.args and entry.alias == node.alias
+                    if entry.import_name == library_node.name
+                    and entry.args == library_node.args
+                    and entry.alias == library_node.alias
                 ]
 
                 if len(libdocs) == 1:
@@ -249,20 +176,20 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
                             kind=MarkupKind.MARKDOWN,
                             value=libdoc.to_markdown(),
                         ),
-                        range=range_from_token_or_node(node, name_token),
+                        range=range_from_token_or_node(library_node, name_token),
                     )
         return None
 
     async def hover_ResourceImport(  # noqa: N802
-        self, result_node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, document: TextDocument, position: Position
     ) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import ResourceImport
 
-        node = cast(ResourceImport, result_node)
-        if node.name:
+        resource_node = cast(ResourceImport, node)
+        if resource_node.name:
 
-            name_token = cast(RobotToken, node.get_token(RobotToken.NAME))
+            name_token = cast(RobotToken, resource_node.get_token(RobotToken.NAME))
             if name_token is None:
                 return None
 
@@ -274,7 +201,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
                 libdocs = [
                     entry.library_doc
                     for entry in (await namespace.get_resources()).values()
-                    if entry.import_name == node.name
+                    if entry.import_name == resource_node.name
                 ]
 
                 if len(libdocs) == 1:
@@ -284,6 +211,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
                             kind=MarkupKind.MARKDOWN,
                             value=libdoc.to_markdown(),
                         ),
-                        range=range_from_token_or_node(node, name_token),
+                        range=range_from_token_or_node(resource_node, name_token),
                     )
         return None
