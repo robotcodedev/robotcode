@@ -26,6 +26,7 @@ coloredlogs = "^15.0"
 robotremoteserver = "^1.1"
 Cython = "^0.29.22"
 pydantic = "^1.7.3"
+isort = "^5.7.0"
 
 [tool.poetry-dynamic-versioning]
 enable = true

@@ -96,60 +96,69 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
                 )
             else:
                 argument_tokens = node.get_tokens(RobotToken.ARGUMENT)
-                if (
-                    keyword_doc.name in RUN_KEYWORD_NAMES
-                    and len(argument_tokens) > 0
-                    and position.is_in_range(range_from_token(argument_tokens[0]))
-                    and is_non_variable_token(argument_tokens[0])
-                ):
-                    keyword_doc = await namespace.find_keyword(argument_tokens[0].value)
-                    if keyword_doc is None:
-                        return None
 
-                    return Hover(
-                        contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
-                        range=range_from_token_or_node(node, argument_tokens[0]),
-                    )
-                elif (
-                    keyword_doc.name in RUN_KEYWORD_WITH_CONDITION_NAMES
-                    and len(argument_tokens) > 1
-                    and position.is_in_range(range_from_token(argument_tokens[1]))
-                    and is_non_variable_token(argument_tokens[1])
-                ):
-                    keyword_doc = await namespace.find_keyword(argument_tokens[1].value)
-                    if keyword_doc is None:
-                        return None
+                while keyword_doc is not None and keyword_doc.libname == "BuiltIn" and argument_tokens:
+                    if (
+                        keyword_doc.name in RUN_KEYWORD_NAMES
+                        and len(argument_tokens) > 0
+                        and is_non_variable_token(argument_tokens[0])
+                    ):
+                        keyword_doc = await namespace.find_keyword(argument_tokens[0].value)
+                        if keyword_doc is None:
+                            return None
 
-                    return Hover(
-                        contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
-                        range=range_from_token_or_node(node, argument_tokens[1]),
-                    )
-                elif (
-                    keyword_doc.name == RUN_KEYWORD_IF_NAME
-                    and len(argument_tokens) > 1
-                    and position.is_in_range(range_from_token(argument_tokens[1]))
-                    and is_non_variable_token(argument_tokens[1])
-                ):
-                    keyword_doc = await namespace.find_keyword(argument_tokens[1].value)
-                    if keyword_doc is None:
-                        return None
-
-                    return Hover(
-                        contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
-                        range=range_from_token_or_node(node, argument_tokens[1]),
-                    )
-                    # TODO else/elif
-                elif keyword_doc.name == RUN_KEYWORDS_NAME:
-                    for t in argument_tokens:
-                        if position.is_in_range(range_from_token(t)) and is_non_variable_token(t):
-                            keyword_doc = await namespace.find_keyword(t.value)
-                            if keyword_doc is None:
-                                return None
-
+                        if position.is_in_range(range_from_token(argument_tokens[0])):
                             return Hover(
                                 contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
-                                range=range_from_token_or_node(node, t),
+                                range=range_from_token_or_node(node, argument_tokens[0]),
                             )
+                        argument_tokens = argument_tokens[1:]
+                    elif (
+                        keyword_doc.name in RUN_KEYWORD_WITH_CONDITION_NAMES
+                        and len(argument_tokens) > 1
+                        and is_non_variable_token(argument_tokens[1])
+                    ):
+                        keyword_doc = await namespace.find_keyword(argument_tokens[1].value)
+                        if keyword_doc is None:
+                            return None
+
+                        if position.is_in_range(range_from_token(argument_tokens[1])):
+                            return Hover(
+                                contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
+                                range=range_from_token_or_node(node, argument_tokens[1]),
+                            )
+                        argument_tokens = argument_tokens[2:]
+                    elif (
+                        keyword_doc.name == RUN_KEYWORD_IF_NAME
+                        and len(argument_tokens) > 1
+                        and is_non_variable_token(argument_tokens[1])
+                    ):
+                        keyword_doc = await namespace.find_keyword(argument_tokens[1].value)
+                        if keyword_doc is None:
+                            return None
+
+                        if position.is_in_range(range_from_token(argument_tokens[1])):
+                            return Hover(
+                                contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
+                                range=range_from_token_or_node(node, argument_tokens[1]),
+                            )
+                        # TODO else/elif
+                        argument_tokens = argument_tokens[2:]
+
+                    elif keyword_doc.name == RUN_KEYWORDS_NAME:
+                        for t in argument_tokens:
+                            if position.is_in_range(range_from_token(t)) and is_non_variable_token(t):
+                                keyword_doc = await namespace.find_keyword(t.value)
+                                if keyword_doc is None:
+                                    return None
+
+                                return Hover(
+                                    contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
+                                    range=range_from_token_or_node(node, t),
+                                )
+                        argument_tokens = []
+                    else:
+                        break
         return None
 
     async def hover_KeywordCall(  # noqa: N802

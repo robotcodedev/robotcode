@@ -119,77 +119,87 @@ class RobotDefinitionProtocolPart(RobotLanguageServerProtocolPart):
                 ]
             else:
                 argument_tokens = node.get_tokens(RobotToken.ARGUMENT)
-                if (
-                    keyword_doc.name in RUN_KEYWORD_NAMES
-                    and len(argument_tokens) > 0
-                    and position.is_in_range(range_from_token(argument_tokens[0]))
-                    and is_non_variable_token(argument_tokens[0])
-                ):
-                    keyword_doc = await namespace.find_keyword(argument_tokens[0].value)
-                    if keyword_doc is None or keyword_doc.source is None:
-                        return None
 
-                    return [
-                        LocationLink(
-                            origin_selection_range=range_from_token_or_node(node, argument_tokens[0]),
-                            target_uri=str(Uri.from_path(keyword_doc.source)),
-                            target_range=keyword_doc.range(),
-                            target_selection_range=keyword_doc.range(),
-                        )
-                    ]
+                while keyword_doc is not None and keyword_doc.libname == "BuiltIn" and argument_tokens:
+                    if (
+                        keyword_doc.name in RUN_KEYWORD_NAMES
+                        and len(argument_tokens) > 0
+                        and is_non_variable_token(argument_tokens[0])
+                    ):
+                        keyword_doc = await namespace.find_keyword(argument_tokens[0].value)
+                        if keyword_doc is None or keyword_doc.source is None:
+                            return None
 
-                elif (
-                    keyword_doc.name in RUN_KEYWORD_WITH_CONDITION_NAMES
-                    and len(argument_tokens) > 1
-                    and position.is_in_range(range_from_token(argument_tokens[1]))
-                    and is_non_variable_token(argument_tokens[1])
-                ):
-                    keyword_doc = await namespace.find_keyword(argument_tokens[1].value)
-                    if keyword_doc is None or keyword_doc.source is None:
-                        return None
-
-                    return [
-                        LocationLink(
-                            origin_selection_range=range_from_token_or_node(node, argument_tokens[1]),
-                            target_uri=str(Uri.from_path(keyword_doc.source)),
-                            target_range=keyword_doc.range(),
-                            target_selection_range=keyword_doc.range(),
-                        )
-                    ]
-                elif (
-                    keyword_doc.name == RUN_KEYWORD_IF_NAME
-                    and len(argument_tokens) > 1
-                    and position.is_in_range(range_from_token(argument_tokens[1]))
-                    and is_non_variable_token(argument_tokens[1])
-                ):
-                    keyword_doc = await namespace.find_keyword(argument_tokens[1].value)
-                    if keyword_doc is None or keyword_doc.source is None:
-                        return None
-
-                    return [
-                        LocationLink(
-                            origin_selection_range=range_from_token_or_node(node, argument_tokens[1]),
-                            target_uri=str(Uri.from_path(keyword_doc.source)),
-                            target_range=keyword_doc.range(),
-                            target_selection_range=keyword_doc.range(),
-                        )
-                    ]
-                    # TODO else/elif
-                elif keyword_doc.name == RUN_KEYWORDS_NAME:
-                    for t in argument_tokens:
-                        if position.is_in_range(range_from_token(t)) and is_non_variable_token(t):
-                            keyword_doc = await namespace.find_keyword(t.value)
-                            if keyword_doc is None or keyword_doc.source is None:
-                                return None
-
+                        if position.is_in_range(range_from_token(argument_tokens[0])):
                             return [
                                 LocationLink(
-                                    origin_selection_range=range_from_token_or_node(node, t),
+                                    origin_selection_range=range_from_token_or_node(node, argument_tokens[0]),
                                     target_uri=str(Uri.from_path(keyword_doc.source)),
                                     target_range=keyword_doc.range(),
                                     target_selection_range=keyword_doc.range(),
                                 )
                             ]
+                        argument_tokens = argument_tokens[1:]
+
+                    elif (
+                        keyword_doc.name in RUN_KEYWORD_WITH_CONDITION_NAMES
+                        and len(argument_tokens) > 1
+                        and is_non_variable_token(argument_tokens[1])
+                    ):
+                        keyword_doc = await namespace.find_keyword(argument_tokens[1].value)
+                        if keyword_doc is None or keyword_doc.source is None:
+                            return None
+
+                        if position.is_in_range(range_from_token(argument_tokens[1])):
+                            return [
+                                LocationLink(
+                                    origin_selection_range=range_from_token_or_node(node, argument_tokens[1]),
+                                    target_uri=str(Uri.from_path(keyword_doc.source)),
+                                    target_range=keyword_doc.range(),
+                                    target_selection_range=keyword_doc.range(),
+                                )
+                            ]
+                        argument_tokens = argument_tokens[2:]
+
+                    elif (
+                        keyword_doc.name == RUN_KEYWORD_IF_NAME
+                        and len(argument_tokens) > 1
+                        and is_non_variable_token(argument_tokens[1])
+                    ):
+                        keyword_doc = await namespace.find_keyword(argument_tokens[1].value)
+                        if keyword_doc is None or keyword_doc.source is None:
+                            return None
+
+                        if position.is_in_range(range_from_token(argument_tokens[1])):
+                            return [
+                                LocationLink(
+                                    origin_selection_range=range_from_token_or_node(node, argument_tokens[1]),
+                                    target_uri=str(Uri.from_path(keyword_doc.source)),
+                                    target_range=keyword_doc.range(),
+                                    target_selection_range=keyword_doc.range(),
+                                )
+                            ]
+                        # TODO else/elif
+                        argument_tokens = argument_tokens[2:]
+
+                    elif keyword_doc.name == RUN_KEYWORDS_NAME:
+                        for t in argument_tokens:
+                            if position.is_in_range(range_from_token(t)) and is_non_variable_token(t):
+                                keyword_doc = await namespace.find_keyword(t.value)
+                                if keyword_doc is None or keyword_doc.source is None:
+                                    return None
+
+                                return [
+                                    LocationLink(
+                                        origin_selection_range=range_from_token_or_node(node, t),
+                                        target_uri=str(Uri.from_path(keyword_doc.source)),
+                                        target_range=keyword_doc.range(),
+                                        target_selection_range=keyword_doc.range(),
+                                    )
+                                ]
+                        argument_tokens = []
+                    else:
+                        break
         return None
 
     async def definition_KeywordCall(  # noqa: N802

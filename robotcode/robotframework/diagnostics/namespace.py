@@ -258,24 +258,39 @@ class Analyzer(AsyncVisitor):
         return result
 
     async def _analyse_run_keyword(
-        self, keyword_doc: KeywordDoc, node: ast.AST, argument_tokens: Tuple[AstToken, ...]
+        self, keyword_doc: Optional[KeywordDoc], node: ast.AST, argument_tokens: Tuple[AstToken, ...]
     ) -> None:
 
-        if keyword_doc.libname == "BuiltIn":
-            if keyword_doc.name in RUN_KEYWORD_NAMES:
-                if len(argument_tokens) > 0 and is_non_variable_token(argument_tokens[0]):
-                    await self._analyze_keyword_call(argument_tokens[0].value, node, argument_tokens[0])
-            elif keyword_doc.name in RUN_KEYWORD_WITH_CONDITION_NAMES:
-                if len(argument_tokens) > 1 and is_non_variable_token(argument_tokens[1]):
-                    await self._analyze_keyword_call(argument_tokens[1].value, node, argument_tokens[1])
-            elif keyword_doc.name == RUN_KEYWORD_IF_NAME:
-                if len(argument_tokens) > 1 and is_non_variable_token(argument_tokens[1]):
-                    await self._analyze_keyword_call(argument_tokens[1].value, node, argument_tokens[1])
-                    # TODO elif and else
+        while keyword_doc is not None and keyword_doc.libname == "BuiltIn" and argument_tokens:
+            if (
+                keyword_doc.name in RUN_KEYWORD_NAMES
+                and len(argument_tokens) > 0
+                and is_non_variable_token(argument_tokens[0])
+            ):
+                keyword_doc = await self._analyze_keyword_call(argument_tokens[0].value, node, argument_tokens[0])
+                argument_tokens = argument_tokens[1:]
+            elif (
+                keyword_doc.name in RUN_KEYWORD_WITH_CONDITION_NAMES
+                and len(argument_tokens) > 1
+                and is_non_variable_token(argument_tokens[1])
+            ):
+                keyword_doc = await self._analyze_keyword_call(argument_tokens[1].value, node, argument_tokens[1])
+                argument_tokens = argument_tokens[2:]
+            elif (
+                keyword_doc.name == RUN_KEYWORD_IF_NAME
+                and len(argument_tokens) > 1
+                and is_non_variable_token(argument_tokens[1])
+            ):
+                keyword_doc = await self._analyze_keyword_call(argument_tokens[1].value, node, argument_tokens[1])
+                argument_tokens = argument_tokens[2:]
+                # TODO elif and else
             elif keyword_doc.name == RUN_KEYWORDS_NAME:
                 for t in argument_tokens:
                     if is_non_variable_token(t):
                         await self._analyze_keyword_call(t.value, node, t)
+                argument_tokens = ()
+            else:
+                break
 
     async def visit_Fixture(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
