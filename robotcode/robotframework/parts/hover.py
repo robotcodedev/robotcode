@@ -8,6 +8,7 @@ from ...language_server.text_document import TextDocument
 from ...language_server.types import Hover, MarkupContent, MarkupKind, Position
 from ...utils.logging import LoggingDescriptor
 from ..utils.ast import (
+    Token,
     range_from_node,
     range_from_token,
     range_from_token_or_node,
@@ -17,11 +18,11 @@ from ..utils.async_ast import walk
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
+from .model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
-from .model_helper import ModelHelper
 
 
-class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
+class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
@@ -74,11 +75,16 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         if namespace is None:
             return None
 
+        kw_node = cast(KeywordCall, node)
         result = await self.get_keyworddoc_and_token_from_position(
-            cast(KeywordCall, node).keyword, RobotToken.KEYWORD, node, namespace, position
+            kw_node.keyword,
+            cast(Token, kw_node.get_token(RobotToken.KEYWORD)),
+            [cast(Token, t) for t in kw_node.get_tokens(RobotToken.ARGUMENT)],
+            namespace,
+            position,
         )
 
-        if result is not None:
+        if result is not None and result[0] is not None:
             return Hover(
                 contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=result[0].to_markdown()),
                 range=range_from_token_or_node(node, result[1]),
@@ -95,11 +101,16 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         if namespace is None:
             return None
 
+        fixture_node = cast(Fixture, node)
         result = await self.get_keyworddoc_and_token_from_position(
-            cast(Fixture, node).name, RobotToken.NAME, node, namespace, position
+            fixture_node.name,
+            cast(Token, fixture_node.get_token(RobotToken.NAME)),
+            [cast(Token, t) for t in fixture_node.get_tokens(RobotToken.ARGUMENT)],
+            namespace,
+            position,
         )
 
-        if result is not None:
+        if result is not None and result[0] is not None:
             return Hover(
                 contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=result[0].to_markdown()),
                 range=range_from_token_or_node(node, result[1]),

@@ -46,28 +46,6 @@ def range_from_token_or_node(node: ast.AST, token: Optional[Token]) -> Range:
     return range_from_node(node)
 
 
-RUN_KEYWORD_NAMES = [
-    "Run Keyword",
-    "Run Keyword And Continue On Failure",
-    "Run Keyword And Ignore Error",
-    "Run Keyword And Return",
-    "Run Keyword And Return Status",
-    "Run Keyword If All Critical Tests Passed",
-    "Run Keyword If All Tests Passed",
-    "Run Keyword If Any Critical Tests Failed",
-    "Run Keyword If Any Tests Failed",
-    "Run Keyword If Test Failed",
-    "Run Keyword If Test Passed",
-    "Run Keyword If Timeout Occurred",
-]
-
-RUN_KEYWORD_WITH_CONDITION_NAMES = ["Run Keyword And Expect Error", "Run Keyword And Return If", "Run Keyword Unless"]
-
-RUN_KEYWORD_IF_NAME = "Run Keyword If"
-
-RUN_KEYWORDS_NAME = "Run Keywords"
-
-
 def is_non_variable_token(token: Token) -> bool:
     from robot.errors import VariableError
 

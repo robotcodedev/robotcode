@@ -182,6 +182,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     self._logger.exception(result, exc_info=result)
             else:
                 diagnostics += result
+
                 self.parent.send_notification(
                     "textDocument/publishDiagnostics",
                     PublishDiagnosticsParams(

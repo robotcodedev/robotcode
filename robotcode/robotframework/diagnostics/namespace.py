@@ -28,12 +28,6 @@ from ...language_server.types import (
 )
 from ...utils.async_itertools import async_chain
 from ...utils.uri import Uri
-from ..utils.ast import (
-    RUN_KEYWORD_IF_NAME,
-    RUN_KEYWORD_NAMES,
-    RUN_KEYWORD_WITH_CONDITION_NAMES,
-    RUN_KEYWORDS_NAME,
-)
 from ..utils.ast import Token as AstToken
 from ..utils.ast import is_non_variable_token, range_from_token_or_node
 from ..utils.async_ast import AsyncVisitor
@@ -196,7 +190,12 @@ class Analyzer(AsyncVisitor):
         return self._results
 
     async def _analyze_keyword_call(
-        self, keyword: Optional[str], value: ast.AST, keyword_token: AstToken, argument_tokens: List[AstToken]
+        self,
+        keyword: Optional[str],
+        value: ast.AST,
+        keyword_token: AstToken,
+        argument_tokens: List[AstToken],
+        analyse_run_keywords: bool = True,
     ) -> Optional[KeywordDoc]:
         result: Optional[KeywordDoc] = None
         try:
@@ -273,52 +272,100 @@ class Analyzer(AsyncVisitor):
                 )
             )
 
-        if result is not None:
+        if result is not None and analyse_run_keywords:
             await self._analyse_run_keyword(result, value, argument_tokens)
 
         return result
 
     async def _analyse_run_keyword(
         self, keyword_doc: Optional[KeywordDoc], node: ast.AST, argument_tokens: List[AstToken]
-    ) -> None:
+    ) -> List[AstToken]:
 
-        while keyword_doc is not None and keyword_doc.libname == "BuiltIn" and argument_tokens:
-            if (
-                keyword_doc.name in RUN_KEYWORD_NAMES
-                and len(argument_tokens) > 0
-                and is_non_variable_token(argument_tokens[0])
-            ):
-                keyword_doc = await self._analyze_keyword_call(
-                    argument_tokens[0].value, node, argument_tokens[0], argument_tokens[1:]
-                )
-                argument_tokens = argument_tokens[1:]
-            elif (
-                keyword_doc.name in RUN_KEYWORD_WITH_CONDITION_NAMES
-                and len(argument_tokens) > 1
-                and is_non_variable_token(argument_tokens[1])
-            ):
-                keyword_doc = await self._analyze_keyword_call(
-                    argument_tokens[1].value, node, argument_tokens[1], argument_tokens[2:]
-                )
-                argument_tokens = argument_tokens[2:]
-            elif (
-                keyword_doc.name == RUN_KEYWORD_IF_NAME
-                and len(argument_tokens) > 1
-                and is_non_variable_token(argument_tokens[1])
-            ):
-                keyword_doc = await self._analyze_keyword_call(
-                    argument_tokens[1].value, node, argument_tokens[1], argument_tokens[1:]
-                )
-                argument_tokens = argument_tokens[2:]
+        if keyword_doc is None or not keyword_doc.is_any_run_keyword():
+            return argument_tokens
 
-                # TODO elif and else
-            elif keyword_doc.name == RUN_KEYWORDS_NAME:
-                for t in argument_tokens:
-                    if is_non_variable_token(t):
-                        await self._analyze_keyword_call(t.value, node, t, [])
-                argument_tokens = []
-            else:
-                break
+        if keyword_doc.is_run_keyword() and len(argument_tokens) > 0 and is_non_variable_token(argument_tokens[0]):
+            await self._analyze_keyword_call(argument_tokens[0].value, node, argument_tokens[0], argument_tokens[1:])
+
+            return argument_tokens[1:]
+        elif (
+            keyword_doc.is_run_keyword_with_condition()
+            and len(argument_tokens) > 1
+            and is_non_variable_token(argument_tokens[1])
+        ):
+            await self._analyze_keyword_call(argument_tokens[1].value, node, argument_tokens[1], argument_tokens[2:])
+            return argument_tokens[2:]
+        elif keyword_doc.is_run_keywords():
+            for t in argument_tokens:
+                if is_non_variable_token(t):
+                    await self._analyze_keyword_call(t.value, node, t, [])
+
+            return []
+
+        elif keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1 and is_non_variable_token(argument_tokens[1]):
+
+            def skip_args() -> None:
+                nonlocal argument_tokens
+
+                while argument_tokens:
+                    if argument_tokens[0].value in ["ELSE", "ELSE IF"]:
+                        break
+                    argument_tokens = argument_tokens[1:]
+
+            result = await self._analyze_keyword_call(
+                argument_tokens[1].value,
+                node,
+                argument_tokens[1],
+                argument_tokens[2:],
+                analyse_run_keywords=False,
+            )
+
+            argument_tokens = argument_tokens[2:]
+
+            if result is not None and result.is_any_run_keyword():
+                argument_tokens = await self._analyse_run_keyword(result, node, argument_tokens)
+
+            skip_args()
+
+            while argument_tokens:
+                if argument_tokens[0].value == "ELSE" and len(argument_tokens) > 1:
+
+                    result = await self._analyze_keyword_call(
+                        argument_tokens[1].value,
+                        node,
+                        argument_tokens[1],
+                        argument_tokens[2:],
+                        analyse_run_keywords=False,
+                    )
+
+                    argument_tokens = argument_tokens[2:]
+
+                    if result is not None and result.is_any_run_keyword():
+                        argument_tokens = await self._analyse_run_keyword(result, node, argument_tokens)
+
+                    skip_args()
+
+                    break
+                elif argument_tokens[0].value == "ELSE IF" and len(argument_tokens) > 2:
+
+                    result = await self._analyze_keyword_call(
+                        argument_tokens[2].value,
+                        node,
+                        argument_tokens[2],
+                        argument_tokens[3:],
+                        analyse_run_keywords=False,
+                    )
+
+                    argument_tokens = argument_tokens[3:]
+
+                    if result is not None and result.is_any_run_keyword():
+                        argument_tokens = await self._analyse_run_keyword(result, node, argument_tokens)
+
+                    skip_args()
+                else:
+                    break
+
+        return argument_tokens
 
     async def visit_Fixture(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
