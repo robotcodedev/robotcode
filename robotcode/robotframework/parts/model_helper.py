@@ -23,7 +23,7 @@ class ModelHelperMixin:
 
         if keyword_doc.is_run_keyword() and len(argument_tokens) > 0 and is_non_variable_token(argument_tokens[0]):
             result = await self.get_keyworddoc_and_token_from_position(
-                argument_tokens[0].value, argument_tokens[0], argument_tokens, namespace, position
+                argument_tokens[0].value, argument_tokens[0], argument_tokens[1:], namespace, position
             )
 
             return result, argument_tokens[1:]
@@ -33,7 +33,7 @@ class ModelHelperMixin:
             and is_non_variable_token(argument_tokens[1])
         ):
             result = await self.get_keyworddoc_and_token_from_position(
-                argument_tokens[1].value, argument_tokens[1], argument_tokens, namespace, position
+                argument_tokens[1].value, argument_tokens[1], argument_tokens[2:], namespace, position
             )
 
             return result, argument_tokens[2:]
