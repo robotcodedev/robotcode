@@ -101,7 +101,7 @@ class ModelHelperMixin:
                     inner_keyword_doc = await namespace.find_keyword(argument_tokens[2].value)
 
                     if position.is_in_range(range_from_token(argument_tokens[2])):
-                        return (inner_keyword_doc, argument_tokens[1]), argument_tokens[3:]
+                        return (inner_keyword_doc, argument_tokens[2]), argument_tokens[3:]
 
                     argument_tokens = argument_tokens[3:]
 

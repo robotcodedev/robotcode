@@ -43,7 +43,9 @@ def range_from_token(token: Token) -> Range:
 def range_from_token_or_node(node: ast.AST, token: Optional[Token]) -> Range:
     if token is not None:
         return range_from_token(token)
-    return range_from_node(node)
+    if node is not None:
+        return range_from_node(node)
+    return Range.zero()
 
 
 def is_non_variable_token(token: Token) -> bool:
