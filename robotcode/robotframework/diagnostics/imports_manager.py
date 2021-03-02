@@ -7,15 +7,29 @@ from collections import OrderedDict
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Coroutine, Dict, List, NamedTuple, Optional, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Coroutine,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Tuple,
+)
 
-from ...language_server.parts.workspace import FileWatcherEntry, Workspace
+from ...language_server.parts.workspace import FileWatcherEntry
 from ...language_server.types import FileChangeType, FileEvent
 from ...utils.async_event import async_tasking_event
 from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
 from ..configuration import RobotConfig
 from ..utils.async_ast import walk
+
+if TYPE_CHECKING:
+    from ..protocol import RobotLanguageServerProtocol
+
 from .library_doc import (
     Error,
     KeywordDoc,
@@ -44,7 +58,7 @@ class _Entry:
         self,
         name: str,
         args: Tuple[Any, ...],
-        parent: LibraryManager,
+        parent: ImportsManager,
         load_doc_coroutine: Callable[[], Coroutine[Any, Any, LibraryDoc]],
     ) -> None:
         super().__init__()
@@ -121,7 +135,7 @@ class _Entry:
         # we are a module, so add the module path into file watchers
         if self._doc.module_spec is not None and self._doc.module_spec.submodule_search_locations is not None:
             self.file_watchers.append(
-                await self.parent.workspace.add_file_watchers(
+                await self.parent.parent_protocol.workspace.add_file_watchers(
                     self.parent.did_change_watched_files,
                     [
                         str(Path(location).absolute().joinpath("**"))
@@ -138,7 +152,7 @@ class _Entry:
         # we are a file, so put the parent path to filewatchers
         if source_or_origin is not None:
             self.file_watchers.append(
-                await self.parent.workspace.add_file_watchers(
+                await self.parent.parent_protocol.workspace.add_file_watchers(
                     self.parent.did_change_watched_files, [str(Path(source_or_origin).parent.joinpath("**"))]
                 )
             )
@@ -148,7 +162,7 @@ class _Entry:
         # we are not found so, put the pythonpath to filewatchers
         if self._doc.python_path is not None:
             self.file_watchers.append(
-                await self.parent.workspace.add_file_watchers(
+                await self.parent.parent_protocol.workspace.add_file_watchers(
                     self.parent.did_change_watched_files,
                     [str(Path(s).joinpath("**")) for s in self._doc.python_path],
                 )
@@ -168,7 +182,7 @@ class _Entry:
     async def _remove_file_watcher(self) -> None:
         if self.file_watchers is not None:
             for watcher in self.file_watchers:
-                await self.parent.workspace.remove_file_watcher_entry(watcher)
+                await self.parent.parent_protocol.workspace.remove_file_watcher_entry(watcher)
         self.file_watchers = []
 
     async def get_doc(self) -> LibraryDoc:
@@ -197,14 +211,16 @@ class LibraryChangedParams(NamedTuple):
     type: FileChangeType
 
 
-class LibraryManager:
+class ImportsManager:
     _logger = LoggingDescriptor()
 
     process_pool = _init_process_pool()
 
-    def __init__(self, workspace: Workspace, folder: Uri, config: Optional[RobotConfig]) -> None:
+    def __init__(
+        self, parent_protocol: RobotLanguageServerProtocol, folder: Uri, config: Optional[RobotConfig]
+    ) -> None:
         super().__init__()
-        self.workspace = workspace
+        self.parent_protocol = parent_protocol
         self.folder = folder
         self.config = config
         self._libaries_lock = asyncio.Lock()

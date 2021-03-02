@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 from ...language_server.text_document import TextDocument
 from ...utils.async_event import async_tasking_event
 from ..configuration import RobotCodeConfig
-from ..diagnostics.library_manager import LibraryManager
+from ..diagnostics.imports_manager import ImportsManager
 from ..diagnostics.namespace import Namespace
 
 if TYPE_CHECKING:
@@ -57,8 +57,8 @@ class ModelTokenCache(RobotLanguageServerProtocolPart):
         self._entries: Dict[Tuple[weakref.ref[TextDocument], int], _Entry] = {}
         self._loop = asyncio.get_event_loop()
 
-        self._library_managers_lock = asyncio.Lock()
-        self._library_managers: weakref.WeakKeyDictionary[WorkspaceFolder, LibraryManager] = weakref.WeakKeyDictionary()
+        self._imports_managers_lock = asyncio.Lock()
+        self._imports_managers: weakref.WeakKeyDictionary[WorkspaceFolder, ImportsManager] = weakref.WeakKeyDictionary()
 
     async def __get_entry(self, document: TextDocument, setter: Callable[[_Entry], Awaitable[_TResult]]) -> _TResult:
         version = document.version
@@ -160,8 +160,8 @@ class ModelTokenCache(RobotLanguageServerProtocolPart):
     ) -> Tuple[Optional[Namespace], ast.AST]:
         model = await self.__get_model(document) if model is None else model
 
-        library_manager = await self.get_library_manager(document)
-        if library_manager is None:
+        imports_manager = await self.get_imports_manager(document)
+        if imports_manager is None:
             return (None, model)
 
         def invalidate(namespace: Namespace) -> None:
@@ -169,20 +169,20 @@ class ModelTokenCache(RobotLanguageServerProtocolPart):
                 asyncio.ensure_future(self.__invalidate_namespace(document, namespace))
 
         return (
-            Namespace(library_manager, model, str(document.uri.to_path()), document.parent or document, invalidate),
+            Namespace(imports_manager, model, str(document.uri.to_path()), document.parent or document, invalidate),
             model,
         )
 
-    async def get_library_manager(self, document: TextDocument) -> Optional[LibraryManager]:
+    async def get_imports_manager(self, document: TextDocument) -> Optional[ImportsManager]:
         folder = self.parent.workspace.get_workspace_folder(document.uri)
         if folder is None:
             return None
 
-        async with self._library_managers_lock:
-            if folder not in self._library_managers:
+        async with self._imports_managers_lock:
+            if folder not in self._imports_managers:
                 config = RobotCodeConfig.parse_obj(
                     await self.parent.workspace.get_configuration("robotcode", folder.uri)
                 )
 
-                self._library_managers[folder] = LibraryManager(self.parent.workspace, folder.uri, config.robot)
-            return self._library_managers[folder]
+                self._imports_managers[folder] = ImportsManager(self.parent, folder.uri, config.robot)
+            return self._imports_managers[folder]

@@ -32,9 +32,10 @@ from ..utils.ast import Token as AstToken
 from ..utils.ast import is_non_variable_token, range_from_token_or_node
 from ..utils.async_ast import AsyncVisitor
 from .library_doc import KeywordDoc, LibraryDoc, is_embedded_keyword
-from .library_manager import DEFAULT_LIBRARIES, LibraryChangedParams, LibraryManager
+from .imports_manager import DEFAULT_LIBRARIES, LibraryChangedParams, ImportsManager
 
 RESOURCE_EXTENSIONS = (".resource", ".robot", ".txt", ".tsv", ".rst", ".rest")
+REST_EXTENSIONS = (".rst", ".rest")
 
 DIAGNOSTICS_SOURCE_NAME = "RobotCode"
 
@@ -452,15 +453,15 @@ class ResourceEntry(LibraryEntry):
 class Namespace:
     def __init__(
         self,
-        library_manager: LibraryManager,
+        imports_manager: ImportsManager,
         model: ast.AST,
         source: str,
         sentinel: Any,
         invalidated_callback: Callable[[Namespace], None],
     ) -> None:
         super().__init__()
-        self.library_manager = library_manager
-        self.library_manager.libraries_changed.add(self.libraries_changed)
+        self.imports_manager = imports_manager
+        self.imports_manager.libraries_changed.add(self.libraries_changed)
         self.model = model
         self.source = source
         self._sentinel = weakref.ref(sentinel)
@@ -637,7 +638,7 @@ class Namespace:
     async def _get_library_entry(
         self, name: str, args: Tuple[Any, ...], alias: Optional[str], base_dir: str, *, is_default_library: bool = False
     ) -> LibraryEntry:
-        library = await self.library_manager.get_doc_from_library(
+        library = await self.imports_manager.get_doc_from_library(
             None if is_default_library else (self._sentinel() or self.model), name, args, base_dir=base_dir
         )
 
@@ -645,17 +646,22 @@ class Namespace:
 
     async def _get_resource_entry(self, name: str, base_dir: str) -> ResourceEntry:
         from robot.api import get_resource_model
+        from robot.utils import read_rest_data, FileReader
 
-        source = await self.library_manager.find_file(name, base_dir or ".", "Resource")
-
-        extension = Path(source).suffix
-        if Path(source).suffix.lower() not in RESOURCE_EXTENSIONS:
+        source = await self.imports_manager.find_file(name, base_dir or ".", "Resource")
+        source_path = Path(source)
+        extension = source_path.suffix
+        if extension.lower() not in RESOURCE_EXTENSIONS:
             raise ImportError(
                 f"Invalid resource file extension '{extension}'. "
                 f"Supported extensions are {', '.join(repr(s) for s in RESOURCE_EXTENSIONS)}."
             )
 
-        model = get_resource_model(source)
+        if extension.lower() in REST_EXTENSIONS:
+            with FileReader(source_path) as reader:
+                model = get_resource_model(read_rest_data(reader))
+        else:
+            model = get_resource_model(source)
 
         resource = await self._get_doc_from_model(model, source)
 
@@ -667,7 +673,7 @@ class Namespace:
     async def _get_doc_from_model(self, model: ast.AST, source: str, *, add_diagnostics: bool = False) -> LibraryDoc:
         await self._import_imports(model, str(Path(source).parent), add_diagnostics=add_diagnostics)
 
-        library_doc = await self.library_manager.get_doc_from_model(model, source)
+        library_doc = await self.imports_manager.get_doc_from_model(model, source)
 
         return library_doc
 
