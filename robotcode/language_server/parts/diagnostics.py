@@ -183,7 +183,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             else:
                 diagnostics += result
 
-                self.parent.send_notification(
+                asyncio.get_event_loop().call_soon(
+                    self.parent.send_notification,
                     "textDocument/publishDiagnostics",
                     PublishDiagnosticsParams(
                         uri=document.document_uri, version=document.version, diagnostics=diagnostics

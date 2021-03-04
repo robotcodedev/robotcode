@@ -379,7 +379,9 @@ class Analyzer(AsyncVisitor):
         value = cast(Fixture, node)
         keyword_token = cast(AstToken, value.get_token(RobotToken.NAME))
 
-        await self._analyze_keyword_call(value.name, value, keyword_token, list(value.get_tokens(RobotToken.ARGUMENT)))
+        await self._analyze_keyword_call(
+            value.name, value, keyword_token, [cast(AstToken, e) for e in value.get_tokens(RobotToken.ARGUMENT)]
+        )
 
         await self.generic_visit(node)
 
@@ -413,7 +415,7 @@ class Analyzer(AsyncVisitor):
         keyword_token = cast(RobotToken, value.get_token(RobotToken.KEYWORD))
 
         await self._analyze_keyword_call(
-            value.keyword, value, keyword_token, list(value.get_tokens(RobotToken.ARGUMENT))
+            value.keyword, value, keyword_token, [cast(AstToken, e) for e in value.get_tokens(RobotToken.ARGUMENT)]
         )
 
         await self.generic_visit(node)
