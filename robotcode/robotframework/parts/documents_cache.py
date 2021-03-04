@@ -116,12 +116,12 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
             if path.name == "__init__.robot":
                 return cast(ast.AST, robot.api.get_init_model(content))
-            elif suffix == ".robot":
+            elif suffix in (".robot",):
                 return cast(ast.AST, robot.api.get_model(content))
-            elif suffix == ".resource":
+            elif suffix in (".resource", ".rst", ".rest"):
                 return cast(ast.AST, robot.api.get_resource_model(content))
             else:
-                raise UnknownFileTypeError(str(document.uri))
+                raise UnknownFileTypeError(f"Unknown file type '{document.uri}'.")
 
     async def get_namespace(self, document: TextDocument) -> Namespace:
         async def setter(e: _Entry) -> Namespace:
