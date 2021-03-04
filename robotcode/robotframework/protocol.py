@@ -13,9 +13,9 @@ from ..language_server.types import (
 from ..utils.logging import LoggingDescriptor
 from .parts.definition import RobotDefinitionProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
+from .parts.documents_cache import DocumentsCache
 from .parts.folding_range import RobotFoldingRangeProtocolPart
 from .parts.hover import RobotHoverProtocolPart
-from .parts.model_token_cache import ModelTokenCache
 
 if TYPE_CHECKING:
     from .server import RobotLanguageServer
@@ -36,7 +36,7 @@ class Options(Model):
 class RobotLanguageServerProtocol(LanguageServerProtocol):
     _logger = LoggingDescriptor()
 
-    model_token_cache = ProtocolPartDescriptor(ModelTokenCache)
+    documents_cache = ProtocolPartDescriptor(DocumentsCache)
     _robot_diagnostics = ProtocolPartDescriptor(RobotDiagnosticsProtocolPart)
     _robot_folding_ranges = ProtocolPartDescriptor(RobotFoldingRangeProtocolPart)
     _robot_definition = ProtocolPartDescriptor(RobotDefinitionProtocolPart)

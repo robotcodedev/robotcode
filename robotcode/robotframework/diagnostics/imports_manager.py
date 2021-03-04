@@ -12,7 +12,6 @@ from typing import (
     Any,
     Callable,
     Coroutine,
-    Dict,
     List,
     NamedTuple,
     Optional,
@@ -20,7 +19,8 @@ from typing import (
 )
 
 from ...language_server.parts.workspace import FileWatcherEntry
-from ...language_server.types import FileChangeType, FileEvent
+from ...language_server.text_document import TextDocument
+from ...language_server.types import DocumentUri, FileChangeType, FileEvent
 from ...utils.async_event import async_tasking_event
 from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
@@ -29,6 +29,7 @@ from ..utils.async_ast import walk
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
+    from .namespace import Namespace
 
 from .library_doc import (
     Error,
@@ -42,10 +43,12 @@ from .library_doc import (
 )
 
 DEFAULT_LIBRARIES = ("BuiltIn", "Reserved", "Easter")
+RESOURCE_EXTENSIONS = (".resource", ".robot", ".txt", ".tsv", ".rst", ".rest")
+REST_EXTENSIONS = (".rst", ".rest")
 
 
 @dataclass()
-class _EntryKey:
+class _LibrariesEntryKey:
     name: str
     args: Tuple[Any, ...]
 
@@ -53,19 +56,19 @@ class _EntryKey:
         return hash((self.name, self.args))
 
 
-class _Entry:
+class _LibrariesEntry:
     def __init__(
         self,
         name: str,
         args: Tuple[Any, ...],
         parent: ImportsManager,
-        load_doc_coroutine: Callable[[], Coroutine[Any, Any, LibraryDoc]],
+        get_libdoc_coroutine: Callable[[], Coroutine[Any, Any, LibraryDoc]],
     ) -> None:
         super().__init__()
         self.name = name
         self.args = args
         self.parent = parent
-        self.load_doc_coroutine = load_doc_coroutine
+        self.get_libdoc_coroutine = get_libdoc_coroutine
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
         self.file_watchers: List[FileWatcherEntry] = []
         self._doc: Optional[LibraryDoc] = None
@@ -82,7 +85,7 @@ class _Entry:
             f"args={repr(self.args)}, file_watchers={repr(self.file_watchers)}, id={repr(id(self))}"
         )
 
-    async def check_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
+    async def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
         async with self._lock:
             if self._doc is None:
                 return None
@@ -122,7 +125,7 @@ class _Entry:
             return None
 
     async def _update(self) -> None:
-        self._doc = await self.load_doc_coroutine()
+        self._doc = await self.get_libdoc_coroutine()
 
         source_or_origin = (
             self._doc.source
@@ -159,7 +162,7 @@ class _Entry:
 
             return
 
-        # we are not found so, put the pythonpath to filewatchers
+        # we are not found, so put the pythonpath to filewatchers
         if self._doc.python_path is not None:
             self.file_watchers.append(
                 await self.parent.parent_protocol.workspace.add_file_watchers(
@@ -185,7 +188,7 @@ class _Entry:
                 await self.parent.parent_protocol.workspace.remove_file_watcher_entry(watcher)
         self.file_watchers = []
 
-    async def get_doc(self) -> LibraryDoc:
+    async def get_libdoc(self) -> LibraryDoc:
         async with self._lock:
             if self._doc is None:
                 await self._update()
@@ -193,6 +196,101 @@ class _Entry:
             assert self._doc is not None
 
             return self._doc
+
+
+@dataclass()
+class _ResourcesEntryKey:
+    name: str
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+class _ResourcesEntry:
+    def __init__(
+        self,
+        name: str,
+        parent: ImportsManager,
+        get_document_coroutine: Callable[[], Coroutine[Any, Any, TextDocument]],
+    ) -> None:
+        super().__init__()
+        self.name = name
+        self.parent = parent
+        self.get_document_coroutine = get_document_coroutine
+        self.references: weakref.WeakSet[Any] = weakref.WeakSet()
+        self.file_watchers: List[FileWatcherEntry] = []
+        self._document: Optional[TextDocument] = None
+        self._lock = asyncio.Lock()
+        self._loop = asyncio.get_event_loop()
+
+    def __del__(self) -> None:
+        if self._loop.is_running():
+            asyncio.run_coroutine_threadsafe(self.invalidate(), self._loop)
+
+    def __repr__(self) -> str:
+        return (
+            f"{type(self).__qualname__}(name={repr(self.name)}, "
+            f"file_watchers={repr(self.file_watchers)}, id={repr(id(self))}"
+        )
+
+    async def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
+        async with self._lock:
+            if self._document is None or self._document.version is None:
+                return None
+
+            for change in changes:
+                uri = Uri(change.uri)
+                if uri.scheme != "file":
+                    continue
+
+                path = uri.to_path()
+                if (
+                    self._document is not None
+                    and ((path.resolve() == self._document.uri.to_path().resolve()))
+                    or self._document is None
+                ):
+                    await self._invalidate()
+
+                    return change.type
+
+            return None
+
+    async def _update(self) -> None:
+        self._document = await self.get_document_coroutine()
+
+        if self._document.version is None:
+            self.file_watchers.append(
+                await self.parent.parent_protocol.workspace.add_file_watchers(
+                    self.parent.did_change_watched_files,
+                    [str(self._document.uri.to_path())],
+                )
+            )
+
+    async def invalidate(self) -> None:
+        async with self._lock:
+            await self._invalidate()
+
+    async def _invalidate(self) -> None:
+        if self._document is None and len(self.file_watchers) == 0:
+            return
+
+        await self._remove_file_watcher()
+        self._document = None
+
+    async def _remove_file_watcher(self) -> None:
+        if self.file_watchers is not None:
+            for watcher in self.file_watchers:
+                await self.parent.parent_protocol.workspace.remove_file_watcher_entry(watcher)
+        self.file_watchers = []
+
+    async def get_document(self) -> TextDocument:
+        async with self._lock:
+            if self._document is None:
+                await self._update()
+
+            assert self._document is not None
+
+            return self._document
 
 
 # we need this, because ProcessPoolExecutor is not correctly initialized if asyncio is reading from stdin
@@ -208,7 +306,10 @@ def _init_process_pool() -> ProcessPoolExecutor:
 class LibraryChangedParams(NamedTuple):
     name: str
     args: Tuple[Any, ...]
-    type: FileChangeType
+
+
+class ResourceChangedParams(NamedTuple):
+    name: str
 
 
 class ImportsManager:
@@ -224,28 +325,70 @@ class ImportsManager:
         self.folder = folder
         self.config = config
         self._libaries_lock = asyncio.Lock()
-        self._libaries: OrderedDict[_EntryKey, _Entry] = OrderedDict()
+        self._libaries: OrderedDict[_LibrariesEntryKey, _LibrariesEntry] = OrderedDict()
+        self._resources_lock = asyncio.Lock()
+        self._resources: OrderedDict[_ResourcesEntryKey, _ResourcesEntry] = OrderedDict()
         self.file_watchers: List[FileWatcherEntry] = []
         self._loop = asyncio.get_event_loop()
+        self.parent_protocol.documents.did_open.add(self.resource_document_changed)
+        self.parent_protocol.documents.did_change.add(self.resource_document_changed)
+        self.parent_protocol.documents.did_close.add(self.resource_document_changed)
+        self.parent_protocol.documents.did_save.add(self.resource_document_changed)
+
+    async def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
+        resource_changed: List[_ResourcesEntryKey] = []
+
+        async with self._resources_lock:
+            for r_key, r_entry in self._resources.items():
+                try:
+                    result = (await r_entry.get_document()).uri == document.uri
+                    if result:
+                        await r_entry.invalidate()
+                except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                    raise
+
+                except BaseException:
+                    result = True
+
+                if result:
+                    resource_changed.append(r_key)
+
+        if resource_changed:
+            await self.resources_changed(self, [ResourceChangedParams(k.name) for k in resource_changed])
 
     @async_tasking_event
     async def libraries_changed(sender, params: List[LibraryChangedParams]) -> None:
         ...
 
+    @async_tasking_event
+    async def resources_changed(sender, params: List[ResourceChangedParams]) -> None:
+        ...
+
     async def did_change_watched_files(self, sender: Any, changes: List[FileEvent]) -> None:
-        changed: Dict[_EntryKey, FileChangeType] = {}
+        libraries_changed: List[_LibrariesEntryKey] = []
+        resource_changed: List[_ResourcesEntryKey] = []
 
-        for key, entry in self._libaries.items():
-            result = await entry.check_changed(changes)
-            if result is not None:
-                changed[key] = result
+        async with self._libaries_lock:
+            for l_key, l_entry in self._libaries.items():
+                result = await l_entry.check_file_changed(changes)
+                if result is not None:
+                    libraries_changed.append(l_key)
 
-        await self.libraries_changed(self, [LibraryChangedParams(k.name, k.args, v) for k, v in changed.items()])
+        async with self._resources_lock:
+            for r_key, r_entry in self._resources.items():
+                result = await r_entry.check_file_changed(changes)
+                if result is not None:
+                    resource_changed.append(r_key)
 
-    def __remove_entry(self, entry_key: _EntryKey, entry: _Entry, now: bool = False) -> None:
-        async def threadsafe_remove(k: _EntryKey, e: _Entry, n: bool) -> None:
+        if libraries_changed:
+            await self.libraries_changed(self, [LibraryChangedParams(k.name, k.args) for k in libraries_changed])
+
+        if resource_changed:
+            await self.resources_changed(self, [ResourceChangedParams(k.name) for k in resource_changed])
+
+    def __remove_library_entry(self, entry_key: _LibrariesEntryKey, entry: _LibrariesEntry, now: bool = False) -> None:
+        async def threadsafe_remove(k: _LibrariesEntryKey, e: _LibrariesEntry, n: bool) -> None:
             if n or len(e.references) == 0:
-                self._logger.debug(lambda: f"remove library {k.name}{repr(k.args)}")
                 async with self._libaries_lock:
                     await entry.invalidate()
                     self._libaries.pop(k, None)
@@ -253,18 +396,26 @@ class ImportsManager:
         if self._loop.is_running():
             asyncio.run_coroutine_threadsafe(threadsafe_remove(entry_key, entry, now), loop=self._loop)
 
+    def __remove_resource_entry(self, entry_key: _ResourcesEntryKey, entry: _ResourcesEntry, now: bool = False) -> None:
+        async def threadsafe_remove(k: _ResourcesEntryKey, e: _ResourcesEntry, n: bool) -> None:
+            if n or len(e.references) == 0:
+                async with self._resources_lock:
+                    await entry.invalidate()
+                    self._resources.pop(k, None)
+
+        if self._loop.is_running():
+            asyncio.run_coroutine_threadsafe(threadsafe_remove(entry_key, entry, now), loop=self._loop)
+
     @_logger.call
-    async def get_doc_from_library(
-        self, sentinel: Any, name: str, args: Tuple[Any, ...] = (), base_dir: str = "."
+    async def get_libdoc_for_library_import(
+        self, name: str, args: Tuple[Any, ...] = (), base_dir: str = ".", sentinel: Any = None
     ) -> LibraryDoc:
         async with self._libaries_lock:
-            entry_key = _EntryKey(name, args)
+            entry_key = _LibrariesEntryKey(name, args)
 
             if entry_key not in self._libaries:
 
-                async def _load_libdoc() -> LibraryDoc:
-                    self._logger.debug(lambda: f"load/reload library {name}{repr(args)}")
-
+                async def _get_libdoc() -> LibraryDoc:
                     result = await asyncio.wait_for(
                         self._loop.run_in_executor(
                             self.process_pool,
@@ -278,25 +429,20 @@ class ImportsManager:
                         30,
                     )
 
-                    self._logger.debug(
-                        lambda: f"loaded library {result.name} "
-                        f"from source {repr(result.source)} and module spec {repr(result.module_spec)}"
-                    )
-
                     return result
 
-                self._libaries[entry_key] = entry = _Entry(name, args, self, _load_libdoc)
+                self._libaries[entry_key] = entry = _LibrariesEntry(name, args, self, _get_libdoc)
 
         entry = self._libaries[entry_key]
 
         if sentinel is not None and sentinel not in entry.references:
             entry.references.add(sentinel)
-            weakref.finalize(sentinel, self.__remove_entry, entry_key, entry)
+            weakref.finalize(sentinel, self.__remove_library_entry, entry_key, entry)
 
-        return await entry.get_doc()
+        return await entry.get_libdoc()
 
     @_logger.call
-    async def get_doc_from_model(
+    async def get_libdoc_from_model(
         self, model: ast.AST, source: str, model_type: str = "RESOURCE", scope: str = "GLOBAL"
     ) -> LibraryDoc:
 
@@ -387,3 +533,53 @@ class ImportsManager:
             ),
             30,
         )
+
+    @_logger.call
+    async def get_document_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> TextDocument:
+
+        async with self._resources_lock:
+            entry_key = _ResourcesEntryKey(name)
+
+            if entry_key not in self._resources:
+
+                async def _get_document() -> TextDocument:
+                    from robot.utils import FileReader, read_rest_data
+
+                    source = await self.find_file(name, base_dir or ".", "Resource")
+
+                    source_path = Path(source)
+                    extension = source_path.suffix
+                    if extension.lower() not in RESOURCE_EXTENSIONS:
+                        raise ImportError(
+                            f"Invalid resource file extension '{extension}'. "
+                            f"Supported extensions are {', '.join(repr(s) for s in RESOURCE_EXTENSIONS)}."
+                        )
+
+                    source_uri = DocumentUri(Uri.from_path(source_path))
+
+                    result = self.parent_protocol.documents.get(source_uri, None)
+                    if result is not None:
+                        return await result.freeze()
+
+                    with FileReader(source_path) as reader:
+                        if extension.lower() in REST_EXTENSIONS:
+                            text = str(read_rest_data(reader))
+                        else:
+                            text = str(reader.read())
+
+                    return TextDocument(document_uri=source_uri, language_id="robot", version=None, text=text)
+
+                self._resources[entry_key] = entry = _ResourcesEntry(name, self, _get_document)
+
+        entry = self._resources[entry_key]
+
+        if sentinel is not None and sentinel not in entry.references:
+            entry.references.add(sentinel)
+            weakref.finalize(sentinel, self.__remove_resource_entry, entry_key, entry)
+
+        return await entry.get_document()
+
+    async def get_namespace_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> "Namespace":
+        document = await self.get_document_for_resource_import(name, base_dir, sentinel)
+
+        return await self.parent_protocol.documents_cache.get_namespace(document)

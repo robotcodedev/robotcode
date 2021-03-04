@@ -48,9 +48,11 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
     @language_id("robotframework")
     async def collect_hover(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:
+        freezed_doc = await document.freeze()
+
         result_nodes = [
             node
-            async for node in walk(await self.parent.model_token_cache.get_model(document.freeze()))
+            async for node in walk(await self.parent.documents_cache.get_model(freezed_doc))
             if position.is_in_range(range_from_node(node))
         ]
 
@@ -63,7 +65,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         if method is None:
             return None
 
-        return await method(result_node, document, position)
+        return await method(result_node, freezed_doc, position)
 
     async def hover_KeywordCall(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position
@@ -71,7 +73,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordCall
 
-        namespace = await self.parent.model_token_cache.get_namespace(document)
+        namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
             return None
 
@@ -97,7 +99,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Fixture
 
-        namespace = await self.parent.model_token_cache.get_namespace(document)
+        namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
             return None
 
@@ -131,7 +133,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 return None
 
             if position.is_in_range(range_from_token(keyword_token)):
-                namespace = await self.parent.model_token_cache.get_namespace(document)
+                namespace = await self.parent.documents_cache.get_namespace(document)
                 if namespace is None:
                     return None
 
@@ -167,7 +169,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 return None
 
             if position.is_in_range(range_from_token(name_token)):
-                namespace = await self.parent.model_token_cache.get_namespace(document)
+                namespace = await self.parent.documents_cache.get_namespace(document)
                 if namespace is None:
                     return None
 
@@ -205,7 +207,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 return None
 
             if position.is_in_range(range_from_token(name_token)):
-                namespace = await self.parent.model_token_cache.get_namespace(document)
+                namespace = await self.parent.documents_cache.get_namespace(document)
                 if namespace is None:
                     return None
 

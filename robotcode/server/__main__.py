@@ -113,10 +113,6 @@ def start_server(mode: str, port: int) -> None:
 
 
 def main() -> None:
-    import gc
-
-    gc.set_threshold(1, 1, 1)
-
     parser = argparse.ArgumentParser(
         description="RobotCode Language Server",
         prog="robotcode.server",

@@ -11,7 +11,6 @@ from typing import (
     AsyncIterator,
     Awaitable,
     Callable,
-    Dict,
     List,
     Optional,
     Tuple,
@@ -26,7 +25,8 @@ if TYPE_CHECKING:
 
 from ...language_server.text_document import TextDocument
 from ...utils.async_event import async_tasking_event
-from ..configuration import RobotCodeConfig
+from ...utils.uri import Uri
+from ..configuration import RobotCodeConfig, RobotConfig
 from ..diagnostics.imports_manager import ImportsManager
 from ..diagnostics.namespace import Namespace
 
@@ -44,42 +44,29 @@ class UnknownFileTypeError(Exception):
 
 @dataclass
 class _Entry:
-    version: int
+    version: Optional[int]
     model: Optional[ast.AST] = None
     tokens: Optional[List[Any]] = None
     namespace: Optional[Namespace] = None
 
 
-class ModelTokenCache(RobotLanguageServerProtocolPart):
+class DocumentsCache(RobotLanguageServerProtocolPart):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
         self._lock = asyncio.Lock()
-        self._entries: Dict[Tuple[weakref.ref[TextDocument], int], _Entry] = {}
+        self._entries: weakref.WeakKeyDictionary[TextDocument, _Entry] = weakref.WeakKeyDictionary()
         self._loop = asyncio.get_event_loop()
 
         self._imports_managers_lock = asyncio.Lock()
         self._imports_managers: weakref.WeakKeyDictionary[WorkspaceFolder, ImportsManager] = weakref.WeakKeyDictionary()
+        self._default_imports_manager: Optional[ImportsManager] = None
 
     async def __get_entry(self, document: TextDocument, setter: Callable[[_Entry], Awaitable[_TResult]]) -> _TResult:
-        version = document.version
-
-        async def remove_safe(r: weakref.ref[TextDocument], v: int) -> None:
-            async with self._lock:
-                self._entries.pop((r, v))
-
-        def remove(r: weakref.ref[TextDocument]) -> None:
-            if self._loop.is_running():
-                asyncio.run_coroutine_threadsafe(remove_safe(r, version), self._loop)
-
         async with self._lock:
-            document_ref = weakref.ref(document.parent or document, remove)
+            if document not in self._entries:
+                self._entries[document] = _Entry(document.version)
 
-            if (document_ref, version) not in self._entries or self._entries[
-                (document_ref, version)
-            ].version != document.version:
-                self._entries[(document_ref, version)] = _Entry(document.version)
-
-            return await setter(self._entries[(document_ref, version)])
+            return await setter(self._entries[document])
 
     async def get_tokens(self, document: TextDocument) -> AsyncIterator["Token"]:
         for e in await self.__get_tokens(document):
@@ -136,8 +123,8 @@ class ModelTokenCache(RobotLanguageServerProtocolPart):
             else:
                 raise UnknownFileTypeError(str(document.uri))
 
-    async def get_namespace(self, document: TextDocument) -> Optional[Namespace]:
-        async def setter(e: _Entry) -> Optional[Namespace]:
+    async def get_namespace(self, document: TextDocument) -> Namespace:
+        async def setter(e: _Entry) -> Namespace:
             if e.namespace is None:
                 e.namespace, e.model = await self.__get_namespace(document, e.model)
             return e.namespace
@@ -155,14 +142,10 @@ class ModelTokenCache(RobotLanguageServerProtocolPart):
         await self.__get_entry(document, setter)
         await self.namespace_invalidated(self, document)
 
-    async def __get_namespace(
-        self, document: TextDocument, model: Optional[ast.AST]
-    ) -> Tuple[Optional[Namespace], ast.AST]:
+    async def __get_namespace(self, document: TextDocument, model: Optional[ast.AST]) -> Tuple[Namespace, ast.AST]:
         model = await self.__get_model(document) if model is None else model
 
         imports_manager = await self.get_imports_manager(document)
-        if imports_manager is None:
-            return (None, model)
 
         def invalidate(namespace: Namespace) -> None:
             if self._loop.is_running():
@@ -173,10 +156,18 @@ class ModelTokenCache(RobotLanguageServerProtocolPart):
             model,
         )
 
-    async def get_imports_manager(self, document: TextDocument) -> Optional[ImportsManager]:
+    @property
+    def default_imports_manager(self) -> ImportsManager:
+        if self._default_imports_manager is None:
+            self._default_imports_manager = ImportsManager(
+                self.parent, Uri(self.parent.workspace.root_uri or "."), RobotConfig(args=(), pythonpath=[])
+            )
+        return self._default_imports_manager
+
+    async def get_imports_manager(self, document: TextDocument) -> ImportsManager:
         folder = self.parent.workspace.get_workspace_folder(document.uri)
         if folder is None:
-            return None
+            return self.default_imports_manager
 
         async with self._imports_managers_lock:
             if folder not in self._imports_managers:

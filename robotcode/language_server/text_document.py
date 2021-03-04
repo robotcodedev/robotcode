@@ -46,7 +46,7 @@ class TextDocument:
         *,
         document_uri: DocumentUri,
         language_id: str,
-        version: int,
+        version: Optional[int],
         text: str,
         parent: Optional[TextDocument] = None,
     ) -> None:
@@ -74,12 +74,14 @@ class TextDocument:
         self.language_id = (
             text_document.language_id if text_document is not None else language_id if language_id is not None else ""
         )
-        self.version = text_document.version if text_document is not None else version if version is not None else -1
+        self.version = text_document.version if text_document is not None else version
         self._text = text_document.text if text_document is not None else text if text is not None else ""
 
         self._parent: Optional[weakref.ReferenceType[TextDocument]] = None
         if parent is not None:
             self._parent = weakref.ref(parent)
+
+        self.__frozen: Optional[weakref.ref[TextDocument]] = None
 
     @property
     def parent(self) -> Optional[TextDocument]:
@@ -88,18 +90,28 @@ class TextDocument:
 
         return self._parent()
 
-    def freeze(self) -> TextDocument:
-        return TextDocument(
+    def __freeze(self) -> TextDocument:
+        assert self.parent is None
+
+        document = self.__frozen() if self.__frozen is not None else None
+
+        if document is not None and document.version == self.version:
+            return document
+
+        document = TextDocument(
             document_uri=self.document_uri,
             language_id=self.language_id,
             version=self.version,
             text=self.text,
             parent=self,
         )
+        self.__frozen = weakref.ref(document)
 
-    async def freeze_async(self) -> TextDocument:
+        return document
+
+    async def freeze(self) -> TextDocument:
         async with self._lock:
-            return self.freeze()
+            return self.__freeze()
 
     def __str__(self) -> str:
         return super().__str__()
@@ -108,8 +120,9 @@ class TextDocument:
         return (
             f"TextDocument(uri={repr(self.uri)}, "
             f"language_id={repr(self.language_id)}, "
-            f"version={repr(self.version)}, "
-            f"text={repr(self.text) if len(self.text)<10 else repr(self.text[:10]+'...')})"
+            f"version={repr(self.version)}"
+            f"{', frozen=True' if self.parent is not None else '' }"
+            f")"
         )
 
     @property

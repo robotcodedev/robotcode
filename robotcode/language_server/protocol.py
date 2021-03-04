@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any, List, Optional, Union, cast
 
 from .._version import __version__
@@ -141,7 +142,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         self.initialization_options = initialization_options
         try:
             await self.on_initialize(initialization_options)
-        except (SystemExit, KeyboardInterrupt):
+        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except JsonRPCErrorException:
             raise

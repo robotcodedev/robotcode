@@ -29,10 +29,10 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         parent.diagnostics.collect.add(self.collect_diagnostics)
 
-        parent.model_token_cache.namespace_invalidated.add(self.namespace_invalidated)
+        parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
 
     async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
-        await self.parent.diagnostics.start_publish_diagnostics_task(document)
+        await self.parent.diagnostics.start_publish_diagnostics_task(document.parent or document)
 
     def is_robot_language(self, document: TextDocument) -> bool:
         return document.language_id == "robotframework"
@@ -57,7 +57,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         result: List[Diagnostic] = []
 
-        async for token in self.parent.model_token_cache.get_tokens(document):
+        async for token in self.parent.documents_cache.get_tokens(document):
             if token.type in [Token.ERROR, Token.FATAL_ERROR]:
                 result.append(
                     Diagnostic(
@@ -124,7 +124,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         self.errors.append(self.parent._create_error(node, e, "robot.visitor"))
                 await super().generic_visit(node)
 
-        return await Visitor.find_from(await self.parent.model_token_cache.get_model(document), self)
+        return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)
 
     @language_id("robotframework")
     @_logger.call
@@ -133,7 +133,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         result: List[Diagnostic] = []
 
-        async for node in walk(await self.parent.model_token_cache.get_model(document)):
+        async for node in walk(await self.parent.documents_cache.get_model(document)):
             error = getattr(node, "error", None)
             if error is not None:
                 result.append(self._create_error(node, error))
@@ -148,7 +148,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @_logger.call
     async def collect_diagnostics(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
 
-        namespace = await self.parent.model_token_cache.get_namespace(document)
+        namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
             return []
 

@@ -493,7 +493,7 @@ class JsonRPCProtocol(asyncio.Protocol):
             self._message_buf = bytes()
             try:
                 self._handle_messages_generator(_json_rpc_message_from_dict(json.loads(body.decode(charset))))
-            except (SystemExit, KeyboardInterrupt):
+            except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
                 self._logger.exception(e)

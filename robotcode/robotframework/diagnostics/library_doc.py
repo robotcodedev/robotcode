@@ -296,6 +296,8 @@ def _update_sys_path(working_dir: str = ".", pythonpath: Optional[List[str]] = N
         for m in set(sys.modules.values()) - __PRELOADED_MODULES:
             try:
                 importlib.reload(m)
+            except (SystemExit, KeyboardInterrupt):
+                raise
             except BaseException:
                 pass
 
