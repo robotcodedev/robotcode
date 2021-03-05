@@ -80,6 +80,7 @@ class TextDocument:
         self._parent: Optional[weakref.ReferenceType[TextDocument]] = None
         if parent is not None:
             self._parent = weakref.ref(parent)
+        self._lines: Optional[List[str]] = None
 
         self.__frozen: Optional[weakref.ref[TextDocument]] = None
 
@@ -137,6 +138,7 @@ class TextDocument:
             if version is not None:
                 self.version = version
             self._text = text
+            self._lines = None
 
     async def apply_incremental_change(self, version: Optional[int], range: Range, text: str) -> None:
         async with self._lock:
@@ -169,7 +171,11 @@ class TextDocument:
                     new.write(line[end_col:])
 
             self._text = new.getvalue()
+            self._lines = None
 
     @property
     def lines(self) -> List[str]:
-        return self.text.splitlines(True)
+        if self._lines is None:
+            self._lines = self.text.splitlines(True)
+
+        return self._lines

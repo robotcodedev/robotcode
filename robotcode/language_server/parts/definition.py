@@ -59,7 +59,7 @@ class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         document = self.parent.documents[text_document.uri]
         for result in await self.collect(
             self,
-            self.parent.documents[text_document.uri],
+            document,
             position,
             callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
         ):

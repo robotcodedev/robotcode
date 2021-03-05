@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 from .model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
+_HoverMethod = Callable[[ast.AST, TextDocument, Position], Awaitable[Optional[Hover]]]
+
 
 class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     _logger = LoggingDescriptor()
@@ -28,26 +30,24 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
-        parent.hover.collect.add(self.collect_hover)
+        parent.hover.collect.add(self.collect)
 
-    def _find_method(
-        self, cls: Type[Any]
-    ) -> Optional[Callable[[ast.AST, TextDocument, Position], Awaitable[Optional[Hover]]]]:
+    def _find_method(self, cls: Type[Any]) -> Optional[_HoverMethod]:
         if cls is ast.AST:
             return None
         method_name = "hover_" + cls.__name__
         if hasattr(self, method_name):
             method = getattr(self, method_name)
             if callable(method):
-                return cast(Callable[[ast.AST, TextDocument, Position], Awaitable[Optional[Hover]]], method)
+                return cast(_HoverMethod, method)
         for base in cls.__bases__:
             method = self._find_method(base)
             if method:
-                return cast(Callable[[ast.AST, TextDocument, Position], Awaitable[Optional[Hover]]], method)
+                return cast(_HoverMethod, method)
         return None
 
     @language_id("robotframework")
-    async def collect_hover(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:
+    async def collect(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:
         freezed_doc = await document.freeze()
 
         result_nodes = [

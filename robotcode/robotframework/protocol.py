@@ -11,11 +11,13 @@ from ..language_server.types import (
     TextDocumentSyncKind,
 )
 from ..utils.logging import LoggingDescriptor
+from .parts.completion import RobotCompletionProtocolPart
 from .parts.definition import RobotDefinitionProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
 from .parts.documents_cache import DocumentsCache
 from .parts.folding_range import RobotFoldingRangeProtocolPart
 from .parts.hover import RobotHoverProtocolPart
+from .parts.signatature_help import RobotSignatureHelpProtocolPart
 
 if TYPE_CHECKING:
     from .server import RobotLanguageServer
@@ -41,6 +43,8 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     _robot_folding_ranges = ProtocolPartDescriptor(RobotFoldingRangeProtocolPart)
     _robot_definition = ProtocolPartDescriptor(RobotDefinitionProtocolPart)
     _robot_hover = ProtocolPartDescriptor(RobotHoverProtocolPart)
+    _robot_completion = ProtocolPartDescriptor(RobotCompletionProtocolPart)
+    _signature_help = ProtocolPartDescriptor(RobotSignatureHelpProtocolPart)
 
     def __init__(self, server: "RobotLanguageServer"):
         super().__init__(server)

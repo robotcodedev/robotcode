@@ -110,6 +110,13 @@ class KeywordMatcher:
         )
 
 
+RUN_KEYWORDS_MATCHERS = [KeywordMatcher(k) for k in RUN_KEYWORDS]
+RUN_KEYWORD_IF_NAME_MATCHER = KeywordMatcher(RUN_KEYWORD_IF_NAME)
+RUN_KEYWORDS_NAME_MATCHER = KeywordMatcher(RUN_KEYWORDS_NAME)
+RUN_KEYWORD_NAMES_MATCHERS = [KeywordMatcher(k) for k in RUN_KEYWORD_NAMES]
+RUN_KEYWORD_WITH_CONDITION_NAMES_MATCHERS = [KeywordMatcher(k) for k in RUN_KEYWORD_WITH_CONDITION_NAMES]
+
+
 class Model(BaseModel):
     class Config:
         pass
@@ -160,6 +167,14 @@ class KeywordDoc(Model):
             result += self.doc
 
         return result
+
+    @property
+    def signature(self) -> str:
+        return f"({self.type}) \"{self.name}\": ({', '.join(self.args)})"
+
+    @property
+    def parameter_signature(self) -> str:
+        return f"({', '.join(self.args)})"
 
     def is_any_run_keyword(self) -> bool:
         return self.libname == BUILTIN_LIBRARY_NAME and self.name in RUN_KEYWORDS

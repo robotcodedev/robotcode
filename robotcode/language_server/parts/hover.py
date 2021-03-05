@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from ...jsonrpc2.protocol import rpc_method
 from ...utils.async_event import async_tasking_event
@@ -9,7 +9,6 @@ from ..has_extend_capabilities import HasExtendCapabilities
 from ..language import HasLanguageId
 from ..text_document import TextDocument
 from ..types import (
-    DocumentUri,
     Hover,
     HoverParams,
     Position,
@@ -29,7 +28,6 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)
-        self._documents: Dict[DocumentUri, TextDocument] = {}
 
     @async_tasking_event
     async def collect(sender, document: TextDocument, position: Position) -> Optional[Hover]:

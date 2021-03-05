@@ -32,6 +32,11 @@ if TYPE_CHECKING:
 from .model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
+_DefinitionMethod = Callable[
+    [ast.AST, TextDocument, Position],
+    Awaitable[Union[Location, List[Location], List[LocationLink], None]],
+]
+
 
 class RobotDefinitionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     _logger = LoggingDescriptor()
@@ -39,42 +44,24 @@ class RobotDefinitionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
-        parent.definition.collect.add(self.collect_definitions)
+        parent.definition.collect.add(self.collect)
 
-    def _find_method(
-        self, cls: Type[Any]
-    ) -> Optional[
-        Callable[
-            [ast.AST, TextDocument, Position], Awaitable[Union[Location, List[Location], List[LocationLink], None]]
-        ]
-    ]:
+    def _find_method(self, cls: Type[Any]) -> Optional[_DefinitionMethod]:
         if cls is ast.AST:
             return None
         method_name = "definition_" + cls.__name__
         if hasattr(self, method_name):
             method = getattr(self, method_name)
             if callable(method):
-                return cast(
-                    Callable[
-                        [ast.AST, TextDocument, Position],
-                        Awaitable[Union[Location, List[Location], List[LocationLink], None]],
-                    ],
-                    method,
-                )
+                return cast(_DefinitionMethod, method)
         for base in cls.__bases__:
             method = self._find_method(base)
             if method:
-                return cast(
-                    Callable[
-                        [ast.AST, TextDocument, Position],
-                        Awaitable[Union[Location, List[Location], List[LocationLink], None]],
-                    ],
-                    method,
-                )
+                return cast(_DefinitionMethod, method)
         return None
 
     @language_id("robotframework")
-    async def collect_definitions(
+    async def collect(
         self, sender: Any, document: TextDocument, position: Position
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         freezed_doc = await document.freeze()

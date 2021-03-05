@@ -20,10 +20,10 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
-        parent.folding_ranges.collect.add(self.collect_folding_ranges)
+        parent.folding_ranges.collect.add(self.collect)
 
     @language_id("robotframework")
-    async def collect_folding_ranges(self, sender: Any, document: TextDocument) -> List[FoldingRange]:
+    async def collect(self, sender: Any, document: TextDocument) -> List[FoldingRange]:
 
         from ..utils.async_ast import AsyncVisitor
 

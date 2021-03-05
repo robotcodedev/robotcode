@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from enum import Enum, IntEnum, IntFlag
-from typing import Any, Dict, Iterator, List, Literal, Optional, Union
+from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union
 
 from pydantic import BaseModel, Field
 
@@ -12,9 +12,6 @@ URI = str
 
 
 class Model(BaseModel):
-    def __init__(self, **data: Any) -> None:
-        super().__init__(**data)
-
     class Config:
 
         allow_population_by_field_name = True
@@ -154,6 +151,11 @@ class SymbolTag(IntEnum):
 class InsertTextMode(IntEnum):
     AS_IS = 1
     ADJUST_INDENTATION = 2
+
+
+class InsertTextFormat(Enum):
+    PLAINTEXT = 1
+    SNIPPET = 2
 
 
 class WorkspaceSymbolClientCapabilitiesSymbolKind(Model):
@@ -667,11 +669,26 @@ class ServerCapabilitiesWorkspace(Model):
     file_operations: Optional[ServerCapabilitiesWorkspaceFileOperations] = None
 
 
+class CompletionOptions(WorkDoneProgressOptions):
+    trigger_characters: Optional[List[str]] = None
+    all_commit_characters: Optional[List[str]] = None
+    resolve_provider: Optional[bool] = None
+
+
+class CompletionRegistrationOptions(TextDocumentRegistrationOptions, CompletionOptions):
+    pass
+
+
+class SignatureHelpOptions(WorkDoneProgressOptions):
+    trigger_characters: Optional[List[str]] = None
+    retrigger_characters: Optional[List[str]] = None
+
+
 class ServerCapabilities(Model):
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None]
-    # completion_provider: Optional[CompletionOptions] = None
+    completion_provider: Optional[CompletionOptions] = None
     hover_provider: Union[bool, HoverOptions, None] = None
-    # signature_help_provider: Optional[SignatureHelpOptions] = None
+    signature_help_provider: Optional[SignatureHelpOptions] = None
     # declaration_provider: Union[bool, DeclarationOptions, DeclarationRegistrationOptions, None] = None
     definition_provider: Union[bool, DefinitionOptions, None] = None
     # implementation_provider: Union[bool, ImplementationOptions, ImplementationRegistrationOptions, None] = None
@@ -1157,3 +1174,90 @@ class DidChangeWatchedFilesParams(Model):
 
 class DocumentSymbolRegistrationOptions(TextDocumentRegistrationOptions, DocumentSymbolOptions):
     pass
+
+
+class Command(Model):
+    title: str
+    command: str
+    arguments: Optional[List[Any]] = None
+
+
+class CompletionTriggerKind(Enum):
+    INVOKED = 1
+    TRIGGERCHARACTER = 2
+    COMPLETIONTRIGGERKIND = 3
+
+
+class CompletionContext(Model):
+    trigger_kind: CompletionTriggerKind
+    trigger_character: Optional[str]
+
+
+class CompletionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+    context: Optional[CompletionContext]
+
+
+class InsertReplaceEdit(Model):
+    new_text: str
+    insert: Range
+    replace: Range
+
+
+class CompletionItem(Model):
+    label: str
+    kind: Optional[CompletionItemKind] = None
+    tags: Optional[List[CompletionItemTag]] = None
+    detail: Optional[str] = None
+    documentation: Union[str, MarkupContent, None] = None
+    deprecated: Optional[bool] = None
+    preselect: Optional[bool] = None
+    sort_text: Optional[str] = None
+    filter_text: Optional[str] = None
+    insert_text: Optional[str] = None
+    insert_text_format: Optional[InsertTextFormat] = None
+    insert_text_mode: Optional[InsertTextMode] = None
+    text_edit: Union[TextEdit, InsertReplaceEdit, None] = None
+    additional_text_edits: Optional[List[TextEdit]]
+    commit_characters: Optional[List[str]] = None
+    command: Optional[Command] = None
+    data: Optional[Any] = None
+
+
+class CompletionList(Model):
+    is_incomplete: bool
+    items: List[CompletionItem]
+
+
+class SignatureHelpTriggerKind(Enum):
+    INVOKED = 1
+    TRIGGERCHARACTER = 2
+    CONTENTCHANGE = 3
+
+
+class ParameterInformation(Model):
+    label: Union[str, Tuple[int, int]]
+    documentation: Union[str, MarkupContent, None] = None
+
+
+class SignatureInformation(Model):
+    label: str
+    documentation: Union[str, MarkupContent, None] = None
+    parameters: Optional[List[ParameterInformation]] = None
+    active_parameter: Optional[int] = None
+
+
+class SignatureHelp(Model):
+    signatures: List[SignatureInformation]
+    active_signature: Optional[int] = None
+    active_parameter: Optional[int] = None
+
+
+class SignatureHelpContext(Model):
+    trigger_kind: SignatureHelpTriggerKind
+    trigger_character: Optional[str] = None
+    is_retrigger: bool
+    active_signature_help: Optional[SignatureHelp] = None
+
+
+class SignatureHelpParams(TextDocumentPositionParams, WorkDoneProgressParams):
+    context: Optional[SignatureHelpContext] = None
