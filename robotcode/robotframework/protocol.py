@@ -12,10 +12,10 @@ from ..language_server.types import (
 )
 from ..utils.logging import LoggingDescriptor
 from .parts.completion import RobotCompletionProtocolPart
-from .parts.goto import RobotGotoProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
 from .parts.documents_cache import DocumentsCache
 from .parts.folding_range import RobotFoldingRangeProtocolPart
+from .parts.goto import RobotGotoProtocolPart
 from .parts.hover import RobotHoverProtocolPart
 from .parts.signatature_help import RobotSignatureHelpProtocolPart
 

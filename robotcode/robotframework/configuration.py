@@ -1,31 +1,29 @@
 from typing import List, Tuple
 
-from pydantic import BaseModel
+from ..language_server.parts.workspace import ConfigBase, config_section
 
 
-class Model(BaseModel):
-    class Config:
-
-        allow_population_by_field_name = True
-        # use_enum_values = True
-
-        @classmethod
-        def alias_generator(cls, string: str) -> str:
-            return string.replace("_", "-")
-
-
-class LanguageServerConfig(Model):
+@config_section("robotcode.language-server")
+class LanguageServerConfig(ConfigBase):
     mode: str
     tcp_port: int
     args: Tuple[str, ...]
     python: str
 
 
-class RobotConfig(Model):
+@config_section("robotcode.robot")
+class RobotConfig(ConfigBase):
     args: Tuple[str, ...]
     pythonpath: List[str]
 
 
-class RobotCodeConfig(Model):
+@config_section("robotcode.syntax")
+class SyntaxConfig(ConfigBase):
+    section_style: str
+
+
+@config_section("robotcode")
+class RobotCodeConfig(ConfigBase):
     language_server: LanguageServerConfig
     robot: RobotConfig
+    syntax: SyntaxConfig

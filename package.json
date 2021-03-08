@@ -108,6 +108,12 @@
 						},
 						"description": "Specifies additional python paths to robotframework. Corresponds to the '--pythonpath' option of the robot module.",
 						"scope": "resource"
+					},
+					"robotcode.syntax.section_style": {
+						"type": "string",
+						"default": "*** {name} ***",
+						"description": "Defines the section style format.",
+						"scope": "resource"
 					}
 				}
 			}

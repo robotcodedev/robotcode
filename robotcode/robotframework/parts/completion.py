@@ -32,6 +32,7 @@ from ...language_server.types import (
 )
 from ...utils.async_itertools import async_chain_iterator
 from ...utils.logging import LoggingDescriptor
+from ..configuration import SyntaxConfig
 from ..diagnostics.namespace import Namespace
 from ..utils.ast import Token, range_from_node, range_from_token
 from ..utils.async_ast import walk
@@ -39,11 +40,30 @@ from ..utils.async_ast import walk
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
-from .model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
+
+class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
+    _logger = LoggingDescriptor()
+
+    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
+        super().__init__(parent)
+
+        parent.completion.collect.add(self.collect)
+
+    @language_id("robotframework")
+    @trigger_characters([" ", "*", "\t", "."])
+    # @all_commit_characters(['\n'])
+    async def collect(
+        self, sender: Any, document: TextDocument, position: Position, context: Optional[CompletionContext]
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        freezed_doc = await document.freeze()
+
+        return await CompletionCollector(self.parent, freezed_doc).collect(position, context)
+
+
 _CompleteMethod = Callable[
-    [ast.AST, List[ast.AST], TextDocument, Position, Optional[CompletionContext]],
+    [ast.AST, List[ast.AST], Position, Optional[CompletionContext]],
     Awaitable[Optional[Optional[List[CompletionItem]]]],
 ]
 
@@ -70,15 +90,28 @@ SETTINGS = [
 ]
 
 TESTCASE_SETTINGS = ["Documentation", "Tags", "Setup", "Teardown", "Template", "Timeout"]
+DEFAULT_SECTIONS_STYLE = "*** {name} ***"
 
 
-class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+class CompletionCollector:
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
-        super().__init__(parent)
+    def __init__(self, parent: RobotLanguageServerProtocol, document: TextDocument) -> None:
+        self.parent = parent
+        self._section_style: Optional[str] = None
+        self.document = document
 
-        parent.completion.collect.add(self.collect)
+    async def get_section_style(self) -> str:
+        if self._section_style is None:
+            folder = self.parent.workspace.get_workspace_folder(self.document.uri)
+            if folder is None:
+                self._section_style = DEFAULT_SECTIONS_STYLE
+            else:
+                config = await self.parent.workspace.get_configuration(SyntaxConfig, folder.uri)
+
+                self._section_style = config.section_style
+
+        return self._section_style or DEFAULT_SECTIONS_STYLE
 
     def _find_method(self, cls: Type[Any]) -> Optional[_CompleteMethod]:
         if cls is ast.AST:
@@ -98,14 +131,13 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     @trigger_characters([" ", "*", "\t", "."])
     # @all_commit_characters(['\n'])
     async def collect(
-        self, sender: Any, document: TextDocument, position: Position, context: Optional[CompletionContext]
+        self, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        freezed_doc = await document.freeze()
 
         result_nodes = [
             node
-            async for node in walk(await self.parent.documents_cache.get_model(freezed_doc))
-            if position.is_in_range(range_from_node(node))
+            async for node in walk(await self.parent.documents_cache.get_model(self.document))
+            if position.is_in_range(range := range_from_node(node)) or range.end == position
         ]
 
         result_nodes.reverse()
@@ -116,37 +148,38 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 if method is None:
                     continue
 
-                r = await method(result_node, result_nodes, freezed_doc, position, context)
+                r = await method(result_node, result_nodes, position, context)
                 if r is not None:
                     yield r
 
-            r = await self.complete_default(result_nodes, document, position, context)
+            r = await self.complete_default(result_nodes, position, context)
             if r is not None:
                 yield r
 
         return [e async for e in async_chain_iterator(iter_results())]
 
-    def create_section_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+    async def create_section_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+        style = await self.get_section_style()
+
         return [
             CompletionItem(
-                label=f"*** {s} ***",
+                label=s,
                 kind=CompletionItemKind.TEXT,
                 detail="Section",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(
                     range=range,
-                    new_text=f"*** {s} ***",
+                    new_text=s,
                 )
                 if range is not None
                 else None,
             )
-            for s in SECTIONS
+            for s in (style.format(name=k) for k in SECTIONS)
         ]
 
     async def complete_default(
         self,
         nodes_at_position: List[ast.AST],
-        document: TextDocument,
         position: Position,
         context: Optional[CompletionContext],
     ) -> Optional[List[CompletionItem]]:
@@ -159,12 +192,73 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 r = range_from_token(token)
                 if (
                     r.start.character == 0
-                    and position.is_in_range(r)
+                    and (position.is_in_range(r) or position == r.end)
                     and (token.value.strip() != "" or position.character == 0)
                 ):
-                    return self.create_section_completion_items(r)
+                    return await self.create_section_completion_items(r)
         elif position.character == 0:
-            return self.create_section_completion_items(None)
+            return await self.create_section_completion_items(None)
+
+        return None
+
+    async def create_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+        result: List[CompletionItem] = []
+
+        for setting in SETTINGS:
+            c = CompletionItem(
+                label=setting,
+                detail="Setting",
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(range=range, new_text=setting) if range is not None else None,
+            )
+            result.append(c)
+
+        return result
+
+    async def complete_SettingSection(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        from robot.parsing.model.statements import SectionHeader, Statement
+
+        if nodes_at_position.index(node) > 0 and not isinstance(nodes_at_position[0], SectionHeader):
+            statement_node = cast(Statement, nodes_at_position[0])
+            if len(statement_node.tokens) > 0:
+                token = cast(Token, statement_node.tokens[0])
+                if position.is_in_range(range_from_token(token)):
+                    return await self.create_settings_completion_items(range_from_token(token))
+
+        return None
+
+    async def create_testcase_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+        return [
+            CompletionItem(
+                label=f"[{setting}]",
+                detail="Setting",
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(range=range, new_text=f"[{setting}]") if range is not None else None,
+            )
+            for setting in TESTCASE_SETTINGS
+        ]
+
+    async def complete_TestCase(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        from robot.parsing.model.statements import Statement, TestCaseName
+
+        if nodes_at_position.index(node) > 0 and not isinstance(nodes_at_position[0], TestCaseName):
+            statement_node = cast(Statement, nodes_at_position[0])
+            if len(statement_node.tokens) > 0:
+                token = cast(Token, statement_node.tokens[0])
+                if position.is_in_range(range_from_token(token)):
+                    return await self.create_testcase_settings_completion_items(range_from_token(token))
 
         return None
 
@@ -172,7 +266,6 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self,
         namespace: Namespace,
         token: Optional[Token],
-        document: TextDocument,
         position: Position,
         context: Optional[CompletionContext],
     ) -> List[CompletionItem]:
@@ -196,7 +289,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     if e < position.character and lib_name_index < e:
                         lib_name_index = e
 
-                if lib_name_index > -1:
+                if lib_name_index >= 0:
                     library_name = token.value[0 : lib_name_index - range.start.character]  # noqa: E203
 
                     libraries = await namespace.get_libraries()
@@ -213,16 +306,6 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                             )
                             result.append(c)
                         return result
-
-        for setting in TESTCASE_SETTINGS:
-            c = CompletionItem(
-                label=f"[{setting}]",
-                kind=CompletionItemKind.KEYWORD,
-                detail="Setting",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
-                text_edit=TextEdit(range=range, new_text=f"[{setting}]") if range is not None else None,
-            )
-            result.append(c)
 
         for kw in await namespace.get_keywords():
             c = CompletionItem(
@@ -248,32 +331,17 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         return result
 
-    async def create_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
-        result: List[CompletionItem] = []
-
-        for setting in SETTINGS:
-            c = CompletionItem(
-                label=setting,
-                detail="Setting",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
-                text_edit=TextEdit(range=range, new_text=setting) if range is not None else None,
-            )
-            result.append(c)
-
-        return result
-
     async def complete_KeywordCall(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
-        document: TextDocument,
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordCall
 
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        namespace = await self.parent.documents_cache.get_namespace(self.document)
         if namespace is None:
             return None
 
@@ -297,31 +365,10 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             ):
                 range = range_from_token(token_at_position)
                 if len(token_at_position.value) > 0 and position.character - range.start.character <= 1:
-                    return await self.create_keyword_completion_items(
-                        namespace, token_before, document, position, context
-                    )
+                    return await self.create_keyword_completion_items(namespace, token_before, position, context)
 
                 return None
 
-            return await self.create_keyword_completion_items(namespace, token_at_position, document, position, context)
+            return await self.create_keyword_completion_items(namespace, token_at_position, position, context)
 
         return []
-
-    async def complete_SettingSection(  # noqa: N802
-        self,
-        node: ast.AST,
-        nodes_at_position: List[ast.AST],
-        document: TextDocument,
-        position: Position,
-        context: Optional[CompletionContext],
-    ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.model.statements import SectionHeader, Statement
-
-        if nodes_at_position.index(node) > 0 and not isinstance(nodes_at_position[0], SectionHeader):
-            statement_node = cast(Statement, nodes_at_position[0])
-            if len(statement_node.tokens) > 0:
-                token = cast(Token, statement_node.tokens[0])
-                if position.is_in_range(range_from_token(token)):
-                    return await self.create_settings_completion_items(range_from_token(token))
-
-        return None

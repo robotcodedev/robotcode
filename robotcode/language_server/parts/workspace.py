@@ -13,9 +13,16 @@ from typing import (
     Mapping,
     NamedTuple,
     Optional,
+    Protocol,
     Tuple,
+    Type,
+    TypeVar,
     Union,
+    cast,
+    runtime_checkable,
 )
+
+from pydantic import BaseModel
 
 from ...jsonrpc2.protocol import rpc_method
 from ...utils.async_event import async_event
@@ -95,6 +102,34 @@ class WorkspaceFolder:
         self.name = name
         self.uri = uri
         self.document_uri = document_uri
+
+
+def config_section(name: str) -> Callable[[_F], _F]:
+    def decorator(func: _F) -> _F:
+        setattr(func, "__config_section__", name)
+        return func
+
+    return decorator
+
+
+@runtime_checkable
+class HasConfigSection(Protocol):
+    __config_section__: str
+
+
+class ConfigBase(BaseModel):
+    class Config:
+
+        allow_population_by_field_name = True
+        # use_enum_values = True
+
+        @classmethod
+        def alias_generator(cls, string: str) -> str:
+            return string.replace("_", "-")
+
+
+_TConfig = TypeVar("_TConfig", bound=(ConfigBase))
+_F = TypeVar("_F", bound=Callable[..., Any])
 
 
 class Workspace(LanguageServerProtocolPart):
@@ -237,14 +272,24 @@ class Workspace(LanguageServerProtocolPart):
     async def _workspace_did_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
         await self.did_delete_files(self, list(f.uri for f in files))
 
-    async def get_configuration(self, section: str, scope_uri: Union[str, Uri, None] = None) -> Any:
+    async def get_configuration(
+        self, section: Union[Type[_TConfig], str], scope_uri: Union[str, Uri, None] = None
+    ) -> Union[_TConfig, Any]:
+
+        if isinstance(section, (ConfigBase, HasConfigSection)):
+            return section.parse_obj(
+                await self.get_configuration(
+                    section=cast(HasConfigSection, section).__config_section__, scope_uri=scope_uri
+                )
+            )
+
         return (
             await self.parent.send_request(
                 "workspace/configuration",
                 ConfigurationParams(
                     items=[
                         ConfigurationItem(
-                            scope_uri=str(scope_uri) if isinstance(scope_uri, Uri) else scope_uri, section=section
+                            scope_uri=str(scope_uri) if isinstance(scope_uri, Uri) else scope_uri, section=str(section)
                         )
                     ]
                 ),

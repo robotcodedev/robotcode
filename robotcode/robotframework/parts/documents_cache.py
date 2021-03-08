@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 from ...language_server.text_document import TextDocument
 from ...utils.async_event import async_tasking_event
 from ...utils.uri import Uri
-from ..configuration import RobotCodeConfig, RobotConfig
+from ..configuration import RobotConfig
 from ..diagnostics.imports_manager import ImportsManager
 from ..diagnostics.namespace import Namespace
 
@@ -171,9 +171,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         async with self._imports_managers_lock:
             if folder not in self._imports_managers:
-                config = RobotCodeConfig.parse_obj(
-                    await self.parent.workspace.get_configuration("robotcode", folder.uri)
-                )
+                config = await self.parent.workspace.get_configuration(RobotConfig, folder.uri)
 
-                self._imports_managers[folder] = ImportsManager(self.parent, folder.uri, config.robot)
+                self._imports_managers[folder] = ImportsManager(self.parent, folder.uri, config)
             return self._imports_managers[folder]

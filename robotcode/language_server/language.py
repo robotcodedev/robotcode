@@ -39,7 +39,7 @@ def retrigger_characters(characters: List[str]) -> Callable[[_F], _F]:
 
 @runtime_checkable
 class HasTriggerCharacters(Protocol):
-    __trigger_characters__: str
+    __trigger_characters__: List[str]
 
 
 def all_commit_characters(characters: List[str]) -> Callable[[_F], _F]:
@@ -52,4 +52,4 @@ def all_commit_characters(characters: List[str]) -> Callable[[_F], _F]:
 
 @runtime_checkable
 class HasAllCommitCharacters(Protocol):
-    __all_commit_characters__: str
+    __all_commit_characters__: List[str]
