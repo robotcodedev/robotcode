@@ -12,7 +12,7 @@ from ..language_server.types import (
 )
 from ..utils.logging import LoggingDescriptor
 from .parts.completion import RobotCompletionProtocolPart
-from .parts.definition import RobotDefinitionProtocolPart
+from .parts.goto import RobotGotoProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
 from .parts.documents_cache import DocumentsCache
 from .parts.folding_range import RobotFoldingRangeProtocolPart
@@ -41,7 +41,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     documents_cache = ProtocolPartDescriptor(DocumentsCache)
     _robot_diagnostics = ProtocolPartDescriptor(RobotDiagnosticsProtocolPart)
     _robot_folding_ranges = ProtocolPartDescriptor(RobotFoldingRangeProtocolPart)
-    _robot_definition = ProtocolPartDescriptor(RobotDefinitionProtocolPart)
+    _robot_goto = ProtocolPartDescriptor(RobotGotoProtocolPart)
     _robot_hover = ProtocolPartDescriptor(RobotHoverProtocolPart)
     _robot_completion = ProtocolPartDescriptor(RobotCompletionProtocolPart)
     _signature_help = ProtocolPartDescriptor(RobotSignatureHelpProtocolPart)

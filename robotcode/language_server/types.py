@@ -643,6 +643,22 @@ class DefinitionOptions(WorkDoneProgressOptions):
     pass
 
 
+class DeclarationOptions(WorkDoneProgressOptions):
+    pass
+
+
+class DeclarationRegistrationOptions(DeclarationOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions):
+    pass
+
+
+class ImplementationOptions(WorkDoneProgressOptions):
+    pass
+
+
+class ImplementationRegistrationOptions(DeclarationOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions):
+    pass
+
+
 class HoverOptions(WorkDoneProgressOptions):
     pass
 
@@ -689,9 +705,9 @@ class ServerCapabilities(Model):
     completion_provider: Optional[CompletionOptions] = None
     hover_provider: Union[bool, HoverOptions, None] = None
     signature_help_provider: Optional[SignatureHelpOptions] = None
-    # declaration_provider: Union[bool, DeclarationOptions, DeclarationRegistrationOptions, None] = None
+    declaration_provider: Union[bool, DeclarationOptions, DeclarationRegistrationOptions, None] = None
     definition_provider: Union[bool, DefinitionOptions, None] = None
-    # implementation_provider: Union[bool, ImplementationOptions, ImplementationRegistrationOptions, None] = None
+    implementation_provider: Union[bool, ImplementationOptions, ImplementationRegistrationOptions, None] = None
     # references_provider: Union[bool, ReferenceOptions, None] = None
     # document_highlight_provider: Union[bool, DocumentHighlightOptions, None] = None
     document_symbol_provider: Union[bool, DocumentSymbolOptions, None] = None
@@ -789,7 +805,7 @@ class Position(Model):
         return iter((self.line, self.character))
 
     def is_in_range(self, range: "Range") -> bool:
-        return self >= range.start and self <= range.end
+        return self >= range.start and self < range.end
 
 
 class Range(Model):
@@ -1089,6 +1105,14 @@ class TextDocumentPositionParams(Model):
 
 
 class DefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+    pass
+
+
+class DeclarationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+    pass
+
+
+class ImplementationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
     pass
 
 

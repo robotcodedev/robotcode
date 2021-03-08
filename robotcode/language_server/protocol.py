@@ -17,11 +17,13 @@ from ..utils.async_event import async_event
 from ..utils.logging import LoggingDescriptor
 from .has_extend_capabilities import HasExtendCapabilities
 from .parts.completion import CompletionProtocolPart
+from .parts.declaration import DeclarationProtocolPart
 from .parts.definition import DefinitionProtocolPart
 from .parts.diagnostics import DiagnosticsProtocolPart
 from .parts.documents import TextDocumentProtocolPart
 from .parts.folding_range import FoldingRangeProtocolPart
 from .parts.hover import HoverProtocolPart
+from .parts.implementation import ImplementationProtocolPart
 from .parts.signature_help import SignatureHelpProtocolPart
 from .parts.window import WindowProtocolPart
 from .parts.workspace import Workspace
@@ -63,6 +65,8 @@ class LanguageServerProtocol(JsonRPCProtocol):
     diagnostics = ProtocolPartDescriptor(DiagnosticsProtocolPart)
     folding_ranges = ProtocolPartDescriptor(FoldingRangeProtocolPart)
     definition = ProtocolPartDescriptor(DefinitionProtocolPart)
+    implementation = ProtocolPartDescriptor(ImplementationProtocolPart)
+    declaration = ProtocolPartDescriptor(DeclarationProtocolPart)
     hover = ProtocolPartDescriptor(HoverProtocolPart)
     completion = ProtocolPartDescriptor(CompletionProtocolPart)
     signature_help = ProtocolPartDescriptor(SignatureHelpProtocolPart)

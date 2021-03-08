@@ -38,13 +38,14 @@ _DefinitionMethod = Callable[
 ]
 
 
-class RobotDefinitionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
         parent.definition.collect.add(self.collect)
+        parent.implementation.collect.add(self.collect)
 
     def _find_method(self, cls: Type[Any]) -> Optional[_DefinitionMethod]:
         if cls is ast.AST:
