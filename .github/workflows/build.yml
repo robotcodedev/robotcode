@@ -3,9 +3,9 @@ name: build
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
-    branches: [ main, dev ]
+    branches: [main, dev]
   pull_request:
-    branches: [ main, dev ]
+    branches: [main, dev]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -21,32 +21,26 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      
+
       - name: Setup Node.js environment
         uses: actions/setup-node@v2.1.5
         with:
-            node-version: ">=15.5"
+          node-version: ">=15.5"
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.8' # Version range or exact version of a Python version to use, using SemVer's version range syntax
-          architecture: 'x64' # optional x64 or x86. Defaults to x64 if not specified
+          python-version: "3.8" # Version range or exact version of a Python version to use, using SemVer's version range syntax
+          architecture: "x64" # optional x64 or x86. Defaults to x64 if not specified
       - uses: Gr1N/setup-poetry@v4
         with:
           poetry-version: 1.0.0
-      
+
       - run: poetry install
       - run: poetry build
-      
+
       - run: npm install
       - run: npm install -g vsce
       - run: vsce package -o dist
 
       - uses: actions/download-artifact@v2
-        with:
-          name: dist
+        with:          
           path: dist
-        
-      
-        
-
-      
