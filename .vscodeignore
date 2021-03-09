@@ -1,16 +1,27 @@
-.vscode/**
-.vscode-test/**
-out/test/**
-src/**
-.gitignore
-.yarnrc
-vsc-extension-quickstart.md
-**/tsconfig.json
-**/.eslintrc.json
-**/*.map
-**/*.ts
+.idea
+.github
+.vscode
+.vscode-test
 
-# python output
+.gitignore
+
+# node
+src/
+node_modules/
+webpack.config.js
+.yarnrc
+.eslintrc.json
+tsconfig.json
+
+
+# python
+.flake8
+mypy.ini
+log.ini
+pyproject.toml
+*.lock
+
+tests
 dist
 **/__pycache__
 **/.mypy_cache

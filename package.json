@@ -1,166 +1,172 @@
 {
-	"name": "robotcode",
-	"displayName": "robotcode",
-	"description": "Robot Framework support for Visual Studio Code",
-	"icon": "images/icon.png",
-	"publisher": "d-biehl",
-	"version": "0.0.1",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/d-biehl/robotcode.git"
-	},
-	"engines": {
-		"vscode": "^1.52.1"
-	},
-	"categories": [
-		"Programming Languages",
-		"Testing",
-		"Debuggers",
-		"Formatters"
-	],
-	"keywords": [
-		"Testing",
-		"RobotFramework"
-	],
-	"activationEvents": [
-		"onLanguage:robotframework",
-		"onCommand:robotcode.helloWorld"
-	],
-	"main": "./out/extension.js",
-	"contributes": {
-		"languages": [
-			{
-				"id": "robotframework",
-				"aliases": [
-					"Robot Framework",
-					"robotframework"
-				],
-				"extensions": [
-					".robot",
-					".resource"
-				],
-				"configuration": "./language-configuration.json"
-			}
-		],
-		"grammars": [
-			{
-				"language": "robotframework",
-				"scopeName": "source.robotframework",
-				"path": "./syntaxes/robotframework.tmLanguage.json"
-			}
-		],
-		"configuration": [
-			{
-				"title": "RobotCode",
-				"type": "object",
-				"properties": {
-					"robotcode.language-server.mode": {
-						"type": "string",
-						"default": "stdio",
-						"description": "Specifies the mode the language server is started. Requires a VSCode restart to take effect.",
-						"enum": [
-							"stdio",
-							"tcp"
-						],
-						"scope": "resource"
-					},
-					"robotcode.language-server.tcp-port": {
-						"type": "number",
-						"default": 0,
-						"description": "If the port is specified, connect to the language server previously started at the given port. Requires a VSCode restart to take effect.",
-						"scope": "resource"
-					},
-					"robotcode.language-server.args": {
-						"type": "array",
-						"default": [],
-						"items": {
-							"type": "string"
-						},
-						"description": "Specifies the arguments to be passed to the language server (i.e.: [\"--log\", \"--log-file=~/robotcode.log\"]). Requires a VSCode restart to take effect.",
-						"scope": "resource"
-					},
-					"robotcode.language-server.python": {
-						"type": "string",
-						"default": "",
-						"description": "Specifies the path to the python executable to be used for the Language Server. If no path is specified, try to get it from \"python\" extension. Requires a VSCode restart to take effect.",
-						"scope": "resource"
-					},
-					"robotcode.robot.args": {
-						"type": "array",
-						"default": [
-							"--outputdir",
-							"results"
-						],
-						"items": {
-							"type": "string"
-						},
-						"description": "Specifies the arguments to be passed to robot module.",
-						"scope": "resource"
-					},
-					"robotcode.robot.pythonpath": {
-						"type": "array",
-						"default": [
-							"./lib",
-							"./resources"
-						],
-						"items": {
-							"type": "string"
-						},
-						"description": "Specifies additional python paths to robotframework. Corresponds to the '--pythonpath' option of the robot module.",
-						"scope": "resource"
-					},
-					"robotcode.syntax.section_style": {
-						"type": "string",
-						"default": "*** {name} ***",
-						"description": "Defines the section style format.",
-						"scope": "resource"
-					}
-				}
-			}
-		],
-		"commands": [
-			{
-				"command": "robotcode.helloWorld",
-				"category": "RobotCode",
-				"title": "Hello World"
-			}
-		],
-		"menus": {
-			"editor/title": [
-				{
-					"command": "robotcode.helloWorld",
-					"title": "Run Testsuite",
-					"group": "1_run@1",
-					"when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
-				}
-			]
-		}
-	},
-	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./",
-		"pretest": "npm run compile && npm run lint",
-		"lint": "eslint src --ext ts",
-		"test": "node ./out/test/runTest.js"
-	},
-	"extensionDependencies": [
-		"ms-python.python"
-	],
-	"dependencies": {
-		"vscode-languageclient": "^7.0.0"
-	},
-	"devDependencies": {
-		"@types/glob": "^7.1.3",
-		"@types/mocha": "^8.0.0",
-		"@types/node": "^14.14.21",
-		"@types/vscode": "^1.52.0",
-		"@typescript-eslint/eslint-plugin": "^4.12.0",
-		"@typescript-eslint/parser": "^4.12.0",
-		"eslint": "^7.17.0",
-		"glob": "^7.1.6",
-		"mocha": "^8.1.3",
-		"typescript": "^4.1.3",
-		"vscode-test": "^1.4.0"
-	}
+    "name": "robotcode",
+    "displayName": "robotcode",
+    "description": "Robot Framework support for Visual Studio Code",
+    "icon": "images/icon.png",
+    "publisher": "d-biehl",
+    "version": "0.0.1",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/d-biehl/robotcode.git"
+    },
+    "engines": {
+        "vscode": "^1.52.1"
+    },
+    "categories": [
+        "Programming Languages",
+        "Testing",
+        "Debuggers",
+        "Formatters"
+    ],
+    "keywords": [
+        "Testing",
+        "RobotFramework"
+    ],
+    "activationEvents": [
+        "onLanguage:robotframework",
+        "onCommand:robotcode.helloWorld"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "languages": [
+            {
+                "id": "robotframework",
+                "aliases": [
+                    "Robot Framework",
+                    "robotframework"
+                ],
+                "extensions": [
+                    ".robot",
+                    ".resource"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "robotframework",
+                "scopeName": "source.robotframework",
+                "path": "./syntaxes/robotframework.tmLanguage.json"
+            }
+        ],
+        "configuration": [
+            {
+                "title": "RobotCode",
+                "type": "object",
+                "properties": {
+                    "robotcode.language-server.mode": {
+                        "type": "string",
+                        "default": "stdio",
+                        "description": "Specifies the mode the language server is started. Requires a VSCode restart to take effect.",
+                        "enum": [
+                            "stdio",
+                            "tcp"
+                        ],
+                        "scope": "resource"
+                    },
+                    "robotcode.language-server.tcp-port": {
+                        "type": "number",
+                        "default": 0,
+                        "description": "If the port is specified, connect to the language server previously started at the given port. Requires a VSCode restart to take effect.",
+                        "scope": "resource"
+                    },
+                    "robotcode.language-server.args": {
+                        "type": "array",
+                        "default": [],
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Specifies the arguments to be passed to the language server (i.e.: [\"--log\", \"--log-file=~/robotcode.log\"]). Requires a VSCode restart to take effect.",
+                        "scope": "resource"
+                    },
+                    "robotcode.language-server.python": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Specifies the path to the python executable to be used for the Language Server. If no path is specified, try to get it from \"python\" extension. Requires a VSCode restart to take effect.",
+                        "scope": "resource"
+                    },
+                    "robotcode.robot.args": {
+                        "type": "array",
+                        "default": [
+                            "--outputdir",
+                            "results"
+                        ],
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Specifies the arguments to be passed to robot module.",
+                        "scope": "resource"
+                    },
+                    "robotcode.robot.pythonpath": {
+                        "type": "array",
+                        "default": [
+                            "./lib",
+                            "./resources"
+                        ],
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Specifies additional python paths to robotframework. Corresponds to the '--pythonpath' option of the robot module.",
+                        "scope": "resource"
+                    },
+                    "robotcode.syntax.section_style": {
+                        "type": "string",
+                        "default": "*** {name} ***",
+                        "description": "Defines the section style format.",
+                        "scope": "resource"
+                    }
+                }
+            }
+        ],
+        "commands": [
+            {
+                "command": "robotcode.helloWorld",
+                "category": "RobotCode",
+                "title": "Hello World"
+            }
+        ],
+        "menus": {
+            "editor/title": [
+                {
+                    "command": "robotcode.helloWorld",
+                    "title": "Run Testsuite",
+                    "group": "1_run@1",
+                    "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "webpack --mode production",
+        "webpack": "webpack --mode development",
+        "webpack-dev": "webpack --mode development --watch",
+        "test-compile": "tsc -p ./",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "pretest": "npm run compile && npm run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js"
+    },
+    "extensionDependencies": [
+        "ms-python.python"
+    ],
+    "dependencies": {
+        "vscode-languageclient": "^7.0.0"
+    },
+    "devDependencies": {
+        "@types/glob": "^7.1.3",
+        "@types/mocha": "^8.0.0",
+        "@types/node": "^14.14.21",
+        "@types/vscode": "^1.52.0",
+        "@typescript-eslint/eslint-plugin": "^4.12.0",
+        "@typescript-eslint/parser": "^4.12.0",
+        "eslint": "^7.17.0",
+        "glob": "^7.1.6",
+        "mocha": "^8.1.3",
+        "ts-loader": "^8.0.17",
+        "typescript": "^4.1.3",
+        "vscode-test": "^1.4.0",
+        "webpack": "^5.24.4",
+        "webpack-cli": "^4.5.0"
+    }
 }

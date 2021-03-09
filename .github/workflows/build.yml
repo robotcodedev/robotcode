@@ -35,7 +35,13 @@ jobs:
           poetry-version: 1.0.0
       
       - run: poetry install
+      - run: poetry build
+      
       - run: npm install
+      - run: npm install -g vsce
+      - run: vsce package -o dist
+        
+      
         
 
       
