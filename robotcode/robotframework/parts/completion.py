@@ -30,10 +30,9 @@ from ...language_server.types import (
     Range,
     TextEdit,
 )
-from ...utils.async_itertools import async_chain_iterator
+from ...utils.async_itertools import async_chain, async_chain_iterator
 from ...utils.logging import LoggingDescriptor
 from ..configuration import SyntaxConfig
-from ..diagnostics.namespace import Namespace
 from ..utils.ast import Token, range_from_node, range_from_token
 from ..utils.async_ast import walk
 
@@ -90,7 +89,22 @@ SETTINGS = [
 ]
 
 TESTCASE_SETTINGS = ["Documentation", "Tags", "Setup", "Teardown", "Template", "Timeout"]
+KEYWORD_SETTINGS = ["Documentation", "Tags", "Arguments", "Return", "Teardown", "Timeout"]
 DEFAULT_SECTIONS_STYLE = "*** {name} ***"
+
+
+def whitespace_at_begin_of_token(token: Token) -> int:
+    s = str(token.value)
+
+    result = 0
+    for c in s:
+        if c == " ":
+            result += 1
+        elif c == "\t":
+            result += 4
+        else:
+            break
+    return result
 
 
 class CompletionCollector:
@@ -163,19 +177,130 @@ class CompletionCollector:
 
         return [
             CompletionItem(
-                label=s,
+                label=s[0],
                 kind=CompletionItemKind.TEXT,
                 detail="Section",
+                sort_text=f"100_{s[1]}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(
                     range=range,
-                    new_text=s,
+                    new_text=s[0],
                 )
                 if range is not None
                 else None,
             )
-            for s in (style.format(name=k) for k in SECTIONS)
+            for s in ((style.format(name=k), k) for k in SECTIONS)
         ]
+
+    async def create_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+        return [
+            CompletionItem(
+                label=setting,
+                kind=CompletionItemKind.TEXT,
+                detail="Setting",
+                sort_text=f"090_{setting}",
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(range=range, new_text=setting) if range is not None else None,
+            )
+            for setting in SETTINGS
+        ]
+
+    async def create_testcase_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+        return [
+            CompletionItem(
+                label=f"[{setting}]",
+                detail="Setting",
+                sort_text=f"070_{setting}",
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(range=range, new_text=f"[{setting}]") if range is not None else None,
+            )
+            for setting in TESTCASE_SETTINGS
+        ]
+
+    async def create_keyword_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+        return [
+            CompletionItem(
+                label=f"[{setting}]",
+                detail="Setting",
+                sort_text=f"070_{setting}",
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(range=range, new_text=f"[{setting}]") if range is not None else None,
+            )
+            for setting in KEYWORD_SETTINGS
+        ]
+
+    async def create_keyword_completion_items(
+        self,
+        token: Optional[Token],
+        position: Position,
+    ) -> List[CompletionItem]:
+        result: List[CompletionItem] = []
+
+        namespace = await self.parent.documents_cache.get_namespace(self.document)
+        if namespace is None:
+            return []
+
+        r: Optional[Range] = None
+
+        if token is not None:
+            r = range_from_token(token)
+
+            if r is not None and "." in token.value:
+
+                def enumerate_indexes(s: str, c: str) -> Iterator[int]:
+                    for i in builtins.range(len(s)):
+                        if s[i] == c:
+                            yield i
+
+                lib_name_index = -1
+                for e in enumerate_indexes(token.value, "."):
+                    e += r.start.character
+                    if e < position.character and lib_name_index < e:
+                        lib_name_index = e
+
+                if lib_name_index >= 0:
+                    library_name = token.value[0 : lib_name_index - r.start.character]  # noqa: E203
+
+                    libraries = await namespace.get_libraries()
+                    if library_name in libraries:
+                        r.start.character = lib_name_index + 1
+                        for kw in libraries[library_name].library_doc.keywords.values():
+                            c = CompletionItem(
+                                label=kw.name,
+                                kind=CompletionItemKind.FUNCTION,
+                                detail="Keyword",
+                                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=kw.to_markdown()),
+                                insert_text_format=InsertTextFormat.PLAINTEXT,
+                                text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
+                            )
+                            result.append(c)
+                        return result
+
+        for kw in await namespace.get_keywords():
+            c = CompletionItem(
+                label=kw.name,
+                kind=CompletionItemKind.FUNCTION,
+                detail=f"Keyword {f'({kw.libname})' if kw.libname is not None else ''}",
+                sort_text=f"020_{kw.name}",
+                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=kw.to_markdown()),
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
+            )
+            result.append(c)
+
+        for k, v in (await namespace.get_libraries()).items():
+            c = CompletionItem(
+                label=k,
+                kind=CompletionItemKind.MODULE,
+                detail="Library",
+                sort_text=f"030_{k}",
+                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=v.library_doc.to_markdown()),
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
+            )
+            result.append(c)
+
+        return result
 
     async def complete_default(
         self,
@@ -201,20 +326,6 @@ class CompletionCollector:
 
         return None
 
-    async def create_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
-        result: List[CompletionItem] = []
-
-        for setting in SETTINGS:
-            c = CompletionItem(
-                label=setting,
-                detail="Setting",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
-                text_edit=TextEdit(range=range, new_text=setting) if range is not None else None,
-            )
-            result.append(c)
-
-        return result
-
     async def complete_SettingSection(  # noqa: N802
         self,
         node: ast.AST,
@@ -228,21 +339,11 @@ class CompletionCollector:
             statement_node = cast(Statement, nodes_at_position[0])
             if len(statement_node.tokens) > 0:
                 token = cast(Token, statement_node.tokens[0])
-                if position.is_in_range(range_from_token(token)):
-                    return await self.create_settings_completion_items(range_from_token(token))
+                r = range_from_token(token)
+                if position.is_in_range(r) or r.end == position:
+                    return await self.create_settings_completion_items(r)
 
         return None
-
-    async def create_testcase_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
-        return [
-            CompletionItem(
-                label=f"[{setting}]",
-                detail="Setting",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
-                text_edit=TextEdit(range=range, new_text=f"[{setting}]") if range is not None else None,
-            )
-            for setting in TESTCASE_SETTINGS
-        ]
 
     async def complete_TestCase(  # noqa: N802
         self,
@@ -251,124 +352,267 @@ class CompletionCollector:
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.model.statements import Statement, TestCaseName
+        from robot.parsing.model.blocks import File, SettingSection, TestCase
+        from robot.parsing.model.statements import (
+            Statement,
+            Template,
+            TestCaseName,
+            TestTemplate,
+        )
 
-        if nodes_at_position.index(node) > 0 and not isinstance(nodes_at_position[0], TestCaseName):
+        def check_in_template() -> bool:
+            testcase_node = cast(TestCase, node)
+            if any(
+                template
+                for template in testcase_node.body
+                if isinstance(template, Template) and cast(Template, template).value is not None
+            ):
+                return True
+
+            if any(
+                file
+                for file in nodes_at_position
+                if isinstance(file, File)
+                and any(
+                    section
+                    for section in cast(File, file).sections
+                    if isinstance(section, SettingSection)
+                    and any(
+                        template
+                        for template in cast(SettingSection, section).body
+                        if isinstance(template, TestTemplate) and cast(TestTemplate, template).value is not None
+                    )
+                )
+            ):
+                return True
+
+            return False
+
+        if nodes_at_position.index(node) > 0:
+            in_template = check_in_template()
+
             statement_node = cast(Statement, nodes_at_position[0])
             if len(statement_node.tokens) > 0:
-                token = cast(Token, statement_node.tokens[0])
-                if position.is_in_range(range_from_token(token)):
-                    return await self.create_testcase_settings_completion_items(range_from_token(token))
+                token = cast(
+                    Token,
+                    statement_node.tokens[1] if isinstance(statement_node, TestCaseName) else statement_node.tokens[0],
+                )
+                r = range_from_token(token)
+                ws = whitespace_at_begin_of_token(token)
+                if ws < 2:
+                    return None
+                r.start.character += 2
+                if position.is_in_range(r) or r.end == position:
+                    return [
+                        e
+                        async for e in async_chain(
+                            await self.create_testcase_settings_completion_items(
+                                range_from_token(statement_node.tokens[1])
+                                if r.end == position and len(statement_node.tokens) > 1
+                                else None
+                            ),
+                            []
+                            if in_template
+                            else await self.create_keyword_completion_items(
+                                statement_node.tokens[1]
+                                if r.end == position and len(statement_node.tokens) > 1
+                                else None,
+                                position,
+                            ),
+                        )
+                    ]
+
+            if len(statement_node.tokens) > 1:
+                token = cast(Token, statement_node.tokens[1])
+                r = range_from_token(token)
+                if position.is_in_range(r) or r.end == position:
+                    return [
+                        e
+                        async for e in async_chain(
+                            await self.create_testcase_settings_completion_items(r),
+                            [] if in_template else await self.create_keyword_completion_items(token, position),
+                        )
+                    ]
 
         return None
 
-    async def create_keyword_completion_items(
-        self,
-        namespace: Namespace,
-        token: Optional[Token],
-        position: Position,
-        context: Optional[CompletionContext],
-    ) -> List[CompletionItem]:
-        result: List[CompletionItem] = []
-
-        range: Optional[Range] = None
-
-        if token is not None:
-            range = range_from_token(token)
-
-            if "." in token.value:
-
-                def enumerate_indexes(s: str, c: str) -> Iterator[int]:
-                    for i in builtins.range(len(s)):
-                        if s[i] == c:
-                            yield i
-
-                lib_name_index = -1
-                for e in enumerate_indexes(token.value, "."):
-                    e += range.start.character
-                    if e < position.character and lib_name_index < e:
-                        lib_name_index = e
-
-                if lib_name_index >= 0:
-                    library_name = token.value[0 : lib_name_index - range.start.character]  # noqa: E203
-
-                    libraries = await namespace.get_libraries()
-                    if library_name in libraries:
-                        range.start.character = lib_name_index + 1
-                        for kw in libraries[library_name].library_doc.keywords.values():
-                            c = CompletionItem(
-                                label=kw.name,
-                                kind=CompletionItemKind.FUNCTION,
-                                detail="Keyword",
-                                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=kw.to_markdown()),
-                                insert_text_format=InsertTextFormat.PLAINTEXT,
-                                text_edit=TextEdit(range=range, new_text=kw.name) if range is not None else None,
-                            )
-                            result.append(c)
-                        return result
-
-        for kw in await namespace.get_keywords():
-            c = CompletionItem(
-                label=kw.name,
-                kind=CompletionItemKind.FUNCTION,
-                detail="Keyword",
-                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=kw.to_markdown()),
-                insert_text_format=InsertTextFormat.PLAINTEXT,
-                text_edit=TextEdit(range=range, new_text=kw.name) if range is not None else None,
-            )
-            result.append(c)
-
-        for k, v in (await namespace.get_libraries()).items():
-            c = CompletionItem(
-                label=k,
-                kind=CompletionItemKind.MODULE,
-                detail="Library",
-                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=v.library_doc.to_markdown()),
-                insert_text_format=InsertTextFormat.PLAINTEXT,
-                text_edit=TextEdit(range=range, new_text=k) if range is not None else None,
-            )
-            result.append(c)
-
-        return result
-
-    async def complete_KeywordCall(  # noqa: N802
+    async def complete_Keyword(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import KeywordCall
+        from robot.parsing.model.statements import KeywordName, Statement
 
-        namespace = await self.parent.documents_cache.get_namespace(self.document)
-        if namespace is None:
-            return None
+        if nodes_at_position.index(node) > 0:
+            statement_node = cast(Statement, nodes_at_position[0])
+            if len(statement_node.tokens) > 0:
+                token = cast(
+                    Token,
+                    statement_node.tokens[1] if isinstance(statement_node, KeywordName) else statement_node.tokens[0],
+                )
+                r = range_from_token(token)
+                ws = whitespace_at_begin_of_token(token)
+                if ws < 2:
+                    return None
+                r.start.character += 2
+                if position.is_in_range(r) or r.end == position:
+                    return [
+                        e
+                        async for e in async_chain(
+                            await self.create_keyword_settings_completion_items(
+                                range_from_token(statement_node.tokens[1])
+                                if r.end == position and len(statement_node.tokens) > 1
+                                else None
+                            ),
+                            await self.create_keyword_completion_items(
+                                statement_node.tokens[1]
+                                if r.end == position and len(statement_node.tokens) > 1
+                                else None,
+                                position,
+                            ),
+                        )
+                    ]
 
-        kw_node = cast(KeywordCall, node)
+            if len(statement_node.tokens) > 1:
+                token = cast(Token, statement_node.tokens[1])
+                r = range_from_token(token)
+                if position.is_in_range(r) or r.end == position:
+                    return [
+                        e
+                        async for e in async_chain(
+                            await self.create_keyword_settings_completion_items(r),
+                            await self.create_keyword_completion_items(token, position),
+                        )
+                    ]
 
-        tokens_at_position = [cast(Token, t) for t in kw_node.tokens if position.is_in_range(range_from_token(t))]
-        if not tokens_at_position:
-            return None
+        return None
 
-        token_at_position = tokens_at_position[-1]
+    async def complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        from robot.parsing.model.statements import Statement
 
-        if token_at_position.type in [RobotToken.KEYWORD, RobotToken.EOL, RobotToken.SEPARATOR]:
-            index = kw_node.tokens.index(token_at_position)
-            # token_after = kw_node.tokens[index + 1] if len(kw_node.tokens) > index + 1 else None
-            token_before = cast(Token, kw_node.tokens[index - 1]) if len(kw_node.tokens) > index - 1 else None
-
-            if (
-                token_at_position.type in [RobotToken.EOL, RobotToken.SEPARATOR]
-                and token_before is not None
-                and token_before.type == RobotToken.KEYWORD
-            ):
-                range = range_from_token(token_at_position)
-                if len(token_at_position.value) > 0 and position.character - range.start.character <= 1:
-                    return await self.create_keyword_completion_items(namespace, token_before, position, context)
-
+        statement_node = cast(Statement, node)
+        if len(statement_node.tokens) > 1:
+            token = cast(Token, statement_node.tokens[1])
+            r = range_from_token(token)
+            ws = whitespace_at_begin_of_token(token)
+            if ws < 2:
                 return None
+            r.start.character += 2
 
-            return await self.create_keyword_completion_items(namespace, token_at_position, position, context)
+            if position.is_in_range(r) or r.end == position:
+                return await self.create_keyword_completion_items(
+                    statement_node.tokens[2] if r.end == position and len(statement_node.tokens) > 2 else None, position
+                )
 
-        return []
+        if len(statement_node.tokens) > 2:
+            token = cast(Token, statement_node.tokens[2])
+            r = range_from_token(token)
+            if position.is_in_range(r) or r.end == position:
+                return await self.create_keyword_completion_items(token, position)
+
+        return None
+
+    async def complete_SuiteSetup(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+
+        return await self.complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
+            node, nodes_at_position, position, context
+        )
+
+    async def complete_SuiteTeardown(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+
+        return await self.complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
+            node, nodes_at_position, position, context
+        )
+
+    async def complete_TestTemplate(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+
+        return await self.complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
+            node, nodes_at_position, position, context
+        )
+
+    async def complete_Setup_or_Teardown_or_Template(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        from robot.parsing.model.statements import Statement
+
+        statement_node = cast(Statement, node)
+        if len(statement_node.tokens) > 2:
+            token = cast(Token, statement_node.tokens[2])
+            r = range_from_token(token)
+            ws = whitespace_at_begin_of_token(token)
+            if ws < 2:
+                return None
+            r.start.character += 2
+
+            if position.is_in_range(r) or r.end == position:
+                return await self.create_keyword_completion_items(
+                    statement_node.tokens[3] if r.end == position and len(statement_node.tokens) > 3 else None, position
+                )
+
+        if len(statement_node.tokens) > 3:
+            token = cast(Token, statement_node.tokens[3])
+            r = range_from_token(token)
+            if position.is_in_range(r) or r.end == position:
+                return await self.create_keyword_completion_items(token, position)
+
+        return None
+
+    async def complete_Setup(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+
+        return await self.complete_Setup_or_Teardown_or_Template(node, nodes_at_position, position, context)
+
+    async def complete_Teardown(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+
+        return await self.complete_Setup_or_Teardown_or_Template(node, nodes_at_position, position, context)
+
+    async def complete_Template(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+
+        return await self.complete_Setup_or_Teardown_or_Template(node, nodes_at_position, position, context)

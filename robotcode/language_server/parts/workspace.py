@@ -22,7 +22,7 @@ from typing import (
     runtime_checkable,
 )
 
-from pydantic import BaseModel
+import pydantic
 
 from ...jsonrpc2.protocol import rpc_method
 from ...utils.async_event import async_event
@@ -114,10 +114,10 @@ def config_section(name: str) -> Callable[[_F], _F]:
 
 @runtime_checkable
 class HasConfigSection(Protocol):
-    __config_section__: str
+    __config_section__: str = pydantic.PrivateAttr(None)
 
 
-class ConfigBase(BaseModel):
+class ConfigBase(pydantic.BaseModel):
     class Config:
 
         allow_population_by_field_name = True

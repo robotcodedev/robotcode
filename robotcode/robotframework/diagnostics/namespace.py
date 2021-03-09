@@ -379,9 +379,10 @@ class Analyzer(AsyncVisitor):
         value = cast(Fixture, node)
         keyword_token = cast(AstToken, value.get_token(RobotToken.NAME))
 
-        await self._analyze_keyword_call(
-            value.name, value, keyword_token, [cast(AstToken, e) for e in value.get_tokens(RobotToken.ARGUMENT)]
-        )
+        if keyword_token is not None:
+            await self._analyze_keyword_call(
+                value.name, value, keyword_token, [cast(AstToken, e) for e in value.get_tokens(RobotToken.ARGUMENT)]
+            )
 
         await self.generic_visit(node)
 
@@ -392,7 +393,8 @@ class Analyzer(AsyncVisitor):
         value = cast(TestTemplate, node)
         keyword_token = cast(AstToken, value.get_token(RobotToken.NAME))
 
-        await self._analyze_keyword_call(value.value, value, keyword_token, [])
+        if keyword_token is not None:
+            await self._analyze_keyword_call(value.value, value, keyword_token, [])
 
         await self.generic_visit(node)
 
@@ -403,7 +405,8 @@ class Analyzer(AsyncVisitor):
         value = cast(Template, node)
         keyword_token = cast(AstToken, value.get_token(RobotToken.NAME))
 
-        await self._analyze_keyword_call(value.value, value, keyword_token, [])
+        if keyword_token is not None:
+            await self._analyze_keyword_call(value.value, value, keyword_token, [])
 
         await self.generic_visit(node)
 
@@ -751,12 +754,12 @@ class KeywordFinder:
             self.diagnostics.append(
                 DiagnosticsEntry("Keyword name cannot be empty.", DiagnosticSeverity.ERROR, "KeywordError")
             )
-            return None
+            raise CancelSearch()
         if not isinstance(name, str):
             self.diagnostics.append(
                 DiagnosticsEntry("Keyword name must be a string.", DiagnosticSeverity.ERROR, "KeywordError")
             )
-            return None
+            raise CancelSearch()
 
         result = await self._get_keyword_from_self(name)
         if not result and "." in name:
