@@ -40,6 +40,11 @@ jobs:
       - run: npm install
       - run: npm install -g vsce
       - run: vsce package -o dist
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: dist
+          path: dist
         
       
         
