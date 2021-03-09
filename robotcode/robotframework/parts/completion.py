@@ -196,7 +196,7 @@ class CompletionCollector:
         return [
             CompletionItem(
                 label=setting,
-                kind=CompletionItemKind.TEXT,
+                kind=CompletionItemKind.KEYWORD,
                 detail="Setting",
                 sort_text=f"090_{setting}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
@@ -209,6 +209,7 @@ class CompletionCollector:
         return [
             CompletionItem(
                 label=f"[{setting}]",
+                kind=CompletionItemKind.KEYWORD,
                 detail="Setting",
                 sort_text=f"070_{setting}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
@@ -221,6 +222,7 @@ class CompletionCollector:
         return [
             CompletionItem(
                 label=f"[{setting}]",
+                kind=CompletionItemKind.KEYWORD,
                 detail="Setting",
                 sort_text=f"070_{setting}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
