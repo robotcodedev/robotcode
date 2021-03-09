@@ -63,9 +63,9 @@ exclude = '''
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -vv"
-testpaths = [
-    "tests",    
-]
+filterwarnings = "ignore:.*Using or importing the ABCs from 'collections' instead of from 'collections.abc'.*:DeprecationWarning"
+testpaths = ["tests"]
+junit_suite_name = "robotcode"
 
 [tool.isort]
 profile = "black"

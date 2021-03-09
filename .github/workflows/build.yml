@@ -3,9 +3,12 @@ name: build
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
-    branches: [main, dev]
+    branches: 
+      - main
+      - dev
   pull_request:
-    branches: [main, dev]
+    branches: 
+      - main
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -35,19 +38,25 @@ jobs:
           poetry-version: 1.0.0
 
       - run: poetry install
+      - run: pytest --junit-xml test-results/robotcode/tests.xml
       - run: poetry build
 
       - run: npm install
       - run: npm install -g vsce
-      - run: vsce package -o dist
-
-      - name: Display structure of downloaded files
-        run: |
-          pwd
-          ls -R        
+      - run: vsce package -o dist   
 
       - uses: actions/upload-artifact@v2
         with:
           name: dist
           path: dist
-          
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: test_results
+          path: test_results
+
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        if: always()
+        with:
+          files: test-results/**/*.xml
