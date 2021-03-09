@@ -2,7 +2,7 @@ import warnings
 import weakref
 from collections import OrderedDict, defaultdict, deque
 from copy import deepcopy
-from itertools import islice
+from itertools import islice, zip_longest
 from types import BuiltinFunctionType, CodeType, FunctionType, GeneratorType, LambdaType, ModuleType
 from typing import (
     TYPE_CHECKING,
@@ -11,6 +11,7 @@ from typing import (
     Callable,
     Dict,
     Generator,
+    Iterable,
     Iterator,
     List,
     Mapping,
@@ -23,7 +24,7 @@ from typing import (
     no_type_check,
 )
 
-from .typing import NoneType, display_as_type
+from .typing import GenericAlias, NoneType, display_as_type
 from .version import version_info
 
 if TYPE_CHECKING:
@@ -148,7 +149,12 @@ def validate_field_name(bases: List[Type['BaseModel']], field_name: str) -> None
 
 
 def lenient_issubclass(cls: Any, class_or_tuple: Union[Type[Any], Tuple[Type[Any], ...]]) -> bool:
-    return isinstance(cls, type) and issubclass(cls, class_or_tuple)
+    try:
+        return isinstance(cls, type) and issubclass(cls, class_or_tuple)
+    except TypeError:
+        if isinstance(cls, GenericAlias):
+            return False
+        raise  # pragma: no cover
 
 
 def in_ipython() -> bool:
@@ -639,3 +645,22 @@ def is_valid_private_name(name: str) -> bool:
         '__orig_bases__',
         '__qualname__',
     }
+
+
+_EMPTY = object()
+
+
+def all_identical(left: Iterable[Any], right: Iterable[Any]) -> bool:
+    """
+    Check that the items of `left` are the same objects as those in `right`.
+
+    >>> a, b = object(), object()
+    >>> all_identical([a, b, a], [a, b, a])
+    True
+    >>> all_identical([a, b, [a]], [a, b, [a]])  # new list object, while "equal" is not "identical"
+    False
+    """
+    for left_item, right_item in zip_longest(left, right, fillvalue=_EMPTY):
+        if left_item is not right_item:
+            return False
+    return True
