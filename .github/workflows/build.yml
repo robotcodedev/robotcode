@@ -65,6 +65,38 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           files: ./**/test-results.xml
 
+  code-quality:    
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1
+        
+      - name: setup python ${{ matrix.python-version }} environment
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: Gr1N/setup-poetry@v4
+        with:
+          poetry-version: 1.1.5
+
+      - run: pip install poetry-dynamic-versioning
+
+      - run: poetry install
+      
+      - run: poetry run isort --check --diff .
+        if: always()
+
+      - run: poetry run black --check --diff .  
+        if: always()
+
+      - run: poetry run flake8 .
+        if: always()
+
+      - run: poetry run mypy .
+        if: always()
+
+
   package:
     needs: test
     runs-on: ubuntu-latest
