@@ -98,11 +98,12 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: test-results-${{ matrix.os }}-${{ matrix.python-version }}
+          if: always()
           path: test-results
 
   publish-test-results:
     name: "Publish Unit Tests Results"
-    needs: build-and-test
+    needs: test_python
     runs-on: ubuntu-latest
     # the build-and-test job might be skipped, we don't need to run this job then
     if: success() || failure()
