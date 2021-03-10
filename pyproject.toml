@@ -28,6 +28,7 @@ Cython = "^0.29.22"
 pydantic = "^1.7.3"
 isort = "^5.7.0"
 pytest-cov = "^2.11.1"
+coverage = {extras = ["toml"], version = "^5.5"}
 
 [tool.poetry-dynamic-versioning]
 enable = true
@@ -42,7 +43,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
-target-version = ['py37']
+target-version = ['py38']
 exclude = '''
 (
   /(

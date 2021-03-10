@@ -32,13 +32,14 @@ jobs:
         with:
           poetry-version: 1.1.5
 
+      - run: poetry install
+
       - name: Build Python packages
         run: |
-          poetry install
           poetry build
 
       - name: Build VSCode pacakge
-      - run: |
+        run: |
           npm install
           npm install -g vsce
           vsce package -o dist
@@ -48,14 +49,14 @@ jobs:
           name: dist
           path: dist
 
-  test_python:    
+  test_python:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
         python-version: [3.8, 3.9]
 
-    steps:      
+    steps:
       - uses: actions/checkout@v2
 
       - name: setup python ${{ matrix.python-version }} environment
@@ -67,7 +68,9 @@ jobs:
           poetry-version: 1.1.5
 
       - run: poetry install
-      - run: poetry run pytest--junitxml=test-results-${{ matrix.python-version }}.xml      
+
+      - name: "test python packages"
+        run: poetry run pytest --junitxml=test-results/python-${{ matrix.python-version }}/test-results.xml --cov=robotcode --cov-report=xml:testresults/python-${{ matrix.python-version }}/coverage.xml --cov-report=html:test-results/python-${{ matrix.python-version }}/htmlcov
 
       - uses: actions/upload-artifact@v2
         with:
@@ -78,5 +81,5 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v1
         if: always()
         with:
-          name: pytest-results-${{ matrix.python-version }}
+          name: test-results-${{ matrix.python-version }}
           files: test-results/**/*.xml
