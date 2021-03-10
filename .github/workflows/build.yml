@@ -22,9 +22,9 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
-        
+
       - run: git describe --tag
-        
+
       - name: Setup Node.js environment
         uses: actions/setup-node@v2.1.5
         with:
@@ -32,9 +32,12 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: "3.8" # Version range or exact version of a Python version to use, using SemVer's version range syntax
+
       - uses: Gr1N/setup-poetry@v4
         with:
           poetry-version: 1.1.5
+
+      - run: pip install poetry-dynamic-versioning
 
       - run: poetry install
 
@@ -80,9 +83,12 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+
       - uses: Gr1N/setup-poetry@v4
         with:
           poetry-version: 1.1.5
+
+      - run: pip install poetry-dynamic-versioning
 
       - run: poetry install
 
@@ -94,10 +100,24 @@ jobs:
           name: test-results-${{ matrix.os }}-${{ matrix.python-version }}
           path: test-results
 
-      - uses: dorny/test-reporter@v1
-        if: success() || failure()
-        continue-on-error: true
+  publish-test-results:
+    name: "Publish Unit Tests Results"
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    # the build-and-test job might be skipped, we don't need to run this job then
+    if: success() || failure()
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
         with:
-          name: Tests ${{ matrix.os }}-${{ matrix.python-version }}
-          path: "test-results/**/test-*.xml"
-          reporter: jest-junit
+          path: artifacts
+      
+      - run: ls -R
+        
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        with:
+          check_name: Unit Test Results
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          files: test-results/**/test-*.xml
