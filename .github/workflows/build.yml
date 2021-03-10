@@ -74,13 +74,12 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: test-results
+          name: test-results-${{ matrix.os }}-${{ matrix.python-version }}
           path: test-results
 
-      - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v1
-        if: always()
-        continue-on-error: true        
+      - uses: dorny/test-reporter@v1
         with:
-          name: test-results-${{ matrix.python-version }}
-          files: test-results/**/*.xml
+          artifact: test-results-${{ matrix.os }}-${{ matrix.python-version }}
+          name: Tests ${{ matrix.os }}-${{ matrix.python-version }}   # Name of the check run which will be created
+          path: 'test-*.xml'                     # Path to test results (inside artifact .zip)
+          reporter: jest-junit              # Format of test results
