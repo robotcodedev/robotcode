@@ -45,9 +45,16 @@ jobs:
           vsce package -o dist
 
       - uses: actions/upload-artifact@v2
-        with:
-          name: dist
-          path: dist
+        with:          
+          path: dist/*.vsix
+
+      - uses: actions/upload-artifact@v2
+        with:          
+          path: dist/*.tar.gz
+
+      - uses: actions/upload-artifact@v2
+        with:          
+          path: dist/*.whl
 
   test_python:
     runs-on: ${{ matrix.os }}
