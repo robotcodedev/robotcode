@@ -143,11 +143,11 @@ jobs:
       - name: Upload python package
         uses: actions/upload-artifact@v2
         with:
-          name: vscode-package
+          name: python-package
           path: dist/*.tar.gz
 
       - name: Upload python wheel package
         uses: actions/upload-artifact@v2
         with:
-          name: vscode-package
+          name: wheel-package
           path: dist/*.whl
