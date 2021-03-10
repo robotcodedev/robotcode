@@ -69,7 +69,7 @@ jobs:
           name: vscode-package
           path: dist/*.whl
 
-  test_python:
+  test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -102,9 +102,9 @@ jobs:
           path: test-results
 
   publish-test-results:
-    name: "Publish Unit Tests Results"
-    needs: test_python
+    needs: test
     runs-on: ubuntu-latest
+
     # the build-and-test job might be skipped, we don't need to run this job then
     if: success() || failure()
 
@@ -113,9 +113,9 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           path: artifacts
-      
+
       - run: ls -R
-        
+
       - name: Publish Unit Test Results
         uses: EnricoMi/publish-unit-test-result-action@v1
         with:
