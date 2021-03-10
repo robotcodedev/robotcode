@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "robotcode"
-version = "0.0.1"
+version = "0.0.0"
 description = ""
 authors = ["Daniel Biehl <daniel.biehl@imbus.de>"]
 include = ["robotcode/py.typed", "README.md"]
@@ -27,6 +27,7 @@ robotremoteserver = "^1.1"
 Cython = "^0.29.22"
 pydantic = "^1.7.3"
 isort = "^5.7.0"
+pytest-cov = "^2.11.1"
 
 [tool.poetry-dynamic-versioning]
 enable = true
