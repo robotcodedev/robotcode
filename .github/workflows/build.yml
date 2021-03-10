@@ -12,13 +12,64 @@ on:
   workflow_dispatch:
 
 jobs:
-  package:
-    # The type of runner that the job will run on
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        python-version: [3.8, 3.9]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: setup python ${{ matrix.python-version }} environment
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: Gr1N/setup-poetry@v4
+        with:
+          poetry-version: 1.1.5
+
+      - run: pip install poetry-dynamic-versioning
+
+      - run: poetry install
+
+      - name: "test python packages"
+        run: poetry run pytest --junitxml=test-results/python-${{ matrix.python-version }}/test-results.xml --cov=robotcode --cov-report=xml:testresults/python-${{ matrix.python-version }}/coverage.xml --cov-report=html:test-results/python-${{ matrix.python-version }}/htmlcov
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: test-results-${{ matrix.os }}-${{ matrix.python-version }}        
+          path: test-results
+
+  publish-test-results:
+    needs: test
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    # the build-and-test job might be skipped, we don't need to run this job then
+    if: success() || failure()
+
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+
+      - run: ls -R
+
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        with:
+          check_name: Unit Test Results
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          files: ./**/test-results.xml
+
+  package:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
@@ -68,57 +119,3 @@ jobs:
         with:
           name: vscode-package
           path: dist/*.whl
-
-  test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
-        python-version: [3.8, 3.9]
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: setup python ${{ matrix.python-version }} environment
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - uses: Gr1N/setup-poetry@v4
-        with:
-          poetry-version: 1.1.5
-
-      - run: pip install poetry-dynamic-versioning
-
-      - run: poetry install
-
-      - name: "test python packages"
-        run: poetry run pytest --junitxml=test-results/python-${{ matrix.python-version }}/test-results.xml --cov=robotcode --cov-report=xml:testresults/python-${{ matrix.python-version }}/coverage.xml --cov-report=html:test-results/python-${{ matrix.python-version }}/htmlcov
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: test-results-${{ matrix.os }}-${{ matrix.python-version }}
-          if: always()
-          path: test-results
-
-  publish-test-results:
-    needs: test
-    runs-on: ubuntu-latest
-
-    # the build-and-test job might be skipped, we don't need to run this job then
-    if: success() || failure()
-
-    steps:
-      - name: Download Artifacts
-        uses: actions/download-artifact@v2
-        with:
-          path: artifacts
-
-      - run: ls -R
-
-      - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v1
-        with:
-          check_name: Unit Test Results
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: test-results/**/test-*.xml
