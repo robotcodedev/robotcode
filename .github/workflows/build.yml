@@ -78,8 +78,9 @@ jobs:
           path: test-results
 
       - uses: dorny/test-reporter@v1
-        with:
-          artifact: test-results-${{ matrix.os }}-${{ matrix.python-version }}
+        if: success() || failure()
+        continue-on-error: true
+        with:          
           name: Tests ${{ matrix.os }}-${{ matrix.python-version }}   # Name of the check run which will be created
           path: 'test-*.xml'                     # Path to test results (inside artifact .zip)
           reporter: jest-junit              # Format of test results
