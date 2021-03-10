@@ -44,15 +44,19 @@ jobs:
           npm install -g vsce
           vsce package -o dist
 
-      - uses: actions/upload-artifact@v2
+      - name: Upload VSCode package
+        uses: actions/upload-artifact@v2
         with:
+          name:
           path: dist/*.vsix
 
-      - uses: actions/upload-artifact@v2
+      - name: Upload python package
+        uses: actions/upload-artifact@v2
         with:
           path: dist/*.tar.gz
 
-      - uses: actions/upload-artifact@v2
+      - name: Upload python wheel package
+        uses: actions/upload-artifact@v2
         with:
           path: dist/*.whl
 
@@ -90,4 +94,4 @@ jobs:
         with:
           name: Tests ${{ matrix.os }}-${{ matrix.python-version }}
           path: "test-results/**/test-*.xml"
-          reporter: jest-junit
+          reporter: java-junit
