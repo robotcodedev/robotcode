@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import inspect
 import threading
@@ -45,13 +47,13 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
     def __init__(self) -> None:
         self.lock = threading.RLock()
 
-        self.listeners: MutableSet[weakref.ref[Any]] = set()
+        self._listeners: MutableSet[weakref.ref[Any]] = set()
         self._loop = asyncio.get_event_loop()
 
     def add(self, callback: _TCallable) -> None:
         async def remove_safe(ref: Any) -> None:
             with self.lock:
-                self.listeners.remove(ref)
+                self._listeners.remove(ref)
 
         def remove_listener(ref: Any) -> None:
             if self._loop.is_running():
@@ -59,45 +61,48 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
 
         with self.lock:
             if inspect.ismethod(callback):
-                self.listeners.add(weakref.WeakMethod(cast(MethodType, callback), remove_listener))
+                self._listeners.add(weakref.WeakMethod(cast(MethodType, callback), remove_listener))
             else:
-                self.listeners.add(weakref.ref(callback, remove_listener))
+                self._listeners.add(weakref.ref(callback, remove_listener))
 
     def remove(self, callback: _TCallable) -> None:
         with self.lock:
             try:
                 if inspect.ismethod(callback):
-                    self.listeners.remove(weakref.WeakMethod(cast(MethodType, callback)))
+                    self._listeners.remove(weakref.WeakMethod(cast(MethodType, callback)))
                 else:
-                    self.listeners.remove(weakref.ref(callback))
+                    self._listeners.remove(weakref.ref(callback))
             except KeyError:
                 pass
 
     def __contains__(self, obj: Any) -> bool:
         if inspect.ismethod(obj):
-            return weakref.WeakMethod(cast(MethodType, obj)) in self.listeners
+            return weakref.WeakMethod(cast(MethodType, obj)) in self._listeners
         else:
-            return weakref.ref(obj) in self.listeners
+            return weakref.ref(obj) in self._listeners
 
     def __len__(self) -> int:
-        return len(self.listeners)
+        return len(self._listeners)
 
-    def __iter__(self) -> Iterator[weakref.ref[Any]]:
-        return self.listeners.__iter__()
+    def __iter__(self) -> Iterator[_TCallable]:
+        for r in self._listeners:
+            c = r()
+            if c is not None:
+                yield c
 
-    async def __aiter__(self) -> AsyncIterator[weakref.ref[Any]]:
-        for e in self.listeners:
-            yield e
+    async def __aiter__(self) -> AsyncIterator[_TCallable]:
+        for r in self._listeners:
+            c = r()
+            if c is not None:
+                yield c
 
     async def _notify(self, *args: Any, **kwargs: Any) -> AsyncIterator[_TResult]:
-        for method_listener in set(self):
-            method = method_listener()
-            if method is not None:
-                result = method(*args, **kwargs)
-                if inspect.isawaitable(result):
-                    result = await result
+        for method in set(self):
+            result = method(*args, **kwargs)
+            if inspect.isawaitable(result):
+                result = await result
 
-                yield result
+            yield result
 
 
 class AsyncEventIterator(AsyncEventResultIteratorBase[_TCallable, _TResult]):
@@ -177,7 +182,7 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
         awaitables: List[asyncio.Future[_TResult]] = []
         for method in filter(
             lambda x: callback_filter(x) if callback_filter is not None else True,
-            filter(lambda x: x is not None, [cast("_TCallable", p()) for p in set(self.listeners)]),
+            set(self),
         ):
             if method is not None:
                 future = asyncio.ensure_future(ensure_coroutine(method)(*args, **kwargs))
@@ -314,7 +319,7 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
         awaitables: List[asyncio.Future[_TResult]] = []
         for method in filter(
             lambda x: callback_filter(x) if callback_filter is not None else True,
-            filter(lambda x: x is not None, [cast("_TCallable", p()) for p in set(self.listeners)]),
+            set(self),
         ):
             if method is not None:
                 future = self._run_in_asyncio_thread(

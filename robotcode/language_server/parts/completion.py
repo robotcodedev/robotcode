@@ -44,14 +44,14 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
-        if len(self.collect.listeners):
+        if len(self.collect):
             trigger_chars = [
                 k
                 for k in chain(
                     *[
-                        cast(HasTriggerCharacters, e()).__trigger_characters__
-                        for e in self.collect.listeners
-                        if isinstance(e(), HasTriggerCharacters)
+                        cast(HasTriggerCharacters, e).__trigger_characters__
+                        for e in self.collect
+                        if isinstance(e, HasTriggerCharacters)
                     ]
                 )
             ]
@@ -60,16 +60,16 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 k
                 for k in chain(
                     *[
-                        cast(HasAllCommitCharacters, e()).__all_commit_characters__
-                        for e in self.collect.listeners
-                        if isinstance(e(), HasAllCommitCharacters)
+                        cast(HasAllCommitCharacters, e).__all_commit_characters__
+                        for e in self.collect
+                        if isinstance(e, HasAllCommitCharacters)
                     ]
                 )
             ]
             capabilities.completion_provider = CompletionOptions(
                 trigger_characters=trigger_chars if trigger_chars else None,
                 all_commit_characters=commit_chars if commit_chars else None,
-                resolve_provider=len(self.resolve.listeners) > 0,
+                resolve_provider=len(self.resolve) > 0,
             )
 
     @rpc_method(name="textDocument/completion", param_type=CompletionParams)

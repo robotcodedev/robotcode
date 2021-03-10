@@ -34,7 +34,7 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
-        if len(self.collect.listeners):
+        if len(self.collect):
             capabilities.hover_provider = True
 
     @rpc_method(name="textDocument/hover", param_type=HoverParams)

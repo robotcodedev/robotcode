@@ -21,6 +21,7 @@ from typing import (
 from pydantic import BaseModel, Field, PrivateAttr
 
 from ...language_server.types import Position, Range
+from ...utils.path import path_is_relative_to
 
 __all__ = [
     "KeywordDoc",
@@ -318,7 +319,7 @@ def _update_sys_path(working_dir: str = ".", pythonpath: Optional[List[str]] = N
 
     file = Path(__file__).resolve()
     top = file.parents[3]
-    for p in filter(lambda v: Path(v).is_relative_to(top), sys.path.copy()):
+    for p in filter(lambda v: path_is_relative_to(v, top), sys.path.copy()):
         sys.path.remove(p)
     wd = Path(working_dir)
 

@@ -39,14 +39,14 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilitie
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
-        if len(self.collect.listeners):
+        if len(self.collect):
             trigger_chars = [
                 k
                 for k in chain(
                     *[
-                        cast(HasTriggerCharacters, e()).__trigger_characters__
-                        for e in self.collect.listeners
-                        if isinstance(e(), HasTriggerCharacters)
+                        cast(HasTriggerCharacters, e).__trigger_characters__
+                        for e in self.collect
+                        if isinstance(e, HasTriggerCharacters)
                     ]
                 )
             ]
@@ -55,9 +55,9 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilitie
                 k
                 for k in chain(
                     *[
-                        cast(HasRetriggerCharacters, e()).__retrigger_characters__
-                        for e in self.collect.listeners
-                        if isinstance(e(), HasRetriggerCharacters)
+                        cast(HasRetriggerCharacters, e).__retrigger_characters__
+                        for e in self.collect
+                        if isinstance(e, HasRetriggerCharacters)
                     ]
                 )
             ]

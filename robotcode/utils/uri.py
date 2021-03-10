@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import os
 import re
-from collections.abc import Mapping
 from dataclasses import astuple, dataclass, fields
 from pathlib import Path
-from typing import Any, Iterator, Optional, Union, overload
+from typing import Any, Iterator, Mapping, Optional, Union, overload
 from urllib import parse
 
 _IS_WIN = os.name == "nt"

@@ -45,7 +45,7 @@ class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         ):
             self.link_support = self.parent.client_capabilities.text_document.definition.link_support or False
 
-        if len(self.collect.listeners):
+        if len(self.collect):
             capabilities.definition_provider = True
 
     @rpc_method(name="textDocument/definition", param_type=DefinitionParams)

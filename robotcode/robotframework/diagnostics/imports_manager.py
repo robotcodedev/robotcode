@@ -23,6 +23,7 @@ from ...language_server.text_document import TextDocument
 from ...language_server.types import DocumentUri, FileChangeType, FileEvent
 from ...utils.async_event import async_tasking_event
 from ...utils.logging import LoggingDescriptor
+from ...utils.path import path_is_relative_to
 from ...utils.uri import Uri
 from ..configuration import RobotConfig
 from ..utils.async_ast import walk
@@ -101,21 +102,21 @@ class _LibrariesEntry:
                         self._doc.module_spec is not None
                         and self._doc.module_spec.submodule_search_locations is not None
                         and any(
-                            path.is_relative_to(Path(e).absolute())
+                            path_is_relative_to(path, Path(e).absolute())
                             for e in self._doc.module_spec.submodule_search_locations
                         )
                     )
                     or (
                         self._doc.module_spec is not None
                         and self._doc.module_spec.origin is not None
-                        and path.is_relative_to(Path(self._doc.module_spec.origin).parent)
+                        and path_is_relative_to(path, Path(self._doc.module_spec.origin).parent)
                     )
-                    or (self._doc.source and path.is_relative_to(Path(self._doc.source).parent))
+                    or (self._doc.source and path_is_relative_to(path, Path(self._doc.source).parent))
                     or (
                         self._doc.module_spec is None
                         and not self._doc.source
                         and self._doc.python_path
-                        and any(path.is_relative_to(Path(e).absolute()) for e in self._doc.python_path)
+                        and any(path_is_relative_to(path, Path(e).absolute()) for e in self._doc.python_path)
                     )
                 ):
                     await self._invalidate()

@@ -45,7 +45,7 @@ class DeclarationProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         ):
             self.link_support = self.parent.client_capabilities.text_document.declaration.link_support or False
 
-        if len(self.collect.listeners):
+        if len(self.collect):
             capabilities.declaration_provider = True
 
     @rpc_method(name="textDocument/declaration", param_type=DeclarationParams)

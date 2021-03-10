@@ -27,6 +27,7 @@ import pydantic
 from ...jsonrpc2.protocol import rpc_method
 from ...utils.async_event import async_event
 from ...utils.logging import LoggingDescriptor
+from ...utils.path import path_is_relative_to
 from ...utils.uri import Uri
 from ..types import (
     ConfigurationItem,
@@ -302,7 +303,7 @@ class Workspace(LanguageServerProtocolPart):
             uri = Uri(uri)
 
         result = sorted(
-            [f for f in self.workspace_folders if uri.to_path().is_relative_to(f.uri.to_path())],
+            [f for f in self.workspace_folders if path_is_relative_to(uri.to_path(), f.uri.to_path())],
             key=lambda v1: len(v1.uri),
             reverse=True,
         )

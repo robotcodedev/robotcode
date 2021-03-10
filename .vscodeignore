@@ -23,6 +23,8 @@ pyproject.toml
 
 tests
 dist
+
 **/__pycache__
 **/.mypy_cache
 **/.pytest_cache
+test-results

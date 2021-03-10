@@ -35,10 +35,11 @@ jobs:
           architecture: "x64" # optional x64 or x86. Defaults to x64 if not specified
       - uses: Gr1N/setup-poetry@v4
         with:
-          poetry-version: 1.0.0
+          poetry-version: 1.1.5
 
       - run: poetry install
-      - run: python -m pytest --junit-xml test-results/robotcode/tests.xml
+      
+      - run: poetry run pytest --junit-xml test-results/robotcode/tests.xml
       - run: poetry build
 
       - run: npm install

@@ -272,3 +272,7 @@ idea/
 
 poetry.lock
 package-lock.json
+
+test-results
+.python-version
+

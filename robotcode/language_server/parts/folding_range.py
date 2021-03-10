@@ -33,7 +33,7 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
-        if len(self.collect.listeners):
+        if len(self.collect):
             capabilities.folding_range_provider = True
 
     @rpc_method(name="textDocument/foldingRange", param_type=FoldingRangeParams)
