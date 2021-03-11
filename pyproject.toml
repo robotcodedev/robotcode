@@ -28,7 +28,7 @@ Cython = "^0.29.22"
 pydantic = "^1.7.3"
 isort = "^5.7.0"
 pytest-cov = "^2.11.1"
-coverage = {extras = ["toml"], version = "^5.5"}
+coverage = { extras = ["toml"], version = "^5.5" }
 
 [tool.poetry-dynamic-versioning]
 enable = true
@@ -36,6 +36,12 @@ vcs = "git"
 style = "semver"
 
 [tool.poetry-dynamic-versioning.substitution]
+files = ["*/_version.py", "package.json"]
+
+patterns = [
+  "(^__version__\\s*=\\s*['\\\"])[^'\\\"]*(['\\\"])",
+  "(\\\"version\\\"\\s*:\\s*['\\\"])[^'\\\"]*(['\\\"])",
+]
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]

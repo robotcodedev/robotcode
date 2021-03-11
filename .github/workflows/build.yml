@@ -33,6 +33,8 @@ jobs:
 
       - run: poetry install
 
+      - run: poetry-dynamic-versioning
+        
       - name: "test python packages"
         run: poetry run pytest --junitxml=test-results/python-${{ matrix.python-version }}/test-results.xml --cov=robotcode --cov-report=xml:testresults/python-${{ matrix.python-version }}/coverage.xml --cov-report=html:test-results/python-${{ matrix.python-version }}/htmlcov
 
@@ -77,6 +79,8 @@ jobs:
       - run: pip install poetry-dynamic-versioning
 
       - run: poetry install
+        
+      - run: poetry-dynamic-versioning
 
       - run: poetry run isort --check --diff .
         if: always()
@@ -114,6 +118,8 @@ jobs:
       - run: pip install poetry-dynamic-versioning
 
       - run: poetry install
+        
+      - run: poetry-dynamic-versioning
 
       - name: Build Python packages
         run: poetry build
