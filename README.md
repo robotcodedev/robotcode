@@ -10,7 +10,7 @@ Robotframework 3.2 and above
 ## Installation
 
 At the moment, it is only possible to install the vsix manually in VSCode.
-Download the vscode-package artifact from the latest [CI/Actions]((https://github.com/d-biehl/robotcode/actions/workflows/build.yml)) run and install the containing vsix file manually in VSCode.
+Download the vscode-package artifact from the latest [CI/Actions](https://github.com/d-biehl/robotcode/actions/workflows/build.yml) run and install the containing vsix file manually in VSCode.
 
 ## Features
 
