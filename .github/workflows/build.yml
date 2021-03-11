@@ -69,17 +69,17 @@ jobs:
     steps:
       - uses: actions/checkout@v1
 
-      - name: setup python ${{ matrix.python-version }} environment
+      - name: setup python environment
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.8
 
-      - uses: Gr1N/setup-poetry@v4
-
+      - uses: Gr1N/setup-poetry@v4        
+      
       - run: pip install poetry-dynamic-versioning
 
       - run: poetry install
-        
+
       - run: poetry-dynamic-versioning
 
       - run: poetry run isort --check --diff .
