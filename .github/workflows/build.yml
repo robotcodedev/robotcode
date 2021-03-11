@@ -1,4 +1,4 @@
-name: build
+name: build_test_and_package
 
 on:
   push:
@@ -27,10 +27,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: Gr1N/setup-poetry@v4
-        with:
-          poetry-version: 1.1.5
-
+      - uses: Gr1N/setup-poetry@v4        
+      
       - run: pip install poetry-dynamic-versioning
 
       - run: poetry install
@@ -40,7 +38,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: test-results-${{ matrix.os }}-${{ matrix.python-version }}        
+          name: test-results-${{ matrix.os }}-${{ matrix.python-version }}
           path: test-results
 
   publish-test-results:
@@ -54,7 +52,7 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v2
         with:
-          path: artifacts      
+          path: artifacts
 
       - name: Publish Unit Test Results
         uses: EnricoMi/publish-unit-test-result-action@v1
@@ -63,29 +61,27 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           files: ./**/test-results.xml
 
-  code-quality:    
+  code-quality:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v1
-        
+
       - name: setup python ${{ matrix.python-version }} environment
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
 
       - uses: Gr1N/setup-poetry@v4
-        with:
-          poetry-version: 1.1.5
 
       - run: pip install poetry-dynamic-versioning
 
       - run: poetry install
-      
+
       - run: poetry run isort --check --diff .
         if: always()
 
-      - run: poetry run black --check --diff .  
+      - run: poetry run black --check --diff .
         if: always()
 
       - run: poetry run flake8 .
@@ -93,7 +89,6 @@ jobs:
 
       - run: poetry run mypy .
         if: always()
-
 
   package:
     needs: test
@@ -112,19 +107,16 @@ jobs:
           node-version: ">=15.5"
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.8" # Version range or exact version of a Python version to use, using SemVer's version range syntax
+          python-version: "3.8"
 
       - uses: Gr1N/setup-poetry@v4
-        with:
-          poetry-version: 1.1.5
 
       - run: pip install poetry-dynamic-versioning
 
       - run: poetry install
 
       - name: Build Python packages
-        run: |
-          poetry build
+        run: poetry build
 
       - name: Build VSCode pacakge
         run: |
