@@ -211,7 +211,8 @@ def main() -> None:
         if not args.log_robotframework:
             logging.getLogger("robotcode.robotframework").propagate = False
 
-    _logger.info(f"Starting with args={args}")
+    _logger.info(f"starting server version={__version__}")
+    _logger.debug(f"args={args}")
     if args.debugpy:
         start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)
 
