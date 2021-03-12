@@ -58,3 +58,17 @@ def is_non_variable_token(token: Token) -> bool:
     except VariableError:
         pass
     return False
+
+
+def whitespace_at_begin_of_token(token: Token) -> int:
+    s = str(token.value)
+
+    result = 0
+    for c in s:
+        if c == " ":
+            result += 1
+        elif c == "\t":
+            result += 4
+        else:
+            break
+    return result

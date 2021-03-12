@@ -33,7 +33,12 @@ from ...language_server.types import (
 from ...utils.async_itertools import async_chain, async_chain_iterator
 from ...utils.logging import LoggingDescriptor
 from ..configuration import SyntaxConfig
-from ..utils.ast import Token, range_from_node, range_from_token
+from ..utils.ast import (
+    Token,
+    range_from_node,
+    range_from_token,
+    whitespace_at_begin_of_token,
+)
 from ..utils.async_ast import walk
 
 if TYPE_CHECKING:
@@ -91,20 +96,6 @@ SETTINGS = [
 TESTCASE_SETTINGS = ["Documentation", "Tags", "Setup", "Teardown", "Template", "Timeout"]
 KEYWORD_SETTINGS = ["Documentation", "Tags", "Arguments", "Return", "Teardown", "Timeout"]
 DEFAULT_SECTIONS_STYLE = "*** {name} ***"
-
-
-def whitespace_at_begin_of_token(token: Token) -> int:
-    s = str(token.value)
-
-    result = 0
-    for c in s:
-        if c == " ":
-            result += 1
-        elif c == "\t":
-            result += 4
-        else:
-            break
-    return result
 
 
 class CompletionCollector:
