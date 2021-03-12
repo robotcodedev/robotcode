@@ -514,10 +514,11 @@ def get_library_doc(
     else:
         module_spec = get_module_spec(import_name)
 
+    errors: List[Error] = []
+
     source = None
     try:
         libcode, source = import_test_library(import_name)
-        lib = get_test_library(libcode, source, name, args, create_handlers=False)
     except BaseException as e:
         return LibraryDoc(
             name=name,
@@ -532,6 +533,34 @@ def get_library_doc(
             module_spec=module_spec,
             python_path=sys.path,
         )
+
+    try:
+        lib = get_test_library(libcode, source, name, args, create_handlers=False)
+    except BaseException as e:
+        errors.append(
+            error_from_exception(
+                e,
+                source or module_spec.origin if module_spec is not None else None,
+                1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
+            )
+        )
+
+        try:
+            lib = get_test_library(libcode, source, name, (), create_handlers=False)
+        except BaseException as e:
+            return LibraryDoc(
+                name=name,
+                source=source,
+                errors=[
+                    error_from_exception(
+                        e,
+                        source or module_spec.origin if module_spec is not None else None,
+                        1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
+                    )
+                ],
+                module_spec=module_spec,
+                python_path=sys.path,
+            )
 
     libdoc = LibraryDoc(name=str(lib.name), source=lib.source, module_spec=module_spec, python_path=sys.path)
 
@@ -584,13 +613,16 @@ def get_library_doc(
     except (SystemExit, KeyboardInterrupt):
         raise
     except BaseException as e:
-        libdoc.errors = [
+        errors.append(
             error_from_exception(
                 e,
                 source or module_spec.origin if module_spec is not None else None,
                 1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
             )
-        ]
+        )
+
+    if errors:
+        libdoc.errors = errors
 
     return libdoc
 
