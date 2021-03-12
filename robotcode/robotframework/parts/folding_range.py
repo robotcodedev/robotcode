@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ast
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from ...language_server.language import language_id
 from ...language_server.text_document import TextDocument
@@ -23,12 +23,12 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
         parent.folding_ranges.collect.add(self.collect)
 
     @language_id("robotframework")
-    async def collect(self, sender: Any, document: TextDocument) -> List[FoldingRange]:
+    async def collect(self, sender: Any, document: TextDocument) -> Optional[List[FoldingRange]]:
 
         from ..utils.async_ast import AsyncVisitor
 
         class Visitor(AsyncVisitor):
-            def __init__(self, parent: "RobotFoldingRangeProtocolPart") -> None:
+            def __init__(self, parent: RobotFoldingRangeProtocolPart) -> None:
                 super().__init__()
                 self.parent = parent
                 self.line_folding_only = True
@@ -43,17 +43,21 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
                                     self.parent.parent.client_capabilities.text_document.folding_range.line_folding_only
                                 )
 
-                self.foldings: List[FoldingRange] = []
+                self.result: List[FoldingRange] = []
 
             @classmethod
-            async def find_from(cls, model: ast.AST, parent: "RobotFoldingRangeProtocolPart") -> List[FoldingRange]:
+            async def find_from(
+                cls, model: ast.AST, parent: RobotFoldingRangeProtocolPart
+            ) -> Optional[List[FoldingRange]]:
                 finder = cls(parent)
-                await finder.visit(model)
-                return finder.foldings
 
-            def __apend(self, node: ast.AST, kind: str) -> None:
+                await finder.visit(model)
+
+                return finder.result if finder.result else None
+
+            def __append(self, node: ast.AST, kind: str) -> None:
                 if not self.line_folding_only:
-                    self.foldings.append(
+                    self.result.append(
                         FoldingRange(
                             start_line=node.lineno - 1,
                             end_line=node.end_lineno - 1 if node.end_lineno is not None else node.lineno - 1,
@@ -63,7 +67,7 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     )
                 else:
-                    self.foldings.append(
+                    self.result.append(
                         FoldingRange(
                             start_line=node.lineno - 1,
                             end_line=node.end_lineno - 1 if node.end_lineno is not None else node.lineno - 1,
@@ -72,32 +76,32 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
                     )
 
             async def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
-                self.__apend(node, kind="section")
+                self.__append(node, kind="section")
 
                 await self.generic_visit(node)
 
             async def visit_CommentSection(self, node: ast.AST) -> None:  # noqa: N802
-                self.__apend(node, kind="comment")
+                self.__append(node, kind="comment")
                 await self.generic_visit(node)
 
             async def visit_TestCase(self, node: ast.AST) -> None:  # noqa: N802
-                self.__apend(node, kind="testcase")
+                self.__append(node, kind="testcase")
                 await self.generic_visit(node)
 
             async def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
-                self.__apend(node, kind="keyword")
+                self.__append(node, kind="keyword")
                 await self.generic_visit(node)
 
             async def visit_ForLoop(self, node: ast.AST) -> None:  # noqa: N802
-                self.__apend(node, kind="for_loop")
+                self.__append(node, kind="for_loop")
                 await self.generic_visit(node)
 
             async def visit_For(self, node: ast.AST) -> None:  # noqa: N802
-                self.__apend(node, kind="for")
+                self.__append(node, kind="for")
                 await self.generic_visit(node)
 
             async def visit_If(self, node: ast.AST) -> None:  # noqa: N802
-                self.__apend(node, kind="if")
+                self.__append(node, kind="if")
                 await self.generic_visit(node)
 
         return await Visitor.find_from(await self.parent.documents_cache.get_model(await document.freeze()), self)

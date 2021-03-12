@@ -60,7 +60,7 @@ __all__ = [
 ]
 
 T = TypeVar("T")
-TResult = TypeVar("TResult")
+TResult = TypeVar("TResult", bound=Any)
 
 
 class JsonRPCErrors:
@@ -565,7 +565,7 @@ class JsonRPCProtocol(asyncio.Protocol):
     def send_request(
         self,
         method: str,
-        params: Any,
+        params: Optional[Any] = None,
         return_type_or_converter: Union[Type[TResult], Callable[[Any], TResult], None] = None,
     ) -> asyncio.Future[TResult]:
 
@@ -582,7 +582,10 @@ class JsonRPCProtocol(asyncio.Protocol):
         return result
 
     async def send_request_async(
-        self, method: str, params: Any, return_type: Optional[Type[TResult]] = None
+        self,
+        method: str,
+        params: Optional[Any] = None,
+        return_type: Union[Type[TResult], Callable[[Any], TResult], None] = None,
     ) -> TResult:
         return await self.send_request(method, params, return_type)
 

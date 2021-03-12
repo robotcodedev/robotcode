@@ -123,12 +123,32 @@
                 "command": "robotcode.helloWorld",
                 "category": "RobotCode",
                 "title": "Hello World"
+            },
+            {
+                "command": "robotcode.runSuite",
+                "category": "RobotCode",
+                "title": "Run Suite"
+            },
+            {
+                "command": "robotcode.debugSuite",
+                "category": "RobotCode",
+                "title": "Debug Suite"
+            },
+            {
+                "command": "robotcode.runTestCase",
+                "category": "RobotCode",
+                "title": "Run Test Case"
+            },
+            {
+                "command": "robotcode.debugTestCase",
+                "category": "RobotCode",
+                "title": "Debug Test Case"
             }
         ],
         "menus": {
             "editor/title": [
                 {
-                    "command": "robotcode.helloWorld",
+                    "command": "robotcode.runSuite",
                     "title": "Run Testsuite",
                     "group": "1_run@1",
                     "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"

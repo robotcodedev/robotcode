@@ -700,6 +700,10 @@ class SignatureHelpOptions(WorkDoneProgressOptions):
     retrigger_characters: Optional[List[str]] = None
 
 
+class CodeLensOptions(WorkDoneProgressOptions):
+    resolve_provider: Optional[bool]
+
+
 class ServerCapabilities(Model):
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None]
     completion_provider: Optional[CompletionOptions] = None
@@ -712,7 +716,7 @@ class ServerCapabilities(Model):
     # document_highlight_provider: Union[bool, DocumentHighlightOptions, None] = None
     document_symbol_provider: Union[bool, DocumentSymbolOptions, None] = None
     # code_action_provider: Union[bool, CodeActionOptions] = None
-    # code_lens_provider: Optional[CodeLensOptions] = None
+    code_lens_provider: Optional[CodeLensOptions] = None
     # document_link_provider: Optional[DocumentLinkOptions] = None
     # color_provider: Union[bool, DocumentColorOptions, DocumentColorRegistrationOptions, None] = None
     # document_formatting_provider: Union[bool, DocumentFormattingOptions, None] = None
@@ -1285,3 +1289,17 @@ class SignatureHelpContext(Model):
 
 class SignatureHelpParams(TextDocumentPositionParams, WorkDoneProgressParams):
     context: Optional[SignatureHelpContext] = None
+
+
+class CodeLensParams(WorkDoneProgressParams, PartialResultParams):
+    text_document: TextDocumentIdentifier
+
+
+class CodeLens(Model):
+    range: Range
+    command: Optional[Command] = None
+    data: Optional[Any] = None
+
+
+class CodeLensRegistrationOptions(TextDocumentRegistrationOptions, CodeLensOptions):
+    pass

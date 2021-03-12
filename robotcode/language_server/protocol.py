@@ -16,6 +16,7 @@ from ..jsonrpc2.server import JsonRPCServer
 from ..utils.async_event import async_event
 from ..utils.logging import LoggingDescriptor
 from .has_extend_capabilities import HasExtendCapabilities
+from .parts.code_lens import CodeLensProtocolPart
 from .parts.completion import CompletionProtocolPart
 from .parts.declaration import DeclarationProtocolPart
 from .parts.definition import DefinitionProtocolPart
@@ -70,6 +71,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     hover = ProtocolPartDescriptor(HoverProtocolPart)
     completion = ProtocolPartDescriptor(CompletionProtocolPart)
     signature_help = ProtocolPartDescriptor(SignatureHelpProtocolPart)
+    code_lens = ProtocolPartDescriptor(CodeLensProtocolPart)
 
     def __init__(self, server: JsonRPCServer[Any]):
         super().__init__(server)

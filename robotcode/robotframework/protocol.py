@@ -11,6 +11,7 @@ from ..language_server.types import (
     TextDocumentSyncKind,
 )
 from ..utils.logging import LoggingDescriptor
+from .parts.code_lens import RobotCodeLensProtocolPart
 from .parts.completion import RobotCompletionProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
 from .parts.documents_cache import DocumentsCache
@@ -44,7 +45,8 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     _robot_goto = ProtocolPartDescriptor(RobotGotoProtocolPart)
     _robot_hover = ProtocolPartDescriptor(RobotHoverProtocolPart)
     _robot_completion = ProtocolPartDescriptor(RobotCompletionProtocolPart)
-    _signature_help = ProtocolPartDescriptor(RobotSignatureHelpProtocolPart)
+    _robot_signature_help = ProtocolPartDescriptor(RobotSignatureHelpProtocolPart)
+    _robot_code_lens = ProtocolPartDescriptor(RobotCodeLensProtocolPart)
 
     def __init__(self, server: "RobotLanguageServer"):
         super().__init__(server)
