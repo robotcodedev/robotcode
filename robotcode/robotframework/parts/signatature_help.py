@@ -1,7 +1,18 @@
 from __future__ import annotations
 
 import ast
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, Tuple, Type, cast
+import asyncio
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    cast,
+)
 
 from ...language_server.language import (
     language_id,
@@ -190,3 +201,86 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         from robot.parsing.lexer.tokens import Token as RobotToken
 
         return await self._signature_help_KeywordCall_or_Fixture(RobotToken.NAME, node, document, position, context)
+
+    async def signature_help_LibraryImport(  # noqa: N802
+        self,
+        node: ast.AST,
+        document: TextDocument,
+        position: Position,
+        context: Optional[SignatureHelpContext] = None,
+    ) -> Optional[SignatureHelp]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import LibraryImport
+
+        library_node = cast(LibraryImport, node)
+
+        if library_node.name is None:
+            return None
+
+        imports_manager = await self.parent.documents_cache.get_imports_manager(document)
+        try:
+            lib_doc = await imports_manager.get_libdoc_for_library_import(
+                library_node.name, library_node.args, library_node.alias
+            )
+            if lib_doc is None:
+                return None
+        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            return None
+
+        tokens_at_position = [cast(Token, t) for t in library_node.tokens if position.is_in_range(range_from_token(t))]
+        if not tokens_at_position:
+            return None
+
+        token_at_position = tokens_at_position[-1]
+
+        if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
+            return None
+
+        token_at_position_index = library_node.tokens.index(token_at_position)
+
+        argument_token_index = token_at_position_index
+        while argument_token_index >= 0 and library_node.tokens[argument_token_index].type != RobotToken.ARGUMENT:
+            argument_token_index -= 1
+
+        arguments = library_node.get_tokens(RobotToken.ARGUMENT)
+
+        if argument_token_index >= 0:
+            argument_token = library_node.tokens[argument_token_index]
+            if argument_token.type == RobotToken.ARGUMENT:
+                argument_index = arguments.index(argument_token)
+            else:
+                argument_index = 0
+        else:
+            argument_index = -1
+
+        if whitespace_at_begin_of_token(token_at_position) > 1:
+            r = range_from_token(token_at_position)
+            r.start.character += 2
+            if position.is_in_range(r) or r.end == position:
+                argument_index += 1
+
+        if argument_index < 0:
+            return None
+
+        signatures: List[SignatureInformation] = []
+
+        for init in lib_doc.inits.values():
+            if argument_index >= len(init.args) and len(init.args) > 0 and not str(init.args[-1]).startswith("*"):
+                argument_index = -1
+
+            signature = SignatureInformation(
+                label=init.parameter_signature,
+                parameters=[ParameterInformation(label=str(p)) for p in init.args],
+                active_parameter=min(argument_index, len(init.args) - 1),
+            )
+            signatures.append(signature)
+
+        if not signatures:
+            return None
+
+        return SignatureHelp(
+            signatures=signatures,
+            active_signature=0,
+        )

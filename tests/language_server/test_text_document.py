@@ -1,6 +1,6 @@
 import asyncio
 from asyncio.events import AbstractEventLoop
-from typing import Any, Generator
+from typing import Generator
 
 import pytest
 
