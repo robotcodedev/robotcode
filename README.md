@@ -4,8 +4,8 @@ Language Server and client for Visual Studio Code.
 
 ## Requirements
 
-Python 3.8 or above
-Robotframework 3.2 and above
+* Python 3.8 or above
+* Robotframework 3.2 and above
 
 ## Installation
 
