@@ -30,6 +30,10 @@ def _range_from_utf16(lines: List[str], range: Range) -> Range:
     return Range(start=_position_from_utf16(lines, range.start), end=_position_from_utf16(lines, range.end))
 
 
+class InvalidRangeError(Exception):
+    pass
+
+
 class TextDocument:
     _logger = LoggingDescriptor()
 
@@ -103,7 +107,7 @@ class TextDocument:
             document_uri=self.document_uri,
             language_id=self.language_id,
             version=self.version,
-            text=self.text,
+            text=self._text,
             parent=self,
         )
         self.__frozen = weakref.ref(document)
@@ -126,9 +130,9 @@ class TextDocument:
             f")"
         )
 
-    @property
-    def text(self) -> str:
-        return self._text
+    async def text(self) -> str:
+        async with self._lock:
+            return self._text
 
     async def apply_none_change(self) -> None:
         pass
@@ -145,7 +149,10 @@ class TextDocument:
             if version is not None:
                 self.version = version
 
-            lines = self.lines
+            if range.start > range.end:
+                raise InvalidRangeError(f"Start position is greater then end position {range}.")
+
+            lines = self._text.splitlines(True)
             (start_line, start_col), (end_line, end_col) = _range_from_utf16(lines, range)
 
             if start_line == len(lines):
@@ -173,9 +180,9 @@ class TextDocument:
             self._text = new.getvalue()
             self._lines = None
 
-    @property
-    def lines(self) -> List[str]:
-        if self._lines is None:
-            self._lines = self.text.splitlines(True)
+    async def lines(self) -> List[str]:
+        async with self._lock:
+            if self._lines is None:
+                self._lines = self._text.splitlines(True)
 
-        return self._lines
+            return self._lines

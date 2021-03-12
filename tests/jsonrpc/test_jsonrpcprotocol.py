@@ -1,7 +1,7 @@
 import asyncio
 import json
 from asyncio import AbstractEventLoop
-from typing import Any, Dict, Generator, List, Optional, cast
+from typing import Any, Dict, Iterator, List, Optional, cast
 
 import pytest
 
@@ -37,7 +37,7 @@ class DummyJsonRPCProtocol(JsonRPCProtocol):
 
 
 @pytest.fixture
-def event_loop() -> Generator[AbstractEventLoop, None, None]:
+def event_loop() -> Iterator[AbstractEventLoop]:
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()

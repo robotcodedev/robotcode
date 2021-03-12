@@ -76,7 +76,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         import robot.api
 
         async def get_tokens() -> AsyncIterator["Token"]:
-            with io.StringIO(document.text) as content:
+            with io.StringIO(await document.text()) as content:
                 path = document.uri.to_path()
                 suffix = path.suffix.lower()
 
@@ -110,7 +110,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     async def __get_model(self, document: TextDocument) -> ast.AST:
         import robot.api
 
-        with io.StringIO(document.text) as content:
+        with io.StringIO(await document.text()) as content:
             path = document.uri.to_path()
             suffix = path.suffix.lower()
 

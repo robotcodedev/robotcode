@@ -72,7 +72,7 @@ class _LibrariesEntry:
         self.get_libdoc_coroutine = get_libdoc_coroutine
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
         self.file_watchers: List[FileWatcherEntry] = []
-        self._doc: Optional[LibraryDoc] = None
+        self._lib_doc: Optional[LibraryDoc] = None
         self._lock = asyncio.Lock()
         self._loop = asyncio.get_event_loop()
 
@@ -88,7 +88,7 @@ class _LibrariesEntry:
 
     async def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
         async with self._lock:
-            if self._doc is None:
+            if self._lib_doc is None:
                 return None
 
             for change in changes:
@@ -97,26 +97,26 @@ class _LibrariesEntry:
                     continue
 
                 path = uri.to_path()
-                if self._doc is not None and (
+                if self._lib_doc is not None and (
                     (
-                        self._doc.module_spec is not None
-                        and self._doc.module_spec.submodule_search_locations is not None
+                        self._lib_doc.module_spec is not None
+                        and self._lib_doc.module_spec.submodule_search_locations is not None
                         and any(
                             path_is_relative_to(path, Path(e).absolute())
-                            for e in self._doc.module_spec.submodule_search_locations
+                            for e in self._lib_doc.module_spec.submodule_search_locations
                         )
                     )
                     or (
-                        self._doc.module_spec is not None
-                        and self._doc.module_spec.origin is not None
-                        and path_is_relative_to(path, Path(self._doc.module_spec.origin).parent)
+                        self._lib_doc.module_spec is not None
+                        and self._lib_doc.module_spec.origin is not None
+                        and path_is_relative_to(path, Path(self._lib_doc.module_spec.origin).parent)
                     )
-                    or (self._doc.source and path_is_relative_to(path, Path(self._doc.source).parent))
+                    or (self._lib_doc.source and path_is_relative_to(path, Path(self._lib_doc.source).parent))
                     or (
-                        self._doc.module_spec is None
-                        and not self._doc.source
-                        and self._doc.python_path
-                        and any(path_is_relative_to(path, Path(e).absolute()) for e in self._doc.python_path)
+                        self._lib_doc.module_spec is None
+                        and not self._lib_doc.source
+                        and self._lib_doc.python_path
+                        and any(path_is_relative_to(path, Path(e).absolute()) for e in self._lib_doc.python_path)
                     )
                 ):
                     await self._invalidate()
@@ -126,30 +126,30 @@ class _LibrariesEntry:
             return None
 
     async def _update(self) -> None:
-        self._doc = await self.get_libdoc_coroutine()
+        self._lib_doc = await self.get_libdoc_coroutine()
 
         source_or_origin = (
-            self._doc.source
-            if self._doc.source is not None
-            else self._doc.module_spec.origin
-            if self._doc.module_spec is not None
+            self._lib_doc.source
+            if self._lib_doc.source is not None
+            else self._lib_doc.module_spec.origin
+            if self._lib_doc.module_spec is not None
             else None
         )
 
         # we are a module, so add the module path into file watchers
-        if self._doc.module_spec is not None and self._doc.module_spec.submodule_search_locations is not None:
+        if self._lib_doc.module_spec is not None and self._lib_doc.module_spec.submodule_search_locations is not None:
             self.file_watchers.append(
                 await self.parent.parent_protocol.workspace.add_file_watchers(
                     self.parent.did_change_watched_files,
                     [
                         str(Path(location).absolute().joinpath("**"))
-                        for location in self._doc.module_spec.submodule_search_locations
+                        for location in self._lib_doc.module_spec.submodule_search_locations
                     ],
                 )
             )
 
             if source_or_origin is not None and Path(source_or_origin).parent in [
-                Path(loc).absolute() for loc in self._doc.module_spec.submodule_search_locations
+                Path(loc).absolute() for loc in self._lib_doc.module_spec.submodule_search_locations
             ]:
                 return
 
@@ -164,11 +164,11 @@ class _LibrariesEntry:
             return
 
         # we are not found, so put the pythonpath to filewatchers
-        if self._doc.python_path is not None:
+        if self._lib_doc.python_path is not None:
             self.file_watchers.append(
                 await self.parent.parent_protocol.workspace.add_file_watchers(
                     self.parent.did_change_watched_files,
-                    [str(Path(s).joinpath("**")) for s in self._doc.python_path],
+                    [str(Path(s).joinpath("**")) for s in self._lib_doc.python_path],
                 )
             )
 
@@ -177,11 +177,11 @@ class _LibrariesEntry:
             await self._invalidate()
 
     async def _invalidate(self) -> None:
-        if self._doc is None and len(self.file_watchers) == 0:
+        if self._lib_doc is None and len(self.file_watchers) == 0:
             return
 
         await self._remove_file_watcher()
-        self._doc = None
+        self._lib_doc = None
 
     async def _remove_file_watcher(self) -> None:
         if self.file_watchers is not None:
@@ -189,14 +189,18 @@ class _LibrariesEntry:
                 await self.parent.parent_protocol.workspace.remove_file_watcher_entry(watcher)
         self.file_watchers = []
 
+    async def is_valid(self) -> bool:
+        async with self._lock:
+            return self._lib_doc is not None
+
     async def get_libdoc(self) -> LibraryDoc:
         async with self._lock:
-            if self._doc is None:
+            if self._lib_doc is None:
                 await self._update()
 
-            assert self._doc is not None
+            assert self._lib_doc is not None
 
-            return self._doc
+            return self._lib_doc
 
 
 @dataclass()
@@ -284,6 +288,10 @@ class _ResourcesEntry:
                 await self.parent.parent_protocol.workspace.remove_file_watcher_entry(watcher)
         self.file_watchers = []
 
+    async def is_valid(self) -> bool:
+        async with self._lock:
+            return self._document is not None
+
     async def get_document(self) -> TextDocument:
         async with self._lock:
             if self._document is None:
@@ -342,6 +350,9 @@ class ImportsManager:
         async with self._resources_lock:
             for r_key, r_entry in self._resources.items():
                 try:
+                    if not await r_entry.is_valid():
+                        continue
+
                     result = (await r_entry.get_document()).uri == document.uri
                     if result:
                         await r_entry.invalidate()

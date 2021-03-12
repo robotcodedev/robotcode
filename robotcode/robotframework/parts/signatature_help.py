@@ -1,16 +1,7 @@
 from __future__ import annotations
 
 import ast
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    Optional,
-    Tuple,
-    Type,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, Tuple, Type, cast
 
 from ...language_server.language import (
     language_id,

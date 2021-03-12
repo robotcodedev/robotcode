@@ -669,14 +669,16 @@ class Namespace:
         self, name: str, args: Tuple[Any, ...], alias: Optional[str], base_dir: str, *, is_default_library: bool = False
     ) -> LibraryEntry:
         library = await self.imports_manager.get_libdoc_for_library_import(
-            name, args, base_dir=base_dir, sentinel=None if is_default_library else (self._sentinel() or self.model)
+            name, args, base_dir=base_dir, sentinel=None if is_default_library else (self._sentinel())
         )
 
         return LibraryEntry(name=library.name, import_name=name, library_doc=library, args=args, alias=alias)
 
     async def _get_resource_entry(self, name: str, base_dir: str) -> ResourceEntry:
 
-        namespace = await self.imports_manager.get_namespace_for_resource_import(name, base_dir)
+        namespace = await self.imports_manager.get_namespace_for_resource_import(
+            name, base_dir, sentinel=self._sentinel()
+        )
 
         await self._import_imports(
             await namespace.get_imports(), str(Path(namespace.source).parent), add_diagnostics=False
