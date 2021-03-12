@@ -212,6 +212,8 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import LibraryImport
 
+        # TODO from robot.utils.escaping import split_from_equals
+
         library_node = cast(LibraryImport, node)
 
         if library_node.name is None:
@@ -226,7 +228,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 return None
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
-        except BaseException as e:
+        except BaseException:
             return None
 
         tokens_at_position = [cast(Token, t) for t in library_node.tokens if position.is_in_range(range_from_token(t))]
@@ -265,6 +267,16 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             return None
 
         signatures: List[SignatureInformation] = []
+
+        # TODO check if we have a named argument
+        # named_arg = False
+        # arg_name: Optional[str] = None
+
+        # if argument_index >= 0 and argument_index < len(arguments):
+        #     name, value = split_from_equals(arguments[argument_index].value)
+        #     if value is not None:
+        #         arg_name = name
+        #         named_arg = True
 
         for init in lib_doc.inits.values():
             if argument_index >= len(init.args) and len(init.args) > 0 and not str(init.args[-1]).startswith("*"):

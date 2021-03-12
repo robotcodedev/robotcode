@@ -17,7 +17,7 @@ from .parts.documents_cache import DocumentsCache
 from .parts.folding_range import RobotFoldingRangeProtocolPart
 from .parts.goto import RobotGotoProtocolPart
 from .parts.hover import RobotHoverProtocolPart
-from .parts.signatature_help import RobotSignatureHelpProtocolPart
+from .parts.signature_help import RobotSignatureHelpProtocolPart
 
 if TYPE_CHECKING:
     from .server import RobotLanguageServer
