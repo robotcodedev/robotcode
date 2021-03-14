@@ -668,6 +668,10 @@ class WorkspaceSymbolOptions(WorkDoneProgressOptions):
 
 
 class DocumentSymbolOptions(WorkDoneProgressOptions):
+    label: Optional[str] = None
+
+
+class DocumentSymbolRegistrationOptions(TextDocumentRegistrationOptions, DocumentSymbolOptions):
     pass
 
 
@@ -1200,10 +1204,6 @@ class DidChangeWatchedFilesParams(Model):
     changes: List[FileEvent]
 
 
-class DocumentSymbolRegistrationOptions(TextDocumentRegistrationOptions, DocumentSymbolOptions):
-    pass
-
-
 class Command(Model):
     title: str
     command: str
@@ -1303,3 +1303,27 @@ class CodeLens(Model):
 
 class CodeLensRegistrationOptions(TextDocumentRegistrationOptions, CodeLensOptions):
     pass
+
+
+class DocumentSymbolParams(WorkDoneProgressParams, PartialResultParams):
+    text_document: TextDocumentIdentifier
+
+
+class DocumentSymbol(Model):
+    name: str
+    detail: Optional[str] = None
+    kind: SymbolKind
+    tags: Optional[List[SymbolTag]] = None
+    deprecated: Optional[bool] = None
+    range: Range
+    selection_range: Range
+    children: Optional[List[DocumentSymbol]] = None
+
+
+class SymbolInformation(Model):
+    name: str
+    kind: SymbolKind
+    tags: Optional[List[SymbolTag]] = None
+    deprecated: Optional[bool] = None
+    location: Location
+    container_name: Optional[str]

@@ -14,6 +14,7 @@ from ..utils.logging import LoggingDescriptor
 from .parts.code_lens import RobotCodeLensProtocolPart
 from .parts.completion import RobotCompletionProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
+from .parts.document_symbols import RobotDocumentSymbolsProtocolPart
 from .parts.documents_cache import DocumentsCache
 from .parts.folding_range import RobotFoldingRangeProtocolPart
 from .parts.goto import RobotGotoProtocolPart
@@ -47,6 +48,9 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     _robot_completion = ProtocolPartDescriptor(RobotCompletionProtocolPart)
     _robot_signature_help = ProtocolPartDescriptor(RobotSignatureHelpProtocolPart)
     _robot_code_lens = ProtocolPartDescriptor(RobotCodeLensProtocolPart)
+    _robot_document_symbols = ProtocolPartDescriptor(RobotDocumentSymbolsProtocolPart)
+
+    symbol_information_label = "robotframework"
 
     def __init__(self, server: "RobotLanguageServer"):
         super().__init__(server)

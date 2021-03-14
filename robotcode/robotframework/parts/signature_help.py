@@ -222,7 +222,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         imports_manager = await self.parent.documents_cache.get_imports_manager(document)
         try:
             lib_doc = await imports_manager.get_libdoc_for_library_import(
-                library_node.name, library_node.args, library_node.alias
+                str(library_node.name), library_node.args, str(library_node.alias)
             )
             if lib_doc is None:
                 return None

@@ -91,4 +91,4 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         ):
             pass
 
-        return await self.parent.send_request("workspace/codeLens/refresh")
+        await self.parent.send_request("workspace/codeLens/refresh")
