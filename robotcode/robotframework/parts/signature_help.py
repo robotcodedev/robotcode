@@ -76,11 +76,9 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
     ) -> Optional[SignatureHelp]:
-        freezed_doc = await document.freeze()
-
         result_nodes = [
             node
-            async for node in walk(await self.parent.documents_cache.get_model(freezed_doc))
+            async for node in walk(await self.parent.documents_cache.get_model(document))
             if position.is_in_range(range_from_node(node))
         ]
 
@@ -93,7 +91,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         if method is None:
             return None
 
-        return await method(result_node, freezed_doc, position, context)
+        return await method(result_node, document, position, context)
 
     async def _signature_help_KeywordCall_or_Fixture(  # noqa: N802
         self,

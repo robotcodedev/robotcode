@@ -571,7 +571,7 @@ class ImportsManager:
 
                     result = self.parent_protocol.documents.get(source_uri, None)
                     if result is not None:
-                        return await result.freeze()
+                        return result
 
                     with FileReader(source_path) as reader:
                         if extension.lower() in REST_EXTENSIONS:

@@ -48,11 +48,9 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
     @language_id("robotframework")
     async def collect(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:
-        freezed_doc = await document.freeze()
-
         result_nodes = [
             node
-            async for node in walk(await self.parent.documents_cache.get_model(freezed_doc))
+            async for node in walk(await self.parent.documents_cache.get_model(document))
             if position.is_in_range(range_from_node(node))
         ]
 
@@ -65,7 +63,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         if method is None:
             return None
 
-        return await method(result_node, freezed_doc, position)
+        return await method(result_node, document, position)
 
     async def hover_KeywordCall(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position

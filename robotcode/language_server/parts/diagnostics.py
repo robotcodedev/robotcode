@@ -158,13 +158,12 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     @_logger.call
     async def start_publish_diagnostics_task(self, document: TextDocument) -> None:
         async with self._task_lock:
-            freezed_doc = await document.freeze()
-            self._cancel_entry(self._running_diagnosistcs.get(freezed_doc.uri, None))
+            self._cancel_entry(self._running_diagnosistcs.get(document.uri, None))
 
-            self._running_diagnosistcs[freezed_doc.uri] = PublishDiagnosticsEntry(
-                freezed_doc,
+            self._running_diagnosistcs[document.uri] = PublishDiagnosticsEntry(
+                document,
                 lambda: asyncio.create_task(
-                    self.publish_diagnostics(freezed_doc),
+                    self.publish_diagnostics(document),
                 ),
             )
 

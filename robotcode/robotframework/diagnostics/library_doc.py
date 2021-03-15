@@ -551,7 +551,9 @@ def get_library_doc(
             return LibraryDoc(
                 name=name,
                 source=source,
-                errors=[
+                errors=errors
+                if errors
+                else [
                     error_from_exception(
                         e,
                         source or module_spec.origin if module_spec is not None else None,

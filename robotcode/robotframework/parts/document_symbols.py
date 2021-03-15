@@ -96,4 +96,4 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
                     symbol = DocumentSymbol(name=keyword.name, kind=SymbolKind.FUNCTION, range=r, selection_range=r)
                     self.current_symbol.children.append(symbol)
 
-        return await Visitor.find_from(await self.parent.documents_cache.get_model(await document.freeze()), self)
+        return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)

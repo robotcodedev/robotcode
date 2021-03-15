@@ -61,9 +61,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        freezed_doc = await document.freeze()
-
-        return await CompletionCollector(self.parent, freezed_doc).collect(position, context)
+        return await CompletionCollector(self.parent, document).collect(position, context)
 
 
 _CompleteMethod = Callable[

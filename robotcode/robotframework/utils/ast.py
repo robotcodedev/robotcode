@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 from typing import Iterator, Optional, Protocol, runtime_checkable
 
@@ -26,7 +28,7 @@ class Token(Protocol):
     def end_col_offset(self) -> int:
         ...
 
-    def tokenize_variables(self) -> Iterator["Token"]:
+    def tokenize_variables(self) -> Iterator[Token]:
         ...
 
 

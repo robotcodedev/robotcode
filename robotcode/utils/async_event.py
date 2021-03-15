@@ -45,28 +45,30 @@ _TCallable = TypeVar("_TCallable", bound=Callable[..., Any])
 
 class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
     def __init__(self) -> None:
-        self.lock = threading.RLock()
+        self._lock = threading.RLock()
 
         self._listeners: MutableSet[weakref.ref[Any]] = set()
         self._loop = asyncio.get_event_loop()
 
     def add(self, callback: _TCallable) -> None:
         async def remove_safe(ref: Any) -> None:
-            with self.lock:
+            with self._lock:
                 self._listeners.remove(ref)
 
         def remove_listener(ref: Any) -> None:
             if self._loop.is_running():
                 asyncio.run_coroutine_threadsafe(remove_safe(ref), self._loop)
+            else:
+                self._listeners.remove(ref)
 
-        with self.lock:
+        with self._lock:
             if inspect.ismethod(callback):
                 self._listeners.add(weakref.WeakMethod(cast(MethodType, callback), remove_listener))
             else:
                 self._listeners.add(weakref.ref(callback, remove_listener))
 
     def remove(self, callback: _TCallable) -> None:
-        with self.lock:
+        with self._lock:
             try:
                 if inspect.ismethod(callback):
                     self._listeners.remove(weakref.WeakMethod(cast(MethodType, callback)))

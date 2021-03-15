@@ -57,12 +57,12 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         result: List[Diagnostic] = []
 
-        async for token in self.parent.documents_cache.get_tokens(document):
+        for token in await self.parent.documents_cache.get_tokens(document):
             if token.type in [Token.ERROR, Token.FATAL_ERROR]:
                 result.append(
                     Diagnostic(
                         range=range_from_token(token),
-                        message=token.error,
+                        message=token.error if token.error is not None else "Unknown Error.",
                         severity=DiagnosticSeverity.ERROR,
                         source="robot",
                         code="TokenError",
@@ -78,7 +78,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         result.append(
                             Diagnostic(
                                 range=range_from_token(variable_token),
-                                message=token.error,
+                                message=token.error if token.error is not None else "Unknown Error.",
                                 severity=DiagnosticSeverity.ERROR,
                                 source="robot",
                                 code="TokenError",

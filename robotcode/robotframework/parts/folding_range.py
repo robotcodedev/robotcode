@@ -104,4 +104,4 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
                 self.__append(node, kind="if")
                 await self.generic_visit(node)
 
-        return await Visitor.find_from(await self.parent.documents_cache.get_model(await document.freeze()), self)
+        return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)

@@ -1,9 +1,21 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import io
 import weakref
-from typing import List, Optional, overload
+from types import MethodType
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from ..utils.logging import LoggingDescriptor
 from ..utils.uri import Uri
@@ -32,6 +44,9 @@ def _range_from_utf16(lines: List[str], range: Range) -> Range:
 
 class InvalidRangeError(Exception):
     pass
+
+
+_T = TypeVar("_T")
 
 
 class TextDocument:
@@ -86,7 +101,10 @@ class TextDocument:
             self._parent = weakref.ref(parent)
         self._lines: Optional[List[str]] = None
 
-        self.__frozen: Optional[weakref.ref[TextDocument]] = None
+        self._cache: Dict[weakref.ref[Any], Any] = {}
+        self._in_get_cache = False
+
+        self._loop = asyncio.get_event_loop()
 
     @property
     def parent(self) -> Optional[TextDocument]:
@@ -94,29 +112,6 @@ class TextDocument:
             return None
 
         return self._parent()
-
-    def __freeze(self) -> TextDocument:
-        assert self.parent is None
-
-        document = self.__frozen() if self.__frozen is not None else None
-
-        if document is not None and document.version == self.version:
-            return document
-
-        document = TextDocument(
-            document_uri=self.document_uri,
-            language_id=self.language_id,
-            version=self.version,
-            text=self._text,
-            parent=self,
-        )
-        self.__frozen = weakref.ref(document)
-
-        return document
-
-    async def freeze(self) -> TextDocument:
-        async with self._lock:
-            return self.__freeze()
 
     def __str__(self) -> str:
         return super().__str__()
@@ -130,12 +125,13 @@ class TextDocument:
             f")"
         )
 
-    async def text(self) -> str:
-        async with self._lock:
-            return self._text
+    @property
+    def text(self) -> str:
+        return self._text
 
     async def apply_none_change(self) -> None:
-        pass
+        self._lines = None
+        await self._invalidate_cache()
 
     async def apply_full_change(self, version: Optional[int], text: str) -> None:
         async with self._lock:
@@ -143,6 +139,7 @@ class TextDocument:
                 self.version = version
             self._text = text
             self._lines = None
+            await self._invalidate_cache()
 
     async def apply_incremental_change(self, version: Optional[int], range: Range, text: str) -> None:
         async with self._lock:
@@ -159,30 +156,86 @@ class TextDocument:
                 self._text = self._text + text
                 return
 
-            new = io.StringIO()
+            with io.StringIO() as new:
+                for i, line in enumerate(lines):
+                    if i < start_line:
+                        new.write(line)
+                        continue
 
-            for i, line in enumerate(lines):
-                if i < start_line:
-                    new.write(line)
-                    continue
+                    if i > end_line:
+                        new.write(line)
+                        continue
 
-                if i > end_line:
-                    new.write(line)
-                    continue
+                    if i == start_line:
+                        new.write(line[:start_col])
+                        new.write(text)
 
-                if i == start_line:
-                    new.write(line[:start_col])
-                    new.write(text)
+                    if i == end_line:
+                        new.write(line[end_col:])
 
-                if i == end_line:
-                    new.write(line[end_col:])
-
-            self._text = new.getvalue()
+                self._text = new.getvalue()
             self._lines = None
+            await self._invalidate_cache()
 
-    async def lines(self) -> List[str]:
+    @property
+    def lines(self) -> List[str]:
+        if self._lines is None:
+            self._lines = self._text.splitlines(True)
+
+        return self._lines
+
+    async def _invalidate_cache(self) -> None:
+        for e in self._cache.keys():
+            self._cache[e] = None
+
+    async def invalidate_cache(self) -> None:
         async with self._lock:
-            if self._lines is None:
-                self._lines = self._text.splitlines(True)
+            self._invalidate_cache()
 
-            return self._lines
+    async def get_cache(self, entry: Callable[[TextDocument], Awaitable[_T]]) -> _T:
+        if self._in_get_cache:
+            return await self._get_cache(entry)
+
+        else:
+            self._in_get_cache = True
+            try:
+                async with self._lock:
+                    return await self._get_cache(entry)
+            finally:
+                self._in_get_cache = False
+
+    async def _get_cache(self, entry: Callable[[TextDocument], Awaitable[_T]]) -> _T:
+        async def remove_safe(ref: Any) -> None:
+            async with self._lock:
+                self._cache.pop(ref)
+
+        def remove_listener(ref: Any) -> None:
+            if self._loop is not None and self._loop.is_running():
+                asyncio.run_coroutine_threadsafe(remove_safe(ref), self._loop)
+            else:
+                self._cache.pop(ref)
+
+        if inspect.ismethod(entry):
+            reference: weakref.ref[Any] = weakref.WeakMethod(cast(MethodType, entry), remove_listener)
+        else:
+            reference = weakref.ref(entry, remove_listener)
+
+        if reference not in self._cache:
+            self._cache[reference] = None
+
+        if self._cache[reference] is None:
+            result = entry(self)
+
+            if isinstance(result, Awaitable):
+                self._cache[reference] = await result
+            else:
+                self._cache[reference] = result
+
+        return cast("_T", self._cache[reference])
+
+    async def remove_cache_entry(self, entry: Callable[[TextDocument], Awaitable[_T]]) -> None:
+        async with self._lock:
+            if inspect.ismethod(entry):
+                self._cache.pop(weakref.WeakMethod(cast(MethodType, entry)), None)
+            else:
+                self._cache.pop(weakref.ref(entry), None)
