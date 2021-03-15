@@ -4,7 +4,7 @@ import ast
 import asyncio
 import io
 import weakref
-from typing import TYPE_CHECKING, AsyncIterator, Iterator, List, Optional, cast
+from typing import TYPE_CHECKING, Iterator, List, Optional, cast
 
 from ...language_server.parts.workspace import WorkspaceFolder
 from ...language_server.text_document import TextDocument
