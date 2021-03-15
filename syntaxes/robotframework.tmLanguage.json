@@ -282,7 +282,7 @@
                 },
                 {
                     "include": "#function_fixture"
-                },              
+                },
                 {
                     "include": "#function_template"
                 },
@@ -354,10 +354,13 @@
         },
         "comments_table": {
             "end": "^(?=\\*)",
-            "begin": "(?i)^(\\*+\\s*comments?[\\s*].*)",
+            "begin": "(?i)^(\\*+\\s*comments?[\\s*].*)|([^\\*]*)",
             "beginCaptures": {
                 "1": {
-                    "name": "markup.heading"
+                    "name": "markup.heading.robot"
+                },
+                "2": {
+                    "name": "comment.line.robot"
                 }
             },
             "contentName": "comment.line.robot",
