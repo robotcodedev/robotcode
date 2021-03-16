@@ -326,12 +326,23 @@ class CompletionCollector:
             if len(statement_node.tokens) > 0:
                 token = cast(Token, statement_node.tokens[0])
                 r = range_from_token(token)
+                value = token.value.strip()
+                only_stars = all(v == "*" for v in value)
                 if (
                     r.start.character == 0
                     and (position.is_in_range(r) or position == r.end)
-                    and (token.value.strip() != "" or position.character == 0)
+                    and (only_stars or value.startswith("*") or position.character == 0)
                 ):
                     return await self.create_section_completion_items(r)
+                elif len(statement_node.tokens) > 1 and only_stars:
+                    r1 = range_from_token(statement_node.tokens[1])
+                    ws = whitespace_at_begin_of_token(statement_node.tokens[1])
+                    if ws > 0:
+                        r1.end.character = r1.start.character + ws
+                        if position.is_in_range(r1) or position == r1.end:
+                            r.end = r1.end
+                            return await self.create_section_completion_items(r)
+
         elif position.character == 0:
             return await self.create_section_completion_items(None)
 
