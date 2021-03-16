@@ -75,13 +75,17 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
                 suffix = path.suffix.lower()
 
                 if path.name == "__init__.robot":
-                    return cast(ast.AST, robot.api.get_init_model(content))
+                    model = cast(ast.AST, robot.api.get_init_model(content))
                 elif suffix in (".robot",):
-                    return cast(ast.AST, robot.api.get_model(content))
+                    model = cast(ast.AST, robot.api.get_model(content))
                 elif suffix in (".resource", ".rst", ".rest"):
-                    return cast(ast.AST, robot.api.get_resource_model(content))
+                    model = cast(ast.AST, robot.api.get_resource_model(content))
                 else:
                     raise UnknownFileTypeError(f"Unknown file type '{document.uri}'.")
+
+                setattr(model, "source", str(path))
+
+                return model
 
         return await asyncio.get_event_loop().run_in_executor(None, get)
 

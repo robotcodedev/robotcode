@@ -114,6 +114,44 @@
                         "default": "*** {name} ***",
                         "description": "Defines the section style format.",
                         "scope": "resource"
+                    },
+                    "robotcode.robocop.enabled": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Enables 'robocop' code analysis, if installed.",
+                        "scope": "resource"
+                    },
+                    "robotcode.robocop.include": {
+                        "type": "array",
+                        "default": [],
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Ignore specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
+                        "scope": "resource"
+                    },
+                    "robotcode.robocop.exclude": {
+                        "type": "array",
+                        "default": [
+                            "1001",
+                            "1002",
+                            "1010",
+                            "0704"
+                        ],
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Ignore specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
+                        "scope": "resource"
+                    },
+                    "robotcode.robocop.configure": {
+                        "type": "array",
+                        "default": [],
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Configure 'robocop' checker with parameter value.",
+                        "scope": "resource"
                     }
                 }
             }

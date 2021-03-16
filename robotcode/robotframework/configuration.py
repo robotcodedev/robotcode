@@ -22,6 +22,14 @@ class SyntaxConfig(ConfigBase):
     section_style: str
 
 
+@config_section("robotcode.robocop")
+class RoboCopConfig(ConfigBase):
+    enabled: bool
+    include: List[str]
+    exclude: List[str]
+    configure: List[str]
+
+
 @config_section("robotcode")
 class RobotCodeConfig(ConfigBase):
     language_server: LanguageServerConfig

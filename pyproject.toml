@@ -9,6 +9,7 @@ exclude = ["robotcode/external"]
 [tool.poetry.dependencies]
 python = "^3.8"
 robotframework = "^3.2.2"
+robotframework-robocop = "^1.5.0"
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.790"

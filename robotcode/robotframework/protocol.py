@@ -19,6 +19,7 @@ from .parts.documents_cache import DocumentsCache
 from .parts.folding_range import RobotFoldingRangeProtocolPart
 from .parts.goto import RobotGotoProtocolPart
 from .parts.hover import RobotHoverProtocolPart
+from .parts.robocop_diagnostics import RobotRoboCopDiagnosticsProtocolPart
 from .parts.signature_help import RobotSignatureHelpProtocolPart
 
 if TYPE_CHECKING:
@@ -49,6 +50,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     _robot_signature_help = ProtocolPartDescriptor(RobotSignatureHelpProtocolPart)
     _robot_code_lens = ProtocolPartDescriptor(RobotCodeLensProtocolPart)
     _robot_document_symbols = ProtocolPartDescriptor(RobotDocumentSymbolsProtocolPart)
+    _robot_robocop_diagnostics = ProtocolPartDescriptor(RobotRoboCopDiagnosticsProtocolPart)
 
     symbol_information_label = "robotframework"
 
