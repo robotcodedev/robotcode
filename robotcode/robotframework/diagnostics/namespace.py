@@ -709,6 +709,9 @@ class Namespace:
     async def _get_variables_entry(self, name: str, args: Tuple[Any, ...], base_dir: str) -> LibraryEntry:
         raise NotImplementedError("_import_variables")
 
+    # TODO get_own_keywords
+    # TODO get_variables
+
     async def get_keywords(self) -> List[KeywordDoc]:
         await self._ensure_initialized()
 

@@ -143,39 +143,41 @@ class TextDocument:
 
     async def apply_incremental_change(self, version: Optional[int], range: Range, text: str) -> None:
         async with self._lock:
-            if version is not None:
-                self.version = version
+            try:
+                if version is not None:
+                    self.version = version
 
-            if range.start > range.end:
-                raise InvalidRangeError(f"Start position is greater then end position {range}.")
+                if range.start > range.end:
+                    raise InvalidRangeError(f"Start position is greater then end position {range}.")
 
-            lines = self._text.splitlines(True)
-            (start_line, start_col), (end_line, end_col) = _range_from_utf16(lines, range)
+                lines = self._text.splitlines(True)
+                (start_line, start_col), (end_line, end_col) = _range_from_utf16(lines, range)
 
-            if start_line == len(lines):
-                self._text = self._text + text
-                return
+                if start_line == len(lines):
+                    self._text = self._text + text
+                    return
 
-            with io.StringIO() as new:
-                for i, line in enumerate(lines):
-                    if i < start_line:
-                        new.write(line)
-                        continue
+                with io.StringIO() as new:
+                    for i, line in enumerate(lines):
+                        if i < start_line:
+                            new.write(line)
+                            continue
 
-                    if i > end_line:
-                        new.write(line)
-                        continue
+                        if i > end_line:
+                            new.write(line)
+                            continue
 
-                    if i == start_line:
-                        new.write(line[:start_col])
-                        new.write(text)
+                        if i == start_line:
+                            new.write(line[:start_col])
+                            new.write(text)
 
-                    if i == end_line:
-                        new.write(line[end_col:])
+                        if i == end_line:
+                            new.write(line[end_col:])
 
-                self._text = new.getvalue()
-            self._lines = None
-            await self._invalidate_cache()
+                    self._text = new.getvalue()
+                self._lines = None
+            finally:
+                await self._invalidate_cache()
 
     @property
     def lines(self) -> List[str]:
