@@ -4,7 +4,7 @@ import ast
 import asyncio
 import weakref
 from collections import OrderedDict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import (
     Any,
@@ -456,7 +456,8 @@ class LibraryEntry:
 
 @dataclass
 class ResourceEntry(LibraryEntry):
-    pass
+    imports: List[Import] = field(default_factory=lambda: [])
+    variables: List[str] = field(default_factory=lambda: [])
 
 
 class Namespace:
@@ -559,6 +560,21 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Resource setting requires value.")
                     result = await self._get_resource_entry(value.name, base_dir)
+                    if (
+                        add_diagnostics
+                        and not result.imports
+                        and not result.variables
+                        and not result.library_doc.keywords
+                    ):
+                        self._diagnostics.append(
+                            Diagnostic(
+                                range=value.range(),
+                                message=f"Imported resource file '{value.name}' is empty.",
+                                severity=DiagnosticSeverity.WARNING,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                            )
+                        )
+
                 elif isinstance(value, VariablesImport):
                     if value.name is None:
                         raise NameSpaceError("Variables setting requires value.")
@@ -686,7 +702,9 @@ class Namespace:
 
         library_doc = await namespace.get_library_doc()
 
-        return ResourceEntry(name=library_doc.name, import_name=name, library_doc=library_doc)
+        return ResourceEntry(
+            name=library_doc.name, import_name=name, library_doc=library_doc, imports=await namespace.get_imports()
+        )
 
     async def _get_variables_entry(self, name: str, args: Tuple[Any, ...], base_dir: str) -> LibraryEntry:
         raise NotImplementedError("_import_variables")
