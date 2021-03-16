@@ -95,6 +95,11 @@ TESTCASE_SETTINGS = ["Documentation", "Tags", "Setup", "Teardown", "Template", "
 KEYWORD_SETTINGS = ["Documentation", "Tags", "Arguments", "Return", "Teardown", "Timeout"]
 DEFAULT_SECTIONS_STYLE = "*** {name} ***"
 
+SNIPPETS = {
+    "FOR": [r"FOR  \${${1}}  ${2|IN,IN ENUMERATE,IN RANGE,IN ZIP|}  ${3:arg}", "END", ""],
+    "IF": [r"IF  \${${1}}", "END", ""],
+}
+
 
 class CompletionCollector:
     _logger = LoggingDescriptor()
@@ -194,6 +199,20 @@ class CompletionCollector:
             for setting in SETTINGS
         ]
 
+    async def create_keyword_snippet_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+        line_end = "\n"
+        return [
+            CompletionItem(
+                label=f"{snippet_name}",
+                kind=CompletionItemKind.SNIPPET,
+                detail="Snippet",
+                sort_text=f"010_{snippet_name}",
+                insert_text_format=InsertTextFormat.SNIPPET,
+                text_edit=TextEdit(range=range, new_text=line_end.join(snippet_value)) if range is not None else None,
+            )
+            for snippet_name, snippet_value in SNIPPETS.items()
+        ]
+
     async def create_testcase_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
         return [
             CompletionItem(
@@ -260,6 +279,7 @@ class CompletionCollector:
                                 label=kw.name,
                                 kind=CompletionItemKind.FUNCTION,
                                 detail="Keyword",
+                                sort_text=f"020_{kw.name}",
                                 documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=kw.to_markdown()),
                                 insert_text_format=InsertTextFormat.PLAINTEXT,
                                 text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
@@ -397,6 +417,11 @@ class CompletionCollector:
                     return [
                         e
                         async for e in async_chain(
+                            await self.create_keyword_snippet_completion_items(
+                                range_from_token(statement_node.tokens[1])
+                                if r.end == position and len(statement_node.tokens) > 1
+                                else None
+                            ),
                             await self.create_testcase_settings_completion_items(
                                 range_from_token(statement_node.tokens[1])
                                 if r.end == position and len(statement_node.tokens) > 1
@@ -420,6 +445,7 @@ class CompletionCollector:
                     return [
                         e
                         async for e in async_chain(
+                            await self.create_keyword_snippet_completion_items(r),
                             await self.create_testcase_settings_completion_items(r),
                             [] if in_template else await self.create_keyword_completion_items(token, position),
                         )
@@ -452,6 +478,11 @@ class CompletionCollector:
                     return [
                         e
                         async for e in async_chain(
+                            await self.create_keyword_snippet_completion_items(
+                                range_from_token(statement_node.tokens[1])
+                                if r.end == position and len(statement_node.tokens) > 1
+                                else None
+                            ),
                             await self.create_keyword_settings_completion_items(
                                 range_from_token(statement_node.tokens[1])
                                 if r.end == position and len(statement_node.tokens) > 1
@@ -473,6 +504,7 @@ class CompletionCollector:
                     return [
                         e
                         async for e in async_chain(
+                            await self.create_keyword_snippet_completion_items(r),
                             await self.create_keyword_settings_completion_items(r),
                             await self.create_keyword_completion_items(token, position),
                         )
