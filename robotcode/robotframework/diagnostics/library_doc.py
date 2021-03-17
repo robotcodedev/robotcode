@@ -2,6 +2,7 @@ import importlib
 import os
 import re
 import sys
+import tempfile
 from pathlib import Path
 from types import ModuleType
 from typing import (
@@ -469,12 +470,57 @@ def error_from_exception(ex: BaseException, default_source: Optional[str], defau
     )
 
 
+def built_variables(
+    working_dir: str = ".", base_dir: str = ".", variables: Optional[Dict[str, Optional[Any]]] = None
+) -> Dict[str, Optional[Any]]:
+    result = {
+        "${CURDIR}": str(Path(base_dir).absolute()),
+        "${TEMPDIR}": str(Path(tempfile.gettempdir()).absolute()),
+        "${EXECDIR}": str(Path(working_dir).absolute()),
+        "${/}": os.sep,
+        "${:}": os.pathsep,
+        "${\\n}": os.linesep,
+        "${SPACE}": " ",
+        "${True}": True,
+        "${False}": False,
+        "${None}": None,
+        "${null}": None,
+        "${TEST NAME}": None,
+        "@{TEST TAGS}": [],
+        "${TEST DOCUMENTATION}": None,
+        "${TEST STATUS}": None,
+        "${TEST MESSAGE}": None,
+        "${PREV TEST NAME}": None,
+        "${PREV TEST STATUS}": None,
+        "${PREV TEST MESSAGE}": None,
+        "${SUITE NAME}": None,
+        "${SUITE SOURCE}": None,
+        "${SUITE DOCUMENTATION}": None,
+        "&{SUITE METADATA}": {},
+        "${SUITE STATUS}": None,
+        "${SUITE MESSAGE}": None,
+        "${KEYWORD STATUS}": None,
+        "${KEYWORD MESSAGE}": None,
+        "${LOG LEVEL}": None,
+        "${OUTPUT FILE}": None,
+        "${LOG FILE}": None,
+        "${REPORT FILE}": None,
+        "${DEBUG FILE}": None,
+        "${OUTPUT DIR}": None,
+    }
+    if variables is not None:
+        result.update(variables)
+
+    return result
+
+
 def get_library_doc(
     name: str,
     args: Optional[Tuple[Any, ...]] = None,
     working_dir: str = ".",
     base_dir: str = ".",
     pythonpath: Optional[List[str]] = None,
+    variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> LibraryDoc:
 
     from robot.libdocpkg.robotbuilder import KeywordDocBuilder
@@ -484,6 +530,7 @@ def get_library_doc(
     from robot.running.testlibraries import _get_lib_class
     from robot.utils import Importer
     from robot.utils.robotpath import find_file as robot_find_file
+    from robot.variables import Variables
 
     def import_test_library(
         name: str,
@@ -498,7 +545,7 @@ def get_library_doc(
         source: str,
         name: str,
         args: Optional[Tuple[Any, ...]] = None,
-        variables: Any = None,
+        variables: Optional[Dict[str, Optional[Any]]] = None,
         create_handlers: bool = True,
         logger: Any = LOGGER,
     ) -> Any:
@@ -510,6 +557,12 @@ def get_library_doc(
         return lib
 
     _update_sys_path(working_dir, pythonpath)
+
+    robot_variables = Variables()
+    for k, v in built_variables(working_dir, base_dir, variables).items():
+        robot_variables[k] = v
+
+    name = robot_variables.replace_string(name, ignore_errors=True)
 
     if name in STDLIBS:
         import_name = "robot.libraries." + name
@@ -549,7 +602,14 @@ def get_library_doc(
 
     lib = None
     try:
-        lib = get_test_library(libcode, source, name, args, create_handlers=False)
+        lib = get_test_library(
+            libcode,
+            source,
+            name,
+            args,
+            create_handlers=False,
+            variables=robot_variables,
+        )
     except BaseException as e:
         errors.append(
             error_from_exception(
@@ -643,10 +703,18 @@ def find_file(
     base_dir: str = ".",
     pythonpath: Optional[List[str]] = None,
     file_type: str = "Resource",
+    variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> str:
     from robot.utils.robotpath import find_file as robot_find_file
+    from robot.variables import Variables
 
     _update_sys_path(working_dir, pythonpath)
+
+    robot_variables = Variables()
+    for k, v in built_variables(working_dir, base_dir, variables).items():
+        robot_variables[k] = v
+
+    name = robot_variables.replace_string(name, ignore_errors=True)
 
     return cast(str, robot_find_file(name, base_dir or ".", file_type))
 

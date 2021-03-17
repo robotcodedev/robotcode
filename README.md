@@ -27,6 +27,9 @@ Download the vscode-package artifact from the latest [CI/Actions](https://github
 * Goto Definition
 * Folding
 * Hover Information
+* Loading Library/Resources with support for builtin variables
+* Integrate 'Robocop' tool static code analysis of Robot Framework code.
+    * https://github.com/MarketSquare/robotframework-robocop
 
 
 ... more comming soon
