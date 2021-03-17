@@ -520,6 +520,7 @@ class ImportsManager:
                     tags=tuple(kw[0].tags),
                     source=kw[0].source,
                     line_no=kw[0].lineno,
+                    libname=libdoc.name,
                     is_embedded=is_embedded_keyword(kw[0].name),
                     errors=getattr(kw[1], "errors") if hasattr(kw[1], "errors") else None,
                 )

@@ -452,6 +452,7 @@ class LibraryEntry:
     library_doc: LibraryDoc
     args: Tuple[Any, ...] = ()
     alias: Optional[str] = None
+    range: Range = field(default_factory=lambda: Range.zero())
 
 
 @dataclass
@@ -547,6 +548,8 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Library setting requires value.")
                     result = await self._get_library_entry(value.name, value.args, value.alias, base_dir)
+                    result.range = value.range()
+
                     if add_diagnostics and result.library_doc.errors is None and len(result.library_doc.keywords) == 0:
                         self._diagnostics.append(
                             Diagnostic(
@@ -560,8 +563,11 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Resource setting requires value.")
                     result = await self._get_resource_entry(value.name, base_dir)
+                    result.range = value.range()
+
                     if (
-                        add_diagnostics
+                        not result.library_doc.errors
+                        and add_diagnostics
                         and not result.imports
                         and not result.variables
                         and not result.library_doc.keywords
@@ -579,6 +585,8 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Variables setting requires value.")
                     result = await self._get_variables_entry(value.name, value.args, base_dir)
+                    result.range = value.range()
+
                 else:
                     raise DiagnosticsException("Unknown import type.")
 
@@ -646,12 +654,38 @@ class Namespace:
                     )
             return result
 
-        for e in await asyncio.gather(*(_import(v) for v in imports)):
-            if e is not None:
-                if isinstance(e, ResourceEntry):
-                    self._resources[e.alias or e.name or e.import_name] = e
+        for entry in await asyncio.gather(*(_import(v) for v in imports)):
+            if entry is not None:
+                if isinstance(entry, ResourceEntry):
+                    assert entry.library_doc.source is not None
+
+                    if (
+                        not any(e.library_doc.source == entry.library_doc.source for e in self._resources.values())
+                        and entry.library_doc.source != self.source
+                    ):
+                        self._resources[entry.alias or entry.name or entry.import_name] = entry
+                        try:
+                            await self._import_imports(
+                                entry.imports,
+                                str(Path(entry.library_doc.source).parent),
+                                add_diagnostics=False,
+                            )
+                        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                            raise
+                        except BaseException as e:
+                            if add_diagnostics:
+                                self._diagnostics.append(
+                                    Diagnostic(
+                                        range=entry.range,
+                                        message=str(e) or type(entry).__name__,
+                                        severity=DiagnosticSeverity.ERROR,
+                                        source=DIAGNOSTICS_SOURCE_NAME,
+                                        code=type(e).__qualname__,
+                                    )
+                                )
+
                 else:
-                    self._libraries[e.alias or e.name or e.import_name] = e
+                    self._libraries[entry.alias or entry.name or entry.import_name] = entry
                 # TODO Variables
 
     async def get_imports(self) -> List[Import]:
@@ -694,10 +728,6 @@ class Namespace:
 
         namespace = await self.imports_manager.get_namespace_for_resource_import(
             name, base_dir, sentinel=self._sentinel()
-        )
-
-        await self._import_imports(
-            await namespace.get_imports(), str(Path(namespace.source).parent), add_diagnostics=False
         )
 
         library_doc = await namespace.get_library_doc()
