@@ -5,6 +5,7 @@ import io
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from ...language_server.language import language_id
+from ...language_server.parts.diagnostics import DiagnosticsResult
 from ...language_server.text_document import TextDocument
 from ...language_server.types import Diagnostic, DiagnosticSeverity, Position, Range
 from ...utils.logging import LoggingDescriptor
@@ -45,13 +46,13 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_diagnostics(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
+    async def collect_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
 
         from robocop.config import Config
         from robocop.run import FileType, Robocop
         from robocop.utils.disablers import DisablersFinder
 
-        class MyDisablerFinder(DisablersFinder):  # type: ignore
+        class RobotCodeDisablerFinder(DisablersFinder):  # type: ignore
             def __init__(self, source: str, linter: Any, text: Optional[str] = None):
                 self.text = text
                 super().__init__(source, linter)
@@ -74,7 +75,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 except BaseException:
                     self.file_disabled = True
 
-        class ModelRobocop(Robocop):  # type: ignore
+        class RobotCodeRobocop(Robocop):  # type: ignore
             def __init__(self, from_cli: bool = False, config: Config = None) -> None:
                 super().__init__(from_cli=from_cli, config=config)
                 self.file_text: Dict[str, str] = {}
@@ -84,7 +85,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
             def register_disablers(self, file: str) -> None:
                 """ Parse content of file to find any disabler statements like # robocop: disable=rulename """
-                self.disabler = MyDisablerFinder(file, self, self.file_text.get(file, None))
+                self.disabler = RobotCodeDisablerFinder(file, self, self.file_text.get(file, None))
 
             def add_model(self, source: str, file_type: FileType, model: ast.AST, text: str) -> None:
                 self.files[source] = (file_type, model)
@@ -92,7 +93,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         extension_config = await self.get_config(document)
         if extension_config is None or not extension_config.enabled:
-            return []
+            return DiagnosticsResult(self.collect_diagnostics)
 
         config = Config()
         config.reports = set()
@@ -102,7 +103,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         config.exclude = set(extension_config.exclude)
         config.configure = set(extension_config.configure)
 
-        analyser = ModelRobocop(from_cli=False, config=config)
+        analyser = RobotCodeRobocop(from_cli=False, config=config)
 
         document_type = await self.parent.documents_cache.get_document_type(document)
 
@@ -126,8 +127,8 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
             d = Diagnostic(
                 range=Range(
-                    start=Position(line=r["line"] - 1, character=r["column"]),
-                    end=Position(line=r["line"] - 1, character=r["column"]),
+                    start=Position(line=r["line"] - (1 if r["line"] > 0 else 0), character=r["column"]),
+                    end=Position(line=r["line"] - (1 if r["line"] > 0 else 0), character=r["column"]),
                 ),
                 message=r["description"],
                 severity=DiagnosticSeverity.INFORMATION
@@ -143,4 +144,4 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
             result.append(d)
 
-        return result
+        return DiagnosticsResult(self.collect_diagnostics, result)

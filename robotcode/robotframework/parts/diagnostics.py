@@ -4,6 +4,7 @@ import ast
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from ...language_server.language import language_id
+from ...language_server.parts.diagnostics import DiagnosticsResult
 from ...language_server.text_document import TextDocument
 from ...language_server.types import Diagnostic, DiagnosticSeverity, Position, Range
 from ...utils.logging import LoggingDescriptor
@@ -27,7 +28,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         # parent.diagnostics.collect.add(self.collect_model_errors)
         parent.diagnostics.collect.add(self.collect_walk_model_errors)
 
-        parent.diagnostics.collect.add(self.collect_diagnostics)
+        parent.diagnostics.collect.add(self.collect_namespace_diagnostics)
 
         parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
 
@@ -48,7 +49,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_token_errors(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
+    async def collect_token_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         from robot.errors import VariableError
         from robot.parsing.lexer.tokens import Token
 
@@ -92,11 +93,11 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                     )
                 )
 
-        return result
+        return DiagnosticsResult(self.collect_token_errors, result)
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_model_errors(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
+    async def collect_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         from ..utils.async_ast import AsyncVisitor
 
         class Visitor(AsyncVisitor):
@@ -121,11 +122,14 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         self.errors.append(self.parent._create_error(node, e, "robot.visitor"))
                 await super().generic_visit(node)
 
-        return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)
+        return DiagnosticsResult(
+            self.collect_model_errors,
+            await Visitor.find_from(await self.parent.documents_cache.get_model(document), self),
+        )
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_walk_model_errors(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
+    async def collect_walk_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         from ..utils.async_ast import walk
 
         result: List[Diagnostic] = []
@@ -139,16 +143,14 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 for e in errors:
                     result.append(self._create_error(node, e))
 
-        return result
+        return DiagnosticsResult(self.collect_walk_model_errors, result)
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_diagnostics(self, sender: Any, document: TextDocument) -> List[Diagnostic]:
+    async def collect_namespace_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
 
         namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
             return []
 
-        result: List[Diagnostic] = await namespace.get_diagnostisc()
-
-        return result
+        return DiagnosticsResult(self.collect_namespace_diagnostics, await namespace.get_diagnostisc())

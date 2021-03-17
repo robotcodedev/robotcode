@@ -13,6 +13,7 @@ from typing import (
     List,
     Optional,
     TypeVar,
+    Union,
     cast,
     overload,
 )
@@ -102,7 +103,9 @@ class TextDocument:
         self._lines: Optional[List[str]] = None
 
         self._cache: Dict[weakref.ref[Any], Any] = {}
-        self._in_get_cache = False
+        self._in_change_cache = False
+
+        self._data: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
 
         self._loop = asyncio.get_event_loop()
 
@@ -194,19 +197,24 @@ class TextDocument:
         async with self._lock:
             self._invalidate_cache()
 
-    async def get_cache(self, entry: Callable[[TextDocument], Awaitable[_T]]) -> _T:
-        if self._in_get_cache:
-            return await self._get_cache(entry)
+    async def get_cache(
+        self,
+        entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]],
+        *args: Any,
+        **kwargs: Any,
+    ) -> _T:
+        if self._in_change_cache:
+            return await self._get_cache(entry, *args, **kwargs)
 
         else:
-            self._in_get_cache = True
+            self._in_change_cache = True
             try:
                 async with self._lock:
-                    return await self._get_cache(entry)
+                    return await self._get_cache(entry, *args, **kwargs)
             finally:
-                self._in_get_cache = False
+                self._in_change_cache = False
 
-    async def _get_cache(self, entry: Callable[[TextDocument], Awaitable[_T]]) -> _T:
+    def __get_callable_reference(self, entry: Callable[..., Any]) -> weakref.ref[Any]:
         async def remove_safe(ref: Any) -> None:
             async with self._lock:
                 self._cache.pop(ref)
@@ -222,11 +230,22 @@ class TextDocument:
         else:
             reference = weakref.ref(entry, remove_listener)
 
+        return reference
+
+    async def _get_cache(
+        self,
+        entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]],
+        *args: Any,
+        **kwargs: Any,
+    ) -> _T:
+
+        reference = self.__get_callable_reference(entry)
+
         if reference not in self._cache:
             self._cache[reference] = None
 
         if self._cache[reference] is None:
-            result = entry(self)
+            result = entry(self, *args, **kwargs)  # type: ignore
 
             if isinstance(result, Awaitable):
                 self._cache[reference] = await result
@@ -235,9 +254,42 @@ class TextDocument:
 
         return cast("_T", self._cache[reference])
 
-    async def remove_cache_entry(self, entry: Callable[[TextDocument], Awaitable[_T]]) -> None:
+    async def set_cache(
+        self,
+        entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]],
+        data: _T,
+    ) -> _T:
+        if self._in_change_cache:
+            return await self._set_cache(entry, data)
+
+        else:
+            self._in_change_cache = True
+            try:
+                async with self._lock:
+                    return await self._set_cache(entry, data)
+            finally:
+                self._in_change_cache = False
+
+    async def _set_cache(
+        self, entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]], data: _T
+    ) -> _T:
+        reference = self.__get_callable_reference(entry)
+
+        self._cache[reference] = data
+
+        return data
+
+    async def remove_cache_entry(
+        self, entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]]
+    ) -> None:
         async with self._lock:
             if inspect.ismethod(entry):
                 self._cache.pop(weakref.WeakMethod(cast(MethodType, entry)), None)
             else:
                 self._cache.pop(weakref.ref(entry), None)
+
+    def set_data(self, key: Any, data: Any) -> None:
+        self._data[key] = data
+
+    def get_data(self, key: Any, default: Any = None) -> Any:
+        return self._data.get(key, default)

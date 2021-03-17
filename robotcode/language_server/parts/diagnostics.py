@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+import itertools
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 
 from ...jsonrpc2.protocol import JsonRPCProtocol
 from ...utils.async_event import async_tasking_event_iterator
@@ -87,6 +89,12 @@ class PublishDiagnosticsEntry:
         asyncio.ensure_future(cancel())
 
 
+@dataclass
+class DiagnosticsResult:
+    key: Any
+    diagnostics: Optional[List[Diagnostic]] = None
+
+
 class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
@@ -105,7 +113,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.parent.documents.did_save.add(self.on_did_save)
 
     @async_tasking_event_iterator
-    async def collect(sender, document: TextDocument) -> List[Diagnostic]:
+    async def collect(sender, document: TextDocument) -> DiagnosticsResult:
         ...
 
     @_logger.call
@@ -167,25 +175,43 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 ),
             )
 
+    async def diagnostics_setter(
+        self, document: TextDocument, diagnostics: Optional[List[Diagnostic]]
+    ) -> Optional[List[Diagnostic]]:
+        return diagnostics
+
     @_logger.call
     async def publish_diagnostics(self, document: TextDocument) -> None:
-        diagnostics: List[Diagnostic] = []
+        diagnostics: Dict[Any, List[Diagnostic]] = document.get_data(self, {})
 
-        async for result in self.collect(
+        collected_keys: List[Any] = []
+
+        async for result_any in self.collect(
             self,
             document,
             callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
         ):
+            result = cast(DiagnosticsResult, result_any)
+
             if isinstance(result, BaseException):
                 if not isinstance(result, asyncio.CancelledError):
                     self._logger.exception(result, exc_info=result)
             else:
-                diagnostics += result
+                if result.diagnostics:
+                    diagnostics[result.key] = result.diagnostics
+                    collected_keys.append(result.key)
 
-                asyncio.get_event_loop().call_soon(
-                    self.parent.send_notification,
-                    "textDocument/publishDiagnostics",
-                    PublishDiagnosticsParams(
-                        uri=document.document_uri, version=document.version, diagnostics=diagnostics
-                    ),
-                )
+                    asyncio.get_event_loop().call_soon(
+                        self.parent.send_notification,
+                        "textDocument/publishDiagnostics",
+                        PublishDiagnosticsParams(
+                            uri=document.document_uri,
+                            version=document.version,
+                            diagnostics=[e for e in itertools.chain(*diagnostics.values())],
+                        ),
+                    )
+
+        for k in set(diagnostics.keys()) - set(collected_keys):
+            diagnostics.pop(k)
+
+        document.set_data(self, diagnostics)
