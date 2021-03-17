@@ -612,7 +612,7 @@ class Namespace:
                 else:
                     raise DiagnosticsException("Unknown import type.")
 
-                if result.library_doc.errors and add_diagnostics:
+                if result.library_doc.source is not None and result.library_doc.errors and add_diagnostics:
                     if any(err.source for err in result.library_doc.errors):
                         self._diagnostics.append(
                             Diagnostic(
@@ -651,6 +651,17 @@ class Namespace:
                             )
                         )
                     for err in filter(lambda e: e.source is None, result.library_doc.errors):
+                        self._diagnostics.append(
+                            Diagnostic(
+                                range=value.range(),
+                                message=err.message,
+                                severity=DiagnosticSeverity.ERROR,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                                code=err.type_name,
+                            )
+                        )
+                elif result.library_doc.errors is not None:
+                    for err in result.library_doc.errors:
                         self._diagnostics.append(
                             Diagnostic(
                                 range=value.range(),
