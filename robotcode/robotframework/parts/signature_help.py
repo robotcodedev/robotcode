@@ -21,6 +21,8 @@ from ...language_server.language import (
 )
 from ...language_server.text_document import TextDocument
 from ...language_server.types import (
+    MarkupContent,
+    MarkupKind,
     ParameterInformation,
     Position,
     SignatureHelp,
@@ -178,6 +180,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             label=result[0].parameter_signature,
             parameters=[ParameterInformation(label=str(p)) for p in result[0].args],
             active_parameter=min(argument_index, len(result[0].args) - 1),
+            documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=result[0].to_markdown(False)),
         )
 
         return SignatureHelp(
@@ -220,7 +223,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         imports_manager = await self.parent.documents_cache.get_imports_manager(document)
         try:
             lib_doc = await imports_manager.get_libdoc_for_library_import(
-                str(library_node.name), library_node.args, str(library_node.alias)
+                str(library_node.name), library_node.args, str(document.uri.to_path().parent)
             )
             if lib_doc is None:
                 return None
@@ -284,6 +287,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 label=init.parameter_signature,
                 parameters=[ParameterInformation(label=str(p)) for p in init.args],
                 active_parameter=min(argument_index, len(init.args) - 1),
+                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=init.to_markdown(False)),
             )
             signatures.append(signature)
 

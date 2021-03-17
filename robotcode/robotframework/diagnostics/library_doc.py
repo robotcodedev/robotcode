@@ -156,12 +156,15 @@ class KeywordDoc(Model):
             ),
         )
 
-    def to_markdown(self) -> str:
-        result = "```python\n"
+    def to_markdown(self, add_signature: bool = True) -> str:
+        if add_signature:
+            result = "```python\n"
 
-        result += f"({self.type}) \"{self.name}\": ({', '.join(self.args)})"
+            result += f"({self.type}) \"{self.name}\": ({', '.join(self.args)})"
 
-        result += "\n```"
+            result += "\n```"
+        else:
+            result = ""
 
         if self.doc:
             result += "\n"
@@ -264,15 +267,16 @@ class LibraryDoc(Model):
             ),
         )
 
-    def to_markdown(self) -> str:
+    def to_markdown(self, add_signature: bool = True) -> str:
         result = ""
 
-        if self.inits:
-            result += "\n\n---\n".join(i.to_markdown() for i in self.inits.values())
-        else:
-            result += "```python\n"
-            result += f'({self.type.lower()}) "{self.name}": ()'
-            result += "\n```"
+        if add_signature:
+            if self.inits:
+                result += "\n\n---\n".join(i.to_markdown() for i in self.inits.values())
+            else:
+                result += "```python\n"
+                result += f'({self.type.lower()}) "{self.name}": ()'
+                result += "\n```"
 
         if self.doc:
             if result:
@@ -303,6 +307,7 @@ def is_library_by_path(path: str) -> bool:
 
 
 def _update_sys_path(working_dir: str = ".", pythonpath: Optional[List[str]] = None) -> None:
+    import gc
 
     global __PRELOADED_MODULES
 
@@ -322,6 +327,9 @@ def _update_sys_path(working_dir: str = ".", pythonpath: Optional[List[str]] = N
     for p in filter(lambda v: path_is_relative_to(v, top), sys.path.copy()):
         sys.path.remove(p)
     wd = Path(working_dir)
+
+    gc.collect()
+    importlib.invalidate_caches()
 
     os.chdir(wd)
 
@@ -539,8 +547,9 @@ def get_library_doc(
     if library_name_path.exists():
         library_name = library_name_path.stem
 
+    lib = None
     try:
-        lib = get_test_library(libcode, source, library_name, args, create_handlers=False)
+        lib = get_test_library(libcode, source, import_name, args, create_handlers=False)
     except BaseException as e:
         errors.append(
             error_from_exception(
@@ -550,83 +559,77 @@ def get_library_doc(
             )
         )
 
+        if args:
+            try:
+                lib = get_test_library(libcode, source, library_name, (), create_handlers=False)
+            except BaseException:
+                pass
+
+    libdoc = LibraryDoc(
+        name=library_name,
+        source=lib.source if lib is not None else source,
+        module_spec=module_spec,
+        python_path=sys.path,
+    )
+
+    if lib is not None:
         try:
-            lib = get_test_library(libcode, source, library_name, (), create_handlers=False)
-        except BaseException as e:
-            return LibraryDoc(
-                name=name,
-                source=source,
-                errors=errors
-                if errors
-                else [
-                    error_from_exception(
-                        e,
-                        source or module_spec.origin if module_spec is not None else None,
-                        1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
+
+            libdoc.inits = KeywordStore(
+                keywords={
+                    kw[0].name: KeywordDoc(
+                        name=libdoc.name,
+                        args=tuple(str(a) for a in kw[0].args),
+                        doc=kw[0].doc,
+                        tags=tuple(kw[0].tags),
+                        source=kw[0].source,
+                        line_no=kw[0].lineno,
+                        type="library",
+                        libname=kw[1].libname,
+                        longname=kw[1].longname,
                     )
-                ],
-                module_spec=module_spec,
-                python_path=sys.path,
+                    for kw in [(KeywordDocBuilder().build_keyword(k), k) for k in [KeywordWrapper(lib.init, source)]]
+                }
             )
 
-    libdoc = LibraryDoc(name=str(lib.name), source=lib.source, module_spec=module_spec, python_path=sys.path)
+            libdoc.line_no = lib.lineno
+            libdoc.doc = str(lib.doc)
+            libdoc.version = str(lib.version)
+            libdoc.scope = str(lib.scope)
+            libdoc.doc_format = str(lib.doc_format)
 
-    try:
+            lib.create_handlers()
 
-        libdoc.inits = KeywordStore(
-            keywords={
-                kw[0].name: KeywordDoc(
-                    name=libdoc.name,
-                    args=tuple(str(a) for a in kw[0].args),
-                    doc=kw[0].doc,
-                    tags=tuple(kw[0].tags),
-                    source=kw[0].source,
-                    line_no=kw[0].lineno,
-                    type="library",
-                    libname=kw[1].libname,
-                    longname=kw[1].longname,
-                )
-                for kw in [(KeywordDocBuilder().build_keyword(k), k) for k in [KeywordWrapper(lib.init, source)]]
-            }
-        )
-
-        libdoc.line_no = lib.lineno
-        libdoc.doc = str(lib.doc)
-        libdoc.version = str(lib.version)
-        libdoc.scope = str(lib.scope)
-        libdoc.doc_format = str(lib.doc_format)
-
-        lib.create_handlers()
-
-        libdoc.keywords = KeywordStore(
-            keywords={
-                kw[0].name: KeywordDoc(
-                    name=kw[0].name,
-                    args=tuple(str(a) for a in kw[0].args),
-                    doc=kw[0].doc,
-                    tags=tuple(kw[0].tags),
-                    source=kw[0].source,
-                    line_no=kw[0].lineno,
-                    libname=kw[1].libname,
-                    longname=kw[1].longname,
-                    is_embedded=is_embedded_keyword(kw[0].name),
-                )
-                for kw in [
-                    (KeywordDocBuilder().build_keyword(k), k) for k in [KeywordWrapper(k, source) for k in lib.handlers]
-                ]
-            }
-        )
-
-    except (SystemExit, KeyboardInterrupt):
-        raise
-    except BaseException as e:
-        errors.append(
-            error_from_exception(
-                e,
-                source or module_spec.origin if module_spec is not None else None,
-                1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
+            libdoc.keywords = KeywordStore(
+                keywords={
+                    kw[0].name: KeywordDoc(
+                        name=kw[0].name,
+                        args=tuple(str(a) for a in kw[0].args),
+                        doc=kw[0].doc,
+                        tags=tuple(kw[0].tags),
+                        source=kw[0].source,
+                        line_no=kw[0].lineno,
+                        libname=kw[1].libname,
+                        longname=kw[1].longname,
+                        is_embedded=is_embedded_keyword(kw[0].name),
+                    )
+                    for kw in [
+                        (KeywordDocBuilder().build_keyword(k), k)
+                        for k in [KeywordWrapper(k, source) for k in lib.handlers]
+                    ]
+                }
             )
-        )
+
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            errors.append(
+                error_from_exception(
+                    e,
+                    source or module_spec.origin if module_spec is not None else None,
+                    1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
+                )
+            )
 
     if errors:
         libdoc.errors = errors

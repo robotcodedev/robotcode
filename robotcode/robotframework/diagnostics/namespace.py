@@ -75,6 +75,7 @@ class Import:
     col_offset: int
     end_line_no: int
     end_col_offset: int
+    source: str
 
     def range(self) -> Range:
         return Range(
@@ -110,8 +111,9 @@ class NameSpaceError(Exception):
 
 
 class ImportVisitor(AsyncVisitor):
-    async def get(self, model: ast.AST) -> List[Import]:
+    async def get(self, source: str, model: ast.AST) -> List[Import]:
         self._results: List[Import] = []
+        self.source = source
         await self.visit(model)
         return self._results
 
@@ -140,6 +142,7 @@ class ImportVisitor(AsyncVisitor):
                 col_offset=node.col_offset,
                 end_line_no=node.end_lineno if node.end_lineno is not None else -1,
                 end_col_offset=node.end_col_offset if node.end_col_offset is not None else -1,
+                source=self.source,
             )
         )
 
@@ -160,6 +163,7 @@ class ImportVisitor(AsyncVisitor):
                 col_offset=node.col_offset,
                 end_line_no=node.end_lineno if node.end_lineno is not None else -1,
                 end_col_offset=node.end_col_offset if node.end_col_offset is not None else -1,
+                source=self.source,
             )
         )
 
@@ -183,6 +187,7 @@ class ImportVisitor(AsyncVisitor):
                 col_offset=node.col_offset,
                 end_line_no=node.end_lineno if node.end_lineno is not None else -1,
                 end_col_offset=node.end_col_offset if node.end_col_offset is not None else -1,
+                source=self.source,
             )
         )
 
@@ -452,7 +457,16 @@ class LibraryEntry:
     library_doc: LibraryDoc
     args: Tuple[Any, ...] = ()
     alias: Optional[str] = None
-    range: Range = field(default_factory=lambda: Range.zero())
+    import_range: Range = field(default_factory=lambda: Range.zero())
+    import_source: str = ""
+
+    def __str__(self) -> str:
+        result = self.import_name
+        if self.args:
+            result += f"  {str(self.args)}"
+        if self.alias:
+            result += f"  WITH NAME  {self.alias}"
+        return result
 
 
 @dataclass
@@ -548,7 +562,8 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Library setting requires value.")
                     result = await self._get_library_entry(value.name, value.args, value.alias, base_dir)
-                    result.range = value.range()
+                    result.import_range = value.range()
+                    result.import_source = value.source
 
                     if add_diagnostics and result.library_doc.errors is None and len(result.library_doc.keywords) == 0:
                         self._diagnostics.append(
@@ -563,7 +578,8 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Resource setting requires value.")
                     result = await self._get_resource_entry(value.name, base_dir)
-                    result.range = value.range()
+                    result.import_range = value.range()
+                    result.import_source = value.source
 
                     if (
                         not result.library_doc.errors
@@ -585,7 +601,8 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Variables setting requires value.")
                     result = await self._get_variables_entry(value.name, value.args, base_dir)
-                    result.range = value.range()
+                    result.import_range = value.range()
+                    result.import_source = value.source
 
                 else:
                     raise DiagnosticsException("Unknown import type.")
@@ -658,11 +675,11 @@ class Namespace:
             if entry is not None:
                 if isinstance(entry, ResourceEntry):
                     assert entry.library_doc.source is not None
+                    allready_imported_resources = [
+                        e for e in self._resources.values() if e.library_doc.source == entry.library_doc.source
+                    ]
 
-                    if (
-                        not any(e.library_doc.source == entry.library_doc.source for e in self._resources.values())
-                        and entry.library_doc.source != self.source
-                    ):
+                    if not allready_imported_resources and entry.library_doc.source != self.source:
                         self._resources[entry.alias or entry.name or entry.import_name] = entry
                         try:
                             await self._import_imports(
@@ -676,20 +693,82 @@ class Namespace:
                             if add_diagnostics:
                                 self._diagnostics.append(
                                     Diagnostic(
-                                        range=entry.range,
+                                        range=entry.import_range,
                                         message=str(e) or type(entry).__name__,
                                         severity=DiagnosticSeverity.ERROR,
                                         source=DIAGNOSTICS_SOURCE_NAME,
                                         code=type(e).__qualname__,
                                     )
                                 )
+                    else:
+                        if add_diagnostics:
+                            if entry.library_doc.source == self.source:
+                                self._diagnostics.append(
+                                    Diagnostic(
+                                        range=entry.import_range,
+                                        message="Recursive resource import.",
+                                        severity=DiagnosticSeverity.INFORMATION,
+                                        source=DIAGNOSTICS_SOURCE_NAME,
+                                    )
+                                )
+                            elif allready_imported_resources and allready_imported_resources[0].library_doc.source:
+                                self._diagnostics.append(
+                                    Diagnostic(
+                                        range=entry.import_range,
+                                        message="Resource already imported.",
+                                        severity=DiagnosticSeverity.INFORMATION,
+                                        source=DIAGNOSTICS_SOURCE_NAME,
+                                        related_information=[
+                                            DiagnosticRelatedInformation(
+                                                location=Location(
+                                                    uri=str(
+                                                        Uri.from_path(allready_imported_resources[0].import_source)
+                                                    ),
+                                                    range=allready_imported_resources[0].import_range,
+                                                ),
+                                                message="",
+                                            )
+                                        ],
+                                    )
+                                )
 
                 else:
+                    allready_imported_library = [
+                        e
+                        for e in self._libraries.values()
+                        if e.library_doc.source == entry.library_doc.source
+                        and e.name == entry.name
+                        and e.alias == entry.alias
+                        and e.args == entry.args
+                    ]
+                    if (
+                        add_diagnostics
+                        and allready_imported_library
+                        and allready_imported_library[0].library_doc.source
+                    ):
+                        self._diagnostics.append(
+                            Diagnostic(
+                                range=entry.import_range,
+                                message=f'Library "{entry}" already imported.',
+                                severity=DiagnosticSeverity.INFORMATION,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                                related_information=[
+                                    DiagnosticRelatedInformation(
+                                        location=Location(
+                                            uri=str(Uri.from_path(allready_imported_library[0].import_source)),
+                                            range=allready_imported_library[0].import_range,
+                                        ),
+                                        message="",
+                                    )
+                                ],
+                            )
+                        )
+
                     self._libraries[entry.alias or entry.name or entry.import_name] = entry
                 # TODO Variables
 
     async def get_imports(self) -> List[Import]:
-        return await ImportVisitor().get(self.model)
+        return await ImportVisitor().get(self.source, self.model)
 
     async def _import_default_libraries(self) -> None:
         async def _import_lib(library: str) -> Optional[LibraryEntry]:
