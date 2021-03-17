@@ -57,7 +57,7 @@ RUN_KEYWORDS_NAME = "Run Keywords"
 
 RUN_KEYWORDS = [*RUN_KEYWORD_NAMES, *RUN_KEYWORD_WITH_CONDITION_NAMES, RUN_KEYWORDS_NAME, RUN_KEYWORD_IF_NAME]
 
-BUILTIN_LIBRARY_NAME = "BuiltIn"
+BUILTIN_LIBRARY_NAME = "robot.libraries.BuiltIn"
 
 
 def is_embedded_keyword(name: str) -> bool:
