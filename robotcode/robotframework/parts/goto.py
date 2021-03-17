@@ -108,7 +108,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     LocationLink(
                         origin_selection_range=range_from_token_or_node(node, result[1]),
                         target_uri=str(Uri.from_path(source)),
-                        target_range=result[0].range(),
+                        target_range=result[0].range().extended(0, 0, 3, 0),
                         target_selection_range=result[0].range(),
                     )
                 ]
@@ -141,7 +141,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     LocationLink(
                         origin_selection_range=range_from_token_or_node(node, result[1]),
                         target_uri=str(Uri.from_path(source)),
-                        target_range=result[0].range(),
+                        target_range=result[0].range().extended(0, 0, 3, 0),
                         target_selection_range=result[0].range(),
                     )
                 ]
@@ -166,14 +166,14 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 if namespace is None:
                     return None
 
-                keyword_doc = await namespace.find_keyword(node.value)
-                if keyword_doc is not None and keyword_doc.source is not None:
+                result = await namespace.find_keyword(node.value)
+                if result is not None and result.source is not None:
                     return [
                         LocationLink(
                             origin_selection_range=range_from_token_or_node(node, keyword_token),
-                            target_uri=str(Uri.from_path(keyword_doc.source)),
-                            target_range=keyword_doc.range(),
-                            target_selection_range=keyword_doc.range(),
+                            target_uri=str(Uri.from_path(result.source)),
+                            target_range=result.range().extended(0, 0, 3, 0),
+                            target_selection_range=result.range(),
                         )
                     ]
         return None
@@ -215,15 +215,15 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 ]
 
                 if len(libdocs) == 1:
-                    libdoc = libdocs[0]
-                    python_source = libdoc.python_source
+                    result = libdocs[0]
+                    python_source = result.python_source
                     if python_source is not None:
                         return [
                             LocationLink(
                                 origin_selection_range=range_from_token_or_node(library_node, name_token),
                                 target_uri=str(Uri.from_path(python_source)),
-                                target_range=libdoc.range(),
-                                target_selection_range=libdoc.range(),
+                                target_range=result.range().extended(0, 0, 3, 0),
+                                target_selection_range=result.range(),
                             )
                         ]
         return None
@@ -253,15 +253,15 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 ]
 
                 if len(libdocs) == 1:
-                    libdoc = libdocs[0]
-                    python_source = libdoc.python_source
+                    result = libdocs[0]
+                    python_source = result.python_source
                     if python_source is not None:
                         return [
                             LocationLink(
                                 origin_selection_range=range_from_token_or_node(resource_node, name_token),
                                 target_uri=str(Uri.from_path(python_source)),
-                                target_range=libdoc.range(),
-                                target_selection_range=libdoc.range(),
+                                target_range=result.range().extended(0, 0, 3, 0),
+                                target_selection_range=result.range(),
                             )
                         ]
         return None
