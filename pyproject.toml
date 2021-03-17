@@ -9,7 +9,7 @@ exclude = ["robotcode/external"]
 [tool.poetry.dependencies]
 python = "^3.8"
 robotframework = "^3.2.2"
-robotframework-robocop = "^1.5.0"
+
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.790"
@@ -30,6 +30,8 @@ pydantic = "^1.7.3"
 isort = "^5.7.0"
 pytest-cov = "^2.11.1"
 coverage = { extras = ["toml"], version = "^5.5" }
+robotframework-robocop = "^1.5.0"
+
 
 [tool.poetry-dynamic-versioning]
 enable = true

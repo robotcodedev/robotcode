@@ -69,7 +69,8 @@ _CompleteMethod = Callable[
     Awaitable[Optional[Optional[List[CompletionItem]]]],
 ]
 
-SECTIONS = ["test case", "test cases", "settings", "variables", "keywords", "comment"]
+SECTIONS = ["Test Case", "Test Cases", "Settings", "Variables", "Keywords", "Comment"]
+DEFAULT_SECTIONS_STYLE = "*** {name} ***"
 
 SETTINGS = [
     "Documentation",
@@ -93,7 +94,6 @@ SETTINGS = [
 
 TESTCASE_SETTINGS = ["Documentation", "Tags", "Setup", "Teardown", "Template", "Timeout"]
 KEYWORD_SETTINGS = ["Documentation", "Tags", "Arguments", "Return", "Teardown", "Timeout"]
-DEFAULT_SECTIONS_STYLE = "*** {name} ***"
 
 SNIPPETS = {
     "FOR": [r"FOR  \${${1}}  ${2|IN,IN ENUMERATE,IN RANGE,IN ZIP|}  ${3:arg}", "END", ""],

@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 from ..configuration import RoboCopConfig
+from .documents_cache import DocumentType
 from .protocol_part import RobotLanguageServerProtocolPart
 
 
@@ -103,9 +104,15 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         analyser = ModelRobocop(from_cli=False, config=config)
 
+        document_type = await self.parent.documents_cache.get_document_type(document)
+
         analyser.add_model(
             str(document.uri.to_path()),
-            FileType.GENERAL,
+            FileType.INIT
+            if document_type == DocumentType.INIT
+            else FileType.RESOURCE
+            if DocumentType.RESOURCE
+            else FileType.GENERAL,
             await self.parent.documents_cache.get_model(document),
             document.text,
         )

@@ -534,8 +534,13 @@ def get_library_doc(
             python_path=sys.path,
         )
 
+    library_name = import_name
+    library_name_path = Path(import_name)
+    if library_name_path.exists():
+        library_name = library_name_path.stem
+
     try:
-        lib = get_test_library(libcode, source, name, args, create_handlers=False)
+        lib = get_test_library(libcode, source, library_name, args, create_handlers=False)
     except BaseException as e:
         errors.append(
             error_from_exception(
@@ -546,7 +551,7 @@ def get_library_doc(
         )
 
         try:
-            lib = get_test_library(libcode, source, name, (), create_handlers=False)
+            lib = get_test_library(libcode, source, library_name, (), create_handlers=False)
         except BaseException as e:
             return LibraryDoc(
                 name=name,

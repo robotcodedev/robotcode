@@ -594,4 +594,4 @@ class ImportsManager:
     async def get_namespace_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> "Namespace":
         document = await self.get_document_for_resource_import(name, base_dir, sentinel)
 
-        return await self.parent_protocol.documents_cache.get_namespace(document)
+        return await self.parent_protocol.documents_cache.get_resource_namespace(document)

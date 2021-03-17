@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import enum
 import io
 import weakref
 from typing import TYPE_CHECKING, Iterator, List, Optional, cast
@@ -25,6 +26,13 @@ class UnknownFileTypeError(Exception):
     pass
 
 
+class DocumentType(enum.Enum):
+    UNKNOWN = "unknown"
+    GENERAL = "robot"
+    RESOURCE = "resource"
+    INIT = "init"
+
+
 class DocumentsCache(RobotLanguageServerProtocolPart):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
@@ -34,28 +42,41 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         self._imports_managers: weakref.WeakKeyDictionary[WorkspaceFolder, ImportsManager] = weakref.WeakKeyDictionary()
         self._default_imports_manager: Optional[ImportsManager] = None
 
+    async def get_document_type(self, document: TextDocument) -> DocumentType:
+        return await document.get_cache(self.__get_document_type)
+
+    async def __get_document_type(self, document: TextDocument) -> DocumentType:
+        path = document.uri.to_path()
+        suffix = path.suffix.lower()
+
+        if path.name == "__init__.robot":
+            return DocumentType.INIT
+        elif suffix == ".robot":
+            return DocumentType.GENERAL
+        elif suffix == ".resource":
+            return DocumentType.RESOURCE
+        else:
+            return DocumentType.UNKNOWN
+
     async def get_tokens(self, document: TextDocument) -> List[Token]:
         return await document.get_cache(self.__get_tokens)
 
     async def __get_tokens(self, document: TextDocument) -> List[Token]:
         import robot.api
 
+        document_type = await self.get_document_type(document)
+
         def get() -> List[Token]:
             gen_func: Iterator[Token]
 
             with io.StringIO(document.text) as content:
-                path = document.uri.to_path()
-                suffix = path.suffix.lower()
 
-                if path.name == "__init__.robot":
+                if document_type == DocumentType.INIT:
                     gen_func = robot.api.get_init_tokens(content)
-
-                elif suffix == ".robot":
+                elif document_type == DocumentType.GENERAL:
                     gen_func = robot.api.get_tokens(content)
-
-                elif suffix == ".resource":
+                elif document_type == DocumentType.RESOURCE:
                     gen_func = robot.api.get_resource_tokens(content)
-
                 else:
                     raise UnknownFileTypeError(str(document.uri))
 
@@ -64,33 +85,88 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         return await asyncio.get_event_loop().run_in_executor(None, get)
 
     async def get_model(self, document: TextDocument) -> ast.AST:
-        return await document.get_cache(self.__get_model)
+        document_type = await self.get_document_type(document)
 
-    async def __get_model(self, document: TextDocument) -> ast.AST:
+        if document_type == DocumentType.INIT:
+            return await self.get_init_model(document)
+        if document_type == DocumentType.GENERAL:
+            return await self.get_general_model(document)
+        if document_type == DocumentType.RESOURCE:
+            return await self.get_resource_model(document)
+        else:
+            raise UnknownFileTypeError(f"Unknown file type '{document.uri}'.")
+
+    async def get_general_model(self, document: TextDocument) -> ast.AST:
+        return await document.get_cache(self.__get_robot_model)
+
+    async def __get_robot_model(self, document: TextDocument) -> ast.AST:
         import robot.api
 
         def get() -> ast.AST:
             with io.StringIO(document.text) as content:
-                path = document.uri.to_path()
-                suffix = path.suffix.lower()
+                return cast(ast.AST, robot.api.get_model(content))
 
-                if path.name == "__init__.robot":
-                    model = cast(ast.AST, robot.api.get_init_model(content))
-                elif suffix in (".robot",):
-                    model = cast(ast.AST, robot.api.get_model(content))
-                elif suffix in (".resource", ".rst", ".rest"):
-                    model = cast(ast.AST, robot.api.get_resource_model(content))
-                else:
-                    raise UnknownFileTypeError(f"Unknown file type '{document.uri}'.")
+        model = await asyncio.get_event_loop().run_in_executor(None, get)
 
-                setattr(model, "source", str(path))
+        setattr(model, "source", str(document.uri.to_path()))
 
-                return model
+        return model
 
-        return await asyncio.get_event_loop().run_in_executor(None, get)
+    async def get_resource_model(self, document: TextDocument) -> ast.AST:
+        return await document.get_cache(self.__get_resource_model)
+
+    async def __get_resource_model(self, document: TextDocument) -> ast.AST:
+        import robot.api
+
+        def get() -> ast.AST:
+            with io.StringIO(document.text) as content:
+                return cast(ast.AST, robot.api.get_resource_model(content))
+
+        model = await asyncio.get_event_loop().run_in_executor(None, get)
+
+        setattr(model, "source", str(document.uri.to_path()))
+
+        return model
+
+    async def get_init_model(self, document: TextDocument) -> ast.AST:
+        return await document.get_cache(self.__get_init_model)
+
+    async def __get_init_model(self, document: TextDocument) -> ast.AST:
+        import robot.api
+
+        def get() -> ast.AST:
+            with io.StringIO(document.text) as content:
+                return cast(ast.AST, robot.api.get_init_model(content))
+
+        model = await asyncio.get_event_loop().run_in_executor(None, get)
+
+        setattr(model, "source", str(document.uri.to_path()))
+
+        return model
 
     async def get_namespace(self, document: TextDocument) -> Namespace:
         return await document.get_cache(self.__get_namespace)
+
+    async def __get_namespace(self, document: TextDocument) -> Namespace:
+        return await self.__get_namespace_for_document_type(document, None)
+
+    async def get_resource_namespace(self, document: TextDocument) -> Namespace:
+        return await document.get_cache(self.__get_resource_namespace)
+
+    async def __get_resource_namespace(self, document: TextDocument) -> Namespace:
+        return await self.__get_namespace_for_document_type(document, DocumentType.RESOURCE)
+
+    async def get_init_namespace(self, document: TextDocument) -> Namespace:
+        return await document.get_cache(self.__get_init_namespace)
+
+    async def __get_init_namespace(self, document: TextDocument) -> Namespace:
+        return await self.__get_namespace_for_document_type(document, DocumentType.INIT)
+
+    async def get_general_namespace(self, document: TextDocument) -> Namespace:
+        return await document.get_cache(self.__get_general_namespace)
+
+    async def __get_general_namespace(self, document: TextDocument) -> Namespace:
+        return await self.__get_namespace_for_document_type(document, DocumentType.GENERAL)
 
     @async_tasking_event
     async def namespace_invalidated(sender, document: TextDocument) -> None:
@@ -100,8 +176,18 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         await document.remove_cache_entry(self.__get_namespace)
         await self.namespace_invalidated(self, document)
 
-    async def __get_namespace(self, document: TextDocument) -> Namespace:
-        model = await self.get_model(document)
+    async def __get_namespace_for_document_type(
+        self, document: TextDocument, document_type: Optional[DocumentType]
+    ) -> Namespace:
+        if document_type is not None and document_type == DocumentType.INIT:
+            model = await self.get_init_model(document)
+        elif document_type is not None and document_type == DocumentType.RESOURCE:
+            model = await self.get_resource_model(document)
+        elif document_type is not None and document_type == DocumentType.RESOURCE:
+            model = await self.get_general_model(document)
+        else:
+            model = await self.get_model(document)
+
         imports_manager = await self.get_imports_manager(document)
 
         def invalidate(namespace: Namespace) -> None:
