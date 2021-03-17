@@ -39,7 +39,12 @@ from .imports_manager import (
     LibraryChangedParams,
     ResourceChangedParams,
 )
-from .library_doc import KeywordDoc, LibraryDoc, is_embedded_keyword
+from .library_doc import (
+    BUILTIN_LIBRARY_NAME,
+    KeywordDoc,
+    LibraryDoc,
+    is_embedded_keyword,
+)
 
 DIAGNOSTICS_SOURCE_NAME = "RobotCode"
 
@@ -733,6 +738,27 @@ class Namespace:
                                 )
 
                 else:
+                    if entry.name == BUILTIN_LIBRARY_NAME and entry.alias is None:
+                        self._diagnostics.append(
+                            Diagnostic(
+                                range=entry.import_range,
+                                message=f'Library "{entry}" is not imported,'
+                                ' because it would override the "BuiltIn" library.',
+                                severity=DiagnosticSeverity.INFORMATION,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                                related_information=[
+                                    DiagnosticRelatedInformation(
+                                        location=Location(
+                                            uri=str(Uri.from_path(entry.import_source)),
+                                            range=entry.import_range,
+                                        ),
+                                        message="",
+                                    )
+                                ],
+                            )
+                        )
+                        continue
+
                     allready_imported_library = [
                         e
                         for e in self._libraries.values()

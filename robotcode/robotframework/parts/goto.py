@@ -108,7 +108,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     LocationLink(
                         origin_selection_range=range_from_token_or_node(node, result[1]),
                         target_uri=str(Uri.from_path(source)),
-                        target_range=result[0].range().extended(0, 0, 3, 0),
+                        target_range=result[0].range(),
                         target_selection_range=result[0].range(),
                     )
                 ]
@@ -141,7 +141,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     LocationLink(
                         origin_selection_range=range_from_token_or_node(node, result[1]),
                         target_uri=str(Uri.from_path(source)),
-                        target_range=result[0].range().extended(0, 0, 3, 0),
+                        target_range=result[0].range(),
                         target_selection_range=result[0].range(),
                     )
                 ]
@@ -172,7 +172,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         LocationLink(
                             origin_selection_range=range_from_token_or_node(node, keyword_token),
                             target_uri=str(Uri.from_path(result.source)),
-                            target_range=result.range().extended(0, 0, 3, 0),
+                            target_range=result.range(),
                             target_selection_range=result.range(),
                         )
                     ]
@@ -222,7 +222,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                             LocationLink(
                                 origin_selection_range=range_from_token_or_node(library_node, name_token),
                                 target_uri=str(Uri.from_path(python_source)),
-                                target_range=result.range().extended(0, 0, 3, 0),
+                                target_range=result.range(),
                                 target_selection_range=result.range(),
                             )
                         ]
@@ -260,7 +260,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                             LocationLink(
                                 origin_selection_range=range_from_token_or_node(resource_node, name_token),
                                 target_uri=str(Uri.from_path(python_source)),
-                                target_range=result.range().extended(0, 0, 3, 0),
+                                target_range=result.range(),
                                 target_selection_range=result.range(),
                             )
                         ]

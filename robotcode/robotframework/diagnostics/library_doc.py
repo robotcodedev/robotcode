@@ -57,7 +57,7 @@ RUN_KEYWORDS_NAME = "Run Keywords"
 
 RUN_KEYWORDS = [*RUN_KEYWORD_NAMES, *RUN_KEYWORD_WITH_CONDITION_NAMES, RUN_KEYWORDS_NAME, RUN_KEYWORD_IF_NAME]
 
-BUILTIN_LIBRARY_NAME = "robot.libraries.BuiltIn"
+BUILTIN_LIBRARY_NAME = "BuiltIn"
 
 
 def is_embedded_keyword(name: str) -> bool:
@@ -542,14 +542,14 @@ def get_library_doc(
             python_path=sys.path,
         )
 
-    library_name = import_name
+    library_name = name
     library_name_path = Path(import_name)
     if library_name_path.exists():
         library_name = library_name_path.stem
 
     lib = None
     try:
-        lib = get_test_library(libcode, source, import_name, args, create_handlers=False)
+        lib = get_test_library(libcode, source, name, args, create_handlers=False)
     except BaseException as e:
         errors.append(
             error_from_exception(
