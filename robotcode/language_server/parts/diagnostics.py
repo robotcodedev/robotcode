@@ -197,19 +197,19 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 if not isinstance(result, asyncio.CancelledError):
                     self._logger.exception(result, exc_info=result)
             else:
-                if result.diagnostics:
-                    diagnostics[result.key] = result.diagnostics
-                    collected_keys.append(result.key)
 
-                    asyncio.get_event_loop().call_soon(
-                        self.parent.send_notification,
-                        "textDocument/publishDiagnostics",
-                        PublishDiagnosticsParams(
-                            uri=document.document_uri,
-                            version=document.version,
-                            diagnostics=[e for e in itertools.chain(*diagnostics.values())],
-                        ),
-                    )
+                diagnostics[result.key] = result.diagnostics if result.diagnostics else []
+                collected_keys.append(result.key)
+
+                asyncio.get_event_loop().call_soon(
+                    self.parent.send_notification,
+                    "textDocument/publishDiagnostics",
+                    PublishDiagnosticsParams(
+                        uri=document.document_uri,
+                        version=document.version,
+                        diagnostics=[e for e in itertools.chain(*diagnostics.values())],
+                    ),
+                )
 
         for k in set(diagnostics.keys()) - set(collected_keys):
             diagnostics.pop(k)
