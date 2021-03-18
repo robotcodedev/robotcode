@@ -24,7 +24,11 @@
     ],
     "activationEvents": [
         "onLanguage:robotframework",
-        "onCommand:robotcode.helloWorld"
+        "onCommand:robotcode.helloWorld",
+        "onCommand:robotcode.runTestcase",
+        "onCommand:robotcode.debugTestcase",
+        "onCommand:robotcode.runSuite",
+        "onCommand:robotcode.debugSuite"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -165,22 +169,38 @@
             {
                 "command": "robotcode.runSuite",
                 "category": "RobotCode",
-                "title": "Run Suite"
+                "title": "Run Suite",
+                "icon": {
+                    "light": "resources/light/run_suite.svg",
+                    "dark": "resources/dark/run_suite.svg"
+                }
             },
             {
                 "command": "robotcode.debugSuite",
                 "category": "RobotCode",
-                "title": "Debug Suite"
+                "title": "Debug Suite",
+                "icon": {
+                    "light": "resources/light/debug_suite.svg",
+                    "dark": "resources/dark/debug_suite.svg"
+                }
             },
             {
-                "command": "robotcode.runTestCase",
+                "command": "robotcode.runTest",
                 "category": "RobotCode",
-                "title": "Run Test Case"
+                "title": "Run Test",
+                "icon": {
+                    "light": "resources/light/run_test.svg",
+                    "dark": "resources/dark/run_test.svg"
+                }
             },
             {
-                "command": "robotcode.debugTestCase",
+                "command": "robotcode.debugTest",
                 "category": "RobotCode",
-                "title": "Debug Test Case"
+                "title": "Debug Test",
+                "icon": {
+                    "light": "resources/light/debug_test.svg",
+                    "dark": "resources/dark/debug_test.svg"
+                }
             }
         ],
         "menus": {
@@ -190,6 +210,26 @@
                     "title": "Run Testsuite",
                     "group": "1_run@1",
                     "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
+                },
+                {
+                    "command": "robotcode.debugSuite",
+                    "title": "Debug Testsuite",
+                    "group": "1_run@2",
+                    "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "command": "robotcode.runSuite",
+                    "title": "Run Testsuite",
+                    "group": "robot@1",
+                    "when": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder"
+                },
+                {
+                    "command": "robotcode.debugSuite",
+                    "title": "Debug Testsuite",
+                    "group": "robot@2",
+                    "when": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder"
                 }
             ]
         }

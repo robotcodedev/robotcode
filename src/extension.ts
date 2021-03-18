@@ -183,6 +183,26 @@ export async function activateAsync(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage('Hello World from robotcode! ' + pythonPath.execCommand.join());
     }));
 
+    context.subscriptions.push(vscode.commands.registerCommand('robotcode.runSuite', async (resource) => {
+
+        vscode.window.showInformationMessage(`robotcode.runSuite currently not implemented (${resource})`);
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('robotcode.debugSuite', async (resource) => {
+
+        vscode.window.showInformationMessage(`robotcode.debugSuite currently not implemented (${resource})`);
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('robotcode.runTest', async (resource, test) => {
+
+        vscode.window.showInformationMessage(`robotcode.runTest currently not implemented (${resource} - ${test})`);
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('robotcode.debugTest', async (resource, test) => {
+
+        vscode.window.showInformationMessage(`robotcode.debugTest currently not implemented (${resource} - ${test})`);
+    }));
+
     context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(startLanguageClientForDocument));
     vscode.workspace.textDocuments.forEach(startLanguageClientForDocument);
 

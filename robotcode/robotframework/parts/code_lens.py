@@ -24,27 +24,12 @@ def create_debug_suite_command(document: TextDocument) -> Command:
     return Command(title="Debug", command="robotcode.debugSuite", arguments=[str(document.uri)])
 
 
-def create_run_testcase_command(document: TextDocument, name: str) -> Command:
-    return Command(title="Run", command="robotcode.runTestCase", arguments=[str(document.uri), name])
+def create_run_test_command(document: TextDocument, name: str) -> Command:
+    return Command(title="Run", command="robotcode.runTest", arguments=[str(document.uri), name])
 
 
-def create_debug_testcase_command(document: TextDocument, name: str) -> Command:
-    return Command(title="Debug", command="robotcode.debugTestCase", arguments=[str(document.uri), name])
-
-
-class DebugSuiteCommand(Command):
-    title: str = "Debug"
-    command: str = "robotcode.debugSuite"
-
-
-class RunTestCaseCommand(Command):
-    title: str = "Run"
-    command: str = "robotcode.runTest"
-
-
-class DebugTestCaseCommand(Command):
-    title: str = "Debug"
-    command: str = "robotcode.debugTest"
+def create_debug_test_command(document: TextDocument, name: str) -> Command:
+    return Command(title="Debug", command="robotcode.debugTest", arguments=[str(document.uri), name])
 
 
 class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart):
@@ -104,12 +89,12 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart):
 
                 self.__append(
                     range_from_node(node),
-                    create_run_testcase_command(document, name),
+                    create_run_test_command(document, name),
                     None,
                 )
                 self.__append(
                     range_from_node(node),
-                    create_debug_testcase_command(document, name),
+                    create_debug_test_command(document, name),
                     None,
                 )
 

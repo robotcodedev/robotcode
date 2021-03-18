@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import asyncio
-import traceback
 import weakref
 from collections import OrderedDict
 from dataclasses import dataclass, field
