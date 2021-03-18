@@ -401,6 +401,7 @@ class ImportsManager:
     def __remove_library_entry(self, entry_key: _LibrariesEntryKey, entry: _LibrariesEntry, now: bool = False) -> None:
         async def threadsafe_remove(k: _LibrariesEntryKey, e: _LibrariesEntry, n: bool) -> None:
             if n or len(e.references) == 0:
+                self._logger.info(f"Remove Library Entry {k}")
                 async with self._libaries_lock:
                     await entry.invalidate()
                     self._libaries.pop(k, None)
@@ -412,6 +413,7 @@ class ImportsManager:
         async def threadsafe_remove(k: _ResourcesEntryKey, e: _ResourcesEntry, n: bool) -> None:
             if n or len(e.references) == 0:
                 async with self._resources_lock:
+                    self._logger.info(f"Remove Resurce Entry {k}")
                     await entry.invalidate()
                     self._resources.pop(k, None)
 
