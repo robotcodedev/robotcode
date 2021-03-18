@@ -17,6 +17,7 @@ from .parts.diagnostics import RobotDiagnosticsProtocolPart
 from .parts.document_symbols import RobotDocumentSymbolsProtocolPart
 from .parts.documents_cache import DocumentsCache
 from .parts.folding_range import RobotFoldingRangeProtocolPart
+from .parts.formatting import RobotFormattingProtocolPart
 from .parts.goto import RobotGotoProtocolPart
 from .parts.hover import RobotHoverProtocolPart
 from .parts.robocop_diagnostics import RobotRoboCopDiagnosticsProtocolPart
@@ -51,6 +52,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     _robot_code_lens = ProtocolPartDescriptor(RobotCodeLensProtocolPart)
     _robot_document_symbols = ProtocolPartDescriptor(RobotDocumentSymbolsProtocolPart)
     _robot_robocop_diagnostics = ProtocolPartDescriptor(RobotRoboCopDiagnosticsProtocolPart)
+    _robot_formatting = ProtocolPartDescriptor(RobotFormattingProtocolPart)
 
     symbol_information_label = "robotframework"
 

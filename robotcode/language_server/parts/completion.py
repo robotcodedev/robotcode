@@ -70,6 +70,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 trigger_characters=trigger_chars if trigger_chars else None,
                 all_commit_characters=commit_chars if commit_chars else None,
                 resolve_provider=len(self.resolve) > 0,
+                work_done_progress=True,
             )
 
     @rpc_method(name="textDocument/completion", param_type=CompletionParams)

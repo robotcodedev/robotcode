@@ -24,6 +24,7 @@ from .parts.diagnostics import DiagnosticsProtocolPart
 from .parts.document_symbols import DocumentSymbolsProtocolPart
 from .parts.documents import TextDocumentProtocolPart
 from .parts.folding_range import FoldingRangeProtocolPart
+from .parts.formatting import FormattingProtocolPart
 from .parts.hover import HoverProtocolPart
 from .parts.implementation import ImplementationProtocolPart
 from .parts.signature_help import SignatureHelpProtocolPart
@@ -74,6 +75,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     signature_help = ProtocolPartDescriptor(SignatureHelpProtocolPart)
     code_lens = ProtocolPartDescriptor(CodeLensProtocolPart)
     document_symbols = ProtocolPartDescriptor(DocumentSymbolsProtocolPart)
+    formatting = ProtocolPartDescriptor(FormattingProtocolPart)
 
     def __init__(self, server: JsonRPCServer[Any]):
         super().__init__(server)

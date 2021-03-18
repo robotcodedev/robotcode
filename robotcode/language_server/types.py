@@ -708,6 +708,26 @@ class CodeLensOptions(WorkDoneProgressOptions):
     resolve_provider: Optional[bool]
 
 
+class DocumentFormattingOptions(WorkDoneProgressOptions):
+    pass
+
+
+class DocumentFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentFormattingOptions):
+    pass
+
+
+class DocumentRangeFormattingOptions(WorkDoneProgressOptions):
+    pass
+
+
+class DocumentRangeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentRangeFormattingOptions):
+    pass
+
+
+class ExecuteCommandOptions(WorkDoneProgressOptions):
+    commands: List[str]
+
+
 class ServerCapabilities(Model):
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None]
     completion_provider: Optional[CompletionOptions] = None
@@ -723,11 +743,12 @@ class ServerCapabilities(Model):
     code_lens_provider: Optional[CodeLensOptions] = None
     # document_link_provider: Optional[DocumentLinkOptions] = None
     # color_provider: Union[bool, DocumentColorOptions, DocumentColorRegistrationOptions, None] = None
-    # document_formatting_provider: Union[bool, DocumentFormattingOptions, None] = None
-    # document_range_formatting_provider: Union[bool, DocumentRangeFormattingOptions, None] = None
+    document_formatting_provider: Union[bool, DocumentFormattingOptions, None] = None
+    document_range_formatting_provider: Union[bool, DocumentRangeFormattingOptions, None] = None
     # document_on_type_formatting_provider: Optional[DocumentOnTypeFormattingOptions] = None
     # rename_provider: Union[bool, RenameOptions, None] = None
     folding_range_provider: Union[bool, FoldingRangeOptions, FoldingRangeRegistrationOptions, None] = None
+    execute_command_provider: Optional[ExecuteCommandOptions] = None
     # selection_range_provider: Union[bool, SelectionRangeOptions, SelectionRangeRegistrationOptions, None] = None
     # linked_editing_range_provider: Union[
     #     boolean, LinkedEditingRangeOptions, LinkedEditingRangeRegistrationOptions, None
@@ -1333,3 +1354,22 @@ class SymbolInformation(Model):
     deprecated: Optional[bool] = None
     location: Location
     container_name: Optional[str]
+
+
+class FormattingOptions(Model):
+    tab_size: int
+    insert_spaces: bool
+    trim_trailing_whitespace: Optional[bool] = None
+    insert_final_newline: Optional[bool] = None
+    trim_final_newlines: Optional[bool] = None
+
+
+class DocumentFormattingParams(WorkDoneProgressParams):
+    text_document: TextDocumentIdentifier
+    options: FormattingOptions
+
+
+class DocumentRangeFormattingParams(WorkDoneProgressParams):
+    text_document: TextDocumentIdentifier
+    range: Range
+    options: FormattingOptions
