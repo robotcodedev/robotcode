@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "robotcode"
-version = "0.1.0-alpha.2.post"
+version = "0.1.0-alpha.3"
 description = ""
 authors = ["Daniel Biehl <daniel.biehl@imbus.de>"]
 include = ["robotcode/py.typed", "README.md"]
