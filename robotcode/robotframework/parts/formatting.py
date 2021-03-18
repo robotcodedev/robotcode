@@ -1,26 +1,13 @@
 from __future__ import annotations
 
-import os
 import io
-
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    List,
-    Optional,
-    cast,
-)
+import os
+from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from ...language_server.language import language_id
 from ...language_server.text_document import TextDocument
-from ...language_server.types import (
-    FormattingOptions,
-    Position,
-    Range,
-    TextEdit,
-)
+from ...language_server.types import FormattingOptions, Position, Range, TextEdit
 from ...utils.logging import LoggingDescriptor
-
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -49,8 +36,13 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self, sender: Any, document: TextDocument, options: FormattingOptions, **further_options: Any
     ) -> Optional[List[TextEdit]]:
 
-        from robot.tidypkg import Aligner, Cleaner, NewlineNormalizer, SeparatorNormalizer
         from robot.parsing.model.blocks import File
+        from robot.tidypkg import (
+            Aligner,
+            Cleaner,
+            NewlineNormalizer,
+            SeparatorNormalizer,
+        )
 
         model = cast(File, await self.parent.documents_cache.get_model(document))
 

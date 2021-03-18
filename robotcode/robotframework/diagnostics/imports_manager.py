@@ -405,7 +405,7 @@ class ImportsManager:
     def __remove_library_entry(self, entry_key: _LibrariesEntryKey, entry: _LibrariesEntry, now: bool = False) -> None:
         async def threadsafe_remove(k: _LibrariesEntryKey, e: _LibrariesEntry, n: bool) -> None:
             if n or len(e.references) == 0:
-                self._logger.info(lambda: f"Remove Library Entry {k}")
+                self._logger.debug(lambda: f"Remove Library Entry {k}")
                 async with self._libaries_lock:
                     await entry.invalidate()
                     self._libaries.pop(k, None)
@@ -417,7 +417,7 @@ class ImportsManager:
         async def threadsafe_remove(k: _ResourcesEntryKey, e: _ResourcesEntry, n: bool) -> None:
             if n or len(e.references) == 0:
                 async with self._resources_lock:
-                    self._logger.info(lambda: f"Remove Resource Entry {k}")
+                    self._logger.debug(lambda: f"Remove Resource Entry {k}")
                     await entry.invalidate()
                     self._resources.pop(k, None)
 
@@ -434,7 +434,7 @@ class ImportsManager:
             if entry_key not in self._libaries:
 
                 async def _get_libdoc() -> LibraryDoc:
-                    self._logger.info(lambda: f"Load Library {name}{repr(args)}")
+                    self._logger.debug(lambda: f"Load Library {name}{repr(args)}")
                     result = await asyncio.wait_for(
                         self._loop.run_in_executor(
                             self.process_pool,
@@ -569,7 +569,7 @@ class ImportsManager:
                 async def _get_document() -> TextDocument:
                     from robot.utils import FileReader, read_rest_data
 
-                    self._logger.info(lambda: f"Load resource {name}")
+                    self._logger.debug(lambda: f"Load resource {name}")
                     source = await self.find_file(name, base_dir or ".", "Resource")
 
                     source_path = Path(source)
