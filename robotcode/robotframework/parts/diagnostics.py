@@ -33,7 +33,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
 
     async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
-        await self.parent.diagnostics.start_publish_diagnostics_task(document.parent or document)
+        await self.parent.diagnostics.start_publish_diagnostics_task(document)
 
     def _create_error(self, node: ast.AST, msg: str, source: Optional[str] = None) -> Diagnostic:
         return Diagnostic(

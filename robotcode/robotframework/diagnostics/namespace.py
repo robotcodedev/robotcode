@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import traceback
 import weakref
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -19,6 +20,7 @@ from typing import (
     cast,
 )
 
+from ...language_server.text_document import TextDocument
 from ...language_server.types import (
     Diagnostic,
     DiagnosticRelatedInformation,
@@ -100,10 +102,26 @@ class LibraryImport(Import):
     args: Tuple[str, ...] = ()
     alias: Optional[str] = None
 
+    def __hash__(self) -> int:
+        return hash(
+            (
+                type(self),
+                self.name,
+                self.args,
+                self.alias,
+            )
+        )
+
 
 @dataclass
 class ResourceImport(Import):
-    pass
+    def __hash__(self) -> int:
+        return hash(
+            (
+                type(self),
+                self.name,
+            )
+        )
 
 
 @dataclass
@@ -198,7 +216,7 @@ class ImportVisitor(AsyncVisitor):
 
 
 class Analyzer(AsyncVisitor):
-    async def get(self, model: ast.AST, namespace: "Namespace") -> List[Diagnostic]:
+    async def get(self, model: ast.AST, namespace: Namespace) -> List[Diagnostic]:
         self._results: List[Diagnostic] = []
         self._namespace = namespace
         await self.visit(model)
@@ -480,6 +498,9 @@ class ResourceEntry(LibraryEntry):
     variables: List[str] = field(default_factory=lambda: [])
 
 
+IMPORTS_KEY = object()
+
+
 class Namespace:
     _logger = LoggingDescriptor()
 
@@ -489,8 +510,8 @@ class Namespace:
         imports_manager: ImportsManager,
         model: ast.AST,
         source: str,
-        sentinel: Any,
         invalidated_callback: Callable[[Namespace], None],
+        document: Optional[TextDocument] = None,
     ) -> None:
         super().__init__()
 
@@ -499,9 +520,8 @@ class Namespace:
         self.imports_manager.resources_changed.add(self.resources_changed)
         self.model = model
         self.source = source
-        self._sentinel = weakref.ref(sentinel)
         self.invalidated_callback = invalidated_callback
-
+        self.document = weakref.ref(document) if document is not None else None
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
         self._resources: OrderedDict[str, ResourceEntry] = OrderedDict()
         self._initialzed = False
@@ -556,8 +576,16 @@ class Namespace:
         if not self._initialzed:
             self._initialzed = True
 
+            imports = await self.get_imports()
+            if self.document is not None:
+                document = self.document()
+                if document is not None:
+                    old_imports = document.get_data(Namespace)
+                    if old_imports != imports:
+                        document.set_data(Namespace, imports)
+
             await self._import_default_libraries()
-            await self._import_imports(await self.get_imports(), str(Path(self.source).parent), add_diagnostics=True)
+            await self._import_imports(imports, str(Path(self.source).parent), add_diagnostics=True)
 
     async def _import_imports(self, imports: Iterable[Import], base_dir: str, *, add_diagnostics: bool = False) -> None:
         async def _import(value: Import) -> Optional[LibraryEntry]:
@@ -566,7 +594,9 @@ class Namespace:
                 if isinstance(value, LibraryImport):
                     if value.name is None:
                         raise NameSpaceError("Library setting requires value.")
-                    result = await self._get_library_entry(value.name, value.args, value.alias, base_dir)
+                    result = await self._get_library_entry(
+                        value.name, value.args, value.alias, base_dir, sentinel=value
+                    )
                     result.import_range = value.range()
                     result.import_source = value.source
 
@@ -582,7 +612,7 @@ class Namespace:
                 elif isinstance(value, ResourceImport):
                     if value.name is None:
                         raise NameSpaceError("Resource setting requires value.")
-                    result = await self._get_resource_entry(value.name, base_dir)
+                    result = await self._get_resource_entry(value.name, base_dir, sentinel=value)
                     result.import_range = value.range()
                     result.import_source = value.source
 
@@ -679,7 +709,7 @@ class Namespace:
                     self._diagnostics.append(
                         Diagnostic(
                             range=value.range(),
-                            message=str(e) or type(e).__name__,
+                            message=str(e),
                             severity=DiagnosticSeverity.ERROR,
                             source=DIAGNOSTICS_SOURCE_NAME,
                             code=type(e).__qualname__,
@@ -832,19 +862,24 @@ class Namespace:
                 self._libraries[e.alias or e.name or e.import_name] = e
 
     async def _get_library_entry(
-        self, name: str, args: Tuple[Any, ...], alias: Optional[str], base_dir: str, *, is_default_library: bool = False
+        self,
+        name: str,
+        args: Tuple[Any, ...],
+        alias: Optional[str],
+        base_dir: str,
+        *,
+        is_default_library: bool = False,
+        sentinel: Any = None,
     ) -> LibraryEntry:
         library = await self.imports_manager.get_libdoc_for_library_import(
-            name, args, base_dir=base_dir, sentinel=None if is_default_library else (self._sentinel())
+            name, args, base_dir=base_dir, sentinel=sentinel
         )
 
         return LibraryEntry(name=library.name, import_name=name, library_doc=library, args=args, alias=alias)
 
-    async def _get_resource_entry(self, name: str, base_dir: str) -> ResourceEntry:
+    async def _get_resource_entry(self, name: str, base_dir: str, sentinel: Any = None) -> ResourceEntry:
 
-        namespace = await self.imports_manager.get_namespace_for_resource_import(
-            name, base_dir, sentinel=self._sentinel()
-        )
+        namespace = await self.imports_manager.get_namespace_for_resource_import(name, base_dir, sentinel=sentinel)
 
         library_doc = await namespace.get_library_doc()
 

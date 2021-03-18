@@ -194,7 +194,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
             if self._loop.is_running():
                 asyncio.ensure_future(self.__invalidate_namespace(document, namespace))
 
-        return Namespace(imports_manager, model, str(document.uri.to_path()), document.parent or document, invalidate)
+        return Namespace(imports_manager, model, str(document.uri.to_path()), invalidate, document)
 
     @property
     def default_imports_manager(self) -> ImportsManager:

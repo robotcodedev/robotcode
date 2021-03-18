@@ -90,10 +90,10 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
     async def _text_document_did_close(self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any) -> None:
         document = self._documents.pop(text_document.uri, None)
 
-        self._logger.warning(lambda: f"Document {text_document.uri} is not opened.", condition=lambda: document is None)
-
         if document is not None:
             await self.did_close(self, document)
+
+            await document.clear()
 
     @rpc_method(name="textDocument/willSave", param_type=WillSaveTextDocumentParams)
     @_logger.call

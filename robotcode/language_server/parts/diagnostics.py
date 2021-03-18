@@ -28,7 +28,8 @@ class PublishDiagnosticsEntry:
 
     def __init__(self, document: TextDocument, task_factory: Callable[..., asyncio.Task[Any]]) -> None:
 
-        self._document = document
+        self._document_uri = document.uri
+
         self._task_factory = task_factory
 
         self._task: Optional[asyncio.Task[Any]] = None
@@ -38,7 +39,7 @@ class PublishDiagnosticsEntry:
             self._task = self._task_factory()
 
             if self._task is not None:
-                self._task.set_name(f"Diagnostics for {document}")
+                self._task.set_name(f"Diagnostics for {self.document_uri}")
 
                 def _done(t: asyncio.Task[Any]) -> None:
                     self._task = None
@@ -51,18 +52,18 @@ class PublishDiagnosticsEntry:
         self.cancel(_from_del=True)
 
     @property
-    def document(self) -> TextDocument:
-        return self._document
+    def document_uri(self) -> Uri:
+        return self._document_uri
 
     @property
     def task(self) -> Optional[asyncio.Task[Any]]:
         return self._task
 
     def __str__(self) -> str:
-        return f"{type(self)}(document={repr(self.document)}, task={repr(self.task)})"
+        return f"{type(self)}(document={repr(self.document_uri)}, task={repr(self.task)})"
 
     def __repr__(self) -> str:
-        return f"{type(self)}(document={repr(self.document)}, task={repr(self.task)})"
+        return f"{type(self)}(document={repr(self.document_uri)}, task={repr(self.task)})"
 
     @_logger.call(condition=lambda self, _from_del=False: not _from_del)
     def cancel(self, *, _from_del: Optional[bool] = False) -> None:

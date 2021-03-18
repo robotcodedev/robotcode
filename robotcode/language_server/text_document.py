@@ -18,7 +18,6 @@ from typing import (
     overload,
 )
 
-from ..utils.logging import LoggingDescriptor
 from ..utils.uri import Uri
 from .types import DocumentUri, Position, Range, TextDocumentItem
 
@@ -51,8 +50,6 @@ _T = TypeVar("_T")
 
 
 class TextDocument:
-    _logger = LoggingDescriptor()
-
     @overload
     def __init__(
         self,
@@ -97,9 +94,6 @@ class TextDocument:
         self.version = text_document.version if text_document is not None else version
         self._text = text_document.text if text_document is not None else text if text is not None else ""
 
-        self._parent: Optional[weakref.ReferenceType[TextDocument]] = None
-        if parent is not None:
-            self._parent = weakref.ref(parent)
         self._lines: Optional[List[str]] = None
 
         self._cache: Dict[weakref.ref[Any], Any] = {}
@@ -109,13 +103,6 @@ class TextDocument:
 
         self._loop = asyncio.get_event_loop()
 
-    @property
-    def parent(self) -> Optional[TextDocument]:
-        if self._parent is None:
-            return None
-
-        return self._parent()
-
     def __str__(self) -> str:
         return super().__str__()
 
@@ -124,7 +111,6 @@ class TextDocument:
             f"TextDocument(uri={repr(self.uri)}, "
             f"language_id={repr(self.language_id)}, "
             f"version={repr(self.version)}"
-            f"{', frozen=True' if self.parent is not None else '' }"
             f")"
         )
 
@@ -190,12 +176,11 @@ class TextDocument:
         return self._lines
 
     async def _invalidate_cache(self) -> None:
-        for e in self._cache.keys():
-            self._cache[e] = None
+        self._cache.clear()
 
     async def invalidate_cache(self) -> None:
         async with self._lock:
-            self._invalidate_cache()
+            await self._invalidate_cache()
 
     async def get_cache(
         self,
@@ -293,3 +278,8 @@ class TextDocument:
 
     def get_data(self, key: Any, default: Any = None) -> Any:
         return self._data.get(key, default)
+
+    async def clear(self) -> None:
+        async with self._lock:
+            await self._invalidate_cache()
+            self._data.clear()
