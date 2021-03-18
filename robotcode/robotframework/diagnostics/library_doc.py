@@ -1,14 +1,17 @@
 import importlib
+import io
 import os
 import re
 import sys
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 from types import ModuleType
 from typing import (
     AbstractSet,
     Any,
     Dict,
+    Iterator,
     List,
     NamedTuple,
     Optional,
@@ -258,6 +261,7 @@ class LibraryDoc(Model):
     module_spec: Optional[ModuleSpec] = None
     errors: Optional[List[Error]] = None
     python_path: Optional[List[str]] = None
+    stdout: Optional[str] = None
 
     def range(self) -> Range:
         return Range(
@@ -514,6 +518,24 @@ def built_variables(
     return result
 
 
+@contextmanager
+def _std_capture() -> Iterator[io.StringIO]:
+    old__stdout__ = sys.__stdout__
+    old__stderr__ = sys.__stderr__
+    old_stdout = sys.stdout
+    old_stderr = sys.stderr
+
+    capturer = sys.stdout = sys.__stdout__ = sys.stderr = sys.__stderr__ = io.StringIO()
+
+    try:
+        yield capturer
+    finally:
+        sys.stderr = old_stderr
+        sys.stdout = old_stdout
+        sys.__stderr__ = old__stderr__
+        sys.__stdout__ = old__stdout__
+
+
 def get_library_doc(
     name: str,
     args: Optional[Tuple[Any, ...]] = None,
@@ -556,132 +578,61 @@ def get_library_doc(
 
         return lib
 
-    _update_sys_path(working_dir, pythonpath)
+    with _std_capture() as std_capturer:
+        _update_sys_path(working_dir, pythonpath)
 
-    robot_variables = Variables()
-    for k, v in built_variables(working_dir, base_dir, variables).items():
-        robot_variables[k] = v
+        robot_variables = Variables()
+        for k, v in built_variables(working_dir, base_dir, variables).items():
+            robot_variables[k] = v
 
-    name = robot_variables.replace_string(name, ignore_errors=True)
+        name = robot_variables.replace_string(name, ignore_errors=True)
 
-    if name in STDLIBS:
-        import_name = "robot.libraries." + name
-    else:
-        import_name = name
+        if name in STDLIBS:
+            import_name = "robot.libraries." + name
+        else:
+            import_name = name
 
-    module_spec: Optional[ModuleSpec] = None
-    if is_library_by_path(import_name):
-        import_name = robot_find_file(import_name, base_dir or ".", "Library")
-    else:
-        module_spec = get_module_spec(import_name)
+        module_spec: Optional[ModuleSpec] = None
+        if is_library_by_path(import_name):
+            import_name = robot_find_file(import_name, base_dir or ".", "Library")
+        else:
+            module_spec = get_module_spec(import_name)
 
-    errors: List[Error] = []
+        errors: List[Error] = []
 
-    source = None
-    try:
-        libcode, source = import_test_library(import_name)
-    except BaseException as e:
-        return LibraryDoc(
-            name=name,
-            source=source,
-            errors=[
-                error_from_exception(
-                    e,
-                    source or module_spec.origin if module_spec is not None else None,
-                    1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
-                )
-            ],
-            module_spec=module_spec,
-            python_path=sys.path,
-        )
-
-    library_name = name
-    library_name_path = Path(import_name)
-    if library_name_path.exists():
-        library_name = library_name_path.stem
-
-    lib = None
-    try:
-        lib = get_test_library(
-            libcode,
-            source,
-            name,
-            args,
-            create_handlers=False,
-            variables=robot_variables,
-        )
-    except BaseException as e:
-        errors.append(
-            error_from_exception(
-                e,
-                source or module_spec.origin if module_spec is not None else None,
-                1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
-            )
-        )
-
-        if args:
-            try:
-                lib = get_test_library(libcode, source, library_name, (), create_handlers=False)
-            except BaseException:
-                pass
-
-    libdoc = LibraryDoc(
-        name=library_name,
-        source=lib.source if lib is not None else source,
-        module_spec=module_spec,
-        python_path=sys.path,
-    )
-
-    if lib is not None:
+        source = None
         try:
-
-            libdoc.inits = KeywordStore(
-                keywords={
-                    kw[0].name: KeywordDoc(
-                        name=libdoc.name,
-                        args=tuple(str(a) for a in kw[0].args),
-                        doc=kw[0].doc,
-                        tags=tuple(kw[0].tags),
-                        source=kw[0].source,
-                        line_no=kw[0].lineno,
-                        type="library",
-                        libname=kw[1].libname,
-                        longname=kw[1].longname,
+            libcode, source = import_test_library(import_name)
+        except BaseException as e:
+            return LibraryDoc(
+                name=name,
+                source=source,
+                errors=[
+                    error_from_exception(
+                        e,
+                        source or module_spec.origin if module_spec is not None else None,
+                        1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
                     )
-                    for kw in [(KeywordDocBuilder().build_keyword(k), k) for k in [KeywordWrapper(lib.init, source)]]
-                }
+                ],
+                module_spec=module_spec,
+                python_path=sys.path,
             )
 
-            libdoc.line_no = lib.lineno
-            libdoc.doc = str(lib.doc)
-            libdoc.version = str(lib.version)
-            libdoc.scope = str(lib.scope)
-            libdoc.doc_format = str(lib.doc_format)
+        library_name = name
+        library_name_path = Path(import_name)
+        if library_name_path.exists():
+            library_name = library_name_path.stem
 
-            lib.create_handlers()
-
-            libdoc.keywords = KeywordStore(
-                keywords={
-                    kw[0].name: KeywordDoc(
-                        name=kw[0].name,
-                        args=tuple(str(a) for a in kw[0].args),
-                        doc=kw[0].doc,
-                        tags=tuple(kw[0].tags),
-                        source=kw[0].source,
-                        line_no=kw[0].lineno,
-                        libname=kw[1].libname,
-                        longname=kw[1].longname,
-                        is_embedded=is_embedded_keyword(kw[0].name),
-                    )
-                    for kw in [
-                        (KeywordDocBuilder().build_keyword(k), k)
-                        for k in [KeywordWrapper(k, source) for k in lib.handlers]
-                    ]
-                }
+        lib = None
+        try:
+            lib = get_test_library(
+                libcode,
+                source,
+                name,
+                args,
+                create_handlers=False,
+                variables=robot_variables,
             )
-
-        except (SystemExit, KeyboardInterrupt):
-            raise
         except BaseException as e:
             errors.append(
                 error_from_exception(
@@ -691,8 +642,84 @@ def get_library_doc(
                 )
             )
 
-    if errors:
-        libdoc.errors = errors
+            if args:
+                try:
+                    lib = get_test_library(libcode, source, library_name, (), create_handlers=False)
+                except BaseException:
+                    pass
+
+        libdoc = LibraryDoc(
+            name=library_name,
+            source=lib.source if lib is not None else source,
+            module_spec=module_spec,
+            python_path=sys.path,
+        )
+
+        if lib is not None:
+            try:
+
+                libdoc.inits = KeywordStore(
+                    keywords={
+                        kw[0].name: KeywordDoc(
+                            name=libdoc.name,
+                            args=tuple(str(a) for a in kw[0].args),
+                            doc=kw[0].doc,
+                            tags=tuple(kw[0].tags),
+                            source=kw[0].source,
+                            line_no=kw[0].lineno,
+                            type="library",
+                            libname=kw[1].libname,
+                            longname=kw[1].longname,
+                        )
+                        for kw in [
+                            (KeywordDocBuilder().build_keyword(k), k) for k in [KeywordWrapper(lib.init, source)]
+                        ]
+                    }
+                )
+
+                libdoc.line_no = lib.lineno
+                libdoc.doc = str(lib.doc)
+                libdoc.version = str(lib.version)
+                libdoc.scope = str(lib.scope)
+                libdoc.doc_format = str(lib.doc_format)
+
+                lib.create_handlers()
+
+                libdoc.keywords = KeywordStore(
+                    keywords={
+                        kw[0].name: KeywordDoc(
+                            name=kw[0].name,
+                            args=tuple(str(a) for a in kw[0].args),
+                            doc=kw[0].doc,
+                            tags=tuple(kw[0].tags),
+                            source=kw[0].source,
+                            line_no=kw[0].lineno,
+                            libname=kw[1].libname,
+                            longname=kw[1].longname,
+                            is_embedded=is_embedded_keyword(kw[0].name),
+                        )
+                        for kw in [
+                            (KeywordDocBuilder().build_keyword(k), k)
+                            for k in [KeywordWrapper(k, source) for k in lib.handlers]
+                        ]
+                    }
+                )
+
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                errors.append(
+                    error_from_exception(
+                        e,
+                        source or module_spec.origin if module_spec is not None else None,
+                        1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
+                    )
+                )
+
+        if errors:
+            libdoc.errors = errors
+
+    libdoc.stdout = std_capturer.getvalue()
 
     return libdoc
 

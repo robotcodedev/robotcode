@@ -46,6 +46,10 @@ from .library_doc import (
 DEFAULT_LIBRARIES = ("BuiltIn", "Reserved", "Easter")
 RESOURCE_EXTENSIONS = (".resource", ".robot", ".txt", ".tsv", ".rst", ".rest")
 REST_EXTENSIONS = (".rst", ".rest")
+PROCESS_POOL_MAX_WORKERS = None
+
+LOAD_LIBRARY_TIME_OUT = 30
+FIND_FILE_TIME_OUT = 10
 
 
 @dataclass()
@@ -304,7 +308,7 @@ class _ResourcesEntry:
 
 # we need this, because ProcessPoolExecutor is not correctly initialized if asyncio is reading from stdin
 def _init_process_pool() -> ProcessPoolExecutor:
-    result = ProcessPoolExecutor()
+    result = ProcessPoolExecutor(max_workers=PROCESS_POOL_MAX_WORKERS)
     try:
         result.submit(init_pool).result(5)
     except BaseException:
@@ -430,6 +434,7 @@ class ImportsManager:
             if entry_key not in self._libaries:
 
                 async def _get_libdoc() -> LibraryDoc:
+                    self._logger.info(f"Load Library {name}")
                     result = await asyncio.wait_for(
                         self._loop.run_in_executor(
                             self.process_pool,
@@ -440,9 +445,11 @@ class ImportsManager:
                             base_dir,
                             self.config.pythonpath if self.config is not None else None,
                         ),
-                        30,
+                        LOAD_LIBRARY_TIME_OUT,
                     )
 
+                    if result.stdout:
+                        self._logger.warning(f"stdout captured at loading library {name}:\n{result.stdout}")
                     return result
 
                 self._libaries[entry_key] = entry = _LibrariesEntry(name, args, self, _get_libdoc)
@@ -546,7 +553,7 @@ class ImportsManager:
                 self.config.pythonpath if self.config is not None else None,
                 file_type,
             ),
-            30,
+            FIND_FILE_TIME_OUT,
         )
 
     @_logger.call
@@ -560,6 +567,7 @@ class ImportsManager:
                 async def _get_document() -> TextDocument:
                     from robot.utils import FileReader, read_rest_data
 
+                    self._logger.info(f"Load resource {name}")
                     source = await self.find_file(name, base_dir or ".", "Resource")
 
                     source_path = Path(source)
