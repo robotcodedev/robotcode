@@ -4,7 +4,7 @@
     "description": "Robot Framework support for Visual Studio Code",
     "icon": "images/icon.png",
     "publisher": "d-biehl",
-    "version": "0.1.0-alpha.1",
+    "version": "0.1.0-alpha.2",
     "repository": {
         "type": "git",
         "url": "https://github.com/d-biehl/robotcode.git"
