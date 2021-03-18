@@ -35,11 +35,10 @@ from ...utils.logging import LoggingDescriptor
 from ..configuration import SyntaxConfig
 from ..utils.ast import (
     Token,
-    range_from_node,
+    get_nodes_at_position,
     range_from_token,
     whitespace_at_begin_of_token,
 )
-from ..utils.async_ast import walk
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -142,11 +141,7 @@ class CompletionCollector:
         self, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
 
-        result_nodes = [
-            node
-            async for node in walk(await self.parent.documents_cache.get_model(self.document))
-            if position.is_in_range(range := range_from_node(node)) or range.end == position
-        ]
+        result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(self.document), position)
 
         result_nodes.reverse()
 

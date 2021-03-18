@@ -20,11 +20,10 @@ from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
 from ..utils.ast import (
     Token,
-    range_from_node,
+    get_node_at_position,
     range_from_token,
     range_from_token_or_node,
 )
-from ..utils.async_ast import walk
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -65,13 +64,8 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     async def collect(
         self, sender: Any, document: TextDocument, position: Position
     ) -> Union[Location, List[Location], List[LocationLink], None]:
-        result_nodes = [
-            node
-            async for node in walk(await self.parent.documents_cache.get_model(document))
-            if position.is_in_range(range_from_node(node))
-        ]
 
-        result_node = result_nodes[-1] if result_nodes else None
+        result_node = await get_node_at_position(await self.parent.documents_cache.get_model(document), position)
 
         if result_node is None:
             return None

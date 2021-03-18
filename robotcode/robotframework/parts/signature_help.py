@@ -33,11 +33,11 @@ from ...utils.logging import LoggingDescriptor
 from ..diagnostics.library_doc import KeywordDoc
 from ..utils.ast import (
     Token,
-    range_from_node,
+    get_node_at_position,
+    get_tokens_at_position,
     range_from_token,
     whitespace_at_begin_of_token,
 )
-from ..utils.async_ast import walk
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -78,13 +78,10 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
     ) -> Optional[SignatureHelp]:
-        result_nodes = [
-            node
-            async for node in walk(await self.parent.documents_cache.get_model(document))
-            if position.is_in_range(range_from_node(node))
-        ]
 
-        result_node = result_nodes[-1] if result_nodes else None
+        result_node = await get_node_at_position(await self.parent.documents_cache.get_model(document), position)
+        if result_node is None:
+            return None
 
         if result_node is None:
             return None
@@ -112,7 +109,8 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         kw_node = cast(Statement, node)
 
-        tokens_at_position = [cast(Token, t) for t in kw_node.tokens if position.is_in_range(range_from_token(t))]
+        tokens_at_position = get_tokens_at_position(kw_node, position)
+
         if not tokens_at_position:
             return None
 
@@ -177,7 +175,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             argument_index = -1
 
         signature = SignatureInformation(
-            label=result[0].parameter_signature,
+            label=result[0].signature,
             parameters=[ParameterInformation(label=str(p)) for p in result[0].args],
             active_parameter=min(argument_index, len(result[0].args) - 1),
             documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=result[0].to_markdown(False)),
@@ -232,7 +230,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         except BaseException:
             return None
 
-        tokens_at_position = [cast(Token, t) for t in library_node.tokens if position.is_in_range(range_from_token(t))]
+        tokens_at_position = tokens_at_position = get_tokens_at_position(library_node, position)
         if not tokens_at_position:
             return None
 

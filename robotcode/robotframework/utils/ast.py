@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import ast
-from typing import Iterator, Optional, Protocol, runtime_checkable
+from typing import Any, Iterator, List, Optional, Protocol, Tuple, runtime_checkable
 
 from ...language_server.types import Position, Range
+from .async_ast import walk
 
 
 def range_from_node(node: ast.AST) -> Range:
@@ -29,6 +30,39 @@ class Token(Protocol):
         ...
 
     def tokenize_variables(self) -> Iterator[Token]:
+        ...
+
+
+@runtime_checkable
+class Statement(Protocol):
+    tokens: Tuple[Token, ...]
+
+    def get_token(self, type: str) -> Token:
+        ...
+
+    def get_tokens(self, *types: str) -> Tuple[Token, ...]:
+        ...
+
+    def get_value(self, type: str, default: Any = None) -> Any:
+        ...
+
+    def get_values(self, *types: str) -> Tuple[Any, ...]:
+        ...
+
+    @property
+    def lineno(self) -> int:
+        ...
+
+    @property
+    def col_offset(self) -> int:
+        ...
+
+    @property
+    def end_lineno(self) -> int:
+        ...
+
+    @property
+    def end_col_offset(self) -> int:
         ...
 
 
@@ -74,3 +108,19 @@ def whitespace_at_begin_of_token(token: Token) -> int:
         else:
             break
     return result
+
+
+def get_tokens_at_position(node: Statement, position: Position) -> List[Token]:
+    return [t for t in node.tokens if position.is_in_range(range := range_from_token(t)) or range.end == position]
+
+
+async def get_nodes_at_position(node: ast.AST, position: Position) -> List[ast.AST]:
+    return [n async for n in walk(node) if position.is_in_range(range := range_from_node(n)) or range.end == position]
+
+
+async def get_node_at_position(node: ast.AST, position: Position) -> Optional[ast.AST]:
+    result_nodes = await get_nodes_at_position(node, position)
+    if not result_nodes:
+        return None
+
+    return result_nodes[-1]
