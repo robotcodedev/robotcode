@@ -66,6 +66,9 @@ RUN_KEYWORDS = [*RUN_KEYWORD_NAMES, *RUN_KEYWORD_WITH_CONDITION_NAMES, RUN_KEYWO
 
 BUILTIN_LIBRARY_NAME = "BuiltIn"
 
+DEFAULT_LIBRARIES = (BUILTIN_LIBRARY_NAME, "Reserved", "Easter")
+ROBOT_LIBRARY_PACKAGE = "robot.libraries"
+
 
 def is_embedded_keyword(name: str) -> bool:
     from robot.errors import VariableError
@@ -477,7 +480,7 @@ def error_from_exception(ex: BaseException, default_source: Optional[str], defau
     )
 
 
-def built_variables(
+def init_builtin_variables(
     working_dir: str = ".", base_dir: str = ".", variables: Optional[Dict[str, Optional[Any]]] = None
 ) -> Dict[str, Optional[Any]]:
     result = {
@@ -585,13 +588,13 @@ def get_library_doc(
         _update_sys_path(working_dir, pythonpath)
 
         robot_variables = Variables()
-        for k, v in built_variables(working_dir, base_dir, variables).items():
+        for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
             robot_variables[k] = v
 
         name = robot_variables.replace_string(name, ignore_errors=True)
 
         if name in STDLIBS:
-            import_name = "robot.libraries." + name
+            import_name = ROBOT_LIBRARY_PACKAGE + "." + name
         else:
             import_name = name
 
@@ -741,7 +744,7 @@ def find_file(
     _update_sys_path(working_dir, pythonpath)
 
     robot_variables = Variables()
-    for k, v in built_variables(working_dir, base_dir, variables).items():
+    for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
         robot_variables[k] = v
 
     name = robot_variables.replace_string(name, ignore_errors=True)
@@ -769,27 +772,53 @@ def iter_module_names(name: Optional[str] = None) -> Iterator[str]:
         yield e.name
 
 
+def is_file_like(name: Optional[str]) -> bool:
+    return name is not None and (
+        name.startswith(".") or name.startswith("/") or name.startswith(os.sep) or "/" in name or os.sep in name
+    )
+
+
+class CompleteResult(NamedTuple):
+    label: str
+    detail: str
+
+
 def complete_library_import(
     name: Optional[str],
     working_dir: str = ".",
     base_dir: str = ".",
     pythonpath: Optional[List[str]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
-) -> Optional[List[str]]:
+) -> Optional[List[CompleteResult]]:
     from robot.variables import Variables
 
     _update_sys_path(working_dir, pythonpath)
 
+    result: List[CompleteResult] = []
+
+    if name is None:
+        result += [
+            CompleteResult(e, "Library (Internal)")
+            for e in iter_module_names(ROBOT_LIBRARY_PACKAGE)
+            if e not in DEFAULT_LIBRARIES
+        ]
+
     if name is not None:
         robot_variables = Variables()
-        for k, v in built_variables(working_dir, base_dir, variables).items():
+        for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
             robot_variables[k] = v
 
         name = robot_variables.replace_string(name, ignore_errors=True)
 
-    modules = [e for e in iter_module_names(name)]
+    if name is None or not is_file_like(name):
+        result += [CompleteResult(e, "Library") for e in iter_module_names(name)]
 
-    return modules
+    if name is None or (is_file_like(name) and (name.endswith("/") or name.endswith(os.sep))):
+        path = Path(base_dir, name if name else base_dir).resolve()
+        if path.exists() and path.is_dir():
+            result += [CompleteResult(str(f.name), "File" if f.is_file() else "Directory") for f in path.iterdir()]
+
+    return result
 
 
 def init_pool() -> None:

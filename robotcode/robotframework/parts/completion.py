@@ -136,7 +136,7 @@ class CompletionCollector:
         return None
 
     @language_id("robotframework")
-    @trigger_characters([" ", "*", "\t", "."])
+    @trigger_characters([" ", "*", "\t", ".", "/"])
     # @all_commit_characters(['\n'])
     async def collect(
         self, position: Position, context: Optional[CompletionContext]
@@ -679,6 +679,9 @@ class CompletionCollector:
         pos = position.character - r.start.character
         text_before_position = str(name_token.value)[:pos].lstrip()
 
+        if text_before_position != "" and all(c == "." for c in text_before_position):
+            return None
+
         last_seperator_index = (
             len(text_before_position)
             - next((i for i, c in enumerate(reversed(text_before_position)) if c in ["/", ".", os.sep]), -1)
@@ -686,7 +689,11 @@ class CompletionCollector:
         )
 
         library_part = (
-            text_before_position[:last_seperator_index] if last_seperator_index < len(text_before_position) else None
+            text_before_position[
+                : last_seperator_index + (1 if text_before_position[last_seperator_index] in ["/", os.sep] else 0)
+            ]
+            if last_seperator_index < len(text_before_position)
+            else None
         )
 
         imports_manger = await self.parent.documents_cache.get_imports_manager(self.document)
@@ -704,12 +711,12 @@ class CompletionCollector:
 
         return [
             CompletionItem(
-                label=e,
+                label=e.label,
                 kind=CompletionItemKind.MODULE,
-                detail="Library",
+                detail=e.detail,
                 sort_text=f"030_{e}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
-                text_edit=TextEdit(range=r, new_text=e) if r is not None else None,
+                text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
             )
             for e in list
         ]

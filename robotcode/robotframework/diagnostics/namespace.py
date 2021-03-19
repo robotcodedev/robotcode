@@ -34,14 +34,10 @@ from ...utils.uri import Uri
 from ..utils.ast import Token as AstToken
 from ..utils.ast import is_non_variable_token, range_from_token_or_node
 from ..utils.async_ast import AsyncVisitor
-from .imports_manager import (
-    DEFAULT_LIBRARIES,
-    ImportsManager,
-    LibraryChangedParams,
-    ResourceChangedParams,
-)
+from .imports_manager import ImportsManager, LibraryChangedParams, ResourceChangedParams
 from .library_doc import (
     BUILTIN_LIBRARY_NAME,
+    DEFAULT_LIBRARIES,
     KeywordDoc,
     LibraryDoc,
     is_embedded_keyword,

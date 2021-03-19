@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from .namespace import Namespace
 
 from .library_doc import (
+    CompleteResult,
     Error,
     KeywordDoc,
     KeywordStore,
@@ -44,7 +45,6 @@ from .library_doc import (
     is_embedded_keyword,
 )
 
-DEFAULT_LIBRARIES = ("BuiltIn", "Reserved", "Easter")
 RESOURCE_EXTENSIONS = (".resource", ".robot", ".txt", ".tsv", ".rst", ".rest")
 REST_EXTENSIONS = (".rst", ".rest")
 PROCESS_POOL_MAX_WORKERS = None
@@ -611,7 +611,7 @@ class ImportsManager:
 
         return await self.parent_protocol.documents_cache.get_resource_namespace(document)
 
-    async def complete_library_import(self, name: Optional[str], base_dir: str = ".") -> Optional[List[str]]:
+    async def complete_library_import(self, name: Optional[str], base_dir: str = ".") -> Optional[List[CompleteResult]]:
         result = await asyncio.wait_for(
             self._loop.run_in_executor(
                 self.process_pool,
