@@ -2,6 +2,7 @@ from __future__ import annotations, print_function
 
 import ast
 import builtins
+import os
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -645,3 +646,70 @@ class CompletionCollector:
     ) -> Union[List[CompletionItem], CompletionList, None]:
 
         return await self.complete_Setup_or_Teardown_or_Template(node, nodes_at_position, position, context)
+
+    async def complete_LibraryImport(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        from robot.parsing.lexer.tokens import Token
+        from robot.parsing.model.statements import LibraryImport
+
+        library_node = cast(LibraryImport, node)
+        library_token = library_node.get_token(Token.LIBRARY)
+        library_index = library_node.tokens.index(library_token)
+
+        if len(library_node.tokens) > library_index + 2:
+            name_token = library_node.tokens[library_index + 2]
+            if not position.is_in_range(r := range_from_token(name_token)) and r.end != position:
+                return None
+
+        elif len(library_node.tokens) > library_index + 1:
+            name_token = library_node.tokens[library_index + 1]
+            if position.is_in_range(r := range_from_token(name_token)) or r.end == position:
+                if whitespace_at_begin_of_token(name_token) > 1:
+                    r.start.character += 2
+                    if not position.is_in_range(r := range_from_token(name_token)) and r.end != position:
+                        return None
+        else:
+            return None
+
+        pos = position.character - r.start.character
+        text_before_position = str(name_token.value)[:pos].lstrip()
+
+        last_seperator_index = (
+            len(text_before_position)
+            - next((i for i, c in enumerate(reversed(text_before_position)) if c in ["/", ".", os.sep]), -1)
+            - 1
+        )
+
+        library_part = (
+            text_before_position[:last_seperator_index] if last_seperator_index < len(text_before_position) else None
+        )
+
+        imports_manger = await self.parent.documents_cache.get_imports_manager(self.document)
+
+        list = await imports_manger.complete_library_import(
+            library_part if library_part else None, str(self.document.uri.to_path().parent)
+        )
+        if not list:
+            return None
+
+        if text_before_position == "":
+            r.start.character = position.character
+        else:
+            r.start.character += last_seperator_index + 1 if last_seperator_index < len(text_before_position) else 0
+
+        return [
+            CompletionItem(
+                label=e,
+                kind=CompletionItemKind.MODULE,
+                detail="Library",
+                sort_text=f"030_{e}",
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(range=r, new_text=e) if r is not None else None,
+            )
+            for e in list
+        ]

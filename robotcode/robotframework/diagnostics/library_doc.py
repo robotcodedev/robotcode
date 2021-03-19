@@ -1,6 +1,8 @@
 import importlib
+import importlib.util
 import io
 import os
+import pkgutil
 import re
 import sys
 import tempfile
@@ -35,6 +37,7 @@ __all__ = [
     "get_library_doc",
     "find_file",
     "is_embedded_keyword",
+    "complete_library_import",
 ]
 
 
@@ -746,5 +749,49 @@ def find_file(
     return cast(str, robot_find_file(name, base_dir or ".", file_type))
 
 
+def iter_module_names(name: Optional[str] = None) -> Iterator[str]:
+    if name is not None:
+        spec = importlib.util.find_spec(name)
+        if spec is None:
+            return
+    else:
+        spec = None
+
+    if spec is None:
+        for e in pkgutil.iter_modules():
+            yield e.name
+        return
+
+    if spec.submodule_search_locations is None:
+        return
+
+    for e in pkgutil.iter_modules(spec.submodule_search_locations):
+        yield e.name
+
+
+def complete_library_import(
+    name: Optional[str],
+    working_dir: str = ".",
+    base_dir: str = ".",
+    pythonpath: Optional[List[str]] = None,
+    variables: Optional[Dict[str, Optional[Any]]] = None,
+) -> Optional[List[str]]:
+    from robot.variables import Variables
+
+    _update_sys_path(working_dir, pythonpath)
+
+    if name is not None:
+        robot_variables = Variables()
+        for k, v in built_variables(working_dir, base_dir, variables).items():
+            robot_variables[k] = v
+
+        name = robot_variables.replace_string(name, ignore_errors=True)
+
+    modules = [e for e in iter_module_names(name)]
+
+    return modules
+
+
 def init_pool() -> None:
+    """Dummy function to initialize the ProcessPollExecutor"""
     pass

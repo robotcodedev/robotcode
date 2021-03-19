@@ -580,8 +580,17 @@ class Namespace:
                 document = self.document()
                 if document is not None:
                     old_imports = document.get_data(Namespace)
-                    if old_imports != imports:
+                    if old_imports is None:
                         document.set_data(Namespace, imports)
+                    elif old_imports != imports:
+                        new_imports = []
+                        for e in old_imports:
+                            if e in imports:
+                                new_imports.append(e)
+                        for e in imports:
+                            if e not in new_imports:
+                                new_imports.append(e)
+                        document.set_data(Namespace, new_imports)
 
             await self._import_default_libraries()
             await self._import_imports(imports, str(Path(self.source).parent), add_diagnostics=True)

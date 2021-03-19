@@ -37,6 +37,7 @@ from .library_doc import (
     KeywordDoc,
     KeywordStore,
     LibraryDoc,
+    complete_library_import,
     find_file,
     get_library_doc,
     init_pool,
@@ -50,6 +51,7 @@ PROCESS_POOL_MAX_WORKERS = None
 
 LOAD_LIBRARY_TIME_OUT = 30
 FIND_FILE_TIME_OUT = 10
+COMPLETE_LIBRARY_IMPORT_TIME_OUT = 5
 
 
 @dataclass()
@@ -608,3 +610,18 @@ class ImportsManager:
         document = await self.get_document_for_resource_import(name, base_dir, sentinel)
 
         return await self.parent_protocol.documents_cache.get_resource_namespace(document)
+
+    async def complete_library_import(self, name: Optional[str], base_dir: str = ".") -> Optional[List[str]]:
+        result = await asyncio.wait_for(
+            self._loop.run_in_executor(
+                self.process_pool,
+                complete_library_import,
+                name,
+                str(self.folder.to_path()),
+                base_dir,
+                self.config.pythonpath if self.config is not None else None,
+            ),
+            COMPLETE_LIBRARY_IMPORT_TIME_OUT,
+        )
+
+        return result
