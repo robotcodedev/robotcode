@@ -104,7 +104,31 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                     is_incomplete=any(e for e in results if isinstance(e, CompletionList) and e.is_incomplete),
                     items=[e for e in chain(*[r.items if isinstance(r, CompletionList) else r for r in results])],
                 )
+                return result
             else:
                 return [cast(CompletionItem, e) for e in chain(*results)]
 
         return None
+
+    @rpc_method(name="completionItem/resolve", param_type=CompletionItem)
+    async def _completion_item_resolve(
+        self,
+        params: CompletionItem,
+    ) -> CompletionItem:
+
+        results: List[CompletionItem] = []
+
+        for result in await self.resolve(self, params):
+            if isinstance(result, BaseException):
+                self._logger.exception(result, exc_info=result)
+            else:
+                if result is not None:
+                    results.append(result)
+
+        if len(results) > 0:
+            if len(results) > 1:
+                self._logger.warning("More then one resolve result. Use the last one.")
+
+            return results[-1]
+
+        return params

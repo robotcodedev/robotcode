@@ -1,6 +1,7 @@
-from __future__ import annotations, print_function
+from __future__ import annotations
 
 import ast
+import asyncio
 import builtins
 import os
 from typing import (
@@ -54,6 +55,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         super().__init__(parent)
 
         parent.completion.collect.add(self.collect)
+        parent.completion.resolve.add(self.resolve)
 
     @language_id("robotframework")
     @trigger_characters([" ", "*", "\t", "."])
@@ -62,6 +64,12 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         self, sender: Any, document: TextDocument, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
         return await CompletionCollector(self.parent, document).collect(position, context)
+
+    @language_id("robotframework")
+    @trigger_characters([" ", "*", "\t", "."])
+    # @all_commit_characters(['\n'])
+    async def resolve(self, sender: Any, completion_item: CompletionItem) -> CompletionItem:
+        return await CompletionCollector(self.parent).resolve(completion_item)
 
 
 _CompleteMethod = Callable[
@@ -104,13 +112,13 @@ SNIPPETS = {
 class CompletionCollector:
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: RobotLanguageServerProtocol, document: TextDocument) -> None:
+    def __init__(self, parent: RobotLanguageServerProtocol, document: Optional[TextDocument] = None) -> None:
         self.parent = parent
         self._section_style: Optional[str] = None
         self.document = document
 
     async def get_section_style(self) -> str:
-        if self._section_style is None:
+        if self.document is not None and self._section_style is None:
             folder = self.parent.workspace.get_workspace_folder(self.document.uri)
             if folder is None:
                 self._section_style = DEFAULT_SECTIONS_STYLE
@@ -142,6 +150,9 @@ class CompletionCollector:
         self, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
 
+        if self.document is None:
+            return []
+
         result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(self.document), position)
 
         result_nodes.reverse()
@@ -160,7 +171,10 @@ class CompletionCollector:
             if r is not None:
                 yield r
 
-        return [e async for e in async_chain_iterator(iter_results())]
+        result = CompletionList(is_incomplete=False, items=[e async for e in async_chain_iterator(iter_results())])
+        if not result.items:
+            return None
+        return result
 
     async def create_section_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
         style = await self.get_section_style()
@@ -241,6 +255,8 @@ class CompletionCollector:
         position: Position,
     ) -> List[CompletionItem]:
         result: List[CompletionItem] = []
+        if self.document is None:
+            return []
 
         namespace = await self.parent.documents_cache.get_namespace(self.document)
         if namespace is None:
@@ -276,9 +292,15 @@ class CompletionCollector:
                                 kind=CompletionItemKind.FUNCTION,
                                 detail="Keyword",
                                 sort_text=f"020_{kw.name}",
-                                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=kw.to_markdown()),
+                                # documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=kw.to_markdown()),
                                 insert_text_format=InsertTextFormat.PLAINTEXT,
                                 text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
+                                data={
+                                    "document_uri": str(self.document.uri),
+                                    "type": "Keyword",
+                                    "libname": kw.libname,
+                                    "name": kw.name,
+                                },
                             )
                             result.append(c)
                         return result
@@ -289,9 +311,15 @@ class CompletionCollector:
                 kind=CompletionItemKind.FUNCTION,
                 detail=f"Keyword {f'({kw.libname})' if kw.libname is not None else ''}",
                 sort_text=f"020_{kw.name}",
-                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=kw.to_markdown()),
+                # documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=kw.to_markdown()),
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
+                data={
+                    "document_uri": str(self.document.uri),
+                    "type": "Keyword",
+                    "libname": kw.libname,
+                    "name": kw.name,
+                },
             )
             result.append(c)
 
@@ -657,6 +685,9 @@ class CompletionCollector:
         from robot.parsing.lexer.tokens import Token
         from robot.parsing.model.statements import LibraryImport
 
+        if self.document is None:
+            return []
+
         library_node = cast(LibraryImport, node)
         library_token = library_node.get_token(Token.LIBRARY)
         library_index = library_node.tokens.index(library_token)
@@ -696,6 +727,8 @@ class CompletionCollector:
             else None
         )
 
+        sep = text_before_position[last_seperator_index] if last_seperator_index < len(text_before_position) else ""
+
         imports_manger = await self.parent.documents_cache.get_imports_manager(self.document)
 
         list = await imports_manger.complete_library_import(
@@ -717,6 +750,58 @@ class CompletionCollector:
                 sort_text=f"030_{e}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
+                data={
+                    "document_uri": str(self.document.uri),
+                    "type": e.detail,
+                    "name": ((library_part + sep) if library_part is not None else "") + e.label,
+                },
             )
             for e in list
         ]
+
+    async def resolve(self, completion_item: CompletionItem) -> CompletionItem:
+        if completion_item.data is not None:
+            document_uri = completion_item.data.get("document_uri", None)
+            if document_uri is not None:
+                document = self.parent.documents.get(document_uri, None)
+                if document is not None:
+                    type = completion_item.data.get("type", None)
+                    if type is not None and type in ["Library", "Library (Internal)", "File"]:
+                        name = completion_item.data.get("name", None)
+                        if name is not None:
+                            try:
+                                lib_doc = await (
+                                    await self.parent.documents_cache.get_imports_manager(document)
+                                ).get_libdoc_for_library_import(
+                                    name, (), str(document.uri.to_path().parent), sentinel=self
+                                )
+                                completion_item.documentation = MarkupContent(
+                                    kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown()
+                                )
+
+                            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                                raise
+                            except BaseException:
+                                pass
+                    if type is not None and type in ["Keyword"]:
+                        libname = completion_item.data.get("libname", None)
+                        name = completion_item.data.get("name", None)
+                        if libname is not None and name is not None:
+                            try:
+                                lib_doc = await (
+                                    await self.parent.documents_cache.get_imports_manager(document)
+                                ).get_libdoc_for_library_import(
+                                    libname, (), str(document.uri.to_path().parent), sentinel=self
+                                )
+                                kw = lib_doc.keywords.get(name, None)
+                                if kw is not None:
+                                    completion_item.documentation = MarkupContent(
+                                        kind=MarkupKind.MARKDOWN, value=kw.to_markdown()
+                                    )
+
+                            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                                raise
+                            except BaseException:
+                                pass
+
+        return completion_item
