@@ -69,6 +69,9 @@ BUILTIN_LIBRARY_NAME = "BuiltIn"
 DEFAULT_LIBRARIES = (BUILTIN_LIBRARY_NAME, "Reserved", "Easter")
 ROBOT_LIBRARY_PACKAGE = "robot.libraries"
 
+ALLOWED_LIBRARY_FILE_EXTENSIONS = [".py"]
+ALLOWED_RESOURCE_FILE_EXTENSIONS = [".robot", ".resource", ".rst", ".rest", ".txt"]
+
 
 def is_embedded_keyword(name: str) -> bool:
     from robot.errors import VariableError
@@ -591,7 +594,7 @@ def get_library_doc(
         for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
             robot_variables[k] = v
 
-        name = robot_variables.replace_string(name, ignore_errors=True)
+        name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 
         if name in STDLIBS:
             import_name = ROBOT_LIBRARY_PACKAGE + "." + name
@@ -689,6 +692,7 @@ def get_library_doc(
                 libdoc.scope = str(lib.scope)
                 libdoc.doc_format = str(lib.doc_format)
 
+                # TODO: create logger to catch log messages at creating keywords
                 lib.create_handlers()
 
                 libdoc.keywords = KeywordStore(
@@ -747,7 +751,7 @@ def find_file(
     for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
         robot_variables[k] = v
 
-    name = robot_variables.replace_string(name, ignore_errors=True)
+    name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 
     return cast(str, robot_find_file(name, base_dir or ".", file_type))
 
@@ -808,15 +812,20 @@ def complete_library_import(
         for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
             robot_variables[k] = v
 
-        name = robot_variables.replace_string(name, ignore_errors=True)
+        name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 
     if name is None or not is_file_like(name):
         result += [CompleteResult(e, "Library") for e in iter_module_names(name)]
 
     if name is None or (is_file_like(name) and (name.endswith("/") or name.endswith(os.sep))):
         path = Path(base_dir, name if name else base_dir).resolve()
-        if path.exists() and path.is_dir():
-            result += [CompleteResult(str(f.name), "File" if f.is_file() else "Directory") for f in path.iterdir()]
+
+        if path.exists() and (path.is_dir()):
+            result += [
+                CompleteResult(str(f.name), "File" if f.is_file() else "Directory")
+                for f in path.iterdir()
+                if f.is_dir() or (f.is_file and f.suffix in ALLOWED_LIBRARY_FILE_EXTENSIONS)
+            ]
 
     return result
 
