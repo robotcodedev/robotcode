@@ -58,7 +58,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         parent.completion.resolve.add(self.resolve)
 
     @language_id("robotframework")
-    @trigger_characters([" ", "*", "\t", "."])
+    @trigger_characters([" ", "*", "\t", ".", "/", os.sep])
     # @all_commit_characters(['\n'])
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[CompletionContext]
@@ -66,8 +66,6 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         return await CompletionCollector(self.parent, document).collect(position, context)
 
     @language_id("robotframework")
-    @trigger_characters([" ", "*", "\t", "."])
-    # @all_commit_characters(['\n'])
     async def resolve(self, sender: Any, completion_item: CompletionItem) -> CompletionItem:
         return await CompletionCollector(self.parent).resolve(completion_item)
 
