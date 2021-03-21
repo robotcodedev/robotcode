@@ -485,6 +485,22 @@ class CompletionCollector:
                             [] if in_template else await self.create_keyword_completion_items(token, position),
                         )
                     ]
+                if len(statement_node.tokens) > 2:
+                    second_token = cast(Token, statement_node.tokens[2])
+                    ws = whitespace_at_begin_of_token(second_token)
+                    if ws < 1:
+                        return None
+
+                    r.end.character += 1
+                    if position.is_in_range(r) or r.end == position:
+                        return [
+                            e
+                            async for e in async_chain(
+                                await self.create_keyword_snippet_completion_items(r),
+                                await self.create_testcase_settings_completion_items(r),
+                                [] if in_template else await self.create_keyword_completion_items(token, position),
+                            )
+                        ]
 
         return None
 
@@ -544,6 +560,22 @@ class CompletionCollector:
                             await self.create_keyword_completion_items(token, position),
                         )
                     ]
+                if len(statement_node.tokens) > 2:
+                    second_token = cast(Token, statement_node.tokens[2])
+                    ws = whitespace_at_begin_of_token(second_token)
+                    if ws < 1:
+                        return None
+
+                    r.end.character += 1
+                    if position.is_in_range(r) or r.end == position:
+                        return [
+                            e
+                            async for e in async_chain(
+                                await self.create_keyword_snippet_completion_items(r),
+                                await self.create_keyword_settings_completion_items(r),
+                                await self.create_keyword_completion_items(token, position),
+                            )
+                        ]
 
         return None
 

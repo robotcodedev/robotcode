@@ -70,6 +70,7 @@ class _LibrariesEntry:
         args: Tuple[Any, ...],
         parent: ImportsManager,
         get_libdoc_coroutine: Callable[[], Coroutine[Any, Any, LibraryDoc]],
+        ignore_reference: bool = False,
     ) -> None:
         super().__init__()
         self.name = name
@@ -81,6 +82,7 @@ class _LibrariesEntry:
         self._lib_doc: Optional[LibraryDoc] = None
         self._lock = asyncio.Lock()
         self._loop = asyncio.get_event_loop()
+        self.ignore_reference = ignore_reference
 
     def __del__(self) -> None:
         if self._loop.is_running():
@@ -456,11 +458,13 @@ class ImportsManager:
                         )
                     return result
 
-                self._libaries[entry_key] = entry = _LibrariesEntry(name, args, self, _get_libdoc)
+                self._libaries[entry_key] = entry = _LibrariesEntry(
+                    name, args, self, _get_libdoc, ignore_reference=sentinel is None
+                )
 
         entry = self._libaries[entry_key]
 
-        if sentinel is not None and sentinel not in entry.references:
+        if not entry.ignore_reference and sentinel is not None and sentinel not in entry.references:
             entry.references.add(sentinel)
             weakref.finalize(sentinel, self.__remove_library_entry, entry_key, entry)
 

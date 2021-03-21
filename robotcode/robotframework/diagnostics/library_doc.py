@@ -766,14 +766,16 @@ def iter_module_names(name: Optional[str] = None) -> Iterator[str]:
 
     if spec is None:
         for e in pkgutil.iter_modules():
-            yield e.name
+            if not e.name.startswith(("_", ".")):
+                yield e.name
         return
 
     if spec.submodule_search_locations is None:
         return
 
     for e in pkgutil.iter_modules(spec.submodule_search_locations):
-        yield e.name
+        if not e.name.startswith(("_", ".")):
+            yield e.name
 
 
 def is_file_like(name: Optional[str]) -> bool:
@@ -824,7 +826,8 @@ def complete_library_import(
             result += [
                 CompleteResult(str(f.name), "File" if f.is_file() else "Directory")
                 for f in path.iterdir()
-                if f.is_dir() or (f.is_file and f.suffix in ALLOWED_LIBRARY_FILE_EXTENSIONS)
+                if not f.name.startswith(("_", "."))
+                and (f.is_dir() or (f.is_file and f.suffix in ALLOWED_LIBRARY_FILE_EXTENSIONS))
             ]
 
     return result
