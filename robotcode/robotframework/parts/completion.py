@@ -718,17 +718,19 @@ class CompletionCollector:
         if self.document is None:
             return []
 
-        library_node = cast(LibraryImport, node)
-        library_token = library_node.get_token(Token.LIBRARY)
-        library_index = library_node.tokens.index(library_token)
+        import_node = cast(LibraryImport, node)
+        import_token = import_node.get_token(Token.LIBRARY)
+        if import_token is None:
+            return []
+        import_token_index = import_node.tokens.index(import_token)
 
-        if len(library_node.tokens) > library_index + 2:
-            name_token = library_node.tokens[library_index + 2]
+        if len(import_node.tokens) > import_token_index + 2:
+            name_token = import_node.tokens[import_token_index + 2]
             if not position.is_in_range(r := range_from_token(name_token)) and r.end != position:
                 return None
 
-        elif len(library_node.tokens) > library_index + 1:
-            name_token = library_node.tokens[library_index + 1]
+        elif len(import_node.tokens) > import_token_index + 1:
+            name_token = import_node.tokens[import_token_index + 1]
             if position.is_in_range(r := range_from_token(name_token)) or r.end == position:
                 if whitespace_at_begin_of_token(name_token) > 1:
                     r.start.character += 2
@@ -745,13 +747,13 @@ class CompletionCollector:
 
         last_seperator_index = (
             len(text_before_position)
-            - next((i for i, c in enumerate(reversed(text_before_position)) if c in ["/", ".", os.sep]), -1)
+            - next((i for i, c in enumerate(reversed(text_before_position)) if c in [".", "/", os.sep]), -1)
             - 1
         )
 
-        library_part = (
+        first_part = (
             text_before_position[
-                : last_seperator_index + (1 if text_before_position[last_seperator_index] in ["/", os.sep] else 0)
+                : last_seperator_index + (1 if text_before_position[last_seperator_index] in [".", "/", os.sep] else 0)
             ]
             if last_seperator_index < len(text_before_position)
             else None
@@ -761,10 +763,15 @@ class CompletionCollector:
 
         imports_manger = await self.parent.documents_cache.get_imports_manager(self.document)
 
-        list = await imports_manger.complete_library_import(
-            library_part if library_part else None, str(self.document.uri.to_path().parent)
-        )
-        if not list:
+        try:
+            list = await imports_manger.complete_library_import(
+                first_part if first_part else None, str(self.document.uri.to_path().parent)
+            )
+            if not list:
+                return None
+        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+            raise
+        except BaseException:
             return None
 
         if text_before_position == "":
@@ -783,7 +790,98 @@ class CompletionCollector:
                 data={
                     "document_uri": str(self.document.uri),
                     "type": e.detail,
-                    "name": ((library_part + sep) if library_part is not None else "") + e.label,
+                    "name": ((first_part + sep) if first_part is not None else "") + e.label,
+                },
+            )
+            for e in list
+        ]
+
+    async def complete_ResourceImport(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        from robot.parsing.lexer.tokens import Token
+        from robot.parsing.model.statements import ResourceImport
+
+        if self.document is None:
+            return []
+
+        import_node = cast(ResourceImport, node)
+        import_token = import_node.get_token(Token.RESOURCE)
+        if import_token is None:
+            return []
+        import_token_index = import_node.tokens.index(import_token)
+
+        if len(import_node.tokens) > import_token_index + 2:
+            name_token = import_node.tokens[import_token_index + 2]
+            if not position.is_in_range(r := range_from_token(name_token)) and r.end != position:
+                return None
+
+        elif len(import_node.tokens) > import_token_index + 1:
+            name_token = import_node.tokens[import_token_index + 1]
+            if position.is_in_range(r := range_from_token(name_token)) or r.end == position:
+                if whitespace_at_begin_of_token(name_token) > 1:
+                    r.start.character += 2
+                    if not position.is_in_range(r := range_from_token(name_token)) and r.end != position:
+                        return None
+        else:
+            return None
+
+        pos = position.character - r.start.character
+        text_before_position = str(name_token.value)[:pos].lstrip()
+
+        if text_before_position != "" and all(c == "." for c in text_before_position):
+            return None
+
+        last_seperator_index = (
+            len(text_before_position)
+            - next((i for i, c in enumerate(reversed(text_before_position)) if c in ["/", os.sep]), -1)
+            - 1
+        )
+
+        first_part = (
+            text_before_position[
+                : last_seperator_index + (1 if text_before_position[last_seperator_index] in ["/", os.sep] else 0)
+            ]
+            if last_seperator_index < len(text_before_position)
+            else None
+        )
+
+        sep = text_before_position[last_seperator_index] if last_seperator_index < len(text_before_position) else ""
+
+        imports_manger = await self.parent.documents_cache.get_imports_manager(self.document)
+
+        try:
+            list = await imports_manger.complete_resource_import(
+                first_part if first_part else None, str(self.document.uri.to_path().parent)
+            )
+            if not list:
+                return None
+        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+            raise
+        except BaseException:
+            return None
+
+        if text_before_position == "":
+            r.start.character = position.character
+        else:
+            r.start.character += last_seperator_index + 1 if last_seperator_index < len(text_before_position) else 0
+
+        return [
+            CompletionItem(
+                label=e.label,
+                kind=CompletionItemKind.MODULE,
+                detail=e.detail,
+                sort_text=f"030_{e}",
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
+                data={
+                    "document_uri": str(self.document.uri),
+                    "type": e.detail,
+                    "name": ((first_part + sep) if first_part is not None else "") + e.label,
                 },
             )
             for e in list
@@ -811,8 +909,10 @@ class CompletionCollector:
 
                             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                                 raise
-                            except BaseException:
-                                pass
+                            except BaseException as e:
+                                completion_item.documentation = MarkupContent(
+                                    kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
+                                )
                     if type is not None and type in ["Keyword"]:
                         libname = completion_item.data.get("libname", None)
                         name = completion_item.data.get("name", None)

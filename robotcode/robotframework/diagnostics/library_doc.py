@@ -545,6 +545,10 @@ def _std_capture() -> Iterator[io.StringIO]:
         sys.__stdout__ = old__stdout__
 
 
+class IgnoreEasterEggLibraryWarning(BaseException):
+    pass
+
+
 def get_library_doc(
     name: str,
     args: Optional[Tuple[Any, ...]] = None,
@@ -606,6 +610,13 @@ def get_library_doc(
             import_name = robot_find_file(import_name, base_dir or ".", "Library")
         else:
             module_spec = get_module_spec(import_name)
+
+        # skip antigravity easter egg
+        # see https://python-history.blogspot.com/2010/06/import-antigravity.html
+        if import_name.lower() in ["antigravity"] or import_name.lower().endswith(
+            ("lib/antigravity.py", f"lib{os.sep}antigravity.py")
+        ):
+            raise IgnoreEasterEggLibraryWarning(f"Ignoring import for python easter egg '{import_name}'.")
 
         errors: List[Error] = []
 
@@ -756,6 +767,17 @@ def find_file(
     return cast(str, robot_find_file(name, base_dir or ".", file_type))
 
 
+class CompleteResult(NamedTuple):
+    label: str
+    detail: str
+
+
+def is_file_like(name: Optional[str]) -> bool:
+    return name is not None and (
+        name.startswith(".") or name.startswith("/") or name.startswith(os.sep) or "/" in name or os.sep in name
+    )
+
+
 def iter_module_names(name: Optional[str] = None) -> Iterator[str]:
     if name is not None:
         spec = importlib.util.find_spec(name)
@@ -778,15 +800,52 @@ def iter_module_names(name: Optional[str] = None) -> Iterator[str]:
             yield e.name
 
 
-def is_file_like(name: Optional[str]) -> bool:
-    return name is not None and (
-        name.startswith(".") or name.startswith("/") or name.startswith(os.sep) or "/" in name or os.sep in name
-    )
+def iter_modules_from_python_path(path: Optional[str] = None) -> Iterator[CompleteResult]:
+    allow_modules = True if not path or not ("/" in path or os.sep in path) else False
+    allow_files = True if not path or "/" in path or os.sep in path else False
+
+    path = path.replace(".", os.sep) if path is not None and not path.startswith((".", "/", os.sep)) else path
+
+    if path is None:
+        paths = sys.path
+    else:
+        paths = [str(Path(s, path)) for s in sys.path]
+
+    for e in [Path(p) for p in set(paths)]:
+        if e.is_dir():
+            for f in e.iterdir():
+                if not f.name.startswith(("_", ".")) and (
+                    f.is_file()
+                    and f.suffix in ALLOWED_LIBRARY_FILE_EXTENSIONS
+                    or f.is_dir()
+                    and f.suffix not in [".dist-info"]
+                ):
+                    if f.is_dir():
+                        yield CompleteResult(f.name, "Module")
+
+                    if f.is_file():
+                        if allow_modules:
+                            yield CompleteResult(f.stem, "Module")
+                        if allow_files:
+                            yield CompleteResult(f.name, "File")
 
 
-class CompleteResult(NamedTuple):
-    label: str
-    detail: str
+def iter_resources_from_python_path(path: Optional[str] = None) -> Iterator[CompleteResult]:
+    if path is None:
+        paths = sys.path
+    else:
+        paths = [str(Path(s, path)) for s in sys.path]
+
+    for e in [Path(p) for p in set(paths)]:
+        if e.is_dir():
+            for f in e.iterdir():
+                if not f.name.startswith(("_", ".")) and (
+                    f.is_file()
+                    and f.suffix in ALLOWED_RESOURCE_FILE_EXTENSIONS
+                    or f.is_dir()
+                    and f.suffix not in [".dist-info"]
+                ):
+                    yield CompleteResult(f.name, "Resource" if f.is_file() else "Directory")
 
 
 def complete_library_import(
@@ -804,7 +863,7 @@ def complete_library_import(
 
     if name is None:
         result += [
-            CompleteResult(e, "Library (Internal)")
+            CompleteResult(e, "Module (Internal)")
             for e in iter_module_names(ROBOT_LIBRARY_PACKAGE)
             if e not in DEFAULT_LIBRARIES
         ]
@@ -816,13 +875,17 @@ def complete_library_import(
 
         name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 
-    if name is None or not is_file_like(name):
-        result += [CompleteResult(e, "Library") for e in iter_module_names(name)]
+    if name is None or not name.startswith((".", "/", os.sep)):
+        result += [e for e in iter_modules_from_python_path(name)]
 
     if name is None or (is_file_like(name) and (name.endswith("/") or name.endswith(os.sep))):
-        path = Path(base_dir, name if name else base_dir).resolve()
+        name_path = Path(name if name else base_dir)
+        if name_path.is_absolute():
+            path = name_path.resolve()
+        else:
+            path = Path(base_dir, name if name else base_dir).resolve()
 
-        if path.exists() and (path.is_dir()):
+        if path.exists() and path.is_dir():
             result += [
                 CompleteResult(str(f.name), "File" if f.is_file() else "Directory")
                 for f in path.iterdir()
@@ -830,7 +893,48 @@ def complete_library_import(
                 and (f.is_dir() or (f.is_file and f.suffix in ALLOWED_LIBRARY_FILE_EXTENSIONS))
             ]
 
-    return result
+    return list(set(result))
+
+
+def complete_resource_import(
+    name: Optional[str],
+    working_dir: str = ".",
+    base_dir: str = ".",
+    pythonpath: Optional[List[str]] = None,
+    variables: Optional[Dict[str, Optional[Any]]] = None,
+) -> Optional[List[CompleteResult]]:
+    from robot.variables import Variables
+
+    _update_sys_path(working_dir, pythonpath)
+
+    result: List[CompleteResult] = []
+
+    if name is not None:
+        robot_variables = Variables()
+        for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
+            robot_variables[k] = v
+
+        name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
+
+    if name is None or not name.startswith(".") and not name.startswith("/") and not name.startswith(os.sep):
+        result += [e for e in iter_resources_from_python_path(name)]
+
+    if name is None or name.startswith(".") or name.startswith("/") or name.startswith(os.sep):
+        name_path = Path(name if name else base_dir)
+        if name_path.is_absolute():
+            path = name_path.resolve()
+        else:
+            path = Path(base_dir, name if name else base_dir).resolve()
+
+        if path.exists() and (path.is_dir()):
+            result += [
+                CompleteResult(str(f.name), "Resource" if f.is_file() else "Directory")
+                for f in path.iterdir()
+                if not f.name.startswith(("_", "."))
+                and (f.is_dir() or (f.is_file and f.suffix in ALLOWED_RESOURCE_FILE_EXTENSIONS))
+            ]
+
+    return list(set(result))
 
 
 def init_pool() -> None:
