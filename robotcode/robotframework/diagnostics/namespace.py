@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import logging
 import weakref
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -709,7 +710,7 @@ class Namespace:
             except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
-                self._logger.exception(e)
+                self._logger.exception(e, level=logging.DEBUG)
 
                 if add_diagnostics:
                     self._diagnostics.append(

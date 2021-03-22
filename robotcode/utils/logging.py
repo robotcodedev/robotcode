@@ -190,10 +190,11 @@ class LoggingDescriptor:
 
     def exception(
         self,
-        msg: Union[BaseException, str, Callable[[], str]],
+        msg: Union[BaseException, str, Callable[[], Union[BaseException, str]]],
         condition: Optional[Callable[[], bool]] = None,
         exc_info: Any = True,
         *args: Any,
+        level: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
         if isinstance(msg, BaseException):
@@ -201,9 +202,9 @@ class LoggingDescriptor:
             s = type(msg).__qualname__
             if sm:
                 s += ": " + sm
-            self.log(logging.ERROR, s, condition, *args, exc_info=exc_info, **kwargs)
+            self.log(logging.ERROR if level is None else level, s, condition, *args, exc_info=exc_info, **kwargs)
         else:
-            self.log(logging.ERROR, msg, condition, *args, exc_info=exc_info, **kwargs)
+            self.log(logging.ERROR if level is None else level, msg, condition, *args, exc_info=exc_info, **kwargs)
 
     def critical(
         self,
