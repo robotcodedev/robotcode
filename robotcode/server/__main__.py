@@ -109,7 +109,7 @@ def start_debugpy(port: int, wait_for_client: bool) -> None:
         _logger.warning("Module debugpy is not installed. If you want to debug python code, please install it.\n")
 
 
-def start_server(mode: str, port: int) -> None:
+def run_server(mode: str, port: int) -> None:
     from ..jsonrpc2.server import JsonRpcServerMode, TcpParams
     from ..robotframework.server import RobotLanguageServer
 
@@ -224,7 +224,7 @@ def main() -> None:
     if args.debugpy:
         start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)
 
-    start_server(args.mode, args.port)
+    run_server(args.mode, args.port)
 
 
 if __name__ == "__main__":

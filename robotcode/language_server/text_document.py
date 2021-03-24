@@ -5,18 +5,7 @@ import inspect
 import io
 import weakref
 from types import MethodType
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    TypeVar,
-    Union,
-    cast,
-    overload,
-)
+from typing import Any, Awaitable, Callable, Dict, List, Optional, TypeVar, Union, cast
 
 from ..utils.uri import Uri
 from .types import DocumentUri, Position, Range, TextDocumentItem
@@ -50,49 +39,37 @@ _T = TypeVar("_T")
 
 
 class TextDocument:
-    @overload
     def __init__(
         self,
-        text_document: TextDocumentItem,
-    ) -> None:
-        ...
-
-    @overload
-    def __init__(
-        self,
-        *,
-        document_uri: DocumentUri,
-        language_id: str,
-        version: Optional[int],
-        text: str,
-        parent: Optional[TextDocument] = None,
-    ) -> None:
-        ...
-
-    def __init__(
-        self,
-        text_document: Optional[TextDocumentItem] = None,
+        text_document_item: Optional[TextDocumentItem] = None,
         *,
         document_uri: Optional[DocumentUri] = None,
         language_id: Optional[str] = None,
         version: Optional[int] = None,
         text: Optional[str] = None,
-        parent: Optional[TextDocument] = None,
     ) -> None:
         super().__init__()
 
         self._lock = asyncio.Lock()
 
         self.document_uri = (
-            text_document.uri if text_document is not None else document_uri if document_uri is not None else ""
+            text_document_item.uri
+            if text_document_item is not None
+            else document_uri
+            if document_uri is not None
+            else ""
         )
         self.uri = Uri(self.document_uri)
 
         self.language_id = (
-            text_document.language_id if text_document is not None else language_id if language_id is not None else ""
+            text_document_item.language_id
+            if text_document_item is not None
+            else language_id
+            if language_id is not None
+            else ""
         )
-        self.version = text_document.version if text_document is not None else version
-        self._text = text_document.text if text_document is not None else text if text is not None else ""
+        self.version = text_document_item.version if text_document_item is not None else version
+        self._text = text_document_item.text if text_document_item is not None else text if text is not None else ""
 
         self._lines: Optional[List[str]] = None
 

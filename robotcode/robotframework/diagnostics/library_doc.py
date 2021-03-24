@@ -353,6 +353,16 @@ def _update_sys_path(working_dir: str = ".", pythonpath: Optional[List[str]] = N
             if absolute_path not in sys.path:
                 sys.path.insert(0, absolute_path)
 
+    try:
+        # Try to reinitialize robot.running.context.EXECUTION_CONTEXTS to prevent exceptions
+        # at reloading of libraries
+
+        import robot.running.context
+
+        robot.running.context.EXECUTION_CONTEXTS = robot.running.context.ExecutionContexts()
+    except BaseException:
+        pass
+
 
 __PRELOADED_MODULES: Optional[Set[ModuleType]] = None
 

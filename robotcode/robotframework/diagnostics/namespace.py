@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import asyncio
-import logging
 import weakref
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -495,6 +494,7 @@ class ResourceEntry(LibraryEntry):
 
 
 IMPORTS_KEY = object()
+REFERENCED_DOCUMENTS_KEY = object()
 
 
 class Namespace:
@@ -517,11 +517,13 @@ class Namespace:
         self.model = model
         self.source = source
         self.invalidated_callback = invalidated_callback
-        self.document = weakref.ref(document) if document is not None else None
+        self._document = weakref.ref(document) if document is not None else None
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
         self._resources: OrderedDict[str, ResourceEntry] = OrderedDict()
         self._initialzed = False
+        self._initialize_lock = asyncio.Lock()
         self._analyzed = False
+        self._analyze_lock = asyncio.Lock()
         self._library_doc: Optional[LibraryDoc] = None
 
         self._diagnostics: List[Diagnostic] = []
@@ -530,6 +532,10 @@ class Namespace:
 
         # TODO: how to get the search order from model
         self.search_order: Tuple[str, ...] = ()
+
+    @property
+    def document(self) -> Optional[TextDocument]:
+        return self._document() if self._document is not None else None
 
     async def libraries_changed(self, sender: Any, params: List[LibraryChangedParams]) -> None:
 
@@ -545,6 +551,7 @@ class Namespace:
                 self.invalidated_callback(self)
                 break
 
+    @_logger.call
     async def get_diagnostisc(self) -> List[Diagnostic]:
         await self._ensure_initialized()
 
@@ -552,11 +559,13 @@ class Namespace:
 
         return self._diagnostics
 
+    @_logger.call
     async def get_libraries(self) -> OrderedDict[str, LibraryEntry]:
         await self._ensure_initialized()
 
         return self._libraries
 
+    @_logger.call
     async def get_resources(self) -> OrderedDict[str, ResourceEntry]:
         await self._ensure_initialized()
 
@@ -568,31 +577,37 @@ class Namespace:
 
         return self._library_doc
 
+    @_logger.call
     async def _ensure_initialized(self) -> None:
         if not self._initialzed:
-            self._initialzed = True
+            async with self._initialize_lock:
+                try:
+                    imports = await self.get_imports()
+                    document = self.document
+                    if document is not None:
+                        if document is not None:
+                            old_imports = document.get_data(Namespace)
+                            if old_imports is None:
+                                document.set_data(Namespace, imports)
+                            elif old_imports != imports:
+                                new_imports = []
+                                for e in old_imports:
+                                    if e in imports:
+                                        new_imports.append(e)
+                                for e in imports:
+                                    if e not in new_imports:
+                                        new_imports.append(e)
+                                document.set_data(Namespace, new_imports)
 
-            imports = await self.get_imports()
-            if self.document is not None:
-                document = self.document()
-                if document is not None:
-                    old_imports = document.get_data(Namespace)
-                    if old_imports is None:
-                        document.set_data(Namespace, imports)
-                    elif old_imports != imports:
-                        new_imports = []
-                        for e in old_imports:
-                            if e in imports:
-                                new_imports.append(e)
-                        for e in imports:
-                            if e not in new_imports:
-                                new_imports.append(e)
-                        document.set_data(Namespace, new_imports)
+                    await self._import_default_libraries()
+                    await self._import_imports(imports, str(Path(self.source).parent), top_level=True)
+                finally:
+                    self._initialzed = True
 
-            await self._import_default_libraries()
-            await self._import_imports(imports, str(Path(self.source).parent), add_diagnostics=True)
+    async def get_imports(self) -> List[Import]:
+        return await ImportVisitor().get(self.source, self.model)
 
-    async def _import_imports(self, imports: Iterable[Import], base_dir: str, *, add_diagnostics: bool = False) -> None:
+    async def _import_imports(self, imports: Iterable[Import], base_dir: str, *, top_level: bool = False) -> None:
         async def _import(value: Import) -> Optional[LibraryEntry]:
             result: Optional[LibraryEntry] = None
             try:
@@ -605,7 +620,7 @@ class Namespace:
                     result.import_range = value.range()
                     result.import_source = value.source
 
-                    if add_diagnostics and result.library_doc.errors is None and len(result.library_doc.keywords) == 0:
+                    if top_level and result.library_doc.errors is None and len(result.library_doc.keywords) == 0:
                         self._diagnostics.append(
                             Diagnostic(
                                 range=value.range(),
@@ -621,9 +636,9 @@ class Namespace:
                     result.import_range = value.range()
                     result.import_source = value.source
 
-                    if (
+                    if top_level and (
                         not result.library_doc.errors
-                        and add_diagnostics
+                        and top_level
                         and not result.imports
                         and not result.variables
                         and not result.library_doc.keywords
@@ -647,72 +662,72 @@ class Namespace:
                 else:
                     raise DiagnosticsException("Unknown import type.")
 
-                if result.library_doc.source is not None and result.library_doc.errors and add_diagnostics:
-                    if any(err.source for err in result.library_doc.errors):
-                        self._diagnostics.append(
-                            Diagnostic(
-                                range=value.range(),
-                                message="Import definition contains errors.",
-                                severity=DiagnosticSeverity.ERROR,
-                                source=DIAGNOSTICS_SOURCE_NAME,
-                                related_information=[
-                                    DiagnosticRelatedInformation(
-                                        location=Location(
-                                            uri=str(Uri.from_path(err.source)),
-                                            range=Range(
-                                                start=Position(
-                                                    line=err.line_no - 1
-                                                    if err.line_no is not None
-                                                    else result.library_doc.line_no
-                                                    if result.library_doc.line_no >= 0
-                                                    else 0,
-                                                    character=0,
-                                                ),
-                                                end=Position(
-                                                    line=err.line_no - 1
-                                                    if err.line_no is not None
-                                                    else result.library_doc.line_no
-                                                    if result.library_doc.line_no >= 0
-                                                    else 0,
-                                                    character=0,
+                if top_level:
+                    if result.library_doc.source is not None and result.library_doc.errors:
+                        if any(err.source for err in result.library_doc.errors):
+                            self._diagnostics.append(
+                                Diagnostic(
+                                    range=value.range(),
+                                    message="Import definition contains errors.",
+                                    severity=DiagnosticSeverity.ERROR,
+                                    source=DIAGNOSTICS_SOURCE_NAME,
+                                    related_information=[
+                                        DiagnosticRelatedInformation(
+                                            location=Location(
+                                                uri=str(Uri.from_path(err.source)),
+                                                range=Range(
+                                                    start=Position(
+                                                        line=err.line_no - 1
+                                                        if err.line_no is not None
+                                                        else result.library_doc.line_no
+                                                        if result.library_doc.line_no >= 0
+                                                        else 0,
+                                                        character=0,
+                                                    ),
+                                                    end=Position(
+                                                        line=err.line_no - 1
+                                                        if err.line_no is not None
+                                                        else result.library_doc.line_no
+                                                        if result.library_doc.line_no >= 0
+                                                        else 0,
+                                                        character=0,
+                                                    ),
                                                 ),
                                             ),
-                                        ),
-                                        message=err.message,
-                                    )
-                                    for err in result.library_doc.errors
-                                    if err.source is not None
-                                ],
+                                            message=err.message,
+                                        )
+                                        for err in result.library_doc.errors
+                                        if err.source is not None
+                                    ],
+                                )
                             )
-                        )
-                    for err in filter(lambda e: e.source is None, result.library_doc.errors):
-                        self._diagnostics.append(
-                            Diagnostic(
-                                range=value.range(),
-                                message=err.message,
-                                severity=DiagnosticSeverity.ERROR,
-                                source=DIAGNOSTICS_SOURCE_NAME,
-                                code=err.type_name,
+                        for err in filter(lambda e: e.source is None, result.library_doc.errors):
+                            self._diagnostics.append(
+                                Diagnostic(
+                                    range=value.range(),
+                                    message=err.message,
+                                    severity=DiagnosticSeverity.ERROR,
+                                    source=DIAGNOSTICS_SOURCE_NAME,
+                                    code=err.type_name,
+                                )
                             )
-                        )
-                elif result.library_doc.errors is not None:
-                    for err in result.library_doc.errors:
-                        self._diagnostics.append(
-                            Diagnostic(
-                                range=value.range(),
-                                message=err.message,
-                                severity=DiagnosticSeverity.ERROR,
-                                source=DIAGNOSTICS_SOURCE_NAME,
-                                code=err.type_name,
+                    elif result.library_doc.errors is not None:
+                        for err in result.library_doc.errors:
+                            self._diagnostics.append(
+                                Diagnostic(
+                                    range=value.range(),
+                                    message=err.message,
+                                    severity=DiagnosticSeverity.ERROR,
+                                    source=DIAGNOSTICS_SOURCE_NAME,
+                                    code=err.type_name,
+                                )
                             )
-                        )
 
             except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
-                self._logger.exception(e, level=logging.DEBUG)
-
-                if add_diagnostics:
+                self._logger.exception(e)
+                if top_level:
                     self._diagnostics.append(
                         Diagnostic(
                             range=value.range(),
@@ -724,7 +739,10 @@ class Namespace:
                     )
             return result
 
-        for entry in await asyncio.gather(*(_import(v) for v in imports)):
+        for entry in await asyncio.gather(*(_import(v) for v in imports), return_exceptions=True):
+            if isinstance(entry, (asyncio.CancelledError, SystemExit, KeyboardInterrupt)):
+                raise entry
+
             if entry is not None:
                 if isinstance(entry, ResourceEntry):
                     assert entry.library_doc.source is not None
@@ -738,12 +756,12 @@ class Namespace:
                             await self._import_imports(
                                 entry.imports,
                                 str(Path(entry.library_doc.source).parent),
-                                add_diagnostics=False,
+                                top_level=False,
                             )
                         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                             raise
                         except BaseException as e:
-                            if add_diagnostics:
+                            if top_level:
                                 self._diagnostics.append(
                                     Diagnostic(
                                         range=entry.import_range,
@@ -754,7 +772,7 @@ class Namespace:
                                     )
                                 )
                     else:
-                        if add_diagnostics:
+                        if top_level:
                             if entry.library_doc.source == self.source:
                                 self._diagnostics.append(
                                     Diagnostic(
@@ -765,6 +783,8 @@ class Namespace:
                                     )
                                 )
                             elif allready_imported_resources and allready_imported_resources[0].library_doc.source:
+                                self._resources[entry.alias or entry.name or entry.import_name] = entry
+
                                 self._diagnostics.append(
                                     Diagnostic(
                                         range=entry.import_range,
@@ -811,15 +831,10 @@ class Namespace:
                         e
                         for e in self._libraries.values()
                         if e.library_doc.source == entry.library_doc.source
-                        and e.name == entry.name
                         and e.alias == entry.alias
                         and e.args == entry.args
                     ]
-                    if (
-                        add_diagnostics
-                        and allready_imported_library
-                        and allready_imported_library[0].library_doc.source
-                    ):
+                    if top_level and allready_imported_library and allready_imported_library[0].library_doc.source:
                         self._diagnostics.append(
                             Diagnostic(
                                 range=entry.import_range,
@@ -840,9 +855,6 @@ class Namespace:
 
                     self._libraries[entry.alias or entry.name or entry.import_name] = entry
                 # TODO Variables
-
-    async def get_imports(self) -> List[Import]:
-        return await ImportVisitor().get(self.source, self.model)
 
     async def _import_default_libraries(self) -> None:
         async def _import_lib(library: str) -> Optional[LibraryEntry]:
@@ -900,6 +912,7 @@ class Namespace:
     # TODO get_own_keywords
     # TODO get_variables
 
+    @_logger.call
     async def get_keywords(self) -> List[KeywordDoc]:
         await self._ensure_initialized()
 
@@ -918,11 +931,14 @@ class Namespace:
 
         return self._keywords
 
+    @_logger.call
     async def _analyze(self) -> None:
         if not self._analyzed:
-            self._analyzed = True
-
-            self._diagnostics += await Analyzer().get(self.model, self)
+            async with self._analyze_lock:
+                try:
+                    self._diagnostics += await Analyzer().get(self.model, self)
+                finally:
+                    self._analyzed = True
 
     async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
         await self._ensure_initialized()

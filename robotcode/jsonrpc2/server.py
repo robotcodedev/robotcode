@@ -47,6 +47,8 @@ class TcpParams(NamedTuple):
 
 
 class JsonRPCServer(Generic[TProtocol], abc.ABC):
+    _logger = LoggingDescriptor()
+
     def __init__(
         self,
         mode: JsonRpcServerMode = JsonRpcServerMode.STDIO,
@@ -65,8 +67,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
     @property
     def __del__(self) -> None:
         self.close()
-
-    _logger = LoggingDescriptor()
 
     @_logger.call
     def start(self) -> None:
