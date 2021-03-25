@@ -1,8 +1,8 @@
 import * as net from 'net';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { LanguageClient, LanguageClientOptions, ServerOptions } from 'vscode-languageclient/node';
 
-import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
 
 const DEFAULT_TCP_PORT = 6601;
 const CONFIG_SECTION = "robotcode";
@@ -84,8 +84,8 @@ function startLanguageClientForDocument(document: vscode.TextDocument) {
             synchronize: {
                 configurationSection: [CONFIG_SECTION, "python"]
             },
-            initializationOptions: {                
-                "storageUri": extensionContext?.storageUri?.toString(),                
+            initializationOptions: {
+                "storageUri": extensionContext?.storageUri?.toString(),
                 "globalStorageUri": extensionContext?.globalStorageUri?.toString()
             },
             diagnosticCollectionName: 'robotcode',
@@ -112,7 +112,7 @@ function getServerOptionsTCP(folder: vscode.WorkspaceFolder) {
             var client = new net.Socket();
             client.on("error", function (err) {
                 reject(err);
-            });            
+            });
             client.connect(port, "127.0.0.1", function () {
                 resolve({
                     reader: client,
@@ -137,10 +137,7 @@ function getServerOptionsStdIo(folder: vscode.WorkspaceFolder, document: vscode.
     var args: Array<string> = [
         "-u",
         pythonLanguageServerMain!,
-        "--mode", "stdio",
-        //"--debug",
-        //"--debugpy",
-        //"--debugpy-wait-for-client"
+        "--mode", "stdio",       
     ];
 
     const serverOptions: ServerOptions = {
@@ -158,7 +155,7 @@ function getServerOptionsStdIo(folder: vscode.WorkspaceFolder, document: vscode.
 export async function activateAsync(context: vscode.ExtensionContext) {
 
     OUTPUT_CHANNEL.appendLine("Activate RobotCode Extension.");
-    extensionContext = context;    
+    extensionContext = context;
 
     pythonLanguageServerMain = context.asAbsolutePath(path.join('robotcode', 'server', '__main__.py'));
 
@@ -217,7 +214,14 @@ export async function activateAsync(context: vscode.ExtensionContext) {
     }));
 
     vscode.workspace.onDidChangeConfiguration(event => {
-        for (let s of ["robotcode.language-server.mode", "robotcode.language-server.tcp-port", "robotcode.language-server.args", "robotcode.language-server.python", "python.pythonPath"]) {
+        for (let s of ["robotcode.language-server.mode",
+            "robotcode.language-server.tcp-port",
+            "robotcode.language-server.args",
+            "robotcode.language-server.python",
+            "robotcode.robot.environment",
+            "robotcode.robot.variables",
+            "robotcode.robot.args",
+            "python.pythonPath"]) {
             if (event.affectsConfiguration(s)) {
                 vscode.window.showWarningMessage('Please use the "Reload Window" action for changes in ' + s + ' to take effect.', ...["Reload Window"]).then((selection) => {
                     if (selection === "Reload Window") {

@@ -320,7 +320,12 @@ def is_library_by_path(path: str) -> bool:
     return path.lower().endswith((".py", ".java", ".class", "/", os.sep))
 
 
-def _update_sys_path(working_dir: str = ".", pythonpath: Optional[List[str]] = None) -> None:
+__PRELOADED_MODULES: Optional[Set[ModuleType]] = None
+
+
+def _update_env(
+    working_dir: str = ".", pythonpath: Optional[List[str]] = None, environment: Optional[Dict[str, str]] = None
+) -> None:
     import gc
 
     global __PRELOADED_MODULES
@@ -353,6 +358,10 @@ def _update_sys_path(working_dir: str = ".", pythonpath: Optional[List[str]] = N
             if absolute_path not in sys.path:
                 sys.path.insert(0, absolute_path)
 
+    if environment:
+        for k, v in environment.items():
+            os.environ[k] = v
+
     try:
         # Try to reinitialize robot.running.context.EXECUTION_CONTEXTS to prevent exceptions
         # at reloading of libraries
@@ -362,9 +371,6 @@ def _update_sys_path(working_dir: str = ".", pythonpath: Optional[List[str]] = N
         robot.running.context.EXECUTION_CONTEXTS = robot.running.context.ExecutionContexts()
     except BaseException:
         pass
-
-
-__PRELOADED_MODULES: Optional[Set[ModuleType]] = None
 
 
 def get_module_spec(module_name: str) -> Optional[ModuleSpec]:
@@ -532,7 +538,7 @@ def init_builtin_variables(
         "${OUTPUT DIR}": None,
     }
     if variables is not None:
-        result.update(variables)
+        result.update((f"${{{k}}}", v) for k, v in variables.items())
 
     return result
 
@@ -565,6 +571,7 @@ def get_library_doc(
     working_dir: str = ".",
     base_dir: str = ".",
     pythonpath: Optional[List[str]] = None,
+    environment: Optional[Dict[str, str]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> LibraryDoc:
 
@@ -602,7 +609,7 @@ def get_library_doc(
         return lib
 
     with _std_capture() as std_capturer:
-        _update_sys_path(working_dir, pythonpath)
+        _update_env(working_dir, pythonpath, environment)
 
         robot_variables = Variables()
         for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
@@ -760,13 +767,14 @@ def find_file(
     working_dir: str = ".",
     base_dir: str = ".",
     pythonpath: Optional[List[str]] = None,
-    file_type: str = "Resource",
+    environment: Optional[Dict[str, str]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
+    file_type: str = "Resource",
 ) -> str:
     from robot.utils.robotpath import find_file as robot_find_file
     from robot.variables import Variables
 
-    _update_sys_path(working_dir, pythonpath)
+    _update_env(working_dir, pythonpath, environment)
 
     robot_variables = Variables()
     for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
@@ -863,11 +871,12 @@ def complete_library_import(
     working_dir: str = ".",
     base_dir: str = ".",
     pythonpath: Optional[List[str]] = None,
+    environment: Optional[Dict[str, str]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Optional[List[CompleteResult]]:
     from robot.variables import Variables
 
-    _update_sys_path(working_dir, pythonpath)
+    _update_env(working_dir, pythonpath, environment)
 
     result: List[CompleteResult] = []
 
@@ -911,11 +920,12 @@ def complete_resource_import(
     working_dir: str = ".",
     base_dir: str = ".",
     pythonpath: Optional[List[str]] = None,
+    environment: Optional[Dict[str, str]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Optional[List[CompleteResult]]:
     from robot.variables import Variables
 
-    _update_sys_path(working_dir, pythonpath)
+    _update_env(working_dir, pythonpath, environment)
 
     result: List[CompleteResult] = []
 

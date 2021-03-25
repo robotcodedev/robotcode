@@ -101,7 +101,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         config.include = set(extension_config.include)
         config.exclude = set(extension_config.exclude)
-        config.configure = set(extension_config.configure)
+        config.configure = set(extension_config.configurations)
 
         analyser = RobotCodeRobocop(from_cli=False, config=config)
 

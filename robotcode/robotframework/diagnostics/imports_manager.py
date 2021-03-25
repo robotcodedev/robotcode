@@ -436,6 +436,7 @@ class ImportsManager:
         self, name: str, args: Tuple[Any, ...] = (), base_dir: str = ".", sentinel: Any = None
     ) -> LibraryDoc:
         async with self._libaries_lock:
+            # TODO resolve library source / module and use it for the entry key
             entry_key = _LibrariesEntryKey(name, base_dir, args)
 
             if entry_key not in self._libaries:
@@ -451,6 +452,8 @@ class ImportsManager:
                             str(self.folder.to_path()),
                             base_dir,
                             self.config.pythonpath if self.config is not None else None,
+                            self.config.environment if self.config is not None else None,
+                            self.config.variables if self.config is not None else None,
                         ),
                         LOAD_LIBRARY_TIME_OUT,
                     )
@@ -562,6 +565,8 @@ class ImportsManager:
                 str(self.folder.to_path()),
                 base_dir,
                 self.config.pythonpath if self.config is not None else None,
+                self.config.environment if self.config is not None else None,
+                self.config.variables if self.config is not None else None,
                 file_type,
             ),
             FIND_FILE_TIME_OUT,
@@ -571,6 +576,8 @@ class ImportsManager:
     async def get_document_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> TextDocument:
 
         async with self._resources_lock:
+            # TODO resolve resource source and use it for the entry key
+
             entry_key = _ResourcesEntryKey(name, base_dir)
 
             if entry_key not in self._resources:
@@ -624,6 +631,8 @@ class ImportsManager:
                 str(self.folder.to_path()),
                 base_dir,
                 self.config.pythonpath if self.config is not None else None,
+                self.config.environment if self.config is not None else None,
+                self.config.variables if self.config is not None else None,
             ),
             COMPLETE_LIBRARY_IMPORT_TIME_OUT,
         )
@@ -641,6 +650,8 @@ class ImportsManager:
                 str(self.folder.to_path()),
                 base_dir,
                 self.config.pythonpath if self.config is not None else None,
+                self.config.environment if self.config is not None else None,
+                self.config.variables if self.config is not None else None,
             ),
             COMPLETE_RESOURCE_IMPORT_TIME_OUT,
         )

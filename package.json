@@ -113,6 +113,18 @@
                         "description": "Specifies additional python paths to robotframework. Corresponds to the '--pythonpath' option of the robot module.",
                         "scope": "resource"
                     },
+                    "robotcode.robot.environment": {
+                        "type": "object",
+                        "default": {},                        
+                        "description": "Specifies the environment variables for robotframework.",
+                        "scope": "resource"
+                    },
+                    "robotcode.robot.variables": {
+                        "type": "object",
+                        "default": {},                        
+                        "description": "Specifies the variables for robotframework. Corresponds to the '--variable name:value' option of the robot module.",
+                        "scope": "resource"
+                    },
                     "robotcode.syntax.section_style": {
                         "type": "string",
                         "default": "*** {name} ***",
@@ -148,7 +160,7 @@
                         "description": "Ignore specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
                         "scope": "resource"
                     },
-                    "robotcode.robocop.configure": {
+                    "robotcode.robocop.configurations": {
                         "type": "array",
                         "default": [],
                         "items": {

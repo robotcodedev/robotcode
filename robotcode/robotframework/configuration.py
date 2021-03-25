@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from ..language_server.parts.workspace import ConfigBase, config_section
 
@@ -15,6 +15,8 @@ class LanguageServerConfig(ConfigBase):
 class RobotConfig(ConfigBase):
     args: Tuple[str, ...]
     pythonpath: List[str]
+    environment: Dict[str, str]
+    variables: Dict[str, str]
 
 
 @config_section("robotcode.syntax")
@@ -27,7 +29,7 @@ class RoboCopConfig(ConfigBase):
     enabled: bool
     include: List[str]
     exclude: List[str]
-    configure: List[str]
+    configurations: List[str]
 
 
 @config_section("robotcode")
