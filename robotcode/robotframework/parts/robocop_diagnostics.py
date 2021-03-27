@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import ast
 import io
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from ...language_server.language import language_id
 from ...language_server.parts.diagnostics import DiagnosticsResult
@@ -14,7 +13,6 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 from ..configuration import RoboCopConfig
-from .documents_cache import DocumentType
 from .protocol_part import RobotLanguageServerProtocolPart
 
 
@@ -49,47 +47,8 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     async def collect_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
 
         from robocop.config import Config
-        from robocop.run import FileType, Robocop
-        from robocop.utils.disablers import DisablersFinder
-
-        class RobotCodeDisablerFinder(DisablersFinder):  # type: ignore
-            def __init__(self, source: str, linter: Any, text: Optional[str] = None):
-                self.text = text
-                super().__init__(source, linter)
-
-            def _parse_file(self, source: str) -> None:
-                if self.text is None:
-                    super()._parse_file(source)
-
-                try:
-                    with io.StringIO(self.text) as file:
-                        lineno = -1
-                        for lineno, line in enumerate(file, start=1):
-                            if "#" in line:
-                                self._parse_line(line, lineno)
-                        if lineno == -1:
-                            return
-                        self._end_block("all", lineno)
-                        self.file_disabled = self._is_file_disabled(lineno)
-                        self.any_disabler = len(self.rules) != 0
-                except BaseException:
-                    self.file_disabled = True
-
-        class RobotCodeRobocop(Robocop):  # type: ignore
-            def __init__(self, from_cli: bool = False, config: Config = None) -> None:
-                super().__init__(from_cli=from_cli, config=config)
-                self.file_text: Dict[str, str] = {}
-
-            def recognize_file_types(self):  # type: ignore
-                pass
-
-            def register_disablers(self, file: str) -> None:
-                """ Parse content of file to find any disabler statements like # robocop: disable=rulename """
-                self.disabler = RobotCodeDisablerFinder(file, self, self.file_text.get(file, None))
-
-            def add_model(self, source: str, file_type: FileType, model: ast.AST, text: str) -> None:
-                self.files[source] = (file_type, model)
-                self.file_text[source] = text
+        from robocop.rules import RuleSeverity
+        from robocop.run import Robocop
 
         extension_config = await self.get_config(document)
         if extension_config is None or not extension_config.enabled:
@@ -103,43 +62,31 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         config.exclude = set(extension_config.exclude)
         config.configure = set(extension_config.configurations)
 
-        analyser = RobotCodeRobocop(from_cli=False, config=config)
+        analyser = Robocop(from_cli=False, config=config)
+        analyser.reload_config()
 
-        document_type = await self.parent.documents_cache.get_document_type(document)
+        model = await self.parent.documents_cache.get_model(document)
 
-        analyser.add_model(
-            str(document.uri.to_path()),
-            FileType.INIT
-            if document_type == DocumentType.INIT
-            else FileType.RESOURCE
-            if DocumentType.RESOURCE
-            else FileType.GENERAL,
-            await self.parent.documents_cache.get_model(document),
-            document.text,
-        )
-
-        json_results = analyser.run()
+        issues = analyser.run_check(model, str(document.uri.to_path()), document.text)
 
         result: List[Diagnostic] = []
 
-        for r in json_results:
-            severity = r["severity"]
-
+        for issue in issues:
             d = Diagnostic(
                 range=Range(
-                    start=Position(line=r["line"] - (1 if r["line"] > 0 else 0), character=r["column"]),
-                    end=Position(line=r["line"] - (1 if r["line"] > 0 else 0), character=r["column"]),
+                    start=Position(line=max(0, issue.line - 1), character=issue.col),
+                    end=Position(line=max(0, issue.line - 1), character=issue.col),
                 ),
-                message=r["description"],
+                message=issue.desc,
                 severity=DiagnosticSeverity.INFORMATION
-                if severity == "I"
+                if issue.severity == RuleSeverity.INFO
                 else DiagnosticSeverity.WARNING
-                if severity == "W"
+                if issue.severity == RuleSeverity.WARNING
                 else DiagnosticSeverity.ERROR
-                if severity == "E"
+                if issue.severity == RuleSeverity.ERROR
                 else DiagnosticSeverity.HINT,
                 source=self.source_name,
-                code=f"{severity}{r['rule_id']}",
+                code=f"{issue.severity.value}{issue.rule_id}",
             )
 
             result.append(d)

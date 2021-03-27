@@ -115,13 +115,13 @@
                     },
                     "robotcode.robot.environment": {
                         "type": "object",
-                        "default": {},                        
+                        "default": {},
                         "description": "Specifies the environment variables for robotframework.",
                         "scope": "resource"
                     },
                     "robotcode.robot.variables": {
                         "type": "object",
-                        "default": {},                        
+                        "default": {},
                         "description": "Specifies the variables for robotframework. Corresponds to the '--variable name:value' option of the robot module.",
                         "scope": "resource"
                     },
@@ -148,12 +148,7 @@
                     },
                     "robotcode.robocop.exclude": {
                         "type": "array",
-                        "default": [
-                            "1001",
-                            "1002",
-                            "1010",
-                            "0704"
-                        ],
+                        "default": [],
                         "items": {
                             "type": "string"
                         },
