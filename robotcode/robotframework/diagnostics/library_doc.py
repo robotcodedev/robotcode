@@ -565,6 +565,50 @@ class IgnoreEasterEggLibraryWarning(BaseException):
     pass
 
 
+def _find_library_internal(
+    name: str,
+    working_dir: str = ".",
+    base_dir: str = ".",
+    pythonpath: Optional[List[str]] = None,
+    environment: Optional[Dict[str, str]] = None,
+    variables: Optional[Dict[str, Optional[Any]]] = None,
+) -> Tuple[str, Any]:
+
+    from robot.libraries import STDLIBS
+    from robot.utils.robotpath import find_file as robot_find_file
+    from robot.variables import Variables
+
+    _update_env(working_dir, pythonpath, environment)
+
+    robot_variables = Variables()
+    for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
+        robot_variables[k] = v
+
+    name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
+
+    if name in STDLIBS:
+        result = ROBOT_LIBRARY_PACKAGE + "." + name
+    else:
+        result = name
+
+    if is_library_by_path(result):
+        result = robot_find_file(result, base_dir or ".", "Library")
+
+    return (result, robot_variables)
+
+
+def find_library(
+    name: str,
+    working_dir: str = ".",
+    base_dir: str = ".",
+    pythonpath: Optional[List[str]] = None,
+    environment: Optional[Dict[str, str]] = None,
+    variables: Optional[Dict[str, Optional[Any]]] = None,
+) -> str:
+
+    return _find_library_internal(name, working_dir, base_dir, pythonpath, environment, variables)[0]
+
+
 def get_library_doc(
     name: str,
     args: Optional[Tuple[Any, ...]] = None,
@@ -576,13 +620,10 @@ def get_library_doc(
 ) -> LibraryDoc:
 
     from robot.libdocpkg.robotbuilder import KeywordDocBuilder
-    from robot.libraries import STDLIBS
     from robot.output import LOGGER
     from robot.running.outputcapture import OutputCapturer
     from robot.running.testlibraries import _get_lib_class
     from robot.utils import Importer
-    from robot.utils.robotpath import find_file as robot_find_file
-    from robot.variables import Variables
 
     def import_test_library(
         name: str,
@@ -609,23 +650,17 @@ def get_library_doc(
         return lib
 
     with _std_capture() as std_capturer:
-        _update_env(working_dir, pythonpath, environment)
-
-        robot_variables = Variables()
-        for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
-            robot_variables[k] = v
-
-        name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
-
-        if name in STDLIBS:
-            import_name = ROBOT_LIBRARY_PACKAGE + "." + name
-        else:
-            import_name = name
+        import_name, robot_variables = _find_library_internal(
+            name,
+            working_dir=working_dir,
+            base_dir=base_dir,
+            pythonpath=pythonpath,
+            environment=environment,
+            variables=variables,
+        )
 
         module_spec: Optional[ModuleSpec] = None
-        if is_library_by_path(import_name):
-            import_name = robot_find_file(import_name, base_dir or ".", "Library")
-        else:
+        if not is_library_by_path(import_name):
             module_spec = get_module_spec(import_name)
 
         # skip antigravity easter egg

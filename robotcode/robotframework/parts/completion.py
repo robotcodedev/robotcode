@@ -40,6 +40,7 @@ from ..utils.ast import (
     get_nodes_at_position,
     range_from_token,
     whitespace_at_begin_of_token,
+    whitespace_from_begin_of_token,
 )
 
 if TYPE_CHECKING:
@@ -444,7 +445,10 @@ class CompletionCollector:
             ws = whitespace_at_begin_of_token(token)
             if ws < 2:
                 return None
-            r.start.character += 2
+
+            ws_b = whitespace_from_begin_of_token(token)
+            r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
+
             if position.is_in_range(r) or r.end == position:
                 return [
                     e
@@ -518,7 +522,10 @@ class CompletionCollector:
             ws = whitespace_at_begin_of_token(token)
             if ws < 2:
                 return None
-            r.start.character += 2
+
+            ws_b = whitespace_from_begin_of_token(token)
+            r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
+
             if position.is_in_range(r) or r.end == position:
                 return [
                     e
@@ -587,7 +594,9 @@ class CompletionCollector:
             ws = whitespace_at_begin_of_token(token)
             if ws < 2:
                 return None
-            r.start.character += 2
+
+            ws_b = whitespace_from_begin_of_token(token)
+            r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
             if position.is_in_range(r) or r.end == position:
                 return await self.create_keyword_completion_items(
@@ -654,7 +663,9 @@ class CompletionCollector:
             ws = whitespace_at_begin_of_token(token)
             if ws < 2:
                 return None
-            r.start.character += 2
+
+            ws_b = whitespace_from_begin_of_token(token)
+            r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
             if position.is_in_range(r) or r.end == position:
                 return await self.create_keyword_completion_items(
@@ -727,7 +738,10 @@ class CompletionCollector:
             name_token = import_node.tokens[import_token_index + 1]
             if position.is_in_range(r := range_from_token(name_token)) or r.end == position:
                 if whitespace_at_begin_of_token(name_token) > 1:
-                    r.start.character += 2
+
+                    ws_b = whitespace_from_begin_of_token(name_token)
+                    r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
+
                     if not position.is_in_range(r := range_from_token(name_token)) and r.end != position:
                         return None
         else:
@@ -818,7 +832,10 @@ class CompletionCollector:
             name_token = import_node.tokens[import_token_index + 1]
             if position.is_in_range(r := range_from_token(name_token)) or r.end == position:
                 if whitespace_at_begin_of_token(name_token) > 1:
-                    r.start.character += 2
+
+                    ws_b = whitespace_from_begin_of_token(name_token)
+                    r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
+
                     if not position.is_in_range(r := range_from_token(name_token)) and r.end != position:
                         return None
         else:
@@ -843,8 +860,6 @@ class CompletionCollector:
             if last_seperator_index < len(text_before_position)
             else None
         )
-
-        sep = text_before_position[last_seperator_index] if last_seperator_index < len(text_before_position) else ""
 
         imports_manger = await self.parent.documents_cache.get_imports_manager(self.document)
 
@@ -875,7 +890,7 @@ class CompletionCollector:
                 data={
                     "document_uri": str(self.document.uri),
                     "type": e.detail,
-                    "name": ((first_part + sep) if first_part is not None else "") + e.label,
+                    "name": ((first_part) if first_part is not None else "") + e.label,
                 },
             )
             for e in list
@@ -888,7 +903,7 @@ class CompletionCollector:
                 document = self.parent.documents.get(document_uri, None)
                 if document is not None:
                     type = completion_item.data.get("type", None)
-                    if type is not None and type in ["Library", "Library (Internal)", "File"]:
+                    if type is not None and type in ["Module", "Module (Internal)", "File"]:
                         name = completion_item.data.get("name", None)
                         if name is not None:
                             try:
@@ -897,9 +912,11 @@ class CompletionCollector:
                                 ).get_libdoc_for_library_import(
                                     name, (), str(document.uri.to_path().parent), sentinel=self
                                 )
-                                completion_item.documentation = MarkupContent(
-                                    kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown()
-                                )
+
+                                if lib_doc is not None:
+                                    completion_item.documentation = MarkupContent(
+                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown()
+                                    )
 
                             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                                 raise
@@ -907,12 +924,33 @@ class CompletionCollector:
                                 completion_item.documentation = MarkupContent(
                                     kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
                                 )
-                    if type is not None and type in ["Keyword"]:
+                    if type is not None and type in ["Resource", "File"]:
+                        name = completion_item.data.get("name", None)
+                        if name is not None:
+                            try:
+                                lib_doc = lib_doc = await (
+                                    await self.parent.documents_cache.get_imports_manager(document)
+                                ).get_libdoc_for_resource_import(
+                                    name, str(document.uri.to_path().parent), sentinel=self
+                                )
+
+                                if lib_doc is not None:
+                                    completion_item.documentation = MarkupContent(
+                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown()
+                                    )
+
+                            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                                raise
+                            except BaseException as e:
+                                completion_item.documentation = MarkupContent(
+                                    kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
+                                )
+                    elif type is not None and type in ["Keyword"]:
                         libname = completion_item.data.get("libname", None)
                         name = completion_item.data.get("name", None)
                         if libname is not None and name is not None:
                             try:
-                                keyword_doc = next(
+                                kw_doc = next(
                                     (
                                         kw
                                         for kw in (
@@ -925,9 +963,9 @@ class CompletionCollector:
                                     None,
                                 )
 
-                                if keyword_doc is not None:
+                                if kw_doc is not None:
                                     completion_item.documentation = MarkupContent(
-                                        kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()
+                                        kind=MarkupKind.MARKDOWN, value=kw_doc.to_markdown()
                                     )
 
                             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):

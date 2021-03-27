@@ -899,8 +899,7 @@ class Namespace:
     async def _get_resource_entry(self, name: str, base_dir: str, sentinel: Any = None) -> ResourceEntry:
 
         namespace = await self.imports_manager.get_namespace_for_resource_import(name, base_dir, sentinel=sentinel)
-
-        library_doc = await namespace.get_library_doc()
+        library_doc = await self.imports_manager.get_libdoc_for_resource_import(name, base_dir, sentinel=sentinel)
 
         return ResourceEntry(
             name=library_doc.name, import_name=name, library_doc=library_doc, imports=await namespace.get_imports()

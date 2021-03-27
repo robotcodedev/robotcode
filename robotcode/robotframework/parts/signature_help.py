@@ -37,6 +37,7 @@ from ..utils.ast import (
     get_tokens_at_position,
     range_from_token,
     whitespace_at_begin_of_token,
+    whitespace_from_begin_of_token,
 )
 
 if TYPE_CHECKING:
@@ -138,7 +139,10 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         if whitespace_at_begin_of_token(token_at_position) > 1:
             r = range_from_token(token_at_position)
-            r.start.character += 2
+
+            ws_b = whitespace_from_begin_of_token(token_at_position)
+            r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
+
             if position.is_in_range(r) or r.end == position:
                 argument_index += 1
 
@@ -258,7 +262,10 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         if whitespace_at_begin_of_token(token_at_position) > 1:
             r = range_from_token(token_at_position)
-            r.start.character += 2
+
+            ws_b = whitespace_from_begin_of_token(token_at_position)
+            r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
+
             if position.is_in_range(r) or r.end == position:
                 argument_index += 1
 

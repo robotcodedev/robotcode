@@ -41,6 +41,7 @@ from .library_doc import (
     complete_library_import,
     complete_resource_import,
     find_file,
+    find_library,
     get_library_doc,
     init_pool,
     is_embedded_keyword,
@@ -58,7 +59,6 @@ COMPLETE_LIBRARY_IMPORT_TIME_OUT = COMPLETE_RESOURCE_IMPORT_TIME_OUT = 10
 @dataclass()
 class _LibrariesEntryKey:
     name: str
-    base_dir: str
     args: Tuple[Any, ...]
 
     def __hash__(self) -> int:
@@ -216,7 +216,6 @@ class _LibrariesEntry:
 @dataclass()
 class _ResourcesEntryKey:
     name: str
-    base_dir: str
 
     def __hash__(self) -> int:
         return hash(self.name)
@@ -432,12 +431,30 @@ class ImportsManager:
             asyncio.run_coroutine_threadsafe(threadsafe_remove(entry_key, entry, now), loop=self._loop)
 
     @_logger.call
+    async def find_library(self, name: str, base_dir: str) -> str:
+        return await asyncio.wait_for(
+            self._loop.run_in_executor(
+                self.process_pool,
+                find_library,
+                name,
+                str(self.folder.to_path()),
+                base_dir,
+                self.config.pythonpath if self.config is not None else None,
+                self.config.environment if self.config is not None else None,
+                self.config.variables if self.config is not None else None,
+            ),
+            FIND_FILE_TIME_OUT,
+        )
+
+    @_logger.call
     async def get_libdoc_for_library_import(
-        self, name: str, args: Tuple[Any, ...] = (), base_dir: str = ".", sentinel: Any = None
+        self, name: str, args: Tuple[Any, ...], base_dir: str, sentinel: Any = None
     ) -> LibraryDoc:
         async with self._libaries_lock:
+            source = await self.find_library(name, base_dir)
+
             # TODO resolve library source / module and use it for the entry key
-            entry_key = _LibrariesEntryKey(name, base_dir, args)
+            entry_key = _LibrariesEntryKey(source, args)
 
             if entry_key not in self._libaries:
 
@@ -578,15 +595,16 @@ class ImportsManager:
         async with self._resources_lock:
             # TODO resolve resource source and use it for the entry key
 
-            entry_key = _ResourcesEntryKey(name, base_dir)
+            source = await self.find_file(name, base_dir, "Resource")
+
+            entry_key = _ResourcesEntryKey(source)
 
             if entry_key not in self._resources:
 
                 async def _get_document() -> TextDocument:
                     from robot.utils import FileReader
 
-                    self._logger.debug(lambda: f"Load resource {name}")
-                    source = await self.find_file(name, base_dir or ".", "Resource")
+                    self._logger.debug(lambda: f"Load resource {name} from source {source}")
 
                     source_path = Path(source).resolve()
                     extension = source_path.suffix
@@ -621,6 +639,11 @@ class ImportsManager:
         document = await self.get_document_for_resource_import(name, base_dir, sentinel)
 
         return await self.parent_protocol.documents_cache.get_resource_namespace(document)
+
+    async def get_libdoc_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> LibraryDoc:
+        namespace = await self.get_namespace_for_resource_import(name, base_dir, sentinel=sentinel)
+
+        return await namespace.get_library_doc()
 
     async def complete_library_import(self, name: Optional[str], base_dir: str = ".") -> Optional[List[CompleteResult]]:
         result = await asyncio.wait_for(

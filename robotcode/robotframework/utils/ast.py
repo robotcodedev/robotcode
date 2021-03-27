@@ -104,9 +104,22 @@ def whitespace_at_begin_of_token(token: Token) -> int:
         if c == " ":
             result += 1
         elif c == "\t":
-            result += 4
+            result += 2
         else:
             break
+    return result
+
+
+def whitespace_from_begin_of_token(token: Token) -> str:
+    s = str(token.value)
+
+    result = ""
+    for c in s:
+        if c in [" ", "\t"]:
+            result += c
+        else:
+            break
+
     return result
 
 
