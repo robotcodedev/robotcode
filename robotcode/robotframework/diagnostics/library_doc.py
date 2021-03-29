@@ -331,9 +331,14 @@ def _update_env(
     global __PRELOADED_MODULES
 
     if __PRELOADED_MODULES is None:
+        try:
+            __import__("robot.libraries.BuiltIn")
+        except ImportError:
+            pass
+
         __PRELOADED_MODULES = set(sys.modules.values())
     else:
-        for m in set(sys.modules.values()) - __PRELOADED_MODULES:
+        for m in (f for f in set(sys.modules.values()) - __PRELOADED_MODULES if not f.__name__.startswith("robot.")):
             try:
                 importlib.reload(m)
             except (SystemExit, KeyboardInterrupt):
@@ -347,8 +352,9 @@ def _update_env(
         sys.path.remove(p)
     wd = Path(working_dir)
 
-    gc.collect()
     importlib.invalidate_caches()
+
+    gc.collect()
 
     os.chdir(wd)
 
@@ -361,16 +367,6 @@ def _update_env(
     if environment:
         for k, v in environment.items():
             os.environ[k] = v
-
-    try:
-        # Try to reinitialize robot.running.context.EXECUTION_CONTEXTS to prevent exceptions
-        # at reloading of libraries
-
-        import robot.running.context
-
-        robot.running.context.EXECUTION_CONTEXTS = robot.running.context.ExecutionContexts()
-    except BaseException:
-        pass
 
 
 def get_module_spec(module_name: str) -> Optional[ModuleSpec]:

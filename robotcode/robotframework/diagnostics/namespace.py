@@ -525,7 +525,7 @@ class Namespace:
         self._analyzed = False
         self._analyze_lock = asyncio.Lock()
         self._library_doc: Optional[LibraryDoc] = None
-
+        self._imports: Optional[List[Import]] = None
         self._diagnostics: List[Diagnostic] = []
 
         self._keywords: Optional[List[KeywordDoc]] = None
@@ -579,25 +579,25 @@ class Namespace:
 
     @_logger.call
     async def _ensure_initialized(self) -> None:
-        if not self._initialzed:
-            async with self._initialize_lock:
+        async with self._initialize_lock:
+            if not self._initialzed:
                 try:
                     imports = await self.get_imports()
-                    document = self.document
-                    if document is not None:
-                        if document is not None:
-                            old_imports = document.get_data(Namespace)
-                            if old_imports is None:
-                                document.set_data(Namespace, imports)
-                            elif old_imports != imports:
-                                new_imports = []
-                                for e in old_imports:
-                                    if e in imports:
-                                        new_imports.append(e)
-                                for e in imports:
-                                    if e not in new_imports:
-                                        new_imports.append(e)
-                                document.set_data(Namespace, new_imports)
+
+                    if self.document is not None:
+
+                        old_imports = self.document.get_data(Namespace)
+                        if old_imports is None:
+                            self.document.set_data(Namespace, imports)
+                        elif old_imports != imports:
+                            new_imports = []
+                            for e in old_imports:
+                                if e in imports:
+                                    new_imports.append(e)
+                            for e in imports:
+                                if e not in new_imports:
+                                    new_imports.append(e)
+                            self.document.set_data(Namespace, new_imports)
 
                     await self._import_default_libraries()
                     await self._import_imports(imports, str(Path(self.source).parent), top_level=True)
@@ -605,7 +605,10 @@ class Namespace:
                     self._initialzed = True
 
     async def get_imports(self) -> List[Import]:
-        return await ImportVisitor().get(self.source, self.model)
+        if self._imports is None:
+            self._imports = await ImportVisitor().get(self.source, self.model)
+
+        return self._imports
 
     async def _import_imports(self, imports: Iterable[Import], base_dir: str, *, top_level: bool = False) -> None:
         async def _import(value: Import) -> Optional[LibraryEntry]:
@@ -614,6 +617,7 @@ class Namespace:
                 if isinstance(value, LibraryImport):
                     if value.name is None:
                         raise NameSpaceError("Library setting requires value.")
+
                     result = await self._get_library_entry(
                         value.name, value.args, value.alias, base_dir, sentinel=value
                     )
@@ -632,6 +636,12 @@ class Namespace:
                 elif isinstance(value, ResourceImport):
                     if value.name is None:
                         raise NameSpaceError("Resource setting requires value.")
+                    source = await self.imports_manager.find_file(value.name, base_dir)
+
+                    # allready imported
+                    if any(r for r in self._resources.values() if r.library_doc.source == source):
+                        return None
+
                     result = await self._get_resource_entry(value.name, base_dir, sentinel=value)
                     result.import_range = value.range()
                     result.import_source = value.source
@@ -653,16 +663,19 @@ class Namespace:
                         )
 
                 elif isinstance(value, VariablesImport):
-                    if value.name is None:
-                        raise NameSpaceError("Variables setting requires value.")
-                    result = await self._get_variables_entry(value.name, value.args, base_dir)
-                    result.import_range = value.range()
-                    result.import_source = value.source
+                    # TODO: variables
 
+                    # if value.name is None:
+                    #     raise NameSpaceError("Variables setting requires value.")
+                    # result = await self._get_variables_entry(value.name, value.args, base_dir)
+
+                    # result.import_range = value.range()
+                    # result.import_source = value.source
+                    pass
                 else:
                     raise DiagnosticsException("Unknown import type.")
 
-                if top_level:
+                if top_level and result is not None:
                     if result.library_doc.source is not None and result.library_doc.errors:
                         if any(err.source for err in result.library_doc.errors):
                             self._diagnostics.append(
@@ -891,13 +904,12 @@ class Namespace:
         sentinel: Any = None,
     ) -> LibraryEntry:
         library = await self.imports_manager.get_libdoc_for_library_import(
-            name, args, base_dir=base_dir, sentinel=sentinel
+            name, args, base_dir=base_dir, sentinel=None if is_default_library else sentinel
         )
 
         return LibraryEntry(name=library.name, import_name=name, library_doc=library, args=args, alias=alias)
 
     async def _get_resource_entry(self, name: str, base_dir: str, sentinel: Any = None) -> ResourceEntry:
-
         namespace = await self.imports_manager.get_namespace_for_resource_import(name, base_dir, sentinel=sentinel)
         library_doc = await self.imports_manager.get_libdoc_for_resource_import(name, base_dir, sentinel=sentinel)
 

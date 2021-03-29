@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import gc
 import weakref
 from collections import OrderedDict
 from concurrent.futures import ProcessPoolExecutor
@@ -226,12 +227,13 @@ class _ResourcesEntry:
         self,
         name: str,
         parent: ImportsManager,
-        get_document_coroutine: Callable[[], Coroutine[Any, Any, TextDocument]],
+        get_document_coroutine: Callable[[], Coroutine[Any, Any, Tuple[TextDocument, bool]]],
     ) -> None:
         super().__init__()
         self.name = name
         self.parent = parent
         self.get_document_coroutine = get_document_coroutine
+        self._delete_on_validate_document = False
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
         self.file_watchers: List[FileWatcherEntry] = []
         self._document: Optional[TextDocument] = None
@@ -271,7 +273,7 @@ class _ResourcesEntry:
             return None
 
     async def _update(self) -> None:
-        self._document = await self.get_document_coroutine()
+        self._document, self._delete_on_validate_document = await self.get_document_coroutine()
 
         if self._document.version is None:
             self.file_watchers.append(
@@ -290,6 +292,13 @@ class _ResourcesEntry:
             return
 
         await self._remove_file_watcher()
+
+        if self._delete_on_validate_document:
+            if self._document is not None:
+                await self._document.clear()
+            del self._document
+            gc.collect()
+
         self._document = None
 
     async def _remove_file_watcher(self) -> None:
@@ -363,7 +372,7 @@ class ImportsManager:
                     if not await r_entry.is_valid():
                         continue
 
-                    result = (await r_entry.get_document()).uri == document.uri
+                    result = (await r_entry.get_document()).uri.to_path() == document.uri.to_path()
                     if result:
                         await r_entry.invalidate()
                 except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
@@ -418,9 +427,9 @@ class ImportsManager:
         if self._loop.is_running():
             asyncio.run_coroutine_threadsafe(threadsafe_remove(entry_key, entry, now), loop=self._loop)
 
-    def __remove_resource_entry(self, entry_key: _ResourcesEntryKey, entry: _ResourcesEntry, now: bool = False) -> None:
-        async def threadsafe_remove(k: _ResourcesEntryKey, e: _ResourcesEntry, n: bool) -> None:
-            if n or len(e.references) == 0:
+    def __remove_resource_entry(self, entry_key: _ResourcesEntryKey, entry: _ResourcesEntry) -> None:
+        async def threadsafe_remove(k: _ResourcesEntryKey, e: _ResourcesEntry) -> None:
+            if len(e.references) == 0:
                 async with self._resources_lock:
                     if k in self._resources:
                         self._logger.debug(lambda: f"Remove Resource Entry {k}")
@@ -428,7 +437,7 @@ class ImportsManager:
                         self._resources.pop(k, None)
 
         if self._loop.is_running():
-            asyncio.run_coroutine_threadsafe(threadsafe_remove(entry_key, entry, now), loop=self._loop)
+            asyncio.run_coroutine_threadsafe(threadsafe_remove(entry_key, entry), loop=self._loop)
 
     @_logger.call
     async def find_library(self, name: str, base_dir: str) -> str:
@@ -450,48 +459,48 @@ class ImportsManager:
     async def get_libdoc_for_library_import(
         self, name: str, args: Tuple[Any, ...], base_dir: str, sentinel: Any = None
     ) -> LibraryDoc:
+
+        source = await self.find_library(name, base_dir)
+
+        async def _get_libdoc() -> LibraryDoc:
+            self._logger.debug(lambda: f"Load Library {source}{repr(args)}")
+
+            result = await asyncio.wait_for(
+                self._loop.run_in_executor(
+                    self.process_pool,
+                    get_library_doc,
+                    name,
+                    args,
+                    str(self.folder.to_path()),
+                    base_dir,
+                    self.config.pythonpath if self.config is not None else None,
+                    self.config.environment if self.config is not None else None,
+                    self.config.variables if self.config is not None else None,
+                ),
+                LOAD_LIBRARY_TIME_OUT,
+            )
+
+            if result.stdout:
+                self._logger.warning(lambda: f"stdout captured at loading library {name}{repr(args)}:\n{result.stdout}")
+            return result
+
         async with self._libaries_lock:
-            source = await self.find_library(name, base_dir)
 
             # TODO resolve library source / module and use it for the entry key
             entry_key = _LibrariesEntryKey(source, args)
 
             if entry_key not in self._libaries:
-
-                async def _get_libdoc() -> LibraryDoc:
-                    self._logger.debug(lambda: f"Load Library {name}{repr(args)}")
-                    result = await asyncio.wait_for(
-                        self._loop.run_in_executor(
-                            self.process_pool,
-                            get_library_doc,
-                            name,
-                            args,
-                            str(self.folder.to_path()),
-                            base_dir,
-                            self.config.pythonpath if self.config is not None else None,
-                            self.config.environment if self.config is not None else None,
-                            self.config.variables if self.config is not None else None,
-                        ),
-                        LOAD_LIBRARY_TIME_OUT,
-                    )
-
-                    if result.stdout:
-                        self._logger.warning(
-                            lambda: f"stdout captured at loading library {name}{repr(args)}:\n{result.stdout}"
-                        )
-                    return result
-
                 self._libaries[entry_key] = entry = _LibrariesEntry(
                     name, args, self, _get_libdoc, ignore_reference=sentinel is None
                 )
 
-        entry = self._libaries[entry_key]
+            entry = self._libaries[entry_key]
 
-        if not entry.ignore_reference and sentinel is not None and sentinel not in entry.references:
-            entry.references.add(sentinel)
-            weakref.finalize(sentinel, self.__remove_library_entry, entry_key, entry)
+            if not entry.ignore_reference and sentinel is not None and sentinel not in entry.references:
+                entry.references.add(sentinel)
+                weakref.finalize(sentinel, self.__remove_library_entry, entry_key, entry)
 
-        return await entry.get_libdoc()
+            return await entry.get_libdoc()
 
     @_logger.call
     async def get_libdoc_from_model(
@@ -591,49 +600,45 @@ class ImportsManager:
 
     @_logger.call
     async def get_document_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> TextDocument:
+        source = await self.find_file(name, base_dir, "Resource")
+
+        async def _get_document() -> Tuple[TextDocument, bool]:
+            from robot.utils import FileReader
+
+            self._logger.debug(lambda: f"Load resource {name} from source {source}")
+
+            source_path = Path(source).resolve()
+            extension = source_path.suffix
+            if extension.lower() not in RESOURCE_EXTENSIONS:
+                raise ImportError(
+                    f"Invalid resource file extension '{extension}'. "
+                    f"Supported extensions are {', '.join(repr(s) for s in RESOURCE_EXTENSIONS)}."
+                )
+
+            source_uri = DocumentUri(Uri.from_path(source_path))
+
+            result = self.parent_protocol.documents.get(source_uri, None)
+            if result is not None:
+                return result, False
+
+            with FileReader(source_path) as reader:
+                text = str(reader.read())
+
+            return TextDocument(document_uri=source_uri, language_id="robot", version=None, text=text), True
 
         async with self._resources_lock:
-            # TODO resolve resource source and use it for the entry key
-
-            source = await self.find_file(name, base_dir, "Resource")
-
             entry_key = _ResourcesEntryKey(source)
 
             if entry_key not in self._resources:
-
-                async def _get_document() -> TextDocument:
-                    from robot.utils import FileReader
-
-                    self._logger.debug(lambda: f"Load resource {name} from source {source}")
-
-                    source_path = Path(source).resolve()
-                    extension = source_path.suffix
-                    if extension.lower() not in RESOURCE_EXTENSIONS:
-                        raise ImportError(
-                            f"Invalid resource file extension '{extension}'. "
-                            f"Supported extensions are {', '.join(repr(s) for s in RESOURCE_EXTENSIONS)}."
-                        )
-
-                    source_uri = DocumentUri(Uri.from_path(source_path))
-
-                    result = self.parent_protocol.documents.get(source_uri, None)
-                    if result is not None:
-                        return result
-
-                    with FileReader(source_path) as reader:
-                        text = str(reader.read())
-
-                    return TextDocument(document_uri=source_uri, language_id="robot", version=None, text=text)
-
                 self._resources[entry_key] = entry = _ResourcesEntry(name, self, _get_document)
 
-        entry = self._resources[entry_key]
+            entry = self._resources[entry_key]
 
-        if sentinel is not None and sentinel not in entry.references:
-            entry.references.add(sentinel)
-            weakref.finalize(sentinel, self.__remove_resource_entry, entry_key, entry)
+            if sentinel is not None and sentinel not in entry.references:
+                entry.references.add(sentinel)
+                weakref.finalize(sentinel, self.__remove_resource_entry, entry_key, entry)
 
-        return await entry.get_document()
+            return await entry.get_document()
 
     async def get_namespace_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> "Namespace":
         document = await self.get_document_for_resource_import(name, base_dir, sentinel)

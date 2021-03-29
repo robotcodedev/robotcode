@@ -11,7 +11,7 @@ from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
 from ..language import HasLanguageId
 from ..text_document import TextDocument
-from ..types import Diagnostic, PublishDiagnosticsParams
+from ..types import Diagnostic, DocumentUri, PublishDiagnosticsParams
 
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol
@@ -26,9 +26,9 @@ DIAGNOSTICS_DEBOUNCE = 0.75
 class PublishDiagnosticsEntry:
     _logger = LoggingDescriptor()
 
-    def __init__(self, document: TextDocument, task_factory: Callable[..., asyncio.Task[Any]]) -> None:
+    def __init__(self, document_uri: DocumentUri, task_factory: Callable[..., asyncio.Task[Any]]) -> None:
 
-        self._document_uri = document.uri
+        self._document_uri = document_uri
 
         self._task_factory = task_factory
 
@@ -39,7 +39,7 @@ class PublishDiagnosticsEntry:
             self._task = self._task_factory()
 
             if self._task is not None:
-                self._task.set_name(f"Diagnostics for {self.document_uri}")
+                self._task.set_name(f"Diagnostics for {self._document_uri}")
 
                 def _done(t: asyncio.Task[Any]) -> None:
                     self._task = None
@@ -52,18 +52,14 @@ class PublishDiagnosticsEntry:
         self.cancel(_from_del=True)
 
     @property
-    def document_uri(self) -> Uri:
-        return self._document_uri
-
-    @property
     def task(self) -> Optional[asyncio.Task[Any]]:
         return self._task
 
     def __str__(self) -> str:
-        return f"{type(self)}(document={repr(self.document_uri)}, task={repr(self.task)})"
+        return self.__repr__()
 
     def __repr__(self) -> str:
-        return f"{type(self)}(document={repr(self.document_uri)}, task={repr(self.task)})"
+        return f"{type(self)}(document={repr(self._document_uri)}, task={repr(self.task)})"
 
     @_logger.call(condition=lambda self, _from_del=False: not _from_del)
     def cancel(self, *, _from_del: Optional[bool] = False) -> None:
@@ -170,19 +166,18 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             self._cancel_entry(self._running_diagnosistcs.get(document.uri, None))
 
             self._running_diagnosistcs[document.uri] = PublishDiagnosticsEntry(
-                document,
+                document.document_uri,
                 lambda: asyncio.create_task(
-                    self.publish_diagnostics(document),
+                    self.publish_diagnostics(document.document_uri),
                 ),
             )
 
-    async def diagnostics_setter(
-        self, document: TextDocument, diagnostics: Optional[List[Diagnostic]]
-    ) -> Optional[List[Diagnostic]]:
-        return diagnostics
-
     @_logger.call
-    async def publish_diagnostics(self, document: TextDocument) -> None:
+    async def publish_diagnostics(self, document_uri: DocumentUri) -> None:
+        document = self.parent.documents.get(document_uri, None)
+        if document is None:
+            return
+
         diagnostics: Dict[Any, List[Diagnostic]] = document.get_data(self, {})
 
         collected_keys: List[Any] = []

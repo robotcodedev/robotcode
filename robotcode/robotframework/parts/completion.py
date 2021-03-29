@@ -4,6 +4,7 @@ import ast
 import asyncio
 import builtins
 import os
+import weakref
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -114,7 +115,11 @@ class CompletionCollector:
     def __init__(self, parent: RobotLanguageServerProtocol, document: Optional[TextDocument] = None) -> None:
         self.parent = parent
         self._section_style: Optional[str] = None
-        self.document = document
+        self._document = weakref.ref(document) if document is not None else None
+
+    @property
+    def document(self) -> Optional[TextDocument]:
+        return self._document() if self._document is not None else None
 
     async def get_section_style(self) -> str:
         if self.document is not None and self._section_style is None:
@@ -304,6 +309,28 @@ class CompletionCollector:
                             result.append(c)
                         return result
 
+                    resources = await namespace.get_resources()
+                    if library_name in resources:
+                        r.start.character = lib_name_index + 1
+                        for kw in resources[library_name].library_doc.keywords.values():
+                            c = CompletionItem(
+                                label=kw.name,
+                                kind=CompletionItemKind.FUNCTION,
+                                detail="Keyword",
+                                sort_text=f"020_{kw.name}",
+                                # documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=kw.to_markdown()),
+                                insert_text_format=InsertTextFormat.PLAINTEXT,
+                                text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
+                                data={
+                                    "document_uri": str(self.document.uri),
+                                    "type": "Keyword",
+                                    "libname": kw.libname,
+                                    "name": kw.name,
+                                },
+                            )
+                            result.append(c)
+                        return result
+
         for kw in await namespace.get_keywords():
             c = CompletionItem(
                 label=kw.name,
@@ -327,6 +354,18 @@ class CompletionCollector:
                 label=k,
                 kind=CompletionItemKind.MODULE,
                 detail="Library",
+                sort_text=f"030_{k}",
+                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=v.library_doc.to_markdown()),
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
+            )
+            result.append(c)
+
+        for k, v in (await namespace.get_resources()).items():
+            c = CompletionItem(
+                label=k,
+                kind=CompletionItemKind.MODULE,
+                detail="Resource",
                 sort_text=f"030_{k}",
                 documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=v.library_doc.to_markdown()),
                 insert_text_format=InsertTextFormat.PLAINTEXT,

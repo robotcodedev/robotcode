@@ -66,11 +66,10 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         document_type = await self.get_document_type(document)
 
-        def get() -> List[Token]:
+        def get(text: str) -> List[Token]:
             gen_func: Iterator[Token]
 
-            with io.StringIO(document.text) as content:
-
+            with io.StringIO(text) as content:
                 if document_type == DocumentType.INIT:
                     gen_func = robot.api.get_init_tokens(content)
                 elif document_type == DocumentType.GENERAL:
@@ -82,7 +81,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
                 return [e for e in gen_func]
 
-        return await asyncio.get_event_loop().run_in_executor(None, get)
+        return await asyncio.get_event_loop().run_in_executor(None, get, document.text)
 
     async def get_model(self, document: TextDocument) -> ast.AST:
         document_type = await self.get_document_type(document)
@@ -102,15 +101,12 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     async def __get_robot_model(self, document: TextDocument) -> ast.AST:
         import robot.api
 
-        def get() -> ast.AST:
-            with io.StringIO(document.text) as content:
-                return cast(ast.AST, robot.api.get_model(content))
-
-        model = await asyncio.get_event_loop().run_in_executor(None, get)
+        with io.StringIO(document.text) as content:
+            model = await asyncio.get_event_loop().run_in_executor(None, robot.api.get_model, content)
 
         setattr(model, "source", str(document.uri.to_path()))
 
-        return model
+        return cast(ast.AST, model)
 
     async def get_resource_model(self, document: TextDocument) -> ast.AST:
         return await document.get_cache(self.__get_resource_model)
@@ -118,15 +114,12 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     async def __get_resource_model(self, document: TextDocument) -> ast.AST:
         import robot.api
 
-        def get() -> ast.AST:
-            with io.StringIO(document.text) as content:
-                return cast(ast.AST, robot.api.get_resource_model(content))
-
-        model = await asyncio.get_event_loop().run_in_executor(None, get)
+        with io.StringIO(document.text) as content:
+            model = await asyncio.get_event_loop().run_in_executor(None, robot.api.get_resource_model, content)
 
         setattr(model, "source", str(document.uri.to_path()))
 
-        return model
+        return cast(ast.AST, model)
 
     async def get_init_model(self, document: TextDocument) -> ast.AST:
         return await document.get_cache(self.__get_init_model)
@@ -134,15 +127,12 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     async def __get_init_model(self, document: TextDocument) -> ast.AST:
         import robot.api
 
-        def get() -> ast.AST:
-            with io.StringIO(document.text) as content:
-                return cast(ast.AST, robot.api.get_init_model(content))
-
-        model = await asyncio.get_event_loop().run_in_executor(None, get)
+        with io.StringIO(document.text) as content:
+            model = await asyncio.get_event_loop().run_in_executor(None, robot.api.get_init_model, content)
 
         setattr(model, "source", str(document.uri.to_path()))
 
-        return model
+        return cast(ast.AST, model)
 
     async def get_namespace(self, document: TextDocument) -> Namespace:
         return await document.get_cache(self.__get_namespace)
@@ -172,9 +162,11 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     async def namespace_invalidated(sender, document: TextDocument) -> None:
         ...
 
-    async def __invalidate_namespace(self, document: TextDocument, namespace: Namespace) -> None:
-        await document.remove_cache_entry(self.__get_namespace)
-        await self.namespace_invalidated(self, document)
+    async def __invalidate_namespace(self, namespace: Namespace) -> None:
+        document = namespace.document
+        if document is not None:
+            await document.remove_cache_entry(self.__get_namespace)
+            await self.namespace_invalidated(self, document)
 
     async def __get_namespace_for_document_type(
         self, document: TextDocument, document_type: Optional[DocumentType]
@@ -192,7 +184,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         def invalidate(namespace: Namespace) -> None:
             if self._loop.is_running():
-                asyncio.ensure_future(self.__invalidate_namespace(document, namespace))
+                asyncio.ensure_future(self.__invalidate_namespace(namespace))
 
         return Namespace(imports_manager, model, str(document.uri.to_path()), invalidate, document)
 

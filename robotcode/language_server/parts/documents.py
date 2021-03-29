@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Mapping, Optional
 
 from ...jsonrpc2.protocol import JsonRPCException, rpc_method
@@ -92,8 +93,10 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
 
         if document is not None:
             await self.did_close(self, document)
-
             await document.clear()
+            del document
+
+        gc.collect()
 
     @rpc_method(name="textDocument/willSave", param_type=WillSaveTextDocumentParams)
     @_logger.call
