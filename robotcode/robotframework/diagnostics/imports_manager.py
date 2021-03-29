@@ -41,6 +41,7 @@ from .library_doc import (
     LibraryDoc,
     complete_library_import,
     complete_resource_import,
+    dummy_first_run_pool,
     find_file,
     find_library,
     get_library_doc,
@@ -321,13 +322,22 @@ class _ResourcesEntry:
             return self._document
 
 
+def _shutdown_process_pool(pool: ProcessPoolExecutor) -> None:
+    pool.shutdown(False)
+
+
 # we need this, because ProcessPoolExecutor is not correctly initialized if asyncio is reading from stdin
 def _init_process_pool() -> ProcessPoolExecutor:
-    result = ProcessPoolExecutor(max_workers=PROCESS_POOL_MAX_WORKERS)
+    import atexit
+
+    result = ProcessPoolExecutor(max_workers=PROCESS_POOL_MAX_WORKERS, initializer=init_pool)
+
     try:
-        result.submit(init_pool).result(5)
+        result.submit(dummy_first_run_pool).result(5)
     except BaseException:
         pass
+
+    atexit.register(_shutdown_process_pool, result)
     return result
 
 

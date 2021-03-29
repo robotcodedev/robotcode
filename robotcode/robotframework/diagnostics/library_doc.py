@@ -300,7 +300,7 @@ class LibraryDoc(Model):
         return result
 
     @property
-    def python_source(self) -> Optional[str]:
+    def source_or_origin(self) -> Optional[str]:
         if self.source is not None:
             return self.source
         if self.module_spec is not None:
@@ -674,11 +674,19 @@ def get_library_doc(
         except BaseException as e:
             return LibraryDoc(
                 name=name,
-                source=source,
+                source=source or module_spec.origin
+                if module_spec is not None and module_spec.origin
+                else import_name
+                if is_library_by_path(import_name)
+                else None,
                 errors=[
                     error_from_exception(
                         e,
-                        source or module_spec.origin if module_spec is not None else None,
+                        source or module_spec.origin
+                        if module_spec is not None and module_spec.origin
+                        else import_name
+                        if is_library_by_path(import_name)
+                        else None,
                         1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
                     )
                 ],
@@ -989,5 +997,11 @@ def complete_resource_import(
 
 
 def init_pool() -> None:
-    """Dummy function to initialize the ProcessPollExecutor"""
+    import signal
+
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+
+def dummy_first_run_pool() -> None:
+    """Dummy function to initialize the ProcessPoolExecutor"""
     pass

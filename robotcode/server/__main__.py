@@ -118,6 +118,8 @@ def run_server(mode: str, port: int) -> None:
             server.run()
         except (SystemExit, KeyboardInterrupt):
             pass
+        except BaseException as e:
+            _logger.exception(e)
 
 
 def main() -> None:

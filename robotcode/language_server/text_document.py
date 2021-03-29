@@ -7,7 +7,6 @@ import weakref
 from types import MethodType
 from typing import Any, Awaitable, Callable, Dict, List, Optional, TypeVar, Union, cast
 
-from ..utils.logging import LoggingDescriptor
 from ..utils.uri import Uri
 from .types import DocumentUri, Position, Range, TextDocumentItem
 
@@ -40,8 +39,6 @@ _T = TypeVar("_T")
 
 
 class TextDocument:
-    _logger = LoggingDescriptor()
-
     def __init__(
         self,
         text_document_item: Optional[TextDocumentItem] = None,
@@ -83,7 +80,6 @@ class TextDocument:
 
         self._loop = asyncio.get_event_loop()
 
-    @_logger.call
     def __del__(self) -> None:
         self._clear()
 

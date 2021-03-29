@@ -541,13 +541,13 @@ class Namespace:
 
         for p in params:
             c = (p.name, p.args)
-            if any(e for e in self._libraries.values() if (e.import_name, e.args) == c):
+            if any(e for e in self._libraries.values() if (e.library_doc.source_or_origin, e.args) == c):
                 self.invalidated_callback(self)
                 break
 
     async def resources_changed(self, sender: Any, params: List[ResourceChangedParams]) -> None:
         for p in params:
-            if any(e for e in self._resources.values() if e.import_name == p.name):
+            if any(e for e in self._resources.values() if e.library_doc.source_or_origin == p.name):
                 self.invalidated_callback(self)
                 break
 

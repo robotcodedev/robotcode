@@ -210,7 +210,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
                 if len(libdocs) == 1:
                     result = libdocs[0]
-                    python_source = result.python_source
+                    python_source = result.source_or_origin
                     if python_source is not None:
                         return [
                             LocationLink(
@@ -248,7 +248,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
                 if len(libdocs) == 1:
                     result = libdocs[0]
-                    python_source = result.python_source
+                    python_source = result.source_or_origin
                     if python_source is not None:
                         return [
                             LocationLink(
