@@ -164,3 +164,9 @@ class Uri(Mapping[str, str]):
     def __iter__(self) -> Iterator[str]:
         for f in fields(self._parts):
             yield f.name
+
+    def normalized(self) -> Uri:
+        if self.scheme == "file":
+            return Uri.from_path(self.to_path().resolve())
+
+        return Uri(str(self))

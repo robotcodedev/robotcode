@@ -59,7 +59,7 @@ class TextDocument:
             if document_uri is not None
             else ""
         )
-        self.uri = Uri(self.document_uri)
+        self.uri = Uri(self.document_uri).normalized()
 
         self.language_id = (
             text_document_item.language_id

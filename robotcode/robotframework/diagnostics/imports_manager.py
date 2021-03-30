@@ -8,16 +8,7 @@ from collections import OrderedDict
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Coroutine,
-    List,
-    NamedTuple,
-    Optional,
-    Tuple,
-)
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, List, Optional, Tuple
 
 from ...language_server.parts.workspace import FileWatcherEntry
 from ...language_server.text_document import TextDocument
@@ -80,7 +71,7 @@ class _LibrariesEntry:
         self.name = name
         self.args = args
         self.parent = parent
-        self.get_libdoc_coroutine = get_libdoc_coroutine
+        self._get_libdoc_coroutine = get_libdoc_coroutine
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
         self.file_watchers: List[FileWatcherEntry] = []
         self._lib_doc: Optional[LibraryDoc] = None
@@ -138,7 +129,7 @@ class _LibrariesEntry:
             return None
 
     async def _update(self) -> None:
-        self._lib_doc = await self.get_libdoc_coroutine()
+        self._lib_doc = await self._get_libdoc_coroutine()
 
         source_or_origin = (
             self._lib_doc.source
@@ -233,7 +224,7 @@ class _ResourcesEntry:
         super().__init__()
         self.name = name
         self.parent = parent
-        self.get_document_coroutine = get_document_coroutine
+        self._get_document_coroutine = get_document_coroutine
         self._delete_on_validate_document = False
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
         self.file_watchers: List[FileWatcherEntry] = []
@@ -274,7 +265,7 @@ class _ResourcesEntry:
             return None
 
     async def _update(self) -> None:
-        self._document, self._delete_on_validate_document = await self.get_document_coroutine()
+        self._document, self._delete_on_validate_document = await self._get_document_coroutine()
 
         if self._document.version is None:
             self.file_watchers.append(
@@ -321,6 +312,14 @@ class _ResourcesEntry:
 
             return self._document
 
+    async def get_namespace(self) -> Namespace:
+        return await self.parent.parent_protocol.documents_cache.get_resource_namespace(await self.get_document())
+
+    async def get_libdoc(self) -> LibraryDoc:
+        return await (
+            await self.parent.parent_protocol.documents_cache.get_resource_namespace(await self.get_document())
+        ).get_library_doc()
+
 
 def _shutdown_process_pool(pool: ProcessPoolExecutor) -> None:
     pool.shutdown(False)
@@ -339,15 +338,6 @@ def _init_process_pool() -> ProcessPoolExecutor:
 
     atexit.register(_shutdown_process_pool, result)
     return result
-
-
-class LibraryChangedParams(NamedTuple):
-    name: str
-    args: Tuple[Any, ...]
-
-
-class ResourceChangedParams(NamedTuple):
-    name: str
 
 
 class ImportsManager:
@@ -373,58 +363,70 @@ class ImportsManager:
         self.parent_protocol.documents.did_close.add(self.resource_document_changed)
         self.parent_protocol.documents.did_save.add(self.resource_document_changed)
 
+    @async_tasking_event
+    async def libraries_changed(sender, params: List[LibraryDoc]) -> None:
+        ...
+
+    @async_tasking_event
+    async def resources_changed(sender, params: List[LibraryDoc]) -> None:
+        ...
+
     async def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
-        resource_changed: List[_ResourcesEntryKey] = []
+        resource_changed: List[LibraryDoc] = []
 
         async with self._resources_lock:
             for r_key, r_entry in self._resources.items():
+                lib_doc: Optional[LibraryDoc] = None
                 try:
                     if not await r_entry.is_valid():
                         continue
 
-                    result = (await r_entry.get_document()).uri.to_path() == document.uri.to_path()
+                    uri = (await r_entry.get_document()).uri
+                    result = uri == document.uri
                     if result:
+                        lib_doc = await r_entry.get_libdoc()
                         await r_entry.invalidate()
+
                 except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException:
                     result = True
 
-                if result:
-                    resource_changed.append(r_key)
+                if result and lib_doc is not None:
+                    resource_changed.append(lib_doc)
 
         if resource_changed:
-            await self.resources_changed(self, [ResourceChangedParams(k.name) for k in resource_changed])
-
-    @async_tasking_event
-    async def libraries_changed(sender, params: List[LibraryChangedParams]) -> None:
-        ...
-
-    @async_tasking_event
-    async def resources_changed(sender, params: List[ResourceChangedParams]) -> None:
-        ...
+            await self.resources_changed(self, resource_changed)
 
     async def did_change_watched_files(self, sender: Any, changes: List[FileEvent]) -> None:
-        libraries_changed: List[_LibrariesEntryKey] = []
-        resource_changed: List[_ResourcesEntryKey] = []
+        libraries_changed: List[LibraryDoc] = []
+        resource_changed: List[LibraryDoc] = []
+
+        lib_doc: Optional[LibraryDoc]
 
         async with self._libaries_lock:
-            for l_key, l_entry in self._libaries.items():
+            for l_entry in self._libaries.values():
+                lib_doc = None
+                if await l_entry.is_valid():
+                    lib_doc = await l_entry.get_libdoc()
                 result = await l_entry.check_file_changed(changes)
-                if result is not None:
-                    libraries_changed.append(l_key)
+                if result is not None and lib_doc is not None:
+                    libraries_changed.append(lib_doc)
 
         async with self._resources_lock:
-            for r_key, r_entry in self._resources.items():
+            for r_entry in self._resources.values():
+                lib_doc = None
+                if await r_entry.is_valid():
+                    lib_doc = await r_entry.get_libdoc()
                 result = await r_entry.check_file_changed(changes)
-                if result is not None:
-                    resource_changed.append(r_key)
+                if result is not None and lib_doc is not None:
+                    resource_changed.append(await r_entry.get_libdoc())
 
         if libraries_changed:
-            await self.libraries_changed(self, [LibraryChangedParams(k.name, k.args) for k in libraries_changed])
+            await self.libraries_changed(self, libraries_changed)
 
         if resource_changed:
-            await self.resources_changed(self, [ResourceChangedParams(k.name) for k in resource_changed])
+            await self.resources_changed(self, resource_changed)
 
     def __remove_library_entry(self, entry_key: _LibrariesEntryKey, entry: _LibrariesEntry, now: bool = False) -> None:
         async def threadsafe_remove(k: _LibrariesEntryKey, e: _LibrariesEntry, n: bool) -> None:
@@ -496,7 +498,6 @@ class ImportsManager:
 
         async with self._libaries_lock:
 
-            # TODO resolve library source / module and use it for the entry key
             entry_key = _LibrariesEntryKey(source, args)
 
             if entry_key not in self._libaries:
@@ -609,7 +610,7 @@ class ImportsManager:
         )
 
     @_logger.call
-    async def get_document_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> TextDocument:
+    async def _get_entry_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> _ResourcesEntry:
         source = await self.find_file(name, base_dir, "Resource")
 
         async def _get_document() -> Tuple[TextDocument, bool]:
@@ -648,17 +649,23 @@ class ImportsManager:
                 entry.references.add(sentinel)
                 weakref.finalize(sentinel, self.__remove_resource_entry, entry_key, entry)
 
-            return await entry.get_document()
+            return entry
+
+    @_logger.call
+    async def get_document_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> TextDocument:
+        entry = await self._get_entry_for_resource_import(name, base_dir, sentinel)
+
+        return await entry.get_document()
 
     async def get_namespace_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> "Namespace":
-        document = await self.get_document_for_resource_import(name, base_dir, sentinel)
+        entry = await self._get_entry_for_resource_import(name, base_dir, sentinel)
 
-        return await self.parent_protocol.documents_cache.get_resource_namespace(document)
+        return await entry.get_namespace()
 
     async def get_libdoc_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> LibraryDoc:
-        namespace = await self.get_namespace_for_resource_import(name, base_dir, sentinel=sentinel)
+        entry = await self._get_entry_for_resource_import(name, base_dir, sentinel)
 
-        return await namespace.get_library_doc()
+        return await entry.get_libdoc()
 
     async def complete_library_import(self, name: Optional[str], base_dir: str = ".") -> Optional[List[CompleteResult]]:
         result = await asyncio.wait_for(

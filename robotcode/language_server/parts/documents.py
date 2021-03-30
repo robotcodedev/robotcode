@@ -3,6 +3,8 @@ from __future__ import annotations
 import gc
 from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Mapping, Optional
 
+from robotcode.utils.uri import Uri
+
 from ...jsonrpc2.protocol import JsonRPCException, rpc_method
 from ...utils.async_event import async_event
 from ...utils.logging import LoggingDescriptor
@@ -63,7 +65,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         ...
 
     def __getitem__(self, k: str) -> Any:
-        return self._documents.__getitem__(k)
+        return self._documents.__getitem__(str(Uri(k).normalized()))
 
     def __len__(self) -> int:
         return self._documents.__len__()
@@ -82,14 +84,14 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
     async def _text_document_did_open(self, text_document: TextDocumentItem, *args: Any, **kwargs: Any) -> None:
         document = self._create_document(text_document)
 
-        self._documents[text_document.uri] = document
+        self._documents[str(Uri(text_document.uri).normalized())] = document
 
         await self.did_open(self, document)
 
     @rpc_method(name="textDocument/didClose", param_type=DidCloseTextDocumentParams)
     @_logger.call
     async def _text_document_did_close(self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any) -> None:
-        document = self._documents.pop(text_document.uri, None)
+        document = self._documents.pop(str(Uri(text_document.uri).normalized()), None)
 
         if document is not None:
             await self.did_close(self, document)
@@ -110,7 +112,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
     async def _text_document_did_save(
         self, text_document: TextDocumentIdentifier, text: Optional[str] = None, *args: Any, **kwargs: Any
     ) -> None:
-        document = self._documents.get(text_document.uri, None)
+        document = self._documents.get(str(Uri(text_document.uri).normalized()), None)
         self._logger.warning(lambda: f"Document {text_document.uri} is not opened.", condition=lambda: document is None)
 
         if document is not None and text is not None:
@@ -134,7 +136,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        document = self._documents.get(text_document.uri, None)
+        document = self._documents.get(str(Uri(text_document.uri).normalized()), None)
         if document is None:
             raise LanguageServerDocumentException(f"Document {text_document.uri} is not opened.")
 

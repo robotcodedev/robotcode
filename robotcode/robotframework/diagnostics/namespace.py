@@ -34,7 +34,7 @@ from ...utils.uri import Uri
 from ..utils.ast import Token as AstToken
 from ..utils.ast import is_non_variable_token, range_from_token_or_node
 from ..utils.async_ast import AsyncVisitor
-from .imports_manager import ImportsManager, LibraryChangedParams, ResourceChangedParams
+from .imports_manager import ImportsManager
 from .library_doc import (
     BUILTIN_LIBRARY_NAME,
     DEFAULT_LIBRARIES,
@@ -537,17 +537,16 @@ class Namespace:
     def document(self) -> Optional[TextDocument]:
         return self._document() if self._document is not None else None
 
-    async def libraries_changed(self, sender: Any, params: List[LibraryChangedParams]) -> None:
+    async def libraries_changed(self, sender: Any, params: List[LibraryDoc]) -> None:
 
         for p in params:
-            c = (p.name, p.args)
-            if any(e for e in self._libraries.values() if (e.library_doc.source_or_origin, e.args) == c):
+            if any(e for e in self._libraries.values() if e.library_doc == p):
                 self.invalidated_callback(self)
                 break
 
-    async def resources_changed(self, sender: Any, params: List[ResourceChangedParams]) -> None:
+    async def resources_changed(self, sender: Any, params: List[LibraryDoc]) -> None:
         for p in params:
-            if any(e for e in self._resources.values() if e.library_doc.source_or_origin == p.name):
+            if any(e for e in self._resources.values() if e.library_doc.source == p.source):
                 self.invalidated_callback(self)
                 break
 
