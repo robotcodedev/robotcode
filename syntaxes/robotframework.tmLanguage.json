@@ -8,7 +8,7 @@
             "begin": "(?i)^(\\*+ ?(?:Settings|Setting)[ *]*)(?= {2,}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "markup.heading"
+                    "name": "storage.type.section.settings.robot"
                 }
             },
             "end": "^(?=\\*)",
@@ -69,7 +69,7 @@
             "begin": "(?i)^(Force Tags|Default Tags)(?= {2}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "keyword.control.import.robot"
+                    "name": "keyword.robot"
                 }
             },
             "contentName": "entity.name.tag.robot",
@@ -90,18 +90,19 @@
             ],
             "name": "meta.setting.tags.robot"
         },
+        "with_name": {},
         "settings_table_setting_imports": {
-            "begin": "(?i)^(Library|Resource|Variables)((?: {2,}| ?\\t)+(.*?)(?= {2}| ?\\t| ?$))?",
+            "begin": "(?i)^(Library|Resource|Variables)(?: {2,}| ?\\t)+((.*?)(?= {2}| ?\\t| ?$))?",
             "beginCaptures": {
                 "1": {
                     "name": "keyword.control.import.robot"
                 },
-                "3": {
+                "2": {
                     "name": "entity.name.namespace.robot"
                 }
             },
             "end": "^(?!\\s*\\.\\.\\.)",
-            "contentName": "string.quoted.single.robot",
+            "contentName": "string.quoted.double",
             "patterns": [
                 {
                     "include": "#escape"
@@ -117,6 +118,28 @@
                 },
                 {
                     "include": "#named_argument"
+                },
+                {
+                    "begin": "(?: {2,}| ?\\t)(WITH NAME)(?= {2}| ?\\t| ?$)",
+                    "end": "^(?!\\s*\\.\\.\\.)",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.other.robot"
+                        }
+                    },
+                    "contentName": "variable.name",
+                    "name": "meta.setting.library.name.robot",
+                    "patterns": [
+                        {
+                            "include": "#escape"
+                        },
+                        {
+                            "include": "#comment"
+                        },
+                        {
+                            "include": "#line_continuation"
+                        }
+                    ]
                 }
             ],
             "name": "meta.setting.imports.robot"
@@ -125,7 +148,7 @@
             "begin": "(?i)^(Suite Setup|Suite Teardown|Test Setup|Task Setup|Test Teardown|Task Teardown|Test Template|Task Template|Metadata)((?: {2,}| ?\\t)+(.*?)(?= {2}| ?\\t| ?$))?",
             "beginCaptures": {
                 "1": {
-                    "name": "keyword.control.import.robot"
+                    "name": "keyword.control.robot"
                 },
                 "2": {
                     "name": "meta.support.function.robot"
@@ -157,7 +180,7 @@
             "begin": "(?i)^(Documentation)(?= {2}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "keyword.control.import.robot"
+                    "name": "keyword.control.robot"
                 }
             },
             "contentName": "comment.block.documentation",
@@ -178,7 +201,7 @@
             "begin": "(?i)^(\\*+ ?(?:Variables|Variable)[ *]*)(?= {2,}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "entity.name.namespace.robot"
+                    "name": "storage.type.section.variables.robot"
                 }
             },
             "end": "^(?=\\*)",
@@ -245,7 +268,7 @@
             "begin": "(?i)^(\\*+ ?(?:Test Cases|Test Case|Tasks|Task)[ *]*)(?= {2,}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "markup.heading"
+                    "name": "storage.type.section.testcases.robot"
                 }
             },
             "end": "^(?=\\*)",
@@ -299,7 +322,7 @@
             "begin": "(?i)^(\\*+ ?(?:Keywords|Keyword)[ *]*)(?= {2,}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": {
-                    "name": "markup.heading"
+                    "name": "storage.type.section.keywords.robot"
                 }
             },
             "end": "^(?=\\*)",
@@ -357,7 +380,7 @@
             "begin": "(?i)^(\\*+\\s*comments?[\\s*].*)|([^\\*]*)",
             "beginCaptures": {
                 "1": {
-                    "name": "markup.heading.robot"
+                    "name": "storage.type.section.comments.robot"
                 },
                 "2": {
                     "name": "comment.line.robot"
