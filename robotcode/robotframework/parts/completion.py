@@ -278,6 +278,8 @@ class CompletionCollector:
 
         r: Optional[Range] = None
 
+        # TODO: create Snippet for embedded keywords?
+
         if token is not None:
             r = range_from_token(token)
 
@@ -645,6 +647,30 @@ class CompletionCollector:
         )
 
     async def complete_SuiteTeardown(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+
+        return await self.complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
+            node, nodes_at_position, position, context
+        )
+
+    async def complete_TestSetup(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+
+        return await self.complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
+            node, nodes_at_position, position, context
+        )
+
+    async def complete_TestTeardown(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
