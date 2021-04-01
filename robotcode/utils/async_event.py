@@ -201,12 +201,12 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
             try:
                 yield await a
             except asyncio.CancelledError as e:
-                if not return_exceptions:
+                if return_exceptions:
                     yield e
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
-                if not return_exceptions:
+                if return_exceptions:
                     yield e
                 else:
                     raise
@@ -337,12 +337,12 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
             try:
                 yield await a
             except asyncio.CancelledError as e:
-                if not return_exceptions:
+                if return_exceptions:
                     yield e
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
-                if not return_exceptions:
+                if return_exceptions:
                     yield e
                 else:
                     raise

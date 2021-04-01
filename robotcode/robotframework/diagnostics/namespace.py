@@ -440,9 +440,20 @@ class Analyzer(AsyncVisitor):
         value = cast(KeywordCall, node)
         keyword_token = cast(RobotToken, value.get_token(RobotToken.KEYWORD))
 
-        await self._analyze_keyword_call(
-            value.keyword, value, keyword_token, [cast(AstToken, e) for e in value.get_tokens(RobotToken.ARGUMENT)]
-        )
+        if value.assign and not value.keyword:
+            self._results.append(
+                Diagnostic(
+                    range=range_from_token_or_node(value, value.get_token(RobotToken.ASSIGN)),
+                    message="Keyword name cannot be empty.",
+                    severity=DiagnosticSeverity.ERROR,
+                    source=DIAGNOSTICS_SOURCE_NAME,
+                    code="KeywordError",
+                )
+            )
+        else:
+            await self._analyze_keyword_call(
+                value.keyword, value, keyword_token, [cast(AstToken, e) for e in value.get_tokens(RobotToken.ARGUMENT)]
+            )
 
         await self.generic_visit(node)
 

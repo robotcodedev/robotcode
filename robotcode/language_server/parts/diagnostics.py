@@ -186,6 +186,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             self,
             document,
             callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+            return_exceptions=True,
         ):
             result = cast(DiagnosticsResult, result_any)
 

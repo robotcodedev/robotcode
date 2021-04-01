@@ -77,7 +77,17 @@ _CompleteMethod = Callable[
     Awaitable[Optional[Optional[List[CompletionItem]]]],
 ]
 
-SECTIONS = ["Test Case", "Test Cases", "Settings", "Variables", "Keywords", "Comment"]
+SECTIONS = [
+    "Test Case",
+    "Test Cases",
+    "Settings",
+    "Setting",
+    "Variable",
+    "Variables",
+    "Keywords",
+    "Comment",
+    "Comments",
+]
 DEFAULT_SECTIONS_STYLE = "*** {name} ***"
 
 SETTINGS = [
@@ -389,7 +399,7 @@ class CompletionCollector:
                 token = cast(Token, statement_node.tokens[0])
                 r = range_from_token(token)
                 value = token.value.strip()
-                only_stars = all(v == "*" for v in value)
+                only_stars = value is not None and "*" in value and all(v == "*" for v in value)
                 if (
                     r.start.character == 0
                     and (position.is_in_range(r) or position == r.end)
@@ -429,6 +439,89 @@ class CompletionCollector:
 
         return None
 
+    async def complete_TestCase_or_Keyword(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+        in_template: bool,
+        create_items: Callable[
+            [bool, bool, Optional[Range], Optional[Token], Position],
+            Awaitable[Union[List[CompletionItem], CompletionList, None]],
+        ],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import KeywordName, Statement, TestCaseName
+
+        index = 0
+        in_assign = False
+
+        statement_node = cast(Statement, nodes_at_position[0])
+
+        while index < len(statement_node.tokens):
+            if len(statement_node.tokens) > index:
+                token = cast(Token, statement_node.tokens[index])
+                if token.type == RobotToken.ASSIGN:
+                    index += 1
+                    in_assign = True
+                    r = range_from_token(token)
+                    if position.is_in_range(r) or r.end == position:
+                        break
+
+            if len(statement_node.tokens) > index:
+                token = cast(
+                    Token,
+                    statement_node.tokens[index]
+                    if isinstance(statement_node, (TestCaseName, KeywordName))
+                    else statement_node.tokens[index],
+                )
+                r = range_from_token(token)
+                ws = whitespace_at_begin_of_token(token)
+                if ws < 4 if index == 0 else 2:
+                    return None
+
+                ws_b = whitespace_from_begin_of_token(token)
+                r.start.character += (4 if index == 0 else 2) if ws_b and ws_b[0] != "\t" else 1
+
+                if position.is_in_range(r) or r.end == position:
+                    return await create_items(
+                        in_assign,
+                        in_template,
+                        range_from_token(statement_node.tokens[index + 1])
+                        if r.end == position and len(statement_node.tokens) > index + 1
+                        else None,
+                        statement_node.tokens[index + 1]
+                        if r.end == position and len(statement_node.tokens) > index + 1
+                        else None,
+                        position,
+                    )
+
+            index += 1
+
+            if len(statement_node.tokens) > index:
+                token = cast(Token, statement_node.tokens[index])
+                if token.type == RobotToken.ASSIGN:
+                    continue
+
+            if len(statement_node.tokens) > index:
+                token = cast(Token, statement_node.tokens[index])
+                r = range_from_token(token)
+                if position.is_in_range(r) or r.end == position:
+                    return await create_items(in_assign, in_template, r, token, position)
+
+                if len(statement_node.tokens) > index + 1:
+                    second_token = cast(Token, statement_node.tokens[index + 1])
+                    ws = whitespace_at_begin_of_token(second_token)
+                    if ws < 1:
+                        return None
+
+                    r.end.character += 1
+                    if position.is_in_range(r) or r.end == position:
+                        return await create_items(in_assign, in_template, r, token, position)
+
+        return None
+
     async def complete_TestCase(  # noqa: N802
         self,
         node: ast.AST,
@@ -437,12 +530,19 @@ class CompletionCollector:
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
         from robot.parsing.model.blocks import File, SettingSection, TestCase
-        from robot.parsing.model.statements import (
-            Statement,
-            Template,
-            TestCaseName,
-            TestTemplate,
-        )
+        from robot.parsing.model.statements import Template, TestTemplate
+
+        async def create_items(
+            in_assign: bool, in_template: bool, r: Optional[Range], token: Optional[Token], pos: Position
+        ) -> Union[List[CompletionItem], CompletionList, None]:
+            return [
+                e
+                async for e in async_chain(
+                    [] if in_assign else await self.create_keyword_snippet_completion_items(r),
+                    [] if in_assign else await self.create_testcase_settings_completion_items(r),
+                    [] if in_template else await self.create_keyword_completion_items(token, pos),
+                )
+            ]
 
         def check_in_template() -> bool:
             testcase_node = cast(TestCase, node)
@@ -474,73 +574,9 @@ class CompletionCollector:
 
         in_template = check_in_template()
 
-        statement_node = cast(Statement, nodes_at_position[0])
-        if len(statement_node.tokens) > 0:
-            token = cast(
-                Token,
-                statement_node.tokens[1] if isinstance(statement_node, TestCaseName) else statement_node.tokens[0],
-            )
-            r = range_from_token(token)
-            ws = whitespace_at_begin_of_token(token)
-            if ws < 2:
-                return None
-
-            ws_b = whitespace_from_begin_of_token(token)
-            r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
-
-            if position.is_in_range(r) or r.end == position:
-                return [
-                    e
-                    async for e in async_chain(
-                        await self.create_keyword_snippet_completion_items(
-                            range_from_token(statement_node.tokens[1])
-                            if r.end == position and len(statement_node.tokens) > 1
-                            else None
-                        ),
-                        await self.create_testcase_settings_completion_items(
-                            range_from_token(statement_node.tokens[1])
-                            if r.end == position and len(statement_node.tokens) > 1
-                            else None
-                        ),
-                        []
-                        if in_template
-                        else await self.create_keyword_completion_items(
-                            statement_node.tokens[1] if r.end == position and len(statement_node.tokens) > 1 else None,
-                            position,
-                        ),
-                    )
-                ]
-
-        if len(statement_node.tokens) > 1:
-            token = cast(Token, statement_node.tokens[1])
-            r = range_from_token(token)
-            if position.is_in_range(r) or r.end == position:
-                return [
-                    e
-                    async for e in async_chain(
-                        await self.create_keyword_snippet_completion_items(r),
-                        await self.create_testcase_settings_completion_items(r),
-                        [] if in_template else await self.create_keyword_completion_items(token, position),
-                    )
-                ]
-            if len(statement_node.tokens) > 2:
-                second_token = cast(Token, statement_node.tokens[2])
-                ws = whitespace_at_begin_of_token(second_token)
-                if ws < 1:
-                    return None
-
-                r.end.character += 1
-                if position.is_in_range(r) or r.end == position:
-                    return [
-                        e
-                        async for e in async_chain(
-                            await self.create_keyword_snippet_completion_items(r),
-                            await self.create_testcase_settings_completion_items(r),
-                            [] if in_template else await self.create_keyword_completion_items(token, position),
-                        )
-                    ]
-
-        return None
+        return await self.complete_TestCase_or_Keyword(
+            node, nodes_at_position, position, context, in_template, create_items
+        )
 
     async def complete_Keyword(  # noqa: N802
         self,
@@ -549,73 +585,19 @@ class CompletionCollector:
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.model.statements import KeywordName, Statement
+        async def create_items(
+            in_assign: bool, in_template: bool, r: Optional[Range], token: Optional[Token], pos: Position
+        ) -> Union[List[CompletionItem], CompletionList, None]:
+            return [
+                e
+                async for e in async_chain(
+                    [] if in_assign else await self.create_keyword_snippet_completion_items(r),
+                    [] if in_assign else await self.create_keyword_settings_completion_items(r),
+                    [] if in_template else await self.create_keyword_completion_items(token, pos),
+                )
+            ]
 
-        statement_node = cast(Statement, nodes_at_position[0])
-        if len(statement_node.tokens) > 0:
-            token = cast(
-                Token,
-                statement_node.tokens[1] if isinstance(statement_node, KeywordName) else statement_node.tokens[0],
-            )
-            r = range_from_token(token)
-            ws = whitespace_at_begin_of_token(token)
-            if ws < 2:
-                return None
-
-            ws_b = whitespace_from_begin_of_token(token)
-            r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
-
-            if position.is_in_range(r) or r.end == position:
-                return [
-                    e
-                    async for e in async_chain(
-                        await self.create_keyword_snippet_completion_items(
-                            range_from_token(statement_node.tokens[1])
-                            if r.end == position and len(statement_node.tokens) > 1
-                            else None
-                        ),
-                        await self.create_keyword_settings_completion_items(
-                            range_from_token(statement_node.tokens[1])
-                            if r.end == position and len(statement_node.tokens) > 1
-                            else None
-                        ),
-                        await self.create_keyword_completion_items(
-                            statement_node.tokens[1] if r.end == position and len(statement_node.tokens) > 1 else None,
-                            position,
-                        ),
-                    )
-                ]
-
-        if len(statement_node.tokens) > 1:
-            token = cast(Token, statement_node.tokens[1])
-            r = range_from_token(token)
-            if position.is_in_range(r) or r.end == position:
-                return [
-                    e
-                    async for e in async_chain(
-                        await self.create_keyword_snippet_completion_items(r),
-                        await self.create_keyword_settings_completion_items(r),
-                        await self.create_keyword_completion_items(token, position),
-                    )
-                ]
-            if len(statement_node.tokens) > 2:
-                second_token = cast(Token, statement_node.tokens[2])
-                ws = whitespace_at_begin_of_token(second_token)
-                if ws < 1:
-                    return None
-
-                r.end.character += 1
-                if position.is_in_range(r) or r.end == position:
-                    return [
-                        e
-                        async for e in async_chain(
-                            await self.create_keyword_snippet_completion_items(r),
-                            await self.create_keyword_settings_completion_items(r),
-                            await self.create_keyword_completion_items(token, position),
-                        )
-                    ]
-
-        return None
+        return await self.complete_TestCase_or_Keyword(node, nodes_at_position, position, context, False, create_items)
 
     async def complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(  # noqa: N802
         self,
