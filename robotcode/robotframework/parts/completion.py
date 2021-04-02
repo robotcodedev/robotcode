@@ -789,7 +789,7 @@ class CompletionCollector:
                     ws_b = whitespace_from_begin_of_token(name_token)
                     r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
-                    if not position.is_in_range(r := range_from_token(name_token)) and r.end != position:
+                    if not position.is_in_range(r) and r.end != position:
                         return None
         else:
             return None
@@ -883,7 +883,7 @@ class CompletionCollector:
                     ws_b = whitespace_from_begin_of_token(name_token)
                     r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
-                    if not position.is_in_range(r := range_from_token(name_token)) and r.end != position:
+                    if not position.is_in_range(r) and r.end != position:
                         return None
         else:
             return None
