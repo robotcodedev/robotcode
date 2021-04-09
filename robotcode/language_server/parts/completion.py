@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from asyncio import CancelledError
 from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 
@@ -120,7 +121,8 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
         for result in await self.resolve(self, params):
             if isinstance(result, BaseException):
-                self._logger.exception(result, exc_info=result)
+                if not isinstance(result, CancelledError):
+                    self._logger.exception(result, exc_info=result)
             else:
                 if result is not None:
                     results.append(result)

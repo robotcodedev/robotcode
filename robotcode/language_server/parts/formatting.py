@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from ...jsonrpc2.protocol import rpc_method
@@ -72,7 +73,8 @@ class FormattingProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             **kwargs,
         ):
             if isinstance(result, BaseException):
-                self._logger.exception(result, exc_info=result)
+                if not isinstance(result, CancelledError):
+                    self._logger.exception(result, exc_info=result)
             else:
                 if result is not None:
                     results += result

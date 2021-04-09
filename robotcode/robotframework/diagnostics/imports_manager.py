@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 from .library_doc import (
     CompleteResult,
     Error,
+    KeywordArgumentDoc,
     KeywordDoc,
     KeywordStore,
     LibraryDoc,
@@ -575,7 +576,7 @@ class ImportsManager:
             keywords={
                 kw[0].name: KeywordDoc(
                     name=kw[0].name,
-                    args=tuple(str(a) for a in kw[0].args),
+                    args=tuple(KeywordArgumentDoc.from_robot(a) for a in kw[0].args),
                     doc=kw[0].doc,
                     tags=tuple(kw[0].tags),
                     source=kw[0].source,

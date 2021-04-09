@@ -8,7 +8,7 @@ exclude = ["robotcode/external"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-robotframework = "^3.2.2"
+robotframework = "^4.0.0"
 
 
 [tool.poetry.dev-dependencies]
@@ -26,7 +26,7 @@ coverage = { extras = ["toml"], version = "^5.5" }
 coloredlogs = "^15.0"
 robotremoteserver = "^1.1"
 Cython = "^0.29.22"
-robotframework-robocop = "^1.5.0"
+robotframework-robocop = "^1.7.0"
 
 
 [tool.poetry-dynamic-versioning]

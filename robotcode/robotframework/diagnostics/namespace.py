@@ -457,13 +457,33 @@ class Analyzer(AsyncVisitor):
 
         await self.generic_visit(node)
 
+    async def visit_TestCase(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.blocks import TestCase
+        from robot.parsing.model.statements import TestCaseName
+
+        kw = cast(TestCase, node)
+        if not kw.name:
+            name_token = cast(TestCaseName, kw.header).get_token(RobotToken.TESTCASE_NAME)
+            self._results.append(
+                Diagnostic(
+                    range=range_from_token_or_node(kw, name_token),
+                    message="Test case name cannot be empty.",
+                    severity=DiagnosticSeverity.ERROR,
+                    source=DIAGNOSTICS_SOURCE_NAME,
+                    code="KeywordError",
+                )
+            )
+
+        await self.generic_visit(node)
+
     async def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.blocks import Keyword
         from robot.parsing.model.statements import Arguments, KeywordName
 
         kw = cast(Keyword, node)
-        if kw.name is not None:
+        if kw.name:
             name_token = cast(KeywordName, kw.header).get_token(RobotToken.KEYWORD_NAME)
             if is_embedded_keyword(kw.name) and any(isinstance(v, Arguments) and len(v.values) > 0 for v in kw.body):
                 self._results.append(
@@ -475,6 +495,18 @@ class Analyzer(AsyncVisitor):
                         code="KeywordError",
                     )
                 )
+
+        if not kw.name:
+            name_token = cast(KeywordName, kw.header).get_token(RobotToken.KEYWORD_NAME)
+            self._results.append(
+                Diagnostic(
+                    range=range_from_token_or_node(kw, name_token),
+                    message="Keyword name cannot be empty.",
+                    severity=DiagnosticSeverity.ERROR,
+                    source=DIAGNOSTICS_SOURCE_NAME,
+                    code="KeywordError",
+                )
+            )
 
         await self.generic_visit(node)
 

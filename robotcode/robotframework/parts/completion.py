@@ -14,6 +14,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Tuple,
     Type,
     Union,
     cast,
@@ -26,6 +27,7 @@ from ...language_server.types import (
     CompletionItem,
     CompletionItemKind,
     CompletionList,
+    CompletionTriggerKind,
     InsertTextFormat,
     MarkupContent,
     MarkupKind,
@@ -36,13 +38,16 @@ from ...language_server.types import (
 from ...utils.async_itertools import async_chain, async_chain_iterator
 from ...utils.logging import LoggingDescriptor
 from ..configuration import SyntaxConfig
+from ..diagnostics.library_doc import KeywordArgumentKind, KeywordDoc
 from ..utils.ast import (
     Token,
     get_nodes_at_position,
+    get_tokens_at_position,
     range_from_token,
     whitespace_at_begin_of_token,
     whitespace_from_begin_of_token,
 )
+from .model_helper import ModelHelperMixin
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -119,7 +124,7 @@ SNIPPETS = {
 }
 
 
-class CompletionCollector:
+class CompletionCollector(ModelHelperMixin):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: RobotLanguageServerProtocol, document: Optional[TextDocument] = None) -> None:
@@ -143,19 +148,18 @@ class CompletionCollector:
 
         return self._section_style or DEFAULT_SECTIONS_STYLE
 
-    def _find_method(self, cls: Type[Any]) -> Optional[_CompleteMethod]:
+    async def _find_methods(self, cls: Type[Any]) -> AsyncIterator[_CompleteMethod]:
         if cls is ast.AST:
-            return None
+            return
+
         method_name = "complete_" + cls.__name__
         if hasattr(self, method_name):
             method = getattr(self, method_name)
             if callable(method):
-                return cast(_CompleteMethod, method)
+                yield cast(_CompleteMethod, method)
         for base in cls.__bases__:
-            method = self._find_method(base)
-            if method:
-                return cast(_CompleteMethod, method)
-        return None
+            async for m in self._find_methods(base):
+                yield m
 
     @language_id("robotframework")
     @trigger_characters([" ", "*", "\t", ".", "/"])
@@ -173,13 +177,10 @@ class CompletionCollector:
 
         async def iter_results() -> AsyncIterator[List[CompletionItem]]:
             for result_node in result_nodes:
-                method = self._find_method(type(result_node))
-                if method is None:
-                    continue
-
-                r = await method(result_node, result_nodes, position, context)
-                if r is not None:
-                    yield r
+                async for method in self._find_methods(type(result_node)):
+                    r = await method(result_node, result_nodes, position, context)
+                    if r is not None:
+                        yield r
 
             r = await self.complete_default(result_nodes, position, context)
             if r is not None:
@@ -189,6 +190,79 @@ class CompletionCollector:
         if not result.items:
             return None
         return result
+
+    async def resolve(self, completion_item: CompletionItem) -> CompletionItem:
+        if completion_item.data is not None:
+            document_uri = completion_item.data.get("document_uri", None)
+            if document_uri is not None:
+                document = self.parent.documents.get(document_uri, None)
+                if document is not None:
+                    type = completion_item.data.get("type", None)
+                    if type is not None and type in ["Module", "Module (Internal)", "File"]:
+                        name = completion_item.data.get("name", None)
+                        if name is not None:
+                            try:
+                                lib_doc = await (
+                                    await self.parent.documents_cache.get_imports_manager(document)
+                                ).get_libdoc_for_library_import(
+                                    name, (), str(document.uri.to_path().parent), sentinel=self
+                                )
+
+                                if lib_doc is not None:
+                                    completion_item.documentation = MarkupContent(
+                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown()
+                                    )
+
+                            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                                raise
+                            except BaseException as e:
+                                completion_item.documentation = MarkupContent(
+                                    kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
+                                )
+                    if type is not None and type in ["Resource", "File"]:
+                        name = completion_item.data.get("name", None)
+                        if name is not None:
+                            try:
+                                lib_doc = lib_doc = await (
+                                    await self.parent.documents_cache.get_imports_manager(document)
+                                ).get_libdoc_for_resource_import(
+                                    name, str(document.uri.to_path().parent), sentinel=self
+                                )
+
+                                if lib_doc is not None:
+                                    completion_item.documentation = MarkupContent(
+                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown()
+                                    )
+
+                            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                                raise
+                            except BaseException as e:
+                                completion_item.documentation = MarkupContent(
+                                    kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
+                                )
+                    elif type is not None and type in ["Keyword"]:
+                        libname = completion_item.data.get("libname", None)
+                        name = completion_item.data.get("name", None)
+                        namespace = await self.parent.documents_cache.get_namespace(document)
+
+                        if libname is not None and name is not None and namespace is not None:
+                            try:
+                                kw_doc = next(
+                                    (kw for kw in await namespace.get_keywords() if kw.name == name),
+                                    None,
+                                )
+
+                                if kw_doc is not None:
+                                    completion_item.documentation = MarkupContent(
+                                        kind=MarkupKind.MARKDOWN, value=kw_doc.to_markdown()
+                                    )
+
+                            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                                raise
+                            except BaseException:
+                                pass
+
+        return completion_item
 
     async def create_section_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
         style = await self.get_section_style()
@@ -308,7 +382,6 @@ class CompletionCollector:
                                 kind=CompletionItemKind.FUNCTION,
                                 detail="Keyword",
                                 sort_text=f"020_{kw.name}",
-                                # documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=kw.to_markdown()),
                                 insert_text_format=InsertTextFormat.PLAINTEXT,
                                 text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
                                 data={
@@ -330,7 +403,6 @@ class CompletionCollector:
                                 kind=CompletionItemKind.FUNCTION,
                                 detail="Keyword",
                                 sort_text=f"020_{kw.name}",
-                                # documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=kw.to_markdown()),
                                 insert_text_format=InsertTextFormat.PLAINTEXT,
                                 text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
                                 data={
@@ -349,7 +421,6 @@ class CompletionCollector:
                 kind=CompletionItemKind.FUNCTION,
                 detail=f"Keyword {f'({kw.libname})' if kw.libname is not None else ''}",
                 sort_text=f"020_{kw.name}",
-                # documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=kw.to_markdown()),
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
                 data={
@@ -441,7 +512,7 @@ class CompletionCollector:
 
         return None
 
-    async def complete_TestCase_or_Keyword(  # noqa: N802
+    async def _complete_TestCase_or_Keyword(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
@@ -460,6 +531,8 @@ class CompletionCollector:
         in_assign = False
 
         statement_node = cast(Statement, nodes_at_position[0])
+        if isinstance(statement_node, (TestCaseName, KeywordName)):
+            index += 1
 
         while index < len(statement_node.tokens):
             if len(statement_node.tokens) > index:
@@ -472,19 +545,14 @@ class CompletionCollector:
                         break
 
             if len(statement_node.tokens) > index:
-                token = cast(
-                    Token,
-                    statement_node.tokens[index]
-                    if isinstance(statement_node, (TestCaseName, KeywordName))
-                    else statement_node.tokens[index],
-                )
+                token = cast(Token, statement_node.tokens[index])
                 r = range_from_token(token)
                 ws = whitespace_at_begin_of_token(token)
-                if ws < 4 if index == 0 else 2:
+                if ws < 2:
                     return None
 
                 ws_b = whitespace_from_begin_of_token(token)
-                r.start.character += (4 if index == 0 else 2) if ws_b and ws_b[0] != "\t" else 1
+                r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
                 if position.is_in_range(r) or r.end == position:
                     return await create_items(
@@ -576,7 +644,7 @@ class CompletionCollector:
 
         in_template = check_in_template()
 
-        return await self.complete_TestCase_or_Keyword(
+        return await self._complete_TestCase_or_Keyword(
             node, nodes_at_position, position, context, in_template, create_items
         )
 
@@ -599,9 +667,9 @@ class CompletionCollector:
                 )
             ]
 
-        return await self.complete_TestCase_or_Keyword(node, nodes_at_position, position, context, False, create_items)
+        return await self._complete_TestCase_or_Keyword(node, nodes_at_position, position, context, False, create_items)
 
-    async def complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(  # noqa: N802
+    async def _complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
@@ -642,7 +710,7 @@ class CompletionCollector:
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
 
-        return await self.complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
+        return await self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
             node, nodes_at_position, position, context
         )
 
@@ -654,7 +722,7 @@ class CompletionCollector:
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
 
-        return await self.complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
+        return await self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
             node, nodes_at_position, position, context
         )
 
@@ -666,7 +734,7 @@ class CompletionCollector:
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
 
-        return await self.complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
+        return await self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
             node, nodes_at_position, position, context
         )
 
@@ -678,7 +746,7 @@ class CompletionCollector:
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
 
-        return await self.complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
+        return await self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
             node, nodes_at_position, position, context
         )
 
@@ -690,7 +758,7 @@ class CompletionCollector:
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
 
-        return await self.complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
+        return await self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
             node, nodes_at_position, position, context
         )
 
@@ -943,81 +1011,143 @@ class CompletionCollector:
             for e in list
         ]
 
-    async def resolve(self, completion_item: CompletionItem) -> CompletionItem:
-        if completion_item.data is not None:
-            document_uri = completion_item.data.get("document_uri", None)
-            if document_uri is not None:
-                document = self.parent.documents.get(document_uri, None)
-                if document is not None:
-                    type = completion_item.data.get("type", None)
-                    if type is not None and type in ["Module", "Module (Internal)", "File"]:
-                        name = completion_item.data.get("name", None)
-                        if name is not None:
-                            try:
-                                lib_doc = await (
-                                    await self.parent.documents_cache.get_imports_manager(document)
-                                ).get_libdoc_for_library_import(
-                                    name, (), str(document.uri.to_path().parent), sentinel=self
-                                )
+    async def _complete_KeywordCall_or_Fixture(  # noqa: N802
+        self,
+        keyword_name_token_type: str,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Statement
 
-                                if lib_doc is not None:
-                                    completion_item.documentation = MarkupContent(
-                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown()
-                                    )
+        if context is None or context.trigger_kind != CompletionTriggerKind.INVOKED:
+            return []
 
-                            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                                raise
-                            except BaseException as e:
-                                completion_item.documentation = MarkupContent(
-                                    kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
-                                )
-                    if type is not None and type in ["Resource", "File"]:
-                        name = completion_item.data.get("name", None)
-                        if name is not None:
-                            try:
-                                lib_doc = lib_doc = await (
-                                    await self.parent.documents_cache.get_imports_manager(document)
-                                ).get_libdoc_for_resource_import(
-                                    name, str(document.uri.to_path().parent), sentinel=self
-                                )
+        if self.document is None:
+            return []
 
-                                if lib_doc is not None:
-                                    completion_item.documentation = MarkupContent(
-                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown()
-                                    )
+        namespace = await self.parent.documents_cache.get_namespace(self.document)
+        if namespace is None:
+            return []
 
-                            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                                raise
-                            except BaseException as e:
-                                completion_item.documentation = MarkupContent(
-                                    kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
-                                )
-                    elif type is not None and type in ["Keyword"]:
-                        libname = completion_item.data.get("libname", None)
-                        name = completion_item.data.get("name", None)
-                        if libname is not None and name is not None:
-                            try:
-                                kw_doc = next(
-                                    (
-                                        kw
-                                        for kw in (
-                                            await (
-                                                await self.parent.documents_cache.get_namespace(document)
-                                            ).get_keywords()
-                                        )
-                                        if kw.name == name
-                                    ),
-                                    None,
-                                )
+        kw_node = cast(Statement, node)
 
-                                if kw_doc is not None:
-                                    completion_item.documentation = MarkupContent(
-                                        kind=MarkupKind.MARKDOWN, value=kw_doc.to_markdown()
-                                    )
+        tokens_at_position = get_tokens_at_position(kw_node, position)
 
-                            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                                raise
-                            except BaseException:
-                                pass
+        if not tokens_at_position:
+            return None
 
-        return completion_item
+        token_at_position = tokens_at_position[-1]
+
+        if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
+            return None
+
+        token_at_position_index = kw_node.tokens.index(token_at_position)
+
+        argument_token_index = token_at_position_index
+        while argument_token_index >= 0 and kw_node.tokens[argument_token_index].type != RobotToken.ARGUMENT:
+            argument_token_index -= 1
+
+        arguments = kw_node.get_tokens(RobotToken.ARGUMENT)
+
+        if argument_token_index >= 0:
+            argument_token = kw_node.tokens[argument_token_index]
+            if argument_token.type == RobotToken.ARGUMENT:
+                argument_index = arguments.index(argument_token)
+            else:
+                argument_index = 0
+        else:
+            argument_index = -1
+
+        if whitespace_at_begin_of_token(token_at_position) > 1:
+            r = range_from_token(token_at_position)
+
+            ws_b = whitespace_from_begin_of_token(token_at_position)
+            r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
+
+            if position.is_in_range(r) or r.end == position:
+                argument_index += 1
+
+        if argument_index < 0:
+            return None
+
+        result: Optional[Tuple[Optional[KeywordDoc], Token]] = None
+
+        keyword_token = kw_node.get_token(keyword_name_token_type)
+        if keyword_token is None:
+            return None
+
+        result = await self.get_keyworddoc_and_token_from_position(
+            keyword_token.value,
+            keyword_token,
+            [cast(Token, t) for t in kw_node.get_tokens(RobotToken.ARGUMENT)],
+            namespace,
+            range_from_token(keyword_token).start,
+            analyse_run_keywords=False,
+        )
+
+        if result is None or result[0] is None:
+            return None
+
+        if result[0].is_any_run_keyword():
+            # TODO: complete run keyword
+            # ks = await self.get_keyworddoc_and_token_from_position(
+            #     keyword_token.value,
+            #     keyword_token,
+            #     [cast(Token, t) for t in kw_node.get_tokens(RobotToken.ARGUMENT)],
+            #     namespace,
+            #     position,
+            #     analyse_run_keywords=True,
+            # )
+            pass
+        r = range_from_token(token_at_position)
+        r.start = position
+        return [
+            CompletionItem(
+                label=f"{e.name}=",
+                kind=CompletionItemKind.PROPERTY,
+                # detail=e.detail,
+                sort_text=f"02{i}_{e.name}=",
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(range=r, new_text=f"{e.name}="),
+                data={
+                    "document_uri": str(self.document.uri),
+                    "type": "Argument",
+                    "name": e,
+                },
+            )
+            for i, e in enumerate(result[0].args)
+            if e.kind
+            not in [
+                KeywordArgumentKind.VAR_POSITIONAL,
+                KeywordArgumentKind.VAR_NAMED,
+                KeywordArgumentKind.NAMED_ONLY_MARKER,
+                KeywordArgumentKind.POSITIONAL_ONLY_MARKER,
+            ]
+        ]
+
+    async def complete_KeywordCall(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+
+        return await self._complete_KeywordCall_or_Fixture(
+            RobotToken.KEYWORD, node, nodes_at_position, position, context
+        )
+
+    async def complete_Fixture(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+
+        return await self._complete_KeywordCall_or_Fixture(RobotToken.NAME, node, nodes_at_position, position, context)

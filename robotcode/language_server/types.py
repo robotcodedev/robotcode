@@ -1240,7 +1240,7 @@ class Command(Model):
 class CompletionTriggerKind(Enum):
     INVOKED = 1
     TRIGGERCHARACTER = 2
-    COMPLETIONTRIGGERKIND = 3
+    TRIGGERFORINCOMPLETECOMPLETIONS = 3
 
 
 class CompletionContext(Model):

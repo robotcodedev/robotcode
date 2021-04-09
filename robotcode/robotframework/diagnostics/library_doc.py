@@ -7,6 +7,7 @@ import re
 import sys
 import tempfile
 from contextlib import contextmanager
+from enum import Enum
 from pathlib import Path
 from types import ModuleType
 from typing import (
@@ -143,9 +144,46 @@ class Error(Model):
     line_no: Optional[int] = None
 
 
+class KeywordArgumentKind(Enum):
+    POSITIONAL_ONLY = "POSITIONAL_ONLY"
+    POSITIONAL_ONLY_MARKER = "POSITIONAL_ONLY_MARKER"
+    POSITIONAL_OR_NAMED = "POSITIONAL_OR_NAMED"
+    VAR_POSITIONAL = "VAR_POSITIONAL"
+    NAMED_ONLY_MARKER = "NAMED_ONLY_MARKER"
+    NAMED_ONLY = "NAMED_ONLY"
+    VAR_NAMED = "VAR_NAMED"
+
+
+class KeywordArgumentDoc(Model):
+    name: str
+    default_value: Optional[Any] = None
+    types: Optional[Any] = None
+    str_repr: str
+    kind: KeywordArgumentKind
+    required: bool
+
+    @staticmethod
+    def from_robot(arg: Any) -> "KeywordArgumentDoc":
+        from robot.running.arguments.argumentspec import ArgInfo
+
+        robot_arg = cast(ArgInfo, arg)
+
+        return KeywordArgumentDoc(
+            name=robot_arg.name,
+            default_value=robot_arg.default_repr,
+            str_repr=str(arg),
+            types=robot_arg.types_reprs,
+            kind=KeywordArgumentKind[robot_arg.kind],
+            required=robot_arg.required,
+        )
+
+    def __str__(self) -> str:
+        return self.str_repr
+
+
 class KeywordDoc(Model):
     name: str = ""
-    args: Tuple[Any, ...] = ()
+    args: Tuple[KeywordArgumentDoc, ...] = ()
     doc: str = ""
     tags: Tuple[str, ...] = ()
     source: Optional[str] = None
@@ -173,7 +211,7 @@ class KeywordDoc(Model):
         if add_signature:
             result = "```python\n"
 
-            result += f"({self.type}) \"{self.name}\": ({', '.join(self.args)})"
+            result += f"({self.type}) \"{self.name}\": ({', '.join(str(a) for a in self.args)})"
 
             result += "\n```"
         else:
@@ -187,11 +225,11 @@ class KeywordDoc(Model):
 
     @property
     def signature(self) -> str:
-        return f"({self.type}) \"{self.name}\": ({', '.join(self.args)})"
+        return f"({self.type}) \"{self.name}\": ({', '.join(str(a) for a in self.args)})"
 
     @property
     def parameter_signature(self) -> str:
-        return f"({', '.join(self.args)})"
+        return f"({', '.join(str(a) for a in self.args)})"
 
     def is_any_run_keyword(self) -> bool:
         return self.libname == BUILTIN_LIBRARY_NAME and self.name in RUN_KEYWORDS
@@ -738,7 +776,7 @@ def get_library_doc(
                     keywords={
                         kw[0].name: KeywordDoc(
                             name=libdoc.name,
-                            args=tuple(str(a) for a in kw[0].args),
+                            args=tuple(KeywordArgumentDoc.from_robot(a) for a in kw[0].args),
                             doc=kw[0].doc,
                             tags=tuple(kw[0].tags),
                             source=kw[0].source,
@@ -766,7 +804,7 @@ def get_library_doc(
                     keywords={
                         kw[0].name: KeywordDoc(
                             name=kw[0].name,
-                            args=tuple(str(a) for a in kw[0].args),
+                            args=tuple(KeywordArgumentDoc.from_robot(a) for a in kw[0].args),
                             doc=kw[0].doc,
                             tags=tuple(kw[0].tags),
                             source=kw[0].source,

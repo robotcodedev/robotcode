@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ast
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from ...language_server.language import language_id
 from ...language_server.text_document import TextDocument
@@ -85,12 +85,18 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
                 await self.generic_visit(node)
 
             async def visit_TestCase(self, node: ast.AST) -> None:  # noqa: N802
-                self.__append(node, kind="testcase")
-                await self.generic_visit(node)
+                from robot.parsing.model.blocks import TestCase
+
+                if cast(TestCase, node).name:
+                    self.__append(node, kind="testcase")
+                    await self.generic_visit(node)
 
             async def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
-                self.__append(node, kind="keyword")
-                await self.generic_visit(node)
+                from robot.parsing.model.blocks import Keyword
+
+                if cast(Keyword, node).name:
+                    self.__append(node, kind="keyword")
+                    await self.generic_visit(node)
 
             async def visit_ForLoop(self, node: ast.AST) -> None:  # noqa: N802
                 self.__append(node, kind="for_loop")

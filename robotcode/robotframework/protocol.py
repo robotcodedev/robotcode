@@ -22,6 +22,7 @@ from .parts.goto import RobotGotoProtocolPart
 from .parts.hover import RobotHoverProtocolPart
 from .parts.robocop_diagnostics import RobotRoboCopDiagnosticsProtocolPart
 from .parts.signature_help import RobotSignatureHelpProtocolPart
+from .utils.version import get_robot_version
 
 if TYPE_CHECKING:
     from .server import RobotLanguageServer
@@ -32,6 +33,9 @@ def check_robotframework() -> None:
         __import__("robot")
     except ImportError as e:
         raise Exception("RobotFramework not found, please install.") from e
+
+    if get_robot_version() < (4, 0):
+        raise Exception("Wrong RobotFramework version. Expect version >= 4.0")
 
 
 class Options(Model):

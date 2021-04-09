@@ -5,7 +5,7 @@ Language Server and client for Visual Studio Code.
 ## Requirements
 
 * Python 3.8 or above
-* Robotframework 3.2 and above
+* Robotframework 4.0 and above
 
 ## Installation
 
@@ -19,17 +19,25 @@ Download the vscode-package artifact from the latest [CI/Actions](https://github
 * Syntax Analysis
     * also for 'run keyword(s) (if/unless/...)'
     * live updating if library or resources changed    
+    * Integrate 'Robocop' tool static code analysis of Robot Framework code.
+        * https://github.com/MarketSquare/robotframework-robocop
 * Code Completion
     * Headers
     * Settings
     * Keywords
+    * Parameter names for:
+        * Keywords
+        * Libraries
+    * Libraries
+        * Python Modules
+        * Python Files
+    * Resources
 * Signature Help
 * Goto Definition
 * Folding
 * Hover Information
+* Document Symbols
 * Loading Library/Resources with support for builtin variables
-* Integrate 'Robocop' tool static code analysis of Robot Framework code.
-    * https://github.com/MarketSquare/robotframework-robocop
 
 
 ... more comming soon

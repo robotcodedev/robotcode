@@ -84,7 +84,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart):
                 from robot.parsing.model.blocks import TestCase
 
                 name = cast(TestCase, node).name
-                if name is None:
+                if not name:
                     return None
 
                 self.__append(

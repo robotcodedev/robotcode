@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from asyncio import CancelledError
 from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
@@ -87,6 +88,8 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilitie
             callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
         ):
             if isinstance(result, BaseException):
+                if not isinstance(result, CancelledError):
+                    self._logger.exception(result, exc_info=result)
                 self._logger.exception(result, exc_info=result)
             else:
                 if result is not None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 from ...jsonrpc2.protocol import rpc_method
@@ -64,7 +65,8 @@ class ImplementationProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
             callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
         ):
             if isinstance(result, BaseException):
-                self._logger.exception(result, exc_info=result)
+                if not isinstance(result, CancelledError):
+                    self._logger.exception(result, exc_info=result)
             else:
                 if result is not None:
                     if isinstance(result, Location):
