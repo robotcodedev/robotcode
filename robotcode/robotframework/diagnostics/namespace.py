@@ -24,6 +24,7 @@ from ...language_server.types import (
     Diagnostic,
     DiagnosticRelatedInformation,
     DiagnosticSeverity,
+    DiagnosticTag,
     Location,
     Position,
     Range,
@@ -214,6 +215,9 @@ class Analyzer(AsyncVisitor):
     async def get(self, model: ast.AST, namespace: Namespace) -> List[Diagnostic]:
         self._results: List[Diagnostic] = []
         self._namespace = namespace
+
+        self.current_testcase_or_keyword_name: Optional[str] = None
+
         await self.visit(model)
         return self._results
 
@@ -242,50 +246,62 @@ class Analyzer(AsyncVisitor):
                     )
                 )
 
-            if result is not None and result.errors:
-                self._results.append(
-                    Diagnostic(
-                        range=range_from_token_or_node(value, keyword_token),
-                        message="Keyword definition contains errors.",
-                        severity=DiagnosticSeverity.ERROR,
-                        source=DIAGNOSTICS_SOURCE_NAME,
-                        related_information=[
-                            DiagnosticRelatedInformation(
-                                location=Location(
-                                    uri=str(
-                                        Uri.from_path(
-                                            err.source
-                                            if err.source is not None
-                                            else result.source
-                                            if result.source is not None
-                                            else "/<unknown>"
-                                        )
-                                    ),
-                                    range=Range(
-                                        start=Position(
-                                            line=err.line_no - 1
-                                            if err.line_no is not None
-                                            else result.line_no
-                                            if result.line_no >= 0
-                                            else 0,
-                                            character=0,
+            if result is not None:
+                if result.errors:
+                    self._results.append(
+                        Diagnostic(
+                            range=range_from_token_or_node(value, keyword_token),
+                            message="Keyword definition contains errors.",
+                            severity=DiagnosticSeverity.ERROR,
+                            source=DIAGNOSTICS_SOURCE_NAME,
+                            related_information=[
+                                DiagnosticRelatedInformation(
+                                    location=Location(
+                                        uri=str(
+                                            Uri.from_path(
+                                                err.source
+                                                if err.source is not None
+                                                else result.source
+                                                if result.source is not None
+                                                else "/<unknown>"
+                                            )
                                         ),
-                                        end=Position(
-                                            line=err.line_no - 1
-                                            if err.line_no is not None
-                                            else result.line_no
-                                            if result.line_no >= 0
-                                            else 0,
-                                            character=0,
+                                        range=Range(
+                                            start=Position(
+                                                line=err.line_no - 1
+                                                if err.line_no is not None
+                                                else result.line_no
+                                                if result.line_no >= 0
+                                                else 0,
+                                                character=0,
+                                            ),
+                                            end=Position(
+                                                line=err.line_no - 1
+                                                if err.line_no is not None
+                                                else result.line_no
+                                                if result.line_no >= 0
+                                                else 0,
+                                                character=0,
+                                            ),
                                         ),
                                     ),
-                                ),
-                                message=err.message,
-                            )
-                            for err in result.errors
-                        ],
+                                    message=err.message,
+                                )
+                                for err in result.errors
+                            ],
+                        )
                     )
-                )
+
+                if result.is_deprecated:
+                    self._results.append(
+                        Diagnostic(
+                            range=range_from_token_or_node(value, keyword_token),
+                            message=result.doc,
+                            severity=DiagnosticSeverity.HINT,
+                            source=DIAGNOSTICS_SOURCE_NAME,
+                            tags=[DiagnosticTag.Deprecated],
+                        )
+                    )
 
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
@@ -455,6 +471,17 @@ class Analyzer(AsyncVisitor):
                 value.keyword, value, keyword_token, [cast(AstToken, e) for e in value.get_tokens(RobotToken.ARGUMENT)]
             )
 
+        if not self.current_testcase_or_keyword_name:
+            self._results.append(
+                Diagnostic(
+                    range=range_from_token_or_node(value, value.get_token(RobotToken.ASSIGN)),
+                    message="Code is unreachable.",
+                    severity=DiagnosticSeverity.HINT,
+                    source=DIAGNOSTICS_SOURCE_NAME,
+                    tags=[DiagnosticTag.Unnecessary],
+                )
+            )
+
         await self.generic_visit(node)
 
     async def visit_TestCase(self, node: ast.AST) -> None:  # noqa: N802
@@ -462,12 +489,12 @@ class Analyzer(AsyncVisitor):
         from robot.parsing.model.blocks import TestCase
         from robot.parsing.model.statements import TestCaseName
 
-        kw = cast(TestCase, node)
-        if not kw.name:
-            name_token = cast(TestCaseName, kw.header).get_token(RobotToken.TESTCASE_NAME)
+        testcase = cast(TestCase, node)
+        if not testcase.name:
+            name_token = cast(TestCaseName, testcase.header).get_token(RobotToken.TESTCASE_NAME)
             self._results.append(
                 Diagnostic(
-                    range=range_from_token_or_node(kw, name_token),
+                    range=range_from_token_or_node(testcase, name_token),
                     message="Test case name cannot be empty.",
                     severity=DiagnosticSeverity.ERROR,
                     source=DIAGNOSTICS_SOURCE_NAME,
@@ -475,32 +502,37 @@ class Analyzer(AsyncVisitor):
                 )
             )
 
-        await self.generic_visit(node)
+        self.current_testcase_or_keyword_name = testcase.name
+        try:
+            await self.generic_visit(node)
+        finally:
+            self.current_testcase_or_keyword_name = None
 
     async def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.blocks import Keyword
         from robot.parsing.model.statements import Arguments, KeywordName
 
-        kw = cast(Keyword, node)
-        if kw.name:
-            name_token = cast(KeywordName, kw.header).get_token(RobotToken.KEYWORD_NAME)
-            if is_embedded_keyword(kw.name) and any(isinstance(v, Arguments) and len(v.values) > 0 for v in kw.body):
+        keyword = cast(Keyword, node)
+        if keyword.name:
+            name_token = cast(KeywordName, keyword.header).get_token(RobotToken.KEYWORD_NAME)
+            if is_embedded_keyword(keyword.name) and any(
+                isinstance(v, Arguments) and len(v.values) > 0 for v in keyword.body
+            ):
                 self._results.append(
                     Diagnostic(
-                        range=range_from_token_or_node(kw, name_token),
+                        range=range_from_token_or_node(keyword, name_token),
                         message="Keyword cannot have both normal and embedded arguments.",
                         severity=DiagnosticSeverity.ERROR,
                         source=DIAGNOSTICS_SOURCE_NAME,
                         code="KeywordError",
                     )
                 )
-
-        if not kw.name:
-            name_token = cast(KeywordName, kw.header).get_token(RobotToken.KEYWORD_NAME)
+        else:
+            name_token = cast(KeywordName, keyword.header).get_token(RobotToken.KEYWORD_NAME)
             self._results.append(
                 Diagnostic(
-                    range=range_from_token_or_node(kw, name_token),
+                    range=range_from_token_or_node(keyword, name_token),
                     message="Keyword name cannot be empty.",
                     severity=DiagnosticSeverity.ERROR,
                     source=DIAGNOSTICS_SOURCE_NAME,
@@ -508,7 +540,11 @@ class Analyzer(AsyncVisitor):
                 )
             )
 
-        await self.generic_visit(node)
+        self.current_testcase_or_keyword_name = keyword.name
+        try:
+            await self.generic_visit(node)
+        finally:
+            self.current_testcase_or_keyword_name = None
 
 
 @dataclass

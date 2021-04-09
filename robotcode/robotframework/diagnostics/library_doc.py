@@ -198,6 +198,10 @@ class KeywordDoc(Model):
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
 
+    @property
+    def is_deprecated(self) -> bool:
+        return self.doc.startswith("*DEPRECATED") and "*" in self.doc[1:]
+
     def range(self) -> Range:
         return Range(
             start=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
@@ -309,6 +313,10 @@ class LibraryDoc(Model):
     errors: Optional[List[Error]] = None
     python_path: Optional[List[str]] = None
     stdout: Optional[str] = None
+
+    @property
+    def is_deprecated(self) -> bool:
+        return self.doc.startswith("*DEPRECATED") and "*" in self.doc[1:]
 
     def range(self) -> Range:
         return Range(
@@ -862,9 +870,18 @@ def find_file(
     return cast(str, robot_find_file(name, base_dir or ".", file_type))
 
 
+class CompleteResultKind(Enum):
+    MODULE_INTERNAL = "Module (Internal)"
+    MODULE = "Module"
+    FILE = "File"
+    RESOURCE = "Resource"
+    FOLDER = "Directory"
+    KEYWORD = "Keyword"
+
+
 class CompleteResult(NamedTuple):
     label: str
-    detail: str
+    kind: CompleteResultKind
 
 
 def is_file_like(name: Optional[str]) -> bool:
@@ -916,13 +933,13 @@ def iter_modules_from_python_path(path: Optional[str] = None) -> Iterator[Comple
                     and f.suffix not in [".dist-info"]
                 ):
                     if f.is_dir():
-                        yield CompleteResult(f.name, "Module")
+                        yield CompleteResult(f.name, CompleteResultKind.MODULE)
 
                     if f.is_file():
                         if allow_modules:
-                            yield CompleteResult(f.stem, "Module")
+                            yield CompleteResult(f.stem, CompleteResultKind.MODULE)
                         if allow_files:
-                            yield CompleteResult(f.name, "File")
+                            yield CompleteResult(f.name, CompleteResultKind.FILE)
 
 
 def iter_resources_from_python_path(path: Optional[str] = None) -> Iterator[CompleteResult]:
@@ -940,7 +957,9 @@ def iter_resources_from_python_path(path: Optional[str] = None) -> Iterator[Comp
                     or f.is_dir()
                     and f.suffix not in [".dist-info"]
                 ):
-                    yield CompleteResult(f.name, "Resource" if f.is_file() else "Directory")
+                    yield CompleteResult(
+                        f.name, CompleteResultKind.RESOURCE if f.is_file() else CompleteResultKind.FOLDER
+                    )
 
 
 def complete_library_import(
@@ -959,7 +978,7 @@ def complete_library_import(
 
     if name is None:
         result += [
-            CompleteResult(e, "Module (Internal)")
+            CompleteResult(e, CompleteResultKind.MODULE_INTERNAL)
             for e in iter_module_names(ROBOT_LIBRARY_PACKAGE)
             if e not in DEFAULT_LIBRARIES
         ]
@@ -983,7 +1002,7 @@ def complete_library_import(
 
         if path.exists() and path.is_dir():
             result += [
-                CompleteResult(str(f.name), "File" if f.is_file() else "Directory")
+                CompleteResult(str(f.name), CompleteResultKind.FILE if f.is_file() else CompleteResultKind.FOLDER)
                 for f in path.iterdir()
                 if not f.name.startswith(("_", "."))
                 and (f.is_dir() or (f.is_file and f.suffix in ALLOWED_LIBRARY_FILE_EXTENSIONS))
@@ -1025,7 +1044,7 @@ def complete_resource_import(
 
         if path.exists() and (path.is_dir()):
             result += [
-                CompleteResult(str(f.name), "Resource" if f.is_file() else "Directory")
+                CompleteResult(str(f.name), CompleteResultKind.RESOURCE if f.is_file() else CompleteResultKind.FOLDER)
                 for f in path.iterdir()
                 if not f.name.startswith(("_", "."))
                 and (f.is_dir() or (f.is_file and f.suffix in ALLOWED_RESOURCE_FILE_EXTENSIONS))

@@ -38,7 +38,11 @@ from ...language_server.types import (
 from ...utils.async_itertools import async_chain, async_chain_iterator
 from ...utils.logging import LoggingDescriptor
 from ..configuration import SyntaxConfig
-from ..diagnostics.library_doc import KeywordArgumentKind, KeywordDoc
+from ..diagnostics.library_doc import (
+    CompleteResultKind,
+    KeywordArgumentKind,
+    KeywordDoc,
+)
 from ..utils.ast import (
     Token,
     get_nodes_at_position,
@@ -196,9 +200,12 @@ class CompletionCollector(ModelHelperMixin):
             document_uri = completion_item.data.get("document_uri", None)
             if document_uri is not None:
                 document = self.parent.documents.get(document_uri, None)
-                if document is not None:
-                    type = completion_item.data.get("type", None)
-                    if type is not None and type in ["Module", "Module (Internal)", "File"]:
+                if document is not None and (type := completion_item.data.get("type", None)) is not None:
+                    if type in [
+                        CompleteResultKind.MODULE.name,
+                        CompleteResultKind.MODULE_INTERNAL.name,
+                        CompleteResultKind.FILE.name,
+                    ]:
                         name = completion_item.data.get("name", None)
                         if name is not None:
                             try:
@@ -219,7 +226,7 @@ class CompletionCollector(ModelHelperMixin):
                                 completion_item.documentation = MarkupContent(
                                     kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
                                 )
-                    if type is not None and type in ["Resource", "File"]:
+                    elif type in [CompleteResultKind.RESOURCE.name]:
                         name = completion_item.data.get("name", None)
                         if name is not None:
                             try:
@@ -240,7 +247,7 @@ class CompletionCollector(ModelHelperMixin):
                                 completion_item.documentation = MarkupContent(
                                     kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
                                 )
-                    elif type is not None and type in ["Keyword"]:
+                    elif type in [CompleteResultKind.KEYWORD.name]:
                         libname = completion_item.data.get("libname", None)
                         name = completion_item.data.get("name", None)
                         namespace = await self.parent.documents_cache.get_namespace(document)
@@ -270,7 +277,7 @@ class CompletionCollector(ModelHelperMixin):
         return [
             CompletionItem(
                 label=s[0],
-                kind=CompletionItemKind.TEXT,
+                kind=CompletionItemKind.CLASS,
                 detail="Section",
                 sort_text=f"100_{s[1]}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
@@ -380,13 +387,13 @@ class CompletionCollector(ModelHelperMixin):
                             c = CompletionItem(
                                 label=kw.name,
                                 kind=CompletionItemKind.FUNCTION,
-                                detail="Keyword",
+                                detail=CompleteResultKind.KEYWORD.value,
                                 sort_text=f"020_{kw.name}",
                                 insert_text_format=InsertTextFormat.PLAINTEXT,
                                 text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
                                 data={
                                     "document_uri": str(self.document.uri),
-                                    "type": "Keyword",
+                                    "type": CompleteResultKind.KEYWORD.name,
                                     "libname": kw.libname,
                                     "name": kw.name,
                                 },
@@ -401,13 +408,13 @@ class CompletionCollector(ModelHelperMixin):
                             c = CompletionItem(
                                 label=kw.name,
                                 kind=CompletionItemKind.FUNCTION,
-                                detail="Keyword",
+                                detail=CompleteResultKind.KEYWORD.value,
                                 sort_text=f"020_{kw.name}",
                                 insert_text_format=InsertTextFormat.PLAINTEXT,
                                 text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
                                 data={
                                     "document_uri": str(self.document.uri),
-                                    "type": "Keyword",
+                                    "type": CompleteResultKind.KEYWORD.name,
                                     "libname": kw.libname,
                                     "name": kw.name,
                                 },
@@ -419,13 +426,14 @@ class CompletionCollector(ModelHelperMixin):
             c = CompletionItem(
                 label=kw.name,
                 kind=CompletionItemKind.FUNCTION,
-                detail=f"Keyword {f'({kw.libname})' if kw.libname is not None else ''}",
+                detail=f"{CompleteResultKind.KEYWORD.value} {f'({kw.libname})' if kw.libname is not None else ''}",
+                deprecated=kw.is_deprecated,
                 sort_text=f"020_{kw.name}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
                 data={
                     "document_uri": str(self.document.uri),
-                    "type": "Keyword",
+                    "type": CompleteResultKind.KEYWORD.name,
                     "libname": kw.libname,
                     "name": kw.name,
                 },
@@ -438,9 +446,15 @@ class CompletionCollector(ModelHelperMixin):
                 kind=CompletionItemKind.MODULE,
                 detail="Library",
                 sort_text=f"030_{k}",
-                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=v.library_doc.to_markdown()),
+                deprecated=v.library_doc.is_deprecated,
+                # documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=v.library_doc.to_markdown()),
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
+                data={
+                    "document_uri": str(self.document.uri),
+                    "type": CompleteResultKind.MODULE.name,
+                    "name": v.name,
+                },
             )
             result.append(c)
 
@@ -449,10 +463,16 @@ class CompletionCollector(ModelHelperMixin):
                 label=k,
                 kind=CompletionItemKind.MODULE,
                 detail="Resource",
+                deprecated=v.library_doc.is_deprecated,
                 sort_text=f"030_{k}",
                 documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=v.library_doc.to_markdown()),
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
+                data={
+                    "document_uri": str(self.document.uri),
+                    "type": CompleteResultKind.RESOURCE.name,
+                    "name": v.name,
+                },
             )
             result.append(c)
 
@@ -905,14 +925,20 @@ class CompletionCollector(ModelHelperMixin):
         return [
             CompletionItem(
                 label=e.label,
-                kind=CompletionItemKind.MODULE,
-                detail=e.detail,
+                kind=CompletionItemKind.MODULE
+                if e.kind in [CompleteResultKind.MODULE, CompleteResultKind.MODULE_INTERNAL]
+                else CompletionItemKind.FILE
+                if e.kind in [CompleteResultKind.FILE]
+                else CompletionItemKind.FOLDER
+                if e.kind in [CompleteResultKind.FOLDER]
+                else None,
+                detail=e.kind.value,
                 sort_text=f"030_{e}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
                 data={
                     "document_uri": str(self.document.uri),
-                    "type": e.detail,
+                    "type": e.kind.name,
                     "name": ((first_part + sep) if first_part is not None else "") + e.label,
                 },
             )
@@ -997,14 +1023,20 @@ class CompletionCollector(ModelHelperMixin):
         return [
             CompletionItem(
                 label=e.label,
-                kind=CompletionItemKind.MODULE,
-                detail=e.detail,
+                kind=CompletionItemKind.FILE
+                if e.kind in [CompleteResultKind.RESOURCE]
+                else CompletionItemKind.FILE
+                if e.kind in [CompleteResultKind.FILE]
+                else CompletionItemKind.FOLDER
+                if e.kind in [CompleteResultKind.FOLDER]
+                else None,
+                detail=e.kind.value,
                 sort_text=f"030_{e}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
                 data={
                     "document_uri": str(self.document.uri),
-                    "type": e.detail,
+                    "type": e.kind.name,
                     "name": ((first_part) if first_part is not None else "") + e.label,
                 },
             )
@@ -1107,7 +1139,7 @@ class CompletionCollector(ModelHelperMixin):
         return [
             CompletionItem(
                 label=f"{e.name}=",
-                kind=CompletionItemKind.PROPERTY,
+                kind=CompletionItemKind.TYPEPARAMETER,
                 # detail=e.detail,
                 sort_text=f"02{i}_{e.name}=",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
