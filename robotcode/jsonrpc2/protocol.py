@@ -524,7 +524,7 @@ class JsonRPCProtocol(asyncio.Protocol):
 
     @_logger.call
     def send_response(self, id: Optional[Union[str, int, None]], result: Optional[Any] = None) -> None:
-        self.send_data(JsonRPCResponse(id=id, result=result))
+        self.send_message(JsonRPCResponse(id=id, result=result))
 
     @_logger.call
     def send_error(
@@ -538,7 +538,7 @@ class JsonRPCProtocol(asyncio.Protocol):
         if data is not None:
             error_obj.data = data
 
-        self.send_data(
+        self.send_message(
             JsonRPCError(
                 id=id,
                 error=error_obj,
@@ -546,10 +546,10 @@ class JsonRPCProtocol(asyncio.Protocol):
         )
 
     @_logger.call
-    def send_data(self, message: JsonRPCMessage) -> None:
+    def send_message(self, message: JsonRPCMessage) -> None:
         message.jsonrpc = PROTOCOL_VERSION
 
-        body = message.json(by_alias=True, indent=True, exclude_unset=True).encode(self.CHARSET)
+        body = message.json(by_alias=True, indent=False, exclude_unset=True, exclude_defaults=True).encode(self.CHARSET)
 
         header = (
             f"Content-Length: {len(body)}\r\n" f"Content-Type: {self.CONTENT_TYPE}; charset={self.CHARSET}\r\n\r\n"
@@ -577,7 +577,7 @@ class JsonRPCProtocol(asyncio.Protocol):
 
             self._sended_request[id] = _SendedRequestEntry(result, return_type_or_converter)
 
-        self.send_data(JsonRPCRequest(id=id, method=method, params=params))
+        self.send_message(JsonRPCRequest(id=id, method=method, params=params))
 
         return result
 
@@ -590,7 +590,7 @@ class JsonRPCProtocol(asyncio.Protocol):
         return await self.send_request(method, params, return_type)
 
     def send_notification(self, method: str, params: Any) -> None:
-        self.send_data(JsonRPCNotification(method=method, params=params))
+        self.send_message(JsonRPCNotification(method=method, params=params))
 
     @_logger.call(exception=True)
     async def handle_response(self, message: JsonRPCResponse) -> None:

@@ -123,8 +123,8 @@ TESTCASE_SETTINGS = ["Documentation", "Tags", "Setup", "Teardown", "Template", "
 KEYWORD_SETTINGS = ["Documentation", "Tags", "Arguments", "Return", "Teardown", "Timeout"]
 
 SNIPPETS = {
-    "FOR": [r"FOR  \${${1}}  ${2|IN,IN ENUMERATE,IN RANGE,IN ZIP|}  ${3:arg}", "END", ""],
-    "IF": [r"IF  \${${1}}", "END", ""],
+    "FOR": [r"FOR  \${${1}}  ${2|IN,IN ENUMERATE,IN RANGE,IN ZIP|}  ${3:arg}", "$0", "END", ""],
+    "IF": [r"IF  \${${1}}", "$0", "END", ""],
 }
 
 
