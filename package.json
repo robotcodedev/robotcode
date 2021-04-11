@@ -16,15 +16,17 @@
         "Programming Languages",
         "Testing",
         "Debuggers",
-        "Formatters"
+        "Formatters",
+        "Linters"
     ],
     "keywords": [
         "Testing",
-        "RobotFramework"
+        "RobotFramework",
+        "Robot Framework",
+        "Robot"
     ],
     "activationEvents": [
-        "onLanguage:robotframework",
-        "onCommand:robotcode.helloWorld",
+        "onLanguage:robotframework",        
         "onCommand:robotcode.runTestcase",
         "onCommand:robotcode.debugTestcase",
         "onCommand:robotcode.runSuite",
@@ -167,12 +169,7 @@
                 }
             }
         ],
-        "commands": [
-            {
-                "command": "robotcode.helloWorld",
-                "category": "RobotCode",
-                "title": "Hello World"
-            },
+        "commands": [            
             {
                 "command": "robotcode.runSuite",
                 "category": "RobotCode",
@@ -239,7 +236,12 @@
                     "when": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder"
                 }
             ]
-        }
+        },
+        "breakpoints": [
+            {
+              "language": "robotframework"
+            }           
+          ]
     },
     "scripts": {
         "vscode:prepublish": "webpack --mode production",

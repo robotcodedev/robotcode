@@ -57,7 +57,6 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
-                self._logger.exception(result, exc_info=result)
             else:
                 if result is not None:
                     results.extend(result)
@@ -74,7 +73,8 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
         for result in await self.resolve(self, params):
             if isinstance(result, BaseException):
-                self._logger.exception(result, exc_info=result)
+                if not isinstance(result, CancelledError):
+                    self._logger.exception(result, exc_info=result)
             else:
                 if result is not None:
                     results.append(result)

@@ -6,6 +6,7 @@ import json
 import re
 import threading
 import weakref
+from asyncio.exceptions import CancelledError
 from collections import OrderedDict
 from typing import (
     TYPE_CHECKING,
@@ -502,7 +503,7 @@ class JsonRPCProtocol(asyncio.Protocol):
     def _handle_messages_generator(self, generator: Generator[JsonRPCMessage, None, None]) -> None:
         def done(f: asyncio.Future[Any]) -> None:
             ex = f.exception()
-            if ex is not None:
+            if ex is not None and not isinstance(ex, CancelledError):
                 self._logger.exception(ex, exc_info=ex)
 
         for m in generator:
@@ -674,6 +675,8 @@ class JsonRPCProtocol(asyncio.Protocol):
             result = e.method(*params[0], **params[1])
             if inspect.isawaitable(result):
                 await result
+        except CancelledError:
+            pass
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:

@@ -90,7 +90,6 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilitie
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
-                self._logger.exception(result, exc_info=result)
             else:
                 if result is not None:
                     results.append(result)

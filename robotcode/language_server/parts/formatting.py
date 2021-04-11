@@ -106,7 +106,8 @@ class FormattingProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             **kwargs,
         ):
             if isinstance(result, BaseException):
-                self._logger.exception(result, exc_info=result)
+                if not isinstance(result, CancelledError):
+                    self._logger.exception(result, exc_info=result)
             else:
                 if result is not None:
                     results += result

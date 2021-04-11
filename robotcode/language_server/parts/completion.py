@@ -94,7 +94,8 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
         ):
             if isinstance(result, BaseException):
-                self._logger.exception(result, exc_info=result)
+                if not isinstance(result, CancelledError):
+                    self._logger.exception(result, exc_info=result)
             else:
                 if result is not None:
                     results.append(result)

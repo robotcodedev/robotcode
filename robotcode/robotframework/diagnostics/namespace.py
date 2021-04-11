@@ -817,7 +817,6 @@ class Namespace:
             except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
-                self._logger.exception(e)
                 if top_level:
                     self._diagnostics.append(
                         Diagnostic(
