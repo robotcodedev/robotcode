@@ -28,7 +28,7 @@ class DummyJsonRPCProtocol(JsonRPCProtocol):
         self.handled_messages.append(message)
         return await super().handle_message(message)
 
-    def send_data(self, message: JsonRPCMessage) -> None:
+    def send_message(self, message: JsonRPCMessage) -> None:
         self.sended_message = message
 
     async def data_received_async(self, data: bytes) -> None:

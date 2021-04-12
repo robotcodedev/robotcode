@@ -29,6 +29,7 @@ from pydantic import BaseModel, Field, PrivateAttr
 
 from ...language_server.types import Position, Range
 from ...utils.path import path_is_relative_to
+from ..utils.markdownformatter import MarkDownFormatter
 
 __all__ = [
     "KeywordDoc",
@@ -194,6 +195,7 @@ class KeywordDoc(Model):
     longname: Optional[str] = None
     is_embedded: bool = False
     errors: Optional[List[Error]] = None
+    doc_format: str = "ROBOT"
 
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
@@ -223,7 +225,7 @@ class KeywordDoc(Model):
 
         if self.doc:
             result += "\n"
-            result += self.doc
+            result += MarkDownFormatter().format(self.doc) if self.doc_format == "ROBOT" else self.doc
 
         return result
 
@@ -341,7 +343,7 @@ class LibraryDoc(Model):
         if self.doc:
             if result:
                 result += "\n\n---\n"
-            result += self.doc
+            result += MarkDownFormatter().format(self.doc) if self.doc_format == "ROBOT" else self.doc
 
         return result
 
@@ -780,6 +782,12 @@ def get_library_doc(
         if lib is not None:
             try:
 
+                libdoc.line_no = lib.lineno
+                libdoc.doc = str(lib.doc)
+                libdoc.version = str(lib.version)
+                libdoc.scope = str(lib.scope)
+                libdoc.doc_format = str(lib.doc_format)
+
                 libdoc.inits = KeywordStore(
                     keywords={
                         kw[0].name: KeywordDoc(
@@ -792,18 +800,13 @@ def get_library_doc(
                             type="library",
                             libname=kw[1].libname,
                             longname=kw[1].longname,
+                            doc_format=str(lib.doc_format),
                         )
                         for kw in [
                             (KeywordDocBuilder().build_keyword(k), k) for k in [KeywordWrapper(lib.init, source)]
                         ]
                     }
                 )
-
-                libdoc.line_no = lib.lineno
-                libdoc.doc = str(lib.doc)
-                libdoc.version = str(lib.version)
-                libdoc.scope = str(lib.scope)
-                libdoc.doc_format = str(lib.doc_format)
 
                 # TODO: create logger to catch log messages at creating keywords
                 lib.create_handlers()
@@ -820,6 +823,7 @@ def get_library_doc(
                             libname=kw[1].libname,
                             longname=kw[1].longname,
                             is_embedded=is_embedded_keyword(kw[0].name),
+                            doc_format=str(lib.doc_format),
                         )
                         for kw in [
                             (KeywordDocBuilder().build_keyword(k), k)
