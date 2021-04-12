@@ -225,7 +225,7 @@ class KeywordDoc(Model):
 
         if self.doc:
             result += "\n"
-            result += MarkDownFormatter().format(self.doc) if self.doc_format == "ROBOT" else self.doc
+            result += MarkDownFormatter().format(self.doc) if self.doc_format in ["", "ROBOT"] else self.doc
 
         return result
 
@@ -343,7 +343,7 @@ class LibraryDoc(Model):
         if self.doc:
             if result:
                 result += "\n\n---\n"
-            result += MarkDownFormatter().format(self.doc) if self.doc_format == "ROBOT" else self.doc
+            result += MarkDownFormatter().format(self.doc) if self.doc_format in ["", "ROBOT"] else self.doc
 
         return result
 

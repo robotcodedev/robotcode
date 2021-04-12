@@ -203,6 +203,7 @@ _                          # end of italic
         super().__init__()
 
         self._formatters: List[Tuple[str, Callable[[str], str]]] = [
+            ("<", self._quote),
             ("*", self._format_bold),
             ("_", self._format_italic),
             ("``", self._format_code),
@@ -214,6 +215,9 @@ _                          # end of italic
             if marker in line:
                 line = formatter(line)
         return line
+
+    def _quote(self, line: str) -> str:
+        return line.replace("<", "\\<")
 
     def _format_bold(self, line: str) -> str:
         return self._bold.sub("\\1**\\3**", line)
@@ -232,9 +236,9 @@ class PreformattedFormatter(Formatter):
         return line.startswith("| ") or line == "|"
 
     def format(self, lines: List[str]) -> str:
-        lines = ["    " + self._format_line(line[2:]) for line in lines]
-
-        return "\n".join(lines)
+        # lines = ["    " + self._format_line(line[2:]) for line in lines]
+        lines = [line[2:] for line in lines]
+        return "```\n" + "\n".join(lines) + "\n```\n"
 
 
 class ParagraphFormatter(Formatter):
