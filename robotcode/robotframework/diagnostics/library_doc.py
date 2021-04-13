@@ -25,7 +25,7 @@ from typing import (
     cast,
 )
 
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import BaseModel, Field, PrivateAttr, validator
 
 from ...language_server.types import Position, Range
 from ...utils.path import path_is_relative_to
@@ -73,6 +73,8 @@ ROBOT_LIBRARY_PACKAGE = "robot.libraries"
 
 ALLOWED_LIBRARY_FILE_EXTENSIONS = [".py"]
 ALLOWED_RESOURCE_FILE_EXTENSIONS = [".robot", ".resource", ".rst", ".rest", ".txt"]
+
+DEFAULT_DOC_FORMAT = "ROBOT"
 
 
 def is_embedded_keyword(name: str) -> bool:
@@ -195,7 +197,11 @@ class KeywordDoc(Model):
     longname: Optional[str] = None
     is_embedded: bool = False
     errors: Optional[List[Error]] = None
-    doc_format: str = "ROBOT"
+    doc_format: str = DEFAULT_DOC_FORMAT
+
+    @validator("doc_format")
+    def doc_format_validator(cls, v: str) -> str:
+        return v or DEFAULT_DOC_FORMAT
 
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
@@ -214,20 +220,36 @@ class KeywordDoc(Model):
         )
 
     def to_markdown(self, add_signature: bool = True) -> str:
-        if add_signature:
-            result = "```python\n"
+        if self.doc_format == DEFAULT_DOC_FORMAT:
+            return MarkDownFormatter().format(self.get_full_doc(add_signature))
 
-            result += f"({self.type}) \"{self.name}\": ({', '.join(str(a) for a in self.args)})"
+        return self.doc
 
-            result += "\n```"
-        else:
+    def get_full_doc(self, add_signature: bool = True) -> str:
+        if self.doc_format == DEFAULT_DOC_FORMAT:
             result = ""
 
-        if self.doc:
-            result += "\n"
-            result += MarkDownFormatter().format(self.doc) if self.doc_format in ["", "ROBOT"] else self.doc
+            if add_signature:
+                result += f"\n\n=== {self.name} ===\n"
+                if self.args:
+                    result += "\n==== Arguments: ====\n"
+                    for a in self.args:
+                        result += f"\n| {str(a)}"
 
-        return result
+            else:
+                result = ""
+
+            if self.doc:
+                if result:
+                    result += "\n\n"
+
+                result += "\n==== Documentation: ====\n\n"
+
+                result += self.doc
+
+            return result
+
+        return self.doc
 
     @property
     def signature(self) -> str:
@@ -275,6 +297,9 @@ class KeywordStore(Model):
     def __len__(self) -> int:
         return len(self.keywords)
 
+    def __bool__(self) -> bool:
+        return len(self) > 0
+
     def items(self) -> AbstractSet[Tuple[str, KeywordDoc]]:
         return self.keywords.items()
 
@@ -305,7 +330,7 @@ class LibraryDoc(Model):
     type: str = "LIBRARY"
     scope: str = "TEST"
     named_args: bool = True
-    doc_format: str = "ROBOT"
+    doc_format: str = DEFAULT_DOC_FORMAT
     source: Optional[str] = None
     line_no: int = -1
     end_line_no: int = -1
@@ -315,6 +340,10 @@ class LibraryDoc(Model):
     errors: Optional[List[Error]] = None
     python_path: Optional[List[str]] = None
     stdout: Optional[str] = None
+
+    @validator("doc_format")
+    def doc_format_validator(cls, v: str) -> str:
+        return v or DEFAULT_DOC_FORMAT
 
     @property
     def is_deprecated(self) -> bool:
@@ -333,17 +362,15 @@ class LibraryDoc(Model):
         result = ""
 
         if add_signature:
-            if self.inits:
+            if any(v for v in self.inits.values() if v.args):
                 result += "\n\n---\n".join(i.to_markdown() for i in self.inits.values())
-            else:
-                result += "```python\n"
-                result += f'({self.type.lower()}) "{self.name}": ()'
-                result += "\n```"
 
         if self.doc:
             if result:
                 result += "\n\n---\n"
-            result += MarkDownFormatter().format(self.doc) if self.doc_format in ["", "ROBOT"] else self.doc
+            result += (
+                MarkDownFormatter().format(self.get_full_doc()) if self.doc_format == DEFAULT_DOC_FORMAT else self.doc
+            )
 
         return result
 
@@ -362,6 +389,72 @@ class LibraryDoc(Model):
                         return str(p)
 
         return None
+
+    def get_full_doc(self) -> str:
+        if self.doc_format == DEFAULT_DOC_FORMAT:
+
+            result = f"= {self.name} =\n"
+
+            if self.version:
+                result += f"\n| **Library Version:** | {self.version} |"
+            if self.scope:
+                result += f"\n| **Library Scope:** | {self.scope} |"
+
+            if "%TOC%" in self.doc:
+                doc = self._add_toc(self.doc)
+            else:
+                doc = self.doc
+
+            if self.doc:
+                result += "\n== Introduction ==\n\n"
+
+            if doc:
+                result += doc
+
+            if any(v for v in self.inits.values() if v.args):
+                result += "\n---\n\n"
+                result += "\n== Importing == \n\n"
+
+                first = True
+
+                for kw in self.inits.values():
+                    if not first:
+                        result += "\n---\n"
+                    first = False
+
+                    result += "\n" + kw.get_full_doc()
+
+            if self.keywords:
+                result += "\n---\n\n"
+                result += "\n== Keywords == \n\n"
+
+                first = True
+
+                for kw in self.keywords.values():
+                    if not first:
+                        result += "\n---\n"
+                    first = False
+
+                    result += "\n" + kw.get_full_doc()
+
+            return result
+
+        return self.doc
+
+    def _add_toc(self, doc: str) -> str:
+        toc = self._create_toc(doc)
+        return "\n".join(line if line.strip() != "%TOC%" else toc for line in doc.splitlines())
+
+    def _create_toc(self, doc: str) -> str:
+        entries = re.findall(r"^\s*=\s+(.+?)\s+=\s*$", doc, flags=re.MULTILINE)
+        if self.inits:
+            entries.append("Importing")
+        if self.keywords:
+            entries.append("Keywords")
+        # TODO if self.data_types:
+        #    entries.append("Data types")
+
+        return "\n".join(f"- `{entry}`" for entry in entries)
 
 
 def is_library_by_path(path: str) -> bool:
@@ -786,7 +879,7 @@ def get_library_doc(
                 libdoc.doc = str(lib.doc)
                 libdoc.version = str(lib.version)
                 libdoc.scope = str(lib.scope)
-                libdoc.doc_format = str(lib.doc_format)
+                libdoc.doc_format = str(lib.doc_format) or DEFAULT_DOC_FORMAT
 
                 libdoc.inits = KeywordStore(
                     keywords={
@@ -800,7 +893,7 @@ def get_library_doc(
                             type="library",
                             libname=kw[1].libname,
                             longname=kw[1].longname,
-                            doc_format=str(lib.doc_format),
+                            doc_format=str(lib.doc_format) or DEFAULT_DOC_FORMAT,
                         )
                         for kw in [
                             (KeywordDocBuilder().build_keyword(k), k) for k in [KeywordWrapper(lib.init, source)]
@@ -823,7 +916,7 @@ def get_library_doc(
                             libname=kw[1].libname,
                             longname=kw[1].longname,
                             is_embedded=is_embedded_keyword(kw[0].name),
-                            doc_format=str(lib.doc_format),
+                            doc_format=str(lib.doc_format) or DEFAULT_DOC_FORMAT,
                         )
                         for kw in [
                             (KeywordDocBuilder().build_keyword(k), k)

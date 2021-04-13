@@ -569,7 +569,13 @@ class ImportsManager:
         lib = MyUserLibrary(res)
 
         libdoc = LibraryDoc(
-            name=lib.name or "", doc=lib.doc, type=model_type, scope=scope, source=source, line_no=1, errors=errors
+            name=lib.name or "",
+            doc=lib.doc,
+            type=model_type,
+            scope=scope,
+            source=source,
+            line_no=1,
+            errors=errors,
         )
 
         libdoc.keywords = KeywordStore(

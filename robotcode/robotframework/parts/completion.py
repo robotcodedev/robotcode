@@ -1139,7 +1139,7 @@ class CompletionCollector(ModelHelperMixin):
         return [
             CompletionItem(
                 label=f"{e.name}=",
-                kind=CompletionItemKind.TYPEPARAMETER,
+                kind=CompletionItemKind.VARIABLE,
                 # detail=e.detail,
                 sort_text=f"02{i}_{e.name}=",
                 insert_text_format=InsertTextFormat.PLAINTEXT,

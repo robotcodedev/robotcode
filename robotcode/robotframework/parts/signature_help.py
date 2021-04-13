@@ -179,7 +179,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             argument_index = -1
 
         signature = SignatureInformation(
-            label=result[0].signature,
+            label=result[0].parameter_signature,
             parameters=[ParameterInformation(label=str(p)) for p in result[0].args],
             active_parameter=min(argument_index, len(result[0].args) - 1),
             documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=result[0].to_markdown(False)),

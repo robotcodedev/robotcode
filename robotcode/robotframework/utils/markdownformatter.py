@@ -92,7 +92,7 @@ class SingleLineFormatter(Formatter):
 
 
 class HeaderFormatter(SingleLineFormatter):
-    _regex = re.compile(r"^(={1,3})\s+(\S.*?)\s+\1$")
+    _regex = re.compile(r"^(={1,5})\s+(\S.*?)\s+\1$")
 
     def match(self, line: str) -> Optional[re.Match[str]]:
         return self._regex.match(line)
@@ -102,7 +102,7 @@ class HeaderFormatter(SingleLineFormatter):
         if m is not None:
             level, text = m.groups()
 
-            return "%s %s" % ("#" * (len(level) + 1), text)
+            return "%s %s\n" % ("#" * (len(level) + 1), text)
         return ""
 
 
@@ -203,7 +203,8 @@ _                          # end of italic
         super().__init__()
 
         self._formatters: List[Tuple[str, Callable[[str], str]]] = [
-            ("<", self._quote),
+            ("<", self._quote_lower_then),
+            ("#", self._quote_hash),
             ("*", self._format_bold),
             ("_", self._format_italic),
             ("``", self._format_code),
@@ -216,8 +217,11 @@ _                          # end of italic
                 line = formatter(line)
         return line
 
-    def _quote(self, line: str) -> str:
+    def _quote_lower_then(self, line: str) -> str:
         return line.replace("<", "\\<")
+
+    def _quote_hash(self, line: str) -> str:
+        return line.replace("#", "\\#")
 
     def _format_bold(self, line: str) -> str:
         return self._bold.sub("\\1**\\3**", line)
@@ -238,7 +242,7 @@ class PreformattedFormatter(Formatter):
     def format(self, lines: List[str]) -> str:
         # lines = ["    " + self._format_line(line[2:]) for line in lines]
         lines = [line[2:] for line in lines]
-        return "```\n" + "\n".join(lines) + "\n```\n"
+        return "```text\n" + "\n".join(lines) + "\n```\n"
 
 
 class ParagraphFormatter(Formatter):
@@ -264,7 +268,7 @@ class ListFormatter(Formatter):
 
     def format(self, lines: List[str]) -> str:
         items = ["- %s" % self._format_item(line) for line in self._combine_lines(lines)]
-        return "\n".join(items)
+        return "\n".join(items) + "\n\n"
 
     def _combine_lines(self, lines: List[str]) -> Iterator[str]:
         current = []
@@ -319,14 +323,14 @@ class TableFormatter(Formatter):
             row += [""] * (maxlen - len(row))
             table.append(f'|{"|".join(self._format_cell(cell) for cell in row)}|')
 
-        row_ = ["---"] * maxlen
+        row_ = [" :--- "] * maxlen
         table.append(f'|{"|".join(row_)}|')
 
         for row in body_rows:
             row += [""] * (maxlen - len(row))
             table.append(f'|{"|".join(self._format_cell(cell) for cell in row)}|')
 
-        return "\n".join(table)
+        return "\n".join(table) + "\n\n"
 
     def _format_cell(self, content: str) -> str:
         if content.startswith("=") and content.endswith("="):
