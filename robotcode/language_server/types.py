@@ -834,7 +834,7 @@ class Position(Model):
         return iter((self.line, self.character))
 
     def is_in_range(self, range: "Range") -> bool:
-        return self >= range.start and self < range.end
+        return range.start <= self < range.end
 
 
 class Range(Model):

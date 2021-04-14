@@ -40,6 +40,8 @@ __all__ = [
     "find_file",
     "is_embedded_keyword",
     "complete_library_import",
+    "CompleteResultKind",
+    "KeywordArgumentKind"
 ]
 
 
@@ -184,6 +186,9 @@ class KeywordArgumentDoc(Model):
         return self.str_repr
 
 
+DEPRECATED_PATTERN = re.compile(r"^\*DEPRECATED(?P<message>.*)\*(?P<doc>.*)")
+
+
 class KeywordDoc(Model):
     name: str = ""
     args: Tuple[KeywordArgumentDoc, ...] = ()
@@ -208,8 +213,15 @@ class KeywordDoc(Model):
 
     @property
     def is_deprecated(self) -> bool:
-        return self.doc.startswith("*DEPRECATED") and "*" in self.doc[1:]
+        return DEPRECATED_PATTERN.match(self.doc) is not None
 
+    @property
+    def deprecated_message(self) -> str:
+        if (m := DEPRECATED_PATTERN.match(self.doc)) is not None:
+            return m.group("message").strip()
+        return ""
+
+    @property
     def range(self) -> Range:
         return Range(
             start=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
@@ -347,8 +359,15 @@ class LibraryDoc(Model):
 
     @property
     def is_deprecated(self) -> bool:
-        return self.doc.startswith("*DEPRECATED") and "*" in self.doc[1:]
+        return DEPRECATED_PATTERN.match(self.doc) is not None
 
+    @property
+    def deprecated_message(self) -> str:
+        if (m := DEPRECATED_PATTERN.match(self.doc)) is not None:
+            return m.group("message").strip()
+        return ""
+
+    @property
     def range(self) -> Range:
         return Range(
             start=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
@@ -390,7 +409,7 @@ class LibraryDoc(Model):
 
         return None
 
-    def get_full_doc(self) -> str:
+    def get_full_doc(self, only_doc: bool = True) -> str:
         if self.doc_format == DEFAULT_DOC_FORMAT:
 
             result = f"= {self.name} =\n"
@@ -411,48 +430,51 @@ class LibraryDoc(Model):
             if doc:
                 result += doc
 
-            if any(v for v in self.inits.values() if v.args):
-                result += "\n---\n\n"
-                result += "\n== Importing == \n\n"
+            if not only_doc:
+                if any(v for v in self.inits.values() if v.args):
+                    result += "\n---\n\n"
+                    result += "\n== Importing == \n\n"
 
-                first = True
+                    first = True
 
-                for kw in self.inits.values():
-                    if not first:
-                        result += "\n---\n"
-                    first = False
+                    for kw in self.inits.values():
+                        if not first:
+                            result += "\n---\n"
+                        first = False
 
-                    result += "\n" + kw.get_full_doc()
+                        result += "\n" + kw.get_full_doc()
 
-            if self.keywords:
-                result += "\n---\n\n"
-                result += "\n== Keywords == \n\n"
+                if self.keywords:
+                    result += "\n---\n\n"
+                    result += "\n== Keywords == \n\n"
 
-                first = True
+                    first = True
 
-                for kw in self.keywords.values():
-                    if not first:
-                        result += "\n---\n"
-                    first = False
+                    for kw in self.keywords.values():
+                        if not first:
+                            result += "\n---\n"
+                        first = False
 
-                    result += "\n" + kw.get_full_doc()
+                        result += "\n" + kw.get_full_doc()
 
             return result
 
         return self.doc
 
-    def _add_toc(self, doc: str) -> str:
-        toc = self._create_toc(doc)
+    def _add_toc(self, doc: str, only_doc: bool = True) -> str:
+        toc = self._create_toc(doc, only_doc)
         return "\n".join(line if line.strip() != "%TOC%" else toc for line in doc.splitlines())
 
-    def _create_toc(self, doc: str) -> str:
+    def _create_toc(self, doc: str, only_doc: bool = True) -> str:
         entries = re.findall(r"^\s*=\s+(.+?)\s+=\s*$", doc, flags=re.MULTILINE)
-        if self.inits:
-            entries.append("Importing")
-        if self.keywords:
-            entries.append("Keywords")
-        # TODO if self.data_types:
-        #    entries.append("Data types")
+
+        if not only_doc:
+            if self.inits:
+                entries.append("Importing")
+            if self.keywords:
+                entries.append("Keywords")
+            # TODO if self.data_types:
+            #    entries.append("Data types")
 
         return "\n".join(f"- `{entry}`" for entry in entries)
 

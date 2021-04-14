@@ -296,7 +296,8 @@ class Analyzer(AsyncVisitor):
                     self._results.append(
                         Diagnostic(
                             range=range_from_token_or_node(value, keyword_token),
-                            message=result.doc,
+                            message=f"Keyword '{result.name}' is deprecated"
+                            f"{f': {result.deprecated_message}' if result.deprecated_message else ''}.",
                             severity=DiagnosticSeverity.HINT,
                             source=DIAGNOSTICS_SOURCE_NAME,
                             tags=[DiagnosticTag.Deprecated],

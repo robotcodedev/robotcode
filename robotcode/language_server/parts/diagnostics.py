@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 from .protocol_part import LanguageServerProtocolPart
 
-__all__ = ["DiagnosticsProtocolPart"]
+__all__ = ["DiagnosticsProtocolPart", "DiagnosticsResult"]
 
 DIAGNOSTICS_DEBOUNCE = 0.75
 
@@ -98,7 +98,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     def __init__(self, protocol: LanguageServerProtocol) -> None:
         super().__init__(protocol)
 
-        self._running_diagnosistcs: Dict[Uri, PublishDiagnosticsEntry] = {}
+        self._running_diagnostics: Dict[Uri, PublishDiagnosticsEntry] = {}
         self._task_lock = asyncio.Lock()
         self._start_lock_lock = asyncio.Lock()
 
@@ -122,15 +122,15 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         await self._cancel_all_tasks()
 
     def __del__(self) -> None:
-        if len(self._running_diagnosistcs) > 0:
+        if len(self._running_diagnostics) > 0:
             self._logger.warning("there are running tasks")
 
     @_logger.call
     async def _cancel_all_tasks(self) -> None:
         tasks_copy = None
         async with self._task_lock:
-            tasks_copy = self._running_diagnosistcs.copy()
-            self._running_diagnosistcs = {}
+            tasks_copy = self._running_diagnostics.copy()
+            self._running_diagnostics = {}
         if tasks_copy is not None:
             for v in tasks_copy.values():
                 self._cancel_entry(v)
@@ -153,7 +153,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     @_logger.call
     async def on_did_close(self, sender: Any, document: TextDocument) -> None:
         async with self._task_lock:
-            e = self._running_diagnosistcs.pop(document.uri, None)
+            e = self._running_diagnostics.pop(document.uri, None)
             self._cancel_entry(e)
 
     @_logger.call
@@ -163,9 +163,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     @_logger.call
     async def start_publish_diagnostics_task(self, document: TextDocument) -> None:
         async with self._task_lock:
-            self._cancel_entry(self._running_diagnosistcs.get(document.uri, None))
+            self._cancel_entry(self._running_diagnostics.get(document.uri, None))
 
-            self._running_diagnosistcs[document.uri] = PublishDiagnosticsEntry(
+            self._running_diagnostics[document.uri] = PublishDiagnosticsEntry(
                 document.document_uri,
                 lambda: asyncio.create_task(
                     self.publish_diagnostics(document.document_uri),

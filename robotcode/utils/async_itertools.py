@@ -1,6 +1,6 @@
 from typing import AsyncIterable, AsyncIterator, Iterable, TypeVar, Union
 
-__all__ = ["async_chain"]
+__all__ = ["async_chain", "async_chain_iterator"]
 
 _T = TypeVar("_T")
 

@@ -57,6 +57,7 @@ __all__ = [
     "ProtocolPartDescriptor",
     "GenericJsonRPCProtocolPart",
     "TProtocol",
+    "JsonRPCErrorException"
 ]
 
 T = TypeVar("T")
@@ -103,8 +104,6 @@ class JsonRPCErrorObject(BaseModel):
 
 
 class JsonRPCError(JsonRPCResponse):
-    """A class that represents json rpc response message."""
-
     error: JsonRPCErrorObject = Field(...)
     result: Optional[Any] = None
 
@@ -240,7 +239,8 @@ class RpcRegistry:
                     rpc_method.__rpc_method__.param_type,
                 )
                 for method, rpc_method in map(
-                    lambda m1: (m1, cast(RpcMethod, m1)), filter(lambda m2: isinstance(m2, RpcMethod), iter_methods(obj))
+                    lambda m1: (m1, cast(RpcMethod, m1)),
+                    filter(lambda m2: isinstance(m2, RpcMethod), iter_methods(obj)),
                 )
             }
 
@@ -618,7 +618,7 @@ class JsonRPCProtocol(asyncio.Protocol):
 
     @_logger.call
     async def handle_error(self, message: JsonRPCError) -> None:
-        raise NotImplementedError()
+        raise JsonRPCErrorException(message.id, message.error.message, message.error.data)
 
     async def handle_request(self, message: JsonRPCRequest) -> None:
         e = self.registry.get_entry(message.method)

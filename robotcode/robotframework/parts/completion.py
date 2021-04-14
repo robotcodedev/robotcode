@@ -374,7 +374,7 @@ class CompletionCollector(ModelHelperMixin):
                 lib_name_index = -1
                 for e in enumerate_indexes(token.value, "."):
                     e += r.start.character
-                    if e < position.character and lib_name_index < e:
+                    if position.character > e > lib_name_index:
                         lib_name_index = e
 
                 if lib_name_index >= 0:
@@ -888,7 +888,7 @@ class CompletionCollector(ModelHelperMixin):
         if text_before_position != "" and all(c == "." for c in text_before_position):
             return None
 
-        last_seperator_index = (
+        last_separator_index = (
             len(text_before_position)
             - next((i for i, c in enumerate(reversed(text_before_position)) if c in [".", "/", os.sep]), -1)
             - 1
@@ -896,13 +896,13 @@ class CompletionCollector(ModelHelperMixin):
 
         first_part = (
             text_before_position[
-                : last_seperator_index + (1 if text_before_position[last_seperator_index] in [".", "/", os.sep] else 0)
+                : last_separator_index + (1 if text_before_position[last_separator_index] in [".", "/", os.sep] else 0)
             ]
-            if last_seperator_index < len(text_before_position)
+            if last_separator_index < len(text_before_position)
             else None
         )
 
-        sep = text_before_position[last_seperator_index] if last_seperator_index < len(text_before_position) else ""
+        sep = text_before_position[last_separator_index] if last_separator_index < len(text_before_position) else ""
 
         imports_manger = await self.parent.documents_cache.get_imports_manager(self.document)
 
@@ -920,7 +920,7 @@ class CompletionCollector(ModelHelperMixin):
         if text_before_position == "":
             r.start.character = position.character
         else:
-            r.start.character += last_seperator_index + 1 if last_seperator_index < len(text_before_position) else 0
+            r.start.character += last_separator_index + 1 if last_separator_index < len(text_before_position) else 0
 
         return [
             CompletionItem(
@@ -988,7 +988,7 @@ class CompletionCollector(ModelHelperMixin):
         if text_before_position != "" and all(c == "." for c in text_before_position):
             return None
 
-        last_seperator_index = (
+        last_separator_index = (
             len(text_before_position)
             - next((i for i, c in enumerate(reversed(text_before_position)) if c in ["/", os.sep]), -1)
             - 1
@@ -996,9 +996,9 @@ class CompletionCollector(ModelHelperMixin):
 
         first_part = (
             text_before_position[
-                : last_seperator_index + (1 if text_before_position[last_seperator_index] in ["/", os.sep] else 0)
+                : last_separator_index + (1 if text_before_position[last_separator_index] in ["/", os.sep] else 0)
             ]
-            if last_seperator_index < len(text_before_position)
+            if last_separator_index < len(text_before_position)
             else None
         )
 
@@ -1018,7 +1018,7 @@ class CompletionCollector(ModelHelperMixin):
         if text_before_position == "":
             r.start.character = position.character
         else:
-            r.start.character += last_seperator_index + 1 if last_seperator_index < len(text_before_position) else 0
+            r.start.character += last_separator_index + 1 if last_separator_index < len(text_before_position) else 0
 
         return [
             CompletionItem(
@@ -1105,7 +1105,7 @@ class CompletionCollector(ModelHelperMixin):
         if argument_index < 0:
             return None
 
-        result: Optional[Tuple[Optional[KeywordDoc], Token]] = None
+        result: Optional[Tuple[Optional[KeywordDoc], Token]]
 
         keyword_token = kw_node.get_token(keyword_name_token_type)
         if keyword_token is None:

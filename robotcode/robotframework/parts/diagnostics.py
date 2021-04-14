@@ -151,6 +151,6 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
-            return []
+            return DiagnosticsResult(self.collect_namespace_diagnostics, None)
 
         return DiagnosticsResult(self.collect_namespace_diagnostics, await namespace.get_diagnostisc())

@@ -85,7 +85,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         self._workspace: Optional[Workspace] = None
         self.client_capabilities: Optional[ClientCapabilities] = None
         self.shutdown_received = False
-        self._capabilites: Optional[ServerCapabilities] = None
+        self._capabilities: Optional[ServerCapabilities] = None
         self._base_capabilities = ServerCapabilities(
             text_document_sync=TextDocumentSyncOptions(
                 open_close=True,
@@ -119,18 +119,18 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     @property
     def capabilities(self) -> ServerCapabilities:
-        if self._capabilites is None:
-            self._capabilites = self._collect_capabilities()
-        return self._capabilites
+        if self._capabilities is None:
+            self._capabilities = self._collect_capabilities()
+        return self._capabilities
 
     def _collect_capabilities(self) -> ServerCapabilities:
-        capas = self._base_capabilities.copy()
+        base_capabilities = self._base_capabilities.copy()
 
         for p in self.registry.parts:
             if isinstance(p, HasExtendCapabilities):
-                cast(HasExtendCapabilities, p).extend_capabilities(capas)
+                cast(HasExtendCapabilities, p).extend_capabilities(base_capabilities)
 
-        return capas
+        return base_capabilities
 
     @rpc_method(name="initialize", param_type=InitializeParams)
     @_logger.call
@@ -162,7 +162,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
             raise
         except BaseException as e:
             raise JsonRPCErrorException(
-                JsonRPCErrors.INTERNAL_ERROR, f"Cant't start language server: {e}", InitializeError(retry=True)
+                JsonRPCErrors.INTERNAL_ERROR, f"Can't start language server: {e}", InitializeError(retry=True)
             ) from e
 
         return InitializeResult(

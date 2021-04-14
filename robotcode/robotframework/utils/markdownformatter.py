@@ -310,7 +310,7 @@ class TableFormatter(Formatter):
     def _format_table(self, rows: List[List[str]]) -> str:
         table = []
 
-        maxlen = max(len(row) for row in rows)
+        max_columns = max(len(row) for row in rows)
 
         try:
             header_rows = [list(next(row for row in rows if any(cell for cell in row if cell.startswith("="))))]
@@ -320,14 +320,14 @@ class TableFormatter(Formatter):
         body_rows = [row for row in rows if row not in header_rows]
 
         for row in header_rows or [[]]:
-            row += [""] * (maxlen - len(row))
+            row += [""] * (max_columns - len(row))
             table.append(f'|{"|".join(self._format_cell(cell) for cell in row)}|')
 
-        row_ = [" :--- "] * maxlen
+        row_ = [" :--- "] * max_columns
         table.append(f'|{"|".join(row_)}|')
 
         for row in body_rows:
-            row += [""] * (maxlen - len(row))
+            row += [""] * (max_columns - len(row))
             table.append(f'|{"|".join(self._format_cell(cell) for cell in row)}|')
 
         return "\n".join(table) + "\n\n"

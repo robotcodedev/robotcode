@@ -29,11 +29,11 @@ def get_methods(
 
 
 _lambda_type = type(lambda: 0)
-_lamda_name = (lambda: 0).__name__
+_lambda_name = (lambda: 0).__name__
 
 
 def is_lambda(v: Any) -> bool:
-    return isinstance(v, _lambda_type) and v.__name__ == _lamda_name
+    return isinstance(v, _lambda_type) and v.__name__ == _lambda_name
 
 
 _TCallable = TypeVar("_TCallable", bound=Callable[..., Any])
