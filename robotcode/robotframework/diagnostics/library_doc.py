@@ -302,11 +302,6 @@ class KeywordStore(Model):
     def __getitem__(self, key: str) -> "KeywordDoc":
         from robot.errors import KeywordError
 
-        # for k, v in self._matchers.items():
-        #     if k == key:
-        #         return v
-        # raise KeyError()
-
         items = [(k, v) for k, v in self._matchers.items() if k == key]
 
         if not items:
@@ -337,11 +332,10 @@ class KeywordStore(Model):
         return self.keywords.values()
 
     def get(self, key: str, default: Optional[KeywordDoc] = None) -> Optional[KeywordDoc]:
-        for k, v in self._matchers.items():
-            if k == key:
-                return v
-
-        return default
+        try:
+            return self.__getitem__(key)
+        except KeyError:
+            return default
 
 
 class ModuleSpec(Model):
