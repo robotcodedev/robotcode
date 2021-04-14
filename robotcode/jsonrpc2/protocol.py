@@ -188,7 +188,7 @@ class HasRpcRegistry(Protocol):
 class RpcRegistry:
     _class_registries: Dict[Type[Any], RpcRegistry] = {}
 
-    def __init__(self, owner: Any = None, parent: Optional[RpcRegistry] = None):
+    def __init__(self, owner: Any = None) -> None:
         self.__owner = owner
         self.__methods: Dict[str, RpcMethodEntry] = {}
         self.__initialized = False
@@ -198,8 +198,8 @@ class RpcRegistry:
     def __set_name__(self, owner: Any, name: str) -> None:
         self.__owner = owner
 
-    def __get__(self, obj: Any, objtype: Type[Any]) -> "RpcRegistry":
-        if obj is None and objtype == self.__owner:
+    def __get__(self, obj: Any, obj_type: Type[Any]) -> "RpcRegistry":
+        if obj is None and obj_type == self.__owner:
             return self
 
         if obj is not None:
@@ -208,10 +208,10 @@ class RpcRegistry:
 
             return cast(HasRpcRegistry, obj).__rpc_registry__
 
-        if objtype not in RpcRegistry._class_registries:
-            RpcRegistry._class_registries[objtype] = RpcRegistry(objtype)
+        if obj_type not in RpcRegistry._class_registries:
+            RpcRegistry._class_registries[obj_type] = RpcRegistry(obj_type)
 
-        return RpcRegistry._class_registries[objtype]
+        return RpcRegistry._class_registries[obj_type]
 
     def _reset(self) -> None:
         self.__methods.clear()
@@ -234,13 +234,13 @@ class RpcRegistry:
     def __ensure_initialized(self) -> None:
         def get_methods(obj: Any) -> Dict[str, RpcMethodEntry]:
             return {
-                r.__rpc_method__.name: RpcMethodEntry(
-                    r.__rpc_method__.name,
-                    m,
-                    r.__rpc_method__.param_type,
+                rpc_method.__rpc_method__.name: RpcMethodEntry(
+                    rpc_method.__rpc_method__.name,
+                    method,
+                    rpc_method.__rpc_method__.param_type,
                 )
-                for m, r in map(
-                    lambda m: (m, cast(RpcMethod, m)), filter(lambda m: isinstance(m, RpcMethod), iter_methods(obj))
+                for method, rpc_method in map(
+                    lambda m1: (m1, cast(RpcMethod, m1)), filter(lambda m2: isinstance(m2, RpcMethod), iter_methods(obj))
                 )
             }
 
@@ -369,12 +369,12 @@ def _convert_params(
     callable: Callable[..., Any], param_type: Optional[Type[Any]], params: Any
 ) -> Tuple[List[Any], Dict[str, Any]]:
     if params is None:
-        return ([], {})
+        return [], {}
     if param_type is None:
         if isinstance(params, Mapping):
-            return ([], dict(**params))
+            return [], dict(**params)
         else:
-            return ([params], {})
+            return [params], {}
 
     # try to convert the dict to correct type
     if issubclass(param_type, BaseModel):
@@ -409,7 +409,7 @@ def _convert_params(
             kw_args[r] = getattr(converted_params, r)
         if not params_added:
             kw_args["params"] = converted_params
-    return (args, kw_args)
+    return args, kw_args
 
 
 class JsonRPCProtocol(asyncio.Protocol):
@@ -682,7 +682,7 @@ class JsonRPCProtocol(asyncio.Protocol):
             self._logger.exception(e)
 
 
-TProtocol = TypeVar("TProtocol", bound=(JsonRPCProtocol))
+TProtocol = TypeVar("TProtocol", bound=JsonRPCProtocol)
 
 
 class GenericJsonRPCProtocolPart(Generic[TProtocol]):
@@ -695,7 +695,7 @@ class GenericJsonRPCProtocolPart(Generic[TProtocol]):
     def parent(self) -> TProtocol:
         result = self._parent()
         if result is None:
-            raise JsonRPCException("WeakRef is not alive")
+            raise JsonRPCException("WeakRef is dead.")
         return result
 
 
