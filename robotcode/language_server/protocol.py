@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 from typing import Any, List, Optional, Union, cast
 
-from .._version import __version__
 from ..jsonrpc2.protocol import (
     JsonRPCErrorException,
     JsonRPCErrors,
@@ -76,6 +75,9 @@ class LanguageServerProtocol(JsonRPCProtocol):
     code_lens = ProtocolPartDescriptor(CodeLensProtocolPart)
     document_symbols = ProtocolPartDescriptor(DocumentSymbolsProtocolPart)
     formatting = ProtocolPartDescriptor(FormattingProtocolPart)
+
+    name: Optional[str] = None
+    version: Optional[str] = None
 
     def __init__(self, server: JsonRPCServer[Any]):
         super().__init__(server)
@@ -167,7 +169,11 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
         return InitializeResult(
             capabilities=self.capabilities,
-            server_info=InitializeResultServerInfo(name="robotcode LanguageServer", version=__version__),
+            **(
+                {"server_info": InitializeResultServerInfo(name=self.name, version=self.version)}
+                if self.name is not None
+                else {}
+            ),
         )
 
     async def on_initialize(self, initialization_options: Optional[Any] = None) -> None:

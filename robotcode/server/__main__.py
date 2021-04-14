@@ -153,7 +153,7 @@ def main() -> None:
     parser.add_argument("--log-colored", action="store_true", help="colored output for logs")
     parser.add_argument("--log-config", default=None, help="reads logging configuration from file")
     parser.add_argument("--log-file", default=None, help="enables logging to file")
-    parser.add_argument("--log-level", default="DEBUG", help="sets the overall log level")
+    parser.add_argument("--log-level", default="ERROR", help="sets the overall log level")
     parser.add_argument("--debugpy", action="store_true", help="starts a debugpy session")
     parser.add_argument("--debugpy-port", default=5678, help="sets the port for debugpy session", type=int)
     parser.add_argument("--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect")

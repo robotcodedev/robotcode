@@ -13,7 +13,6 @@ URI = str
 
 class Model(BaseModel):
     class Config:
-
         allow_population_by_field_name = True
         # use_enum_values = True
 
@@ -69,7 +68,7 @@ class ResourceOperationKind(Enum):
 class FailureHandlingKind(Enum):
     ABORT = "abort"
     TRANSACTIONAL = "transactional"
-    TEXTONLYTRANSACTIONAL = "textOnlyTransactional"
+    TEXT_ONLY_TRANSACTIONAL = "textOnlyTransactional"
     UNDO = "undo"
 
 
@@ -192,12 +191,12 @@ class CompletionItemKind(IntEnum):
     FILE = 17
     REFERENCE = 18
     FOLDER = 19
-    ENUMMEMBER = 20
+    ENUM_MEMBER = 20
     CONSTANT = 21
     STRUCT = 22
     EVENT = 23
     OPERATOR = 24
-    TYPEPARAMETER = 25
+    TYPE_PARAMETER = 25
 
 
 class CompletionClientCapabilitiesCompletionItemTagSupport(Model):

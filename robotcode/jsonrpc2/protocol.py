@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
+import logging
 import re
 import threading
 import weakref
@@ -549,7 +550,12 @@ class JsonRPCProtocol(asyncio.Protocol):
     def send_message(self, message: JsonRPCMessage) -> None:
         message.jsonrpc = PROTOCOL_VERSION
 
-        body = message.json(by_alias=True, indent=False, exclude_unset=True, exclude_defaults=True).encode(self.CHARSET)
+        body = message.json(
+            by_alias=True,
+            exclude_unset=True,
+            exclude_defaults=True,
+            indent=self._message_logger.is_enabled_for(logging.DEBUG) or None,
+        ).encode(self.CHARSET)
 
         header = (
             f"Content-Length: {len(body)}\r\n" f"Content-Type: {self.CONTENT_TYPE}; charset={self.CHARSET}\r\n\r\n"

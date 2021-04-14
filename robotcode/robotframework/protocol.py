@@ -1,6 +1,7 @@
 import uuid
 from typing import TYPE_CHECKING, Any, Optional
 
+from .._version import __version__
 from ..jsonrpc2.protocol import ProtocolPartDescriptor
 from ..language_server.protocol import LanguageServerProtocol
 from ..language_server.types import (
@@ -57,6 +58,9 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     _robot_document_symbols = ProtocolPartDescriptor(RobotDocumentSymbolsProtocolPart)
     _robot_robocop_diagnostics = ProtocolPartDescriptor(RobotRoboCopDiagnosticsProtocolPart)
     _robot_formatting = ProtocolPartDescriptor(RobotFormattingProtocolPart)
+
+    name = "RobotCode"
+    version = __version__
 
     symbol_information_label = "robotframework"
 
