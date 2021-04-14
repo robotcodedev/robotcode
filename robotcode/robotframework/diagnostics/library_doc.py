@@ -41,7 +41,7 @@ __all__ = [
     "is_embedded_keyword",
     "complete_library_import",
     "CompleteResultKind",
-    "KeywordArgumentKind"
+    "KeywordArgumentKind",
 ]
 
 

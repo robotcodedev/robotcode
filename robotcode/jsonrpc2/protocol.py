@@ -57,7 +57,7 @@ __all__ = [
     "ProtocolPartDescriptor",
     "GenericJsonRPCProtocolPart",
     "TProtocol",
-    "JsonRPCErrorException"
+    "JsonRPCErrorException",
 ]
 
 T = TypeVar("T")
@@ -113,7 +113,7 @@ class JsonRPCException(Exception):
 
 
 class JsonRPCErrorException(JsonRPCException):
-    def __init__(self, code: int, message: str, data: Optional[Any] = None) -> None:
+    def __init__(self, code: int, message: Optional[str], data: Optional[Any] = None) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
@@ -530,7 +530,7 @@ class JsonRPCProtocol(asyncio.Protocol):
     def send_error(
         self,
         code: int,
-        message: str,
+        message: Optional[str],
         id: Optional[Union[str, int, None]] = None,
         data: Optional[Any] = None,
     ) -> None:
@@ -618,7 +618,7 @@ class JsonRPCProtocol(asyncio.Protocol):
 
     @_logger.call
     async def handle_error(self, message: JsonRPCError) -> None:
-        raise JsonRPCErrorException(message.id, message.error.message, message.error.data)
+        raise JsonRPCErrorException(message.error.code, message.error.message, message.error.data)
 
     async def handle_request(self, message: JsonRPCRequest) -> None:
         e = self.registry.get_entry(message.method)
