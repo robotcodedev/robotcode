@@ -303,6 +303,15 @@ class Analyzer(AsyncVisitor):
                             tags=[DiagnosticTag.Deprecated],
                         )
                     )
+                if result.is_error_handler:
+                    self._results.append(
+                        Diagnostic(
+                            range=range_from_token_or_node(value, keyword_token),
+                            message=f"Keyword definition contains errors: {result.error_handler_message}",
+                            severity=DiagnosticSeverity.ERROR,
+                            source=DIAGNOSTICS_SOURCE_NAME,
+                        )
+                    )
 
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise

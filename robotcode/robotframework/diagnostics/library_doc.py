@@ -203,6 +203,8 @@ class KeywordDoc(Model):
     is_embedded: bool = False
     errors: Optional[List[Error]] = None
     doc_format: str = DEFAULT_DOC_FORMAT
+    is_error_handler: bool = False
+    error_handler_message: Optional[str] = None
 
     @validator("doc_format")
     def doc_format_validator(cls, v: str) -> str:
@@ -298,10 +300,23 @@ class KeywordStore(Model):
         return self.__matchers
 
     def __getitem__(self, key: str) -> "KeywordDoc":
-        for k, v in self._matchers.items():
-            if k == key:
-                return v
-        raise KeyError()
+        from robot.errors import KeywordError
+
+        # for k, v in self._matchers.items():
+        #     if k == key:
+        #         return v
+        # raise KeyError()
+
+        items = [(k, v) for k, v in self._matchers.items() if k == key]
+
+        if not items:
+            raise KeyError()
+        if len(items) == 1:
+            return items[0][1]
+
+        error = [f"File contains multiple keywords matching name '{key}':"]
+        names = sorted(k.name for k, v in items)
+        raise KeywordError("\n    ".join(error + names))
 
     def __contains__(self, __x: object) -> bool:
         return any(k == __x for k in self._matchers.keys())
@@ -613,6 +628,20 @@ class KeywordWrapper:
         except BaseException:
             return ""
 
+    @property
+    def is_error_handler(self) -> bool:
+        from robot.running.usererrorhandler import UserErrorHandler
+
+        return isinstance(self.kw, UserErrorHandler)
+
+    @property
+    def error_handler_message(self) -> Optional[str]:
+        from robot.running.usererrorhandler import UserErrorHandler
+
+        if self.is_error_handler:
+            return str(cast(UserErrorHandler, self.kw).error)
+        return None
+
 
 class Traceback(NamedTuple):
     source: str
@@ -780,9 +809,18 @@ def get_library_doc(
 
     from robot.libdocpkg.robotbuilder import KeywordDocBuilder
     from robot.output import LOGGER
+    from robot.output.loggerhelper import AbstractLogger
     from robot.running.outputcapture import OutputCapturer
     from robot.running.testlibraries import _get_lib_class
     from robot.utils import Importer
+
+    class Logger(AbstractLogger):  # type: ignore
+        def __init__(self) -> None:
+            super().__init__()
+            self.messages: List[Tuple[str, str, bool]] = []
+
+        def write(self, message: str, level: str, html: bool = False) -> None:
+            self.messages.append((message, level, html))
 
     def import_test_library(
         name: str,
@@ -923,8 +961,19 @@ def get_library_doc(
                     }
                 )
 
-                # TODO: create logger to catch log messages at creating keywords
+                logger = Logger()
+                lib.logger = logger
                 lib.create_handlers()
+                for m in logger.messages:
+                    if m[1] == "ERROR":
+                        errors.append(
+                            Error(
+                                message=m[0],
+                                type_name=m[1],
+                                source=libdoc.source,
+                                line_no=libdoc.line_no,
+                            )
+                        )
 
                 libdoc.keywords = KeywordStore(
                     keywords={
@@ -939,6 +988,8 @@ def get_library_doc(
                             longname=kw[1].longname,
                             is_embedded=is_embedded_keyword(kw[0].name),
                             doc_format=str(lib.doc_format) or DEFAULT_DOC_FORMAT,
+                            is_error_handler=kw[1].is_error_handler,
+                            error_handler_message=kw[1].error_handler_message,
                         )
                         for kw in [
                             (KeywordDocBuilder().build_keyword(k), k)

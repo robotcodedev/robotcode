@@ -8,7 +8,7 @@ from collections import OrderedDict
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, List, Optional, Tuple, cast
 
 from ...language_server.parts.workspace import FileWatcherEntry
 from ...language_server.text_document import TextDocument
@@ -542,10 +542,20 @@ class ImportsManager:
         ResourceBuilder(res).visit(model)
 
         class MyUserLibrary(UserLibrary):  # type: ignore
+            current_kw: Any = None
+
             def _log_creating_failed(self, handler: UserErrorHandler, error: BaseException) -> None:
-                pass
+                err = Error(
+                    message="Error in %s '%s': Creating keyword '%s' failed: %s"
+                    % (self.source_type.lower(), self.source, handler.name, str(error)),
+                    type_name=type(error).__qualname__,
+                    source=self.current_kw.source if self.current_kw is not None else None,
+                    line_no=self.current_kw.lineno if self.current_kw is not None else None,
+                )
+                errors.append(err)
 
             def _create_handler(self, kw: Any) -> Any:
+                self.current_kw = kw
                 try:
                     handler = super()._create_handler(kw)
                     setattr(handler, "errors", None)
@@ -590,6 +600,10 @@ class ImportsManager:
                     libname=libdoc.name,
                     is_embedded=is_embedded_keyword(kw[0].name),
                     errors=getattr(kw[1], "errors") if hasattr(kw[1], "errors") else None,
+                    is_error_handler=isinstance(kw[1], UserErrorHandler),
+                    error_handler_message=str(cast(UserErrorHandler, kw[1]).error)
+                    if isinstance(kw[1], UserErrorHandler)
+                    else None,
                 )
                 for kw in [
                     (KeywordDocBuilder(resource=model_type == "RESOURCE").build_keyword(lw), lw) for lw in lib.handlers
