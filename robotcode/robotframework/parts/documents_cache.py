@@ -105,6 +105,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
             model = await asyncio.get_event_loop().run_in_executor(None, robot.api.get_model, content)
 
         setattr(model, "source", str(document.uri.to_path()))
+        setattr(model, "model_type", DocumentType.GENERAL)
 
         return cast(ast.AST, model)
 
@@ -118,6 +119,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
             model = await asyncio.get_event_loop().run_in_executor(None, robot.api.get_resource_model, content)
 
         setattr(model, "source", str(document.uri.to_path()))
+        setattr(model, "model_type", DocumentType.RESOURCE)
 
         return cast(ast.AST, model)
 
@@ -131,6 +133,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
             model = await asyncio.get_event_loop().run_in_executor(None, robot.api.get_init_model, content)
 
         setattr(model, "source", str(document.uri.to_path()))
+        setattr(model, "model_type", DocumentType.INIT)
 
         return cast(ast.AST, model)
 

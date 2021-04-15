@@ -546,8 +546,7 @@ class ImportsManager:
 
             def _log_creating_failed(self, handler: UserErrorHandler, error: BaseException) -> None:
                 err = Error(
-                    message="Error in %s '%s': Creating keyword '%s' failed: %s"
-                    % (self.source_type.lower(), self.source, handler.name, str(error)),
+                    message=f"Creating keyword '{handler.name}' failed: {str(error)}",
                     type_name=type(error).__qualname__,
                     source=self.current_kw.source if self.current_kw is not None else None,
                     line_no=self.current_kw.lineno if self.current_kw is not None else None,
@@ -589,6 +588,8 @@ class ImportsManager:
         )
 
         libdoc.keywords = KeywordStore(
+            source=libdoc.name,
+            source_type=libdoc.type,
             keywords={
                 kw[0].name: KeywordDoc(
                     name=kw[0].name,
@@ -608,7 +609,7 @@ class ImportsManager:
                 for kw in [
                     (KeywordDocBuilder(resource=model_type == "RESOURCE").build_keyword(lw), lw) for lw in lib.handlers
                 ]
-            }
+            },
         )
 
         return libdoc

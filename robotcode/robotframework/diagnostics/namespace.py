@@ -59,10 +59,6 @@ class ImportError(DiagnosticsException):
     pass
 
 
-class KeywordError(DiagnosticsException):
-    pass
-
-
 @dataclass
 class Token:
     line_no: int
@@ -660,8 +656,25 @@ class Namespace:
         return self._resources
 
     async def get_library_doc(self) -> LibraryDoc:
+        from ..parts.documents_cache import DocumentType
+
         if self._library_doc is None:
-            self._library_doc = await self.imports_manager.get_libdoc_from_model(self.model, self.source)
+
+            model_type = ""
+
+            if hasattr(self.model, "model_type"):
+                t = getattr(self.model, "model_type")
+
+                if t == DocumentType.RESOURCE:
+                    model_type = "RESOURCE"
+                elif t == DocumentType.GENERAL:
+                    model_type = "TESTCASE"
+                elif t == DocumentType.INIT:
+                    model_type = "INIT"
+
+            self._library_doc = await self.imports_manager.get_libdoc_from_model(
+                self.model, self.source, model_type=model_type
+            )
 
         return self._library_doc
 
@@ -1035,6 +1048,29 @@ class Namespace:
             async with self._analyze_lock:
                 try:
                     self._diagnostics += await Analyzer().get(self.model, self)
+
+                    lib_doc = await self.get_library_doc()
+
+                    if lib_doc.errors is not None:
+                        for err in lib_doc.errors:
+                            self._diagnostics.append(
+                                Diagnostic(
+                                    range=Range(
+                                        start=Position(
+                                            line=((err.line_no - 1) if err.line_no is not None else 0),
+                                            character=0,
+                                        ),
+                                        end=Position(
+                                            line=((err.line_no - 1) if err.line_no is not None else 0),
+                                            character=0,
+                                        ),
+                                    ),
+                                    message=err.message,
+                                    severity=DiagnosticSeverity.ERROR,
+                                    source=DIAGNOSTICS_SOURCE_NAME,
+                                    code=err.type_name,
+                                )
+                            )
                 finally:
                     self._analyzed = True
 

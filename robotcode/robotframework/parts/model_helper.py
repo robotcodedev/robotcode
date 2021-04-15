@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import List, Optional, Tuple
 
-from robotcode.robotframework.diagnostics.library_doc import KeywordDoc
-
 from ...language_server.types import Position
+from ..diagnostics.library_doc import KeywordDoc, KeywordError
 from ..diagnostics.namespace import Namespace
 from ..utils.ast import Token, is_non_variable_token, range_from_token
 
@@ -130,16 +129,20 @@ class ModelHelperMixin:
         analyse_run_keywords: bool = True,
     ) -> Optional[Tuple[Optional[KeywordDoc], Token]]:
 
-        keyword_doc = await namespace.find_keyword(keyword_name)
-        if keyword_doc is None:
-            return None
+        try:
+            keyword_doc = await namespace.find_keyword(keyword_name)
+            if keyword_doc is None:
+                return None
 
-        if position.is_in_range(range_from_token(keyword_token)):
-            return keyword_doc, keyword_token
-        elif analyse_run_keywords:
-            return (
-                await self.get_run_keyword_keyworddoc_and_token_from_position(
-                    keyword_doc, argument_tokens, namespace, position
-                )
-            )[0]
+            if position.is_in_range(range_from_token(keyword_token)):
+                return keyword_doc, keyword_token
+            elif analyse_run_keywords:
+                return (
+                    await self.get_run_keyword_keyworddoc_and_token_from_position(
+                        keyword_doc, argument_tokens, namespace, position
+                    )
+                )[0]
+        except KeywordError:
+            pass
+
         return None

@@ -77,7 +77,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             position,
         )
 
-        if result is not None and result[0] is not None:
+        if result is not None and result[0] is not None and not result[0].is_error_handler:
             return Hover(
                 contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=result[0].to_markdown()),
                 range=range_from_token_or_node(node, result[1]),
@@ -103,7 +103,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             position,
         )
 
-        if result is not None and result[0] is not None:
+        if result is not None and result[0] is not None and not result[0].is_error_handler:
             return Hover(
                 contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=result[0].to_markdown()),
                 range=range_from_token_or_node(node, result[1]),
@@ -129,7 +129,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     return None
 
                 keyword_doc = await namespace.find_keyword(template_node.value)
-                if keyword_doc is not None:
+                if keyword_doc is not None and not keyword_doc.is_error_handler:
                     return Hover(
                         contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
                         range=range_from_token_or_node(template_node, keyword_token),

@@ -384,6 +384,8 @@ class CompletionCollector(ModelHelperMixin):
                     if library_name in libraries:
                         r.start.character = lib_name_index + 1
                         for kw in libraries[library_name].library_doc.keywords.values():
+                            if kw.is_error_handler:
+                                continue
                             c = CompletionItem(
                                 label=kw.name,
                                 kind=CompletionItemKind.FUNCTION,
@@ -405,6 +407,8 @@ class CompletionCollector(ModelHelperMixin):
                     if library_name in resources:
                         r.start.character = lib_name_index + 1
                         for kw in resources[library_name].library_doc.keywords.values():
+                            if kw.is_error_handler:
+                                continue
                             c = CompletionItem(
                                 label=kw.name,
                                 kind=CompletionItemKind.FUNCTION,
@@ -423,6 +427,9 @@ class CompletionCollector(ModelHelperMixin):
                         return result
 
         for kw in await namespace.get_keywords():
+            if kw.is_error_handler:
+                continue
+
             c = CompletionItem(
                 label=kw.name,
                 kind=CompletionItemKind.FUNCTION,

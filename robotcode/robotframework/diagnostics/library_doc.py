@@ -289,8 +289,15 @@ class KeywordDoc(Model):
         return self.libname == BUILTIN_LIBRARY_NAME and self.name == RUN_KEYWORDS_NAME
 
 
+class KeywordError(Exception):
+    pass
+
+
 class KeywordStore(Model):
+    source: Optional[str] = None
+    source_type: Optional[str] = None
     keywords: Dict[str, KeywordDoc] = Field(default_factory=lambda: {})
+
     __matchers: Optional[Dict[KeywordMatcher, KeywordDoc]] = PrivateAttr(None)
 
     @property
@@ -300,8 +307,6 @@ class KeywordStore(Model):
         return self.__matchers
 
     def __getitem__(self, key: str) -> "KeywordDoc":
-        from robot.errors import KeywordError
-
         items = [(k, v) for k, v in self._matchers.items() if k == key]
 
         if not items:
@@ -309,7 +314,19 @@ class KeywordStore(Model):
         if len(items) == 1:
             return items[0][1]
 
-        error = [f"File contains multiple keywords matching name '{key}':"]
+        if self.source and self.source_type:
+            file_info = ""
+            if self.source_type == "RESOURCE":
+                file_info += f"Resource file '{self.source}'"
+            elif self.source_type == "LIBRARY":
+                file_info += f"Test library '{self.source}'"
+            elif self.source_type == "TESTCASE":
+                file_info += "Test case file"
+            else:
+                file_info += f"File '{self.source}'"
+        else:
+            file_info = "File"
+        error = [f"{file_info} contains multiple keywords matching name '{key}':"]
         names = sorted(k.name for k, v in items)
         raise KeywordError("\n    ".join(error + names))
 
@@ -970,6 +987,8 @@ def get_library_doc(
                         )
 
                 libdoc.keywords = KeywordStore(
+                    source=libdoc.name,
+                    source_type=libdoc.type,
                     keywords={
                         kw[0].name: KeywordDoc(
                             name=kw[0].name,
@@ -989,7 +1008,7 @@ def get_library_doc(
                             (KeywordDocBuilder().build_keyword(k), k)
                             for k in [KeywordWrapper(k, source) for k in lib.handlers]
                         ]
-                    }
+                    },
                 )
 
             except (SystemExit, KeyboardInterrupt):
