@@ -217,7 +217,7 @@ class CompletionCollector(ModelHelperMixin):
 
                                 if lib_doc is not None:
                                     completion_item.documentation = MarkupContent(
-                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown()
+                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown(False)
                                     )
 
                             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):

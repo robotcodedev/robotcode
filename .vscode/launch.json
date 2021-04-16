@@ -11,7 +11,8 @@
 			"request": "launch",
 			"program": "${file}",
 			"console": "integratedTerminal",
-			"justMyCode": false
+			"justMyCode": false,
+			"cwd": "${workspaceFolder}",			
 		},
 		{
 			"name": "Python: Attach to 5678",
@@ -30,7 +31,7 @@
 			"connect": {
 				"host": "localhost",
 				"port": "${input:portNumber}"
-			},
+			}			
 		},
 		{
 			"name": "Python: robotcode.server tcp",

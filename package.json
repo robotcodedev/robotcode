@@ -10,7 +10,7 @@
         "url": "https://github.com/d-biehl/robotcode.git"
     },
     "engines": {
-        "vscode": "^1.52.1"
+        "vscode": "^1.55.1"
     },
     "categories": [
         "Programming Languages",
@@ -26,7 +26,7 @@
         "Robot"
     ],
     "activationEvents": [
-        "onLanguage:robotframework",        
+        "onLanguage:robotframework",
         "onCommand:robotcode.runTestcase",
         "onCommand:robotcode.debugTestcase",
         "onCommand:robotcode.runSuite",
@@ -103,7 +103,7 @@
                         "description": "Specifies the arguments to be passed to robot module.",
                         "scope": "resource"
                     },
-                    "robotcode.robot.pythonpath": {
+                    "robotcode.robot.python-path": {
                         "type": "array",
                         "default": [
                             "./lib",
@@ -169,7 +169,7 @@
                 }
             }
         ],
-        "commands": [            
+        "commands": [
             {
                 "command": "robotcode.runSuite",
                 "category": "RobotCode",
@@ -239,9 +239,77 @@
         },
         "breakpoints": [
             {
-              "language": "robotframework"
-            }           
-          ]
+                "language": "robotframework"
+            }
+        ],
+        "debuggers": [
+            {
+                "type": "robotcode",
+                "label": "Robot Framework",
+                "languages": [
+                    "robotframework"
+                ],
+                "configurationAttributes": {
+                    "launch": {
+                        "properties": {
+                            "target": {
+                                "type": "string",
+                                "description": "The .robot file or a folder containing .robot files to be launched.",
+                                "default": "${file}"
+                            },
+                            "args": {
+                                "type": "array",
+                                "description": "Command line arguments passed to robot."
+                            },
+                            "cwd": {
+                                "type": "string",
+                                "description": "Absolute path to the working directory of the program being debugged. Default is the root directory of the file (leave empty).",
+                                "default": "${workspaceFolder}"
+                            },
+                            "env": {
+                                "type": "object",
+                                "description": "Environment variables defined as a key value pair. Property ends up being the Environment Variable and the value of the property ends up being the value of the Env Variable."
+                            },
+                            "console": {
+                                "type": "string",
+                                "enum": [
+                                    "internalConsole",
+                                    "integratedTerminal",
+                                    "externalTerminal"
+                                ],
+                                "enumDescriptions": [
+                                    "No terminal (pipes the output to the client debug console).",
+                                    "Use terminal integrated in client.",
+                                    "External terminal (configured in user settings)."
+                                ],
+                                "description": "Where to launch the debug target: internal console, integrated terminal, or external terminal.",
+                                "default": "integratedTerminal"
+                            },
+                            "variables": {
+                                "type": "object",
+                                "default": {},
+                                "description": "Specifies the variables for robotframework. Corresponds to the '--variable name:value' option of the robot module."
+                            }
+                        }
+                    }
+                }
+            }
+        ],
+        "configurationSnippets": [
+            {
+                "label": "Robot Framework: Launch .robot file",
+                "description": "Add a new configuration for launching Robot Framework.",
+                "body": {
+                    "type": "robotcode",
+                    "name": "Robot Framework: Launch .robot file",
+                    "request": "launch",
+                    "cwd": "^\"${workspaceFolder}\"",
+                    "target": "^\"${file}\"",
+                    "env": {},
+                    "args": []
+                }
+            }
+        ]
     },
     "scripts": {
         "vscode:prepublish": "webpack --mode production",
@@ -258,6 +326,7 @@
         "ms-python.python"
     ],
     "dependencies": {
+        "vscode-debugadapter": "^1.46.0",
         "vscode-languageclient": "^7.0.0"
     },
     "devDependencies": {
@@ -272,6 +341,7 @@
         "mocha": "^8.1.3",
         "ts-loader": "^8.0.17",
         "typescript": "^4.1.3",
+        "vscode-debugadapter-testsupport": "^1.46.0",
         "vscode-test": "^1.4.0",
         "webpack": "^5.24.4",
         "webpack-cli": "^4.5.0"

@@ -59,7 +59,7 @@ from ..types import WorkspaceFolder as TypesWorkspaceFolder
 from ..types import WorkspaceFoldersChangeEvent, WorkspaceFoldersServerCapabilities
 from .protocol_part import LanguageServerProtocolPart
 
-__all__ = ["WorkspaceFolder", "Workspace"]
+__all__ = ["WorkspaceFolder", "Workspace", "ConfigBase", "config_section"]
 
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol

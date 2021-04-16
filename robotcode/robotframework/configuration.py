@@ -14,7 +14,7 @@ class LanguageServerConfig(ConfigBase):
 @config_section("robotcode.robot")
 class RobotConfig(ConfigBase):
     args: Tuple[str, ...]
-    pythonpath: List[str]
+    python_path: List[str]
     environment: Dict[str, str]
     variables: Dict[str, str]
 

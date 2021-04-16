@@ -131,13 +131,13 @@ function getServerOptionsStdIo(folder: vscode.WorkspaceFolder, document: vscode.
     const extension = vscode.extensions.getExtension('ms-python.python')!;
     const pythonPath: string[] = extension.exports.settings.getExecutionDetails(document.uri)?.execCommand;
     if (pythonPath === undefined) {
-        throw new Error("Can't get valid python executable");
+        throw new Error("Can't find a valid python executable.");
     }
 
     var args: Array<string> = [
         "-u",
         pythonLanguageServerMain!,
-        "--mode", "stdio",       
+        "--mode", "stdio",
     ];
 
     const serverOptions: ServerOptions = {
@@ -244,7 +244,7 @@ export async function activate(context: vscode.ExtensionContext) {
     displayProgress(activateAsync(context));
 }
 
-export function deactivate(): Thenable<void> {
+export async function deactivate() {
     let promises: Thenable<void>[] = [];
 
     for (let client of clients.values()) {
