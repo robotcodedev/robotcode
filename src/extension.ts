@@ -183,7 +183,7 @@ export async function activateAsync(context: vscode.ExtensionContext) {
     OUTPUT_CHANNEL.appendLine("Activate RobotCode Extension.");
     extensionContext = context;
 
-    pythonLanguageServerMain = context.asAbsolutePath(path.join("robotcode", "server", "__main__.py"));
+    pythonLanguageServerMain = context.asAbsolutePath(path.join("robotcode", "language_server", "__main__.py"));
 
     OUTPUT_CHANNEL.appendLine("Try to activate Python extension.");
     const extension = vscode.extensions.getExtension("ms-python.python")!;

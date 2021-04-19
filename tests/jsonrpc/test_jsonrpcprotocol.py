@@ -15,7 +15,7 @@ from robotcode.jsonrpc2.protocol import (
     JsonRPCResponse,
 )
 from robotcode.jsonrpc2.server import JsonRPCServer
-from robotcode.language_server.types import MessageActionItem
+from robotcode.language_server.common.types import MessageActionItem
 
 
 class DummyJsonRPCProtocol(JsonRPCProtocol):
