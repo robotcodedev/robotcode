@@ -157,6 +157,23 @@ class LinkFormatter:
             return self._get_image(link, content)
         return self._get_link(link, content)
 
+    def remove_link(self, text: str) -> str:
+        # 2nd, 4th, etc. token contains link, others surrounding content
+        tokens = self._link.split(text)
+
+        formatters: Iterator[Callable[[str], Any]] = itertools.cycle([self._remove_link])
+        return "".join(f(t) for f, t in zip(formatters, tokens))
+
+    def _remove_link(self, text: str) -> str:
+        if "|" not in text:
+            return text
+
+        link, content = [t.strip() for t in text.split("|", 1)]
+        if self._is_image(content):
+            content = self._get_image(content, link)
+
+        return content
+
     def _is_image(self, text: str) -> bool:
         return text.startswith("data:image/") or text.lower().endswith(self._image_exts)
 
@@ -240,8 +257,7 @@ class PreformattedFormatter(Formatter):
         return line.startswith("| ") or line == "|"
 
     def format(self, lines: List[str]) -> str:
-        # lines = ["    " + self._format_line(line[2:]) for line in lines]
-        lines = [line[2:] for line in lines]
+        lines = [LinkFormatter().remove_link(line[2:]) for line in lines]
         return "```text\n" + "\n".join(lines) + "\n```\n"
 
 

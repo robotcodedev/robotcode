@@ -403,7 +403,7 @@ class LibraryDoc(Model):
             ),
         )
 
-    def to_markdown(self, add_signature: bool = True) -> str:
+    def to_markdown(self, add_signature: bool = True, only_doc: bool = True) -> str:
         result = ""
 
         if add_signature:
@@ -414,7 +414,9 @@ class LibraryDoc(Model):
             if result:
                 result += "\n\n---\n"
             result += (
-                MarkDownFormatter().format(self.get_full_doc()) if self.doc_format == DEFAULT_DOC_FORMAT else self.doc
+                MarkDownFormatter().format(self.get_full_doc(only_doc))
+                if self.doc_format == DEFAULT_DOC_FORMAT
+                else self.doc
             )
 
         return result
@@ -434,6 +436,23 @@ class LibraryDoc(Model):
                         return str(p)
 
         return None
+
+    _inline_link: re.Pattern[str] = re.compile(
+        r"([\`])((?:\1|.)+?)\1",
+        re.VERBOSE,
+    )
+
+    _headers: re.Pattern[str] = re.compile(r"^(={1,5})\s+(\S.*?)\s+\1$", re.MULTILINE)
+
+    def _process_inline_links(self, text: str) -> str:
+        headers = [v.group(2) for v in self._headers.finditer(text)]
+
+        def repl(m: re.Match[str]) -> str:
+            if m.group(2) in headers:
+                return f"[#{str(m.group(2)).replace(' ', '-')}|{str(m.group(2))}]"
+            return m.group(0)
+
+        return self._inline_link.sub(repl, text)
 
     def get_full_doc(self, only_doc: bool = True) -> str:
         if self.doc_format == DEFAULT_DOC_FORMAT:
@@ -483,7 +502,7 @@ class LibraryDoc(Model):
 
                         result += "\n" + kw.get_full_doc()
 
-            return result
+            return self._process_inline_links(result)
 
         return self.doc
 
