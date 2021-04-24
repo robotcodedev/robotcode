@@ -113,14 +113,14 @@ async def run_robot(port: int, args: List[str]) -> Any:
         server.protocol.send_event(InitializedEvent())
 
         rc = robot.run_cli(args, False)
-        server.protocol.send_event(ExitedEvent(body=ExitedEventBody(exit_code=rc)))
+        await server.protocol.send_event_async(ExitedEvent(body=ExitedEventBody(exit_code=rc)))
         return rc
     except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
         pass
     except asyncio.TimeoutError:
         pass
     finally:
-        server.protocol.send_event(TerminatedEvent())
+        await server.protocol.send_event_async(TerminatedEvent())
         if server is not None:
             server.close()
         loop.stop()

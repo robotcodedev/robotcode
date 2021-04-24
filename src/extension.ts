@@ -194,19 +194,23 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
         debugConfiguration.python = getPythonCommand(folder);
 
         if (!debugConfiguration.pythonPath) debugConfiguration.pythonPath = [];
-
         debugConfiguration.pythonPath = config
             .get<Array<string>>("robot.pythonPath", [])
             .concat(debugConfiguration.pythonPath);
 
-        if (!debugConfiguration.variables) debugConfiguration.variables = {};
+        if (!debugConfiguration.args) debugConfiguration.args = [];
+        debugConfiguration.args = config.get<Array<string>>("robot.args", []).concat(debugConfiguration.args);
 
+        if (!debugConfiguration.variables) debugConfiguration.variables = {};
         debugConfiguration.variables = Object.assign(
             {},
             config.get<Object>("robot.variables", {}),
             debugConfiguration.variables
         );
-        
+
+        if (!debugConfiguration.env) debugConfiguration.env = {};
+        debugConfiguration.env = Object.assign({}, config.get<Object>("robot.env", {}), debugConfiguration.env);
+
         return debugConfiguration;
     }
 }

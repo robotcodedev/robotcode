@@ -90,11 +90,11 @@ class DAPServerProtocol(DebugAdapterProtocol):
 
         run_args += ["--"]
 
+        run_args += args or []
+
         if pythonPath:
             for e in pythonPath:
                 run_args += ["-P", e]
-
-        run_args += args or []
 
         if variables:
             for k, v in variables.items():

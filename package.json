@@ -152,7 +152,7 @@
                         "description": "Specifies additional python paths to robotframework. Corresponds to the '--pythonpath' option of the robot module.",
                         "scope": "resource"
                     },
-                    "robotcode.robot.environment": {
+                    "robotcode.robot.env": {
                         "type": "object",
                         "default": {},
                         "description": "Specifies the environment variables for robotframework.",
