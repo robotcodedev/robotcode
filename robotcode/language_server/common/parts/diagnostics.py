@@ -5,7 +5,6 @@ import itertools
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 
-from ....jsonrpc2.protocol import JsonRPCProtocol
 from ....utils.async_event import async_tasking_event_iterator
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
@@ -114,7 +113,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         ...
 
     @_logger.call
-    async def on_connection_lost(self, sender: JsonRPCProtocol, exc: Optional[BaseException]) -> None:
+    async def on_connection_lost(self, sender: Any, exc: Optional[BaseException]) -> None:
         await self._cancel_all_tasks()
 
     @_logger.call

@@ -131,13 +131,6 @@ class KeywordMatcher:
         )
 
 
-RUN_KEYWORDS_MATCHERS = [KeywordMatcher(k) for k in RUN_KEYWORDS]
-RUN_KEYWORD_IF_NAME_MATCHER = KeywordMatcher(RUN_KEYWORD_IF_NAME)
-RUN_KEYWORDS_NAME_MATCHER = KeywordMatcher(RUN_KEYWORDS_NAME)
-RUN_KEYWORD_NAMES_MATCHERS = [KeywordMatcher(k) for k in RUN_KEYWORD_NAMES]
-RUN_KEYWORD_WITH_CONDITION_NAMES_MATCHERS = [KeywordMatcher(k) for k in RUN_KEYWORD_WITH_CONDITION_NAMES]
-
-
 class Model(BaseModel):
     class Config:
         pass

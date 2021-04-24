@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import uuid
 import weakref
 from typing import (
@@ -126,7 +127,14 @@ class ConfigBase(pydantic.BaseModel):
 
         @classmethod
         def alias_generator(cls, string: str) -> str:
-            return string.replace("_", "-")
+            string = re.sub(r"^[\-_\.]", "", str(string))
+            if not string:
+                return string
+            return str(string[0]).lower() + re.sub(
+                r"[\-_\.\s]([a-z])",
+                lambda matched: str(matched.group(1)).upper(),
+                string[1:],
+            )
 
 
 _TConfig = TypeVar("_TConfig", bound=(ConfigBase))

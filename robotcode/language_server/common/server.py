@@ -7,7 +7,7 @@ from .protocol import LanguageServerProtocol
 
 __all__ = ["LanguageServerBase", "LanguageServer", "TCP_DEFAULT_PORT"]
 
-TCP_DEFAULT_PORT = 6601
+TCP_DEFAULT_PORT = 6610
 
 TProtocol = TypeVar("TProtocol", bound=LanguageServerProtocol)
 

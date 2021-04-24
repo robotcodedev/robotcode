@@ -26,6 +26,11 @@
         "Robot"
     ],
     "activationEvents": [
+        "onDebug",
+        "onDebugAdapterProtocolTracker:robotframework",        
+        "onDebugInitialConfigurations",
+        "onDebugDynamicConfigurations",
+        "onDebugResolve:robotframework",
         "onLanguage:robotframework",
         "onCommand:robotcode.runTestcase",
         "onCommand:robotcode.debugTestcase",
@@ -60,7 +65,13 @@
                 "title": "RobotCode",
                 "type": "object",
                 "properties": {
-                    "robotcode.language-server.mode": {
+                    "robotcode.python": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Specifies the python executable to be used for RobotCode. If no path is specified, try to get it from \"python\" extension. Requires a VSCode restart to take effect.",
+                        "scope": "resource"
+                    },
+                    "robotcode.languageServer.mode": {
                         "type": "string",
                         "default": "stdio",
                         "description": "Specifies the mode the language server is started. Requires a VSCode restart to take effect.",
@@ -70,13 +81,13 @@
                         ],
                         "scope": "resource"
                     },
-                    "robotcode.language-server.tcp-port": {
+                    "robotcode.languageServer.tcpPort": {
                         "type": "number",
                         "default": 0,
                         "description": "If the port is specified, connect to the language server previously started at the given port. Requires a VSCode restart to take effect.",
                         "scope": "resource"
                     },
-                    "robotcode.language-server.args": {
+                    "robotcode.languageServer.args": {
                         "type": "array",
                         "default": [],
                         "items": {
@@ -85,12 +96,38 @@
                         "description": "Specifies the arguments to be passed to the language server (i.e.: [\"--log\", \"--log-file=~/robotcode.log\"]). Requires a VSCode restart to take effect.",
                         "scope": "resource"
                     },
-                    "robotcode.language-server.python": {
+                    "robotcode.debugAdapter.mode": {
                         "type": "string",
-                        "default": "",
-                        "description": "Specifies the path to the python executable to be used for the Language Server. If no path is specified, try to get it from \"python\" extension. Requires a VSCode restart to take effect.",
+                        "default": "stdio",
+                        "description": "Specifies the mode the debug adapter is started. Requires a VSCode restart to take effect.",
+                        "enum": [
+                            "stdio",
+                            "tcp"
+                        ],
                         "scope": "resource"
                     },
+                    "robotcode.debugAdapter.tcpPort": {
+                        "type": "number",
+                        "default": 0,
+                        "description": "If the port is specified, connect to the debug adapter previously started at the given port. Requires a VSCode restart to take effect.",
+                        "scope": "resource"
+                    },
+                    "robotcode.debugAdapter.host": {
+                        "type": "string",
+                        "default": null,
+                        "description": "If the host is specified, connect to the debug adapter previously started at the given host. Requires a VSCode restart to take effect.",
+                        "scope": "resource"
+                    },
+                    "robotcode.debugAdapter.args": {
+                        "type": "array",
+                        "default": [],
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Specifies the arguments to be passed to the debug adapter (i.e.: [\"--log\", \"--log-file=~/debug-adapter.log\"]). Requires a VSCode restart to take effect.",
+                        "scope": "resource"
+                    },
+
                     "robotcode.robot.args": {
                         "type": "array",
                         "default": [
@@ -103,7 +140,7 @@
                         "description": "Specifies the arguments to be passed to robot module.",
                         "scope": "resource"
                     },
-                    "robotcode.robot.python-path": {
+                    "robotcode.robot.pythonPath": {
                         "type": "array",
                         "default": [
                             "./lib",
@@ -127,7 +164,7 @@
                         "description": "Specifies the variables for robotframework. Corresponds to the '--variable name:value' option of the robot module.",
                         "scope": "resource"
                     },
-                    "robotcode.syntax.section_style": {
+                    "robotcode.syntax.sectionStyle": {
                         "type": "string",
                         "default": "*** {name} ***",
                         "description": "Defines the section style format.",
@@ -239,7 +276,7 @@
         },
         "breakpoints": [
             {
-                "language": "robotframework"
+                "language": "robotframework"                
             }
         ],
         "debuggers": [
@@ -259,7 +296,8 @@
                             },
                             "args": {
                                 "type": "array",
-                                "description": "Command line arguments passed to robot."
+                                "description": "Command line arguments passed to robot.",
+                                "default": []
                             },
                             "cwd": {
                                 "type": "string",
@@ -268,14 +306,15 @@
                             },
                             "env": {
                                 "type": "object",
-                                "description": "Environment variables defined as a key value pair. Property ends up being the Environment Variable and the value of the property ends up being the value of the Env Variable."
+                                "description": "Environment variables defined as a key value pair. Property ends up being the Environment Variable and the value of the property ends up being the value of the Env Variable.",
+                                "default": []
                             },
                             "console": {
                                 "type": "string",
                                 "enum": [
-                                    "internalConsole",
-                                    "integratedTerminal",
-                                    "externalTerminal"
+                                    "none",
+                                    "integrated",
+                                    "external"
                                 ],
                                 "enumDescriptions": [
                                     "No terminal (pipes the output to the client debug console).",
@@ -283,7 +322,12 @@
                                     "External terminal (configured in user settings)."
                                 ],
                                 "description": "Where to launch the debug target: internal console, integrated terminal, or external terminal.",
-                                "default": "integratedTerminal"
+                                "default": "integrated"
+                            },
+                            "pythonPath": {
+                                "type": "array",
+                                "description": "Specifies additional python paths to robotframework. Corresponds to the '--pythonpath' option of the robot module.",
+                                "default": []
                             },
                             "variables": {
                                 "type": "object",

@@ -80,7 +80,8 @@ class LanguageServerProtocol(JsonRPCProtocol):
     version: Optional[str] = None
 
     def __init__(self, server: JsonRPCServer[Any]):
-        super().__init__(server)
+        super().__init__()
+        self.server = server
 
         self.initialization_options: Any = None
         self.client_info: Optional[ClientInfo] = None

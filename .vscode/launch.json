@@ -12,7 +12,7 @@
 			"program": "${file}",
 			"console": "integratedTerminal",
 			"justMyCode": false,
-			"cwd": "${workspaceFolder}",			
+			"cwd": "${workspaceFolder}",
 		},
 		{
 			"name": "Python: Attach to 5678",
@@ -31,10 +31,52 @@
 			"connect": {
 				"host": "localhost",
 				"port": "${input:portNumber}"
-			}			
+			}
 		},
 		{
-			"name": "Python: robotcode.server tcp",
+			"name": "Python: robotcode.debug_adapter.runner",
+			"type": "python",
+			"request": "launch",
+			"module": "robotcode.debug_adapter.runner",
+			"justMyCode": false,
+			"args": [
+				"--"				
+			]
+		},
+		{
+			"name": "Python: robotcode.debug_adapter tcp",
+			"type": "python",
+			"request": "launch",
+			"module": "robotcode.debug_adapter",
+			"justMyCode": false,
+			"args": [
+				"--mode",
+				"tcp",
+				//"--call-tracing",
+				"--log-config",
+				"log.ini"
+			]
+		},
+		{
+			"name": "Python: robotcode.debug_adapter stdio",
+			"type": "python",
+			"request": "launch",
+			"module": "robotcode.debug_adapter",
+			"justMyCode": false,
+			"args": [
+				"--mode",
+				"stdio",
+				"--call-tracing",
+				"--log-config",
+				"log.ini"
+				//"--debug",
+				// "--debug-json-rpc",
+				// "--debug-json-rpc-data",
+				//"--debug-colored"
+			]
+		},
+		{
+			"name": "Python: robotcode.language_server tcp",
 			"type": "python",
 			"request": "launch",
 			"module": "robotcode.language_server",
@@ -43,15 +85,12 @@
 				"--mode",
 				"tcp",
 				//"--call-tracing",
-				"--log-config", "log.ini"
-				//"--debug",
-				// "--debug-json-rpc",
-				// "--debug-json-rpc-data",
-				//"--debug-colored"
+				"--log-config",
+				"log.ini"
 			]
 		},
 		{
-			"name": "Python: robotcode.server stdio",
+			"name": "Python: robotcode.language_server stdio",
 			"type": "python",
 			"request": "launch",
 			"module": "robotcode.language_server",
@@ -60,7 +99,8 @@
 				"--mode",
 				"stdio",
 				"--call-tracing",
-				"--log-config", "log.ini"
+				"--log-config",
+				"log.ini"
 				//"--debug",
 				// "--debug-json-rpc",
 				// "--debug-json-rpc-data",
@@ -75,7 +115,7 @@
 			"justMyCode": false,
 			"args": [
 				"./playground/second.py",
-				"list",				
+				"list",
 			]
 		},
 		{

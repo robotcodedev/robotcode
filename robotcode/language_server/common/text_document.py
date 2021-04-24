@@ -12,7 +12,7 @@ from .types import DocumentUri, Position, Range, TextDocumentItem
 
 
 def _utf16_unit_offset(chars: str) -> int:
-    return sum(ord(ch) > 0xFFFF for ch in chars)
+    return sum(ord(ch) > 0xffff for ch in chars)
 
 
 def _position_from_utf16(lines: List[str], position: Position) -> Position:

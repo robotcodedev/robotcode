@@ -3,13 +3,41 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { LanguageClient, LanguageClientOptions, ServerOptions } from "vscode-languageclient/node";
 
-const DEFAULT_TCP_PORT = 6601;
+const LANGUAGE_SERVER_DEFAULT_TCP_PORT = 6610;
+const LANGUAGE_SERVER_DEFAULT_HOST = "127.0.0.1";
+
+const DEBUG_ADAPTER_DEFAULT_TCP_PORT = 6611;
+const DEBUG_ADAPTER_DEFAULT_HOST = "127.0.0.1";
+
 const CONFIG_SECTION = "robotcode";
 const OUTPUT_CHANNEL_NAME = "RobotCode";
 const OUTPUT_CHANNEL = vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
 
 var extensionContext: vscode.ExtensionContext | undefined = undefined;
 var pythonLanguageServerMain: string | undefined;
+var pythonDebugAdapterMain: string | undefined;
+
+function getPythonCommand(folder: vscode.WorkspaceFolder | undefined): string | undefined {
+    let config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+    var result: string | undefined = undefined;
+
+    let configPython = config.get<string>("python");
+
+    if (configPython !== undefined && configPython != "") {
+        result = configPython;
+    } else {
+        const extension = vscode.extensions.getExtension("ms-python.python")!;
+        let pythonExtensionPythonPath: string[] | undefined = extension.exports.settings.getExecutionDetails(
+            folder?.uri
+        )?.execCommand;
+
+        if (pythonExtensionPythonPath !== undefined) {
+            result = pythonExtensionPythonPath.join(" ");
+        }
+    }
+
+    return result;
+}
 
 let clients: Map<string, LanguageClient> = new Map();
 
@@ -53,29 +81,23 @@ function startLanguageClientForDocument(document: vscode.TextDocument) {
         return;
     }
 
-    let uri = document.uri;
+    let workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
 
-    let workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-
-    // Files outside a folder can't be handled. This might depend on the language.
-    // Single file languages like JSON might handle files outside the workspace folders.
     if (!workspaceFolder) {
         return;
     }
 
-    // If we have nested workspace folders we only start a server on the outer most workspace folder.
     workspaceFolder = getOuterMostWorkspaceFolder(workspaceFolder);
 
     if (!clients.has(workspaceFolder.uri.toString())) {
         let config = vscode.workspace.getConfiguration(CONFIG_SECTION, document);
 
-        let mode = config.get<string>("language-server.mode", "stdio");
+        let mode = config.get<string>("languageServer.mode", "stdio");
 
         const serverOptions: ServerOptions =
-            mode === "tcp" ? getServerOptionsTCP(workspaceFolder) : getServerOptionsStdIo(workspaceFolder, document);
-        let name = `RobotCode Language Server mode=${mode} for workspace "${workspaceFolder.name}"`;
+            mode === "tcp" ? getServerOptionsTCP(workspaceFolder) : getServerOptionsStdIo(workspaceFolder);
+        let name = `RobotCode Language Server mode=${mode} for workspace folder "${workspaceFolder.name}"`;
 
-        // set the output channel only if we are running with debug and not in tcp mode
         let outputChannel = mode === "stdio" ? vscode.window.createOutputChannel(name) : undefined;
 
         let clientOptions: LanguageClientOptions = {
@@ -108,9 +130,9 @@ function startLanguageClientForDocument(document: vscode.TextDocument) {
 
 function getServerOptionsTCP(folder: vscode.WorkspaceFolder) {
     let config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
-    let port = config.get<number>("language-server.tcp-port", DEFAULT_TCP_PORT);
+    let port = config.get<number>("languageServer.tcpPort", LANGUAGE_SERVER_DEFAULT_TCP_PORT);
     if (port === 0) {
-        port = DEFAULT_TCP_PORT;
+        port = LANGUAGE_SERVER_DEFAULT_TCP_PORT;
     }
     const serverOptions: ServerOptions = function () {
         return new Promise((resolve, reject) => {
@@ -118,7 +140,8 @@ function getServerOptionsTCP(folder: vscode.WorkspaceFolder) {
             client.on("error", function (err) {
                 reject(err);
             });
-            client.connect(port, "127.0.0.1", function () {
+            let host = LANGUAGE_SERVER_DEFAULT_HOST;
+            client.connect(port, host, function () {
                 resolve({
                     reader: client,
                     writer: client,
@@ -129,19 +152,21 @@ function getServerOptionsTCP(folder: vscode.WorkspaceFolder) {
     return serverOptions;
 }
 
-function getServerOptionsStdIo(folder: vscode.WorkspaceFolder, document: vscode.TextDocument) {
+function getServerOptionsStdIo(folder: vscode.WorkspaceFolder) {
     let config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
-    let serverArgs = config.get<Array<string>>("language-server.args", []);
-    const extension = vscode.extensions.getExtension("ms-python.python")!;
-    const pythonPath: string[] = extension.exports.settings.getExecutionDetails(document.uri)?.execCommand;
-    if (pythonPath === undefined) {
+
+    let pythonCommand = getPythonCommand(folder);
+
+    if (pythonCommand === undefined) {
         throw new Error("Can't find a valid python executable.");
     }
+
+    let serverArgs = config.get<Array<string>>("languageServer.args", []);
 
     var args: Array<string> = ["-u", pythonLanguageServerMain!, "--mode", "stdio"];
 
     const serverOptions: ServerOptions = {
-        command: pythonPath.join(" "),
+        command: pythonCommand!,
         args: args.concat(serverArgs),
         options: {
             cwd: folder.uri.fsPath,
@@ -165,6 +190,23 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
         debugConfiguration: vscode.DebugConfiguration,
         token?: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
+        let config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+        debugConfiguration.python = getPythonCommand(folder);
+
+        if (!debugConfiguration.pythonPath) debugConfiguration.pythonPath = [];
+
+        debugConfiguration.pythonPath = config
+            .get<Array<string>>("robot.pythonPath", [])
+            .concat(debugConfiguration.pythonPath);
+
+        if (!debugConfiguration.variables) debugConfiguration.variables = {};
+
+        debugConfiguration.variables = Object.assign(
+            {},
+            config.get<Object>("robot.variables", {}),
+            debugConfiguration.variables
+        );
+        
         return debugConfiguration;
     }
 }
@@ -174,8 +216,40 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
         session: vscode.DebugSession,
         executable: vscode.DebugAdapterExecutable | undefined
     ): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
-        //throw new Error('Method not implemented.');
-        return new vscode.DebugAdapterExecutable("robot", [session.configuration.target]);
+        let config = vscode.workspace.getConfiguration(CONFIG_SECTION, session.workspaceFolder);
+
+        let mode = config.get("debugAdapter.mode", "stdio");
+
+        switch (mode) {
+            case "stdio":
+                let pythonCommand = getPythonCommand(session.workspaceFolder);
+
+                if (pythonCommand === undefined) {
+                    throw new Error("Can't get a valid python command.");
+                }
+
+                let debugAdapterArgs = config.get<Array<string>>("debugAdapter.args", []);
+
+                var args: Array<string> = ["-u", pythonDebugAdapterMain!, "--mode", "stdio"].concat(debugAdapterArgs);
+
+                const options: vscode.DebugAdapterExecutableOptions = {
+                    env: {},
+                    cwd: session.workspaceFolder?.uri.fsPath,
+                };
+
+                return new vscode.DebugAdapterExecutable(pythonCommand, args, options);
+
+            case "tcp":
+                let port =
+                    config.get("debugAdapter.tcpPort", DEBUG_ADAPTER_DEFAULT_TCP_PORT) ||
+                    DEBUG_ADAPTER_DEFAULT_TCP_PORT;
+
+                let host = config.get("debugAdapter.host", DEBUG_ADAPTER_DEFAULT_HOST) || DEBUG_ADAPTER_DEFAULT_HOST;
+
+                return new vscode.DebugAdapterServer(port, host);
+            default:
+                throw new Error("Unsupported Mode.");
+        }
     }
 }
 
@@ -184,6 +258,7 @@ export async function activateAsync(context: vscode.ExtensionContext) {
     extensionContext = context;
 
     pythonLanguageServerMain = context.asAbsolutePath(path.join("robotcode", "language_server", "__main__.py"));
+    pythonDebugAdapterMain = context.asAbsolutePath(path.join("robotcode", "debug_adapter", "__main__.py"));
 
     OUTPUT_CHANNEL.appendLine("Try to activate Python extension.");
     const extension = vscode.extensions.getExtension("ms-python.python")!;
@@ -195,15 +270,6 @@ export async function activateAsync(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         extension.exports.settings.onDidChangeExecutionDetails((uri: vscode.Uri) => {
             OUTPUT_CHANNEL.appendLine(uri.toString());
-        }),
-
-        vscode.commands.registerCommand("robotcode.helloWorld", async (resource, some) => {
-            const p = extension.exports.settings.getExecutionDetails();
-            OUTPUT_CHANNEL.appendLine(p.execCommand.join());
-
-            const pythonPath = extension.exports.settings.getExecutionDetails(resource);
-
-            vscode.window.showInformationMessage("Hello World from robotcode! " + pythonPath.execCommand.join());
         }),
 
         vscode.commands.registerCommand("robotcode.runSuite", async (resource) => {
@@ -233,19 +299,37 @@ export async function activateAsync(context: vscode.ExtensionContext) {
             }
         }),
         vscode.debug.registerDebugConfigurationProvider("robotcode", new RobotCodeDebugConfigurationProvider()),
-        vscode.debug.registerDebugAdapterDescriptorFactory("robotcode", new RobotCodeDebugAdapterDescriptorFactory())
+        vscode.debug.registerDebugAdapterDescriptorFactory("robotcode", new RobotCodeDebugAdapterDescriptorFactory()),
+        vscode.debug.registerDebugAdapterTrackerFactory("robotcode", {
+            createDebugAdapterTracker(session: vscode.DebugSession) {
+                return {
+                    onWillStartSession: () => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER start session`),
+                    onWillStopSession: () => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER stop session`),
+                    onWillReceiveMessage: (m) =>
+                        OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER > ${JSON.stringify(m, undefined, 2)}`),
+                    onDidSendMessage: (m) =>
+                        OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER < ${JSON.stringify(m, undefined, 2)}`),
+                    onError: (e) =>
+                        OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER ERROR: ${JSON.stringify(e, undefined, 2)}`),
+                    onExit: (c, s) => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER EXIT code ${c} signal ${s}`),
+                };
+            },
+        })
     );
 
     vscode.workspace.onDidChangeConfiguration((event) => {
         for (let s of [
-            "robotcode.language-server.mode",
-            "robotcode.language-server.tcp-port",
-            "robotcode.language-server.args",
-            "robotcode.language-server.python",
+            "python.pythonPath",
+            "robotcode.python",
+            "robotcode.languageServer.mode",
+            "robotcode.languageServer.tcpPort",
+            "robotcode.languageServer.args",
+            "robotcode.debugAdapter.mode",
+            "robotcode.debugAdapter.tcpPort",
+            "robotcode.debugAdapter.args",
             "robotcode.robot.environment",
             "robotcode.robot.variables",
             "robotcode.robot.args",
-            "python.pythonPath",
         ]) {
             if (event.affectsConfiguration(s)) {
                 vscode.window

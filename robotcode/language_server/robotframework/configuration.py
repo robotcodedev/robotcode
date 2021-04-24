@@ -8,7 +8,6 @@ class LanguageServerConfig(ConfigBase):
     mode: str
     tcp_port: int
     args: Tuple[str, ...]
-    python: str
 
 
 @config_section("robotcode.robot")

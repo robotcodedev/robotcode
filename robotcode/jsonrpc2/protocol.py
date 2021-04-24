@@ -7,14 +7,14 @@ import logging
 import re
 import threading
 import weakref
+from abc import ABC, abstractmethod
 from collections import OrderedDict
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
-    Generator,
     Generic,
+    Iterator,
     List,
     Mapping,
     NamedTuple,
@@ -36,9 +36,6 @@ from pydantic.typing import get_args, get_origin
 from ..utils.async_event import async_event
 from ..utils.inspect import ensure_coroutine, iter_methods
 from ..utils.logging import LoggingDescriptor
-
-if TYPE_CHECKING:
-    from .server import JsonRPCServer
 
 __all__ = [
     "JsonRPCErrors",
@@ -304,40 +301,12 @@ class RpcRegistry:
         return result.param_type
 
 
-def _json_rpc_message_from_dict(
-    data: Union[Dict[Any, Any], List[Dict[Any, Any]]]
-) -> Generator[JsonRPCMessage, None, None]:
-    def inner(d: Dict[Any, Any]) -> JsonRPCMessage:
-        if "jsonrpc" in d:
-            if d["jsonrpc"] != PROTOCOL_VERSION:
-                raise InvalidProtocolVersionException("Invalid JSON-RPC2 protocol version.")
-
-            if "id" in d:
-                if "method" in d:
-                    return JsonRPCRequest(**d)
-                else:
-                    if "error" in d:
-                        error = d.pop("error")
-                        return JsonRPCError(error=JsonRPCErrorObject(**error), **d)
-
-                    return JsonRPCResponse(**d)
-            else:
-                return JsonRPCNotification(**d)
-        raise JsonRPCException("Invalid JSON-RPC2 Message")
-
-    if isinstance(data, list):
-        for e in data:
-            yield inner(e)
-    else:
-        yield inner(data)
-
-
-class _SendedRequestEntry(NamedTuple):
+class SendedRequestEntry(NamedTuple):
     future: asyncio.Future[Any]
     result_type: Union[Type[Any], Callable[[Any], Any], None]
 
 
-def _try_convert_value(value: Any, value_type_or_converter: Union[Type[Any], Callable[[Any], Any], None]) -> Any:
+def try_convert_value(value: Any, value_type_or_converter: Union[Type[Any], Callable[[Any], Any], None]) -> Any:
     if value_type_or_converter is None or value_type_or_converter == Any:
         return value
     if isinstance(value_type_or_converter, type):
@@ -349,13 +318,13 @@ def _try_convert_value(value: Any, value_type_or_converter: Union[Type[Any], Cal
     elif get_origin(cast(Type[Any], value_type_or_converter)) == list and isinstance(value, List):
         p = get_args(cast(Type[Any], value_type_or_converter))
         if len(p) > 0:
-            return [_try_convert_value(e, p[0]) for e in value]
+            return [try_convert_value(e, p[0]) for e in value]
         else:
             return value
     elif get_origin(cast(Type[Any], value_type_or_converter)) == dict and isinstance(value, dict):
         p = get_args(cast(Type[Any], value_type_or_converter))
         if len(p) > 1:
-            return {_try_convert_value(k, p[0]): _try_convert_value(v, p[1]) for k, v in value.items()}
+            return {try_convert_value(k, p[0]): try_convert_value(v, p[1]) for k, v in value.items()}
         else:
             return value
     elif get_origin(cast(Type[Any], value_type_or_converter)) is not None:
@@ -366,68 +335,15 @@ def _try_convert_value(value: Any, value_type_or_converter: Union[Type[Any], Cal
     return value
 
 
-def _convert_params(
-    callable: Callable[..., Any], param_type: Optional[Type[Any]], params: Any
-) -> Tuple[List[Any], Dict[str, Any]]:
-    if params is None:
-        return [], {}
-    if param_type is None:
-        if isinstance(params, Mapping):
-            return [], dict(**params)
-        else:
-            return [params], {}
-
-    # try to convert the dict to correct type
-    if issubclass(param_type, BaseModel):
-        converted_params = param_type.parse_obj(params)
-    else:
-        converted_params = param_type(**params)
-
-    signature = inspect.signature(callable)
-
-    has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in signature.parameters.values())
-
-    kw_args = {}
-    args = []
-    params_added = False
-    rest = list(converted_params.__dict__.keys())
-    for v in signature.parameters.values():
-        if v.name in converted_params.__dict__:
-            if v.kind == inspect.Parameter.POSITIONAL_ONLY:
-                args.append(getattr(converted_params, v.name))
-            else:
-                kw_args[v.name] = getattr(converted_params, v.name)
-            rest.remove(v.name)
-        elif v.name == "params":
-            if v.kind == inspect.Parameter.POSITIONAL_ONLY:
-                args.append(converted_params)
-                params_added = True
-            else:
-                kw_args[v.name] = converted_params
-                params_added = True
-    if has_var_kw:
-        for r in rest:
-            kw_args[r] = getattr(converted_params, r)
-        if not params_added:
-            kw_args["params"] = converted_params
-    return args, kw_args
-
-
-class JsonRPCProtocol(asyncio.Protocol):
+class JsonRPCProtocolBase(asyncio.Protocol, ABC):
 
     _logger = LoggingDescriptor()
     _message_logger = LoggingDescriptor(postfix=".message")
     registry = RpcRegistry()
 
-    def __init__(self, server: "JsonRPCServer[Any]"):
-        self.server = server
+    def __init__(self) -> None:
         self.read_transport: Optional[asyncio.ReadTransport] = None
         self.write_transport: Optional[asyncio.WriteTransport] = None
-        self._sended_request_lock = threading.RLock()
-        self._sended_request: OrderedDict[Union[str, int], _SendedRequestEntry] = OrderedDict()
-        self._sended_request_count = 0
-        self._received_request_lock = threading.RLock()
-        self._received_request: OrderedDict[Union[str, int, None], asyncio.Future[Any]] = OrderedDict()
         self._message_buf = bytes()
 
     @async_event
@@ -492,24 +408,70 @@ class JsonRPCProtocol(asyncio.Protocol):
 
             body, data = body[:length], body[length:]
             self._message_buf = bytes()
-            try:
-                self._handle_messages_generator(_json_rpc_message_from_dict(json.loads(body.decode(charset))))
-            except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
-                raise
-            except BaseException as e:
-                self._logger.exception(e)
-                self.send_error(JsonRPCErrors.PARSE_ERROR, str(e))
 
-    def _handle_messages_generator(self, generator: Generator[JsonRPCMessage, None, None]) -> None:
+            self._handle_body(body, charset)
+
+    @abstractmethod
+    def _handle_body(self, body: bytes, charset: str) -> None:
+        ...
+
+
+class JsonRPCProtocol(JsonRPCProtocolBase):
+    _logger = LoggingDescriptor()
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._sended_request_lock = threading.RLock()
+        self._sended_request: OrderedDict[Union[str, int], SendedRequestEntry] = OrderedDict()
+        self._sended_request_count = 0
+        self._received_request_lock = threading.RLock()
+        self._received_request: OrderedDict[Union[str, int, None], asyncio.Future[Any]] = OrderedDict()
+
+    @staticmethod
+    def _generate_json_rpc_messages_from_dict(
+        data: Union[Dict[Any, Any], List[Dict[Any, Any]]]
+    ) -> Iterator[JsonRPCMessage]:
+        def inner(d: Dict[Any, Any]) -> JsonRPCMessage:
+            if "jsonrpc" in d:
+                if d["jsonrpc"] != PROTOCOL_VERSION:
+                    raise InvalidProtocolVersionException("Invalid JSON-RPC2 protocol version.")
+
+                if "id" in d:
+                    if "method" in d:
+                        return JsonRPCRequest(**d)
+                    else:
+                        if "error" in d:
+                            error = d.pop("error")
+                            return JsonRPCError(error=JsonRPCErrorObject(**error), **d)
+
+                        return JsonRPCResponse(**d)
+                else:
+                    return JsonRPCNotification(**d)
+            raise JsonRPCException("Invalid JSON-RPC2 Message")
+
+        if isinstance(data, list):
+            for e in data:
+                yield inner(e)
+        else:
+            yield inner(data)
+
+    def _handle_body(self, body: bytes, charset: str) -> None:
+        try:
+            self._handle_messages(self._generate_json_rpc_messages_from_dict(json.loads(body.decode(charset))))
+        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            self._logger.exception(e)
+            self.send_error(JsonRPCErrors.PARSE_ERROR, str(e))
+
+    def _handle_messages(self, iterator: Iterator[JsonRPCMessage]) -> None:
         def done(f: asyncio.Future[Any]) -> None:
             ex = f.exception()
             if ex is not None and not isinstance(ex, asyncio.CancelledError):
                 self._logger.exception(ex, exc_info=ex)
 
-        for m in generator:
-            future = asyncio.ensure_future(
-                self.handle_message(m), loop=self.server.loop if self.server is not None else None
-            )
+        for m in iterator:
+            future = asyncio.ensure_future(self.handle_message(m))
             future.add_done_callback(done)
 
     @_logger.call
@@ -581,7 +543,7 @@ class JsonRPCProtocol(asyncio.Protocol):
             self._sended_request_count += 1
             id = self._sended_request_count
 
-            self._sended_request[id] = _SendedRequestEntry(result, return_type_or_converter)
+            self._sended_request[id] = SendedRequestEntry(result, return_type_or_converter)
 
         self.send_message(JsonRPCRequest(id=id, method=method, params=params))
 
@@ -616,7 +578,7 @@ class JsonRPCProtocol(asyncio.Protocol):
             return
 
         try:
-            entry.future.set_result(_try_convert_value(message.result, entry.result_type))
+            entry.future.set_result(try_convert_value(message.result, entry.result_type))
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -625,6 +587,65 @@ class JsonRPCProtocol(asyncio.Protocol):
     @_logger.call
     async def handle_error(self, message: JsonRPCError) -> None:
         raise JsonRPCErrorException(message.error.code, message.error.message, message.error.data)
+
+    @staticmethod
+    def _convert_params(
+        callable: Callable[..., Any], param_type: Optional[Type[Any]], params: Any
+    ) -> Tuple[List[Any], Dict[str, Any]]:
+        if params is None:
+            return [], {}
+        if param_type is None:
+            if isinstance(params, Mapping):
+                return [], dict(**params)
+            else:
+                return [params], {}
+
+        # try to convert the dict to correct type
+        if issubclass(param_type, BaseModel):
+            converted_params = param_type.parse_obj(params)
+        else:
+            converted_params = param_type(**params)
+
+        signature = inspect.signature(callable)
+
+        has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in signature.parameters.values())
+
+        kw_args = {}
+        args = []
+        params_added = False
+        rest = set(converted_params.__dict__.keys())
+        if isinstance(params, dict):
+            rest = set.union(rest, params.keys())
+
+        for v in signature.parameters.values():
+            if v.name in converted_params.__dict__:
+                if v.kind == inspect.Parameter.POSITIONAL_ONLY:
+                    args.append(getattr(converted_params, v.name))
+                else:
+                    kw_args[v.name] = getattr(converted_params, v.name)
+                rest.remove(v.name)
+            elif v.name == "params":
+                if v.kind == inspect.Parameter.POSITIONAL_ONLY:
+                    args.append(converted_params)
+                    params_added = True
+                else:
+                    kw_args[v.name] = converted_params
+                    params_added = True
+            elif isinstance(params, dict) and v.name in params:
+                if v.kind == inspect.Parameter.POSITIONAL_ONLY:
+                    args.append(params[v.name])
+                else:
+                    kw_args[v.name] = params[v.name]
+        if has_var_kw:
+            for r in rest:
+                if hasattr(converted_params, r):
+                    kw_args[r] = getattr(converted_params, r)
+                elif isinstance(params, dict) and r in params:
+                    kw_args[r] = params[r]
+
+            if not params_added:
+                kw_args["params"] = converted_params
+        return args, kw_args
 
     async def handle_request(self, message: JsonRPCRequest) -> None:
         e = self.registry.get_entry(message.method)
@@ -638,7 +659,7 @@ class JsonRPCProtocol(asyncio.Protocol):
             return
 
         try:
-            params = _convert_params(e.method, e.param_type, message.params)
+            params = self._convert_params(e.method, e.param_type, message.params)
 
             result = asyncio.ensure_future(ensure_coroutine(e.method)(*params[0], **params[1]))
 
@@ -673,10 +694,9 @@ class JsonRPCProtocol(asyncio.Protocol):
 
         if e is None or not callable(e.method):
             self._logger.warning(f"Unknown method: {message.method}")
-            # self.send_error(JsonRPCErrors.METHOD_NOT_FOUND, f"Unknown method: {message.method}")
             return
         try:
-            params = _convert_params(e.method, e.param_type, message.params)
+            params = self._convert_params(e.method, e.param_type, message.params)
             result = e.method(*params[0], **params[1])
             if inspect.isawaitable(result):
                 await result

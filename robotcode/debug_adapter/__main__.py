@@ -24,7 +24,7 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
     except ValueError:  # Already removed
         pass
 
-    __package__ = "robotcode.language_server"
+    __package__ = "robotcode.debug_adapter"
 
 from .._version import __version__
 from ..utils.debugpy import start_debugpy
@@ -71,9 +71,9 @@ def get_log_handler(logfile: str) -> logging.FileHandler:
 
 def run_server(mode: str, port: int) -> None:
     from ..jsonrpc2.server import JsonRpcServerMode, TcpParams
-    from .robotframework.server import RobotLanguageServer
+    from .server import DebugAdapterServer
 
-    with RobotLanguageServer(mode=JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port)) as server:
+    with DebugAdapterServer(JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port)) as server:
         try:
             server.run()
         except (SystemExit, KeyboardInterrupt):
@@ -83,10 +83,10 @@ def run_server(mode: str, port: int) -> None:
 
 
 def main() -> None:
-    from ..language_server.common.server import TCP_DEFAULT_PORT
+    from .server import TCP_DEFAULT_PORT
 
     parser = argparse.ArgumentParser(
-        description="RobotCode Language Server",
+        description="RobotCode Debug Adapter",
         prog=__package__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
@@ -101,15 +101,7 @@ def main() -> None:
     )
     parser.add_argument("-p", "--port", default=TCP_DEFAULT_PORT, help="server listen port (tcp)", type=int)
     parser.add_argument("--log", action="store_true", help="enable logging")
-    parser.add_argument("--log-json-rpc", action="store_true", help="show json-rpc log messages")
-    parser.add_argument("--log-json-rpc-data", action="store_true", help="show json-rpc messages log messages")
-    parser.add_argument("--log-language-server", action="store_true", help="show language server log messages")
-    parser.add_argument(
-        "--log-language-server-parts", action="store_true", help="show language server parts log messages"
-    )
-    parser.add_argument(
-        "--log-robotframework", action="store_true", help="show robotframework language server log messages"
-    )
+    parser.add_argument("--log-debug-adapter", action="store_true", help="show debug adapter messages")
     parser.add_argument("--debug-asyncio", action="store_true", help="enable async io debugging messages")
     parser.add_argument("--log-asyncio", action="store_true", help="show asyncio log messages")
     parser.add_argument("--log-colored", action="store_true", help="colored output for logs")
@@ -168,22 +160,10 @@ def main() -> None:
         if not args.log_asyncio:
             logging.getLogger("asyncio").propagate = False
 
-        if not args.log_json_rpc:
-            logging.getLogger("robotcode.jsonrpc2").propagate = False
+        if not args.log_debug_adapter:
+            logging.getLogger("robotcode.debug_adapter").propagate = False
 
-        if not args.log_json_rpc_data:
-            logging.getLogger("robotcode.jsonrpc2.protocol.JsonRPCProtocol.message").propagate = False
-
-        if not args.log_language_server:
-            logging.getLogger("robotcode.language_server.common").propagate = False
-
-        if not args.log_language_server_parts:
-            logging.getLogger("robotcode.language_server.common.parts").propagate = False
-
-        if not args.log_robotframework:
-            logging.getLogger("robotcode.language_server.robotframework").propagate = False
-
-    _logger.info(f"starting language server version={__version__}")
+    _logger.info(f"starting debug adapter server version={__version__}")
     _logger.debug(f"args={args}")
     if args.debugpy:
         start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)

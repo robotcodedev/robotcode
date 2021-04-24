@@ -12,13 +12,16 @@ from typing import (
     NamedTuple,
     Optional,
     Type,
+    TypeVar,
     cast,
 )
 
 from ..utils.logging import LoggingDescriptor
-from .protocol import JsonRPCException, JsonRPCProtocol, TProtocol
+from .protocol import JsonRPCException
 
 __all__ = ["StdOutTransportAdapter", "JsonRpcServerMode", "TcpParams", "JsonRPCServer"]
+
+TProtocol = TypeVar("TProtocol", bound=asyncio.Protocol)
 
 
 class StdOutTransportAdapter(asyncio.Transport):
@@ -83,11 +86,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
         if self._server:
             self._server.close()
-            self.loop.run_until_complete(self._server.wait_closed())
             self._server = None
-
-        if not self.loop.is_closed():
-            self.loop.close()
 
     def __enter__(self) -> "JsonRPCServer[TProtocol]":
         self.start()
@@ -123,7 +122,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         def run_io_nonblocking() -> None:
             self._stop_event = asyncio.Event()
 
-            async def aio_readline(rfile: BinaryIO, protocol: JsonRPCProtocol) -> None:
+            async def aio_readline(rfile: BinaryIO, protocol: asyncio.Protocol) -> None:
                 while self._stop_event is not None and not self._stop_event.is_set() and not rfile.closed:
                     data = await self.loop.run_in_executor(None, cast(io.BufferedReader, rfile).read1, 1000)
                     protocol.data_received(data)
