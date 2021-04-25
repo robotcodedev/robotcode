@@ -197,7 +197,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
             self._default_imports_manager = ImportsManager(
                 self.parent,
                 Uri(self.parent.workspace.root_uri or "."),
-                RobotConfig(args=(), python_path=[], environment={}, variables={}),
+                RobotConfig(args=(), python_path=[], env={}, variables={}),
             )
         return self._default_imports_manager
 

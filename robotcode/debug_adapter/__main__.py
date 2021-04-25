@@ -108,11 +108,10 @@ def main() -> None:
     parser.add_argument("--log-config", default=None, help="reads logging configuration from file")
     parser.add_argument("--log-file", default=None, help="enables logging to file")
     parser.add_argument("--log-level", default="WARNING", help="sets the overall log level")
+    parser.add_argument("--call-tracing", action="store_true", help="enables log tracing of method calls")
     parser.add_argument("--debugpy", action="store_true", help="starts a debugpy session")
     parser.add_argument("--debugpy-port", default=5678, help="sets the port for debugpy session", type=int)
     parser.add_argument("--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect")
-    parser.add_argument("--call-tracing", action="store_true", help="enables log tracing of method calls")
-
     parser.add_argument(
         "--call-tracing-default-level", default="TRACE", help="sets the default level for call tracing", metavar="LEVEL"
     )
@@ -154,14 +153,16 @@ def main() -> None:
         if args.log_file is not None:
             _logger.logger.addHandler(get_log_handler(args.log_file))
 
-        if args.debug_asyncio:
-            os.environ["PYTHONASYNCIODEBUG"] = "1"
-
         if not args.log_asyncio:
+            logging.getLogger("asyncio").level = logging.CRITICAL
             logging.getLogger("asyncio").propagate = False
 
         if not args.log_debug_adapter:
             logging.getLogger("robotcode.debug_adapter").propagate = False
+
+    if args.debug_asyncio:
+        os.environ["PYTHONASYNCIODEBUG"] = "1"
+        logging.getLogger("asyncio").level = logging.DEBUG
 
     _logger.info(f"starting debug adapter server version={__version__}")
     _logger.debug(f"args={args}")

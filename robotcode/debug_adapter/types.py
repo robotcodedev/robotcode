@@ -390,3 +390,16 @@ class ThreadsResponseBody(Model):
 
 class ThreadsResponse(Response):
     body: ThreadsResponseBody
+
+
+class TerminateArguments(Model):
+    restart: Optional[bool] = None
+
+
+class TerminateRequest(Request):
+    command: str = Field("terminate", const=True)
+    arguments: Optional[TerminateArguments] = None
+
+
+class TerminateResponse(Response):
+    pass

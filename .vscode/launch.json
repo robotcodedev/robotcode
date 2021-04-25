@@ -34,10 +34,10 @@
 			}
 		},
 		{
-			"name": "Python: robotcode.debug_adapter.runner",
+			"name": "Python: robotcode.debug_adapter.launcher",
 			"type": "python",
 			"request": "launch",
-			"module": "robotcode.debug_adapter.runner",
+			"module": "robotcode.debug_adapter.launcher",
 			"justMyCode": false,
 			"args": [
 				"--"				

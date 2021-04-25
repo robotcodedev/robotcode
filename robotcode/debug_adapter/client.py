@@ -40,17 +40,23 @@ class DAPClient:
     def __del__(self) -> None:
         self.close()
 
-    async def connect(self) -> DAPClientProtocol:
-        self._transport, protocol = await asyncio.wait_for(
-            asyncio.get_running_loop().create_connection(
-                self._create_protocol,
-                host=self.tcp_params.host if self.tcp_params.host is not None else "127.0.0.1",
-                port=self.tcp_params.port,
-            ),
-            timeout=5,
-        )
+    async def connect(self, timeout: float = 5) -> DAPClientProtocol:
+        async def wait() -> None:
+            while self._protocol is None:
+                try:
+                    self._transport, protocol = await asyncio.get_running_loop().create_connection(
+                        self._create_protocol,
+                        host=self.tcp_params.host if self.tcp_params.host is not None else "127.0.0.1",
+                        port=self.tcp_params.port,
+                    )
 
-        self._protocol = cast(DAPClientProtocol, protocol)
+                    self._protocol = cast(DAPClientProtocol, protocol)
+                except (asyncio.CancelledError, KeyboardInterrupt, SystemExit):
+                    raise
+                except ConnectionError:
+                    pass
+
+        await asyncio.wait_for(wait(), timeout=timeout)
 
         return self.protocol
 

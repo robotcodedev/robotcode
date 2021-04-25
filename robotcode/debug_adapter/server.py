@@ -20,7 +20,9 @@ from .types import (
     RunInTerminalResponseBody,
     SetBreakpointsArguments,
     SetBreakpointsResponseBody,
+    TerminateArguments,
     TerminatedEvent,
+    TerminateRequest,
     ThreadsResponseBody,
 )
 
@@ -55,7 +57,7 @@ class DAPServerProtocol(DebugAdapterProtocol):
             # support_terminate_debuggee=True,
             # support_suspend_debuggee=True,
             # supports_loaded_sources_request=True,
-            # supports_terminate_request=True,
+            supports_terminate_request=True,
             # supports_data_breakpoints=True
         )
 
@@ -80,11 +82,12 @@ class DAPServerProtocol(DebugAdapterProtocol):
 
         port = find_free_port()
 
-        runner = Path(Path(__file__).parent, "runner")
+        launcher = Path(Path(__file__).parent, "launcher")
 
-        run_args = [python, "-u", str(runner)]
+        run_args = [python, "-u", str(launcher)]
 
         run_args += ["-p", str(port)]
+        run_args += ["--wait-for-client"]
         run_args += ["--debugpy"]
         # run_args += ["--debugpy-wait-for-client"]
 
@@ -141,6 +144,11 @@ class DAPServerProtocol(DebugAdapterProtocol):
     async def _threads(self) -> ThreadsResponseBody:
         # TODO
         return ThreadsResponseBody(threads=[])
+
+    @_logger.call
+    @rpc_method(name="terminate", param_type=TerminateArguments)
+    async def _terminate(self, arguments: Optional[TerminateArguments] = None) -> None:
+        return await self.client.protocol.send_request(TerminateRequest(arguments=arguments))
 
 
 TCP_DEFAULT_PORT = 6611
