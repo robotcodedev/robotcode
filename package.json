@@ -163,6 +163,27 @@
                         "description": "Specifies the variables for robotframework. Corresponds to the '--variable name:value' option of the robot module.",
                         "scope": "resource"
                     },
+                    "robotcode.debug.defaultConfiguration": {
+                        "type": "object",
+                        "default": {},
+                        "description": "Specifies the default configuration to run or debug robot tests.",
+                        "scope": "resource"
+                    },
+                    "robotcode.debug.defaultConsole": {
+                        "type": "string",
+                        "enum": [
+                            "none",
+                            "integrated",
+                            "external"
+                        ],
+                        "default": "integrated",
+                        "enumDescriptions": [
+                            "No terminal (pipes the output to the client debug console).",
+                            "Use terminal integrated in client.",
+                            "External terminal (configured in user settings)."
+                        ],
+                        "description": "Where to launch the debug target: internal console, integrated terminal, or external terminal."
+                    },
                     "robotcode.syntax.sectionStyle": {
                         "type": "string",
                         "default": "*** {name} ***",

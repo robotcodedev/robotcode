@@ -211,7 +211,9 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
         if (!debugConfiguration.env) debugConfiguration.env = {};
         debugConfiguration.env = Object.assign({}, config.get<Object>("robot.env", {}), debugConfiguration.env);
 
-        return debugConfiguration;
+        var template = config.get("debug.defaultConfiguration", {});
+
+        return { ...template, ...debugConfiguration };
     }
 }
 
@@ -257,6 +259,45 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
     }
 }
 
+async function debugSuiteOrTestcase(
+    resource: string | vscode.Uri,
+    testcase?: string,
+    options?: vscode.DebugSessionOptions
+) {
+    let uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
+
+    let folder = vscode.workspace.getWorkspaceFolder(uri);
+
+    let config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+
+    var args = [];
+
+    if (testcase) {
+        args.push("-t");
+        args.push(testcase);
+    }
+
+    var template = config.get("debug.defaultConfiguration", {});
+
+    template;
+    vscode.debug.startDebugging(
+        folder,
+        {
+            ...template,
+            ...{
+                type: "robotcode",
+                name: `robotcode: Suite: ${resource}${testcase ? " Testcase: " + testcase : ""}`,
+                request: "launch",
+                cwd: folder?.uri.fsPath,
+                target: uri.fsPath,
+                args: args,
+                console: config.get("debug.defaultConsole", "internal"),
+            },
+        },
+        options
+    );
+}
+
 export async function activateAsync(context: vscode.ExtensionContext) {
     OUTPUT_CHANNEL.appendLine("Activate RobotCode Extension.");
     extensionContext = context;
@@ -277,21 +318,19 @@ export async function activateAsync(context: vscode.ExtensionContext) {
         }),
 
         vscode.commands.registerCommand("robotcode.runSuite", async (resource) => {
-            vscode.window.showInformationMessage(`robotcode.runSuite currently not implemented (${resource})`);
+            return await debugSuiteOrTestcase(resource, undefined, { noDebug: true });
         }),
 
         vscode.commands.registerCommand("robotcode.debugSuite", async (resource) => {
-            vscode.window.showInformationMessage(`robotcode.debugSuite currently not implemented (${resource})`);
+            return await debugSuiteOrTestcase(resource, undefined);
         }),
 
         vscode.commands.registerCommand("robotcode.runTest", async (resource, test) => {
-            vscode.window.showInformationMessage(`robotcode.runTest currently not implemented (${resource} - ${test})`);
+            return await debugSuiteOrTestcase(resource, test, { noDebug: true });
         }),
 
         vscode.commands.registerCommand("robotcode.debugTest", async (resource, test) => {
-            vscode.window.showInformationMessage(
-                `robotcode.debugTest currently not implemented (${resource} - ${test})`
-            );
+            return await debugSuiteOrTestcase(resource, test);
         }),
         vscode.workspace.onDidChangeWorkspaceFolders((event) => {
             for (let folder of event.removed) {
