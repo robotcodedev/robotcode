@@ -99,6 +99,8 @@ class DAPServerProtocol(DebugAdapterProtocol):
         pythonPath: Optional[List[str]] = None,  # noqa: N803
         launcherArgs: Optional[List[str]] = None,  # noqa: N803
         launcherTimeout: Optional[int] = None,  # noqa: N803
+        attachPython: Optional[bool] = False,  # noqa: N803
+        pythonPort: Optional[int] = 5678,
         variables: Optional[Dict[str, Any]] = None,
         arguments: Optional[LaunchRequestArguments] = None,
         **kwargs: Any,
@@ -115,10 +117,12 @@ class DAPServerProtocol(DebugAdapterProtocol):
 
         run_args += ["-p", str(port)]
         run_args += ["--wait-for-client", "-t", str(connect_timeout)]
-        run_args += ["--debugpy"]
-        # run_args += ["--debugpy-wait-for-client"]
+
+        if attachPython and not no_debug:
+            run_args += ["--debugpy", "--debugpy-port", str(pythonPort), "--debugpy-wait-for-client"]
 
         run_args += launcherArgs or []
+
         run_args += ["--"]
 
         run_args += args or []

@@ -211,6 +211,14 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
         if (!debugConfiguration.env) debugConfiguration.env = {};
         debugConfiguration.env = Object.assign({}, config.get<Object>("robot.env", {}), debugConfiguration.env);
 
+        if (debugConfiguration.noDebug) {
+            debugConfiguration.attachPython = false;
+        }
+        if (debugConfiguration.attachPython) {
+            // TODO find free port
+            debugConfiguration.pythonPort = 5678;
+        }
+
         var template = config.get("debug.defaultConfiguration", {});
 
         return { ...template, ...debugConfiguration };
@@ -298,6 +306,28 @@ async function debugSuiteOrTestcase(
     );
 }
 
+async function attachPython(session: vscode.DebugSession) {
+    if (session.type == "robotcode" && !session.configuration.noDebug && session.configuration.attachPython) {
+        let config = vscode.workspace.getConfiguration(CONFIG_SECTION, session.workspaceFolder);
+
+        vscode.debug.startDebugging(
+            session.workspaceFolder,
+            {
+                ...session.configuration.pythonConfiguration,
+                ...{
+                    type: "python",
+                    name: `Python ${session.name}`,
+                    request: "attach",
+                    connect: {
+                        port: session.configuration.pythonPort,
+                    },
+                },
+            },
+            session
+        );
+    }
+}
+
 export async function activateAsync(context: vscode.ExtensionContext) {
     OUTPUT_CHANNEL.appendLine("Activate RobotCode Extension.");
     extensionContext = context;
@@ -343,20 +373,25 @@ export async function activateAsync(context: vscode.ExtensionContext) {
         }),
         vscode.debug.registerDebugConfigurationProvider("robotcode", new RobotCodeDebugConfigurationProvider()),
         vscode.debug.registerDebugAdapterDescriptorFactory("robotcode", new RobotCodeDebugAdapterDescriptorFactory()),
-        vscode.debug.registerDebugAdapterTrackerFactory("robotcode", {
-            createDebugAdapterTracker(session: vscode.DebugSession) {
-                return {
-                    onWillStartSession: () => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER start session`),
-                    onWillStopSession: () => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER stop session`),
-                    onWillReceiveMessage: (m) =>
-                        OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER > ${JSON.stringify(m, undefined, 2)}`),
-                    onDidSendMessage: (m) =>
-                        OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER < ${JSON.stringify(m, undefined, 2)}`),
-                    onError: (e) =>
-                        OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER ERROR: ${JSON.stringify(e, undefined, 2)}`),
-                    onExit: (c, s) => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER EXIT code ${c} signal ${s}`),
-                };
-            },
+        // vscode.debug.registerDebugAdapterTrackerFactory("robotcode", {
+        //     createDebugAdapterTracker(session: vscode.DebugSession) {
+        //         return {
+        //             onWillStartSession: () => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER start session`),
+        //             onWillStopSession: () => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER stop session`),
+        //             onWillReceiveMessage: (m) =>
+        //                 OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER > ${JSON.stringify(m, undefined, 2)}`),
+        //             onDidSendMessage: (m) =>
+        //                 OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER < ${JSON.stringify(m, undefined, 2)}`),
+        //             onError: (e) =>
+        //                 OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER ERROR: ${JSON.stringify(e, undefined, 2)}`),
+        //             onExit: (c, s) => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER EXIT code ${c} signal ${s}`),
+        //         };
+        //     },
+        // })
+        vscode.debug.onDidStartDebugSession(async (session) => {
+            if (session.configuration.type === "robotcode") {
+                await attachPython(session);
+            }
         })
     );
 

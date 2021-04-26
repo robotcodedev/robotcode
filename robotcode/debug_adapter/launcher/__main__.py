@@ -110,6 +110,9 @@ async def run_robot(
     wait_for_client: bool = False,
     wait_for_client_timeout: float = DEFAULT_TIMEOUT,
     configuration_done_timeout: float = DEFAULT_TIMEOUT,
+    debugpy: bool = False,
+    wait_for_debugpy_client: bool = False,
+    debugpy_port: int = 5678,
 ) -> Any:
     import robot
 
@@ -147,6 +150,9 @@ async def run_robot(
 
         if server.protocol.connected:
             await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server.protocol.initialized(), loop=loop))
+
+        if debugpy:
+            start_debugpy(debugpy_port, wait_for_debugpy_client)
 
         exit_code = robot.run_cli(args, False)
 
@@ -306,12 +312,16 @@ def main() -> None:
     _logger.info(f"starting debug adapter launcher version={__version__}")
     _logger.debug(f"args={args}")
 
-    if args.debugpy:
-        start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)
-
     asyncio.run(
         run_robot(
-            args.port, robot_args, args.wait_for_client, args.wait_for_client_timeout, args.configuration_done_timeout
+            args.port,
+            robot_args,
+            args.wait_for_client,
+            args.wait_for_client_timeout,
+            args.configuration_done_timeout,
+            args.debugpy,
+            args.debugpy_wait_for_client,
+            args.debugpy_port,
         )
     )
 

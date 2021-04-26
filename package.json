@@ -349,6 +349,16 @@
                                 "description": "Specifies additional python paths to robotframework. Corresponds to the '--pythonpath' option of the robot module.",
                                 "default": []
                             },
+                            "attachPython": {
+                                "type": "boolean",
+                                "description": "Attach the python debugger.",
+                                "default": true
+                            },
+                            "pythonConfiguration": {
+                                "type": "object",
+                                "description": "The python configuration to use for the launch.",
+                                "default": {}
+                            },
                             "variables": {
                                 "type": "object",
                                 "default": {},
