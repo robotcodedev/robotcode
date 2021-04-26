@@ -40,7 +40,13 @@
 			"module": "robotcode.debug_adapter.launcher",
 			"justMyCode": false,
 			"args": [
-				"--"				
+				"--debug-asyncio",
+				"--call-tracing",
+				"--log-config",
+				"log.ini",
+				//"-w",
+				"--",
+				"C:\\tmp\\robottest\\tests\\bdd_style.robot"				
 			]
 		},
 		{

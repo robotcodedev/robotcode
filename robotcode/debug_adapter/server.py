@@ -1,24 +1,30 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 from ..jsonrpc2.protocol import rpc_method
 from ..jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
 from ..utils.logging import LoggingDescriptor
-from .client import ClientNotConnectedError, DAPClient
+from .client import DAPClient, DAPClientError
 from .protocol import DebugAdapterProtocol
 from .types import (
     Capabilities,
     ConfigurationDoneArguments,
+    ConfigurationDoneRequest,
     DisconnectArguments,
+    DisconnectRequest,
     InitializeRequestArguments,
     LaunchRequestArguments,
+    OutputEvent,
+    OutputEventBody,
     RunInTerminalRequest,
     RunInTerminalRequestArguments,
     RunInTerminalResponseBody,
     SetBreakpointsArguments,
+    SetBreakpointsRequest,
     SetBreakpointsResponseBody,
     TerminateArguments,
     TerminatedEvent,
@@ -27,17 +33,34 @@ from .types import (
 )
 
 
+class OutputProtocol(asyncio.SubprocessProtocol):
+    def __init__(self, parent: DAPServerProtocol) -> None:
+        super().__init__()
+        self.parent = parent
+
+    def pipe_data_received(self, fd: Any, data: bytes) -> None:
+        category = None
+
+        if fd == 1:
+            category = "stdout"
+        elif fd == 2:
+            category = "stderr"
+
+        self.parent.send_event(OutputEvent(body=OutputEventBody(output=data.decode(), category=category)))
+
+
 class DAPServerProtocol(DebugAdapterProtocol):
     _logger = LoggingDescriptor()
 
     def __init__(self) -> None:
         super().__init__()
         self._client: Optional[DAPClient] = None
+        self._process: Optional[asyncio.subprocess.Process] = None
 
     @property
     def client(self) -> DAPClient:
         if self._client is None:
-            raise ClientNotConnectedError("Client not defined.")
+            raise DAPClientError("Client not defined.")
 
         return self._client
 
@@ -54,8 +77,8 @@ class DAPServerProtocol(DebugAdapterProtocol):
             # supports_function_breakpoints=True,
             # supports_conditional_breakpoints=True,
             # supports_hit_conditional_breakpoints=True,
-            # support_terminate_debuggee=True,
-            # support_suspend_debuggee=True,
+            support_terminate_debuggee=True,
+            support_suspend_debuggee=True,
             # supports_loaded_sources_request=True,
             supports_terminate_request=True,
             # supports_data_breakpoints=True
@@ -69,16 +92,20 @@ class DAPServerProtocol(DebugAdapterProtocol):
         cwd: str = ".",
         target: Optional[str] = None,
         args: Optional[List[str]] = None,
-        env: Optional[Dict[str, Optional[str]]] = None,
+        env: Optional[Dict[str, Optional[Any]]] = None,
         console: Optional[Literal["integrated", "external"]] = "integrated",
         name: Optional[str] = None,
         no_debug: Optional[bool] = None,
         pythonPath: Optional[List[str]] = None,  # noqa: N803
+        launcherArgs: Optional[List[str]] = None,  # noqa: N803
+        launcherTimeout: Optional[int] = None,  # noqa: N803
         variables: Optional[Dict[str, Any]] = None,
         arguments: Optional[LaunchRequestArguments] = None,
         **kwargs: Any,
     ) -> None:
         from ..utils.debugpy import find_free_port
+
+        connect_timeout = launcherTimeout or 5
 
         port = find_free_port()
 
@@ -87,10 +114,11 @@ class DAPServerProtocol(DebugAdapterProtocol):
         run_args = [python, "-u", str(launcher)]
 
         run_args += ["-p", str(port)]
-        run_args += ["--wait-for-client"]
+        run_args += ["--wait-for-client", "-t", str(connect_timeout)]
         run_args += ["--debugpy"]
         # run_args += ["--debugpy-wait-for-client"]
 
+        run_args += launcherArgs or []
         run_args += ["--"]
 
         run_args += args or []
@@ -106,39 +134,73 @@ class DAPServerProtocol(DebugAdapterProtocol):
         if target:
             run_args.append(target)
 
-        await self.send_request_async(
-            RunInTerminalRequest(
-                arguments=RunInTerminalRequestArguments(
-                    cwd=cwd,
-                    args=run_args,
-                    env=env,
-                    kind=console if console in ["integrated", "external"] else None,
-                    title=name,
-                )
-            ),
-            return_type=RunInTerminalResponseBody,
-        )
+        env = {k: ("" if v is None else str(v)) for k, v in env.items()} if env else {}
+
+        if console in ["integrated", "external"]:
+            await self.send_request_async(
+                RunInTerminalRequest(
+                    arguments=RunInTerminalRequestArguments(
+                        cwd=cwd,
+                        args=run_args,
+                        env=env,
+                        kind=console if console in ["integrated", "external"] else None,
+                        title=name,
+                    )
+                ),
+                return_type=RunInTerminalResponseBody,
+            )
+        elif console in ["none"]:
+            # self.process = await asyncio.create_subprocess_exec(
+            #     run_args[0],
+            #     *run_args[1:],
+            #     cwd=cwd,
+            #     env=env,
+            #     stdout=asyncio.subprocess.PIPE,
+            #     stderr=asyncio.subprocess.PIPE,
+            #     stdin=asyncio.subprocess.PIPE,
+            # )
+            # await asyncio.get_event_loop().connect_read_pipe(
+            #     lambda: OutputProtocol(self, "stdout"), self.process.stdout
+            # )
+
+            # await asyncio.get_event_loop().connect_read_pipe(
+            #     lambda: OutputProtocol(self, "stderr"), self.process.stderr
+            # )
+
+            run_env: Dict[str, Optional[str]] = dict(os.environ)
+            run_env.update(env)
+
+            await asyncio.get_event_loop().subprocess_exec(
+                lambda: OutputProtocol(self),
+                *run_args,
+                cwd=cwd,
+                env=run_env,
+            )
+
+        else:
+            raise Exception(f'Unknown console type "{console}".')
 
         self.client = DAPClient(self, TcpParams(None, port))
         try:
-            await self.client.connect()
+            await self.client.connect(connect_timeout)
         except asyncio.TimeoutError:
-            self.send_event(TerminatedEvent())
+            raise asyncio.TimeoutError("Can't connect to debug launcher.")
 
     @rpc_method(name="configurationDone", param_type=ConfigurationDoneArguments)
     async def _configuration_done(self, arguments: Optional[ConfigurationDoneArguments] = None) -> None:
-        # TODO
-        pass
+        await self.client.protocol.send_request_async(ConfigurationDoneRequest(arguments=arguments))
 
     @rpc_method(name="disconnect", param_type=DisconnectArguments)
     async def _disconnect(self, arguments: Optional[DisconnectArguments] = None) -> None:
-        # TODO
-        pass
+        if self._client is not None:
+            if self.client.connected and not self.client.protocol.terminated:
+                await self.client.protocol.send_request_async(DisconnectRequest(arguments=arguments))
+        else:
+            await self.send_event_async(TerminatedEvent())
 
     @rpc_method(name="setBreakpoints", param_type=SetBreakpointsArguments)
-    async def _set_breakpoints(self, arguments: Optional[SetBreakpointsArguments] = None) -> SetBreakpointsResponseBody:
-        # TODO
-        return SetBreakpointsResponseBody(breakpoints=[])
+    async def _set_breakpoints(self, arguments: SetBreakpointsArguments) -> SetBreakpointsResponseBody:
+        return await self.client.protocol.send_request_async(SetBreakpointsRequest(arguments=arguments))
 
     @rpc_method(name="threads")
     async def _threads(self) -> ThreadsResponseBody:
@@ -148,7 +210,10 @@ class DAPServerProtocol(DebugAdapterProtocol):
     @_logger.call
     @rpc_method(name="terminate", param_type=TerminateArguments)
     async def _terminate(self, arguments: Optional[TerminateArguments] = None) -> None:
-        return await self.client.protocol.send_request(TerminateRequest(arguments=arguments))
+        if self.client.connected:
+            return await self.client.protocol.send_request_async(TerminateRequest(arguments=arguments))
+        else:
+            await self.send_event_async(TerminatedEvent())
 
 
 TCP_DEFAULT_PORT = 6611

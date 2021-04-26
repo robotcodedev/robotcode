@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional, cast
+from typing import Any, Optional, cast
 
 from ..jsonrpc2.server import TcpParams
 from ..utils.logging import LoggingDescriptor
@@ -15,12 +15,18 @@ class DAPClientProtocol(DebugAdapterProtocol):
     def __init__(self, parent: DebugAdapterProtocol) -> None:
         super().__init__()
         self.parent = parent
+        self.exited = False
+        self.terminated = False
 
     async def handle_event(self, message: Event) -> None:
+        if message.event == "exited":
+            self.exited = True
+        elif message.event == "terminated":
+            self.terminated = True
         self.parent.send_event(Event(event=message.event, body=message.body))
 
 
-class ClientNotConnectedError(Exception):
+class DAPClientError(Exception):
     pass
 
 
@@ -40,6 +46,10 @@ class DAPClient:
     def __del__(self) -> None:
         self.close()
 
+    async def on_connection_lost(self, sender: Any, exc: Optional[BaseException]) -> None:
+        if sender == self._protocol:
+            self._protocol = None
+
     async def connect(self, timeout: float = 5) -> DAPClientProtocol:
         async def wait() -> None:
             while self._protocol is None:
@@ -51,10 +61,14 @@ class DAPClient:
                     )
 
                     self._protocol = cast(DAPClientProtocol, protocol)
+                    self._protocol.on_connection_lost.add(self.on_connection_lost)
                 except (asyncio.CancelledError, KeyboardInterrupt, SystemExit):
                     raise
                 except ConnectionError:
                     pass
+
+        if self._protocol is not None:
+            raise DAPClientError("Client already connected.")
 
         await asyncio.wait_for(wait(), timeout=timeout)
 
@@ -64,7 +78,11 @@ class DAPClient:
         return DAPClientProtocol(self.parent)
 
     @property
+    def connected(self) -> bool:
+        return self._protocol is not None and not self._protocol.terminated
+
+    @property
     def protocol(self) -> DAPClientProtocol:
         if self._protocol is None:
-            raise ClientNotConnectedError("Debug Adapter Client is not connected.")
+            raise DAPClientError("Client is not connected.")
         return self._protocol

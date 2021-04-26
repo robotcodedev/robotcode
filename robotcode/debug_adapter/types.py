@@ -165,6 +165,22 @@ class TerminatedEvent(Event):
     body: Optional[TerminatedEventBody] = None
 
 
+class OutputEventBody(Model):
+    output: str
+    category: Union[Literal["console", "stdout", "stderr", "telemetry"], str, None] = None
+    group: Optional[Literal["start", "startCollapsed", "end"]] = None
+    variables_reference: Optional[int] = None
+    source: Optional[Source] = None
+    line: Optional[int] = None
+    column: Optional[int] = None
+    data: Optional[Any] = None
+
+
+class OutputEvent(Event):
+    event: str = Field("output", const=True)
+    body: Optional[OutputEventBody] = None
+
+
 class InitializeRequestArguments(Model):
     adapter_id: str = Field(..., alias="adapterID")
     client_id: Optional[str] = Field(None, alias="clientID")

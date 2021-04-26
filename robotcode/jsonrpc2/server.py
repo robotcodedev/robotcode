@@ -84,9 +84,8 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         if self._stop_event is not None:
             self._stop_event.set()
 
-        if self._server:
+        if self._server and self._server.is_serving:
             self._server.close()
-            self._server = None
 
     def __enter__(self) -> "JsonRPCServer[TProtocol]":
         self.start()
@@ -135,7 +134,10 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
     def start_tcp(self, host: Optional[str] = None, port: int = 0) -> None:
         self.mode = JsonRpcServerMode.TCP
 
-        self._server = self.loop.run_until_complete(self.loop.create_server(lambda: self.create_protocol(), host, port))
+        self._server = self.loop.run_until_complete(
+            self.loop.create_server(lambda: self.create_protocol(), host, port, reuse_address=True)
+        )
+
         self._run_func = self.loop.run_forever
 
     @_logger.call

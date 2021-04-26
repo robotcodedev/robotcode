@@ -113,16 +113,18 @@ def main() -> None:
     parser.add_argument("--debug-asyncio", action="store_true", help="enable async io debugging messages")
     parser.add_argument("--log-asyncio", action="store_true", help="show asyncio log messages")
     parser.add_argument("--log-colored", action="store_true", help="colored output for logs")
-    parser.add_argument("--log-config", default=None, help="reads logging configuration from file")
-    parser.add_argument("--log-file", default=None, help="enables logging to file")
-    parser.add_argument("--log-level", default="WARNING", help="sets the overall log level")
-    parser.add_argument("--debugpy", action="store_true", help="starts a debugpy session")
-    parser.add_argument("--debugpy-port", default=5678, help="sets the port for debugpy session", type=int)
-    parser.add_argument("--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect")
+    parser.add_argument("--log-config", default=None, help="reads logging configuration from file", metavar="FILE")
+    parser.add_argument("--log-file", default=None, help="enables logging to file", metavar="FILE")
+    parser.add_argument("--log-level", default="WARNING", help="sets the overall log level", metavar="LEVEL")
     parser.add_argument("--call-tracing", action="store_true", help="enables log tracing of method calls")
     parser.add_argument(
         "--call-tracing-default-level", default="TRACE", help="sets the default level for call tracing", metavar="LEVEL"
     )
+    parser.add_argument("--debugpy", action="store_true", help="starts a debugpy session")
+    parser.add_argument(
+        "--debugpy-port", default=5678, help="sets the port for debugpy session", type=int, metavar="PORT"
+    )
+    parser.add_argument("--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect")
 
     args = parser.parse_args()
 
@@ -136,6 +138,12 @@ def main() -> None:
         LoggingDescriptor.set_call_tracing_default_level(
             logging._checkLevel(args.call_tracing_default_level)  # type: ignore
         )
+
+    if args.debug_asyncio:
+        os.environ["PYTHONASYNCIODEBUG"] = "1"
+        logging.getLogger("asyncio").level = logging.DEBUG
+    else:
+        logging.getLogger("asyncio").level = logging.CRITICAL
 
     if args.log_config is not None:
         if not os.path.exists(args.log_config):
@@ -162,7 +170,6 @@ def main() -> None:
             _logger.logger.addHandler(get_log_handler(args.log_file))
 
         if not args.log_asyncio:
-            logging.getLogger("asyncio").level = logging.CRITICAL
             logging.getLogger("asyncio").propagate = False
 
         if not args.log_json_rpc:
@@ -179,10 +186,6 @@ def main() -> None:
 
         if not args.log_robotframework:
             logging.getLogger("robotcode.language_server.robotframework").propagate = False
-
-    if args.debug_asyncio:
-        logging.getLogger("asyncio").level = logging.DEBUG
-        os.environ["PYTHONASYNCIODEBUG"] = "1"
 
     _logger.info(f"starting language server version={__version__}")
     _logger.debug(f"args={args}")
