@@ -236,25 +236,37 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
                 kw_args["arguments"] = converted_params
         return args, kw_args
 
+    async def handle_unknown_command(self, message: Request) -> Any:
+        # self._logger.error(lambda: f"unknown command-> {message}")
+
+        # self.send_error(
+        #     "unknown command",
+        #     request_seq=message.seq,
+        #     command=message.command,
+        #     error_message=Message(
+        #         format='Unknown command "{command}"', variables={"command": str(message.command)}, show_user=True
+        #     ),
+        # )
+
+        # return None
+        raise DebugAdapterRPCErrorException(
+            f"Unknown Command '{message.command}'",
+            error_message=Message(
+                format='Unknown command "{command}"', variables={"command": str(message.command)}, show_user=True
+            ),
+        )
+
     @_logger.call
     async def handle_request(self, message: Request) -> None:
         e = self.registry.get_entry(message.command)
 
-        if e is None or not callable(e.method):
-            self.send_error(
-                "unknown command",
-                request_seq=message.seq,
-                command=message.command,
-                error_message=Message(
-                    format='Unknown command "{command}"', variables={"command": str(message.command)}, show_user=True
-                ),
-            )
-            return
-
         try:
-            params = self._convert_params(e.method, e.param_type, message.arguments)
+            if e is None or not callable(e.method):
+                result = asyncio.ensure_future(self.handle_unknown_command(message))
+            else:
+                params = self._convert_params(e.method, e.param_type, message.arguments)
 
-            result = asyncio.ensure_future(ensure_coroutine(e.method)(*params[0], **params[1]))
+                result = asyncio.ensure_future(ensure_coroutine(e.method)(*params[0], **params[1]))
 
             with self._received_request_lock:
                 self._received_request[message.seq] = result
@@ -273,14 +285,28 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
             self._logger.exception(ex)
             self.send_error(
                 message=ex.message,
-                request_seq=ex.request_seq or message.seq,
+                request_seq=message.seq,
                 command=ex.command or message.command,
                 success=ex.success or False,
                 error_message=ex.error_message,
             )
+        except DebugAdapterErrorResponseError as ex:
+            self.send_error(
+                ex.error.message,
+                message.seq,
+                message.command,
+                False,
+                error_message=ex.error.body.error if ex.error.body is not None else None,
+            )
         except BaseException as e:
             self._logger.exception(e)
-            self.send_error(type(e).__name__, message.seq, message.command, False, error_message=Message(format=str(e)))
+            self.send_error(
+                type(e).__name__,
+                message.seq,
+                message.command,
+                False,
+                error_message=Message(format=str(e), show_user=True),
+            )
 
     @_logger.call
     def send_response(

@@ -172,21 +172,21 @@
                     "robotcode.debug.defaultConsole": {
                         "type": "string",
                         "enum": [
-                            "none",
-                            "integrated",
-                            "external"
-                        ],
-                        "default": "integrated",
+                            "internalConsole",
+                            "integratedTerminal",
+                            "externalTerminal"                        ],
+                        "default": "integratedTerminal",
                         "enumDescriptions": [
                             "No terminal (pipes the output to the client debug console).",
                             "Use terminal integrated in client.",
                             "External terminal (configured in user settings)."
                         ],
-                        "description": "Where to launch the debug target: internal console, integrated terminal, or external terminal."
+                        "description": "Default setting for where to launch the debug target: internal console, integrated terminal, or external terminal.",
+                        "scope": "resource"
                     },
                     "robotcode.syntax.sectionStyle": {
                         "type": "string",
-                        "default": "*** {name} ***",
+                        "default": "*** {name}s ***",
                         "description": "Defines the section style format.",
                         "scope": "resource"
                     },
@@ -316,7 +316,7 @@
                             },
                             "args": {
                                 "type": "array",
-                                "description": "Command line arguments passed to robot.",
+                                "description": "Specifies additional command line arguments passed to robot.",
                                 "default": []
                             },
                             "cwd": {
@@ -326,15 +326,15 @@
                             },
                             "env": {
                                 "type": "object",
-                                "description": "Environment variables defined as a key value pair. Property ends up being the Environment Variable and the value of the property ends up being the value of the Env Variable.",
+                                "description": "Environment variables defined as a key value pair.",
                                 "default": []
                             },
                             "console": {
                                 "type": "string",
                                 "enum": [
-                                    "none",
-                                    "integrated",
-                                    "external"
+                                    "internalConsole",
+                                    "integratedTerminal",
+                                    "externalTerminal"
                                 ],
                                 "enumDescriptions": [
                                     "No terminal (pipes the output to the client debug console).",
@@ -342,21 +342,21 @@
                                     "External terminal (configured in user settings)."
                                 ],
                                 "description": "Where to launch the debug target: internal console, integrated terminal, or external terminal.",
-                                "default": "integrated"
+                                "default": "integratedTerminal"
                             },
                             "pythonPath": {
                                 "type": "array",
-                                "description": "Specifies additional python paths to robotframework. Corresponds to the '--pythonpath' option of the robot module.",
+                                "description": "Specifies additional python paths for robotframework. Corresponds to the '--pythonpath' option of the robot module.",
                                 "default": []
                             },
                             "attachPython": {
                                 "type": "boolean",
-                                "description": "Attach the python debugger.",
+                                "description": "Attach also the python debugger if a robot test starts.",
                                 "default": true
                             },
                             "pythonConfiguration": {
                                 "type": "object",
-                                "description": "The python configuration to use for the launch.",
+                                "description": "Defines a template for the python launch configuration.",
                                 "default": {}
                             },
                             "variables": {

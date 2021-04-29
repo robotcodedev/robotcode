@@ -79,10 +79,12 @@ class DAPClient:
 
     @property
     def connected(self) -> bool:
-        return self._protocol is not None and not self._protocol.terminated
+        return self._protocol is not None
 
     @property
     def protocol(self) -> DAPClientProtocol:
+        import inspect
+
         if self._protocol is None:
-            raise DAPClientError("Client is not connected.")
+            raise DAPClientError(f"Client is not connected. {inspect.stack()[1][3]}")
         return self._protocol

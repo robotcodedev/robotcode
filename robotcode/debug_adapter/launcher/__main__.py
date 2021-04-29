@@ -7,7 +7,7 @@ import sys
 import threading
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any, List, Optional, cast
+from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 __file__ = os.path.abspath(__file__)
 if __file__.endswith((".pyc", ".pyo")):
@@ -54,25 +54,26 @@ except ImportError:
     external_path = Path(file.parents[2], "external", "pydantic")
     sys.path.append(str(external_path))
 
-
-from .server import TCP_DEFAULT_PORT, LaucherServer  # noqa: E402
+if TYPE_CHECKING:
+    from .server import LaucherServer
 
 server_lock = threading.RLock()
-_server: Optional[LaucherServer] = None
+_server: Optional["LaucherServer"] = None
 
 
-def get_server() -> Optional[LaucherServer]:
+def get_server() -> Optional["LaucherServer"]:
     with server_lock:
         return _server
 
 
-def set_server(value: LaucherServer) -> None:
+def set_server(value: "LaucherServer") -> None:
     with server_lock:
         global _server
         _server = value
 
 
-async def wait_for_server(timeout: float = 5) -> LaucherServer:
+@_logger.call
+async def wait_for_server(timeout: float = 5) -> "LaucherServer":
     async def wait() -> None:
         while get_server() is None:
             await asyncio.sleep(0.05)
@@ -84,8 +85,10 @@ async def wait_for_server(timeout: float = 5) -> LaucherServer:
     return result
 
 
+@_logger.call
 def run_server(port: int, loop: asyncio.AbstractEventLoop) -> None:
     from ...jsonrpc2.server import TcpParams
+    from .server import LaucherServer
 
     asyncio.set_event_loop(loop)
 
@@ -104,9 +107,11 @@ def run_server(port: int, loop: asyncio.AbstractEventLoop) -> None:
 DEFAULT_TIMEOUT = 5.0
 
 
+@_logger.call
 async def run_robot(
     port: int,
     args: List[str],
+    no_debug: bool = False,
     wait_for_client: bool = False,
     wait_for_client_timeout: float = DEFAULT_TIMEOUT,
     configuration_done_timeout: float = DEFAULT_TIMEOUT,
@@ -115,6 +120,8 @@ async def run_robot(
     debugpy_port: int = 5678,
 ) -> Any:
     import robot
+
+    from .debugger import Debugger
 
     loop = asyncio.new_event_loop()
 
@@ -127,15 +134,26 @@ async def run_robot(
     try:
         if wait_for_client:
             try:
-                await asyncio.wrap_future(
-                    asyncio.run_coroutine_threadsafe(
-                        server.protocol.wait_for_client(wait_for_client_timeout), loop=loop
-                    )
+
+                @_logger.call
+                async def start_debugpy_async() -> None:
+                    if debugpy:
+                        start_debugpy(debugpy_port, wait_for_debugpy_client)
+
+                await asyncio.gather(
+                    start_debugpy_async(),
+                    asyncio.wrap_future(
+                        asyncio.run_coroutine_threadsafe(
+                            server.protocol.wait_for_client(wait_for_client_timeout), loop=loop
+                        )
+                    ),
                 )
             except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                 pass
             except asyncio.TimeoutError:
                 raise ConnectionError("No incomming connection from a debugger client.")
+
+            await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server.protocol.initialized(), loop=loop))
 
             try:
                 await asyncio.wrap_future(
@@ -148,13 +166,19 @@ async def run_robot(
             except asyncio.TimeoutError:
                 raise ConnectionError("Timeout to get configuration from client.")
 
-        if server.protocol.connected:
-            await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server.protocol.initialized(), loop=loop))
+        args = [
+            "--listener",
+            f"robotcode.debug_adapter.launcher.listeners.ListenerV2:no_debug={repr(no_debug)}",
+            *args,
+        ]
 
-        if debugpy:
-            start_debugpy(debugpy_port, wait_for_debugpy_client)
+        Debugger.instance().set_main_thread(threading.current_thread())
+        Debugger.instance().start()
 
-        exit_code = robot.run_cli(args, False)
+        exit_code = robot.run_cli(
+            args,
+            False,
+        )
 
         if server.protocol.connected:
             await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server.protocol.exit(exit_code), loop=loop))
@@ -163,7 +187,9 @@ async def run_robot(
     except asyncio.CancelledError:
         pass
     except BaseException as e:
-        print(str(e), file=sys.stderr)
+        _logger.exception(e)
+        # print(str(e), file=sys.stderr)
+        raise
     finally:
         if server.protocol.connected:
             await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server.protocol.terminate(), loop=loop))
@@ -211,7 +237,7 @@ def main() -> None:
     )
 
     parser.add_argument("--version", action="store_true", help="shows the version and exits")
-    parser.add_argument("-p", "--port", default=TCP_DEFAULT_PORT, help="server listen port (tcp)", type=int)
+    parser.add_argument("-p", "--port", default=6612, help="server listen port (tcp)", type=int)
     parser.add_argument("-w", "--wait-for-client", action="store_true", help="waits for an debug client to connect")
     parser.add_argument(
         "-t",
@@ -233,6 +259,7 @@ def main() -> None:
     parser.add_argument(
         "--log-debug-adapter-launcher", action="store_true", help="show debug adapter launcher messages"
     )
+    parser.add_argument("-n", "--no-debug", action="store_true", help="disable debugging")
     parser.add_argument("--debug-asyncio", action="store_true", help="enable async io debugging messages")
     parser.add_argument("--log-asyncio", action="store_true", help="show asyncio log messages")
     parser.add_argument("--log-colored", action="store_true", help="colored output for logs")
@@ -243,11 +270,13 @@ def main() -> None:
     parser.add_argument(
         "--call-tracing-default-level", default="TRACE", help="sets the default level for call tracing", metavar="LEVEL"
     )
-    parser.add_argument("--debugpy", action="store_true", help="starts a debugpy session")
+    parser.add_argument("-d", "--debugpy", action="store_true", help="starts a debugpy session")
     parser.add_argument(
-        "--debugpy-port", default=5678, help="sets the port for debugpy session", type=int, metavar="PORT"
+        "-dp", "--debugpy-port", default=5678, help="sets the port for debugpy session", type=int, metavar="PORT"
     )
-    parser.add_argument("--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect")
+    parser.add_argument(
+        "-dw", "--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect"
+    )
 
     sys_args = sys.argv[1:]
 
@@ -309,13 +338,14 @@ def main() -> None:
         if not args.log_debug_adapter_launcher:
             logging.getLogger("robotcode.debug_adapter.launcher").propagate = False
 
-    _logger.info(f"starting debug adapter launcher version={__version__}")
+    _logger.info(f"starting {__package__} version={__version__}")
     _logger.debug(f"args={args}")
 
     asyncio.run(
         run_robot(
             args.port,
             robot_args,
+            args.no_debug,
             args.wait_for_client,
             args.wait_for_client_timeout,
             args.configuration_done_timeout,

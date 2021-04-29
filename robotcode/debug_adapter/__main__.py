@@ -83,8 +83,6 @@ def run_server(mode: str, port: int) -> None:
 
 
 def main() -> None:
-    from .server import TCP_DEFAULT_PORT
-
     parser = argparse.ArgumentParser(
         description="RobotCode Debug Adapter",
         prog=__package__,
@@ -99,7 +97,7 @@ def main() -> None:
         choices=["stdio", "tcp"],
         help="communication mode",
     )
-    parser.add_argument("-p", "--port", default=TCP_DEFAULT_PORT, help="server listen port (tcp)", type=int)
+    parser.add_argument("-p", "--port", default=6611, help="server listen port (tcp)", type=int)
     parser.add_argument("--log", action="store_true", help="enable logging")
     parser.add_argument("--log-debug-adapter", action="store_true", help="show debug adapter messages")
     parser.add_argument("--debug-asyncio", action="store_true", help="enable async io debugging messages")

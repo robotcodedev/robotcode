@@ -18,18 +18,17 @@ from .types import (
     DisconnectRequest,
     InitializeRequestArguments,
     LaunchRequestArguments,
+    OutputCategory,
     OutputEvent,
     OutputEventBody,
+    Request,
+    RunInTerminalKind,
     RunInTerminalRequest,
     RunInTerminalRequestArguments,
     RunInTerminalResponseBody,
-    SetBreakpointsArguments,
-    SetBreakpointsRequest,
-    SetBreakpointsResponseBody,
     TerminateArguments,
     TerminatedEvent,
     TerminateRequest,
-    ThreadsResponseBody,
 )
 
 
@@ -42,9 +41,9 @@ class OutputProtocol(asyncio.SubprocessProtocol):
         category = None
 
         if fd == 1:
-            category = "stdout"
+            category = OutputCategory.STDOUT
         elif fd == 2:
-            category = "stderr"
+            category = OutputCategory.STDERR
 
         self.parent.send_event(OutputEvent(body=OutputEventBody(output=data.decode(), category=category)))
 
@@ -67,6 +66,10 @@ class DAPServerProtocol(DebugAdapterProtocol):
     @client.setter
     def client(self, value: DAPClient) -> None:
         self._client = value
+
+    @property
+    def connected(self) -> bool:
+        return self._client is not None and self._client.connected
 
     @rpc_method(name="initialize", param_type=InitializeRequestArguments)
     async def _initialize(self, arguments: InitializeRequestArguments) -> Capabilities:
@@ -93,7 +96,7 @@ class DAPServerProtocol(DebugAdapterProtocol):
         target: Optional[str] = None,
         args: Optional[List[str]] = None,
         env: Optional[Dict[str, Optional[Any]]] = None,
-        console: Optional[Literal["integrated", "external"]] = "integrated",
+        console: Optional[Literal["internalConsole", "integratedTerminal", "externalTerminal"]] = "integratedTerminal",
         name: Optional[str] = None,
         no_debug: Optional[bool] = None,
         pythonPath: Optional[List[str]] = None,  # noqa: N803
@@ -116,10 +119,13 @@ class DAPServerProtocol(DebugAdapterProtocol):
         run_args = [python, "-u", str(launcher)]
 
         run_args += ["-p", str(port)]
-        run_args += ["--wait-for-client", "-t", str(connect_timeout)]
+        run_args += ["-w", "-t", str(connect_timeout)]
+
+        if no_debug:
+            run_args += ["-n"]
 
         if attachPython and not no_debug:
-            run_args += ["--debugpy", "--debugpy-port", str(pythonPort), "--debugpy-wait-for-client"]
+            run_args += ["-d", "-dp", str(pythonPort), "-dw"]
 
         run_args += launcherArgs or []
 
@@ -140,37 +146,24 @@ class DAPServerProtocol(DebugAdapterProtocol):
 
         env = {k: ("" if v is None else str(v)) for k, v in env.items()} if env else {}
 
-        if console in ["integrated", "external"]:
+        if console in ["integratedTerminal", "externalTerminal"]:
             await self.send_request_async(
                 RunInTerminalRequest(
                     arguments=RunInTerminalRequestArguments(
                         cwd=cwd,
                         args=run_args,
                         env=env,
-                        kind=console if console in ["integrated", "external"] else None,
+                        kind=RunInTerminalKind.INTEGRATED
+                        if console == "integratedTerminal"
+                        else RunInTerminalKind.EXTERNAL
+                        if console == "externalTerminal"
+                        else None,
                         title=name,
                     )
                 ),
                 return_type=RunInTerminalResponseBody,
             )
-        elif console in ["none"]:
-            # self.process = await asyncio.create_subprocess_exec(
-            #     run_args[0],
-            #     *run_args[1:],
-            #     cwd=cwd,
-            #     env=env,
-            #     stdout=asyncio.subprocess.PIPE,
-            #     stderr=asyncio.subprocess.PIPE,
-            #     stdin=asyncio.subprocess.PIPE,
-            # )
-            # await asyncio.get_event_loop().connect_read_pipe(
-            #     lambda: OutputProtocol(self, "stdout"), self.process.stdout
-            # )
-
-            # await asyncio.get_event_loop().connect_read_pipe(
-            #     lambda: OutputProtocol(self, "stderr"), self.process.stderr
-            # )
-
+        elif console is None or console in ["internalConsole"]:
             run_env: Dict[str, Optional[str]] = dict(os.environ)
             run_env.update(env)
 
@@ -196,20 +189,11 @@ class DAPServerProtocol(DebugAdapterProtocol):
 
     @rpc_method(name="disconnect", param_type=DisconnectArguments)
     async def _disconnect(self, arguments: Optional[DisconnectArguments] = None) -> None:
-        if self._client is not None:
-            if self.client.connected and not self.client.protocol.terminated:
+        if self.connected:
+            if not self.client.protocol.terminated:
                 await self.client.protocol.send_request_async(DisconnectRequest(arguments=arguments))
         else:
             await self.send_event_async(TerminatedEvent())
-
-    @rpc_method(name="setBreakpoints", param_type=SetBreakpointsArguments)
-    async def _set_breakpoints(self, arguments: SetBreakpointsArguments) -> SetBreakpointsResponseBody:
-        return await self.client.protocol.send_request_async(SetBreakpointsRequest(arguments=arguments))
-
-    @rpc_method(name="threads")
-    async def _threads(self) -> ThreadsResponseBody:
-        # TODO
-        return ThreadsResponseBody(threads=[])
 
     @_logger.call
     @rpc_method(name="terminate", param_type=TerminateArguments)
@@ -218,6 +202,14 @@ class DAPServerProtocol(DebugAdapterProtocol):
             return await self.client.protocol.send_request_async(TerminateRequest(arguments=arguments))
         else:
             await self.send_event_async(TerminatedEvent())
+
+    async def handle_unknown_command(self, message: Request) -> Any:
+        if self.connected:
+            self._logger.info("Forward request to client...")
+
+            return await self.client.protocol.send_request_async(message)
+
+        return super().handle_unknown_command(message)
 
 
 TCP_DEFAULT_PORT = 6611

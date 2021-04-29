@@ -37,11 +37,11 @@ def start_debugpy(port: int, wait_for_client: bool) -> None:
 
         real_port = check_free_port(port)
         if real_port != port:
-            _logger.warning(f"start debugpy session on port {real_port}")
+            _logger.info(f"start debugpy session on port {real_port}")
         debugpy.listen(real_port)
 
         if wait_for_client:
-            _logger.warning("wait for debugpy client")
+            _logger.info("wait for debugpy client")
             debugpy.wait_for_client()
     except ImportError:
         _logger.warning("Module debugpy is not installed. If you want to debug python code, please install it.\n")

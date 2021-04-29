@@ -4,7 +4,6 @@ import asyncio
 import inspect
 import threading
 import weakref
-from abc import ABC
 from concurrent.futures.thread import ThreadPoolExecutor
 from types import MethodType
 from typing import (
@@ -126,7 +125,6 @@ class AsyncEventDescriptorBase(Generic[_TCallable, _TResult, _TEvent]):
     ) -> None:
         self._func = _func
         self.__factory = factory
-        self.__event: Optional[_TEvent] = None
         self.__factory_args = factory_args
         self.__factory_kwargs = factory_kwargs
         self._owner: Optional[Any] = None
@@ -140,7 +138,7 @@ class AsyncEventDescriptorBase(Generic[_TCallable, _TResult, _TEvent]):
         if obj is None:
             return self  # type: ignore
 
-        name = f"__async_event_{self._owner_name}__"
+        name = f"__async_event_{self._func.__name__}__"
         if not hasattr(obj, name):
             setattr(obj, name, self.__factory(*self.__factory_args, **self.__factory_kwargs))
 
@@ -159,7 +157,7 @@ class async_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncEvent[_TCallabl
         super().__init__(_func, AsyncEvent[_TCallable, _TResult])
 
 
-class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallable, _TResult], ABC):
+class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallable, _TResult]):
     def __init__(self, *, task_name_prefix: Optional[str] = None) -> None:
         super().__init__()
         self._task_name_prefix = task_name_prefix or type(self).__qualname__
@@ -243,7 +241,7 @@ class async_tasking_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncTasking
         super().__init__(_func, AsyncTaskingEvent[_TCallable, Any], task_name_prefix=lambda: _get_name_prefix(self))
 
 
-class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallable, _TResult], ABC):
+class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallable, _TResult]):
     __executor: Optional[ThreadPoolExecutor]
 
     def __init__(self, *, thread_name_prefix: Optional[str] = None) -> None:

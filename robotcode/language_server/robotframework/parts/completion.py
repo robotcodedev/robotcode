@@ -88,16 +88,12 @@ _CompleteMethod = Callable[
 
 SECTIONS = [
     "Test Case",
-    "Test Cases",
-    "Settings",
     "Setting",
     "Variable",
-    "Variables",
-    "Keywords",
+    "Keyword",
     "Comment",
-    "Comments",
 ]
-DEFAULT_SECTIONS_STYLE = "*** {name} ***"
+DEFAULT_SECTIONS_STYLE = "*** {name}s ***"
 
 SETTINGS = [
     "Documentation",

@@ -83,8 +83,6 @@ def run_server(mode: str, port: int) -> None:
 
 
 def main() -> None:
-    from ..language_server.common.server import TCP_DEFAULT_PORT
-
     parser = argparse.ArgumentParser(
         description="RobotCode Language Server",
         prog=__package__,
@@ -99,7 +97,7 @@ def main() -> None:
         choices=["stdio", "tcp"],
         help="communication mode",
     )
-    parser.add_argument("-p", "--port", default=TCP_DEFAULT_PORT, help="server listen port (tcp)", type=int)
+    parser.add_argument("-p", "--port", default=6610, help="server listen port (tcp)", type=int)
     parser.add_argument("--log", action="store_true", help="enable logging")
     parser.add_argument("--log-json-rpc", action="store_true", help="show json-rpc log messages")
     parser.add_argument("--log-json-rpc-data", action="store_true", help="show json-rpc messages log messages")

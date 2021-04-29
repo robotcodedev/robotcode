@@ -1,7 +1,6 @@
 import asyncio
 import os
-import threading
-from typing import Optional
+from typing import Any, Optional
 
 from ...jsonrpc2.protocol import rpc_method
 from ...jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
@@ -9,15 +8,28 @@ from ...utils.logging import LoggingDescriptor
 from ..protocol import DebugAdapterProtocol
 from ..types import (
     ConfigurationDoneArguments,
+    ContinueArguments,
+    ContinueResponseBody,
     DisconnectArguments,
+    Event,
     ExitedEvent,
     ExitedEventBody,
     InitializedEvent,
+    NextArguments,
+    PauseArguments,
+    ScopesArguments,
+    ScopesResponseBody,
     SetBreakpointsArguments,
     SetBreakpointsResponseBody,
+    StackTraceArguments,
+    StackTraceResponseBody,
+    StepInArguments,
+    StepOutArguments,
     TerminateArguments,
     TerminatedEvent,
+    ThreadsResponseBody,
 )
+from .debugger import Debugger
 
 TCP_DEFAULT_PORT = 6612
 
@@ -27,8 +39,10 @@ class LauncherServerProtocol(DebugAdapterProtocol):
 
     def __init__(self) -> None:
         super().__init__()
+        self._loop = asyncio.get_event_loop()
+
         self._initialized = False
-        self._connect_lock = threading.RLock()
+        self._connected_event = asyncio.Event()
         self._connected = False
         self._sigint_signaled = False
 
@@ -38,13 +52,17 @@ class LauncherServerProtocol(DebugAdapterProtocol):
         self._terminated_lock = asyncio.Lock()
         self._terminated = False
 
-        self._received_configuration_done_lock = asyncio.Lock()
-        self._received_configuration_done = True
+        self._received_configuration_done_event = asyncio.Event()
+        self._received_configuration_done = False
+
+        Debugger.instance().send_event.add(self.on_debugger_send_event)
+
+    def on_debugger_send_event(self, sender: Any, event: Event) -> None:
+        self._loop.call_soon_threadsafe(self.send_event, event)
 
     @property
     def connected(self) -> bool:
-        with self._connect_lock:
-            return self._connected
+        return self._connected
 
     @property
     async def exited(self) -> bool:
@@ -62,24 +80,24 @@ class LauncherServerProtocol(DebugAdapterProtocol):
             raise ConnectionError("Protocol already connected, only one conntection allowed.")
 
         super().connection_made(transport)
-        with self._connect_lock:
-            self._connected = self.read_transport is not None and self.write_transport is not None
+
+        if self.read_transport is not None and self.write_transport is not None:
+            self._connected = True
+            self._connected_event.set()
 
     @_logger.call
     def connection_lost(self, exc: Optional[BaseException]) -> None:
         super().connection_lost(exc)
-        with self._connect_lock:
-            self._connected = False
+
+        self._connected = False
 
     @_logger.call
     async def wait_for_client(self, timeout: float = 5) -> bool:
-        async def wait() -> None:
-            while self.read_transport is None or self.write_transport is None:
-                await asyncio.sleep(0.01)
+        await asyncio.wait_for(self._connected_event.wait(), timeout)
 
-        await asyncio.wait_for(wait(), timeout)
+        result = self.read_transport is not None and self.write_transport is not None
 
-        return self.read_transport is not None and self.write_transport is not None
+        return result
 
     @_logger.call
     async def initialized(self) -> None:
@@ -109,6 +127,8 @@ class LauncherServerProtocol(DebugAdapterProtocol):
             self._logger.info("Send SIGTERM to process")
             signal.raise_signal(signal.SIGTERM)
 
+        Debugger.instance().stop()
+
     @rpc_method(name="disconnect", param_type=DisconnectArguments)
     async def _disconnect(self, arguments: Optional[DisconnectArguments] = None) -> None:
         if not (await self.exited) or not (await self.terminated):
@@ -117,25 +137,59 @@ class LauncherServerProtocol(DebugAdapterProtocol):
 
     @rpc_method(name="setBreakpoints", param_type=SetBreakpointsArguments)
     async def _set_breakpoints(self, arguments: SetBreakpointsArguments) -> SetBreakpointsResponseBody:
-        return SetBreakpointsResponseBody(breakpoints=[])
+        return SetBreakpointsResponseBody(
+            breakpoints=Debugger.instance().set_breakpoints(
+                arguments.source, arguments.breakpoints, arguments.lines, arguments.source_modified
+            )
+        )
 
+    @_logger.call
     @rpc_method(name="configurationDone", param_type=ConfigurationDoneArguments)
     async def _configuration_done(self, arguments: Optional[ConfigurationDoneArguments] = None) -> None:
-        async with self._received_configuration_done_lock:
-            self._received_configuration_done = True
+        self._received_configuration_done = True
+        self._received_configuration_done_event.set()
 
     @_logger.call
     async def wait_for_configuration_done(self, timeout: float = 5) -> bool:
-        async def wait() -> None:
-            while True:
-                async with self._received_configuration_done_lock:
-                    if self._received_configuration_done:
-                        break
-                await asyncio.sleep(0.01)
-
-        await asyncio.wait_for(wait(), timeout)
+        await asyncio.wait_for(self._received_configuration_done_event.wait(), timeout)
 
         return self._received_configuration_done
+
+    @rpc_method(name="threads")
+    async def _threads(self) -> ThreadsResponseBody:
+        return ThreadsResponseBody(threads=Debugger.instance().get_threads())
+
+    @rpc_method(name="stackTrace", param_type=StackTraceArguments)
+    async def _stack_trace(self, arguments: StackTraceArguments) -> StackTraceResponseBody:
+        result = Debugger.instance().get_stack_trace(
+            arguments.thread_id, arguments.start_frame, arguments.levels, arguments.format
+        )
+        return StackTraceResponseBody(stack_frames=result.stack_frames, total_frames=result.total_frames)
+
+    @rpc_method(name="scopes", param_type=ScopesArguments)
+    async def _scopes(self, arguments: ScopesArguments) -> ScopesResponseBody:
+        return ScopesResponseBody(scopes=Debugger.instance().get_scopes(arguments.frame_id))
+
+    @rpc_method(name="continue", param_type=ContinueArguments)
+    async def _continue(self, arguments: ContinueArguments) -> ContinueResponseBody:
+        Debugger.instance().continue_thread(arguments.thread_id)
+        return ContinueResponseBody(all_threads_continued=True)
+
+    @rpc_method(name="pause", param_type=PauseArguments)
+    async def _pause(self, arguments: PauseArguments) -> None:
+        Debugger.instance().pause_thread(arguments.thread_id)
+
+    @rpc_method(name="next", param_type=NextArguments)
+    async def _next(self, arguments: NextArguments) -> None:
+        Debugger.instance().next(arguments.thread_id, arguments.granularity)
+
+    @rpc_method(name="stepIn", param_type=StepInArguments)
+    async def _step_in(self, arguments: StepInArguments) -> None:
+        Debugger.instance().step_in(arguments.thread_id, arguments.target_id, arguments.granularity)
+
+    @rpc_method(name="stepOut", param_type=StepOutArguments)
+    async def _step_out(self, arguments: StepOutArguments) -> None:
+        Debugger.instance().step_out(arguments.thread_id, arguments.granularity)
 
 
 class LaucherServer(JsonRPCServer[LauncherServerProtocol]):

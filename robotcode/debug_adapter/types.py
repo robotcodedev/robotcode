@@ -24,18 +24,22 @@ class Model(BaseModel):
             )
 
 
-def __counter() -> Iterator[int]:
+def __next_id_iter() -> Iterator[int]:
     i = 0
     while True:
         yield i
         i += 1
 
 
-_counter = __counter()
+_next_id_iterator = __next_id_iter()
+
+
+def _next_id() -> int:
+    return next(_next_id_iterator)
 
 
 class ProtocolMessage(Model):
-    seq: int = Field(default_factory=lambda: next(_counter))
+    seq: int = Field(default_factory=lambda: _next_id())
     type: Union[Literal["request", "response", "event"], str]
 
 
@@ -88,7 +92,7 @@ class ErrorBody(Model):
 
 
 class ErrorResponse(Response):
-    body: ErrorBody
+    body: Optional[ErrorBody]
 
 
 class CancelArguments(Model):
@@ -109,19 +113,21 @@ class InitializedEvent(Event):
     event: str = Field("initialized", const=True)
 
 
+class StoppedReason(Enum):
+    STEP = "step"
+    BREAKPOINT = "breakpoint"
+    EXCEPTION = "exception"
+    PAUSE = "pause"
+    ENTRY = "entry"
+    GOTO = "goto"
+    FUNCTION_BREAKPOINT = "function breakpoint"
+    DATA_BREAKPOINT = "data breakpoint"
+    INSTRUCTION_BREAKPOINT = "instruction breakpoint"
+
+
 class StoppedEventBody(Model):
     reason: Union[
-        Literal[
-            "step",
-            "breakpoint",
-            "exception",
-            "pause",
-            "entry",
-            "goto",
-            "function breakpoint",
-            "data breakpoint",
-            "instruction breakpoint",
-        ],
+        StoppedReason,
         str,
     ]
     description: Optional[str] = None
@@ -165,10 +171,23 @@ class TerminatedEvent(Event):
     body: Optional[TerminatedEventBody] = None
 
 
+class OutputCategory(Enum):
+    CONSOLE = "console"
+    STDOUT = "stdout"
+    STDERR = "stderr"
+    TELEMETRY = "telemetry"
+
+
+class OutputGroup(Enum):
+    START = "start"
+    STARTCOLLAPSED = "startCollapsed"
+    END = "end"
+
+
 class OutputEventBody(Model):
     output: str
-    category: Union[Literal["console", "stdout", "stderr", "telemetry"], str, None] = None
-    group: Optional[Literal["start", "startCollapsed", "end"]] = None
+    category: Union[OutputCategory, str, None] = None
+    group: Optional[OutputGroup] = None
     variables_reference: Optional[int] = None
     source: Optional[Source] = None
     line: Optional[int] = None
@@ -277,11 +296,16 @@ class LaunchResponse(Response):
     pass
 
 
+class RunInTerminalKind(Enum):
+    INTEGRATED = "integrated"
+    EXTERNAL = "external"
+
+
 class RunInTerminalRequestArguments(Model):
     cwd: str
     args: List[str]
     env: Optional[Dict[str, Optional[str]]] = None
-    kind: Optional[Literal["integrated", "external"]] = None
+    kind: Optional[RunInTerminalKind] = None
     title: Optional[str] = None
 
 
@@ -418,4 +442,159 @@ class TerminateRequest(Request):
 
 
 class TerminateResponse(Response):
+    pass
+
+
+class StackFrameFormat(Model):
+    parameters: Optional[bool] = None
+    parameter_types: Optional[bool] = None
+    parameter_names: Optional[bool] = None
+    parameter_values: Optional[bool] = None
+    line: Optional[bool] = None
+    module: Optional[bool] = None
+    include_all: Optional[bool] = None
+
+
+class StackTraceArguments(Model):
+    thread_id: int
+    start_frame: Optional[int] = None
+    levels: Optional[int] = None
+    format: Optional[StackFrameFormat] = None
+
+
+class StackTraceRequest(Request):
+    command: str = Field("stackTrace", const=True)
+    arguments: StackTraceArguments
+
+
+class StackFrame(Model):
+    id: int
+    name: str
+    line: int
+    column: int
+    source: Optional[Source] = None
+    end_line: Optional[int] = None
+    end_column: Optional[int] = None
+    can_restart: Optional[bool] = None
+    instruction_pointer_reference: Optional[str] = None
+    module_id: Union[int, str, None] = None
+    presentation_hint: Optional[Literal["normal", "label", "subtle"]] = None
+
+
+class StackTraceResponseBody(Model):
+    stack_frames: List[StackFrame]
+    total_frames: Optional[int]
+
+
+class StackTraceResponse(Response):
+    body: StackTraceResponseBody
+
+
+class ScopesArguments(Model):
+    frame_id: int
+
+
+class Scope(Model):
+    name: str
+    presentation_hint: Union[Literal["arguments", "locals", "registers"], str, None] = None
+    variables_reference: int
+    named_variables: Optional[int] = None
+    indexed_variables: Optional[int] = None
+    expensive: bool
+    source: Optional[Source] = None
+    line: Optional[int] = None
+    column: Optional[int] = None
+    end_line: Optional[int] = None
+    end_column: Optional[int] = None
+
+
+class ScopesRequest(Request):
+    command: str = Field("scopes", const=True)
+    arguments: ScopesArguments
+
+
+class ScopesResponseBody(Model):
+    scopes: List[Scope]
+
+
+class ScopesResponse(Response):
+    body: ScopesResponseBody
+
+
+class ContinueArguments(Model):
+    thread_id: int
+
+
+class ContinueRequest(Request):
+    command: str = Field("continue", const=True)
+    arguments: ContinueArguments
+
+
+class ContinueResponseBody(Model):
+    all_threads_continued: Optional[bool] = None
+
+
+class ContinueResponse(Response):
+    body: ContinueResponseBody
+
+
+class PauseArguments(Model):
+    thread_id: int
+
+
+class PauseRequest(Request):
+    command: str = Field("pause", const=True)
+    arguments: PauseArguments
+
+
+class PauseResponse(Response):
+    pass
+
+
+class SteppingGranularity(Enum):
+    STATEMENT = "statement"
+    LINE = "line"
+    INSTRUCTION = "instruction"
+
+
+class NextArguments(Model):
+    thread_id: int
+    granularity: Optional[SteppingGranularity] = None
+
+
+class NextRequest(Request):
+    command: str = Field("next", const=True)
+    arguments: NextArguments
+
+
+class NextResponse(Response):
+    pass
+
+
+class StepInArguments(Model):
+    thread_id: int
+    target_id: Optional[int] = None
+    granularity: Optional[SteppingGranularity] = None
+
+
+class StepInRequest(Request):
+    command: str = Field("stepIn", const=True)
+    arguments: StepInArguments
+
+
+class StepInResponse(Response):
+    pass
+
+
+class StepOutArguments(Model):
+    thread_id: int
+    granularity: Optional[SteppingGranularity] = None
+
+
+class StepOutRequest(Request):
+    command: str = Field("stepOut", const=True)
+    arguments: StepOutArguments
+
+
+class StepOutResponse(Response):
     pass
