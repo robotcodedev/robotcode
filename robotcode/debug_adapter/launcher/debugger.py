@@ -68,6 +68,7 @@ class StackFrameEntry:
         self.source = source
         self.line = line
         self.column = column
+        self._suite_marker = object()
         self._test_marker = object()
         self._local_marker = object()
         self._global_marker = object()
@@ -75,6 +76,12 @@ class StackFrameEntry:
     @property
     def id(self) -> int:
         return id(self)
+
+    def test_id(self) -> int:
+        return id(self._test_marker)
+
+    def suite_id(self) -> int:
+        return id(self._suite_marker)
 
     def local_id(self) -> int:
         return id(self._local_marker)
@@ -436,7 +443,8 @@ class Debugger:
         result: List[Scope] = []
         entry = next((v for v in self.stack_frames if v.id == frame_id), None)
         if entry is not None:
-            if entry.context() is not None:
+            context = entry.context()
+            if context is not None:
                 result.append(
                     Scope(
                         name="Local",
@@ -445,14 +453,33 @@ class Debugger:
                         variables_reference=entry.local_id(),
                     )
                 )
-                result.append(
-                    Scope(
-                        name="Global",
-                        expensive=False,
-                        presentation_hint="global",
-                        variables_reference=entry.global_id(),
+                if context.variables._test is not None and context.variables._test != context.variables.current:
+                    result.append(
+                        Scope(
+                            name="Test",
+                            expensive=False,
+                            presentation_hint="test",
+                            variables_reference=entry.test_id(),
+                        )
                     )
-                )
+                if context.variables._suite is not None and context.variables._suite != context.variables.current:
+                    result.append(
+                        Scope(
+                            name="Suite",
+                            expensive=False,
+                            presentation_hint="suite",
+                            variables_reference=entry.suite_id(),
+                        )
+                    )
+                if context.variables._global is not None:
+                    result.append(
+                        Scope(
+                            name="Global",
+                            expensive=False,
+                            presentation_hint="global",
+                            variables_reference=entry.global_id(),
+                        )
+                    )
 
         return result
 
@@ -465,16 +492,44 @@ class Debugger:
         format: Optional[ValueFormat] = None,
     ) -> List[Variable]:
         result: List[Variable] = []
-        entry = next((v for v in self.stack_frames if variables_reference in [v.global_id(), v.local_id()]), None)
+        entry = next(
+            (
+                v
+                for v in self.stack_frames
+                if variables_reference in [v.global_id(), v.local_id(), v.suite_id(), v.test_id()]
+            ),
+            None,
+        )
         if entry is not None:
             context = entry.context()
             if context is not None:
-                current_index = context.variables._scopes.index(context.variables.current)
-                globals = context.variables._scopes[max(current_index - 1, 0)].as_dict()
 
                 if entry.global_id() == variables_reference:
-                    result += [Variable(name=k, value=repr(v), type=repr(type(v))) for k, v in globals.items()]
+                    result += [
+                        Variable(name=k, value=repr(v), type=repr(type(v)))
+                        for k, v in context.variables._global.as_dict().items()
+                    ]
+                elif entry.suite_id() == variables_reference:
+                    # current_index = context.variables._scopes.index(context.variables._suite)
+                    # globals = context.variables._scopes[max(current_index - 1, 0)].as_dict()
+                    globals = context.variables._global.as_dict()
+                    result += [
+                        Variable(name=k, value=repr(v), type=repr(type(v)))
+                        for k, v in context.variables._suite.as_dict().items()
+                        if k not in globals or globals[k] != v
+                    ]
+                elif entry.test_id() == variables_reference:
+                    # current_index = context.variables._scopes.index(context.variables._test)
+                    # globals = context.variables._scopes[max(current_index - 1, 0)].as_dict()
+                    globals = context.variables._suite.as_dict()
+                    result += [
+                        Variable(name=k, value=repr(v), type=repr(type(v)))
+                        for k, v in context.variables._test.as_dict().items()
+                        if k not in globals or globals[k] != v
+                    ]
                 elif entry.local_id() == variables_reference:
+                    current_index = context.variables._scopes.index(context.variables.current)
+                    globals = context.variables._scopes[max(current_index - 1, 0)].as_dict()
                     result += [
                         Variable(name=k, value=repr(v), type=repr(type(v)))
                         for k, v in context.variables.current.as_dict().items()
