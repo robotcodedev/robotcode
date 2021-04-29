@@ -204,8 +204,7 @@ async def run_robot(
     except asyncio.CancelledError:
         pass
     except BaseException as e:
-        _logger.exception(e)
-        # print(str(e), file=sys.stderr)
+        _logger.exception(e, level=logging.INFO)
         raise
     finally:
         if server.protocol.connected:

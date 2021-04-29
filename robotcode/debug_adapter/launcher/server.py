@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from ...jsonrpc2.protocol import rpc_method
 from ...jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
@@ -28,6 +28,9 @@ from ..types import (
     TerminateArguments,
     TerminatedEvent,
     ThreadsResponseBody,
+    ValueFormat,
+    VariablesArguments,
+    VariablesResponseBody,
 )
 from .debugger import Debugger
 
@@ -153,21 +156,6 @@ class LauncherServerProtocol(DebugAdapterProtocol):
 
         return self._received_configuration_done
 
-    @rpc_method(name="threads")
-    async def _threads(self) -> ThreadsResponseBody:
-        return ThreadsResponseBody(threads=Debugger.instance().get_threads())
-
-    @rpc_method(name="stackTrace", param_type=StackTraceArguments)
-    async def _stack_trace(self, arguments: StackTraceArguments) -> StackTraceResponseBody:
-        result = Debugger.instance().get_stack_trace(
-            arguments.thread_id, arguments.start_frame, arguments.levels, arguments.format
-        )
-        return StackTraceResponseBody(stack_frames=result.stack_frames, total_frames=result.total_frames)
-
-    @rpc_method(name="scopes", param_type=ScopesArguments)
-    async def _scopes(self, arguments: ScopesArguments) -> ScopesResponseBody:
-        return ScopesResponseBody(scopes=Debugger.instance().get_scopes(arguments.frame_id))
-
     @rpc_method(name="continue", param_type=ContinueArguments)
     async def _continue(self, arguments: ContinueArguments) -> ContinueResponseBody:
         Debugger.instance().continue_thread(arguments.thread_id)
@@ -188,6 +176,35 @@ class LauncherServerProtocol(DebugAdapterProtocol):
     @rpc_method(name="stepOut", param_type=StepOutArguments)
     async def _step_out(self, arguments: StepOutArguments) -> None:
         Debugger.instance().step_out(arguments.thread_id, arguments.granularity)
+
+    @rpc_method(name="threads")
+    async def _threads(self) -> ThreadsResponseBody:
+        return ThreadsResponseBody(threads=Debugger.instance().get_threads())
+
+    @rpc_method(name="stackTrace", param_type=StackTraceArguments)
+    async def _stack_trace(self, arguments: StackTraceArguments) -> StackTraceResponseBody:
+        result = Debugger.instance().get_stack_trace(
+            arguments.thread_id, arguments.start_frame, arguments.levels, arguments.format
+        )
+        return StackTraceResponseBody(stack_frames=result.stack_frames, total_frames=result.total_frames)
+
+    @rpc_method(name="scopes", param_type=ScopesArguments)
+    async def _scopes(self, arguments: ScopesArguments) -> ScopesResponseBody:
+        return ScopesResponseBody(scopes=Debugger.instance().get_scopes(arguments.frame_id))
+
+    @rpc_method(name="variables", param_type=VariablesArguments)
+    async def _variables(
+        self,
+        arguments: VariablesArguments,
+        variables_reference: int,
+        filter: Optional[Literal["indexed", "named"]] = None,
+        start: Optional[int] = None,
+        count: Optional[int] = None,
+        format: Optional[ValueFormat] = None,
+    ) -> VariablesResponseBody:
+        return VariablesResponseBody(
+            variables=Debugger.instance().get_variables(variables_reference, filter, start, count, format)
+        )
 
 
 class LaucherServer(JsonRPCServer[LauncherServerProtocol]):

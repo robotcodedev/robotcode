@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import itertools
 import threading
+import weakref
 from collections import deque
 from enum import Enum
 from pathlib import Path
-from typing import Any, Deque, Dict, List, NamedTuple, Optional
+from typing import Any, Deque, Dict, List, Literal, NamedTuple, Optional
 
 from ...utils.event import event
 from ...utils.logging import LoggingDescriptor
@@ -27,6 +28,8 @@ from ..types import (
     StoppedEventBody,
     StoppedReason,
     Thread,
+    ValueFormat,
+    Variable,
 )
 
 
@@ -56,12 +59,28 @@ class StackTraceResult(NamedTuple):
 
 
 class StackFrameEntry:
-    def __init__(self, name: str, type: str, source: str, line: int, column: int = 1) -> None:
+    def __init__(
+        self, context: weakref.ref[Any], name: str, type: str, source: str, line: int, column: int = 1
+    ) -> None:
+        self.context = context
         self.name = name
         self.type = type
         self.source = source
         self.line = line
         self.column = column
+        self._test_marker = object()
+        self._local_marker = object()
+        self._global_marker = object()
+
+    @property
+    def id(self) -> int:
+        return id(self)
+
+    def local_id(self) -> int:
+        return id(self._local_marker)
+
+    def global_id(self) -> int:
+        return id(self._global_marker)
 
 
 class Debugger:
@@ -301,12 +320,16 @@ class Debugger:
             self.condition.wait_for(lambda: self.state in [State.Running, State.Stopped])
 
     def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
+        from robot.running.context import EXECUTION_CONTEXTS
+
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
         longname = attributes.get("longname", "")
         type = "SUITE"
 
-        self.stack_frames.appendleft(StackFrameEntry(longname, type, source, line_no))
+        self.stack_frames.appendleft(
+            StackFrameEntry(weakref.ref(EXECUTION_CONTEXTS.current), longname, type, source, line_no)
+        )
 
         self.process_state(source, line_no, type)
 
@@ -317,12 +340,16 @@ class Debugger:
             self.stack_frames.popleft()
 
     def start_test(self, name: str, attributes: Dict[str, Any]) -> None:
+        from robot.running.context import EXECUTION_CONTEXTS
+
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
         longname = attributes.get("longname", "")
         type = "TEST"
 
-        self.stack_frames.appendleft(StackFrameEntry(longname, type, source, line_no))
+        self.stack_frames.appendleft(
+            StackFrameEntry(weakref.ref(EXECUTION_CONTEXTS.current), longname, type, source, line_no)
+        )
 
         self.process_state(source, line_no, type)
 
@@ -333,6 +360,8 @@ class Debugger:
             self.stack_frames.popleft()
 
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
+        from robot.running.context import EXECUTION_CONTEXTS
+
         status = attributes.get("status", "")
 
         if status == "NOT RUN":
@@ -343,7 +372,9 @@ class Debugger:
         longname = attributes.get("kwname", "")
         type = attributes.get("type", "KEYWORD")
 
-        self.stack_frames.appendleft(StackFrameEntry(longname, type, source, line_no))
+        self.stack_frames.appendleft(
+            StackFrameEntry(weakref.ref(EXECUTION_CONTEXTS.current), longname, type, source, line_no)
+        )
 
         self.process_state(source, line_no, type)
 
@@ -377,14 +408,11 @@ class Debugger:
         levels = start_frame + 1 + (levels or len(self.stack_frames))
         return StackTraceResult(
             [
-                StackFrame(id=id(v), name=v.name, line=v.line, column=v.column, source=Source(path=v.source))
+                StackFrame(id=v.id, name=v.name, line=v.line, column=v.column, source=Source(path=v.source))
                 for v in itertools.islice(self.stack_frames, start_frame, levels)
             ],
             len(self.stack_frames),
         )
-
-    def get_scopes(self, frame_id: int) -> List[Scope]:
-        return []
 
     def log_message(self, message: Dict[str, Any]) -> None:
         self.send_event(
@@ -403,3 +431,54 @@ class Debugger:
                 )
             ),
         )
+
+    def get_scopes(self, frame_id: int) -> List[Scope]:
+        result: List[Scope] = []
+        entry = next((v for v in self.stack_frames if v.id == frame_id), None)
+        if entry is not None:
+            if entry.context() is not None:
+                result.append(
+                    Scope(
+                        name="Local",
+                        expensive=False,
+                        presentation_hint="local",
+                        variables_reference=entry.local_id(),
+                    )
+                )
+                result.append(
+                    Scope(
+                        name="Global",
+                        expensive=False,
+                        presentation_hint="global",
+                        variables_reference=entry.global_id(),
+                    )
+                )
+
+        return result
+
+    def get_variables(
+        self,
+        variables_reference: int,
+        filter: Optional[Literal["indexed", "named"]] = None,
+        start: Optional[int] = None,
+        count: Optional[int] = None,
+        format: Optional[ValueFormat] = None,
+    ) -> List[Variable]:
+        result: List[Variable] = []
+        entry = next((v for v in self.stack_frames if variables_reference in [v.global_id(), v.local_id()]), None)
+        if entry is not None:
+            context = entry.context()
+            if context is not None:
+                current_index = context.variables._scopes.index(context.variables.current)
+                globals = context.variables._scopes[max(current_index - 1, 0)].as_dict()
+
+                if entry.global_id() == variables_reference:
+                    result += [Variable(name=k, value=repr(v), type=repr(type(v))) for k, v in globals.items()]
+                elif entry.local_id() == variables_reference:
+                    result += [
+                        Variable(name=k, value=repr(v), type=repr(type(v)))
+                        for k, v in context.variables.current.as_dict().items()
+                        if k not in globals or globals[k] != v
+                    ]
+
+        return result

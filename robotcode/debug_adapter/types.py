@@ -598,3 +598,80 @@ class StepOutRequest(Request):
 
 class StepOutResponse(Response):
     pass
+
+
+class ValueFormat(Model):
+    hex: Optional[bool] = None
+
+
+class VariablesArguments(Model):
+    variables_reference: int
+    filter: Optional[Literal["indexed", "named"]] = None
+    start: Optional[int] = None
+    count: Optional[int] = None
+    format: Optional[ValueFormat] = None
+
+
+class VariablesRequest(Request):
+    command: str = Field("variables", const=True)
+    arguments: VariablesArguments
+
+
+class VariablePresentationHint(Model):
+    kind: Union[
+        Literal[
+            "property",
+            "method",
+            "class",
+            "data",
+            "event",
+            "baseClass",
+            "innerClass",
+            "interface",
+            "mostDerivedClass",
+            "virtual",
+            "dataBreakpoint",
+        ],
+        str,
+        None,
+    ] = None
+
+    attributes: Optional[
+        List[
+            Union[
+                Literal[
+                    "static",
+                    "constant",
+                    "readOnly",
+                    "rawString",
+                    "hasObjectId",
+                    "canHaveObjectId",
+                    "hasSideEffects",
+                    "hasDataBreakpoint",
+                ],
+                str,
+            ]
+        ]
+    ] = None
+
+    visibility: Union[Literal["public", "private", "protected", "internal", "final"], str, None] = None
+
+
+class Variable(Model):
+    name: str
+    value: str
+    type: Optional[str] = None
+    presentation_hint: Optional[VariablePresentationHint] = None
+    evaluate_name: Optional[str] = None
+    variables_reference: int = 0
+    named_variables: Optional[int] = None
+    indexed_variables: Optional[int] = None
+    memory_reference: Optional[str] = None
+
+
+class VariablesResponseBody(Model):
+    variables: List[Variable]
+
+
+class VariablesResponse(Response):
+    body: VariablesResponseBody

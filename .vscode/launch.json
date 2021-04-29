@@ -46,7 +46,7 @@
 				"log.ini",
 				//"-w",
 				"--",
-				"C:\\tmp\\robottest\\tests\\bdd_style.robot"				
+				//"C:\\tmp\\robottest\\tests\\bdd_style.robot"				
 			]
 		},
 		{
