@@ -191,12 +191,13 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
         token?: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
         let config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
-        debugConfiguration.python = getPythonCommand(folder);
 
-        if (!debugConfiguration.pythonPath) debugConfiguration.pythonPath = [];
-        debugConfiguration.pythonPath = config
+        if (!debugConfiguration.python) debugConfiguration.python = getPythonCommand(folder);
+
+        if (!debugConfiguration.robotPythonPath) debugConfiguration.robotPythonPath = [];
+        debugConfiguration.robotPythonPath = config
             .get<Array<string>>("robot.pythonPath", [])
-            .concat(debugConfiguration.pythonPath);
+            .concat(debugConfiguration.robotPythonPath);
 
         if (!debugConfiguration.args) debugConfiguration.args = [];
         debugConfiguration.args = config.get<Array<string>>("robot.args", []).concat(debugConfiguration.args);
@@ -211,12 +212,10 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
         if (!debugConfiguration.env) debugConfiguration.env = {};
         debugConfiguration.env = Object.assign({}, config.get<Object>("robot.env", {}), debugConfiguration.env);
 
+        if (debugConfiguration.attachPython == undefined) debugConfiguration.attachPython = true;
+
         if (debugConfiguration.noDebug) {
             debugConfiguration.attachPython = false;
-        }
-        if (debugConfiguration.attachPython) {
-            // TODO find free port
-            debugConfiguration.pythonPort = 5678;
         }
 
         var template = config.get("debug.defaultConfiguration", {});
@@ -287,7 +286,6 @@ async function debugSuiteOrTestcase(
 
     var template = config.get("debug.defaultConfiguration", {});
 
-    template;
     vscode.debug.startDebugging(
         folder,
         {
@@ -306,8 +304,14 @@ async function debugSuiteOrTestcase(
     );
 }
 
-async function attachPython(session: vscode.DebugSession) {
-    if (session.type == "robotcode" && !session.configuration.noDebug && session.configuration.attachPython) {
+async function attachPython(session: vscode.DebugSession, event: string, options?: any) {
+    if (
+        session.type == "robotcode" &&
+        !session.configuration.noDebug &&
+        session.configuration.attachPython &&
+        options &&
+        options.port
+    ) {
         vscode.debug.startDebugging(
             session.workspaceFolder,
             {
@@ -317,7 +321,7 @@ async function attachPython(session: vscode.DebugSession) {
                     name: `Python ${session.name}`,
                     request: "attach",
                     connect: {
-                        port: session.configuration.pythonPort,
+                        port: options.port,
                     },
                 },
             },
@@ -386,11 +390,17 @@ export async function activateAsync(context: vscode.ExtensionContext) {
                 };
             },
         }),
-        vscode.debug.onDidStartDebugSession(async (session) => {
-            if (session.configuration.type === "robotcode") {
-                await attachPython(session);
+        vscode.debug.onDidReceiveDebugSessionCustomEvent(async (event) => {
+            if (event.session.configuration.type === "robotcode") {
+                if (event.event === "debugpyStarted") await attachPython(event.session, event.event, event.body);
             }
         })
+
+        // vscode.debug.onDidStartDebugSession(async (session) => {
+        //     if (session.configuration.type === "robotcode") {
+        //         await attachPython(session);
+        //     }
+        // })
     );
 
     vscode.workspace.onDidChangeConfiguration((event) => {

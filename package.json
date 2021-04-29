@@ -258,25 +258,25 @@
                 "command": "robotcode.debugTest",
                 "category": "RobotCode",
                 "title": "Debug Test",
-                "icon": {
-                    "light": "resources/light/debug_test.svg",
+                "icon": {                    
+                    "light": "resources/light/debug_test.svg",                              
                     "dark": "resources/dark/debug_test.svg"
                 }
             }
         ],
-        "menus": {
-            "editor/title": [
+        "menus": {                    
+            "editor/title/run": [
                 {
                     "command": "robotcode.runSuite",
                     "title": "Run Testsuite",
-                    "group": "1_run@1",
+                    "group": "robot@1",
                     "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
                 },
                 {
                     "command": "robotcode.debugSuite",
                     "title": "Debug Testsuite",
-                    "group": "1_run@2",
-                    "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
+                    "group": "robot@2",
+                    "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"                    
                 }
             ],
             "explorer/context": [
@@ -344,7 +344,12 @@
                                 "description": "Where to launch the debug target: internal console, integrated terminal, or external terminal.",
                                 "default": "integratedTerminal"
                             },
-                            "pythonPath": {
+                            "python": {
+                                "type": "string",
+                                "description": "Specifies the python interpreter to use. If not specified, the python interpreter defined for the extension is used.",
+                                "default": null
+                            },
+                            "robotPythonPath": {
                                 "type": "array",
                                 "description": "Specifies additional python paths for robotframework. Corresponds to the '--pythonpath' option of the robot module.",
                                 "default": []

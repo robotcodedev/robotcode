@@ -95,9 +95,7 @@ class LauncherServerProtocol(DebugAdapterProtocol):
     async def wait_for_client(self, timeout: float = 5) -> bool:
         await asyncio.wait_for(self._connected_event.wait(), timeout)
 
-        result = self.read_transport is not None and self.write_transport is not None
-
-        return result
+        return self._connected
 
     @_logger.call
     async def initialized(self) -> None:

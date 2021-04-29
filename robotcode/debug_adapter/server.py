@@ -99,16 +99,15 @@ class DAPServerProtocol(DebugAdapterProtocol):
         console: Optional[Literal["internalConsole", "integratedTerminal", "externalTerminal"]] = "integratedTerminal",
         name: Optional[str] = None,
         no_debug: Optional[bool] = None,
-        pythonPath: Optional[List[str]] = None,  # noqa: N803
+        robotPythonPath: Optional[List[str]] = None,  # noqa: N803
         launcherArgs: Optional[List[str]] = None,  # noqa: N803
         launcherTimeout: Optional[int] = None,  # noqa: N803
         attachPython: Optional[bool] = False,  # noqa: N803
-        pythonPort: Optional[int] = 5678,
         variables: Optional[Dict[str, Any]] = None,
         arguments: Optional[LaunchRequestArguments] = None,
         **kwargs: Any,
     ) -> None:
-        from ..utils.debugpy import find_free_port
+        from ..utils.net import find_free_port
 
         connect_timeout = launcherTimeout or 5
 
@@ -125,7 +124,7 @@ class DAPServerProtocol(DebugAdapterProtocol):
             run_args += ["-n"]
 
         if attachPython and not no_debug:
-            run_args += ["-d", "-dp", str(pythonPort), "-dw"]
+            run_args += ["-d", "-dp", str(find_free_port()), "-dw"]
 
         run_args += launcherArgs or []
 
@@ -133,8 +132,8 @@ class DAPServerProtocol(DebugAdapterProtocol):
 
         run_args += args or []
 
-        if pythonPath:
-            for e in pythonPath:
+        if robotPythonPath:
+            for e in robotPythonPath:
                 run_args += ["-P", e]
 
         if variables:

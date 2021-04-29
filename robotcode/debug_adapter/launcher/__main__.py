@@ -29,7 +29,6 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
     __package__ = "robotcode.debug_adapter.launcher"
 
 from ..._version import __version__
-from ...utils.debugpy import start_debugpy
 from ...utils.logging import LoggingDescriptor
 
 TRACE = logging.DEBUG - 6
@@ -121,6 +120,9 @@ async def run_robot(
 ) -> Any:
     import robot
 
+    from ...utils.debugpy import enable_debugpy, wait_for_debugpy_connected
+    from ...utils.net import check_free_port
+    from ..types import Event
     from .debugger import Debugger
 
     loop = asyncio.new_event_loop()
@@ -138,7 +140,22 @@ async def run_robot(
                 @_logger.call
                 async def start_debugpy_async() -> None:
                     if debugpy:
-                        start_debugpy(debugpy_port, wait_for_debugpy_client)
+                        port = check_free_port(debugpy_port)
+                        if enable_debugpy(port):
+                            if await asyncio.wrap_future(
+                                asyncio.run_coroutine_threadsafe(
+                                    server.protocol.wait_for_client(wait_for_client_timeout), loop=loop
+                                )
+                            ):
+                                await asyncio.wrap_future(
+                                    asyncio.run_coroutine_threadsafe(
+                                        server.protocol.send_event_async(
+                                            Event(event="debugpyStarted", body={"port": port})
+                                        ),
+                                        loop=loop,
+                                    )
+                                )
+                                wait_for_debugpy_connected()
 
                 await asyncio.gather(
                     start_debugpy_async(),
@@ -272,7 +289,7 @@ def main() -> None:
     )
     parser.add_argument("-d", "--debugpy", action="store_true", help="starts a debugpy session")
     parser.add_argument(
-        "-dp", "--debugpy-port", default=5678, help="sets the port for debugpy session", type=int, metavar="PORT"
+        "-dp", "--debugpy-port", default=6613, help="sets the port for debugpy session", type=int, metavar="PORT"
     )
     parser.add_argument(
         "-dw", "--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect"

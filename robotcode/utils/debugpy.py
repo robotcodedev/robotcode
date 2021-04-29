@@ -1,38 +1,41 @@
-from typing import cast
-
 from .logging import LoggingDescriptor
+from .net import check_free_port
 
 _logger = LoggingDescriptor(name=__name__)
 
 
-def find_free_port() -> int:
-    import socket
-    from contextlib import closing
-
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(("127.0.0.1", 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return cast(int, s.getsockname()[1])
-
-
-def check_free_port(port: int) -> int:
-    import socket
-    from contextlib import closing
-
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        try:
-            s.bind(("127.0.0.1", port))
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            return cast(int, s.getsockname()[1])
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except BaseException:
-            _logger.warning(f"Port {port} is not free. Try to find a free port.")
-            return find_free_port()
-
-
-def start_debugpy(port: int, wait_for_client: bool) -> None:
+def is_debugpy_installed() -> bool:
     try:
+        __import__("debugpy")
+    except ImportError:
+        _logger.warning("Module debugpy is not installed. If you want to debug python code, please install it.\n")
+        return False
+    return True
+
+
+def wait_for_debugpy_connected() -> bool:
+    if is_debugpy_installed():
+        import debugpy
+
+        _logger.info("wait for debugpy client")
+        debugpy.wait_for_client()
+
+        return True
+    return False
+
+
+def enable_debugpy(port: int) -> bool:
+    if is_debugpy_installed():
+        import debugpy
+
+        debugpy.listen(port)
+
+        return True
+    return False
+
+
+def start_debugpy(port: int, wait_for_client: bool) -> bool:
+    if is_debugpy_installed():
         import debugpy
 
         real_port = check_free_port(port)
@@ -43,5 +46,5 @@ def start_debugpy(port: int, wait_for_client: bool) -> None:
         if wait_for_client:
             _logger.info("wait for debugpy client")
             debugpy.wait_for_client()
-    except ImportError:
-        _logger.warning("Module debugpy is not installed. If you want to debug python code, please install it.\n")
+        return True
+    return False
