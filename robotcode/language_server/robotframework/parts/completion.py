@@ -855,98 +855,218 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.lexer.tokens import Token
-        from robot.parsing.model.statements import LibraryImport
+
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import LibraryImport, Statement
 
         if self.document is None:
             return []
 
         import_node = cast(LibraryImport, node)
-        import_token = import_node.get_token(Token.LIBRARY)
+        import_token = import_node.get_token(RobotToken.LIBRARY)
         if import_token is None:
             return []
         import_token_index = import_node.tokens.index(import_token)
 
-        if len(import_node.tokens) > import_token_index + 2:
-            name_token = import_node.tokens[import_token_index + 2]
-            if not position.is_in_range(r := range_from_token(name_token)) and r.end != position:
+        async def complete_import() -> Union[List[CompletionItem], CompletionList, None]:
+            if self.document is None:
+                return []
+
+            if len(import_node.tokens) > import_token_index + 2:
+                name_token = import_node.tokens[import_token_index + 2]
+                if not position.is_in_range(r := range_from_token(name_token)) and r.end != position:
+                    return None
+
+            elif len(import_node.tokens) > import_token_index + 1:
+                name_token = import_node.tokens[import_token_index + 1]
+                if position.is_in_range(r := range_from_token(name_token)) or r.end == position:
+                    if whitespace_at_begin_of_token(name_token) > 1:
+
+                        ws_b = whitespace_from_begin_of_token(name_token)
+                        r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
+
+                        if not position.is_in_range(r) and r.end != position:
+                            return None
+            else:
                 return None
 
-        elif len(import_node.tokens) > import_token_index + 1:
-            name_token = import_node.tokens[import_token_index + 1]
-            if position.is_in_range(r := range_from_token(name_token)) or r.end == position:
-                if whitespace_at_begin_of_token(name_token) > 1:
+            pos = position.character - r.start.character
+            text_before_position = str(name_token.value)[:pos].lstrip()
 
-                    ws_b = whitespace_from_begin_of_token(name_token)
-                    r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
+            if text_before_position != "" and all(c == "." for c in text_before_position):
+                return None
 
-                    if not position.is_in_range(r) and r.end != position:
-                        return None
-        else:
-            return None
+            last_separator_index = (
+                len(text_before_position)
+                - next((i for i, c in enumerate(reversed(text_before_position)) if c in [".", "/", os.sep]), -1)
+                - 1
+            )
 
-        pos = position.character - r.start.character
-        text_before_position = str(name_token.value)[:pos].lstrip()
+            first_part = (
+                text_before_position[
+                    : last_separator_index
+                    + (1 if text_before_position[last_separator_index] in [".", "/", os.sep] else 0)
+                ]
+                if last_separator_index < len(text_before_position)
+                else None
+            )
 
-        if text_before_position != "" and all(c == "." for c in text_before_position):
-            return None
+            sep = text_before_position[last_separator_index] if last_separator_index < len(text_before_position) else ""
 
-        last_separator_index = (
-            len(text_before_position)
-            - next((i for i, c in enumerate(reversed(text_before_position)) if c in [".", "/", os.sep]), -1)
-            - 1
-        )
+            imports_manger = await self.parent.documents_cache.get_imports_manager(self.document)
 
-        first_part = (
-            text_before_position[
-                : last_separator_index + (1 if text_before_position[last_separator_index] in [".", "/", os.sep] else 0)
+            try:
+                list = await imports_manger.complete_library_import(
+                    first_part if first_part else None, str(self.document.uri.to_path().parent)
+                )
+                if not list:
+                    return None
+            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                raise
+            except BaseException:
+                return None
+
+            if text_before_position == "":
+                r.start.character = position.character
+            else:
+                r.start.character += last_separator_index + 1 if last_separator_index < len(text_before_position) else 0
+
+            return [
+                CompletionItem(
+                    label=e.label,
+                    kind=CompletionItemKind.MODULE
+                    if e.kind in [CompleteResultKind.MODULE, CompleteResultKind.MODULE_INTERNAL]
+                    else CompletionItemKind.FILE
+                    if e.kind in [CompleteResultKind.FILE]
+                    else CompletionItemKind.FOLDER
+                    if e.kind in [CompleteResultKind.FOLDER]
+                    else None,
+                    detail=e.kind.value,
+                    sort_text=f"030_{e}",
+                    insert_text_format=InsertTextFormat.PLAINTEXT,
+                    text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
+                    data={
+                        "document_uri": str(self.document.uri),
+                        "type": e.kind.name,
+                        "name": ((first_part + sep) if first_part is not None else "") + e.label,
+                    },
+                )
+                for e in list
             ]
-            if last_separator_index < len(text_before_position)
-            else None
-        )
 
-        sep = text_before_position[last_separator_index] if last_separator_index < len(text_before_position) else ""
+        async def complete_arguments() -> Union[List[CompletionItem], CompletionList, None]:
+            if self.document is None:
+                return []
 
-        imports_manger = await self.parent.documents_cache.get_imports_manager(self.document)
+            if context is None or context.trigger_kind != CompletionTriggerKind.INVOKED:
+                return []
 
-        try:
-            list = await imports_manger.complete_library_import(
-                first_part if first_part else None, str(self.document.uri.to_path().parent)
-            )
-            if not list:
+            namespace = await self.parent.documents_cache.get_namespace(self.document)
+            if namespace is None:
+                return []
+
+            kw_node = cast(Statement, node)
+
+            tokens_at_position = get_tokens_at_position(kw_node, position)
+
+            if not tokens_at_position:
                 return None
-        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-            raise
-        except BaseException:
+
+            token_at_position = tokens_at_position[-1]
+
+            if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
+                return None
+
+            token_at_position_index = kw_node.tokens.index(token_at_position)
+
+            argument_token_index = token_at_position_index
+            while argument_token_index >= 0 and kw_node.tokens[argument_token_index].type != RobotToken.ARGUMENT:
+                argument_token_index -= 1
+
+            arguments = kw_node.get_tokens(RobotToken.ARGUMENT)
+
+            if argument_token_index >= 0:
+                argument_token = kw_node.tokens[argument_token_index]
+                if argument_token.type == RobotToken.ARGUMENT:
+                    argument_index = arguments.index(argument_token)
+                else:
+                    argument_index = 0
+            else:
+                argument_index = -1
+
+            if whitespace_at_begin_of_token(token_at_position) > 1:
+                completion_range = range_from_token(token_at_position)
+
+                ws_b = whitespace_from_begin_of_token(token_at_position)
+                completion_range.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
+
+                if position.is_in_range(completion_range) or completion_range.end == position:
+                    argument_index += 1
+
+            if argument_index < 0:
+                return None
+
+            completion_range = range_from_token(token_at_position)
+            if (w := whitespace_at_begin_of_token(token_at_position)) > 0:
+                if w > 1 and completion_range.start.character + 1 < position.character:
+                    completion_range.start = position
+                elif completion_range.start == position:
+                    pass
+                else:
+                    return None
+            else:
+                if token_at_position.type != RobotToken.ARGUMENT:
+                    return None
+
+                if "=" in token_at_position.value:
+                    equal_index = token_at_position.value.index("=")
+                    if completion_range.start.character + equal_index < position.character:
+                        return None
+                    else:
+                        completion_range.end.character = completion_range.start.character + equal_index + 1
+
+            libdocs = [
+                entry.library_doc
+                for entry in (await namespace.get_libraries()).values()
+                if entry.import_name == import_node.name
+                and entry.args == import_node.args
+                and entry.alias == import_node.alias
+            ]
+
+            if len(libdocs) == 1:
+                init = next((v for v in libdocs[0].inits.values()), None)
+
+                if init:
+                    return [
+                        CompletionItem(
+                            label=f"{e.name}=",
+                            kind=CompletionItemKind.VARIABLE,
+                            # detail=e.detail,
+                            sort_text=f"02{i}_{e.name}=",
+                            insert_text_format=InsertTextFormat.PLAINTEXT,
+                            text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
+                            data={
+                                "document_uri": str(self.document.uri),
+                                "type": "Argument",
+                                "name": e,
+                            },
+                        )
+                        for i, e in enumerate(init.args)
+                        if e.kind
+                        not in [
+                            KeywordArgumentKind.VAR_POSITIONAL,
+                            KeywordArgumentKind.VAR_NAMED,
+                            KeywordArgumentKind.NAMED_ONLY_MARKER,
+                            KeywordArgumentKind.POSITIONAL_ONLY_MARKER,
+                        ]
+                    ]
+
             return None
 
-        if text_before_position == "":
-            r.start.character = position.character
-        else:
-            r.start.character += last_separator_index + 1 if last_separator_index < len(text_before_position) else 0
-
-        return [
-            CompletionItem(
-                label=e.label,
-                kind=CompletionItemKind.MODULE
-                if e.kind in [CompleteResultKind.MODULE, CompleteResultKind.MODULE_INTERNAL]
-                else CompletionItemKind.FILE
-                if e.kind in [CompleteResultKind.FILE]
-                else CompletionItemKind.FOLDER
-                if e.kind in [CompleteResultKind.FOLDER]
-                else None,
-                detail=e.kind.value,
-                sort_text=f"030_{e}",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
-                text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
-                data={
-                    "document_uri": str(self.document.uri),
-                    "type": e.kind.name,
-                    "name": ((first_part + sep) if first_part is not None else "") + e.label,
-                },
-            )
-            for e in list
-        ]
+        result = await complete_import()
+        if not result:
+            result = await complete_arguments()
+        return result
 
     async def complete_ResourceImport(  # noqa: N802
         self,
@@ -1097,12 +1217,12 @@ class CompletionCollector(ModelHelperMixin):
             argument_index = -1
 
         if whitespace_at_begin_of_token(token_at_position) > 1:
-            r = range_from_token(token_at_position)
+            completion_range = range_from_token(token_at_position)
 
             ws_b = whitespace_from_begin_of_token(token_at_position)
-            r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
+            completion_range.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
-            if position.is_in_range(r) or r.end == position:
+            if position.is_in_range(completion_range) or completion_range.end == position:
                 argument_index += 1
 
         if argument_index < 0:
@@ -1113,6 +1233,25 @@ class CompletionCollector(ModelHelperMixin):
         keyword_token = kw_node.get_token(keyword_name_token_type)
         if keyword_token is None:
             return None
+
+        completion_range = range_from_token(token_at_position)
+        if (w := whitespace_at_begin_of_token(token_at_position)) > 0:
+            if w > 1 and completion_range.start.character + 1 < position.character:
+                completion_range.start = position
+            elif completion_range.start == position:
+                pass
+            else:
+                return None
+        else:
+            if token_at_position.type != RobotToken.ARGUMENT:
+                return None
+
+            if "=" in token_at_position.value:
+                equal_index = token_at_position.value.index("=")
+                if completion_range.start.character + equal_index < position.character:
+                    return None
+                else:
+                    completion_range.end.character = completion_range.start.character + equal_index + 1
 
         result = await self.get_keyworddoc_and_token_from_position(
             keyword_token.value,
@@ -1137,8 +1276,7 @@ class CompletionCollector(ModelHelperMixin):
             #     analyse_run_keywords=True,
             # )
             pass
-        r = range_from_token(token_at_position)
-        r.start = position
+
         return [
             CompletionItem(
                 label=f"{e.name}=",
@@ -1146,7 +1284,7 @@ class CompletionCollector(ModelHelperMixin):
                 # detail=e.detail,
                 sort_text=f"02{i}_{e.name}=",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
-                text_edit=TextEdit(range=r, new_text=f"{e.name}="),
+                text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
                 data={
                     "document_uri": str(self.document.uri),
                     "type": "Argument",
