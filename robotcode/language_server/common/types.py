@@ -856,7 +856,7 @@ class Range(Model):
             ),
         )
 
-    def extended(self, start_line: int, start_character: int, end_line: int, end_character: int) -> Range:
+    def extend(self, start_line: int = 0, start_character: int = 0, end_line: int = 0, end_character: int = 0) -> Range:
         return Range(
             start=Position(line=self.start.line + start_line, character=self.start.character + start_character),
             end=Position(line=self.end.line + end_line, character=self.end.character + end_character),

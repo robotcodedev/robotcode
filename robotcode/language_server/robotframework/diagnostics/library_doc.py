@@ -886,9 +886,7 @@ def get_library_doc(
 
         # skip antigravity easter egg
         # see https://python-history.blogspot.com/2010/06/import-antigravity.html
-        if import_name.lower() in ["antigravity"] or import_name.lower().endswith(
-            ("lib/antigravity.py", f"lib{os.sep}antigravity.py")
-        ):
+        if import_name.lower() in ["antigravity"] or import_name.lower().endswith("antigravity.py"):
             raise IgnoreEasterEggLibraryWarning(f"Ignoring import for python easter egg '{import_name}'.")
 
         errors: List[Error] = []

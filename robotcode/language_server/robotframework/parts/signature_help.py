@@ -215,7 +215,14 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         library_node = cast(LibraryImport, node)
 
-        if library_node.name is None:
+        if (
+            library_node.name is None
+            or position <= range_from_token(library_node.get_token(RobotToken.NAME)).extend(end_character=1).end
+        ):
+            return None
+
+        with_name_token = next((v for v in library_node.tokens if v.value == "WITH NAME"), None)
+        if with_name_token is not None and position >= range_from_token(with_name_token).start:
             return None
 
         imports_manager = await self.parent.documents_cache.get_imports_manager(document)

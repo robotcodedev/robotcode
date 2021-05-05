@@ -868,9 +868,9 @@ class CompletionCollector(ModelHelperMixin):
             return []
         import_token_index = import_node.tokens.index(import_token)
 
-        async def complete_import() -> Union[List[CompletionItem], CompletionList, None]:
+        async def complete_import() -> Optional[List[CompletionItem]]:
             if self.document is None:
-                return []
+                return None
 
             if len(import_node.tokens) > import_token_index + 2:
                 name_token = import_node.tokens[import_token_index + 2]
@@ -887,6 +887,9 @@ class CompletionCollector(ModelHelperMixin):
 
                         if not position.is_in_range(r) and r.end != position:
                             return None
+                    else:
+                        return None
+
             else:
                 return None
 
@@ -954,9 +957,19 @@ class CompletionCollector(ModelHelperMixin):
                 for e in list
             ]
 
-        async def complete_arguments() -> Union[List[CompletionItem], CompletionList, None]:
+        async def complete_arguments() -> Optional[List[CompletionItem]]:
             if self.document is None:
-                return []
+                return None
+
+            if (
+                import_node.name is None
+                or position <= range_from_token(import_node.get_token(RobotToken.NAME)).extend(end_character=1).end
+            ):
+                return None
+
+            with_name_token = next((v for v in import_node.tokens if v.value == "WITH NAME"), None)
+            if with_name_token is not None and position >= range_from_token(with_name_token).start:
+                return None
 
             if context is None or context.trigger_kind != CompletionTriggerKind.INVOKED:
                 return []
@@ -1063,9 +1076,31 @@ class CompletionCollector(ModelHelperMixin):
 
             return None
 
-        result = await complete_import()
-        if not result:
-            result = await complete_arguments()
+        async def complete_with_name() -> Optional[List[CompletionItem]]:
+            if self.document is None:
+                return None
+
+            if context is None or context.trigger_kind != CompletionTriggerKind.INVOKED:
+                return []
+
+            if import_node.name and not any(v for v in import_node.tokens if v.value == "WITH NAME"):
+                name_token = import_node.get_token(RobotToken.NAME)
+                if position >= range_from_token(name_token).extend(end_character=2).end:
+                    return [
+                        CompletionItem(
+                            label="WITH NAME",
+                            kind=CompletionItemKind.TEXT,
+                            # detail=e.detail,
+                            sort_text="03_WITH NAME",
+                            insert_text_format=InsertTextFormat.PLAINTEXT,
+                        )
+                    ]
+            return []
+
+        result = await complete_import() or []
+        result.extend(await complete_arguments() or [])
+        result.extend(await complete_with_name() or [])
+
         return result
 
     async def complete_ResourceImport(  # noqa: N802
