@@ -171,6 +171,29 @@ class TerminatedEvent(Event):
     body: Optional[TerminatedEventBody] = None
 
 
+class ChecksumAlgorithm(Enum):
+    MD5 = "MD5"
+    SHA1 = "SHA1"
+    SHA256 = "SHA256"
+    TIMESTAMP = "timestamp"
+
+
+class Checksum(BaseModel):
+    algorithm: ChecksumAlgorithm
+    checksum: str
+
+
+class Source(Model):
+    name: Optional[str] = None
+    path: Optional[str] = None
+    source_reference: Optional[int] = None
+    presentation_hint: Optional[Literal["normal", "emphasize", "deemphasize"]] = None
+    origin: Optional[str] = None
+    sources: Optional[List[Source]] = None
+    adapter_data: Optional[Any] = None
+    checksums: Optional[List[Checksum]] = None
+
+
 class OutputCategory(Enum):
     CONSOLE = "console"
     STDOUT = "stdout"
@@ -349,29 +372,6 @@ class DisconnectRequest(Request):
 
 class DisconnectResponse(Response):
     pass
-
-
-class ChecksumAlgorithm(Enum):
-    MD5 = "MD5"
-    SHA1 = "SHA1"
-    SHA256 = "SHA256"
-    TIMESTAMP = "timestamp"
-
-
-class Checksum(BaseModel):
-    algorithm: ChecksumAlgorithm
-    checksum: str
-
-
-class Source(Model):
-    name: Optional[str] = None
-    path: Optional[str] = None
-    source_reference: Optional[int] = None
-    presentation_hint: Optional[Literal["normal", "emphasize", "deemphasize"]] = None
-    origin: Optional[str] = None
-    sources: Optional[List[Source]] = None
-    adapter_data: Optional[Any] = None
-    checksums: Optional[List[Checksum]] = None
 
 
 class SourceBreakpoint(Model):

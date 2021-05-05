@@ -18,6 +18,7 @@ from ..types import (
     OutputCategory,
     OutputEvent,
     OutputEventBody,
+    OutputGroup,
     Scope,
     Source,
     SourceBreakpoint,
@@ -127,6 +128,36 @@ class Debugger:
         self.state: State = State.Stopped
         self.requested_state: RequestedState = RequestedState.Nothing
         self.stop_stack_len = 0
+        self._robot_report_file: Optional[str] = None
+        self._robot_log_file: Optional[str] = None
+        self._robot_output_file: Optional[str] = None
+        self.output_messages: bool = False
+        self.output_log: bool = False
+        self.group_output: bool = False
+
+    @property
+    def robot_report_file(self) -> Optional[str]:
+        return self._robot_report_file
+
+    @robot_report_file.setter
+    def robot_report_file(self, value: Optional[str]) -> None:
+        self._robot_report_file = value
+
+    @property
+    def robot_log_file(self) -> Optional[str]:
+        return self._robot_log_file
+
+    @robot_log_file.setter
+    def robot_log_file(self, value: Optional[str]) -> None:
+        self._robot_log_file = value
+
+    @property
+    def robot_output_file(self) -> Optional[str]:
+        return self._robot_output_file
+
+    @robot_output_file.setter
+    def robot_output_file(self, value: Optional[str]) -> None:
+        self._robot_output_file = value
 
     @_logger.call
     def start(self) -> None:
@@ -326,6 +357,42 @@ class Debugger:
         with self.condition:
             self.condition.wait_for(lambda: self.state in [State.Running, State.Stopped])
 
+    def start_output_group(self, name: str, attributes: Dict[str, Any], type: Optional[str] = None) -> None:
+        if self.group_output:
+            source = attributes.get("source", None)
+            line_no = attributes.get("lineno", None)
+
+            self.send_event(
+                self,
+                OutputEvent(
+                    body=OutputEventBody(
+                        output=f"{(type +' ') if type else ''}{name}\n",
+                        category=OutputCategory.CONSOLE,
+                        group=OutputGroup.STARTCOLLAPSED,
+                        source=Source(name=name, path=source) if source else None,
+                        line=line_no,
+                    )
+                ),
+            )
+
+    def end_output_group(self, name: str, attributes: Dict[str, Any]) -> None:
+        if self.group_output:
+            source = attributes.get("source", None)
+            line_no = attributes.get("lineno", None)
+
+            self.send_event(
+                self,
+                OutputEvent(
+                    body=OutputEventBody(
+                        output="",
+                        category=OutputCategory.CONSOLE,
+                        group=OutputGroup.END,
+                        source=Source(name=name, path=source) if source else None,
+                        line=line_no,
+                    )
+                ),
+            )
+
     def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
         from robot.running.context import EXECUTION_CONTEXTS
 
@@ -376,11 +443,11 @@ class Debugger:
 
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
-        longname = attributes.get("kwname", "")
+        kwname = attributes.get("kwname", "")
         type = attributes.get("type", "KEYWORD")
 
         self.stack_frames.appendleft(
-            StackFrameEntry(weakref.ref(EXECUTION_CONTEXTS.current), longname, type, source, line_no)
+            StackFrameEntry(weakref.ref(EXECUTION_CONTEXTS.current), kwname, type, source, line_no)
         )
 
         self.process_state(source, line_no, type)
@@ -422,22 +489,27 @@ class Debugger:
         )
 
     def log_message(self, message: Dict[str, Any]) -> None:
-        self.send_event(
-            self,
-            OutputEvent(
-                body=OutputEventBody(output="LOG> {timestamp} {level}: {message}\n".format(**message), category="log")
-            ),
-        )
+        if self.output_log:
+            self.send_event(
+                self,
+                OutputEvent(
+                    body=OutputEventBody(
+                        output="LOG> {timestamp} {level}: {message}\n".format(**message), category="log"
+                    )
+                ),
+            )
 
     def message(self, message: Dict[str, Any]) -> None:
-        self.send_event(
-            self,
-            OutputEvent(
-                body=OutputEventBody(
-                    output="MSG> {timestamp} {level}: {message}\n".format(**message), category=OutputCategory.CONSOLE
-                )
-            ),
-        )
+        if self.output_messages:
+            self.send_event(
+                self,
+                OutputEvent(
+                    body=OutputEventBody(
+                        output="MSG> {timestamp} {level}: {message}\n".format(**message),
+                        category=OutputCategory.CONSOLE,
+                    )
+                ),
+            )
 
     def get_scopes(self, frame_id: int) -> List[Scope]:
         result: List[Scope] = []

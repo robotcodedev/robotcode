@@ -192,6 +192,11 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
         let config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
+        try {
+            if (path.isAbsolute(debugConfiguration.target))
+                debugConfiguration.target = path.relative(debugConfiguration.cwd, debugConfiguration.target).toString();
+        } catch {}
+
         if (!debugConfiguration.python) debugConfiguration.python = getPythonCommand(folder);
 
         if (!debugConfiguration.robotPythonPath) debugConfiguration.robotPythonPath = [];
@@ -330,6 +335,85 @@ async function attachPython(session: vscode.DebugSession, event: string, options
     }
 }
 
+async function openReportInternal(reportFile: string) {
+    let panel = vscode.window.createWebviewPanel("robotcode.report", "Robot Report", vscode.ViewColumn.Active, {
+        enableScripts: true,
+        enableFindWidget: true,
+        enableCommandUris: true,
+        retainContextWhenHidden: true,
+        localResourceRoots: [vscode.Uri.file(path.dirname(reportFile))],
+    });
+
+    let uri = vscode.Uri.file(reportFile);
+
+    panel.webview.html = `<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Security-Policy" content="
+default-src none 'unsafe-inline'; 
+frame-src ${panel.webview.cspSource} 'unsafe-inline';
+style-src ${panel.webview.cspSource} 'unsafe-inline'; 
+img-src ${panel.webview.cspSource}; 
+script-src ${panel.webview.cspSource} 'unsafe-inline';">  
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robot Report</title>
+</head>
+
+<body>
+<script>
+function frame_loaded() {
+function WhichLinkWasClicked(evt) {
+alert(evt.target);
+//evt.preventDefault();
+}
+
+var links = myFrame.document.querySelectorAll('a');
+for (var link of links) {
+console.log("blah link");
+link.addEventListener('click', WhichLinkWasClicked);
+}
+}
+</script>
+
+<iframe style="position: absolute; height: 100%; width: 100%; border: none" src="${panel.webview
+        .asWebviewUri(uri)
+        .toString()}" name="myFrame"
+onload="frame_loaded()" sandbox="allow-scripts allow-same-origin" referrerpolicy="origin" >
+</iframe>
+</body>
+
+</html>`;
+    //panel.webview.html = fs.readFileSync(event.body?.reportFile).toString();
+    // panel.webview.onDidReceiveMessage(async (event) => {
+    //     console.log(`hello ${JSON.stringify(event)}`);
+    // });
+}
+
+async function on_robotExited(
+    session: vscode.DebugSession,
+    outputFile?: string,
+    logFile?: string,
+    reportFile?: string
+) {
+    if (reportFile) {
+        let config = vscode.workspace.getConfiguration(CONFIG_SECTION, session.workspaceFolder);
+
+        switch (config.get<string>("run.openReportAfterRun")) {
+            case "disabled":
+                return;
+            case "external":
+                vscode.env.openExternal(vscode.Uri.file(reportFile));
+                break;
+
+            case "internal":
+                openReportInternal(reportFile);
+                break;
+        }
+    }
+}
+
 export async function activateAsync(context: vscode.ExtensionContext) {
     OUTPUT_CHANNEL.appendLine("Activate RobotCode Extension.");
     extensionContext = context;
@@ -375,25 +459,81 @@ export async function activateAsync(context: vscode.ExtensionContext) {
         }),
         vscode.debug.registerDebugConfigurationProvider("robotcode", new RobotCodeDebugConfigurationProvider()),
         vscode.debug.registerDebugAdapterDescriptorFactory("robotcode", new RobotCodeDebugAdapterDescriptorFactory()),
-        vscode.debug.registerDebugAdapterTrackerFactory("robotcode", {
-            createDebugAdapterTracker(session: vscode.DebugSession) {
-                return {
-                    onWillStartSession: () => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER start session`),
-                    onWillStopSession: () => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER stop session`),
-                    onWillReceiveMessage: (m) =>
-                        OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER > ${JSON.stringify(m, undefined, 2)}`),
-                    onDidSendMessage: (m) =>
-                        OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER < ${JSON.stringify(m, undefined, 2)}`),
-                    onError: (e) =>
-                        OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER ERROR: ${JSON.stringify(e, undefined, 2)}`),
-                    onExit: (c, s) => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER EXIT code ${c} signal ${s}`),
-                };
-            },
-        }),
+        // vscode.debug.registerDebugAdapterTrackerFactory("robotcode", {
+        //     createDebugAdapterTracker(session: vscode.DebugSession) {
+        //         return {
+        //             onWillStartSession: () => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER start session`),
+        //             onWillStopSession: () => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER stop session`),
+        //             onWillReceiveMessage: (m) =>
+        //                 OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER > ${JSON.stringify(m, undefined, 2)}`),
+        //             onDidSendMessage: (m) =>
+        //                 OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER < ${JSON.stringify(m, undefined, 2)}`),
+        //             onError: (e) =>
+        //                 OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER ERROR: ${JSON.stringify(e, undefined, 2)}`),
+        //             onExit: (c, s) => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER EXIT code ${c} signal ${s}`),
+        //         };
+        //     },
+        // }),
         vscode.debug.onDidReceiveDebugSessionCustomEvent(async (event) => {
             if (event.session.configuration.type === "robotcode") {
-                if (event.event === "debugpyStarted") await attachPython(event.session, event.event, event.body);
+                switch (event.event) {
+                    case "debugpyStarted": {
+                        await attachPython(event.session, event.event, event.body);
+                        break;
+                    }
+                    case "robotExited": {
+                        await on_robotExited(
+                            event.session,
+                            event.body.outputFile,
+                            event.body.logFile,
+                            event.body.reportFile
+                        );
+                        break;
+                    }
+                }
             }
+        }),
+        vscode.window.onDidOpenTerminal(async (terminal) => {
+            console.log("ho");
+        }),
+        vscode.window.registerTerminalLinkProvider({
+            provideTerminalLinks(context: vscode.TerminalLinkContext, token: vscode.CancellationToken) {
+                console.log("ho");
+                if (
+                    (context.line.startsWith("Log:") || context.line.startsWith("Report:")) &&
+                    context.line.endsWith("html")
+                ) {
+                    let result = /(Log|Report):\s*(?<link>\S.*)/.exec(context.line)?.groups?.link;
+
+                    if (result) {
+                        return [
+                            {
+                                startIndex: context.line.indexOf(result),
+                                length: result.length,
+                                tooltip: "Open report.",
+                                path: result,
+                            },
+                        ];
+                    }
+                }
+
+                return [];
+            },
+            handleTerminalLink(link: any) {
+                let config = vscode.workspace.getConfiguration(
+                    CONFIG_SECTION,
+                    vscode.workspace.getWorkspaceFolder(vscode.Uri.file(link.path))
+                );
+
+                switch (config.get<string>("run.openReportAfterRun")) {
+                    case "internal":
+                        openReportInternal(link.path);
+                        break;
+                    default:
+                        vscode.env.openExternal(vscode.Uri.file(link.path));
+                        break;
+                }
+            },
         })
 
         // vscode.debug.onDidStartDebugSession(async (session) => {

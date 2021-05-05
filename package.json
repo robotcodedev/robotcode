@@ -174,7 +174,8 @@
                         "enum": [
                             "internalConsole",
                             "integratedTerminal",
-                            "externalTerminal"                        ],
+                            "externalTerminal"
+                        ],
                         "default": "integratedTerminal",
                         "enumDescriptions": [
                             "No terminal (pipes the output to the client debug console).",
@@ -184,16 +185,33 @@
                         "description": "Default setting for where to launch the debug target: internal console, integrated terminal, or external terminal.",
                         "scope": "resource"
                     },
+                    "robotcode.robocop.enabled": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Enables 'robocop' code analysis, if installed.",
+                        "scope": "resource"
+                    },
+
                     "robotcode.syntax.sectionStyle": {
                         "type": "string",
                         "default": "*** {name}s ***",
                         "description": "Defines the section style format.",
                         "scope": "resource"
                     },
-                    "robotcode.robocop.enabled": {
-                        "type": "boolean",
-                        "default": true,
-                        "description": "Enables 'robocop' code analysis, if installed.",
+                    "robotcode.run.openReportAfterRun": {
+                        "type": "string",
+                        "enum": [
+                            "disabled",
+                            "external",
+                            "internal"
+                        ],   
+                        "enumDescriptions": [
+                            "Do not open the result report",
+                            "Opens the report in an external browser.",
+                            "Opens the report in an internal view (experimental)."
+                        ],                     
+                        "default": "none",
+                        "description": "Defines if the test report should be opened a run session automatically.",
                         "scope": "resource"
                     },
                     "robotcode.robocop.include": {
@@ -258,13 +276,13 @@
                 "command": "robotcode.debugTest",
                 "category": "RobotCode",
                 "title": "Debug Test",
-                "icon": {                    
-                    "light": "resources/light/debug_test.svg",                              
+                "icon": {
+                    "light": "resources/light/debug_test.svg",
                     "dark": "resources/dark/debug_test.svg"
                 }
             }
         ],
-        "menus": {                    
+        "menus": {
             "editor/title/run": [
                 {
                     "command": "robotcode.runSuite",
@@ -276,7 +294,7 @@
                     "command": "robotcode.debugSuite",
                     "title": "Debug Testsuite",
                     "group": "robot@2",
-                    "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"                    
+                    "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
                 }
             ],
             "explorer/context": [
@@ -378,6 +396,21 @@
                                 "type": "number",
                                 "description": "Timeout to connect to the debuggee.",
                                 "default": 5
+                            },
+                            "outputMessages": {
+                                "type": "boolean",
+                                "description": "Output messages from robotframework in debug console.",
+                                "default": false
+                            },
+                            "outputLog": {
+                                "type": "boolean",
+                                "description": "Output log messages from robotframework in debug console.",
+                                "default": false
+                            },
+                            "groupOutput": {
+                                "type": "boolean",
+                                "description": "Group start and stop suite/test/keyword messages in debug console.",
+                                "default": false
                             }
                         }
                     }
@@ -394,7 +427,7 @@
                             "cwd": "^\"\\${workspaceFolder}\"",
                             "target": "^\"\\${file}\"",
                             "env": {},
-                            "args": []
+                            "args": []                            
                         }
                     }
                 ]

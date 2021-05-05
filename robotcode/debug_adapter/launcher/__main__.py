@@ -117,6 +117,9 @@ async def run_robot(
     debugpy: bool = False,
     wait_for_debugpy_client: bool = False,
     debugpy_port: int = 5678,
+    output_messages: bool = False,
+    output_log: bool = False,
+    group_output: bool = False,
 ) -> Any:
     import robot
 
@@ -189,6 +192,10 @@ async def run_robot(
             *args,
         ]
 
+        Debugger.instance().output_messages = output_messages
+        Debugger.instance().output_log = output_log
+        Debugger.instance().group_output = group_output
+
         Debugger.instance().set_main_thread(threading.current_thread())
         Debugger.instance().start()
 
@@ -196,6 +203,24 @@ async def run_robot(
             args,
             False,
         )
+
+        if server.protocol.connected:
+            await asyncio.wrap_future(
+                asyncio.run_coroutine_threadsafe(
+                    server.protocol.send_event_async(
+                        Event(
+                            event="robotExited",
+                            body={
+                                "reportFile": Debugger.instance().robot_report_file,
+                                "logFile": Debugger.instance().robot_log_file,
+                                "outputFile": Debugger.instance().robot_output_file,
+                                "exitCode": exit_code,
+                            },
+                        )
+                    ),
+                    loop=loop,
+                )
+            )
 
         if server.protocol.connected:
             await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server.protocol.exit(exit_code), loop=loop))
@@ -293,6 +318,15 @@ def main() -> None:
     parser.add_argument(
         "-dw", "--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect"
     )
+    parser.add_argument(
+        "-om", "--output-messages", action="store_true", help="Send output messages from robotframework to client."
+    )
+    parser.add_argument(
+        "-ol", "--output-log", action="store_true", help="Send log messages from robotframework to client."
+    )
+    parser.add_argument(
+        "-og", "--group-output", action="store_true", help="Fold messages/log from robotframework to client."
+    )
 
     sys_args = sys.argv[1:]
 
@@ -352,7 +386,8 @@ def main() -> None:
             logging.getLogger("asyncio").propagate = False
 
         if not args.log_debug_adapter_launcher:
-            logging.getLogger("robotcode.debug_adapter.launcher").propagate = False
+            logging.getLogger("robotcode.debug_adapter").propagate = False
+            logging.getLogger("robotcode.debug_adapter").disabled = True
 
     _logger.info(f"starting {__package__} version={__version__}")
     _logger.debug(f"args={args}")
@@ -368,6 +403,9 @@ def main() -> None:
             args.debugpy,
             args.debugpy_wait_for_client,
             args.debugpy_port,
+            args.output_messages,
+            args.output_log,
+            args.group_output,
         )
     )
 

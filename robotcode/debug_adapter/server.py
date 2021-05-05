@@ -104,6 +104,9 @@ class DAPServerProtocol(DebugAdapterProtocol):
         launcherTimeout: Optional[int] = None,  # noqa: N803
         attachPython: Optional[bool] = False,  # noqa: N803
         variables: Optional[Dict[str, Any]] = None,
+        outputMessages: Optional[bool] = False,
+        outputLog: Optional[bool] = False,
+        groupOutput: Optional[bool] = False,
         arguments: Optional[LaunchRequestArguments] = None,
         **kwargs: Any,
     ) -> None:
@@ -125,6 +128,15 @@ class DAPServerProtocol(DebugAdapterProtocol):
 
         if attachPython and not no_debug:
             run_args += ["-d", "-dp", str(find_free_port()), "-dw"]
+
+        if outputMessages:
+            run_args += ["-om"]
+
+        if outputLog:
+            run_args += ["-ol"]
+
+        if groupOutput:
+            run_args += ["-og"]
 
         run_args += launcherArgs or []
 
