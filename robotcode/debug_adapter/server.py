@@ -82,6 +82,7 @@ class DAPServerProtocol(DebugAdapterProtocol):
             # supports_hit_conditional_breakpoints=True,
             support_terminate_debuggee=True,
             support_suspend_debuggee=True,
+            supports_evaluate_for_hovers=True,
             # supports_loaded_sources_request=True,
             supports_terminate_request=True,
             # supports_data_breakpoints=True

@@ -217,6 +217,7 @@ class LauncherServerProtocol(DebugAdapterProtocol):
         frame_id: Optional[int] = None,
         context: Union[EvaluateArgumentContext, str, None] = None,
         format: Optional[ValueFormat] = None,
+        **kwargs: Any,
     ) -> EvaluateResponseBody:
         result = Debugger.instance().evaluate(expression, frame_id, context, format)
         return EvaluateResponseBody(
