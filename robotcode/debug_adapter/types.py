@@ -675,3 +675,36 @@ class VariablesResponseBody(Model):
 
 class VariablesResponse(Response):
     body: VariablesResponseBody
+
+
+class EvaluateArgumentContext(Enum):
+    WATCH = "watch"
+    REPL = "repl"
+    HOVER = "hover"
+    CLIPBOARD = "clipboard"
+
+
+class EvaluateArguments(Model):
+    expression: str
+    frame_id: Optional[int] = None
+    context: Union[EvaluateArgumentContext, str, None] = None
+    format: Optional[ValueFormat] = None
+
+
+class EvaluateRequest(Request):
+    command: str = Field("evaluate", const=True)
+    arguments: EvaluateArguments
+
+
+class EvaluateResponseBody(Model):
+    result: str
+    type: Optional[str] = None
+    presentation_hint: Optional[VariablePresentationHint] = None
+    variables_reference: int = 0
+    named_variables: Optional[int] = None
+    indexed_variables: Optional[int] = None
+    memory_reference: Optional[str] = None
+
+
+class EvaluateResponse(Response):
+    body: VariablesResponseBody

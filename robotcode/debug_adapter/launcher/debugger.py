@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import itertools
+import re
 import threading
 import weakref
 from collections import deque
 from enum import Enum
 from pathlib import Path
-from typing import Any, Deque, Dict, List, Literal, NamedTuple, Optional
+from typing import Any, Deque, Dict, List, Literal, NamedTuple, Optional, Union
 
 from ...utils.event import event
 from ...utils.logging import LoggingDescriptor
@@ -14,6 +15,7 @@ from ..types import (
     Breakpoint,
     ContinuedEvent,
     ContinuedEventBody,
+    EvaluateArgumentContext,
     Event,
     OutputCategory,
     OutputEvent,
@@ -31,7 +33,18 @@ from ..types import (
     Thread,
     ValueFormat,
     Variable,
+    VariablePresentationHint,
 )
+
+
+class EvaluateResult(NamedTuple):
+    result: str
+    type: Optional[str] = None
+    presentation_hint: Optional[VariablePresentationHint] = None
+    variables_reference: int = 0
+    named_variables: Optional[int] = None
+    indexed_variables: Optional[int] = None
+    memory_reference: Optional[str] = None
 
 
 class State(Enum):
@@ -61,7 +74,7 @@ class StackTraceResult(NamedTuple):
 
 class StackFrameEntry:
     def __init__(
-        self, context: weakref.ref[Any], name: str, type: str, source: str, line: int, column: int = 1
+        self, context: weakref.ref[Any], name: str, type: str, source: Optional[str], line: int, column: int = 1
     ) -> None:
         self.context = context
         self.name = name
@@ -281,7 +294,7 @@ class Debugger:
 
         return []
 
-    def process_state(self, source: str, line_no: int, type: str) -> None:
+    def process_state(self, source: Optional[str], line_no: Optional[int], type: Optional[str]) -> None:
         if self.state == State.Stopped:
             return
 
@@ -336,21 +349,22 @@ class Debugger:
                 )
                 self.requested_state = RequestedState.Nothing
 
-        source = str(Path(source).resolve())
-        if source in self.breakpoints:
-            breakpoints = [v for v in self.breakpoints[source].breakpoints if v.line == line_no]
-            if len(breakpoints) > 0:
-                self.state = State.Paused
-                self.send_event(
-                    self,
-                    StoppedEvent(
-                        body=StoppedEventBody(
-                            reason=StoppedReason.BREAKPOINT,
-                            thread_id=threading.current_thread().ident,
-                            hit_breakpoint_ids=[id(v) for v in breakpoints],
-                        )
-                    ),
-                )
+        if source is not None:
+            source = str(Path(source).resolve())
+            if source in self.breakpoints:
+                breakpoints = [v for v in self.breakpoints[source].breakpoints if v.line == line_no]
+                if len(breakpoints) > 0:
+                    self.state = State.Paused
+                    self.send_event(
+                        self,
+                        StoppedEvent(
+                            body=StoppedEventBody(
+                                reason=StoppedReason.BREAKPOINT,
+                                thread_id=threading.current_thread().ident,
+                                hit_breakpoint_ids=[id(v) for v in breakpoints],
+                            )
+                        ),
+                    )
 
     @_logger.call
     def wait_for_running(self) -> None:
@@ -367,7 +381,8 @@ class Debugger:
                 OutputEvent(
                     body=OutputEventBody(
                         output=f"{(type +' ') if type else ''}{name}\n",
-                        category=OutputCategory.CONSOLE,
+                        # category=OutputCategory.CONSOLE,
+                        category="log",
                         group=OutputGroup.STARTCOLLAPSED,
                         source=Source(name=name, path=source) if source else None,
                         line=line_no,
@@ -385,7 +400,8 @@ class Debugger:
                 OutputEvent(
                     body=OutputEventBody(
                         output="",
-                        category=OutputCategory.CONSOLE,
+                        # category=OutputCategory.CONSOLE,
+                        category="log",
                         group=OutputGroup.END,
                         source=Source(name=name, path=source) if source else None,
                         line=line_no,
@@ -393,19 +409,43 @@ class Debugger:
                 ),
             )
 
-    def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
+    def add_stackframe_entry(
+        self, name: str, type: str, source: Optional[str], line: Optional[int], column: Optional[int] = 1
+    ) -> StackFrameEntry:
         from robot.running.context import EXECUTION_CONTEXTS
 
+        if source is None or line is None or column is None:
+            for v in self.stack_frames:
+                if source is None:
+                    source = v.source
+                if line is None:
+                    line = v.line
+                if column is None:
+                    column = v.column
+                if source is not None and line is not None and column is not None:
+                    break
+
+        result = StackFrameEntry(
+            weakref.ref(EXECUTION_CONTEXTS.current),
+            name,
+            type,
+            source,
+            line if line is not None else 0,
+            column if column is not None else 0,
+        )
+        self.stack_frames.appendleft(result)
+
+        return result
+
+    def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
         longname = attributes.get("longname", "")
         type = "SUITE"
 
-        self.stack_frames.appendleft(
-            StackFrameEntry(weakref.ref(EXECUTION_CONTEXTS.current), longname, type, source, line_no)
-        )
+        entry = self.add_stackframe_entry(longname, type, source, line_no)
 
-        self.process_state(source, line_no, type)
+        self.process_state(entry.source, entry.line, entry.type)
 
         self.wait_for_running()
 
@@ -414,18 +454,14 @@ class Debugger:
             self.stack_frames.popleft()
 
     def start_test(self, name: str, attributes: Dict[str, Any]) -> None:
-        from robot.running.context import EXECUTION_CONTEXTS
-
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
         longname = attributes.get("longname", "")
         type = "TEST"
 
-        self.stack_frames.appendleft(
-            StackFrameEntry(weakref.ref(EXECUTION_CONTEXTS.current), longname, type, source, line_no)
-        )
+        entry = self.add_stackframe_entry(longname, type, source, line_no)
 
-        self.process_state(source, line_no, type)
+        self.process_state(entry.source, entry.line, entry.type)
 
         self.wait_for_running()
 
@@ -434,8 +470,6 @@ class Debugger:
             self.stack_frames.popleft()
 
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
-        from robot.running.context import EXECUTION_CONTEXTS
-
         status = attributes.get("status", "")
 
         if status == "NOT RUN":
@@ -446,11 +480,9 @@ class Debugger:
         kwname = attributes.get("kwname", "")
         type = attributes.get("type", "KEYWORD")
 
-        self.stack_frames.appendleft(
-            StackFrameEntry(weakref.ref(EXECUTION_CONTEXTS.current), kwname, type, source, line_no)
-        )
+        entry = self.add_stackframe_entry(kwname, type, source, line_no)
 
-        self.process_state(source, line_no, type)
+        self.process_state(entry.source, entry.line, entry.type)
 
         self.wait_for_running()
 
@@ -480,13 +512,19 @@ class Debugger:
     ) -> StackTraceResult:
         start_frame = start_frame or 0
         levels = start_frame + 1 + (levels or len(self.stack_frames))
-        return StackTraceResult(
-            [
-                StackFrame(id=v.id, name=v.name, line=v.line, column=v.column, source=Source(path=v.source))
-                for v in itertools.islice(self.stack_frames, start_frame, levels)
-            ],
-            len(self.stack_frames),
-        )
+
+        frames = [
+            StackFrame(
+                id=v.id,
+                name=v.name,
+                line=v.line,
+                column=v.column,
+                source=Source(path=v.source) if v.source is not None else None,
+            )
+            for v in itertools.islice(self.stack_frames, start_frame, levels)
+        ]
+
+        return StackTraceResult(frames, len(frames))
 
     def log_message(self, message: Dict[str, Any]) -> None:
         if self.output_log:
@@ -609,3 +647,38 @@ class Debugger:
                     ]
 
         return result
+
+    VARS_RE = re.compile(r"^[$@&%]\{.*\}$")
+
+    def evaluate(
+        self,
+        expression: str,
+        frame_id: Optional[int] = None,
+        context: Union[EvaluateArgumentContext, str, None] = None,
+        format: Optional[ValueFormat] = None,
+    ) -> EvaluateResult:
+        from robot.running.context import EXECUTION_CONTEXTS
+        from robot.variables.evaluation import evaluate_expression
+
+        evaluate_context: Any = None
+
+        if frame_id is not None:
+            evaluate_context = (
+                next((v.context() for v in self.stack_frames if v.id == frame_id), None)
+                if frame_id is not None
+                else None
+            )
+
+        if evaluate_context is None:
+            evaluate_context = EXECUTION_CONTEXTS.current
+
+        try:
+            vars = evaluate_context.variables.current if frame_id is not None else evaluate_context.variables._global
+            if self.VARS_RE.match(expression.strip()):
+                result = vars.replace_string(expression)
+            else:
+                result = evaluate_expression(vars.replace_string(expression), vars.store)
+        except BaseException as e:
+            result = e
+
+        return EvaluateResult(repr(result), repr(type(result)))

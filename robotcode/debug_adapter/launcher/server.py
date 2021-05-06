@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, Union
 
 from ...jsonrpc2.protocol import rpc_method
 from ...jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
@@ -11,6 +11,9 @@ from ..types import (
     ContinueArguments,
     ContinueResponseBody,
     DisconnectArguments,
+    EvaluateArgumentContext,
+    EvaluateArguments,
+    EvaluateResponseBody,
     Event,
     ExitedEvent,
     ExitedEventBody,
@@ -204,6 +207,26 @@ class LauncherServerProtocol(DebugAdapterProtocol):
     ) -> VariablesResponseBody:
         return VariablesResponseBody(
             variables=Debugger.instance().get_variables(variables_reference, filter, start, count, format)
+        )
+
+    @rpc_method(name="evaluate", param_type=EvaluateArguments)
+    async def _evaluate(
+        self,
+        arguments: ScopesArguments,
+        expression: str,
+        frame_id: Optional[int] = None,
+        context: Union[EvaluateArgumentContext, str, None] = None,
+        format: Optional[ValueFormat] = None,
+    ) -> EvaluateResponseBody:
+        result = Debugger.instance().evaluate(expression, frame_id, context, format)
+        return EvaluateResponseBody(
+            result=result.result,
+            type=result.type,
+            presentation_hint=result.presentation_hint,
+            variables_reference=result.variables_reference,
+            named_variables=result.named_variables,
+            indexed_variables=result.indexed_variables,
+            memory_reference=result.memory_reference,
         )
 
 
