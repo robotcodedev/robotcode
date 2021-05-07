@@ -47,6 +47,14 @@ class EvaluateResult(NamedTuple):
     memory_reference: Optional[str] = None
 
 
+class SetVariableResult(NamedTuple):
+    value: str
+    type: Optional[str]
+    variables_reference: Optional[int] = None
+    named_variables: Optional[int] = None
+    indexed_variables: Optional[int] = None
+
+
 class State(Enum):
     Stopped = 0
     Running = 1
@@ -668,15 +676,12 @@ class Debugger:
         if entry is not None:
             context = entry.context()
             if context is not None:
-
                 if entry.global_id() == variables_reference:
                     result += [
                         Variable(name=k, value=repr(v), type=repr(type(v)))
                         for k, v in context.variables._global.as_dict().items()
                     ]
                 elif entry.suite_id() == variables_reference:
-                    # current_index = context.variables._scopes.index(context.variables._suite)
-                    # globals = context.variables._scopes[max(current_index - 1, 0)].as_dict()
                     globals = context.variables._global.as_dict()
                     result += [
                         Variable(name=k, value=repr(v), type=repr(type(v)))
@@ -684,8 +689,6 @@ class Debugger:
                         if k not in globals or globals[k] != v
                     ]
                 elif entry.test_id() == variables_reference:
-                    # current_index = context.variables._scopes.index(context.variables._test)
-                    # globals = context.variables._scopes[max(current_index - 1, 0)].as_dict()
                     globals = context.variables._suite.as_dict()
                     result += [
                         Variable(name=k, value=repr(v), type=repr(type(v)))
@@ -703,7 +706,7 @@ class Debugger:
 
         return result
 
-    VARS_RE = re.compile(r"^[$@&%]\{.*\}$")
+    IS_VARIABLE_RE = re.compile(r"^[$@&%]\{.*\}$")
 
     def evaluate(
         self,
@@ -734,7 +737,7 @@ class Debugger:
                 vars = (
                     evaluate_context.variables.current if frame_id is not None else evaluate_context.variables._global
                 )
-                if self.VARS_RE.match(expression.strip()):
+                if self.IS_VARIABLE_RE.match(expression.strip()):
                     result = vars.replace_string(expression)
                 else:
                     result = evaluate_expression(vars.replace_string(expression), vars.store)
@@ -748,3 +751,32 @@ class Debugger:
                 result = e
 
         return EvaluateResult(repr(result), repr(type(result)))
+
+    def set_variable(
+        self, variables_reference: int, name: str, value: str, format: Optional[ValueFormat] = None
+    ) -> SetVariableResult:
+        from robot.variables.evaluation import evaluate_expression
+
+        entry = next(
+            (
+                v
+                for v in self.stack_frames
+                if variables_reference in [v.global_id(), v.local_id(), v.suite_id(), v.test_id()]
+            ),
+            None,
+        )
+
+        if entry is not None:
+            context = entry.context()
+            if context is not None:
+                variables = context.variables.current
+
+                if (name[2:-1] if self.IS_VARIABLE_RE.match(name) else name) not in variables:
+                    raise NameError(f"Variable '{name}' not found.")
+
+                evaluated_value = evaluate_expression(variables.replace_string(value), variables.store)
+                variables[name] = evaluated_value
+
+                return SetVariableResult(repr(evaluated_value), repr(type(value)))
+
+        raise ReferenceError("Invalid variable reference.")

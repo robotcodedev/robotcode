@@ -24,6 +24,8 @@ from ..types import (
     ScopesResponseBody,
     SetBreakpointsArguments,
     SetBreakpointsResponseBody,
+    SetVariableArguments,
+    SetVariableResponseBody,
     StackTraceArguments,
     StackTraceResponseBody,
     StepInArguments,
@@ -217,7 +219,6 @@ class LauncherServerProtocol(DebugAdapterProtocol):
         frame_id: Optional[int] = None,
         context: Union[EvaluateArgumentContext, str, None] = None,
         format: Optional[ValueFormat] = None,
-        **kwargs: Any,
     ) -> EvaluateResponseBody:
         result = Debugger.instance().evaluate(expression, frame_id, context, format)
         return EvaluateResponseBody(
@@ -228,6 +229,24 @@ class LauncherServerProtocol(DebugAdapterProtocol):
             named_variables=result.named_variables,
             indexed_variables=result.indexed_variables,
             memory_reference=result.memory_reference,
+        )
+
+    @rpc_method(name="setVariable", param_type=SetVariableArguments)
+    async def _set_variable(
+        self,
+        arguments: SetVariableArguments,
+        variables_reference: int,
+        name: str,
+        value: str,
+        format: Optional[ValueFormat] = None,
+    ) -> SetVariableResponseBody:
+        result = Debugger.instance().set_variable(variables_reference, name, value, format)
+        return SetVariableResponseBody(
+            value=result.value,
+            type=result.type,
+            variables_reference=result.variables_reference,
+            named_variables=result.named_variables,
+            indexed_variables=result.indexed_variables,
         )
 
 

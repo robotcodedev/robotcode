@@ -85,7 +85,11 @@ class DAPServerProtocol(DebugAdapterProtocol):
             supports_evaluate_for_hovers=True,
             # supports_loaded_sources_request=True,
             supports_terminate_request=True,
-            # supports_data_breakpoints=True
+            # supports_data_breakpoints=True,
+            supports_log_points=True,
+            supports_set_expression=True,
+            supports_set_variable=True,
+            supports_value_formatting_options=True,
         )
 
     @rpc_method(name="launch", param_type=LaunchRequestArguments)

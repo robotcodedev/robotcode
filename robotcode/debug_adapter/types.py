@@ -708,3 +708,27 @@ class EvaluateResponseBody(Model):
 
 class EvaluateResponse(Response):
     body: VariablesResponseBody
+
+
+class SetVariableArguments(Model):
+    variables_reference: int
+    name: str
+    value: str
+    format: Optional[ValueFormat] = None
+
+
+class SetVariableRequest(Request):
+    command: str = Field("setVariable", const=True)
+    arguments: SetVariableArguments
+
+
+class SetVariableResponseBody(Model):
+    value: str
+    type: Optional[str]
+    variables_reference: Optional[int] = None
+    named_variables: Optional[int] = None
+    indexed_variables: Optional[int] = None
+
+
+class SetVariableResponse(Response):
+    body: SetVariableResponseBody
