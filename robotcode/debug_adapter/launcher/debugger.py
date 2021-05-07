@@ -104,6 +104,12 @@ class StackFrameEntry:
         return id(self._global_marker)
 
 
+class HitCountEntry(NamedTuple):
+    source: str
+    line: int
+    type: str
+
+
 class Debugger:
     __instance = None
     __lock = threading.RLock()
@@ -147,6 +153,7 @@ class Debugger:
         self.output_messages: bool = False
         self.output_log: bool = False
         self.group_output: bool = False
+        self.hit_counts: Dict[HitCountEntry, int] = {}
 
     @property
     def robot_report_file(self) -> Optional[str]:
@@ -294,7 +301,7 @@ class Debugger:
 
         return []
 
-    def process_state(self, source: Optional[str], line_no: Optional[int], type: Optional[str]) -> None:
+    def process_state(self, source: str, line_no: int, type: str) -> None:
         from robot.running.context import EXECUTION_CONTEXTS
         from robot.variables.evaluation import evaluate_expression
 
@@ -359,6 +366,7 @@ class Debugger:
                 if len(breakpoints) > 0:
                     for point in breakpoints:
                         if point.condition is not None:
+                            hit = False
                             try:
                                 vars = EXECUTION_CONTEXTS.current.variables.current
                                 hit = bool(evaluate_expression(vars.replace_string(point.condition), vars.store))
@@ -367,18 +375,48 @@ class Debugger:
 
                             if not hit:
                                 return
-
-                    self.state = State.Paused
-                    self.send_event(
-                        self,
-                        StoppedEvent(
-                            body=StoppedEventBody(
-                                reason=StoppedReason.BREAKPOINT,
-                                thread_id=threading.current_thread().ident,
-                                hit_breakpoint_ids=[id(v) for v in breakpoints],
+                        if point.hit_condition is not None:
+                            hit = False
+                            entry = HitCountEntry(source, line_no, type)
+                            if entry not in self.hit_counts:
+                                self.hit_counts[entry] = 0
+                            self.hit_counts[entry] += 1
+                            try:
+                                hit = self.hit_counts[entry] != int(point.hit_condition)
+                            except BaseException:
+                                hit = False
+                            if not hit:
+                                return
+                        if point.log_message:
+                            vars = EXECUTION_CONTEXTS.current.variables.current
+                            try:
+                                message = vars.replace_string(point.log_message)
+                            except BaseException as e:
+                                message = f"{point.log_message}\nError: {e}"
+                            self.send_event(
+                                self,
+                                OutputEvent(
+                                    body=OutputEventBody(
+                                        output=message,
+                                        category=OutputCategory.CONSOLE,
+                                        source=Source(path=source) if source else None,
+                                        line=line_no,
+                                    )
+                                ),
                             )
-                        ),
-                    )
+                            return
+                        else:
+                            self.state = State.Paused
+                            self.send_event(
+                                self,
+                                StoppedEvent(
+                                    body=StoppedEventBody(
+                                        reason=StoppedReason.BREAKPOINT,
+                                        thread_id=threading.current_thread().ident,
+                                        hit_breakpoint_ids=[id(v) for v in breakpoints],
+                                    )
+                                ),
+                            )
 
     @_logger.call
     def wait_for_running(self) -> None:
@@ -398,7 +436,7 @@ class Debugger:
                         # category=OutputCategory.CONSOLE,
                         category="log",
                         group=OutputGroup.STARTCOLLAPSED,
-                        source=Source(name=name, path=source) if source else None,
+                        source=Source(path=source) if source else None,
                         line=line_no,
                     )
                 ),
@@ -417,7 +455,7 @@ class Debugger:
                         # category=OutputCategory.CONSOLE,
                         category="log",
                         group=OutputGroup.END,
-                        source=Source(name=name, path=source) if source else None,
+                        source=Source(path=source) if source else None,
                         line=line_no,
                     )
                 ),
@@ -459,9 +497,10 @@ class Debugger:
 
         entry = self.add_stackframe_entry(longname, type, source, line_no)
 
-        self.process_state(entry.source, entry.line, entry.type)
+        if entry.source:
+            self.process_state(entry.source, entry.line, entry.type)
 
-        self.wait_for_running()
+            self.wait_for_running()
 
     def end_suite(self, name: str, attributes: Dict[str, Any]) -> None:
         if self.stack_frames:
@@ -475,9 +514,10 @@ class Debugger:
 
         entry = self.add_stackframe_entry(longname, type, source, line_no)
 
-        self.process_state(entry.source, entry.line, entry.type)
+        if entry.source:
+            self.process_state(entry.source, entry.line, entry.type)
 
-        self.wait_for_running()
+            self.wait_for_running()
 
     def end_test(self, name: str, attributes: Dict[str, Any]) -> None:
         if self.stack_frames:
@@ -496,9 +536,10 @@ class Debugger:
 
         entry = self.add_stackframe_entry(kwname, type, source, line_no)
 
-        self.process_state(entry.source, entry.line, entry.type)
+        if entry.source:
+            self.process_state(entry.source, entry.line, entry.type)
 
-        self.wait_for_running()
+            self.wait_for_running()
 
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         status = attributes.get("status", "")
