@@ -295,6 +295,9 @@ class Debugger:
         return []
 
     def process_state(self, source: Optional[str], line_no: Optional[int], type: Optional[str]) -> None:
+        from robot.running.context import EXECUTION_CONTEXTS
+        from robot.variables.evaluation import evaluate_expression
+
         if self.state == State.Stopped:
             return
 
@@ -354,6 +357,17 @@ class Debugger:
             if source in self.breakpoints:
                 breakpoints = [v for v in self.breakpoints[source].breakpoints if v.line == line_no]
                 if len(breakpoints) > 0:
+                    for point in breakpoints:
+                        if point.condition is not None:
+                            try:
+                                vars = EXECUTION_CONTEXTS.current.variables.current
+                                hit = bool(evaluate_expression(vars.replace_string(point.condition), vars.store))
+                            except BaseException:
+                                hit = False
+
+                            if not hit:
+                                return
+
                     self.state = State.Paused
                     self.send_event(
                         self,
