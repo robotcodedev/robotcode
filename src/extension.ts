@@ -217,7 +217,7 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
         if (!debugConfiguration.env) debugConfiguration.env = {};
         debugConfiguration.env = Object.assign({}, config.get<Object>("robot.env", {}), debugConfiguration.env);
 
-        if (debugConfiguration.attachPython == undefined) debugConfiguration.attachPython = true;
+        if (debugConfiguration.attachPython == undefined) debugConfiguration.attachPython = false;
 
         if (debugConfiguration.noDebug) {
             debugConfiguration.attachPython = false;

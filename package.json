@@ -10,7 +10,7 @@
         "url": "https://github.com/d-biehl/robotcode.git"
     },
     "engines": {
-        "vscode": "^1.55.1"
+        "vscode": "^1.56.0"
     },
     "categories": [
         "Programming Languages",
@@ -191,7 +191,6 @@
                         "description": "Enables 'robocop' code analysis, if installed.",
                         "scope": "resource"
                     },
-
                     "robotcode.syntax.sectionStyle": {
                         "type": "string",
                         "default": "*** {name}s ***",
@@ -204,12 +203,12 @@
                             "disabled",
                             "external",
                             "internal"
-                        ],   
+                        ],
                         "enumDescriptions": [
                             "Do not open the result report",
                             "Opens the report in an external browser.",
                             "Opens the report in an internal view (experimental)."
-                        ],                     
+                        ],
                         "default": "none",
                         "description": "Defines if the test report should be opened a run session automatically.",
                         "scope": "resource"
@@ -375,7 +374,7 @@
                             "attachPython": {
                                 "type": "boolean",
                                 "description": "Attach also the python debugger if a robot test starts.",
-                                "default": true
+                                "default": false
                             },
                             "pythonConfiguration": {
                                 "type": "object",
@@ -427,7 +426,7 @@
                             "cwd": "^\"\\${workspaceFolder}\"",
                             "target": "^\"\\${file}\"",
                             "env": {},
-                            "args": []                            
+                            "args": []
                         }
                     }
                 ]
@@ -449,25 +448,27 @@
         "ms-python.python"
     ],
     "dependencies": {
-        "vscode-debugadapter": "^1.46.0",
-        "vscode-languageclient": "^7.0.0"
+        "vscode-debugadapter": "^1.47.0",
+        "vscode-debugprotocol": "^1.47.0",
+        "vscode-languageclient": "^7.0.0",
+        "vscode-languageserver-protocol": "^3.16.0"
     },
     "devDependencies": {
         "@types/glob": "^7.1.3",
         "@types/mocha": "^8.2.2",
-        "@types/node": "^14.14.41",
-        "@types/vscode": "^1.55.0",
-        "@typescript-eslint/eslint-plugin": "^4.22.0",
-        "@typescript-eslint/parser": "^4.22.0",
-        "eslint": "^7.24.0",
-        "glob": "^7.1.6",
+        "@types/node": "^15.0.2",
+        "@types/vscode": "^1.56.0",
+        "@typescript-eslint/eslint-plugin": "^4.22.1",
+        "@typescript-eslint/parser": "^4.22.1",
+        "eslint": "^7.25.0",
+        "glob": "^7.1.7",
         "mocha": "^8.3.2",
-        "ts-loader": "^8.1.0",
+        "ts-loader": "^9.1.2",
         "typescript": "^4.2.4",
-        "vsce": "^1.87.1",
-        "vscode-debugadapter-testsupport": "^1.46.0",
+        "vsce": "^1.88.0",
+        "vscode-debugadapter-testsupport": "^1.47.0",
         "vscode-test": "^1.5.2",
-        "webpack": "^5.33.2",
-        "webpack-cli": "^4.6.0"
+        "webpack": "^5.36.2",
+        "webpack-cli": "^4.7.0"
     }
 }
