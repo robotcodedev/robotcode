@@ -16,6 +16,7 @@ from .types import (
     ConfigurationDoneRequest,
     DisconnectArguments,
     DisconnectRequest,
+    ExceptionBreakpointsFilter,
     InitializeRequestArguments,
     LaunchRequestArguments,
     OutputCategory,
@@ -77,19 +78,44 @@ class DAPServerProtocol(DebugAdapterProtocol):
 
         return Capabilities(
             supports_configuration_done_request=True,
-            # supports_function_breakpoints=True,
             supports_conditional_breakpoints=True,
             supports_hit_conditional_breakpoints=True,
             support_terminate_debuggee=True,
             support_suspend_debuggee=True,
             supports_evaluate_for_hovers=True,
-            # supports_loaded_sources_request=True,
             supports_terminate_request=True,
-            # supports_data_breakpoints=True,
             supports_log_points=True,
             supports_set_expression=True,
             supports_set_variable=True,
             supports_value_formatting_options=True,
+            exception_breakpoint_filters=[
+                ExceptionBreakpointsFilter(
+                    filter="failed_keyword",
+                    label="Failed Keywords",
+                    description="Breaks on failed keywords",
+                    default=True,
+                    # supports_condition=True,
+                    # condition_description="expression",
+                ),
+                ExceptionBreakpointsFilter(
+                    filter="failed_test",
+                    label="Failed Test",
+                    description="Breaks on failed tests",
+                    default=False,
+                    # supports_condition=True,
+                    # condition_description="expression",
+                ),
+                ExceptionBreakpointsFilter(
+                    filter="failed_suite",
+                    label="Failed Suite",
+                    description="Breaks on failed suite",
+                    default=False,
+                    # supports_condition=True,
+                    # condition_description="expression",
+                ),
+            ],
+            supports_exception_options=True,
+            supports_exception_filter_options=True,
         )
 
     @rpc_method(name="launch", param_type=LaunchRequestArguments)
@@ -112,6 +138,7 @@ class DAPServerProtocol(DebugAdapterProtocol):
         outputMessages: Optional[bool] = False,
         outputLog: Optional[bool] = False,
         groupOutput: Optional[bool] = False,
+        stopOnEntry: Optional[bool] = False,  # noqa: N803
         arguments: Optional[LaunchRequestArguments] = None,
         **kwargs: Any,
     ) -> None:
@@ -142,6 +169,9 @@ class DAPServerProtocol(DebugAdapterProtocol):
 
         if groupOutput:
             run_args += ["-og"]
+
+        if stopOnEntry:
+            run_args += ["-soe"]
 
         run_args += launcherArgs or []
 

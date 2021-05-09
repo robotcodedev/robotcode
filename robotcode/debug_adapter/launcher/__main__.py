@@ -120,6 +120,7 @@ async def run_robot(
     output_messages: bool = False,
     output_log: bool = False,
     group_output: bool = False,
+    stop_on_entry: bool = False,
 ) -> Any:
     import robot
 
@@ -127,6 +128,25 @@ async def run_robot(
     from ...utils.net import check_free_port
     from ..types import Event
     from .debugger import Debugger
+
+    @_logger.call
+    async def start_debugpy_async() -> None:
+        if debugpy:
+            port = check_free_port(debugpy_port)
+            if enable_debugpy(port):
+                if await asyncio.wrap_future(
+                    asyncio.run_coroutine_threadsafe(
+                        server.protocol.wait_for_client(wait_for_client_timeout), loop=loop
+                    )
+                ):
+                    await asyncio.wrap_future(
+                        asyncio.run_coroutine_threadsafe(
+                            server.protocol.send_event_async(Event(event="debugpyStarted", body={"port": port})),
+                            loop=loop,
+                        )
+                    )
+                    if wait_for_debugpy_client:
+                        wait_for_debugpy_connected()
 
     loop = asyncio.new_event_loop()
 
@@ -140,28 +160,8 @@ async def run_robot(
         if wait_for_client:
             try:
 
-                @_logger.call
-                async def start_debugpy_async() -> None:
-                    if debugpy:
-                        port = check_free_port(debugpy_port)
-                        if enable_debugpy(port):
-                            if await asyncio.wrap_future(
-                                asyncio.run_coroutine_threadsafe(
-                                    server.protocol.wait_for_client(wait_for_client_timeout), loop=loop
-                                )
-                            ):
-                                await asyncio.wrap_future(
-                                    asyncio.run_coroutine_threadsafe(
-                                        server.protocol.send_event_async(
-                                            Event(event="debugpyStarted", body={"port": port})
-                                        ),
-                                        loop=loop,
-                                    )
-                                )
-                                wait_for_debugpy_connected()
-
                 await asyncio.gather(
-                    start_debugpy_async(),
+                    # start_debugpy_async(),
                     asyncio.wrap_future(
                         asyncio.run_coroutine_threadsafe(
                             server.protocol.wait_for_client(wait_for_client_timeout), loop=loop
@@ -186,12 +186,15 @@ async def run_robot(
             except asyncio.TimeoutError:
                 raise ConnectionError("Timeout to get configuration from client.")
 
+        await start_debugpy_async()
+
         args = [
             "--listener",
             f"robotcode.debug_adapter.launcher.listeners.ListenerV2:no_debug={repr(no_debug)}",
             *args,
         ]
 
+        Debugger.instance().stop_on_entry = stop_on_entry
         Debugger.instance().output_messages = output_messages
         Debugger.instance().output_log = output_log
         Debugger.instance().group_output = group_output
@@ -199,10 +202,7 @@ async def run_robot(
         Debugger.instance().set_main_thread(threading.current_thread())
         Debugger.instance().start()
 
-        exit_code = robot.run_cli(
-            args,
-            False,
-        )
+        exit_code = robot.run_cli(args, False)
 
         if server.protocol.connected:
             await asyncio.wrap_future(
@@ -327,6 +327,7 @@ def main() -> None:
     parser.add_argument(
         "-og", "--group-output", action="store_true", help="Fold messages/log from robotframework to client."
     )
+    parser.add_argument("-soe", "--stop-on-entry", action="store_true", help="Stops on entry.")
 
     sys_args = sys.argv[1:]
 
@@ -406,6 +407,7 @@ def main() -> None:
             args.output_messages,
             args.output_log,
             args.group_output,
+            args.stop_on_entry,
         )
     )
 

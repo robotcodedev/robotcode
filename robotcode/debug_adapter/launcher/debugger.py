@@ -7,7 +7,18 @@ import weakref
 from collections import deque
 from enum import Enum
 from pathlib import Path
-from typing import Any, Deque, Dict, List, Literal, NamedTuple, Optional, Union
+from typing import (
+    Any,
+    Deque,
+    Dict,
+    List,
+    Literal,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 from ...utils.event import event
 from ...utils.logging import LoggingDescriptor
@@ -17,6 +28,8 @@ from ..types import (
     ContinuedEventBody,
     EvaluateArgumentContext,
     Event,
+    ExceptionFilterOptions,
+    ExceptionOptions,
     OutputCategory,
     OutputEvent,
     OutputEventBody,
@@ -69,10 +82,15 @@ class RequestedState(Enum):
     StepOut = 4
 
 
-class BreakpointsEntry:
-    def __init__(self, breakpoints: List[SourceBreakpoint], lines: List[int]) -> None:
-        self.breakpoints = breakpoints
-        self.lines = lines
+class BreakpointsEntry(NamedTuple):
+    breakpoints: Tuple[SourceBreakpoint, ...]
+    lines: Tuple[int, ...]
+
+
+class ExceptionBreakpointsEntry(NamedTuple):
+    filters: Tuple[str, ...]
+    filter_options: Optional[Tuple[ExceptionFilterOptions, ...]] = None
+    exception_options: Optional[Tuple[ExceptionOptions, ...]] = None
 
 
 class StackTraceResult(NamedTuple):
@@ -149,6 +167,8 @@ class Debugger:
 
     def __init__(self) -> None:
         self.breakpoints: Dict[str, BreakpointsEntry] = {}
+        self.exception_breakpoints: Set[ExceptionBreakpointsEntry] = set()
+
         self.main_thread: Optional[threading.Thread] = None
         self.stack_frames: Deque[StackFrameEntry] = deque()
         self.condition = threading.Condition()
@@ -162,6 +182,8 @@ class Debugger:
         self.output_log: bool = False
         self.group_output: bool = False
         self.hit_counts: Dict[HitCountEntry, int] = {}
+        self.last_fail_message: Optional[str] = None
+        self.stop_on_entry = False
 
     @property
     def robot_report_file(self) -> Optional[str]:
@@ -300,7 +322,9 @@ class Debugger:
         if path in self.breakpoints and not breakpoints and not lines:
             self.breakpoints.pop(path)
         elif path:
-            self.breakpoints[path] = result = BreakpointsEntry(breakpoints or [], lines or [])
+            self.breakpoints[path] = result = BreakpointsEntry(
+                tuple(breakpoints) if breakpoints else (), tuple(lines) if lines else ()
+            )
             return [
                 Breakpoint(id=id(v), source=Source(path=path), verified=True, line=v.line) for v in result.breakpoints
             ]
@@ -309,7 +333,7 @@ class Debugger:
 
         return []
 
-    def process_state(self, source: str, line_no: int, type: str) -> None:
+    def process_start_state(self, source: str, line_no: int, type: str, status: str) -> None:
         from robot.running.context import EXECUTION_CONTEXTS
         from robot.variables.evaluation import evaluate_expression
 
@@ -426,6 +450,27 @@ class Debugger:
                                 ),
                             )
 
+    def process_end_state(self, status: str, filter_id: str, description: str, text: Optional[str]) -> None:
+        if status == "FAIL" and any(
+            v
+            for v in self.exception_breakpoints
+            if v.filter_options is not None and any(o for o in v.filter_options if o.filter_id == filter_id)
+        ):
+            self.state = State.Paused
+            self.send_event(
+                self,
+                StoppedEvent(
+                    body=StoppedEventBody(
+                        description=description,
+                        reason=StoppedReason.EXCEPTION,
+                        thread_id=threading.current_thread().ident,
+                        all_threads_stopped=True,
+                        text=text,
+                    )
+                ),
+            )
+            self.wait_for_running()
+
     @_logger.call
     def wait_for_running(self) -> None:
         with self.condition:
@@ -441,8 +486,7 @@ class Debugger:
                 OutputEvent(
                     body=OutputEventBody(
                         output=f"{(type +' ') if type else ''}{name}\n",
-                        # category=OutputCategory.CONSOLE,
-                        category="log",
+                        category=OutputCategory.CONSOLE,
                         group=OutputGroup.STARTCOLLAPSED,
                         source=Source(path=source) if source else None,
                         line=line_no,
@@ -460,8 +504,7 @@ class Debugger:
                 OutputEvent(
                     body=OutputEventBody(
                         output="",
-                        # category=OutputCategory.CONSOLE,
-                        category="log",
+                        category=OutputCategory.CONSOLE,
                         group=OutputGroup.END,
                         source=Source(path=source) if source else None,
                         line=line_no,
@@ -501,16 +544,41 @@ class Debugger:
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
         longname = attributes.get("longname", "")
+        status = attributes.get("status", "")
         type = "SUITE"
 
         entry = self.add_stackframe_entry(longname, type, source, line_no)
 
-        if entry.source:
-            self.process_state(entry.source, entry.line, entry.type)
+        if self.stop_on_entry:
+            self.stop_on_entry = False
+
+            self.state = State.Paused
+            self.send_event(
+                self,
+                StoppedEvent(
+                    body=StoppedEventBody(
+                        reason=StoppedReason.ENTRY,
+                        thread_id=threading.current_thread().ident,
+                    )
+                ),
+            )
+
+            self.wait_for_running()
+        elif entry.source:
+            self.process_start_state(entry.source, entry.line, entry.type, status)
 
             self.wait_for_running()
 
     def end_suite(self, name: str, attributes: Dict[str, Any]) -> None:
+        status = attributes.get("status", "")
+
+        self.process_end_state(
+            status,
+            "failed_suite",
+            "Suite failed.",
+            f"Suite failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
+        )
+
         if self.stack_frames:
             self.stack_frames.popleft()
 
@@ -518,16 +586,27 @@ class Debugger:
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
         longname = attributes.get("longname", "")
+        status = attributes.get("status", "")
+
         type = "TEST"
 
         entry = self.add_stackframe_entry(longname, type, source, line_no)
 
         if entry.source:
-            self.process_state(entry.source, entry.line, entry.type)
+            self.process_start_state(entry.source, entry.line, entry.type, status)
 
             self.wait_for_running()
 
     def end_test(self, name: str, attributes: Dict[str, Any]) -> None:
+        status = attributes.get("status", "")
+
+        self.process_end_state(
+            status,
+            "failed_test",
+            "Test failed.",
+            f"Test failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
+        )
+
         if self.stack_frames:
             self.stack_frames.popleft()
 
@@ -545,7 +624,7 @@ class Debugger:
         entry = self.add_stackframe_entry(kwname, type, source, line_no)
 
         if entry.source:
-            self.process_state(entry.source, entry.line, entry.type)
+            self.process_start_state(entry.source, entry.line, entry.type, status)
 
             self.wait_for_running()
 
@@ -554,6 +633,8 @@ class Debugger:
 
         if status == "NOT RUN":
             return
+
+        self.process_end_state(status, "failed_keyword", "Keyword failed.", f"Keyword failed: {self.last_fail_message}")
 
         if self.stack_frames:
             self.stack_frames.popleft()
@@ -590,6 +671,9 @@ class Debugger:
         return StackTraceResult(frames, len(frames))
 
     def log_message(self, message: Dict[str, Any]) -> None:
+        if message["level"] == "FAIL":
+            self.last_fail_message = message["message"]
+
         if self.output_log:
             self.send_event(
                 self,
@@ -707,6 +791,7 @@ class Debugger:
         return result
 
     IS_VARIABLE_RE = re.compile(r"^[$@&%]\{.*\}$")
+    SPLIT_LINE = re.compile(r"(?= {2,}| ?\t)\s*")
 
     def evaluate(
         self,
@@ -716,7 +801,11 @@ class Debugger:
         format: Optional[ValueFormat] = None,
     ) -> EvaluateResult:
         from robot.running.context import EXECUTION_CONTEXTS
+        from robot.running.model import Keyword
         from robot.variables.evaluation import evaluate_expression
+
+        if not expression:
+            return EvaluateResult(result="")
 
         evaluate_context: Any = None
 
@@ -732,25 +821,33 @@ class Debugger:
 
         if context in [EvaluateArgumentContext.HOVER]:
             expression = f"${expression}"
+
+        result: Optional[str] = None
         try:
-            if expression:
-                vars = (
-                    evaluate_context.variables.current if frame_id is not None else evaluate_context.variables._global
-                )
-                if self.IS_VARIABLE_RE.match(expression.strip()):
-                    result = vars.replace_string(expression)
-                else:
-                    result = evaluate_expression(vars.replace_string(expression), vars.store)
+
+            vars = evaluate_context.variables.current if frame_id is not None else evaluate_context.variables._global
+
+            if expression.startswith("! "):
+                splitted = self.SPLIT_LINE.split(expression[2:].strip())
+                if splitted:
+                    kw = Keyword(name=splitted[0], args=tuple(splitted[1:]))
+                    result = kw.run(evaluate_context)
+
+            elif self.IS_VARIABLE_RE.match(expression.strip()):
+                result = vars.replace_string(expression)
             else:
-                return EvaluateResult("")
+                result = evaluate_expression(vars.replace_string(expression), vars.store)
 
         except BaseException as e:
             if context in [EvaluateArgumentContext.HOVER]:
                 return EvaluateResult("")
             else:
-                result = e
+                result = str(e)
 
-        return EvaluateResult(repr(result), repr(type(result)))
+        if result is not None:
+            return EvaluateResult(repr(result), repr(type(result)))
+
+        return EvaluateResult("")
 
     def set_variable(
         self, variables_reference: int, name: str, value: str, format: Optional[ValueFormat] = None
@@ -780,3 +877,29 @@ class Debugger:
                 return SetVariableResult(repr(evaluated_value), repr(type(value)))
 
         raise ReferenceError("Invalid variable reference.")
+
+    def set_exception_breakpoints(
+        self,
+        filters: List[str],
+        filter_options: Optional[List[ExceptionFilterOptions]] = None,
+        exception_options: Optional[List[ExceptionOptions]] = None,
+    ) -> Optional[List[Breakpoint]]:
+        self.exception_breakpoints.clear()
+
+        result: List[Breakpoint] = []
+
+        if filter_options is not None:
+            for option in filter_options:
+                if option.filter_id in ["failed_keyword", "failed_test", "failed_suite"]:
+                    entry = ExceptionBreakpointsEntry(
+                        tuple(filters),
+                        tuple(filter_options) if filter_options is not None else None,
+                        tuple(exception_options) if exception_options is not None else None,
+                    )
+
+                    self.exception_breakpoints.add(entry)
+                    result.append(Breakpoint(verified=True))
+                else:
+                    result.append(Breakpoint(verified=False))
+
+        return result or None

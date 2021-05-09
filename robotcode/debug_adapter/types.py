@@ -732,3 +732,47 @@ class SetVariableResponseBody(Model):
 
 class SetVariableResponse(Response):
     body: SetVariableResponseBody
+
+
+class ExceptionFilterOptions(Model):
+    filter_id: str
+    condition: Optional[str] = None
+
+    def __hash__(self) -> int:
+        return hash(tuple(self.__dict__.values()))
+
+
+class ExceptionBreakMode(Enum):
+    NEVER = "never"
+    ALWAYS = "always"
+    UNHANDLED = "unhandled"
+    USER_UNHANDLED = "userUnhandled"
+
+
+class ExceptionPathSegment(Model):
+    names: List[str]
+    negate: Optional[bool] = None
+
+
+class ExceptionOptions(Model):
+    break_mode: ExceptionBreakMode
+    path: Optional[List[ExceptionPathSegment]] = None
+
+
+class SetExceptionBreakpointsArguments(Model):
+    filters: List[str]
+    filter_options: Optional[List[ExceptionFilterOptions]] = None
+    exception_options: Optional[List[ExceptionOptions]] = None
+
+
+class SetExceptionBreakpointsRequest(Request):
+    command: str = Field("setExceptionBreakpoints", const=True)
+    arguments: SetExceptionBreakpointsArguments
+
+
+class SetExceptionBreakpointsResponseBody(Model):
+    breakpoints: Optional[List[Breakpoint]] = None
+
+
+class SetExceptionBreakpointsResponse(Response):
+    body: Optional[SetExceptionBreakpointsResponseBody] = None

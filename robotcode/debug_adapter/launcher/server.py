@@ -24,6 +24,8 @@ from ..types import (
     ScopesResponseBody,
     SetBreakpointsArguments,
     SetBreakpointsResponseBody,
+    SetExceptionBreakpointsArguments,
+    SetExceptionBreakpointsResponseBody,
     SetVariableArguments,
     SetVariableResponseBody,
     StackTraceArguments,
@@ -248,6 +250,15 @@ class LauncherServerProtocol(DebugAdapterProtocol):
             named_variables=result.named_variables,
             indexed_variables=result.indexed_variables,
         )
+
+    @rpc_method(name="setExceptionBreakpoints", param_type=SetExceptionBreakpointsArguments)
+    async def _set_exception_breakpoints(
+        self, arguments: SetExceptionBreakpointsArguments
+    ) -> Optional[SetExceptionBreakpointsResponseBody]:
+        result = Debugger.instance().set_exception_breakpoints(
+            arguments.filters, arguments.filter_options, arguments.exception_options
+        )
+        return SetExceptionBreakpointsResponseBody(breakpoints=result) if result else None
 
 
 class LaucherServer(JsonRPCServer[LauncherServerProtocol]):

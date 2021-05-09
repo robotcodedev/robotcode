@@ -330,7 +330,11 @@ async function attachPython(session: vscode.DebugSession, event: string, options
                     },
                 },
             },
-            session
+            {
+                parentSession: session,
+                compact: true,
+                consoleMode: vscode.DebugConsoleMode.MergeWithParent
+            }
         );
     }
 }
@@ -391,7 +395,7 @@ onload="frame_loaded()" sandbox="allow-scripts allow-same-origin" referrerpolicy
     // });
 }
 
-async function on_robotExited(
+async function onRobotExited(
     session: vscode.DebugSession,
     outputFile?: string,
     logFile?: string,
@@ -482,7 +486,7 @@ export async function activateAsync(context: vscode.ExtensionContext) {
                         break;
                     }
                     case "robotExited": {
-                        await on_robotExited(
+                        await onRobotExited(
                             event.session,
                             event.body.outputFile,
                             event.body.logFile,
