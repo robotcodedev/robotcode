@@ -60,6 +60,16 @@
                 "path": "./syntaxes/robotframework.tmLanguage.json"
             }
         ],
+        "keybindings": [
+            {
+                "key": "tab",
+                "command": "type",
+                "args": {
+                    "text": "    "
+                },
+                "when": "editorTextFocus && editorLangId == robotframework && !editorHasSelection && !inSnippetMode && !suggestWidgetVisible && config.robotcode.editor.4SpacesTab"
+            }
+        ],
         "configuration": [
             {
                 "title": "RobotCode",
@@ -70,6 +80,11 @@
                         "default": "",
                         "description": "Specifies the python executable to be used for RobotCode. If no path is specified, try to get it from \"python\" extension. Requires a VSCode restart to take effect.",
                         "scope": "resource"
+                    },
+                    "robotcode.editor.4SpacesTab": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "If actived insert 4 spaces if TAB is pressed."
                     },
                     "robotcode.languageServer.mode": {
                         "type": "string",
@@ -441,7 +456,7 @@
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile && npm run lint",
-        "lint": "eslint src --ext ts",
+        "lint": "eslint vscode-client --ext ts",
         "test": "node ./out/test/runTest.js"
     },
     "extensionDependencies": [
@@ -460,9 +475,9 @@
         "@types/vscode": "^1.56.0",
         "@typescript-eslint/eslint-plugin": "^4.22.1",
         "@typescript-eslint/parser": "^4.22.1",
-        "eslint": "^7.25.0",
+        "eslint": "^7.26.0",
         "glob": "^7.1.7",
-        "mocha": "^8.3.2",
+        "mocha": "^8.4.0",
         "ts-loader": "^9.1.2",
         "typescript": "^4.2.4",
         "vsce": "^1.88.0",
