@@ -23,6 +23,7 @@ from .parts.goto import RobotGotoProtocolPart
 from .parts.hover import RobotHoverProtocolPart
 from .parts.robocop_diagnostics import RobotRoboCopDiagnosticsProtocolPart
 from .parts.signature_help import RobotSignatureHelpProtocolPart
+from .parts.utils import UtilsProtocolPart
 from .utils.version import get_robot_version
 
 if TYPE_CHECKING:
@@ -58,6 +59,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     _robot_document_symbols = ProtocolPartDescriptor(RobotDocumentSymbolsProtocolPart)
     _robot_robocop_diagnostics = ProtocolPartDescriptor(RobotRoboCopDiagnosticsProtocolPart)
     _robot_formatting = ProtocolPartDescriptor(RobotFormattingProtocolPart)
+    _robot_utils = ProtocolPartDescriptor(UtilsProtocolPart)
 
     name = "RobotCode"
     version = __version__

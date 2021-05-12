@@ -2,6 +2,7 @@ import * as net from "net";
 import * as path from "path";
 import * as vscode from "vscode";
 import { LanguageClient, LanguageClientOptions, ServerOptions } from "vscode-languageclient/node";
+import { sleep } from "./utils";
 
 const LANGUAGE_SERVER_DEFAULT_TCP_PORT = 6610;
 const LANGUAGE_SERVER_DEFAULT_HOST = "127.0.0.1";
@@ -76,12 +77,15 @@ function getOuterMostWorkspaceFolder(folder: vscode.WorkspaceFolder): vscode.Wor
     return folder;
 }
 
-function startLanguageClientForDocument(document: vscode.TextDocument) {
-    if (document.languageId !== "robotframework") {
-        return;
-    }
+async function getLanguageClientForDocument(document: vscode.TextDocument): Promise<LanguageClient | undefined> {
+    if (document.languageId !== "robotframework") return;
 
-    let workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+    return await getLanguageClientForResource(document.uri);
+}
+
+async function getLanguageClientForResource(resource: string | vscode.Uri): Promise<LanguageClient | undefined> {
+    let uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
+    let workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
 
     if (!workspaceFolder) {
         return;
@@ -89,8 +93,10 @@ function startLanguageClientForDocument(document: vscode.TextDocument) {
 
     workspaceFolder = getOuterMostWorkspaceFolder(workspaceFolder);
 
-    if (!clients.has(workspaceFolder.uri.toString())) {
-        let config = vscode.workspace.getConfiguration(CONFIG_SECTION, document);
+    var result = clients.get(workspaceFolder.uri.toString());
+
+    if (!result) {
+        let config = vscode.workspace.getConfiguration(CONFIG_SECTION, uri);
 
         let mode = config.get<string>("languageServer.mode", "stdio");
 
@@ -119,13 +125,23 @@ function startLanguageClientForDocument(document: vscode.TextDocument) {
             },
             progressOnInitialization: true,
         };
+
         OUTPUT_CHANNEL.appendLine(`start Language client: ${name}`);
-        let client = new LanguageClient(name, serverOptions, clientOptions);
+        result = new LanguageClient(name, serverOptions, clientOptions);
+        clients.set(workspaceFolder.uri.toString(), result);
 
-        client.start();
-
-        clients.set(workspaceFolder.uri.toString(), client);
+        result.start();
     }
+
+    var counter = 0;
+    while (!result.initializeResult && counter < 10_000) {
+        await sleep(100);
+        counter++;
+    }
+
+    await result.onReady();
+
+    return result;
 }
 
 function getServerOptionsTCP(folder: vscode.WorkspaceFolder) {
@@ -271,11 +287,90 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
     }
 }
 
+async function getCurrentTestFromActiveResource(
+    resource: string | vscode.Uri | undefined,
+    selection?: vscode.Selection
+): Promise<string | undefined> {
+    if (resource === undefined) return;
+
+    let uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
+    let folder = vscode.workspace.getWorkspaceFolder(uri);
+    if (!folder) return;
+
+    if (!vscode.window.activeTextEditor) return;
+
+    if (vscode.window.activeTextEditor.document.uri.toString() != uri.toString()) return;
+
+    if (selection === undefined) selection = vscode.window.activeTextEditor.selection;
+
+    let client = await getLanguageClientForResource(resource);
+
+    if (!client) return;
+
+    try {
+        return (
+            (await client?.sendRequest<string | undefined>("robotcode/getTestFromPosition", {
+                textDocument: { uri: uri.toString() },
+                position: selection.active,
+            })) ?? undefined
+        );
+    } catch {}
+}
+
+interface Test {
+    name: string;
+    source: {
+        uri: string;
+    };
+    lineNo: number;
+}
+async function getTestsFromResource(resource: string | vscode.Uri | undefined): Promise<Test[] | undefined> {
+    if (resource === undefined) return [];
+
+    let uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
+    let folder = vscode.workspace.getWorkspaceFolder(uri);
+    if (!folder) return [];
+
+    let client = await getLanguageClientForResource(resource);
+
+    if (!client) return;
+
+    let result =
+        (await client.sendRequest<Test[]>("robotcode/getTests", {
+            textDocument: { uri: uri.toString() },
+        })) ?? undefined;
+
+    return result;
+}
+
+async function getTestFromResource(resource: string | vscode.Uri | undefined): Promise<string | string[] | undefined> {
+    var result = await getCurrentTestFromActiveResource(resource);
+    if (!result) {
+        let tests = await getTestsFromResource(resource);
+        if (tests) {
+            let items = tests.map((t) => {
+                return { label: t.name, picked: false, description: "" };
+            });
+            if (items.length > 0) {
+                items[0].picked = true;
+                items[0].description = "(Default)";
+            }
+            let selection = await vscode.window.showQuickPick(items, { title: "Select test(s)" });
+            if (selection) {
+                return selection.label;
+            }
+        }
+    }
+    return result;
+}
+
 async function debugSuiteOrTestcase(
-    resource: string | vscode.Uri,
-    testcase?: string,
+    resource: string | vscode.Uri | undefined,
+    testcases?: string | string[],
     options?: vscode.DebugSessionOptions
 ) {
+    if (resource === undefined) return;
+
     let uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
 
     let folder = vscode.workspace.getWorkspaceFolder(uri);
@@ -284,9 +379,14 @@ async function debugSuiteOrTestcase(
 
     var args = [];
 
-    if (testcase) {
-        args.push("-t");
-        args.push(testcase);
+    if (testcases) {
+        if (!(testcases instanceof Array)) {
+            testcases = [testcases];
+        }
+        for (var testcase of testcases) {
+            args.push("-t");
+            args.push(testcase.toString());
+        }
     }
 
     var template = config.get("debug.defaultConfiguration", {});
@@ -297,7 +397,7 @@ async function debugSuiteOrTestcase(
             ...template,
             ...{
                 type: "robotcode",
-                name: `robotcode: Suite: ${resource}${testcase ? " Testcase: " + testcase : ""}`,
+                name: `robotcode: Suite: ${resource}${testcases ? " Testcase: " + testcases : ""}`,
                 request: "launch",
                 cwd: folder?.uri.fsPath,
                 target: uri.fsPath,
@@ -333,7 +433,7 @@ async function attachPython(session: vscode.DebugSession, event: string, options
             {
                 parentSession: session,
                 compact: true,
-                consoleMode: vscode.DebugConsoleMode.MergeWithParent
+                consoleMode: vscode.DebugConsoleMode.MergeWithParent,
             }
         );
     }
@@ -395,12 +495,7 @@ onload="frame_loaded()" sandbox="allow-scripts allow-same-origin" referrerpolicy
     // });
 }
 
-async function onRobotExited(
-    session: vscode.DebugSession,
-    outputFile?: string,
-    logFile?: string,
-    reportFile?: string
-) {
+async function onRobotExited(session: vscode.DebugSession, outputFile?: string, logFile?: string, reportFile?: string) {
     if (reportFile) {
         let config = vscode.workspace.getConfiguration(CONFIG_SECTION, session.workspaceFolder);
 
@@ -416,6 +511,18 @@ async function onRobotExited(
                 break;
         }
     }
+}
+
+async function updateEditorContext(editor?: vscode.TextEditor) {
+    if (editor === undefined) editor = vscode.window.activeTextEditor;
+
+    var inTest = false;
+    if (editor && editor == vscode.window.activeTextEditor && editor.document.languageId == "robotframework") {
+        let currentTest = await getCurrentTestFromActiveResource(editor.document.uri);
+        inTest = currentTest !== undefined && currentTest !== "";
+    }
+
+    vscode.commands.executeCommand("setContext", "robotCode.editor.inTest", inTest);
 }
 
 export async function activateAsync(context: vscode.ExtensionContext) {
@@ -438,20 +545,44 @@ export async function activateAsync(context: vscode.ExtensionContext) {
         }),
 
         vscode.commands.registerCommand("robotcode.runSuite", async (resource) => {
-            return await debugSuiteOrTestcase(resource, undefined, { noDebug: true });
+            return await debugSuiteOrTestcase(resource ?? vscode.window.activeTextEditor?.document.uri, undefined, {
+                noDebug: true,
+            });
         }),
 
         vscode.commands.registerCommand("robotcode.debugSuite", async (resource) => {
-            return await debugSuiteOrTestcase(resource, undefined);
+            return await debugSuiteOrTestcase(resource ?? vscode.window.activeTextEditor?.document.uri, undefined);
         }),
 
-        vscode.commands.registerCommand("robotcode.runTest", async (resource, test) => {
-            return await debugSuiteOrTestcase(resource, test, { noDebug: true });
-        }),
+        vscode.commands.registerCommand(
+            "robotcode.runTest",
+            async (resource: vscode.Uri | string | undefined, test) => {
+                let res = resource ?? vscode.window.activeTextEditor?.document.uri;
 
-        vscode.commands.registerCommand("robotcode.debugTest", async (resource, test) => {
-            return await debugSuiteOrTestcase(resource, test);
-        }),
+                let realTest =
+                    (test !== undefined && test instanceof String ? test.toString() : undefined) ??
+                    (await getTestFromResource(res));
+                if (!realTest) return;
+
+                return await debugSuiteOrTestcase(res, realTest, {
+                    noDebug: true,
+                });
+            }
+        ),
+
+        vscode.commands.registerCommand(
+            "robotcode.debugTest",
+            async (resource: vscode.Uri | string | undefined, test) => {
+                let res = resource ?? vscode.window.activeTextEditor?.document.uri;
+
+                let realTest =
+                    (test !== undefined && test instanceof String ? test.toString() : undefined) ??
+                    (await getTestFromResource(res));
+                if (!realTest) return;
+
+                return await debugSuiteOrTestcase(res, realTest);
+            }
+        ),
         vscode.workspace.onDidChangeWorkspaceFolders((event) => {
             for (let folder of event.removed) {
                 let client = clients.get(folder.uri.toString());
@@ -497,9 +628,6 @@ export async function activateAsync(context: vscode.ExtensionContext) {
                 }
             }
         }),
-        vscode.window.onDidOpenTerminal(async (terminal) => {
-            console.log("ho");
-        }),
         vscode.window.registerTerminalLinkProvider({
             provideTerminalLinks(context: vscode.TerminalLinkContext, token: vscode.CancellationToken) {
                 console.log("ho");
@@ -538,47 +666,54 @@ export async function activateAsync(context: vscode.ExtensionContext) {
                         break;
                 }
             },
-        })
+        }),
 
         // vscode.debug.onDidStartDebugSession(async (session) => {
         //     if (session.configuration.type === "robotcode") {
         //         await attachPython(session);
         //     }
         // })
+
+        vscode.workspace.onDidChangeConfiguration((event) => {
+            for (let s of [
+                "python.pythonPath",
+                "robotcode.python",
+                "robotcode.languageServer.mode",
+                "robotcode.languageServer.tcpPort",
+                "robotcode.languageServer.args",
+                "robotcode.debugAdapter.mode",
+                "robotcode.debugAdapter.tcpPort",
+                "robotcode.debugAdapter.args",
+                "robotcode.robot.environment",
+                "robotcode.robot.variables",
+                "robotcode.robot.args",
+            ]) {
+                if (event.affectsConfiguration(s)) {
+                    vscode.window
+                        .showWarningMessage(
+                            'Please use the "Reload Window" action for changes in ' + s + " to take effect.",
+                            ...["Reload Window"]
+                        )
+                        .then((selection) => {
+                            if (selection === "Reload Window") {
+                                vscode.commands.executeCommand("workbench.action.reloadWindow");
+                            }
+                        });
+                    return;
+                }
+            }
+        }),
+        vscode.window.onDidChangeTextEditorSelection(async (event) => {
+            await updateEditorContext(event.textEditor);
+        }),
+        vscode.workspace.onDidOpenTextDocument(getLanguageClientForDocument)
     );
 
-    vscode.workspace.onDidChangeConfiguration((event) => {
-        for (let s of [
-            "python.pythonPath",
-            "robotcode.python",
-            "robotcode.languageServer.mode",
-            "robotcode.languageServer.tcpPort",
-            "robotcode.languageServer.args",
-            "robotcode.debugAdapter.mode",
-            "robotcode.debugAdapter.tcpPort",
-            "robotcode.debugAdapter.args",
-            "robotcode.robot.environment",
-            "robotcode.robot.variables",
-            "robotcode.robot.args",
-        ]) {
-            if (event.affectsConfiguration(s)) {
-                vscode.window
-                    .showWarningMessage(
-                        'Please use the "Reload Window" action for changes in ' + s + " to take effect.",
-                        ...["Reload Window"]
-                    )
-                    .then((selection) => {
-                        if (selection === "Reload Window") {
-                            vscode.commands.executeCommand("workbench.action.reloadWindow");
-                        }
-                    });
-                return;
-            }
-        }
-    });
+    for (let document of vscode.workspace.textDocuments) {
+        await getLanguageClientForDocument(document);
+    }
 
-    vscode.workspace.onDidOpenTextDocument(startLanguageClientForDocument);
-    vscode.workspace.textDocuments.forEach(startLanguageClientForDocument);
+    await updateEditorContext();
 }
 
 function displayProgress(promise: Promise<any>) {

@@ -1,7 +1,16 @@
 from __future__ import annotations
 
 import ast
-from typing import Any, Iterator, List, Optional, Protocol, Tuple, runtime_checkable
+from typing import (
+    Any,
+    AsyncIterator,
+    Iterator,
+    List,
+    Optional,
+    Protocol,
+    Tuple,
+    runtime_checkable,
+)
 
 from ...common.types import Position, Range
 from .async_ast import walk
@@ -127,8 +136,12 @@ def get_tokens_at_position(node: Statement, position: Position) -> List[Token]:
     return [t for t in node.tokens if position.is_in_range(range := range_from_token(t)) or range.end == position]
 
 
+def iter_nodes_at_position(node: ast.AST, position: Position) -> AsyncIterator[ast.AST]:
+    return (n async for n in walk(node) if position.is_in_range(range := range_from_node(n)) or range.end == position)
+
+
 async def get_nodes_at_position(node: ast.AST, position: Position) -> List[ast.AST]:
-    return [n async for n in walk(node) if position.is_in_range(range := range_from_node(n)) or range.end == position]
+    return [n async for n in iter_nodes_at_position(node, position)]
 
 
 async def get_node_at_position(node: ast.AST, position: Position) -> Optional[ast.AST]:

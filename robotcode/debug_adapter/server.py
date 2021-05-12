@@ -177,8 +177,6 @@ class DAPServerProtocol(DebugAdapterProtocol):
 
         run_args += ["--"]
 
-        run_args += args or []
-
         if robotPythonPath:
             for e in robotPythonPath:
                 run_args += ["-P", e]
@@ -186,6 +184,8 @@ class DAPServerProtocol(DebugAdapterProtocol):
         if variables:
             for k, v in variables.items():
                 run_args += ["-v", f"{k}:{v}"]
+
+        run_args += args or []
 
         if target:
             run_args.append(target)
