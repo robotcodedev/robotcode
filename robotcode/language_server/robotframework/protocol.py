@@ -69,9 +69,11 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     def __init__(self, server: "RobotLanguageServer"):
         super().__init__(server)
         self.options = Options()
+        super().on_initialize.add(self._on_initialize)
+        super().on_initialized.add(self._on_initialized)
 
     @_logger.call
-    async def on_initialize(self, initialization_options: Optional[Any] = None) -> None:
+    async def _on_initialize(self, sender: Any, initialization_options: Optional[Any] = None) -> None:
         check_robotframework()
 
         if initialization_options is not None:
@@ -80,7 +82,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         self._logger.info(f"initialized with {repr(self.options)}")
 
     @_logger.call
-    async def on_initialized(self) -> None:
+    async def _on_initialized(self, sender: Any) -> None:
         document_selector = [DocumentFilter(language="python")]
         await self.register_capability(
             str(uuid.uuid4()),

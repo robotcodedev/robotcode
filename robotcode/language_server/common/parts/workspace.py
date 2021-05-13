@@ -211,7 +211,7 @@ class Workspace(LanguageServerProtocolPart):
         await self.did_change_configuration(self, settings)
 
     @async_event
-    async def will_create_files(sender, files: List[str]) -> Mapping[str, TextEdit]:
+    async def will_create_files(sender, files: List[str]) -> Optional[Mapping[str, List[TextEdit]]]:
         ...
 
     @async_event

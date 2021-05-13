@@ -158,7 +158,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
         self.initialization_options = initialization_options
         try:
-            await self.on_initialize(initialization_options)
+            await self.on_initialize(self, initialization_options)
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except JsonRPCErrorException:
@@ -177,15 +177,17 @@ class LanguageServerProtocol(JsonRPCProtocol):
             ),
         )
 
-    async def on_initialize(self, initialization_options: Optional[Any] = None) -> None:
-        pass
+    @async_event
+    async def on_initialize(sender, initialization_options: Optional[Any] = None) -> None:
+        ...
 
     @rpc_method(name="initialized", param_type=InitializedParams)
     async def _initialized(self, params: InitializedParams) -> None:
-        await self.on_initialized()
+        await self.on_initialized(self)
 
-    async def on_initialized(self) -> None:
-        pass
+    @async_event
+    async def on_initialized(sender) -> None:
+        ...
 
     @rpc_method(name="shutdown")
     @_logger.call
