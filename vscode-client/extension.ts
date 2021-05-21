@@ -1,5 +1,6 @@
 import * as net from "net";
 import * as path from "path";
+import * as fs from "fs";
 import * as vscode from "vscode";
 import { LanguageClient, LanguageClientOptions, ServerOptions } from "vscode-languageclient/node";
 import { sleep } from "./utils";
@@ -27,8 +28,8 @@ function getPythonCommand(folder: vscode.WorkspaceFolder | undefined): string | 
     if (configPython !== undefined && configPython != "") {
         result = configPython;
     } else {
-        const extension = vscode.extensions.getExtension("ms-python.python")!;
-        let pythonExtensionPythonPath: string[] | undefined = extension.exports.settings.getExecutionDetails(
+        const pythonExtension = vscode.extensions.getExtension("ms-python.python")!;
+        let pythonExtensionPythonPath: string[] | undefined = pythonExtension.exports.settings.getExecutionDetails(
             folder?.uri
         )?.execCommand;
 
@@ -439,62 +440,6 @@ async function attachPython(session: vscode.DebugSession, event: string, options
     }
 }
 
-async function openReportInternal(reportFile: string) {
-    let panel = vscode.window.createWebviewPanel("robotcode.report", "Robot Report", vscode.ViewColumn.Active, {
-        enableScripts: true,
-        enableFindWidget: true,
-        enableCommandUris: true,
-        retainContextWhenHidden: true,
-        localResourceRoots: [vscode.Uri.file(path.dirname(reportFile))],
-    });
-
-    let uri = vscode.Uri.file(reportFile);
-
-    panel.webview.html = `<!DOCTYPE html>
-<html>
-
-<head>
-<meta http-equiv="Content-Security-Policy" content="
-default-src none 'unsafe-inline'; 
-frame-src ${panel.webview.cspSource} 'unsafe-inline';
-style-src ${panel.webview.cspSource} 'unsafe-inline'; 
-img-src ${panel.webview.cspSource}; 
-script-src ${panel.webview.cspSource} 'unsafe-inline';">  
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Robot Report</title>
-</head>
-
-<body>
-<script>
-function frame_loaded() {
-function WhichLinkWasClicked(evt) {
-alert(evt.target);
-//evt.preventDefault();
-}
-
-var links = myFrame.document.querySelectorAll('a');
-for (var link of links) {
-console.log("blah link");
-link.addEventListener('click', WhichLinkWasClicked);
-}
-}
-</script>
-
-<iframe style="position: absolute; height: 100%; width: 100%; border: none" src="${panel.webview
-        .asWebviewUri(uri)
-        .toString()}" name="myFrame"
-onload="frame_loaded()" sandbox="allow-scripts allow-same-origin" referrerpolicy="origin" >
-</iframe>
-</body>
-
-</html>`;
-    //panel.webview.html = fs.readFileSync(event.body?.reportFile).toString();
-    // panel.webview.onDidReceiveMessage(async (event) => {
-    //     console.log(`hello ${JSON.stringify(event)}`);
-    // });
-}
-
 async function onRobotExited(session: vscode.DebugSession, outputFile?: string, logFile?: string, reportFile?: string) {
     if (reportFile) {
         let config = vscode.workspace.getConfiguration(CONFIG_SECTION, session.workspaceFolder);
@@ -503,12 +448,7 @@ async function onRobotExited(session: vscode.DebugSession, outputFile?: string, 
             case "disabled":
                 return;
             case "external":
-                vscode.env.openExternal(vscode.Uri.file(reportFile));
-                break;
-
-            case "internal":
-                openReportInternal(reportFile);
-                break;
+                vscode.env.openExternal(vscode.Uri.file(reportFile));        
         }
     }
 }
@@ -533,17 +473,13 @@ export async function activateAsync(context: vscode.ExtensionContext) {
     pythonDebugAdapterMain = context.asAbsolutePath(path.join("robotcode", "debug_adapter", "__main__.py"));
 
     OUTPUT_CHANNEL.appendLine("Try to activate Python extension.");
-    const extension = vscode.extensions.getExtension("ms-python.python")!;
+    const pythonExtension = vscode.extensions.getExtension("ms-python.python")!;
 
-    await extension.activate().then(function () {
-        OUTPUT_CHANNEL.appendLine("Python Extension is active");
-    });
+    await pythonExtension.activate();
+
+    OUTPUT_CHANNEL.appendLine("Python Extension is active");
 
     context.subscriptions.push(
-        extension.exports.settings.onDidChangeExecutionDetails((uri: vscode.Uri) => {
-            OUTPUT_CHANNEL.appendLine(uri.toString());
-        }),
-
         vscode.commands.registerCommand("robotcode.runSuite", async (resource) => {
             return await debugSuiteOrTestcase(resource ?? vscode.window.activeTextEditor?.document.uri, undefined, {
                 noDebug: true,
@@ -630,7 +566,6 @@ export async function activateAsync(context: vscode.ExtensionContext) {
         }),
         vscode.window.registerTerminalLinkProvider({
             provideTerminalLinks(context: vscode.TerminalLinkContext, token: vscode.CancellationToken) {
-                console.log("ho");
                 if (
                     (context.line.startsWith("Log:") || context.line.startsWith("Report:")) &&
                     context.line.endsWith("html")
@@ -658,9 +593,6 @@ export async function activateAsync(context: vscode.ExtensionContext) {
                 );
 
                 switch (config.get<string>("run.openReportAfterRun")) {
-                    case "internal":
-                        openReportInternal(link.path);
-                        break;
                     default:
                         vscode.env.openExternal(vscode.Uri.file(link.path));
                         break;
@@ -706,7 +638,35 @@ export async function activateAsync(context: vscode.ExtensionContext) {
         vscode.window.onDidChangeTextEditorSelection(async (event) => {
             await updateEditorContext(event.textEditor);
         }),
-        vscode.workspace.onDidOpenTextDocument(getLanguageClientForDocument)
+        vscode.workspace.onDidOpenTextDocument(getLanguageClientForDocument),
+
+        vscode.languages.registerInlineValuesProvider("robotframework", {
+            provideInlineValues(
+                document: vscode.TextDocument,
+                viewPort: vscode.Range,
+                context: vscode.InlineValueContext,
+                token: vscode.CancellationToken
+            ): vscode.ProviderResult<vscode.InlineValue[]> {
+                const allValues: vscode.InlineValue[] = [];
+
+                for (let l = 0; l <= context.stoppedLocation.end.line; l++) {
+                    const line = document.lineAt(l);
+                    let text = line.text.split("#")[0];
+
+                    const variableMatches =
+                        /([$@&%]\{)(?:((?:\d+\.?\d*)|(?:0x[\/da-f]+)|(?:0o[0-7]+)|(?:0b[01]+))|(true|false|none|null|empty|space|\/|:|\\n)|((.+?}*)))(\})(?:(\[)(?:(\d+)|(.*?))?(\]))?/gi;
+
+                    let match;
+                    while ((match = variableMatches.exec(text))) {
+                        let varName = match[0];
+
+                        const rng = new vscode.Range(l, match.index, l, match.index + varName.length);
+                        allValues.push(new vscode.InlineValueVariableLookup(rng, varName, false));
+                    }
+                }
+                return allValues;
+            },
+        })
     );
 
     for (let document of vscode.workspace.textDocuments) {

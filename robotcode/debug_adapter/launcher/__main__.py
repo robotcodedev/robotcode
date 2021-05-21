@@ -150,7 +150,7 @@ async def run_robot(
 
     loop = asyncio.new_event_loop()
 
-    thread = threading.Thread(name="RobotCode Debug Launcher", target=run_server, args=(port, loop))
+    thread = threading.Thread(name="RobotCode Debugger", target=run_server, args=(port, loop))
     thread.setDaemon(True)
     thread.start()
 
@@ -159,32 +159,28 @@ async def run_robot(
     try:
         if wait_for_client:
             try:
-
-                await asyncio.gather(
-                    # start_debugpy_async(),
-                    asyncio.wrap_future(
-                        asyncio.run_coroutine_threadsafe(
-                            server.protocol.wait_for_client(wait_for_client_timeout), loop=loop
-                        )
-                    ),
+                await asyncio.wrap_future(
+                    asyncio.run_coroutine_threadsafe(
+                        server.protocol.wait_for_client(wait_for_client_timeout), loop=loop
+                    )
                 )
             except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                 pass
             except asyncio.TimeoutError:
                 raise ConnectionError("No incomming connection from a debugger client.")
 
-            await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server.protocol.initialized(), loop=loop))
+        await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server.protocol.initialized(), loop=loop))
 
-            try:
-                await asyncio.wrap_future(
-                    asyncio.run_coroutine_threadsafe(
-                        server.protocol.wait_for_configuration_done(configuration_done_timeout), loop=loop
-                    )
+        try:
+            await asyncio.wrap_future(
+                asyncio.run_coroutine_threadsafe(
+                    server.protocol.wait_for_configuration_done(configuration_done_timeout), loop=loop
                 )
-            except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
-                pass
-            except asyncio.TimeoutError:
-                raise ConnectionError("Timeout to get configuration from client.")
+            )
+        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+            pass
+        except asyncio.TimeoutError:
+            raise ConnectionError("Timeout to get configuration from client.")
 
         await start_debugpy_async()
 
