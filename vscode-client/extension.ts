@@ -1,6 +1,5 @@
 import * as net from "net";
 import * as path from "path";
-import * as fs from "fs";
 import * as vscode from "vscode";
 import { LanguageClient, LanguageClientOptions, ServerOptions } from "vscode-languageclient/node";
 import { sleep } from "./utils";
@@ -316,6 +315,8 @@ async function getCurrentTestFromActiveResource(
             })) ?? undefined
         );
     } catch {}
+
+    return;
 }
 
 interface Test {
@@ -448,7 +449,7 @@ async function onRobotExited(session: vscode.DebugSession, outputFile?: string, 
             case "disabled":
                 return;
             case "external":
-                vscode.env.openExternal(vscode.Uri.file(reportFile));        
+                vscode.env.openExternal(vscode.Uri.file(reportFile));
         }
     }
 }
@@ -496,7 +497,7 @@ export async function activateAsync(context: vscode.ExtensionContext) {
                 let res = resource ?? vscode.window.activeTextEditor?.document.uri;
 
                 let realTest =
-                    (test !== undefined && test instanceof String ? test.toString() : undefined) ??
+                    (test !== undefined && typeof test === "string" ? test.toString() : undefined) ??
                     (await getTestFromResource(res));
                 if (!realTest) return;
 
@@ -512,7 +513,7 @@ export async function activateAsync(context: vscode.ExtensionContext) {
                 let res = resource ?? vscode.window.activeTextEditor?.document.uri;
 
                 let realTest =
-                    (test !== undefined && test instanceof String ? test.toString() : undefined) ??
+                    (test !== undefined && typeof test === "string" ? test.toString() : undefined) ??
                     (await getTestFromResource(res));
                 if (!realTest) return;
 
@@ -600,12 +601,6 @@ export async function activateAsync(context: vscode.ExtensionContext) {
             },
         }),
 
-        // vscode.debug.onDidStartDebugSession(async (session) => {
-        //     if (session.configuration.type === "robotcode") {
-        //         await attachPython(session);
-        //     }
-        // })
-
         vscode.workspace.onDidChangeConfiguration((event) => {
             for (let s of [
                 "python.pythonPath",
@@ -649,7 +644,11 @@ export async function activateAsync(context: vscode.ExtensionContext) {
             ): vscode.ProviderResult<vscode.InlineValue[]> {
                 const allValues: vscode.InlineValue[] = [];
 
-                for (let l = 0; l <= context.stoppedLocation.end.line; l++) {
+                for (
+                    let l = viewPort.start.line;
+                    l <= Math.min(viewPort.end.line, context.stoppedLocation.end.line);
+                    l++
+                ) {
                     const line = document.lineAt(l);
                     let text = line.text.split("#")[0];
 

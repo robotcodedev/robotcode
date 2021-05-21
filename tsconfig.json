@@ -1,21 +1,33 @@
 {
 	"compilerOptions": {
+		"baseUrl": ".",
 		"module": "commonjs",
-		"target": "es6",
+		"target": "es2018",
 		"outDir": "out",
 		"lib": [
-			"ES2019"
+			"es6",
+			"es2018",
+			"dom",
+			"ES2019",
+			"ES2020"
 		],
 		"sourceMap": true,
 		"rootDir": "vscode-client",
-		"strict": true   /* enable all strict type-checking options */
-		/* Additional Checks */
-		// "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
-		// "noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement. */
-		// "noUnusedParameters": true,  /* Report errors on unused parameters. */
+		"strict": true,
+		"experimentalDecorators": true,
+		"allowSyntheticDefaultImports": true,
+		"noImplicitAny": true,
+		"noImplicitThis": true,
+		"noUnusedLocals": true,
+		//"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"resolveJsonModule": true,
+		"removeComments": true,
+		"noImplicitReturns": true,
 	},
 	"exclude": [
 		"node_modules",
-		".vscode-test"
+		".vscode-test",
+		"out",
 	]
 }
