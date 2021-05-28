@@ -10,6 +10,7 @@ from typing import (
     Any,
     AsyncIterator,
     Callable,
+    Dict,
     Iterable,
     List,
     NamedTuple,
@@ -40,6 +41,7 @@ from .library_doc import (
     BUILTIN_LIBRARY_NAME,
     DEFAULT_LIBRARIES,
     KeywordDoc,
+    KeywordMatcher,
     LibraryDoc,
     is_embedded_keyword,
 )
@@ -123,6 +125,27 @@ class VariablesImport(Import):
 
 class NameSpaceError(Exception):
     pass
+
+
+class VariablesVisitor(AsyncVisitor):
+    async def get(self, source: str, model: ast.AST) -> List[str]:
+        self._results: List[str] = []
+        self.source = source
+        await self.visit(model)
+        return self._results
+
+    async def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.model.blocks import VariableSection
+
+        if isinstance(node, VariableSection):
+            await self.generic_visit(node)
+
+    async def visit_Variable(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.model.statements import Variable
+
+        n = cast(Variable, node)
+        if n.name:
+            self._results.append(n.name)
 
 
 class ImportVisitor(AsyncVisitor):
@@ -578,6 +601,11 @@ class ResourceEntry(LibraryEntry):
     variables: List[str] = field(default_factory=lambda: [])
 
 
+@dataclass
+class VariablesEntry(LibraryEntry):
+    pass
+
+
 IMPORTS_KEY = object()
 REFERENCED_DOCUMENTS_KEY = object()
 
@@ -605,12 +633,14 @@ class Namespace:
         self._document = weakref.ref(document) if document is not None else None
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
         self._resources: OrderedDict[str, ResourceEntry] = OrderedDict()
+        self._variables: OrderedDict[str, VariablesEntry] = OrderedDict()
         self._initialzed = False
         self._initialize_lock = asyncio.Lock()
         self._analyzed = False
         self._analyze_lock = asyncio.Lock()
         self._library_doc: Optional[LibraryDoc] = None
         self._imports: Optional[List[Import]] = None
+        self._own_variables: Optional[List[str]] = None
         self._diagnostics: List[Diagnostic] = []
 
         self._keywords: Optional[List[KeywordDoc]] = None
@@ -710,6 +740,12 @@ class Namespace:
             self._imports = await ImportVisitor().get(self.source, self.model)
 
         return self._imports
+
+    async def get_own_variables(self) -> List[str]:
+        if self._own_variables is None:
+            self._own_variables = await VariablesVisitor().get(self.source, self.model)
+
+        return self._own_variables
 
     async def _import_imports(self, imports: Iterable[Import], base_dir: str, *, top_level: bool = False) -> None:
         async def _import(value: Import) -> Optional[LibraryEntry]:
@@ -1014,13 +1050,13 @@ class Namespace:
         library_doc = await self.imports_manager.get_libdoc_for_resource_import(name, base_dir, sentinel=sentinel)
 
         return ResourceEntry(
-            name=library_doc.name, import_name=name, library_doc=library_doc, imports=await namespace.get_imports()
+            name=library_doc.name,
+            import_name=name,
+            library_doc=library_doc,
+            imports=await namespace.get_imports(),
+            variables=await namespace.get_own_variables(),
         )
 
-    async def _get_variables_entry(self, name: str, args: Tuple[Any, ...], base_dir: str) -> LibraryEntry:
-        raise NotImplementedError("_import_variables")
-
-    # TODO get_own_keywords
     # TODO get_variables
 
     @_logger.call
@@ -1028,17 +1064,17 @@ class Namespace:
         await self._ensure_initialized()
 
         if self._keywords is None:
+            result: Dict[KeywordMatcher, KeywordDoc] = {}
 
-            self._keywords = [
-                e
-                async for e in async_chain(
-                    *(e.library_doc.keywords.values() for e in self._libraries.values()),
-                    *(e.library_doc.keywords.values() for e in self._resources.values()),
-                    (await self.get_library_doc()).keywords.values()
-                    if (await self.get_library_doc()) is not None
-                    else [],
-                )
-            ]
+            async for name, doc in async_chain(
+                (await self.get_library_doc()).keywords.items() if (await self.get_library_doc()) is not None else [],
+                *(e.library_doc.keywords.items() for e in self._resources.values()),
+                *(e.library_doc.keywords.items() for e in self._libraries.values()),
+            ):
+                if KeywordMatcher(name) not in result.keys():
+                    result[KeywordMatcher(name)] = doc
+
+            self._keywords = list(result.values())
 
         return self._keywords
 

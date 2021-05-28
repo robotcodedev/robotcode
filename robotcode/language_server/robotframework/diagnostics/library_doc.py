@@ -109,6 +109,9 @@ class KeywordMatcher:
     def __eq__(self, o: object) -> bool:
         from robot.utils.normalizing import normalize
 
+        if isinstance(o, KeywordMatcher):
+            o = o.name
+
         if not isinstance(o, str):
             return False
 
