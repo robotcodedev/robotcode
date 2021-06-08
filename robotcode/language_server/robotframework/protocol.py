@@ -34,7 +34,7 @@ def check_robotframework() -> None:
     try:
         __import__("robot")
     except ImportError as e:
-        raise Exception("RobotFramework not found, please install.") from e
+        raise Exception("'robot' module not found, please install RobotFramework.") from e
 
     if get_robot_version() < (4, 0):
         raise Exception("Wrong RobotFramework version. Expect version >= 4.0")

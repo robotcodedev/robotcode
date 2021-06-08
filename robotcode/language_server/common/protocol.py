@@ -165,7 +165,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
             raise
         except BaseException as e:
             raise JsonRPCErrorException(
-                JsonRPCErrors.INTERNAL_ERROR, f"Can't start language server: {e}", InitializeError(retry=True)
+                JsonRPCErrors.INTERNAL_ERROR, f"Can't start language server: {e}", InitializeError(retry=False)
             ) from e
 
         return InitializeResult(
