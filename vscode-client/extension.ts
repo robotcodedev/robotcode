@@ -43,16 +43,33 @@ function getPythonCommand(folder: vscode.WorkspaceFolder | undefined): string | 
 let clientsMutex = new Mutex();
 let clients: Map<string, LanguageClient> = new Map();
 
-async function pythonExcetionDidChangeExecutionDetails(uri: vscode.Uri | undefined) {
-    if (uri && clients.has(uri.toString())) {
-        await clientsMutex.dispatch(async () => {
-            let client = clients.get(uri.toString());
-            clients.delete(uri.toString());
-            await client?.stop();
-        });
+async function updateLoadedDocumentClients(uri?: vscode.Uri | undefined) {
+    // if (uri && clients.has(uri.toString())) {
+    //     await clientsMutex.dispatch(async () => {
+    //         let client = clients.get(uri.toString());
+    //         clients.delete(uri.toString());
+    //         await client?.stop();
+    //     });
 
-        await getLanguageClientForResource(uri);
+    //     await getLanguageClientForResource(uri);
+    // }
+
+    OUTPUT_CHANNEL.appendLine("initialze/restart all needed language clients.");
+    await clientsMutex.dispatch(async () => {
+        for (let client of clients.values()) {
+            await client.stop().catch((_) => {});
+        }
+        clients.clear();
+    });
+
+    for (let document of vscode.workspace.textDocuments) {
+        try {
+            await getLanguageClientForDocument(document).catch((_) => {});
+        } catch {
+            // do nothing
+        }
     }
+    await updateEditorContext().catch((_) => {});
 }
 
 let _sortedWorkspaceFolders: string[] | undefined;
@@ -96,7 +113,7 @@ async function getLanguageClientForDocument(document: vscode.TextDocument): Prom
 }
 
 async function getLanguageClientForResource(resource: string | vscode.Uri): Promise<LanguageClient | undefined> {
-    let client = await clientsMutex.dispatch(async () => {
+    var client = await clientsMutex.dispatch(async () => {
         let uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
         let workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
 
@@ -108,58 +125,78 @@ async function getLanguageClientForResource(resource: string | vscode.Uri): Prom
 
         var result = clients.get(workspaceFolder.uri.toString());
 
-        if (!result) {
-            let config = vscode.workspace.getConfiguration(CONFIG_SECTION, uri);
+        if (result) return result;
 
-            let mode = config.get<string>("languageServer.mode", "stdio");
+        let config = vscode.workspace.getConfiguration(CONFIG_SECTION, uri);
 
-            const serverOptions: ServerOptions =
-                mode === "tcp" ? getServerOptionsTCP(workspaceFolder) : getServerOptionsStdIo(workspaceFolder);
-            let name = `RobotCode Language Server mode=${mode} for workspace folder "${workspaceFolder.name}"`;
+        let mode = config.get<string>("languageServer.mode", "stdio");
 
-            let outputChannel = mode === "stdio" ? vscode.window.createOutputChannel(name) : undefined;
+        const serverOptions: ServerOptions =
+            mode === "tcp" ? getServerOptionsTCP(workspaceFolder) : getServerOptionsStdIo(workspaceFolder);
+        let name = `RobotCode Language Server mode=${mode} for folder "${workspaceFolder.name}"`;
 
-            let clientOptions: LanguageClientOptions = {
-                documentSelector: [
-                    { scheme: "file", language: "robotframework", pattern: `${workspaceFolder.uri.fsPath}/**/*` },
-                ],
-                synchronize: {
-                    configurationSection: [CONFIG_SECTION, "python"],
-                },
-                initializationOptions: {
-                    storageUri: extensionContext?.storageUri?.toString(),
-                    globalStorageUri: extensionContext?.globalStorageUri?.toString(),
-                },
-                diagnosticCollectionName: "robotcode",
-                workspaceFolder: workspaceFolder,
-                outputChannel: outputChannel,
-                markdown: {
-                    isTrusted: true,
-                },
-                progressOnInitialization: true,
-            };
+        let outputChannel = mode === "stdio" ? vscode.window.createOutputChannel(name) : undefined;
 
-            OUTPUT_CHANNEL.appendLine(`start Language client: ${name}`);
-            result = new LanguageClient(name, serverOptions, clientOptions);
-            clients.set(workspaceFolder.uri.toString(), result);
-        }
+        let clientOptions: LanguageClientOptions = {
+            documentSelector: [
+                { scheme: "file", language: "robotframework", pattern: `${workspaceFolder.uri.fsPath}/**/*` },
+            ],
+            synchronize: {
+                configurationSection: [CONFIG_SECTION, "python"],
+            },
+            initializationOptions: {
+                storageUri: extensionContext?.storageUri?.toString(),
+                globalStorageUri: extensionContext?.globalStorageUri?.toString(),
+            },
+            diagnosticCollectionName: "robotcode",
+            workspaceFolder: workspaceFolder,
+            outputChannel: outputChannel,
+            markdown: {
+                isTrusted: true,
+            },
+            progressOnInitialization: true,
+            initializationFailedHandler: (error) => {
+                return false;
+            },
+        };
+
+        OUTPUT_CHANNEL.appendLine(`create Language client: ${name}`);
+        result = new LanguageClient(name, serverOptions, clientOptions);
+
+        OUTPUT_CHANNEL.appendLine(`trying to start Language client: ${name}`);
+        result.start();
+
+        result = await result.onReady().then(
+            (_) => {
+                OUTPUT_CHANNEL.appendLine(`client  ${client?.clientOptions.workspaceFolder?.uri ?? "unknown"} ready.`);
+                return result;
+            },
+            (reason) => {
+                OUTPUT_CHANNEL.appendLine(
+                    `client  ${client?.clientOptions.workspaceFolder?.uri ?? "unknown"} error: ${reason}`
+                );
+                vscode.window.showErrorMessage(reason.message ?? "Unknown error.");
+                return undefined;
+            }
+        );
+
+        if (result) clients.set(workspaceFolder.uri.toString(), result);
+
         return result;
     });
 
     if (client) {
-        if (client.needsStart()) {
-            client.start();
-        }
+        // be sure client is correctly initialized
 
         var counter = 0;
-        while (!client.initializeResult && counter < 10_000) {
-            await sleep(100);
-            counter++;
+        try {
+            while (!client.initializeResult && counter < 1000) {
+                await sleep(10);
+                counter++;
+            }
+        } catch {
+            return undefined;
         }
-
-        await client.onReady().catch((reason) => {
-            OUTPUT_CHANNEL.appendLine("puhhh: " + reason);
-        });
     }
 
     return client;
@@ -236,27 +273,21 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
 
         if (!debugConfiguration.python) debugConfiguration.python = getPythonCommand(folder);
 
-        if (!debugConfiguration.robotPythonPath) debugConfiguration.robotPythonPath = [];
-        debugConfiguration.robotPythonPath = config
-            .get<Array<string>>("robot.pythonPath", [])
-            .concat(debugConfiguration.robotPythonPath);
+        debugConfiguration.robotPythonPath = [
+            ...config.get<Array<string>>("robot.pythonPath", []),
+            ...(debugConfiguration.robotPythonPath ?? []),
+        ];
 
-        if (!debugConfiguration.args) debugConfiguration.args = [];
-        debugConfiguration.args = config.get<Array<string>>("robot.args", []).concat(debugConfiguration.args);
+        debugConfiguration.args = [...config.get<Array<string>>("robot.args", []), ...(debugConfiguration.args ?? [])];
 
-        if (!debugConfiguration.variables) debugConfiguration.variables = {};
-        debugConfiguration.variables = Object.assign(
-            {},
-            config.get<Object>("robot.variables", {}),
-            debugConfiguration.variables
-        );
+        debugConfiguration.variables = {
+            ...config.get<Object>("robot.variables", {}),
+            ...(debugConfiguration.variables ?? {}),
+        };
 
-        if (!debugConfiguration.env) debugConfiguration.env = {};
-        debugConfiguration.env = Object.assign({}, config.get<Object>("robot.env", {}), debugConfiguration.env);
+        debugConfiguration.env = { ...config.get<Object>("robot.env", {}), ...(debugConfiguration.env ?? {}) };
 
-        if (debugConfiguration.attachPython == undefined) debugConfiguration.attachPython = false;
-
-        if (debugConfiguration.noDebug) {
+        if (!debugConfiguration.attachPython || debugConfiguration.noDebug) {
             debugConfiguration.attachPython = false;
         }
 
@@ -502,7 +533,7 @@ export async function activateAsync(context: vscode.ExtensionContext) {
     OUTPUT_CHANNEL.appendLine("Python Extension is active");
 
     context.subscriptions.push(
-        pythonExtension.exports.settings.onDidChangeExecutionDetails(pythonExcetionDidChangeExecutionDetails),
+        pythonExtension.exports.settings.onDidChangeExecutionDetails(updateLoadedDocumentClients),
         vscode.commands.registerCommand("robotcode.runSuite", async (resource) => {
             return await debugSuiteOrTestcase(resource ?? vscode.window.activeTextEditor?.document.uri, undefined, {
                 noDebug: true,
@@ -629,7 +660,6 @@ export async function activateAsync(context: vscode.ExtensionContext) {
 
         vscode.workspace.onDidChangeConfiguration((event) => {
             for (let s of [
-                //"python.pythonPath",
                 "robotcode.python",
                 "robotcode.languageServer.mode",
                 "robotcode.languageServer.tcpPort",
@@ -694,11 +724,7 @@ export async function activateAsync(context: vscode.ExtensionContext) {
         })
     );
 
-    for (let document of vscode.workspace.textDocuments) {
-        getLanguageClientForDocument(document);
-    }
-
-    updateEditorContext();
+    await updateLoadedDocumentClients();
 }
 
 function displayProgress(promise: Promise<any>) {

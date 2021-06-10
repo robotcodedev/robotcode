@@ -501,19 +501,19 @@
     "devDependencies": {
         "@types/glob": "^7.1.3",
         "@types/mocha": "^8.2.2",
-        "@types/node": "^15.3.0",
+        "@types/node": "^15.12.2",
         "@types/vscode": "^1.56.0",
-        "@typescript-eslint/eslint-plugin": "^4.23.0",
-        "@typescript-eslint/parser": "^4.23.0",
-        "eslint": "^7.26.0",
+        "@typescript-eslint/eslint-plugin": "^4.26.1",
+        "@typescript-eslint/parser": "^4.26.1",
+        "eslint": "^7.28.0",
         "glob": "^7.1.7",
-        "mocha": "^8.4.0",
-        "ts-loader": "^9.1.2",
-        "typescript": "^4.2.4",
-        "vsce": "^1.88.0",
+        "mocha": "^9.0.0",
+        "ts-loader": "^9.2.3",
+        "typescript": "^4.3.2",
+        "vsce": "^1.93.0",
         "vscode-debugadapter-testsupport": "^1.47.0",
         "vscode-test": "^1.5.2",
-        "webpack": "^5.37.0",
-        "webpack-cli": "^4.7.0"
+        "webpack": "^5.38.1",
+        "webpack-cli": "^4.7.2"
     }
 }
