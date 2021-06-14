@@ -17,6 +17,7 @@ const OUTPUT_CHANNEL = vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
 var extensionContext: vscode.ExtensionContext | undefined = undefined;
 var pythonLanguageServerMain: string | undefined;
 var pythonDebugAdapterMain: string | undefined;
+//var pythonDebugpyPath: string | undefined;
 
 function getPythonCommand(folder: vscode.WorkspaceFolder | undefined): string | undefined {
     let config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
@@ -28,7 +29,7 @@ function getPythonCommand(folder: vscode.WorkspaceFolder | undefined): string | 
         result = configPython;
     } else {
         const pythonExtension = vscode.extensions.getExtension("ms-python.python")!;
-        let pythonExtensionPythonPath: string[] | undefined = pythonExtension.exports.settings.getExecutionDetails(
+        let pythonExtensionPythonPath: string[] | undefined = pythonExtension?.exports?.settings?.getExecutionDetails(
             folder?.uri
         )?.execCommand;
 
@@ -44,16 +45,6 @@ let clientsMutex = new Mutex();
 let clients: Map<string, LanguageClient> = new Map();
 
 async function updateLoadedDocumentClients(uri?: vscode.Uri | undefined) {
-    // if (uri && clients.has(uri.toString())) {
-    //     await clientsMutex.dispatch(async () => {
-    //         let client = clients.get(uri.toString());
-    //         clients.delete(uri.toString());
-    //         await client?.stop();
-    //     });
-
-    //     await getLanguageClientForResource(uri);
-    // }
-
     OUTPUT_CHANNEL.appendLine("initialze/restart all needed language clients.");
     await clientsMutex.dispatch(async () => {
         for (let client of clients.values()) {
@@ -113,7 +104,7 @@ async function getLanguageClientForDocument(document: vscode.TextDocument): Prom
 }
 
 async function getLanguageClientForResource(resource: string | vscode.Uri): Promise<LanguageClient | undefined> {
-    var client = await clientsMutex.dispatch(async () => {
+    return await clientsMutex.dispatch(async () => {
         let uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
         let workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
 
@@ -142,7 +133,7 @@ async function getLanguageClientForResource(resource: string | vscode.Uri): Prom
                 { scheme: "file", language: "robotframework", pattern: `${workspaceFolder.uri.fsPath}/**/*` },
             ],
             synchronize: {
-                configurationSection: [CONFIG_SECTION, "python"],
+                configurationSection: [CONFIG_SECTION],
             },
             initializationOptions: {
                 storageUri: extensionContext?.storageUri?.toString(),
@@ -167,13 +158,22 @@ async function getLanguageClientForResource(resource: string | vscode.Uri): Prom
         result.start();
 
         result = await result.onReady().then(
-            (_) => {
-                OUTPUT_CHANNEL.appendLine(`client  ${client?.clientOptions.workspaceFolder?.uri ?? "unknown"} ready.`);
+            async (_) => {
+                OUTPUT_CHANNEL.appendLine(`client  ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} ready.`);
+                var counter = 0;
+                try {
+                    while (!result?.initializeResult && counter < 1000) {
+                        await sleep(10);
+                        counter++;
+                    }
+                } catch {
+                    return undefined;
+                }
                 return result;
             },
-            (reason) => {
+            async (reason) => {
                 OUTPUT_CHANNEL.appendLine(
-                    `client  ${client?.clientOptions.workspaceFolder?.uri ?? "unknown"} error: ${reason}`
+                    `client  ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} error: ${reason}`
                 );
                 vscode.window.showErrorMessage(reason.message ?? "Unknown error.");
                 return undefined;
@@ -184,22 +184,6 @@ async function getLanguageClientForResource(resource: string | vscode.Uri): Prom
 
         return result;
     });
-
-    if (client) {
-        // be sure client is correctly initialized
-
-        var counter = 0;
-        try {
-            while (!client.initializeResult && counter < 1000) {
-                await sleep(10);
-                counter++;
-            }
-        } catch {
-            return undefined;
-        }
-    }
-
-    return client;
 }
 
 function getServerOptionsTCP(folder: vscode.WorkspaceFolder) {
@@ -286,6 +270,10 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
         };
 
         debugConfiguration.env = { ...config.get<Object>("robot.env", {}), ...(debugConfiguration.env ?? {}) };
+
+        // if (pythonDebugpyPath) {
+        //     debugConfiguration.env = { PYTHONPATH: path.dirname(pythonDebugpyPath), ...debugConfiguration.env };
+        // }
 
         if (!debugConfiguration.attachPython || debugConfiguration.noDebug) {
             debugConfiguration.attachPython = false;
@@ -529,6 +517,8 @@ export async function activateAsync(context: vscode.ExtensionContext) {
     const pythonExtension = vscode.extensions.getExtension("ms-python.python")!;
 
     await pythonExtension.activate();
+
+    //pythonDebugpyPath = await pythonExtension?.exports?.debug?.getDebuggerPackagePath();
 
     OUTPUT_CHANNEL.appendLine("Python Extension is active");
 

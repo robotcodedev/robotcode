@@ -216,11 +216,11 @@
                         "type": "string",
                         "enum": [
                             "disabled",
-                            "external"                         
+                            "external"
                         ],
                         "enumDescriptions": [
                             "Do not open the result report",
-                            "Opens the report in an external browser."                            
+                            "Opens the report in an external browser."
                         ],
                         "default": "none",
                         "description": "Defines if the test report should be opened a run session automatically.",
