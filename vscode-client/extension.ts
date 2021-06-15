@@ -3,6 +3,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { LanguageClient, LanguageClientOptions, ServerOptions } from "vscode-languageclient/node";
 import { sleep, Mutex } from "./utils";
+import openExternal = require("open");
 
 const LANGUAGE_SERVER_DEFAULT_TCP_PORT = 6610;
 const LANGUAGE_SERVER_DEFAULT_HOST = "127.0.0.1";
@@ -45,7 +46,6 @@ let clientsMutex = new Mutex();
 let clients: Map<string, LanguageClient> = new Map();
 
 async function updateLoadedDocumentClients(uri?: vscode.Uri | undefined) {
-    OUTPUT_CHANNEL.appendLine("initialze/restart all needed language clients.");
     await clientsMutex.dispatch(async () => {
         for (let client of clients.values()) {
             await client.stop().catch((_) => {});
@@ -481,6 +481,10 @@ async function attachPython(session: vscode.DebugSession, event: string, options
     }
 }
 
+async function openReport(file: string) {
+    await openExternal(file);
+}
+
 async function onRobotExited(session: vscode.DebugSession, outputFile?: string, logFile?: string, reportFile?: string) {
     if (reportFile) {
         let config = vscode.workspace.getConfiguration(CONFIG_SECTION, session.workspaceFolder);
@@ -489,7 +493,7 @@ async function onRobotExited(session: vscode.DebugSession, outputFile?: string, 
             case "disabled":
                 return;
             case "external":
-                vscode.env.openExternal(vscode.Uri.file(reportFile));
+                openReport(reportFile);
         }
     }
 }
@@ -642,13 +646,13 @@ export async function activateAsync(context: vscode.ExtensionContext) {
 
                 switch (config.get<string>("run.openReportAfterRun")) {
                     default:
-                        vscode.env.openExternal(vscode.Uri.file(link.path));
+                        openReport(link.path);
                         break;
                 }
             },
         }),
 
-        vscode.workspace.onDidChangeConfiguration((event) => {
+        vscode.workspace.onDidChangeConfiguration(async (event) => {
             for (let s of [
                 "robotcode.python",
                 "robotcode.languageServer.mode",
@@ -662,7 +666,7 @@ export async function activateAsync(context: vscode.ExtensionContext) {
                 "robotcode.robot.args",
             ]) {
                 if (event.affectsConfiguration(s)) {
-                    vscode.window
+                    await vscode.window
                         .showWarningMessage(
                             'Please use the "Reload Window" action for changes in ' + s + " to take effect.",
                             ...["Reload Window"]

@@ -15,7 +15,8 @@
 		"rootDir": "vscode-client",
 		"strict": true,
 		"experimentalDecorators": true,
-		"allowSyntheticDefaultImports": true,
+		//"esModuleInterop": true,
+		//"allowSyntheticDefaultImports": true,
 		"noImplicitAny": true,
 		"noImplicitThis": true,
 		"noUnusedLocals": true,
@@ -23,7 +24,7 @@
 		"noFallthroughCasesInSwitch": true,
 		"resolveJsonModule": true,
 		"removeComments": true,
-		"noImplicitReturns": true,
+		"noImplicitReturns": true,				
 	},
 	"exclude": [
 		"node_modules",
