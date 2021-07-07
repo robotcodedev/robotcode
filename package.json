@@ -493,8 +493,7 @@
         "test": "node ./out/test/runTest.js"
     },
     "extensionDependencies": [
-        "ms-python.python",
-        "hbenl.vscode-test-explorer"
+        "ms-python.python"        
     ],
     "dependencies": {
         "open": "^8.2.1",
