@@ -689,6 +689,11 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         if future is not None and not future.cancelled():
             future.cancel()
 
+    async def cancel_all_received_request(self) -> None:
+        for future in self._received_request.values():
+            if future is not None and not future.cancelled():
+                future.cancel()
+
     async def handle_notification(self, message: JsonRPCNotification) -> None:
         e = self.registry.get_entry(message.method)
 

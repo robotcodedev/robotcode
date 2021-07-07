@@ -286,12 +286,15 @@ class Workspace(LanguageServerProtocolPart):
     ) -> Union[_TConfig, Any]:
 
         if isinstance(section, (ConfigBase, HasConfigSection)):
-            return section.parse_obj(
+            config = section.parse_obj(
                 await self.get_configuration(
                     section=cast(HasConfigSection, section).__config_section__, scope_uri=scope_uri
                 )
             )
+            if config is None:
+                return None
 
+            return section.parse_obj(config)
         return (
             await self.parent.send_request(
                 "workspace/configuration",

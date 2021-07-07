@@ -3,7 +3,7 @@ from typing import Dict, List, Tuple
 from ..common.parts.workspace import ConfigBase, config_section
 
 
-@config_section("robotcode.language-server")
+@config_section("robotcode.languageServer")
 class LanguageServerConfig(ConfigBase):
     mode: str
     tcp_port: int

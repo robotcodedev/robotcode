@@ -63,7 +63,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         self._run_func: Optional[Callable[[], None]] = None
         self._server: Optional[asyncio.AbstractServer] = None
 
-        self._stop_event: Optional[asyncio.Event] = None
+        self._stdio_stop_event: Optional[asyncio.Event] = None
 
         self.loop = asyncio.get_event_loop()
 
@@ -81,8 +81,8 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
     @_logger.call
     def close(self) -> None:
-        if self._stop_event is not None:
-            self._stop_event.set()
+        if self._stdio_stop_event is not None:
+            self._stdio_stop_event.set()
 
         if self._server and self._server.is_serving:
             self._server.close()
@@ -104,9 +104,9 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
     def create_protocol(self) -> TProtocol:
         ...
 
-    def close_protocol(self, protocol: TProtocol) -> None:
-        if self.mode == JsonRpcServerMode.STDIO and self._stop_event is not None:
-            self._stop_event.set()
+    def shutdown_protocol(self, protocol: TProtocol) -> None:
+        if self.mode == JsonRpcServerMode.STDIO and self._stdio_stop_event is not None:
+            self._stdio_stop_event.set()
 
     @_logger.call
     def start_stdio(self) -> None:
@@ -119,10 +119,10 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         protocol.connection_made(transport)
 
         def run_io_nonblocking() -> None:
-            self._stop_event = asyncio.Event()
+            self._stdio_stop_event = asyncio.Event()
 
             async def aio_readline(rfile: BinaryIO, protocol: asyncio.Protocol) -> None:
-                while self._stop_event is not None and not self._stop_event.is_set() and not rfile.closed:
+                while self._stdio_stop_event is not None and not self._stdio_stop_event.is_set() and not rfile.closed:
                     data = await self.loop.run_in_executor(None, cast(io.BufferedReader, rfile).read1, 1000)
                     protocol.data_received(data)
 

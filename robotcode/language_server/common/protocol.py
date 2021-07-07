@@ -193,9 +193,15 @@ class LanguageServerProtocol(JsonRPCProtocol):
     @_logger.call
     async def shutdown(self) -> None:
         self.shutdown_received = True
+
+        try:
+            await asyncio.wait_for(self.cancel_all_received_request(), 1)
+        except BaseException:
+            pass
+
         await self.on_shutdown(self)
         if self.server is not None:
-            self.server.close_protocol(self)
+            self.server.shutdown_protocol(self)
 
     @rpc_method(name="exit")
     @_logger.call
