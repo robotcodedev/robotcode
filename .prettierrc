@@ -1,0 +1,7 @@
+{
+  "tabWidth": 2,
+  "useTabs": false,
+  "endOfLine": "auto",
+  "quoteProps": "as-needed",
+  "printWidth": 120
+}

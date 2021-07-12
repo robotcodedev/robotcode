@@ -1,525 +1,543 @@
 {
-    "name": "robotcode",
-    "displayName": "robotcode",
-    "description": "Robot Framework support for Visual Studio Code",
-    "icon": "images/icon.png",
-    "publisher": "d-biehl",
-    "version": "0.1.0-alpha.3",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/d-biehl/robotcode.git"
-    },
-    "engines": {
-        "vscode": "^1.57.0"
-    },
-    "categories": [
-        "Programming Languages",
-        "Testing",
-        "Debuggers",
-        "Formatters",
-        "Linters"
+  "name": "robotcode",
+  "displayName": "robotcode",
+  "description": "Robot Framework support for Visual Studio Code",
+  "icon": "images/icon.png",
+  "publisher": "d-biehl",
+  "version": "0.1.0-alpha.3",
+  "enableProposedApi": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/d-biehl/robotcode.git"
+  },
+  "engines": {
+    "vscode": "^1.58.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Testing",
+    "Debuggers",
+    "Formatters",
+    "Linters"
+  ],
+  "keywords": [
+    "Test",
+    "Testing",
+    "RobotFramework",
+    "Robot Framework",
+    "Robot",
+    "Keyword Driven"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.robot",
+    "onDebug",
+    "onDebugAdapterProtocolTracker:robotframework",
+    "onDebugInitialConfigurations",
+    "onDebugDynamicConfigurations",
+    "onDebugResolve:robotframework",
+    "onLanguage:robotframework",
+    "onCommand:robotcode.runTest",
+    "onCommand:robotcode.debugTest",
+    "onCommand:robotcode.runSuite",
+    "onCommand:robotcode.debugSuite"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "robotframework",
+        "aliases": [
+          "Robot Framework",
+          "robotframework"
+        ],
+        "extensions": [
+          ".robot",
+          ".resource"
+        ],
+        "configuration": "./language-configuration.json"
+      }
     ],
-    "keywords": [
-        "Test",
-        "Testing",
-        "RobotFramework",
-        "Robot Framework",
-        "Robot",
-        "Keyword Driven"
+    "grammars": [
+      {
+        "language": "robotframework",
+        "scopeName": "source.robotframework",
+        "path": "./syntaxes/robotframework.tmLanguage.json"
+      }
     ],
-    "activationEvents": [
-        "workspaceContains:**/*.robot",
-        "onDebug",
-        "onDebugAdapterProtocolTracker:robotframework",
-        "onDebugInitialConfigurations",
-        "onDebugDynamicConfigurations",
-        "onDebugResolve:robotframework",
-        "onLanguage:robotframework",
-        "onCommand:robotcode.runTest",
-        "onCommand:robotcode.debugTest",
-        "onCommand:robotcode.runSuite",
-        "onCommand:robotcode.debugSuite"
-    ],
-    "main": "./out/extension.js",
-    "contributes": {
-        "languages": [
-            {
-                "id": "robotframework",
-                "aliases": [
-                    "Robot Framework",
-                    "robotframework"
-                ],
-                "extensions": [
-                    ".robot",
-                    ".resource"
-                ],
-                "configuration": "./language-configuration.json"
-            }
-        ],
-        "grammars": [
-            {
-                "language": "robotframework",
-                "scopeName": "source.robotframework",
-                "path": "./syntaxes/robotframework.tmLanguage.json"
-            }
-        ],
-        "keybindings": [
-            {
-                "key": "tab",
-                "command": "type",
-                "args": {
-                    "text": "    "
-                },
-                "when": "editorTextFocus && editorLangId == robotframework && !editorHasSelection && !inSnippetMode && !suggestWidgetVisible && config.robotcode.editor.4SpacesTab"
-            }
-        ],
-        "configuration": [
-            {
-                "title": "RobotCode",
-                "type": "object",
-                "properties": {
-                    "robotcode.python": {
-                        "type": "string",
-                        "default": "",
-                        "description": "Specifies the python executable to be used for RobotCode. If no path is specified, try to get it from \"python\" extension. Requires a VSCode restart to take effect.",
-                        "scope": "resource"
-                    },
-                    "robotcode.editor.4SpacesTab": {
-                        "type": "boolean",
-                        "default": true,
-                        "description": "If actived insert 4 spaces if TAB is pressed."
-                    },
-                    "robotcode.languageServer.mode": {
-                        "type": "string",
-                        "default": "stdio",
-                        "description": "Specifies the mode the language server is started. Requires a VSCode restart to take effect.",
-                        "enum": [
-                            "stdio",
-                            "tcp"
-                        ],
-                        "scope": "resource"
-                    },
-                    "robotcode.languageServer.tcpPort": {
-                        "type": "number",
-                        "default": 0,
-                        "description": "If the port is specified, connect to the language server previously started at the given port. Requires a VSCode restart to take effect.",
-                        "scope": "resource"
-                    },
-                    "robotcode.languageServer.args": {
-                        "type": "array",
-                        "default": [],
-                        "items": {
-                            "type": "string"
-                        },
-                        "description": "Specifies the arguments to be passed to the language server (i.e.: [\"--log\", \"--log-file=~/robotcode.log\"]). Requires a VSCode restart to take effect.",
-                        "scope": "resource"
-                    },
-                    "robotcode.debugAdapter.mode": {
-                        "type": "string",
-                        "default": "stdio",
-                        "description": "Specifies the mode the debug adapter is started. Requires a VSCode restart to take effect.",
-                        "enum": [
-                            "stdio",
-                            "tcp"
-                        ],
-                        "scope": "resource"
-                    },
-                    "robotcode.debugAdapter.tcpPort": {
-                        "type": "number",
-                        "default": 0,
-                        "description": "If the port is specified, connect to the debug adapter previously started at the given port. Requires a VSCode restart to take effect.",
-                        "scope": "resource"
-                    },
-                    "robotcode.debugAdapter.host": {
-                        "type": "string",
-                        "default": null,
-                        "description": "If the host is specified, connect to the debug adapter previously started at the given host. Requires a VSCode restart to take effect.",
-                        "scope": "resource"
-                    },
-                    "robotcode.debugAdapter.args": {
-                        "type": "array",
-                        "default": [],
-                        "items": {
-                            "type": "string"
-                        },
-                        "description": "Specifies the arguments to be passed to the debug adapter (i.e.: [\"--log\", \"--log-file=~/debug-adapter.log\"]). Requires a VSCode restart to take effect.",
-                        "scope": "resource"
-                    },
-                    "robotcode.robot.args": {
-                        "type": "array",
-                        "default": [
-                            "--outputdir",
-                            "results"
-                        ],
-                        "items": {
-                            "type": "string"
-                        },
-                        "description": "Specifies the arguments to be passed to robot module.",
-                        "scope": "resource"
-                    },
-                    "robotcode.robot.pythonPath": {
-                        "type": "array",
-                        "default": [
-                            "./lib",
-                            "./resources"
-                        ],
-                        "items": {
-                            "type": "string"
-                        },
-                        "description": "Specifies additional python paths to robotframework. Corresponds to the '--pythonpath' option of the robot module.",
-                        "scope": "resource"
-                    },
-                    "robotcode.robot.env": {
-                        "type": "object",
-                        "default": {},
-                        "description": "Specifies the environment variables for robotframework.",
-                        "scope": "resource"
-                    },
-                    "robotcode.robot.variables": {
-                        "type": "object",
-                        "default": {},
-                        "description": "Specifies the variables for robotframework. Corresponds to the '--variable name:value' option of the robot module.",
-                        "scope": "resource"
-                    },
-                    "robotcode.debug.defaultConfiguration": {
-                        "type": "object",
-                        "default": {},
-                        "description": "Specifies the default configuration to run or debug robot tests.",
-                        "scope": "resource"
-                    },
-                    "robotcode.debug.defaultConsole": {
-                        "type": "string",
-                        "enum": [
-                            "internalConsole",
-                            "integratedTerminal",
-                            "externalTerminal"
-                        ],
-                        "default": "integratedTerminal",
-                        "enumDescriptions": [
-                            "No terminal (pipes the output to the client debug console).",
-                            "Use terminal integrated in client.",
-                            "External terminal (configured in user settings)."
-                        ],
-                        "description": "Default setting for where to launch the debug target: internal console, integrated terminal, or external terminal.",
-                        "scope": "resource"
-                    },
-                    "robotcode.robocop.enabled": {
-                        "type": "boolean",
-                        "default": true,
-                        "description": "Enables 'robocop' code analysis, if installed.",
-                        "scope": "resource"
-                    },
-                    "robotcode.syntax.sectionStyle": {
-                        "type": "string",
-                        "default": "*** {name}s ***",
-                        "description": "Defines the section style format.",
-                        "scope": "resource"
-                    },
-                    "robotcode.run.openReportAfterRun": {
-                        "type": "string",
-                        "enum": [
-                            "disabled",
-                            "external"
-                        ],
-                        "enumDescriptions": [
-                            "Do not open the result report",
-                            "Opens the report in an external browser."
-                        ],
-                        "default": "none",
-                        "description": "Defines if the test report should be opened a run session automatically.",
-                        "scope": "resource"
-                    },
-                    "robotcode.robocop.include": {
-                        "type": "array",
-                        "default": [],
-                        "items": {
-                            "type": "string"
-                        },
-                        "description": "Ignore specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
-                        "scope": "resource"
-                    },
-                    "robotcode.robocop.exclude": {
-                        "type": "array",
-                        "default": [],
-                        "items": {
-                            "type": "string"
-                        },
-                        "description": "Ignore specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
-                        "scope": "resource"
-                    },
-                    "robotcode.robocop.configurations": {
-                        "type": "array",
-                        "default": [],
-                        "items": {
-                            "type": "string"
-                        },
-                        "description": "Configure 'robocop' checker with parameter value.",
-                        "scope": "resource"
-                    }
-                }
-            }
-        ],
-        "commands": [
-            {
-                "command": "robotcode.runSuite",
-                "category": "RobotCode",
-                "title": "Run Suite",
-                "enablement": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder",
-                "icon": {
-                    "light": "resources/light/run_suite.svg",
-                    "dark": "resources/dark/run_suite.svg"
-                }
-            },
-            {
-                "command": "robotcode.debugSuite",
-                "category": "RobotCode",
-                "title": "Debug Suite",
-                "enablement": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder",
-                "icon": {
-                    "light": "resources/light/debug_suite.svg",
-                    "dark": "resources/dark/debug_suite.svg"
-                }
-            },
-            {
-                "command": "robotcode.runTest",
-                "category": "RobotCode",
-                "title": "Run Test Case",
-                "enablement": "resourceLangId == robotframework && resourceExtname == .robot",
-                "icon": {
-                    "light": "resources/light/run_test.svg",
-                    "dark": "resources/dark/run_test.svg"
-                }
-            },
-            {
-                "command": "robotcode.debugTest",
-                "category": "RobotCode",
-                "title": "Debug Test Case",
-                "enablement": "resourceLangId == robotframework && resourceExtname == .robot",
-                "icon": {
-                    "light": "resources/light/debug_test.svg",
-                    "dark": "resources/dark/debug_test.svg"
-                }
-            }
-        ],
-        "menus": {
-            "editor/title/run": [
-                {
-                    "command": "robotcode.runTest",
-                    "group": "robotcode@1run@1",
-                    "when": "resourceLangId == robotframework && resourceExtname == .robot && robotCode.editor.inTest && !isInDiffEditor"
-                },
-                {
-                    "command": "robotcode.debugTest",
-                    "group": "robotcode@2debug@1",
-                    "when": "resourceLangId == robotframework && resourceExtname == .robot && robotCode.editor.inTest && !isInDiffEditor"
-                },
-                {
-                    "command": "robotcode.runSuite",
-                    "group": "robotcode@1run@2",
-                    "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
-                },
-                {
-                    "command": "robotcode.debugSuite",
-                    "group": "robotcode@2debug@2",
-                    "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
-                }
-            ],
-            "editor/context": [
-                {
-                    "command": "robotcode.runTest",
-                    "group": "robotcode@1run@1",
-                    "when": "resourceLangId == robotframework && resourceExtname == .robot && robotCode.editor.inTest && !isInDiffEditor"
-                },
-                {
-                    "command": "robotcode.debugTest",
-                    "group": "robotcode@2debug@1",
-                    "when": "resourceLangId == robotframework && resourceExtname == .robot && robotCode.editor.inTest && !isInDiffEditor"
-                },
-                {
-                    "command": "robotcode.runSuite",
-                    "group": "robotcode@1run@2",
-                    "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
-                },
-                {
-                    "command": "robotcode.debugSuite",
-                    "group": "robotcode@2debug@2",
-                    "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
-                }
-            ],
-            "explorer/context": [
-                {
-                    "command": "robotcode.runSuite",
-                    "group": "robotcode@1",
-                    "when": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder"
-                },
-                {
-                    "command": "robotcode.debugSuite",
-                    "group": "robotcode@2",
-                    "when": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder"
-                }
-            ]
+    "keybindings": [
+      {
+        "key": "tab",
+        "command": "type",
+        "args": {
+          "text": "    "
         },
-        "breakpoints": [
-            {
-                "language": "robotframework"
-            }
-        ],
-        "debuggers": [
-            {
-                "type": "robotcode",
-                "label": "RobotCode Debug",
-                "languages": [
-                    "robotframework"
-                ],
-                "configurationAttributes": {
-                    "launch": {
-                        "properties": {
-                            "target": {
-                                "type": "string",
-                                "description": "The .robot file or a folder containing .robot files to be launched.",
-                                "default": "${file}"
-                            },
-                            "args": {
-                                "type": "array",
-                                "description": "Specifies additional command line arguments passed to robot.",
-                                "default": []
-                            },
-                            "cwd": {
-                                "type": "string",
-                                "description": "Absolute path to the working directory of the program being debugged. Default is the root directory of the file (leave empty).",
-                                "default": "${workspaceFolder}"
-                            },
-                            "env": {
-                                "type": "object",
-                                "description": "Environment variables defined as a key value pair.",
-                                "default": []
-                            },
-                            "console": {
-                                "type": "string",
-                                "enum": [
-                                    "internalConsole",
-                                    "integratedTerminal",
-                                    "externalTerminal"
-                                ],
-                                "enumDescriptions": [
-                                    "No terminal (pipes the output to the client debug console).",
-                                    "Use terminal integrated in client.",
-                                    "External terminal (configured in user settings)."
-                                ],
-                                "description": "Where to launch the debug target: internal console, integrated terminal, or external terminal.",
-                                "default": "integratedTerminal"
-                            },
-                            "python": {
-                                "type": "string",
-                                "description": "Specifies the python interpreter to use. If not specified, the python interpreter defined for the extension is used.",
-                                "default": null
-                            },
-                            "robotPythonPath": {
-                                "type": "array",
-                                "description": "Specifies additional python paths for robotframework. Corresponds to the '--pythonpath' option of the robot module.",
-                                "default": []
-                            },
-                            "attachPython": {
-                                "type": "boolean",
-                                "description": "Attach also the python debugger if a robot test starts.",
-                                "default": false
-                            },
-                            "pythonConfiguration": {
-                                "type": "object",
-                                "description": "Defines a template for the python launch configuration.",
-                                "default": {}
-                            },
-                            "variables": {
-                                "type": "object",
-                                "default": {},
-                                "description": "Specifies the variables for robotframework. Corresponds to the '--variable name:value' option of the robot module."
-                            },
-                            "launcherArgs": {
-                                "type": "array",
-                                "description": "Command line arguments passed to launcher.",
-                                "default": []
-                            },
-                            "launcherTimeout": {
-                                "type": "number",
-                                "description": "Timeout to connect to the debuggee.",
-                                "default": 5
-                            },
-                            "outputMessages": {
-                                "type": "boolean",
-                                "description": "Output messages from robotframework in debug console.",
-                                "default": false
-                            },
-                            "outputLog": {
-                                "type": "boolean",
-                                "description": "Output log messages from robotframework in debug console.",
-                                "default": false
-                            },
-                            "groupOutput": {
-                                "type": "boolean",
-                                "description": "Group start and stop suite/test/keyword messages in debug console.",
-                                "default": false
-                            }
-                        }
-                    }
-                },
-                "initialConfigurations": [],
-                "configurationSnippets": [
-                    {
-                        "label": "RobotCode: Launch .robot file",
-                        "description": "Add a new configuration for launching Robot Framework Tests.",
-                        "body": {
-                            "type": "robotcode",
-                            "name": "RobotCode: Launch .robot file",
-                            "request": "launch",
-                            "cwd": "^\"\\${workspaceFolder}\"",
-                            "target": "^\"\\${file}\"",
-                            "env": {},
-                            "args": []
-                        }
-                    }
-                ]
-            }
-        ]
-    },
-    "scripts": {
-        "vscode:prepublish": "webpack --mode production",
-        "webpack": "webpack --mode development",
-        "webpack-dev": "webpack --mode development --watch",
-        "test-compile": "tsc -p ./",
-        "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./",
-        "pretest": "npm run compile && npm run lint",
-        "lint": "eslint vscode-client --ext ts",
-        "test": "node ./out/test/runTest.js"
-    },
-    "extensionDependencies": [
-        "ms-python.python"        
+        "when": "editorTextFocus && editorLangId == robotframework && !editorHasSelection && !inSnippetMode && !suggestWidgetVisible && config.robotcode.editor.4SpacesTab"
+      }
     ],
-    "dependencies": {
-        "open": "^8.2.1",
-        "vscode-debugadapter": "^1.47.0",
-        "vscode-debugprotocol": "^1.47.0",
-        "vscode-languageclient": "^7.0.0",
-        "vscode-languageserver-protocol": "^3.16.0",
-        "vscode-test-adapter-api": "^1.9.0",
-        "vscode-test-adapter-util": "^0.7.1"
+    "configuration": [
+      {
+        "title": "RobotCode",
+        "type": "object",
+        "properties": {
+          "robotcode.python": {
+            "type": "string",
+            "default": "",
+            "description": "Specifies the python executable to be used for RobotCode. If no path is specified, try to get it from \"python\" extension. Requires a VSCode restart to take effect.",
+            "scope": "resource"
+          },
+          "robotcode.editor.4SpacesTab": {
+            "type": "boolean",
+            "default": true,
+            "description": "If actived insert 4 spaces if TAB is pressed."
+          },
+          "robotcode.languageServer.mode": {
+            "type": "string",
+            "default": "stdio",
+            "description": "Specifies the mode the language server is started. Requires a VSCode restart to take effect.",
+            "enum": [
+              "stdio",
+              "tcp"
+            ],
+            "scope": "resource"
+          },
+          "robotcode.languageServer.tcpPort": {
+            "type": "number",
+            "default": 0,
+            "description": "If the port is specified, connect to the language server previously started at the given port. Requires a VSCode restart to take effect.",
+            "scope": "resource"
+          },
+          "robotcode.languageServer.args": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "description": "Specifies the arguments to be passed to the language server (i.e.: [\"--log\", \"--log-file=~/robotcode.log\"]). Requires a VSCode restart to take effect.",
+            "scope": "resource"
+          },
+          "robotcode.debugAdapter.mode": {
+            "type": "string",
+            "default": "stdio",
+            "description": "Specifies the mode the debug adapter is started. Requires a VSCode restart to take effect.",
+            "enum": [
+              "stdio",
+              "tcp"
+            ],
+            "scope": "resource"
+          },
+          "robotcode.debugAdapter.tcpPort": {
+            "type": "number",
+            "default": 0,
+            "description": "If the port is specified, connect to the debug adapter previously started at the given port. Requires a VSCode restart to take effect.",
+            "scope": "resource"
+          },
+          "robotcode.debugAdapter.host": {
+            "type": "string",
+            "default": null,
+            "description": "If the host is specified, connect to the debug adapter previously started at the given host. Requires a VSCode restart to take effect.",
+            "scope": "resource"
+          },
+          "robotcode.debugAdapter.args": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "description": "Specifies the arguments to be passed to the debug adapter (i.e.: [\"--log\", \"--log-file=~/debug-adapter.log\"]). Requires a VSCode restart to take effect.",
+            "scope": "resource"
+          },
+          "robotcode.robot.args": {
+            "type": "array",
+            "default": [
+              "--outputdir",
+              "results"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Specifies the arguments to be passed to robot module.",
+            "scope": "resource"
+          },
+          "robotcode.robot.pythonPath": {
+            "type": "array",
+            "default": [
+              "./lib",
+              "./resources"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Specifies additional python paths to robotframework. Corresponds to the '--pythonpath' option of the robot module.",
+            "scope": "resource"
+          },
+          "robotcode.robot.env": {
+            "type": "object",
+            "default": {},
+            "description": "Specifies the environment variables for robotframework.",
+            "scope": "resource"
+          },
+          "robotcode.robot.variables": {
+            "type": "object",
+            "default": {},
+            "description": "Specifies the variables for robotframework. Corresponds to the '--variable name:value' option of the robot module.",
+            "scope": "resource"
+          },
+          "robotcode.debug.defaultConfiguration": {
+            "type": "object",
+            "default": {},
+            "description": "Specifies the default configuration to run or debug robot tests.",
+            "scope": "resource"
+          },
+          "robotcode.debug.defaultConsole": {
+            "type": "string",
+            "enum": [
+              "internalConsole",
+              "integratedTerminal",
+              "externalTerminal"
+            ],
+            "default": "integratedTerminal",
+            "enumDescriptions": [
+              "No terminal (pipes the output to the client debug console).",
+              "Use terminal integrated in client.",
+              "External terminal (configured in user settings)."
+            ],
+            "description": "Default setting for where to launch the debug target: internal console, integrated terminal, or external terminal.",
+            "scope": "resource"
+          },
+          "robotcode.robocop.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enables 'robocop' code analysis, if installed.",
+            "scope": "resource"
+          },
+          "robotcode.syntax.sectionStyle": {
+            "type": "string",
+            "default": "*** {name}s ***",
+            "description": "Defines the section style format.",
+            "scope": "resource"
+          },
+          "robotcode.run.openReportAfterRun": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "external"
+            ],
+            "enumDescriptions": [
+              "Do not open the result report",
+              "Opens the report in an external browser."
+            ],
+            "default": "none",
+            "description": "Defines if the test report should be opened a run session automatically.",
+            "scope": "resource"
+          },
+          "robotcode.robocop.include": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "description": "Ignore specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
+            "scope": "resource"
+          },
+          "robotcode.robocop.exclude": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "description": "Ignore specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
+            "scope": "resource"
+          },
+          "robotcode.robocop.configurations": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "description": "Configure 'robocop' checker with parameter value.",
+            "scope": "resource"
+          }
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "robotcode.runSuite",
+        "category": "RobotCode",
+        "title": "Run Suite",
+        "enablement": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder",
+        "icon": {
+          "light": "resources/light/run_suite.svg",
+          "dark": "resources/dark/run_suite.svg"
+        }
+      },
+      {
+        "command": "robotcode.debugSuite",
+        "category": "RobotCode",
+        "title": "Debug Suite",
+        "enablement": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder",
+        "icon": {
+          "light": "resources/light/debug_suite.svg",
+          "dark": "resources/dark/debug_suite.svg"
+        }
+      },
+      {
+        "command": "robotcode.runTest",
+        "category": "RobotCode",
+        "title": "Run Test Case",
+        "enablement": "resourceLangId == robotframework && resourceExtname == .robot",
+        "icon": {
+          "light": "resources/light/run_test.svg",
+          "dark": "resources/dark/run_test.svg"
+        }
+      },
+      {
+        "command": "robotcode.debugTest",
+        "category": "RobotCode",
+        "title": "Debug Test Case",
+        "enablement": "resourceLangId == robotframework && resourceExtname == .robot",
+        "icon": {
+          "light": "resources/light/debug_test.svg",
+          "dark": "resources/dark/debug_test.svg"
+        }
+      }
+    ],
+    "menus": {
+      "editor/title/run": [
+        {
+          "command": "robotcode.runTest",
+          "group": "robotcode@1run@1",
+          "when": "resourceLangId == robotframework && resourceExtname == .robot && robotCode.editor.inTest && !isInDiffEditor"
+        },
+        {
+          "command": "robotcode.debugTest",
+          "group": "robotcode@2debug@1",
+          "when": "resourceLangId == robotframework && resourceExtname == .robot && robotCode.editor.inTest && !isInDiffEditor"
+        },
+        {
+          "command": "robotcode.runSuite",
+          "group": "robotcode@1run@2",
+          "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
+        },
+        {
+          "command": "robotcode.debugSuite",
+          "group": "robotcode@2debug@2",
+          "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "robotcode.runTest",
+          "group": "robotcode@1run@1",
+          "when": "resourceLangId == robotframework && resourceExtname == .robot && robotCode.editor.inTest && !isInDiffEditor"
+        },
+        {
+          "command": "robotcode.debugTest",
+          "group": "robotcode@2debug@1",
+          "when": "resourceLangId == robotframework && resourceExtname == .robot && robotCode.editor.inTest && !isInDiffEditor"
+        },
+        {
+          "command": "robotcode.runSuite",
+          "group": "robotcode@1run@2",
+          "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
+        },
+        {
+          "command": "robotcode.debugSuite",
+          "group": "robotcode@2debug@2",
+          "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "robotcode.runSuite",
+          "group": "robotcode@1",
+          "when": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder"
+        },
+        {
+          "command": "robotcode.debugSuite",
+          "group": "robotcode@2",
+          "when": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder"
+        }
+      ]
     },
-    "devDependencies": {
-        "@types/glob": "^7.1.4",
-        "@types/mocha": "^8.2.3",
-        "@types/node": "^16.0.0",       
-        "@types/vscode": "^1.57.1",
-        "@typescript-eslint/eslint-plugin": "^4.28.2",
-        "@typescript-eslint/parser": "^4.28.2",
-        "eslint": "^7.30.0",
-        "glob": "^7.1.7",
-        "mocha": "^9.0.2",
-        "ts-loader": "^9.2.3",
-        "typescript": "^4.3.5",
-        "vsce": "^1.95.0",
-        "vscode-debugadapter-testsupport": "^1.47.0",
-        "vscode-test": "^1.5.2",
-        "webpack": "^5.43.0",
-        "webpack-cli": "^4.7.2"
-    }
+    "breakpoints": [
+      {
+        "language": "robotframework"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "robotcode",
+        "label": "RobotCode Debug",
+        "languages": [
+          "robotframework"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "target": {
+                "type": "string",
+                "description": "The .robot file or a folder containing .robot files to be launched.",
+                "default": "${file}"
+              },
+              "args": {
+                "type": "array",
+                "description": "Specifies additional command line arguments passed to robot.",
+                "default": []
+              },
+              "cwd": {
+                "type": "string",
+                "description": "Absolute path to the working directory of the program being debugged. Default is the root directory of the file (leave empty).",
+                "default": "${workspaceFolder}"
+              },
+              "env": {
+                "type": "object",
+                "description": "Environment variables defined as a key value pair.",
+                "default": []
+              },
+              "console": {
+                "type": "string",
+                "enum": [
+                  "internalConsole",
+                  "integratedTerminal",
+                  "externalTerminal"
+                ],
+                "enumDescriptions": [
+                  "No terminal (pipes the output to the client debug console).",
+                  "Use terminal integrated in client.",
+                  "External terminal (configured in user settings)."
+                ],
+                "description": "Where to launch the debug target: internal console, integrated terminal, or external terminal.",
+                "default": "integratedTerminal"
+              },
+              "python": {
+                "type": "string",
+                "description": "Specifies the python interpreter to use. If not specified, the python interpreter defined for the extension is used.",
+                "default": null
+              },
+              "robotPythonPath": {
+                "type": "array",
+                "description": "Specifies additional python paths for robotframework. Corresponds to the '--pythonpath' option of the robot module.",
+                "default": []
+              },
+              "attachPython": {
+                "type": "boolean",
+                "description": "Attach also the python debugger if a robot test starts.",
+                "default": false
+              },
+              "pythonConfiguration": {
+                "type": "object",
+                "description": "Defines a template for the python launch configuration.",
+                "default": {}
+              },
+              "variables": {
+                "type": "object",
+                "default": {},
+                "description": "Specifies the variables for robotframework. Corresponds to the '--variable name:value' option of the robot module."
+              },
+              "launcherArgs": {
+                "type": "array",
+                "description": "Command line arguments passed to launcher.",
+                "default": []
+              },
+              "launcherTimeout": {
+                "type": "number",
+                "description": "Timeout to connect to the debuggee.",
+                "default": 5
+              },
+              "outputMessages": {
+                "type": "boolean",
+                "description": "Output messages from robotframework in debug console.",
+                "default": false
+              },
+              "outputLog": {
+                "type": "boolean",
+                "description": "Output log messages from robotframework in debug console.",
+                "default": false
+              },
+              "groupOutput": {
+                "type": "boolean",
+                "description": "Group start and stop suite/test/keyword messages in debug console.",
+                "default": false
+              }
+            }
+          }
+        },
+        "initialConfigurations": [],
+        "configurationSnippets": [
+          {
+            "label": "RobotCode: Launch .robot file",
+            "description": "Add a new configuration for launching Robot Framework Tests.",
+            "body": {
+              "type": "robotcode",
+              "name": "RobotCode: Launch .robot file",
+              "request": "launch",
+              "cwd": "^\"\\${workspaceFolder}\"",
+              "target": "^\"\\${file}\"",
+              "env": {},
+              "args": []
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "webpack --mode production",
+    "webpack": "webpack --mode development",
+    "webpack-dev": "webpack --mode development --watch",
+    "test-compile": "tsc -p ./",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint --ext .ts,.tsx,.js .",
+    "lint-fix": "eslint --ext .ts,.tsx,.js --fix .",
+    "test": "node ./out/test/runTest.js",
+    "download-api": "vscode-dts dev",
+    "postdownload-api": "vscode-dts main",
+    "postinstall": "npm run download-api"
+  },
+  "extensionDependencies": [
+    "ms-python.python"
+  ],
+  "dependencies": {
+    "open": "^8.2.1",
+    "vscode-debugadapter": "^1.47.0",
+    "vscode-debugprotocol": "^1.47.0",
+    "vscode-languageclient": "^7.0.0",
+    "vscode-languageserver-protocol": "^3.16.0",
+    "vscode-test-adapter-api": "^1.9.0",
+    "vscode-test-adapter-util": "^0.7.1"
+  },
+  "devDependencies": {
+    "@types/glob": "^7.1.4",
+    "@types/mocha": "^8.2.3",
+    "@types/node": "^16.3.1",
+    "@types/vscode": "^1.58.0",
+    "@typescript-eslint/eslint-plugin": "^4.28.2",
+    "@typescript-eslint/parser": "^4.28.2",
+    "eslint": "^7.30.0",
+    "eslint-config-airbnb": "^18.2.1",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-config-standard": "^16.0.3",
+    "eslint-config-standard-with-typescript": "20.0.0",
+    "eslint-plugin-import": "^2.23.4",
+    "eslint-plugin-jsx-a11y": "^6.4.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^3.4.0",
+    "eslint-plugin-promise": "^5.1.0",
+    "eslint-plugin-react": "^7.24.0",
+    "eslint-plugin-react-hooks": "^4.2.0",
+    "glob": "^7.1.7",
+    "mocha": "^9.0.2",
+    "prettier": "^2.3.2",
+    "ts-loader": "^9.2.3",
+    "typescript": "^4.3.5",
+    "vsce": "^1.95.1",
+    "vscode-debugadapter-testsupport": "^1.47.0",
+    "vscode-dts": "^0.3.1",
+    "vscode-test": "^1.5.2",
+    "webpack": "^5.44.0",
+    "webpack-cli": "^4.7.2"
+  }
 }

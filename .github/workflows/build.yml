@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-        python-version: [3.8, 3.9]
+        python-version: [3.9]
 
     steps:
       - uses: actions/checkout@v2
@@ -27,14 +27,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: Gr1N/setup-poetry@v4        
-      
+      - uses: Gr1N/setup-poetry@v4
+
       - run: pip install poetry-dynamic-versioning
 
       - run: poetry install
 
       - run: poetry-dynamic-versioning
-        
+
       - name: "test python packages"
         run: poetry run pytest --junitxml=test-results/python-${{ matrix.python-version }}/test-results.xml --cov=robotcode --cov-report=xml:testresults/python-${{ matrix.python-version }}/coverage.xml --cov-report=html:test-results/python-${{ matrix.python-version }}/htmlcov
 
@@ -72,10 +72,10 @@ jobs:
       - name: setup python environment
         uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: 3.9
 
-      - uses: Gr1N/setup-poetry@v4        
-      
+      - uses: Gr1N/setup-poetry@v4
+
       - run: pip install poetry-dynamic-versioning
 
       - run: poetry install
@@ -111,14 +111,14 @@ jobs:
           node-version: ">=15.5"
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.8"
+          python-version: "3.9"
 
       - uses: Gr1N/setup-poetry@v4
 
       - run: pip install poetry-dynamic-versioning
 
       - run: poetry install
-        
+
       - run: poetry-dynamic-versioning
 
       - name: Build Python packages

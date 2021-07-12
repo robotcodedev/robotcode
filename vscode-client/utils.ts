@@ -1,48 +1,47 @@
 export async function sleep(timeout: number): Promise<number> {
-    return new Promise<number>((resolve) => {
-        setTimeout(() => resolve(timeout), timeout);
-    });
+  return new Promise<number>((resolve) => {
+    setTimeout(() => resolve(timeout), timeout);
+  });
 }
 
 export async function waitForPromise<T>(promise: Promise<T>, timeout: number): Promise<T | null> {
-    // Set a timer that will resolve with null
-    return new Promise<T | null>((resolve, reject) => {
-        const timer = setTimeout(() => resolve(null), timeout);
-        promise
-            .then((result) => {
-                // When the promise resolves, make sure to clear the timer or
-                // the timer may stick around causing tests to wait
-                clearTimeout(timer);
-                resolve(result);
-            })
-            .catch((e) => {
-                clearTimeout(timer);
-                reject(e);
-            });
-    });
+  // Set a timer that will resolve with null
+  return new Promise<T | null>((resolve, reject) => {
+    const timer = setTimeout(() => resolve(null), timeout);
+    promise
+      .then((result) => {
+        // When the promise resolves, make sure to clear the timer or
+        // the timer may stick around causing tests to wait
+        clearTimeout(timer);
+        resolve(result);
+      })
+      .catch((e) => {
+        clearTimeout(timer);
+        reject(e);
+      });
+  });
 }
 
 export class Mutex {
-    private mutex = Promise.resolve();
+  private mutex = Promise.resolve();
 
-    lock(): PromiseLike<() => void> {
-        let begin: (unlock: () => void) => void = (unlock) => {};
+  lock(): PromiseLike<() => void> {
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    let begin: (unlock: () => void) => void = (_unlock) => {};
 
-        this.mutex = this.mutex.then(() => {
-            return new Promise(begin);
-        });
+    this.mutex = this.mutex.then(() => new Promise(begin));
 
-        return new Promise((res) => {
-            begin = res;
-        });
+    return new Promise((resolve) => {
+      begin = resolve;
+    });
+  }
+
+  async dispatch<T>(fn: (() => T) | (() => PromiseLike<T>)): Promise<T> {
+    const unlock = await this.lock();
+    try {
+      return await Promise.resolve(fn()).finally(() => unlock());
+    } finally {
+      unlock();
     }
-
-    async dispatch<T>(fn: (() => T) | (() => PromiseLike<T>)): Promise<T> {
-        const unlock = await this.lock();
-        try {
-            return await Promise.resolve(fn()).finally(() => unlock());
-        } finally {
-            unlock();
-        }
-    }
+  }
 }

@@ -276,3 +276,5 @@ package-lock.json
 test-results
 .python-version
 
+/vscode.d.ts
+/vscode.proposed.d.ts

@@ -129,7 +129,8 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}"
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"--enable-proposed-api"
 			],
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"
