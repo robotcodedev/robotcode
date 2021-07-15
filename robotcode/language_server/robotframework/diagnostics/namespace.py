@@ -49,15 +49,15 @@ from .library_doc import (
 DIAGNOSTICS_SOURCE_NAME = "RobotCode"
 
 
-class DiagnosticsException(Exception):
+class DiagnosticsError(Exception):
     pass
 
 
-class DiagnosticsWarning(DiagnosticsException):
+class DiagnosticsWarningError(DiagnosticsError):
     pass
 
 
-class ImportError(DiagnosticsException):
+class ImportError(DiagnosticsError):
     pass
 
 
@@ -810,7 +810,7 @@ class Namespace:
                     # result.import_source = value.source
                     pass
                 else:
-                    raise DiagnosticsException("Unknown import type.")
+                    raise DiagnosticsError("Unknown import type.")
 
                 if top_level and result is not None:
                     if result.library_doc.source is not None and result.library_doc.errors:
@@ -1122,7 +1122,7 @@ class DiagnosticsEntry(NamedTuple):
     code: Optional[str] = None
 
 
-class CancelSearch(Exception):
+class CancelSearchError(Exception):
     pass
 
 
@@ -1143,7 +1143,7 @@ class KeywordFinder:
                 )
 
             return result
-        except CancelSearch:
+        except CancelSearchError:
             return None
 
     async def _find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
@@ -1151,12 +1151,12 @@ class KeywordFinder:
             self.diagnostics.append(
                 DiagnosticsEntry("Keyword name cannot be empty.", DiagnosticSeverity.ERROR, "KeywordError")
             )
-            raise CancelSearch()
+            raise CancelSearchError()
         if not isinstance(name, str):
             self.diagnostics.append(
                 DiagnosticsEntry("Keyword name must be a string.", DiagnosticSeverity.ERROR, "KeywordError")
             )
-            raise CancelSearch()
+            raise CancelSearchError()
 
         result = await self._get_keyword_from_self(name)
         if not result and "." in name:
@@ -1191,7 +1191,7 @@ class KeywordFinder:
                     "KeywordError",
                 )
             )
-            raise CancelSearch()
+            raise CancelSearchError()
 
         return found[0][1] if found else None
 
@@ -1240,7 +1240,7 @@ class KeywordFinder:
                 "KeywordError",
             )
         )
-        raise CancelSearch()
+        raise CancelSearchError()
 
     async def _get_keyword_based_on_search_order(
         self, entries: List[Tuple[LibraryEntry, KeywordDoc]]
@@ -1276,7 +1276,7 @@ class KeywordFinder:
                 "KeywordError",
             )
         )
-        raise CancelSearch()
+        raise CancelSearchError()
 
     async def _filter_stdlib_runner(
         self, entry1: Tuple[LibraryEntry, KeywordDoc], entry2: Tuple[LibraryEntry, KeywordDoc]

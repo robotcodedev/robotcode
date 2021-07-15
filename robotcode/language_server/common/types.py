@@ -580,22 +580,6 @@ class SaveOptions(Model):
 
 
 class TextDocumentSyncOptions(Model):
-    def __init__(
-        self,
-        open_close: Optional[bool] = None,
-        change: Optional[TextDocumentSyncKind] = None,
-        will_save: Optional[bool] = None,
-        will_save_wait_until: Optional[bool] = None,
-        save: Union[bool, SaveOptions, None] = None,
-    ) -> None:
-        super().__init__(  # type: ignore
-            open_close=open_close,
-            change=change,
-            will_save=will_save,
-            will_save_wait_until=will_save_wait_until,
-            save=save,
-        )
-
     open_close: Optional[bool] = None
     change: Optional[TextDocumentSyncKind] = None
     will_save: Optional[bool] = None

@@ -1,11 +1,13 @@
 # Robot Code Readme
 
-Language Server and client for Visual Studio Code.
+RobotFramework Language Server and client for Visual Studio Code.
+
 
 ## Requirements
 
-* Python 3.8 or above
+* Python 3.9 or above
 * Robotframework 4.0 and above
+* VSCode version 1.58 and above
 
 ## Installation
 

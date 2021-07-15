@@ -48,7 +48,7 @@ __all__ = [
     "JsonRPCProtocol",
     "JsonRPCException",
     "JsonRPCParseError",
-    "InvalidProtocolVersionException",
+    "InvalidProtocolVersionError",
     "rpc_method",
     "RpcRegistry",
     "JsonRPCProtocolPart",
@@ -122,7 +122,7 @@ class JsonRPCParseError(JsonRPCException):
     pass
 
 
-class InvalidProtocolVersionException(JsonRPCParseError):
+class InvalidProtocolVersionError(JsonRPCParseError):
     pass
 
 
@@ -434,7 +434,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         def inner(d: Dict[Any, Any]) -> JsonRPCMessage:
             if "jsonrpc" in d:
                 if d["jsonrpc"] != PROTOCOL_VERSION:
-                    raise InvalidProtocolVersionException("Invalid JSON-RPC2 protocol version.")
+                    raise InvalidProtocolVersionError("Invalid JSON-RPC2 protocol version.")
 
                 if "id" in d:
                     if "method" in d:
