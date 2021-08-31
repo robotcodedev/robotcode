@@ -7,7 +7,6 @@ from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.text_document import TextDocument
 from ...common.types import DocumentUri, Model, Position, Range, TextDocumentIdentifier
-from ..utils.async_ast import walk
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

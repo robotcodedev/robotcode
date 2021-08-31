@@ -115,9 +115,9 @@ export class TestControllerManager {
     };
 
     const fileWatcher = vscode.workspace.createFileSystemWatcher("**/*");
-    fileWatcher.onDidCreate((uri) => this.refreshFromUri(uri));
-    fileWatcher.onDidDelete((uri) => this.refreshFromUri(uri));
-    fileWatcher.onDidChange((uri) => this.refreshFromUri(uri));
+    fileWatcher.onDidCreate((uri) => this.refreshFromUri(uri, "create"));
+    fileWatcher.onDidDelete((uri) => this.refreshFromUri(uri, "delete"));
+    fileWatcher.onDidChange((uri) => this.refreshFromUri(uri, "change"));
 
     this._disposables = vscode.Disposable.from(
       fileWatcher,
@@ -305,7 +305,7 @@ export class TestControllerManager {
 
   private readonly refreshFromUriMutex = new Mutex();
 
-  private async refreshFromUri(uri: vscode.Uri): Promise<void> {
+  private async refreshFromUri(uri: vscode.Uri, _reason?: string): Promise<void> {
     await this.refreshFromUriMutex.dispatch(async () => {
       const workspace = vscode.workspace.getWorkspaceFolder(uri);
       if (workspace !== undefined) {
