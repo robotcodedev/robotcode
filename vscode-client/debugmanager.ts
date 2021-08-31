@@ -113,46 +113,6 @@ export class DebugManager {
     public readonly outputChannel: vscode.OutputChannel
   ) {
     this._disposables = vscode.Disposable.from(
-      vscode.commands.registerCommand(
-        "robotcode.runSuite",
-        async (resource) =>
-          await DebugManager.debugSuiteOrTestcase(resource ?? vscode.window.activeTextEditor?.document.uri, undefined, {
-            noDebug: true,
-          })
-      ),
-
-      vscode.commands.registerCommand(
-        "robotcode.debugSuite",
-        async (resource) =>
-          await DebugManager.debugSuiteOrTestcase(resource ?? vscode.window.activeTextEditor?.document.uri, undefined)
-      ),
-
-      vscode.commands.registerCommand("robotcode.runTest", async (resource: vscode.Uri | string | undefined, test) => {
-        const res = resource ?? vscode.window.activeTextEditor?.document.uri;
-
-        const realTest =
-          (test !== undefined && typeof test === "string" ? test.toString() : undefined) ??
-          (await this.languageClientsManager.getTestFromResource(res));
-        if (!realTest) return;
-
-        return await DebugManager.debugSuiteOrTestcase(res, realTest, {
-          noDebug: true,
-        });
-      }),
-
-      vscode.commands.registerCommand(
-        "robotcode.debugTest",
-        async (resource: vscode.Uri | string | undefined, test) => {
-          const res = resource ?? vscode.window.activeTextEditor?.document.uri;
-
-          const realTest =
-            (test !== undefined && typeof test === "string" ? test.toString() : undefined) ??
-            (await this.languageClientsManager.getTestFromResource(res));
-          if (!realTest) return;
-
-          return await DebugManager.debugSuiteOrTestcase(res, realTest);
-        }
-      ),
       vscode.debug.registerDebugConfigurationProvider(
         "robotcode",
         new RobotCodeDebugConfigurationProvider(this.pythonManager)
@@ -298,7 +258,8 @@ export class DebugManager {
         {
           parentSession: session,
           compact: true,
-          consoleMode: vscode.DebugConsoleMode.MergeWithParent,
+          lifecycleManagedByParent: true,
+          consoleMode: vscode.DebugConsoleMode.Separate,
         }
       );
     }

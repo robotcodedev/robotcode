@@ -4,14 +4,13 @@
   "description": "Robot Framework support for Visual Studio Code",
   "icon": "images/icon.png",
   "publisher": "d-biehl",
-  "version": "0.1.0-alpha.5",
-  "enableProposedApi": true,
+  "version": "0.1.0-alpha.5",  
   "repository": {
     "type": "git",
     "url": "https://github.com/d-biehl/robotcode.git"
   },
   "engines": {
-    "vscode": "^1.58.0"
+    "vscode": "^1.59.0"
   },
   "categories": [
     "Programming Languages",
@@ -259,107 +258,7 @@
           }
         }
       }
-    ],
-    "commands": [
-      {
-        "command": "robotcode.runSuite",
-        "category": "RobotCode",
-        "title": "Run Suite",
-        "enablement": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder",
-        "icon": {
-          "light": "resources/light/run_suite.svg",
-          "dark": "resources/dark/run_suite.svg"
-        }
-      },
-      {
-        "command": "robotcode.debugSuite",
-        "category": "RobotCode",
-        "title": "Debug Suite",
-        "enablement": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder",
-        "icon": {
-          "light": "resources/light/debug_suite.svg",
-          "dark": "resources/dark/debug_suite.svg"
-        }
-      },
-      {
-        "command": "robotcode.runTest",
-        "category": "RobotCode",
-        "title": "Run Test Case",
-        "enablement": "resourceLangId == robotframework && resourceExtname == .robot",
-        "icon": {
-          "light": "resources/light/run_test.svg",
-          "dark": "resources/dark/run_test.svg"
-        }
-      },
-      {
-        "command": "robotcode.debugTest",
-        "category": "RobotCode",
-        "title": "Debug Test Case",
-        "enablement": "resourceLangId == robotframework && resourceExtname == .robot",
-        "icon": {
-          "light": "resources/light/debug_test.svg",
-          "dark": "resources/dark/debug_test.svg"
-        }
-      }
-    ],
-    "menus": {
-      "editor/title/run": [
-        {
-          "command": "robotcode.runTest",
-          "group": "robotcode@1run@1",
-          "when": "resourceLangId == robotframework && resourceExtname == .robot && robotCode.editor.inTest && !isInDiffEditor"
-        },
-        {
-          "command": "robotcode.debugTest",
-          "group": "robotcode@2debug@1",
-          "when": "resourceLangId == robotframework && resourceExtname == .robot && robotCode.editor.inTest && !isInDiffEditor"
-        },
-        {
-          "command": "robotcode.runSuite",
-          "group": "robotcode@1run@2",
-          "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
-        },
-        {
-          "command": "robotcode.debugSuite",
-          "group": "robotcode@2debug@2",
-          "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
-        }
-      ],
-      "editor/context": [
-        {
-          "command": "robotcode.runTest",
-          "group": "robotcode@1run@1",
-          "when": "resourceLangId == robotframework && resourceExtname == .robot && robotCode.editor.inTest && !isInDiffEditor"
-        },
-        {
-          "command": "robotcode.debugTest",
-          "group": "robotcode@2debug@1",
-          "when": "resourceLangId == robotframework && resourceExtname == .robot && robotCode.editor.inTest && !isInDiffEditor"
-        },
-        {
-          "command": "robotcode.runSuite",
-          "group": "robotcode@1run@2",
-          "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
-        },
-        {
-          "command": "robotcode.debugSuite",
-          "group": "robotcode@2debug@2",
-          "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
-        }
-      ],
-      "explorer/context": [
-        {
-          "command": "robotcode.runSuite",
-          "group": "robotcode@1",
-          "when": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder"
-        },
-        {
-          "command": "robotcode.debugSuite",
-          "group": "robotcode@2",
-          "when": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder"
-        }
-      ]
-    },
+    ],    
     "breakpoints": [
       {
         "language": "robotframework"
@@ -492,18 +391,15 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint --ext .ts,.tsx,.js .",
     "lint-fix": "eslint --ext .ts,.tsx,.js --fix .",
-    "test": "node ./out/test/runTest.js",
-    "download-api": "vscode-dts dev",
-    "postdownload-api": "vscode-dts main",
-    "postinstall": "npm run download-api"
+    "test": "node ./out/test/runTest.js"   
   },
   "extensionDependencies": [
     "ms-python.python"
   ],
   "dependencies": {
     "open": "^8.2.1",
-    "vscode-debugadapter": "^1.47.0",
-    "vscode-debugprotocol": "^1.47.0",
+    "vscode-debugadapter": "^1.49.0",
+    "vscode-debugprotocol": "^1.49.0",
     "vscode-languageclient": "^7.0.0",
     "vscode-languageserver-protocol": "^3.16.0",
     "vscode-test-adapter-api": "^1.9.0",
@@ -511,33 +407,32 @@
   },
   "devDependencies": {
     "@types/glob": "^7.1.4",
-    "@types/mocha": "^8.2.3",
-    "@types/node": "^16.3.1",
-    "@types/vscode": "^1.58.0",
-    "@typescript-eslint/eslint-plugin": "^4.28.2",
-    "@typescript-eslint/parser": "^4.28.2",
-    "eslint": "^7.30.0",
+    "@types/mocha": "^9.0.0",
+    "@types/node": "^16.7.6",
+    "@types/vscode": "^1.59.0",
+    "@typescript-eslint/eslint-plugin": "^4.29.3",
+    "@typescript-eslint/parser": "^4.29.3",
+    "eslint": "^7.32.0",
     "eslint-config-airbnb": "^18.2.1",
     "eslint-config-prettier": "^8.3.0",
     "eslint-config-standard": "^16.0.3",
     "eslint-config-standard-with-typescript": "20.0.0",
-    "eslint-plugin-import": "^2.23.4",
+    "eslint-plugin-import": "^2.24.2",
     "eslint-plugin-jsx-a11y": "^6.4.1",
     "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-prettier": "^3.4.0",
+    "eslint-plugin-prettier": "^3.4.1",
     "eslint-plugin-promise": "^5.1.0",
-    "eslint-plugin-react": "^7.24.0",
+    "eslint-plugin-react": "^7.25.1",
     "eslint-plugin-react-hooks": "^4.2.0",
     "glob": "^7.1.7",
-    "mocha": "^9.0.2",
+    "mocha": "^9.1.1",
     "prettier": "^2.3.2",
-    "ts-loader": "^9.2.3",
-    "typescript": "^4.3.5",
-    "vsce": "^1.95.1",
-    "vscode-debugadapter-testsupport": "^1.47.0",
-    "vscode-dts": "^0.3.1",
-    "vscode-test": "^1.5.2",
-    "webpack": "^5.44.0",
-    "webpack-cli": "^4.7.2"
+    "ts-loader": "^9.2.5",
+    "typescript": "^4.4.2",
+    "vsce": "^1.96.2",
+    "vscode-debugadapter-testsupport": "^1.49.0",    
+    "vscode-test": "^1.6.1",
+    "webpack": "^5.51.1",
+    "webpack-cli": "^4.8.0"
   }
 }

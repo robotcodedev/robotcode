@@ -8,12 +8,25 @@ import { PythonManager } from "./pythonmanger";
 const LANGUAGE_SERVER_DEFAULT_TCP_PORT = 6610;
 const LANGUAGE_SERVER_DEFAULT_HOST = "127.0.0.1";
 
-interface Test {
-  name: string;
-  source: {
-    uri: string;
-  };
-  lineNo: number;
+export interface RobotPosition {
+  line: number;
+  character: number;
+}
+
+export interface RobotRange {
+  start: RobotPosition;
+  end: RobotPosition;
+}
+
+export interface RobotTestItem {
+  type: string;
+  id: string;
+  uri?: string;
+  children: RobotTestItem[] | undefined;
+  label: string;
+  description?: string;
+  range?: RobotRange;
+  error?: string;
 }
 
 export class LanguageClientsManager {
@@ -29,16 +42,13 @@ export class LanguageClientsManager {
     public readonly outputChannel: vscode.OutputChannel
   ) {
     this._disposables = vscode.Disposable.from(
-      this.pythonManager.pythonExtension?.exports.settings.onDidChangeExecutionDetails(this.refresh) ?? {
+      this.pythonManager.pythonExtension?.exports.settings.onDidChangeExecutionDetails(
+        async (_event) => await this.refresh()
+      ) ?? {
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         dispose() {},
       },
-      vscode.workspace.onDidChangeWorkspaceFolders(async (_event) => {
-        await this.refresh();
-      }),
-      vscode.window.onDidChangeTextEditorSelection(async (event) => {
-        await this.updateEditorContext(event.textEditor);
-      }),
+      vscode.workspace.onDidChangeWorkspaceFolders(async (_event) => await this.refresh()),
       vscode.workspace.onDidOpenTextDocument(this.getLanguageClientForDocument)
     );
   }
@@ -195,84 +205,6 @@ export class LanguageClientsManager {
     });
   }
 
-  public async getCurrentTestFromActiveResource(
-    resource: string | vscode.Uri | undefined,
-    selection?: vscode.Selection
-  ): Promise<string | undefined> {
-    if (resource === undefined) return;
-
-    const uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
-    const folder = vscode.workspace.getWorkspaceFolder(uri);
-    if (!folder) return undefined;
-
-    if (!vscode.window.activeTextEditor) return undefined;
-
-    if (vscode.window.activeTextEditor.document.uri.toString() !== uri.toString()) return;
-
-    if (selection === undefined) selection = vscode.window.activeTextEditor.selection;
-
-    const client = await this.getLanguageClientForResource(resource);
-
-    if (!client) return undefined;
-
-    return (
-      (await client?.sendRequest<string | undefined>("robotcode/getTestFromPosition", {
-        textDocument: { uri: uri.toString() },
-        position: selection.active,
-      })) ?? undefined
-    );
-  }
-
-  public async getTestsFromResource(resource: string | vscode.Uri | undefined): Promise<Test[] | undefined> {
-    if (resource === undefined) return [];
-
-    const uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
-    const folder = vscode.workspace.getWorkspaceFolder(uri);
-    if (!folder) return [];
-
-    const client = await this.getLanguageClientForResource(resource);
-
-    if (!client) return;
-
-    const result =
-      (await client.sendRequest<Test[]>("robotcode/getTests", {
-        textDocument: { uri: uri.toString() },
-      })) ?? undefined;
-
-    return result;
-  }
-
-  public async getTestFromResource(resource: string | vscode.Uri | undefined): Promise<string | string[] | undefined> {
-    const result = await this.getCurrentTestFromActiveResource(resource);
-    if (!result) {
-      const tests = await this.getTestsFromResource(resource);
-      if (tests) {
-        const items = tests.map((t) => ({ label: t.name, picked: false, description: "" }));
-        if (items.length > 0) {
-          items[0].picked = true;
-          items[0].description = "(Default)";
-        }
-        const selection = await vscode.window.showQuickPick(items, { title: "Select test(s)" });
-        if (selection) {
-          return selection.label;
-        }
-      }
-    }
-    return result;
-  }
-
-  public async updateEditorContext(editor?: vscode.TextEditor): Promise<void> {
-    if (editor === undefined) editor = vscode.window.activeTextEditor;
-
-    let inTest = false;
-    if (editor && editor === vscode.window.activeTextEditor && editor.document.languageId === "robotframework") {
-      const currentTest = await this.getCurrentTestFromActiveResource(editor.document.uri);
-      inTest = currentTest !== undefined && currentTest !== "";
-    }
-
-    vscode.commands.executeCommand("setContext", "robotCode.editor.inTest", inTest);
-  }
-
   public async refresh(_uri?: vscode.Uri | undefined): Promise<void> {
     await this.clientsMutex.dispatch(async () => {
       for (const client of this.clients.values()) {
@@ -290,7 +222,35 @@ export class LanguageClientsManager {
         // do nothing
       }
     }
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    await this.updateEditorContext().catch((_) => {});
+  }
+
+  public async getTestsFromWorkspace(
+    workspaceFolder: vscode.WorkspaceFolder,
+    paths?: Array<string>
+  ): Promise<RobotTestItem[] | undefined> {
+    const client = await this.getLanguageClientForResource(workspaceFolder.uri);
+
+    if (!client) return;
+
+    const result =
+      (await client.sendRequest<RobotTestItem[]>("robot/discovering/getTestsFromWorkspace", {
+        paths: paths ?? ["."],
+      })) ?? undefined;
+
+    return result;
+  }
+
+  public async getTestsFromDocument(document: vscode.TextDocument, id?: string): Promise<RobotTestItem[] | undefined> {
+    const client = await this.getLanguageClientForResource(document.uri);
+
+    if (!client) return;
+
+    const result =
+      (await client.sendRequest<RobotTestItem[]>("robot/discovering/getTestsFromDocument", {
+        textDocument: { uri: document.uri.toString() },
+        id: id,
+      })) ?? undefined;
+
+    return result;
   }
 }

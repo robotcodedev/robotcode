@@ -92,7 +92,10 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilit
         document_symbols: List[DocumentSymbol] = []
         symbol_informations: List[SymbolInformation] = []
 
-        document = self.parent.documents[text_document.uri]
+        document = self.parent.documents.get(text_document.uri, None)
+        if not document:
+            return None
+
         for result in await self.collect(
             self,
             document,

@@ -4,6 +4,7 @@ import { DebugManager } from "./debugmanager";
 import { LanguageClientsManager } from "./languageclientsmanger";
 import { PythonManager } from "./pythonmanger";
 import openExternal = require("open");
+import { TestControllerManager } from "./testcontrollermanager";
 
 class TerminalLink extends vscode.TerminalLink {
   constructor(public path: string, startIndex: number, length: number, tooltip?: string) {
@@ -22,10 +23,13 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
 
   const debugManager = new DebugManager(context, pythonManager, languageClientManger, outputChannel);
 
+  const testControllerManger = new TestControllerManager(context, languageClientManger, outputChannel);
+
   context.subscriptions.push(
     pythonManager,
     languageClientManger,
     debugManager,
+    testControllerManger,
 
     vscode.window.registerTerminalLinkProvider({
       provideTerminalLinks(context: vscode.TerminalLinkContext, _token: vscode.CancellationToken) {
@@ -61,44 +65,15 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         "robotcode.languageServer.args",
       ]) {
         if (event.affectsConfiguration(s)) {
-          await vscode.window
-            .showWarningMessage(
-              'Please use the "Reload Window" action for changes in ' + s + " to take effect.",
-              ...["Reload Window"]
-            )
-            .then((selection) => {
-              if (selection === "Reload Window") {
-                vscode.commands.executeCommand("workbench.action.reloadWindow");
-              }
-            });
-          return;
+          await languageClientManger.refresh();
+          await testControllerManger.refresh();
         }
       }
     })
   );
 
-  try {
-    const testController = vscode.test.createTestController("robotcode");
-    context.subscriptions.push(testController);
-
-    testController.root.label = "RobotFramework tests";
-
-    testController.root.canResolveChildren = true;
-    testController.resolveChildrenHandler = async (item) => {
-      if (item === testController.root) {
-        for (const workspace of vscode.workspace.workspaceFolders ?? []) {
-          const testItem = testController.createTestItem(workspace.uri.toString(), workspace.name, item, workspace.uri);
-          testItem.debuggable = true;
-        }
-      }
-    };
-    testController.runHandler = async (_request, _token) => {
-      console.log("hello");
-    };
-  } catch (e) {
-    console.log(e);
-  }
   await languageClientManger.refresh();
+  await testControllerManger.refresh();
 }
 
 function displayProgress(promise: Promise<unknown>) {

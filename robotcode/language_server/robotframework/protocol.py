@@ -12,9 +12,9 @@ from ..common.types import (
     TextDocumentRegistrationOptions,
     TextDocumentSyncKind,
 )
-from .parts.code_lens import RobotCodeLensProtocolPart
 from .parts.completion import RobotCompletionProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
+from .parts.discovering import DiscoveringProtocolPart
 from .parts.document_symbols import RobotDocumentSymbolsProtocolPart
 from .parts.documents_cache import DocumentsCache
 from .parts.folding_range import RobotFoldingRangeProtocolPart
@@ -23,7 +23,6 @@ from .parts.goto import RobotGotoProtocolPart
 from .parts.hover import RobotHoverProtocolPart
 from .parts.robocop_diagnostics import RobotRoboCopDiagnosticsProtocolPart
 from .parts.signature_help import RobotSignatureHelpProtocolPart
-from .parts.utils import UtilsProtocolPart
 from .utils.version import get_robot_version
 
 if TYPE_CHECKING:
@@ -55,11 +54,10 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     _robot_hover = ProtocolPartDescriptor(RobotHoverProtocolPart)
     _robot_completion = ProtocolPartDescriptor(RobotCompletionProtocolPart)
     _robot_signature_help = ProtocolPartDescriptor(RobotSignatureHelpProtocolPart)
-    _robot_code_lens = ProtocolPartDescriptor(RobotCodeLensProtocolPart)
     _robot_document_symbols = ProtocolPartDescriptor(RobotDocumentSymbolsProtocolPart)
     _robot_robocop_diagnostics = ProtocolPartDescriptor(RobotRoboCopDiagnosticsProtocolPart)
     _robot_formatting = ProtocolPartDescriptor(RobotFormattingProtocolPart)
-    _robot_utils = ProtocolPartDescriptor(UtilsProtocolPart)
+    _robot_discovering = ProtocolPartDescriptor(DiscoveringProtocolPart)
 
     name = "RobotCode"
     version = __version__
