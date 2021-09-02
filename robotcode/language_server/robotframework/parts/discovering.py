@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, List, Optional
 
@@ -150,22 +151,25 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
     async def get_tests_from_document(self, text_document: TextDocumentIdentifier, id: Optional[str]) -> List[TestItem]:
-
+        from robot.output.logger import LOGGER
         from robot.running import TestSuite
 
-        model = TestSuite.from_model(await self.parent.documents_cache.get_model(self.get_document(text_document.uri)))
-
-        return [
-            TestItem(
-                type="test",
-                id=f"{id}.{v.longname}" if id else v.longname,
-                label=v.name,
-                uri=str(Uri.from_path(v.source)),
-                range=Range(
-                    start=Position(line=v.lineno - 1, character=0),
-                    end=Position(line=v.lineno - 1, character=0),
-                ),
-                tags=[t for t in v.tags],
+        with LOGGER.cache_only:
+            model = TestSuite.from_model(
+                await self.parent.documents_cache.get_model(self.get_document(text_document.uri))
             )
-            for v in model.tests
-        ]
+
+            return [
+                TestItem(
+                    type="test",
+                    id=f"{id}.{v.longname}" if id else v.longname,
+                    label=v.name,
+                    uri=str(Uri.from_path(v.source)),
+                    range=Range(
+                        start=Position(line=v.lineno - 1, character=0),
+                        end=Position(line=v.lineno - 1, character=0),
+                    ),
+                    tags=[t for t in v.tags],
+                )
+                for v in model.tests
+            ]

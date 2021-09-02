@@ -46,7 +46,7 @@ from .library_doc import (
     is_embedded_keyword,
 )
 
-DIAGNOSTICS_SOURCE_NAME = "RobotCode"
+DIAGNOSTICS_SOURCE_NAME = "robotcode.namespace"
 
 
 class DiagnosticsError(Exception):

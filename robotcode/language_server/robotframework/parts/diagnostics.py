@@ -8,7 +8,7 @@ from ...common.language import language_id
 from ...common.parts.diagnostics import DiagnosticsResult
 from ...common.text_document import TextDocument
 from ...common.types import Diagnostic, DiagnosticSeverity, Position, Range
-from ..utils.ast import range_from_token
+from ..utils.ast import Token, range_from_token
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -22,7 +22,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
-        self.source_name = "robotcode"
+        self.source_name = "robotcode.diagnostics"
 
         parent.diagnostics.collect.add(self.collect_token_errors)
         # parent.diagnostics.collect.add(self.collect_model_errors)
@@ -35,7 +35,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
         await self.parent.diagnostics.start_publish_diagnostics_task(document)
 
-    def _create_error(self, node: ast.AST, msg: str, source: Optional[str] = None) -> Diagnostic:
+    def _create_error_from_node(self, node: ast.AST, msg: str, source: Optional[str] = None) -> Diagnostic:
         return Diagnostic(
             range=Range(
                 start=Position(line=node.lineno - 1, character=node.col_offset),
@@ -45,6 +45,15 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             severity=DiagnosticSeverity.ERROR,
             source=source if source is not None else self.source_name,
             code="ModelError",
+        )
+
+    def _create_error_from_token(self, token: Token, source: Optional[str] = None) -> Diagnostic:
+        return Diagnostic(
+            range=range_from_token(token),
+            message=token.error if token.error is not None else "Unknown Error.",
+            severity=DiagnosticSeverity.ERROR,
+            source=source if source is not None else self.source_name,
+            code="TokenError",
         )
 
     @language_id("robotframework")
@@ -57,15 +66,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         for token in await self.parent.documents_cache.get_tokens(document):
             if token.type in [Token.ERROR, Token.FATAL_ERROR]:
-                result.append(
-                    Diagnostic(
-                        range=range_from_token(token),
-                        message=token.error if token.error is not None else "Unknown Error.",
-                        severity=DiagnosticSeverity.ERROR,
-                        source="robot",
-                        code="TokenError",
-                    )
-                )
+                result.append(self._create_error_from_token(token))
 
             try:
                 for variable_token in token.tokenize_variables():
@@ -73,22 +74,15 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         break
 
                     if variable_token.type in [Token.ERROR, Token.FATAL_ERROR]:
-                        result.append(
-                            Diagnostic(
-                                range=range_from_token(variable_token),
-                                message=token.error if token.error is not None else "Unknown Error.",
-                                severity=DiagnosticSeverity.ERROR,
-                                source="robot",
-                                code="TokenError",
-                            )
-                        )
+                        result.append(self._create_error_from_token(variable_token))
+
             except VariableError as e:
                 result.append(
                     Diagnostic(
                         range=range_from_token(token),
                         message=str(e),
                         severity=DiagnosticSeverity.ERROR,
-                        source="robot",
+                        source=self.source_name,
                         code=type(e).__qualname__,
                     )
                 )
@@ -115,11 +109,11 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             async def generic_visit(self, node: ast.AST) -> None:
                 error = getattr(node, "error", None)
                 if error is not None:
-                    self.errors.append(self.parent._create_error(node, error, "robot.visitor"))
+                    self.errors.append(self.parent._create_error_from_node(node, error))
                 errors = getattr(node, "errors", None)
                 if errors is not None:
                     for e in errors:
-                        self.errors.append(self.parent._create_error(node, e, "robot.visitor"))
+                        self.errors.append(self.parent._create_error_from_node(node, e))
                 await super().generic_visit(node)
 
         return DiagnosticsResult(
@@ -137,11 +131,11 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         async for node in walk(await self.parent.documents_cache.get_model(document)):
             error = getattr(node, "error", None)
             if error is not None:
-                result.append(self._create_error(node, error))
+                result.append(self._create_error_from_node(node, error))
             errors = getattr(node, "errors", None)
             if errors is not None:
                 for e in errors:
-                    result.append(self._create_error(node, e))
+                    result.append(self._create_error_from_node(node, e))
 
         return DiagnosticsResult(self.collect_walk_model_errors, result)
 

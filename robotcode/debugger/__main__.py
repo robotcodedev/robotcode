@@ -126,8 +126,8 @@ async def run_robot(
 
     from ..utils.debugpy import enable_debugpy, wait_for_debugpy_connected
     from ..utils.net import check_free_port
-    from .types import Event
     from .debugger import Debugger
+    from .types import Event
 
     @_logger.call
     async def start_debugpy_async() -> None:
@@ -271,7 +271,6 @@ def main() -> None:
         description="RobotCode Debugger",
         prog=__package__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        usage="%(prog)s [arguments]... -- [<robot arguments>]...",
     )
 
     parser.add_argument("--version", action="store_true", help="shows the version and exits")
@@ -294,9 +293,7 @@ def main() -> None:
         help="timeout to wait for a configuration from client",
     )
     parser.add_argument("--log", action="store_true", help="enable logging")
-    parser.add_argument(
-        "--log-debugger", action="store_true", help="show debugger log messages"
-    )
+    parser.add_argument("--log-debugger", action="store_true", help="show debugger log messages")
     parser.add_argument("-n", "--no-debug", action="store_true", help="disable debugging")
     parser.add_argument("--debug-asyncio", action="store_true", help="enable async io debugging messages")
     parser.add_argument("--log-asyncio", action="store_true", help="show asyncio log messages")
@@ -325,6 +322,8 @@ def main() -> None:
         "-og", "--group-output", action="store_true", help="Fold messages/log from robotframework to client."
     )
     parser.add_argument("-soe", "--stop-on-entry", action="store_true", help="Stops on entry.")
+
+    parser.add_argument("--", help="RobotFramework arguments. (see robot --help)", dest="robot args", nargs="*")
 
     sys_args = sys.argv[1:]
 
