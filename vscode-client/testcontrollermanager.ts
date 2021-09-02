@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { LanguageClientsManager, RobotTestItem } from "./languageclientsmanger";
-import { Mutex, sleep } from "./utils";
+import { Mutex } from "./utils";
 
 export class TestControllerManager {
   private _disposables: vscode.Disposable;
@@ -20,93 +20,15 @@ export class TestControllerManager {
       "Run Tests",
       vscode.TestRunProfileKind.Run,
       async (request, token) => {
-        token.onCancellationRequested(async (_e) => {
-          console.log("hello canceled");
-        });
-        const runtest = async () => {
-          const run = this.testController.createTestRun(request);
-
-          const items: vscode.TestItem[] = [];
-
-          if (request.include) {
-            request.include.forEach((test) => items.push(test));
-          } else {
-            this.testController.items.forEach((test) => items.push(test));
-          }
-
-          items.forEach((i) => run.enqueued(i));
-
-          function enqueItem(item: vscode.TestItem) {
-            run.enqueued(item);
-
-            item.children.forEach((i) => enqueItem(i));
-          }
-
-          async function runItem(item: vscode.TestItem) {
-            run.started(item);
-            run.appendOutput(`run item ${item.id}: ${item.label}`);
-            run.appendOutput("\r\n");
-
-            if (item.children.size > 0) {
-              const queue: vscode.TestItem[] = [];
-
-              item.children.forEach((i) => queue.push(i));
-
-              items.forEach((i) => run.enqueued(i));
-
-              for (const i of queue) {
-                await runItem(i);
-              }
-            } else {
-              await sleep(100);
-            }
-
-            switch (Math.floor(Math.random() * 1)) {
-              case 0:
-                run.passed(item, Math.floor(Math.random() * 1000));
-                break;
-              case 1: {
-                const m = new vscode.TestMessage("a failed test");
-
-                if (item.uri !== undefined && item.range !== undefined)
-                  m.location = new vscode.Location(item.uri, item.range);
-
-                run.failed(item, m, Math.floor(Math.random() * 1000));
-                break;
-              }
-              case 2:
-                run.skipped(item);
-                break;
-              case 3: {
-                const m = new vscode.TestMessage("an errored test");
-
-                if (item.uri !== undefined && item.range !== undefined)
-                  m.location = new vscode.Location(item.uri, item.range);
-
-                run.errored(item, m, Math.floor(Math.random() * 1000));
-                break;
-              }
-            }
-          }
-
-          for (const i of items) {
-            enqueItem(i);
-          }
-
-          for (const i of items) {
-            await runItem(i);
-          }
-          run.end();
-        };
-        await runtest();
+        await this.runHandler(request, token);
       }
     );
 
     this.debugProfile = this.testController.createRunProfile(
       "Debug",
       vscode.TestRunProfileKind.Debug,
-      (request, _token) => {
-        console.log(`${request}`);
+      async (request, token) => {
+        await this.runHandler(request, token);
       }
     );
 
@@ -151,7 +73,7 @@ export class TestControllerManager {
     this.testController.dispose();
   }
 
-  public readonly testItems: WeakMap<vscode.WorkspaceFolder, RobotTestItem[] | undefined> = new Map();
+  public readonly testItems = new WeakMap<vscode.WorkspaceFolder, RobotTestItem[] | undefined>();
 
   public findRobotItem(item: vscode.TestItem): RobotTestItem | undefined {
     if (item.parent) {
@@ -315,5 +237,51 @@ export class TestControllerManager {
         await this.refresh();
       }
     });
+  }
+
+  private findWorkspaceForItem(item: vscode.TestItem): vscode.WorkspaceFolder | undefined {
+    if (item.uri !== undefined) {
+      return vscode.workspace.getWorkspaceFolder(item.uri);
+    }
+
+    for (const ws of vscode.workspace.workspaceFolders ?? []) {
+      if (this.testItems.has(ws)) {
+        if (this.testItems.get(ws)?.find((w) => w.id === item.id) !== undefined) {
+          return ws;
+        }
+      }
+    }
+    return undefined;
+  }
+
+  private readonly testRuns = new Map<string, vscode.TestRun>();
+
+  private mapTestItemsToWorkspace(items: vscode.TestItem[]): Map<vscode.WorkspaceFolder, vscode.TestItem[]> {
+    const folders = new Map<vscode.WorkspaceFolder, vscode.TestItem[]>();
+    for (const i of items) {
+      const ws = this.findWorkspaceForItem(i);
+      if (ws !== undefined) {
+        if (!folders.has(ws)) {
+          folders.set(ws, []);
+        }
+        folders.get(ws)?.push(i);
+      }
+    }
+    return folders;
+  }
+
+  public async runHandler(request: vscode.TestRunRequest, _token: vscode.CancellationToken): Promise<void> {
+    let includedItems: vscode.TestItem[] = [];
+
+    if (request.include) {
+      includedItems = request.include;
+    } else {
+      this.testController.items.forEach((test) => includedItems.push(test));
+    }
+
+    const included = this.mapTestItemsToWorkspace(includedItems);
+    const excluded = this.mapTestItemsToWorkspace(request.exclude ?? []);
+
+    // const run = this.testController.createTestRun(request);
   }
 }

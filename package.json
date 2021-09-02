@@ -4,7 +4,7 @@
   "description": "Robot Framework support for Visual Studio Code",
   "icon": "images/icon.png",
   "publisher": "d-biehl",
-  "version": "0.1.0-alpha.5",  
+  "version": "0.1.0-alpha.5",
   "repository": {
     "type": "git",
     "url": "https://github.com/d-biehl/robotcode.git"
@@ -216,16 +216,8 @@
             "scope": "resource"
           },
           "robotcode.run.openReportAfterRun": {
-            "type": "string",
-            "enum": [
-              "disabled",
-              "external"
-            ],
-            "enumDescriptions": [
-              "Do not open the result report",
-              "Opens the report in an external browser."
-            ],
-            "default": "none",
+            "type": "boolean",
+            "default": false,
             "description": "Defines if the test report should be opened a run session automatically.",
             "scope": "resource"
           },
@@ -258,7 +250,7 @@
           }
         }
       }
-    ],    
+    ],
     "breakpoints": [
       {
         "language": "robotframework"
@@ -391,19 +383,14 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint --ext .ts,.tsx,.js .",
     "lint-fix": "eslint --ext .ts,.tsx,.js --fix .",
-    "test": "node ./out/test/runTest.js"   
+    "test": "node ./out/test/runTest.js"
   },
   "extensionDependencies": [
     "ms-python.python"
   ],
   "dependencies": {
-    "open": "^8.2.1",
-    "vscode-debugadapter": "^1.49.0",
-    "vscode-debugprotocol": "^1.49.0",
-    "vscode-languageclient": "^7.0.0",
-    "vscode-languageserver-protocol": "^3.16.0",
-    "vscode-test-adapter-api": "^1.9.0",
-    "vscode-test-adapter-util": "^0.7.1"
+    "vscode-debugadapter": "^1.49.0",    
+    "vscode-languageclient": "^7.0.0"    
   },
   "devDependencies": {
     "@types/glob": "^7.1.4",
@@ -430,7 +417,7 @@
     "ts-loader": "^9.2.5",
     "typescript": "^4.4.2",
     "vsce": "^1.96.2",
-    "vscode-debugadapter-testsupport": "^1.49.0",    
+    "vscode-debugadapter-testsupport": "^1.49.0",
     "vscode-test": "^1.6.1",
     "webpack": "^5.51.1",
     "webpack-cli": "^4.8.0"

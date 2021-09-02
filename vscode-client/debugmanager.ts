@@ -1,6 +1,5 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import openExternal = require("open");
 import { PythonManager } from "./pythonmanger";
 import { CONFIG_SECTION } from "./config";
 import { LanguageClientsManager } from "./languageclientsmanger";
@@ -274,11 +273,8 @@ export class DebugManager {
     if (reportFile) {
       const config = vscode.workspace.getConfiguration(CONFIG_SECTION, session.workspaceFolder);
 
-      switch (config.get<string>("run.openReportAfterRun")) {
-        case "disabled":
-          return;
-        case "external":
-          openExternal(reportFile);
+      if (config.get<boolean>("run.openReportAfterRun")) {
+        vscode.env.openExternal(vscode.Uri.file(reportFile));
       }
     }
   }

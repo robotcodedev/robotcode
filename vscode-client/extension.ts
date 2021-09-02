@@ -1,9 +1,7 @@
 import * as vscode from "vscode";
-import { CONFIG_SECTION } from "./config";
 import { DebugManager } from "./debugmanager";
 import { LanguageClientsManager } from "./languageclientsmanger";
 import { PythonManager } from "./pythonmanger";
-import openExternal = require("open");
 import { TestControllerManager } from "./testcontrollermanager";
 
 class TerminalLink extends vscode.TerminalLink {
@@ -44,16 +42,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         return [];
       },
       handleTerminalLink(link: TerminalLink) {
-        const config = vscode.workspace.getConfiguration(
-          CONFIG_SECTION,
-          vscode.workspace.getWorkspaceFolder(vscode.Uri.file(link.path))
-        );
-
-        switch (config.get<string>("run.openReportAfterRun")) {
-          default:
-            openExternal(link.path);
-            break;
-        }
+        vscode.env.openExternal(vscode.Uri.file(link.path));
       },
     }),
 
