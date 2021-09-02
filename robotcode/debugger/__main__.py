@@ -271,7 +271,7 @@ def main() -> None:
         description="RobotCode Debugger",
         prog=__package__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        usage=f"{__package__} [arguments]... -- [<robot arguments>]...",
+        usage="%(prog)s [arguments]... -- [<robot arguments>]...",
     )
 
     parser.add_argument("--version", action="store_true", help="shows the version and exits")
