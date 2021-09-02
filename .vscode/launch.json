@@ -34,10 +34,10 @@
 			}
 		},
 		{
-			"name": "Python: robotcode.debug_adapter.launcher",
+			"name": "Python: robotcode.debugger",
 			"type": "python",
 			"request": "launch",
-			"module": "robotcode.debug_adapter.launcher",
+			"module": "robotcode.debugger",
 			"justMyCode": false,
 			"args": [
 				"--debug-asyncio",
@@ -50,10 +50,10 @@
 			]
 		},
 		{
-			"name": "Python: robotcode.debug_adapter tcp",
+			"name": "Python: robotcode.debugger.launcher tcp",
 			"type": "python",
 			"request": "launch",
-			"module": "robotcode.debug_adapter",
+			"module": "robotcode.debugger.launcher",
 			"justMyCode": false,
 			"args": [
 				"--mode",
@@ -64,10 +64,10 @@
 			]
 		},
 		{
-			"name": "Python: robotcode.debug_adapter stdio",
+			"name": "Python: robotcode.debugger.launcher stdio",
 			"type": "python",
 			"request": "launch",
-			"module": "robotcode.debug_adapter",
+			"module": "robotcode.debugger.launcher",
 			"justMyCode": false,
 			"args": [
 				"--mode",

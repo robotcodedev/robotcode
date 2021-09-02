@@ -14,7 +14,7 @@ if __file__.endswith((".pyc", ".pyo")):
 if __name__ == "__main__" and __package__ is None or __package__ == "":
 
     file = Path(__file__).resolve()
-    parent, top = file.parent, file.parents[2]
+    parent, top = file.parent, file.parents[3]
 
     if str(top) not in sys.path:
         sys.path.append(str(top))
@@ -24,11 +24,11 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
     except ValueError:  # Already removed
         pass
 
-    __package__ = "robotcode.debug_adapter"
+    __package__ = "robotcode.debugger.launcher"
 
-from .._version import __version__
-from ..utils.debugpy import start_debugpy
-from ..utils.logging import LoggingDescriptor
+from ..._version import __version__
+from ...utils.debugpy import start_debugpy
+from ...utils.logging import LoggingDescriptor
 
 TRACE = logging.DEBUG - 6
 logging.addLevelName(TRACE, "TRACE")
@@ -41,7 +41,7 @@ try:
 except ImportError:
     _logger.debug("typing_extensions not found, add our external path to sys.path")
     file = Path(__file__).resolve()
-    external_path = Path(file.parents[1], "external", "typing_extensions")
+    external_path = Path(file.parents[2], "external", "typing_extensions")
     sys.path.append(str(external_path))
 
 try:
@@ -49,7 +49,7 @@ try:
 except ImportError:
     _logger.debug("pydantic library not found, add our external path to sys.path")
     file = Path(__file__).resolve()
-    external_path = Path(file.parents[1], "external", "pydantic")
+    external_path = Path(file.parents[2], "external", "pydantic")
     sys.path.append(str(external_path))
 
 
@@ -70,7 +70,7 @@ def get_log_handler(logfile: str) -> logging.FileHandler:
 
 
 def run_server(mode: str, port: int) -> None:
-    from ..jsonrpc2.server import JsonRpcServerMode, TcpParams
+    from ...jsonrpc2.server import JsonRpcServerMode, TcpParams
     from .server import DebugAdapterServer
 
     with DebugAdapterServer(JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port)) as server:
@@ -84,7 +84,7 @@ def run_server(mode: str, port: int) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="RobotCode Debug Adapter",
+        description="RobotCode Debugger Launcher",
         prog=__package__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
@@ -99,7 +99,7 @@ def main() -> None:
     )
     parser.add_argument("-p", "--port", default=6611, help="server listen port (tcp)", type=int)
     parser.add_argument("--log", action="store_true", help="enable logging")
-    parser.add_argument("--log-debug-adapter", action="store_true", help="show debug adapter messages")
+    parser.add_argument("--log-debugger-launcher", action="store_true", help="show debugger launcher log messages")
     parser.add_argument("--debug-asyncio", action="store_true", help="enable async io debugging messages")
     parser.add_argument("--log-asyncio", action="store_true", help="show asyncio log messages")
     parser.add_argument("--log-colored", action="store_true", help="colored output for logs")
@@ -162,10 +162,10 @@ def main() -> None:
         if not args.log_asyncio:
             logging.getLogger("asyncio").propagate = False
 
-        if not args.log_debug_adapter:
-            logging.getLogger("robotcode.debug_adapter").propagate = False
+        if not args.log_debugger_launcher:
+            logging.getLogger("robotcode.debugger.launcher").propagate = False
 
-    _logger.info(f"starting debug adapter server version={__version__}")
+    _logger.info(f"starting debugger launcher server version={__version__}")
     _logger.debug(f"args={args}")
     if args.debugpy:
         start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)

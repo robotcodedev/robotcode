@@ -16,7 +16,7 @@ if __file__.endswith((".pyc", ".pyo")):
 if __name__ == "__main__" and __package__ is None or __package__ == "":
 
     file = Path(__file__).resolve()
-    parent, top = file.parent, file.parents[3]
+    parent, top = file.parent, file.parents[2]
 
     if str(top) not in sys.path:
         sys.path.append(str(top))
@@ -26,10 +26,10 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
     except ValueError:  # Already removed
         pass
 
-    __package__ = "robotcode.debug_adapter.launcher"
+    __package__ = "robotcode.debugger"
 
-from ..._version import __version__
-from ...utils.logging import LoggingDescriptor
+from .._version import __version__
+from ..utils.logging import LoggingDescriptor
 
 TRACE = logging.DEBUG - 6
 logging.addLevelName(TRACE, "TRACE")
@@ -42,7 +42,7 @@ try:
 except ImportError:
     _logger.debug("typing_extensions not found, add our external path to sys.path")
     file = Path(__file__).resolve()
-    external_path = Path(file.parents[2], "external", "typing_extensions")
+    external_path = Path(file.parents[1], "external", "typing_extensions")
     sys.path.append(str(external_path))
 
 try:
@@ -50,7 +50,7 @@ try:
 except ImportError:
     _logger.debug("pydantic library not found, add our external path to sys.path")
     file = Path(__file__).resolve()
-    external_path = Path(file.parents[2], "external", "pydantic")
+    external_path = Path(file.parents[1], "external", "pydantic")
     sys.path.append(str(external_path))
 
 if TYPE_CHECKING:
@@ -86,7 +86,7 @@ async def wait_for_server(timeout: float = 5) -> "LaucherServer":
 
 @_logger.call
 def run_server(port: int, loop: asyncio.AbstractEventLoop) -> None:
-    from ...jsonrpc2.server import TcpParams
+    from ..jsonrpc2.server import TcpParams
     from .server import LaucherServer
 
     asyncio.set_event_loop(loop)
@@ -124,9 +124,9 @@ async def run_robot(
 ) -> Any:
     import robot
 
-    from ...utils.debugpy import enable_debugpy, wait_for_debugpy_connected
-    from ...utils.net import check_free_port
-    from ..types import Event
+    from ..utils.debugpy import enable_debugpy, wait_for_debugpy_connected
+    from ..utils.net import check_free_port
+    from .types import Event
     from .debugger import Debugger
 
     @_logger.call
@@ -171,22 +171,23 @@ async def run_robot(
 
         await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server.protocol.initialized(), loop=loop))
 
-        try:
-            await asyncio.wrap_future(
-                asyncio.run_coroutine_threadsafe(
-                    server.protocol.wait_for_configuration_done(configuration_done_timeout), loop=loop
+        if wait_for_client:
+            try:
+                await asyncio.wrap_future(
+                    asyncio.run_coroutine_threadsafe(
+                        server.protocol.wait_for_configuration_done(configuration_done_timeout), loop=loop
+                    )
                 )
-            )
-        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
-            pass
-        except asyncio.TimeoutError:
-            raise ConnectionError("Timeout to get configuration from client.")
+            except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                pass
+            except asyncio.TimeoutError:
+                raise ConnectionError("Timeout to get configuration from client.")
 
         await start_debugpy_async()
 
         args = [
             "--listener",
-            f"robotcode.debug_adapter.launcher.listeners.ListenerV2:no_debug={repr(no_debug)}",
+            f"robotcode.debugger.listeners.ListenerV2:no_debug={repr(no_debug)}",
             *args,
         ]
 
@@ -267,7 +268,7 @@ def get_log_handler(logfile: str) -> logging.FileHandler:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="RobotCode Debug Adapter Launcher",
+        description="RobotCode Debugger",
         prog=__package__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         usage=f"{__package__} [arguments]... -- [<robot arguments>]...",
@@ -294,7 +295,7 @@ def main() -> None:
     )
     parser.add_argument("--log", action="store_true", help="enable logging")
     parser.add_argument(
-        "--log-debug-adapter-launcher", action="store_true", help="show debug adapter launcher messages"
+        "--log-debugger", action="store_true", help="show debugger log messages"
     )
     parser.add_argument("-n", "--no-debug", action="store_true", help="disable debugging")
     parser.add_argument("--debug-asyncio", action="store_true", help="enable async io debugging messages")
@@ -382,9 +383,9 @@ def main() -> None:
         if not args.log_asyncio:
             logging.getLogger("asyncio").propagate = False
 
-        if not args.log_debug_adapter_launcher:
-            logging.getLogger("robotcode.debug_adapter").propagate = False
-            logging.getLogger("robotcode.debug_adapter").disabled = True
+        if not args.log_debugger:
+            logging.getLogger("robotcode.debugger").propagate = False
+            logging.getLogger("robotcode.debugger").disabled = True
 
     _logger.info(f"starting {__package__} version={__version__}")
     _logger.debug(f"args={args}")

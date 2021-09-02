@@ -375,6 +375,7 @@ class LibraryDoc(Model):
     errors: Optional[List[Error]] = None
     python_path: Optional[List[str]] = None
     stdout: Optional[str] = None
+    has_listener: Optional[bool] = None
 
     @validator("doc_format")
     def doc_format_validator(cls, v: str) -> str:
@@ -965,6 +966,7 @@ def get_library_doc(
                 libdoc.version = str(lib.version)
                 libdoc.scope = str(lib.scope)
                 libdoc.doc_format = str(lib.doc_format) or DEFAULT_DOC_FORMAT
+                libdoc.has_listener = lib.has_listener
 
                 libdoc.inits = KeywordStore(
                     keywords={

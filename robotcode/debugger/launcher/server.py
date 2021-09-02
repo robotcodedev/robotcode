@@ -5,12 +5,12 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
-from ..jsonrpc2.protocol import rpc_method
-from ..jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
-from ..utils.logging import LoggingDescriptor
-from .client import DAPClient, DAPClientError
-from .protocol import DebugAdapterProtocol
-from .types import (
+from ...jsonrpc2.protocol import rpc_method
+from ...jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
+from ...utils.logging import LoggingDescriptor
+from ..client import DAPClient, DAPClientError
+from ..protocol import DebugAdapterProtocol
+from ..types import (
     Capabilities,
     ConfigurationDoneArguments,
     ConfigurationDoneRequest,
@@ -142,13 +142,13 @@ class DAPServerProtocol(DebugAdapterProtocol):
         arguments: Optional[LaunchRequestArguments] = None,
         **kwargs: Any,
     ) -> None:
-        from ..utils.net import find_free_port
+        from ...utils.net import find_free_port
 
         connect_timeout = launcherTimeout or 5
 
         port = find_free_port()
 
-        launcher = Path(Path(__file__).parent, "launcher")
+        launcher = Path(Path(__file__).parent.parent)
 
         run_args = [python, "-u", str(launcher)]
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
-
-from typing import TYPE_CHECKING, List, Optional
+from pathlib import Path
+from typing import TYPE_CHECKING, Iterator, List, Optional
 
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.logging import LoggingDescriptor
@@ -74,7 +74,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                         type="test",
                         id=test.longname,
                         label=test.name,
-                        uri=str(Uri.from_path(test.source)),
+                        uri=str(Uri.from_path(test.source)) if test.source else None,
                         range=Range(
                             start=Position(line=test.lineno - 1, character=0),
                             end=Position(line=test.lineno - 1, character=0),
@@ -90,18 +90,63 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 type="suite",
                 id=suite.longname,
                 label=suite.name,
-                uri=str(Uri.from_path(suite.source)),
+                uri=str(Uri.from_path(suite.source)) if suite.source else None,
                 children=children,
                 range=Range(
                     start=Position(line=0, character=0),
                     end=Position(line=0, character=0),
-                ),
+                )
+                if suite.source
+                else None,
             )
 
         with LOGGER.cache_only:
-            suite: TestSuite = TestSuite.from_file_system(*paths) if paths else TestSuite.from_file_system()
+            try:
+                if paths and len(paths):
 
-            return [generate(suite)]
+                    def normalize_paths(paths: List[str]) -> Iterator[str]:
+
+                        for path in paths:
+
+                            p = Path(path)
+                            if p.exists():
+                                yield str(p)
+
+                    def nonexisting_paths(paths: List[str]) -> Iterator[str]:
+
+                        for path in paths:
+
+                            p = Path(path)
+                            if not p.exists():
+                                yield str(p)
+
+                    valid_paths = [i for i in normalize_paths(paths)]
+                    suite: Optional[TestSuite] = TestSuite.from_file_system(*valid_paths) if valid_paths else None
+                    suite_item = [generate(suite)] if suite else []
+
+                    return [
+                        TestItem(
+                            type="workspace",
+                            id=Path.cwd().name,
+                            label=Path.cwd().name,
+                            children=[
+                                *suite_item,
+                                *[
+                                    TestItem(
+                                        type="error",
+                                        id=i,
+                                        label=i,
+                                        error=f"Parsing '{i}' failed: File or directory to does not exist.",
+                                    )
+                                    for i in nonexisting_paths(paths)
+                                ],
+                            ],
+                        )
+                    ]
+                else:
+                    return [generate(TestSuite.from_file_system("."))]
+            except BaseException as e:
+                return [TestItem(type="error", id="error", label="Error", error=str(e))]
 
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
     async def get_tests_from_document(self, text_document: TextDocumentIdentifier, id: Optional[str]) -> List[TestItem]:

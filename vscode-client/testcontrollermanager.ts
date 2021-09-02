@@ -17,7 +17,7 @@ export class TestControllerManager {
     this.testController = vscode.tests.createTestController("robotCode.RobotFramework", "RobotFramework");
 
     this.runProfile = this.testController.createRunProfile(
-      "Run",
+      "Run Tests",
       vscode.TestRunProfileKind.Run,
       async (request, token) => {
         token.onCancellationRequested(async (_e) => {
@@ -245,6 +245,7 @@ export class TestControllerManager {
               );
             }
             testItem.label = ri.label;
+            testItem.error = ri.error;
 
             await this.refreshItem(testItem);
           }
@@ -266,7 +267,7 @@ export class TestControllerManager {
 
       for (const workspace of vscode.workspace.workspaceFolders ?? []) {
         if (!this.testItems.has(workspace) && this.testItems.get(workspace) === undefined) {
-          this.testItems.set(workspace, await this.languageClientsManager.getTestsFromWorkspace(workspace));
+          this.testItems.set(workspace, await this.languageClientsManager.getTestsFromWorkspace(workspace, []));
         }
 
         const tests = this.testItems.get(workspace);
@@ -281,7 +282,7 @@ export class TestControllerManager {
                 ri.label,
                 ri.uri ? vscode.Uri.parse(ri.uri) : undefined
               );
-
+              testItem.error = ri.error;
               this.testController.items.add(testItem);
             }
             testItem.canResolveChildren = ri.children !== undefined && ri.children.length > 0;

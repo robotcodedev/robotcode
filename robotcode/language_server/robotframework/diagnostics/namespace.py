@@ -761,7 +761,11 @@ class Namespace:
                     result.import_range = value.range()
                     result.import_source = value.source
 
-                    if top_level and result.library_doc.errors is None and len(result.library_doc.keywords) == 0:
+                    if (
+                        top_level
+                        and result.library_doc.errors is None
+                        and (len(result.library_doc.keywords) == 0 and not bool(result.library_doc.has_listener))
+                    ):
                         self._diagnostics.append(
                             Diagnostic(
                                 range=value.range(),

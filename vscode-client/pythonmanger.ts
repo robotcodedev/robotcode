@@ -84,7 +84,7 @@ export class PythonManager {
       path.join("robotcode", "language_server", "__main__.py")
     );
     this._pythonDebugAdapterMain = this.extensionContext.asAbsolutePath(
-      path.join("robotcode", "debug_adapter", "__main__.py")
+      path.join("robotcode", "debugger", "launcher", "__main__.py")
     );
   }
 

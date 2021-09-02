@@ -7,7 +7,7 @@ RobotFramework Language Server and client for Visual Studio Code.
 
 * Python 3.9 or above
 * Robotframework 4.0 and above
-* VSCode version 1.58 and above
+* VSCode version 1.59 and above
 
 ## Installation
 
