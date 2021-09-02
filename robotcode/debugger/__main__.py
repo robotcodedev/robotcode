@@ -188,6 +188,8 @@ async def run_robot(
         args = [
             "--listener",
             f"robotcode.debugger.listeners.ListenerV2:no_debug={repr(no_debug)}",
+            "--listener",
+            "robotcode.debugger.listeners.ListenerV3",
             *args,
         ]
 

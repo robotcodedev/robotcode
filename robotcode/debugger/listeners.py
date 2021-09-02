@@ -1,6 +1,7 @@
-from typing import Any, Dict
+from typing import Any, Dict, Iterator, Union, cast
 
 from .debugger import Debugger
+from .types import Event
 
 
 class ListenerV2:
@@ -11,6 +12,14 @@ class ListenerV2:
         self.debug = not no_debug
 
     def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
+        Debugger.instance().send_event(
+            self,
+            Event(
+                event="robotStarted",
+                body=dict(attributes),
+            ),
+        )
+
         Debugger.instance().start_output_group(name, attributes, "SUITE")
 
         if self.debug:
@@ -22,7 +31,23 @@ class ListenerV2:
 
         Debugger.instance().end_output_group(name, attributes)
 
+        Debugger.instance().send_event(
+            self,
+            Event(
+                event="robotEnded",
+                body=dict(attributes),
+            ),
+        )
+
     def start_test(self, name: str, attributes: Dict[str, Any]) -> None:
+        Debugger.instance().send_event(
+            self,
+            Event(
+                event="robotStarted",
+                body=dict(attributes),
+            ),
+        )
+
         Debugger.instance().start_output_group(name, attributes, "TEST")
 
         if self.debug:
@@ -33,6 +58,14 @@ class ListenerV2:
             Debugger.instance().end_test(name, attributes)
 
         Debugger.instance().end_output_group(name, attributes)
+
+        Debugger.instance().send_event(
+            self,
+            Event(
+                event="robotEnded",
+                body=dict(attributes),
+            ),
+        )
 
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         Debugger.instance().start_output_group(
@@ -82,3 +115,29 @@ class ListenerV2:
 
     def close(self) -> None:
         pass
+
+
+class ListenerV3:
+    ROBOT_LISTENER_API_VERSION = "3"
+
+    def start_suite(self, data: Any, result: Any) -> None:
+        from robot.running import TestCase, TestSuite
+
+        def enqueue(item: Union[TestSuite, TestCase]) -> Iterator[str]:
+            if isinstance(item, TestSuite):
+                for s in item.suites:
+                    yield from enqueue(s)
+                for s in item.tests:
+                    yield from enqueue(s)
+
+            yield item.longname
+
+        items = [i for i in enqueue(cast(TestSuite, data))]
+
+        Debugger.instance().send_event(
+            self,
+            Event(
+                event="robotEnqueued",
+                body={"items": items},
+            ),
+        )

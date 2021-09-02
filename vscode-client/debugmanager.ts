@@ -188,49 +188,40 @@ export class DebugManager {
     this._disposables.dispose();
   }
 
-  static async debugSuiteOrTestcase(
-    resource: string | vscode.Uri | undefined,
-    testcases?: string | string[],
+  static async runTests(
+    folder: vscode.WorkspaceFolder,
+    tests: string[],
+    runId?: string,
     options?: vscode.DebugSessionOptions
   ): Promise<void> {
-    if (resource === undefined) return;
+    if (tests.length) {
+      const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
-    const uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
+      const args = [];
+      args.push("--prerunmodifier");
 
-    const folder = vscode.workspace.getWorkspaceFolder(uri);
+      args.push(`robotcode.debugger.modifiers.ByLongName:${tests.join(":")}`);
 
-    const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+      const template = config.get("debug.defaultConfiguration", {});
 
-    const args = [];
-
-    if (testcases) {
-      if (!(testcases instanceof Array)) {
-        testcases = [testcases];
-      }
-      for (const testcase of testcases) {
-        args.push("-t");
-        args.push(testcase.toString());
-      }
-    }
-
-    const template = config.get("debug.defaultConfiguration", {});
-
-    vscode.debug.startDebugging(
-      folder,
-      {
-        ...template,
-        ...{
-          type: "robotcode",
-          name: `robotcode: Suite: ${resource}${testcases ? ` Testcase: ${testcases}` : ""}`,
-          request: "launch",
-          cwd: folder?.uri.fsPath,
-          target: uri.fsPath,
-          args,
-          console: config.get("debug.defaultConsole", "integratedTerminal"),
+      await vscode.debug.startDebugging(
+        folder,
+        {
+          ...template,
+          ...{
+            type: "robotcode",
+            name: "robotcode: Run Tests",
+            request: "launch",
+            cwd: folder?.uri.fsPath,
+            target: ".",
+            args: args,
+            console: config.get("debug.defaultConsole", "integratedTerminal"),
+            runId: runId,
+          },
         },
-      },
-      options
-    );
+        options
+      );
+    }
   }
 
   static async attachPython(session: vscode.DebugSession, event: string, options?: { port: number }): Promise<void> {
@@ -264,7 +255,7 @@ export class DebugManager {
     }
   }
 
-  static async onRobotExited(
+  private static async onRobotExited(
     session: vscode.DebugSession,
     outputFile?: string,
     logFile?: string,

@@ -21,7 +21,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
 
   const debugManager = new DebugManager(context, pythonManager, languageClientManger, outputChannel);
 
-  const testControllerManger = new TestControllerManager(context, languageClientManger, outputChannel);
+  const testControllerManger = new TestControllerManager(context, languageClientManger, debugManager, outputChannel);
 
   context.subscriptions.push(
     pythonManager,

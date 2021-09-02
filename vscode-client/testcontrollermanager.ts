@@ -1,6 +1,22 @@
 import * as vscode from "vscode";
+import { DebugManager } from "./debugmanager";
 import { LanguageClientsManager, RobotTestItem } from "./languageclientsmanger";
 import { Mutex } from "./utils";
+
+interface RobotExecutionAttributes {
+  id: string | undefined;
+  longname: string | undefined;
+  originalname: string | undefined;
+  template: string | undefined;
+  status: string | undefined;
+  message: string | undefined;
+  elapsedtime: number | undefined;
+  source: string | undefined;
+  lineno: number | undefined;
+  starttime: string | undefined;
+  endtime: string | undefined;
+  tags: string[] | undefined;
+}
 
 export class TestControllerManager {
   private _disposables: vscode.Disposable;
@@ -8,10 +24,12 @@ export class TestControllerManager {
   public readonly runProfile: vscode.TestRunProfile;
   public readonly debugProfile: vscode.TestRunProfile;
   private readonly refreshMutex = new Mutex();
+  private readonly debugSessions = new Set<vscode.DebugSession>();
 
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
     public readonly languageClientsManager: LanguageClientsManager,
+    public readonly debugManager: DebugManager,
     public readonly outputChannel: vscode.OutputChannel
   ) {
     this.testController = vscode.tests.createTestController("robotCode.RobotFramework", "RobotFramework");
@@ -20,7 +38,7 @@ export class TestControllerManager {
       "Run Tests",
       vscode.TestRunProfileKind.Run,
       async (request, token) => {
-        await this.runHandler(request, token);
+        await this.runTests(request, token);
       }
     );
 
@@ -28,7 +46,7 @@ export class TestControllerManager {
       "Debug",
       vscode.TestRunProfileKind.Debug,
       async (request, token) => {
-        await this.runHandler(request, token);
+        await this.runTests(request, token);
       }
     );
 
@@ -46,17 +64,17 @@ export class TestControllerManager {
       vscode.workspace.onDidSaveTextDocument(async (document) => {
         if (document.languageId !== "robotframework") return;
 
-        await this.refresh(this.findTestItemFromDocument(document));
+        await this.refresh(this.findTestItemForDocument(document));
       }),
       vscode.workspace.onDidOpenTextDocument(async (document) => {
         if (document.languageId !== "robotframework") return;
 
-        await this.refresh(this.findTestItemFromDocument(document));
+        await this.refresh(this.findTestItemForDocument(document));
       }),
       vscode.workspace.onDidChangeTextDocument(async (event) => {
         if (event.document.languageId !== "robotframework") return;
 
-        await this.refresh(this.findTestItemFromDocument(event.document));
+        await this.refresh(this.findTestItemForDocument(event.document));
       }),
       vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
         for (const r of event.removed) {
@@ -64,6 +82,43 @@ export class TestControllerManager {
         }
 
         await this.refresh();
+      }),
+
+      vscode.debug.onDidStartDebugSession((session) => {
+        if (session.configuration.type === "robotcode" && session.configuration.runId !== undefined) {
+          if (this.testRuns.has(session.configuration.runId)) {
+            this.debugSessions.add(session);
+          }
+        }
+      }),
+      vscode.debug.onDidTerminateDebugSession((session) => {
+        if (this.debugSessions.has(session)) {
+          this.debugSessions.delete(session);
+        }
+      }),
+
+      vscode.debug.onDidReceiveDebugSessionCustomEvent(async (event) => {
+        if (event.session.configuration.type === "robotcode") {
+          switch (event.event) {
+            case "robotExited": {
+              this.TestRunExited(event.session.configuration.runId);
+              break;
+            }
+
+            case "robotStarted": {
+              this.TestItemStarted(event.session.configuration.runId, event.body?.longname);
+              break;
+            }
+            case "robotEnded": {
+              this.TestItemEnded(event.session.configuration.runId, event.body as RobotExecutionAttributes);
+              break;
+            }
+            case "robotEnqueued": {
+              this.TestItemEnqueued(event.session.configuration.runId, event.body?.items);
+              break;
+            }
+          }
+        }
       })
     );
   }
@@ -95,11 +150,11 @@ export class TestControllerManager {
     }
   }
 
-  public findTestItemFromDocument(document: vscode.TextDocument): vscode.TestItem | undefined {
-    return this.findTestItem(document.uri.toString());
+  public findTestItemForDocument(document: vscode.TextDocument): vscode.TestItem | undefined {
+    return this.findTestItemByUri(document.uri.toString());
   }
 
-  public findTestItem(documentUri: string, items?: vscode.TestItemCollection): vscode.TestItem | undefined {
+  public findTestItemByUri(documentUri: string, items?: vscode.TestItemCollection): vscode.TestItem | undefined {
     let result: vscode.TestItem | undefined;
 
     if (items === undefined) items = this.testController.items;
@@ -114,7 +169,30 @@ export class TestControllerManager {
 
     items.forEach((i) => {
       if (result === undefined) {
-        result = this.findTestItem(documentUri, i.children);
+        result = this.findTestItemByUri(documentUri, i.children);
+      }
+    });
+
+    return result;
+  }
+
+  public findTestItemById(id: string, items?: vscode.TestItemCollection): vscode.TestItem | undefined {
+    let result: vscode.TestItem | undefined;
+
+    if (items === undefined) items = this.testController.items;
+
+    items.forEach((i) => {
+      console.log(i.id);
+      if (result === undefined && i.id === id) {
+        result = i;
+      }
+    });
+
+    if (result !== undefined) return result;
+
+    items.forEach((i) => {
+      if (result === undefined) {
+        result = this.findTestItemById(id, i.children);
       }
     });
 
@@ -270,7 +348,17 @@ export class TestControllerManager {
     return folders;
   }
 
-  public async runHandler(request: vscode.TestRunRequest, _token: vscode.CancellationToken): Promise<void> {
+  private static _runIdCounter = 0;
+
+  private static *runIdGenerator(): Iterator<string> {
+    while (true) {
+      yield (this._runIdCounter++).toString();
+    }
+  }
+
+  private static readonly runId = TestControllerManager.runIdGenerator();
+
+  public async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken): Promise<void> {
     let includedItems: vscode.TestItem[] = [];
 
     if (request.include) {
@@ -280,8 +368,124 @@ export class TestControllerManager {
     }
 
     const included = this.mapTestItemsToWorkspace(includedItems);
-    const excluded = this.mapTestItemsToWorkspace(request.exclude ?? []);
+    // TODO const excluded = this.mapTestItemsToWorkspace(request.exclude ?? []);
 
-    // const run = this.testController.createTestRun(request);
+    const run = this.testController.createTestRun(request);
+
+    token.onCancellationRequested(async (_) => {
+      for (const e of this.testRuns.keys()) {
+        for (const session of this.debugSessions) {
+          if (session.configuration.runId === e) {
+            await vscode.debug.stopDebugging(session);
+          }
+        }
+      }
+    });
+
+    for (const e of included) {
+      const runId = TestControllerManager.runId.next().value;
+      this.testRuns.set(runId, run);
+
+      let options = {};
+      if (request.profile !== undefined && request.profile.kind !== vscode.TestRunProfileKind.Debug) {
+        options = {
+          noDebug: true,
+        };
+      }
+
+      await DebugManager.runTests(
+        e[0],
+        e[1].map((i) => i.id),
+        runId,
+        options
+      );
+    }
+  }
+
+  private async TestRunExited(runId: string | undefined) {
+    if (runId === undefined) return;
+
+    const run = this.testRuns.get(runId);
+    this.testRuns.delete(runId);
+    if (run !== undefined) {
+      if (Array.from(this.testRuns.values()).indexOf(run) === -1) {
+        run.end();
+      }
+    }
+  }
+
+  private async TestItemEnqueued(runId: string | undefined, items: string[] | undefined) {
+    if (runId === undefined || items === undefined) return;
+
+    const run = this.testRuns.get(runId);
+
+    if (run !== undefined) {
+      for (const id of items) {
+        const item = this.findTestItemById(id);
+        if (item !== undefined) {
+          run.enqueued(item);
+        }
+      }
+    }
+  }
+
+  private async TestItemStarted(runId: string | undefined, id: string | undefined) {
+    if (runId === undefined || id === undefined) return;
+
+    const run = this.testRuns.get(runId);
+
+    if (run !== undefined) {
+      const item = this.findTestItemById(id);
+      if (item !== undefined) {
+        run.started(item);
+      }
+    }
+  }
+
+  private async TestItemEnded(runId: string | undefined, attributes: RobotExecutionAttributes) {
+    if (runId === undefined || attributes === undefined || attributes.longname === undefined) return;
+
+    const run = this.testRuns.get(runId);
+
+    if (run !== undefined) {
+      const item = this.findTestItemById(attributes.longname);
+      if (item !== undefined) {
+        switch (attributes.status) {
+          case "PASS":
+            run.passed(item, attributes.elapsedtime);
+            break;
+          case "SKIP":
+            run.skipped(item);
+            break;
+          case "FAIL":
+            {
+              let message: vscode.TestMessage | undefined;
+              if (attributes.message) {
+                message = new vscode.TestMessage(attributes.message ?? "unknown error");
+                if (attributes.source !== undefined) {
+                  message.location = new vscode.Location(
+                    vscode.Uri.file(attributes.source),
+                    new vscode.Position((attributes.lineno ?? 1) - 1, 0)
+                  );
+                }
+              }
+              run.failed(item, message ?? [], attributes.elapsedtime);
+            }
+            break;
+          default:
+            {
+              const message = new vscode.TestMessage(attributes.message ?? "unknown error");
+              if (attributes.source !== undefined) {
+                message.location = new vscode.Location(
+                  vscode.Uri.file(attributes.source),
+                  new vscode.Position((attributes.lineno ?? 1) - 1, 0)
+                );
+              }
+              run.errored(item, message, attributes.elapsedtime);
+            }
+            break;
+        }
+      }
+    }
   }
 }

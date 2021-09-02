@@ -162,7 +162,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             return [
                 TestItem(
                     type="test",
-                    id=f"{id}.{v.longname}" if id else v.longname,
+                    id=f"{id}.{v.name}" if id else v.longname,
                     label=v.name,
                     uri=str(Uri.from_path(v.source)),
                     range=Range(
