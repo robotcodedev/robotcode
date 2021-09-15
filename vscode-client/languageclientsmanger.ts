@@ -27,6 +27,7 @@ export interface RobotTestItem {
   description?: string;
   range?: RobotRange;
   error?: string;
+  tags?: string[];
 }
 
 export class LanguageClientsManager {
@@ -49,7 +50,7 @@ export class LanguageClientsManager {
         dispose() {},
       },
       vscode.workspace.onDidChangeWorkspaceFolders(async (_event) => await this.refresh()),
-      vscode.workspace.onDidOpenTextDocument(this.getLanguageClientForDocument)
+      vscode.workspace.onDidOpenTextDocument(async (document) => await this.getLanguageClientForDocument(document))
     );
   }
 

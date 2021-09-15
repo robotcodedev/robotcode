@@ -435,12 +435,12 @@ class LibraryDoc(Model):
 
         return None
 
-    _inline_link: re.Pattern[str] = re.compile(
+    _inline_link: re.Pattern = re.compile(  # type: ignore
         r"([\`])((?:\1|.)+?)\1",
         re.VERBOSE,
     )
 
-    _headers: re.Pattern[str] = re.compile(r"^(={1,5})\s+(\S.*?)\s+\1$", re.MULTILINE)
+    _headers: re.Pattern = re.compile(r"^(={1,5})\s+(\S.*?)\s+\1$", re.MULTILINE)  # type: ignore
 
     def _process_inline_links(self, text: str) -> str:
         headers = [v.group(2) for v in self._headers.finditer(text)]
@@ -450,7 +450,7 @@ class LibraryDoc(Model):
                 return f"[#{str(m.group(2)).replace(' ', '-')}|{str(m.group(2))}]"
             return m.group(0)
 
-        return self._inline_link.sub(repl, text)
+        return str(self._inline_link.sub(repl, text))
 
     def get_full_doc(self, only_doc: bool = True) -> str:
         if self.doc_format == DEFAULT_DOC_FORMAT:

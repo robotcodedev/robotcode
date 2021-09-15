@@ -5,7 +5,7 @@
     "moduleResolution": "Node",
     "target": "ES2021",
     "outDir": "out",
-    "lib": ["es6", "dom", "ES2018", "ES2019", "ES2020"],
+    "lib": ["es6", "dom", "ES2018", "ES2019", "ES2020", "ES2021"],
     "sourceMap": true,
     "rootDir": "vscode-client",
     "strict": true,

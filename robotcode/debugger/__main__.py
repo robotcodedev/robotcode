@@ -197,7 +197,7 @@ async def run_robot(
         Debugger.instance().output_messages = output_messages
         Debugger.instance().output_log = output_log
         Debugger.instance().group_output = group_output
-
+        Debugger.instance().no_debug = no_debug
         Debugger.instance().set_main_thread(threading.current_thread())
         Debugger.instance().start()
 

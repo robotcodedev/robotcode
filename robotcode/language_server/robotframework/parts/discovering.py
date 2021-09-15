@@ -4,10 +4,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, List, Optional
 
 from ....jsonrpc2.protocol import rpc_method
+from ....utils.async_itertools import async_chain
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.text_document import TextDocument
 from ...common.types import DocumentUri, Model, Position, Range, TextDocumentIdentifier
+from ...robotframework.utils.async_ast import walk
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -147,29 +149,35 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 else:
                     return [generate(TestSuite.from_file_system("."))]
             except BaseException as e:
-                return [TestItem(type="error", id="error", label="Error", error=str(e))]
+                return [TestItem(type="error", id=Path.cwd().name, label=Path.cwd().name, error=str(e))]
 
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
     async def get_tests_from_document(self, text_document: TextDocumentIdentifier, id: Optional[str]) -> List[TestItem]:
-        from robot.output.logger import LOGGER
-        from robot.running import TestSuite
+        from robot.parsing.model.blocks import TestCase
+        from robot.parsing.model.statements import Tags
 
-        with LOGGER.cache_only:
-            model = TestSuite.from_model(
-                await self.parent.documents_cache.get_model(self.get_document(text_document.uri))
-            )
+        model = await self.parent.documents_cache.get_model(self.get_document(text_document.uri))
 
-            return [
-                TestItem(
-                    type="test",
-                    id=f"{id}.{v.name}" if id else v.longname,
-                    label=v.name,
-                    uri=str(Uri.from_path(v.source)),
-                    range=Range(
-                        start=Position(line=v.lineno - 1, character=0),
-                        end=Position(line=v.lineno - 1, character=0),
+        return [
+            TestItem(
+                type="test",
+                id=f"{id}.{test_case.name}" if id else test_case.name,
+                label=test_case.name,
+                uri=text_document.uri,
+                range=Range(
+                    start=Position(line=test_case.lineno - 1, character=test_case.col_offset),
+                    end=Position(
+                        line=(test_case.end_lineno if test_case.end_lineno != -1 else test_case.lineno) - 1,
+                        character=test_case.end_col_offset if test_case.end_col_offset != -1 else test_case.col_offset,
                     ),
-                    tags=[t for t in v.tags],
-                )
-                for v in model.tests
-            ]
+                ),
+                tags=[
+                    str(tag)
+                    async for tag in async_chain(
+                        *[tags.values async for tags in walk(test_case) if isinstance(tags, Tags)]
+                    )
+                ],
+            )
+            async for test_case in walk(model)
+            if isinstance(test_case, TestCase)
+        ]

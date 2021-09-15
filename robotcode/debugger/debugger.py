@@ -184,6 +184,11 @@ class Debugger:
         self.hit_counts: Dict[HitCountEntry, int] = {}
         self.last_fail_message: Optional[str] = None
         self.stop_on_entry = False
+        self.no_debug = False
+
+    @property
+    def debug(self) -> bool:
+        return not self.no_debug
 
     @property
     def robot_report_file(self) -> Optional[str]:
@@ -549,35 +554,37 @@ class Debugger:
 
         entry = self.add_stackframe_entry(longname, type, source, line_no)
 
-        if self.stop_on_entry:
-            self.stop_on_entry = False
+        if self.debug:
+            if self.stop_on_entry:
+                self.stop_on_entry = False
 
-            self.state = State.Paused
-            self.send_event(
-                self,
-                StoppedEvent(
-                    body=StoppedEventBody(
-                        reason=StoppedReason.ENTRY,
-                        thread_id=threading.current_thread().ident,
-                    )
-                ),
-            )
+                self.state = State.Paused
+                self.send_event(
+                    self,
+                    StoppedEvent(
+                        body=StoppedEventBody(
+                            reason=StoppedReason.ENTRY,
+                            thread_id=threading.current_thread().ident,
+                        )
+                    ),
+                )
 
-            self.wait_for_running()
-        elif entry.source:
-            self.process_start_state(entry.source, entry.line, entry.type, status)
+                self.wait_for_running()
+            elif entry.source:
+                self.process_start_state(entry.source, entry.line, entry.type, status)
 
-            self.wait_for_running()
+                self.wait_for_running()
 
     def end_suite(self, name: str, attributes: Dict[str, Any]) -> None:
-        status = attributes.get("status", "")
+        if self.debug:
+            status = attributes.get("status", "")
 
-        self.process_end_state(
-            status,
-            "failed_suite",
-            "Suite failed.",
-            f"Suite failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
-        )
+            self.process_end_state(
+                status,
+                "failed_suite",
+                "Suite failed.",
+                f"Suite failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
+            )
 
         if self.stack_frames:
             self.stack_frames.popleft()
@@ -592,20 +599,22 @@ class Debugger:
 
         entry = self.add_stackframe_entry(longname, type, source, line_no)
 
-        if entry.source:
-            self.process_start_state(entry.source, entry.line, entry.type, status)
+        if self.debug:
+            if entry.source:
+                self.process_start_state(entry.source, entry.line, entry.type, status)
 
-            self.wait_for_running()
+                self.wait_for_running()
 
     def end_test(self, name: str, attributes: Dict[str, Any]) -> None:
-        status = attributes.get("status", "")
+        if self.debug:
+            status = attributes.get("status", "")
 
-        self.process_end_state(
-            status,
-            "failed_test",
-            "Test failed.",
-            f"Test failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
-        )
+            self.process_end_state(
+                status,
+                "failed_test",
+                "Test failed.",
+                f"Test failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
+            )
 
         if self.stack_frames:
             self.stack_frames.popleft()
@@ -623,18 +632,20 @@ class Debugger:
 
         entry = self.add_stackframe_entry(kwname, type, source, line_no)
 
-        if entry.source:
-            self.process_start_state(entry.source, entry.line, entry.type, status)
+        if self.debug:
+            if entry.source:
+                self.process_start_state(entry.source, entry.line, entry.type, status)
 
-            self.wait_for_running()
+                self.wait_for_running()
 
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
-        status = attributes.get("status", "")
+        if self.debug:
+            status = attributes.get("status", "")
 
-        if status == "NOT RUN":
-            return
-
-        self.process_end_state(status, "failed_keyword", "Keyword failed.", f"Keyword failed: {self.last_fail_message}")
+            if status != "NOT RUN":
+                self.process_end_state(
+                    status, "failed_keyword", "Keyword failed.", f"Keyword failed: {self.last_fail_message}"
+                )
 
         if self.stack_frames:
             self.stack_frames.popleft()
@@ -674,12 +685,20 @@ class Debugger:
         if message["level"] == "FAIL":
             self.last_fail_message = message["message"]
 
+        current_frame = self.stack_frames[-1] if self.stack_frames else None
+        source = Source(path=current_frame.source) if current_frame else None
+        line = current_frame.line - 1 if current_frame else None
+
         if self.output_log:
             self.send_event(
                 self,
                 OutputEvent(
                     body=OutputEventBody(
-                        output="LOG> {timestamp} {level}: {message}\n".format(**message), category="log"
+                        output="LOG> {timestamp} {level}: {message}\n".format(**message),
+                        category="log",
+                        source=source,
+                        line=line,
+                        column=0 if source is not None else None,
                     )
                 ),
             )

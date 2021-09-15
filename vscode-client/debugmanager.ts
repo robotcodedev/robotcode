@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import { PythonManager } from "./pythonmanger";
 import { CONFIG_SECTION } from "./config";
 import { LanguageClientsManager } from "./languageclientsmanger";
+import { WeakValueSet } from "./utils";
 
 const DEBUG_ADAPTER_DEFAULT_TCP_PORT = 6611;
 const DEBUG_ADAPTER_DEFAULT_HOST = "127.0.0.1";
@@ -104,6 +105,7 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
 
 export class DebugManager {
   private _disposables: vscode.Disposable;
+  private _attachedSessions = new WeakValueSet<vscode.DebugSession>();
 
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
@@ -139,11 +141,11 @@ export class DebugManager {
         if (event.session.configuration.type === "robotcode") {
           switch (event.event) {
             case "debugpyStarted": {
-              await DebugManager.attachPython(event.session, event.event, event.body);
+              await DebugManager.OnDebugpyStarted(event.session, event.event, event.body);
               break;
             }
             case "robotExited": {
-              await DebugManager.onRobotExited(
+              await DebugManager.OnRobotExited(
                 event.session,
                 event.body.outputFile,
                 event.body.logFile,
@@ -152,6 +154,23 @@ export class DebugManager {
               break;
             }
           }
+        }
+      }),
+      vscode.debug.onDidStartDebugSession(async (session) => {
+        if (session.parentSession?.type === "robotcode") {
+          this._attachedSessions.add(session);
+        }
+      }),
+      vscode.debug.onDidTerminateDebugSession(async (session) => {
+        if (session.type === "robotcode") {
+          for (const s of this._attachedSessions) {
+            if (s.parentSession === session) {
+              vscode.debug.stopDebugging(s);
+            }
+          }
+        }
+        if (this._attachedSessions.has(session)) {
+          this._attachedSessions.delete(session);
         }
       }),
       vscode.languages.registerInlineValuesProvider("robotframework", {
@@ -190,18 +209,24 @@ export class DebugManager {
 
   static async runTests(
     folder: vscode.WorkspaceFolder,
-    tests: string[],
+    included: string[],
+    excluded: string[],
     runId?: string,
     options?: vscode.DebugSessionOptions
   ): Promise<void> {
-    if (tests.length) {
+    if (included.length) {
       const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
       const args = [];
       args.push("--prerunmodifier");
 
-      args.push(`robotcode.debugger.modifiers.ByLongName:${tests.join(":")}`);
+      args.push(`robotcode.debugger.modifiers.ByLongName:${included.join(":")}`);
 
+      if (excluded.length > 0) {
+        args.push("--prerunmodifier");
+
+        args.push(`robotcode.debugger.modifiers.ExcludedByLongName:${excluded.join(":")}`);
+      }
       const template = config.get("debug.defaultConfiguration", {});
 
       await vscode.debug.startDebugging(
@@ -224,7 +249,11 @@ export class DebugManager {
     }
   }
 
-  static async attachPython(session: vscode.DebugSession, event: string, options?: { port: number }): Promise<void> {
+  static async OnDebugpyStarted(
+    session: vscode.DebugSession,
+    _event: string,
+    options?: { port: number }
+  ): Promise<void> {
     if (
       session.type === "robotcode" &&
       !session.configuration.noDebug &&
@@ -232,7 +261,7 @@ export class DebugManager {
       options &&
       options.port
     ) {
-      vscode.debug.startDebugging(
+      await vscode.debug.startDebugging(
         session.workspaceFolder,
         {
           ...session.configuration.pythonConfiguration,
@@ -255,10 +284,10 @@ export class DebugManager {
     }
   }
 
-  private static async onRobotExited(
+  private static async OnRobotExited(
     session: vscode.DebugSession,
-    outputFile?: string,
-    logFile?: string,
+    _outputFile?: string,
+    _logFile?: string,
     reportFile?: string
   ): Promise<void> {
     if (reportFile) {

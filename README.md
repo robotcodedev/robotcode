@@ -5,9 +5,9 @@ RobotFramework Language Server and client for Visual Studio Code.
 
 ## Requirements
 
-* Python 3.9 or above
+* Python 3.8 or above
 * Robotframework 4.0 and above
-* VSCode version 1.59 and above
+* VSCode version 1.60 and above
 
 ## Installation
 
@@ -40,6 +40,6 @@ Download the vscode-package artifact from the latest [CI/Actions](https://github
 * Hover Information
 * Document Symbols
 * Loading Library/Resources with support for builtin variables
-
+* Support for VSCode test explorer
 
 ... more comming soon

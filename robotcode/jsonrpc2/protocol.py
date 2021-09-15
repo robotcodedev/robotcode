@@ -718,7 +718,6 @@ TProtocol = TypeVar("TProtocol", bound=JsonRPCProtocol)
 
 class GenericJsonRPCProtocolPart(Generic[TProtocol]):
     def __init__(self, parent: TProtocol) -> None:
-        super().__init__()
         self._parent = weakref.ref(parent)
         parent.registry.add_class_part_instance(self)
 
