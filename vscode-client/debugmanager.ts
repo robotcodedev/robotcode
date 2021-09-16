@@ -43,6 +43,9 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
       ...(debugConfiguration.env ?? {}),
     };
 
+    debugConfiguration.outputDir =
+      debugConfiguration?.outputDir ?? config.get<string | undefined>("robot.outputDir", undefined);
+
     // if (pythonDebugpyPath) {
     //     debugConfiguration.env = { PYTHONPATH: path.dirname(pythonDebugpyPath), ...debugConfiguration.env };
     // }

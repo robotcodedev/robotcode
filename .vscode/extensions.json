@@ -5,6 +5,7 @@
 		"ms-python.python",
 		"ms-python.vscode-pylance",
 		"esbenp.prettier-vscode",
-		"dbaeumer.vscode-eslint"
+		"dbaeumer.vscode-eslint",
+		"tamasfe.even-better-toml"
 	]
 }

@@ -4,7 +4,7 @@
   "description": "Robot Framework support for Visual Studio Code",
   "icon": "images/icon.png",
   "publisher": "d-biehl",
-  "version": "0.2.0-alpha.0",  
+  "version": "0.2.0-alpha.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/d-biehl/robotcode.git"
@@ -147,10 +147,7 @@
           },
           "robotcode.robot.args": {
             "type": "array",
-            "default": [
-              "--outputdir",
-              "results"
-            ],
+            "default": [],
             "items": {
               "type": "string"
             },
@@ -179,6 +176,12 @@
             "type": "object",
             "default": {},
             "description": "Specifies the variables for robotframework. Corresponds to the '--variable name:value' option of the robot module.",
+            "scope": "resource"
+          },
+          "robotcode.robot.outputDir": {
+            "type": "string",
+            "default": "results",
+            "description": "Specifies the output directory where robotframework saves output files.",
             "scope": "resource"
           },
           "robotcode.debug.defaultConfiguration": {
@@ -336,6 +339,11 @@
                 "description": "Timeout to connect to the debuggee.",
                 "default": 5
               },
+              "outputDir": {
+                "type": "string",
+                "default": null,
+                "description": "Specifies the output directory where robotframework saves output files."
+              },
               "outputMessages": {
                 "type": "boolean",
                 "description": "Output messages from robotframework in debug console.",
@@ -385,15 +393,15 @@
     "lint-fix": "eslint --ext .ts,.tsx,.js --fix .",
     "test": "node ./out/test/runTest.js",
     "download-api": "vscode-dts dev",
-		"postdownload-api": "vscode-dts main",
-		"_postinstall": "npm run download-api"
+    "postdownload-api": "vscode-dts main",
+    "_postinstall": "npm run download-api"
   },
   "extensionDependencies": [
     "ms-python.python"
   ],
   "dependencies": {
-    "vscode-debugadapter": "^1.49.0",    
-    "vscode-languageclient": "^7.0.0"    
+    "vscode-debugadapter": "^1.49.0",
+    "vscode-languageclient": "^7.0.0"
   },
   "devDependencies": {
     "@types/glob": "^7.1.4",

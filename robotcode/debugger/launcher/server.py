@@ -135,6 +135,7 @@ class DAPServerProtocol(DebugAdapterProtocol):
         launcherTimeout: Optional[int] = None,  # noqa: N803
         attachPython: Optional[bool] = False,  # noqa: N803
         variables: Optional[Dict[str, Any]] = None,
+        outputDir: Optional[str] = None,
         outputMessages: Optional[bool] = False,
         outputLog: Optional[bool] = False,
         groupOutput: Optional[bool] = False,
@@ -176,6 +177,9 @@ class DAPServerProtocol(DebugAdapterProtocol):
         run_args += launcherArgs or []
 
         run_args += ["--"]
+
+        if outputDir:
+            run_args += ["-d", outputDir]
 
         if robotPythonPath:
             for e in robotPythonPath:
