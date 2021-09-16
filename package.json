@@ -395,7 +395,7 @@
     "download-api": "vscode-dts dev",
     "postdownload-api": "vscode-dts main",
     "_postinstall": "npm run download-api",
-    "version": "node scripts/updateVersions.js"
+    "version": "node scripts/updateVersions.js && git add ."
   },
   "extensionDependencies": [
     "ms-python.python"
