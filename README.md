@@ -1,7 +1,6 @@
-# Robot Code Readme
+# RobotCode
 
-RobotFramework Language Server and client for Visual Studio Code.
-
+An [extension](https://marketplace.visualstudio.com/VSCode) which brings support for [RobotFramework](https://robotframework.org/) to [Visual Studio Code](https://code.visualstudio.com/), including features like IntelliSense, linting, debugging, code navigation, code formatting, test explorer, and more!
 
 ## Requirements
 
@@ -9,37 +8,22 @@ RobotFramework Language Server and client for Visual Studio Code.
 * Robotframework 4.0 and above
 * VSCode version 1.60 and above
 
-## Installation
+## Installed extensions
 
-At the moment, it is only possible to install the vsix manually in VSCode.
-Download the vscode-package artifact from the latest [CI/Actions](https://github.com/d-biehl/robotcode/actions/workflows/build.yml) run and install the containing vsix file manually in VSCode.
+RobotCode will automatically install [Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python).
 
-## Features
+Extensions installed through the marketplace are subject to the [Marketplace Terms of Use](https://cdn.vsassets.io/v/M146_20190123.39/_content/Microsoft-Visual-Studio-Marketplace-Terms-of-Use.pdf).
 
-* Syntax Highlighting
-    * Semantic highlighting (comming soon)
-* Syntax Analysis
-    * also for 'run keyword(s) (if/unless/...)'
-    * live updating if library or resources changed    
-    * Integrate 'Robocop' tool static code analysis of Robot Framework code.
-        * https://github.com/MarketSquare/robotframework-robocop
-* Code Completion
-    * Headers
-    * Settings
-    * Keywords
-    * Parameter names for:
-        * Keywords
-        * Libraries
-    * Libraries
-        * Python Modules
-        * Python Files
-    * Resources
-* Signature Help
-* Goto Definition
-* Folding
-* Hover Information
-* Document Symbols
-* Loading Library/Resources with support for builtin variables
-* Support for VSCode test explorer
+## Quick start
 
-... more comming soon
+1. [Install a supported version of Python on your system](https://code.visualstudio.com/docs/python/python-tutorial#_prerequisites) 
+(note: only Python 3.8 and above are supported)
+
+2. [Install a supported version of RobotFramwork on your system](https://github.com/robotframework/robotframework/blob/master/INSTALL.rst) (note: only RobotFramework 4.0 and above are supported)
+
+3. [Install the # RobotCode extension for Visual Studio Code](https://code.visualstudio.com/docs/editor/extension-gallery).
+4. Open or create a robot file and start coding! 😉
+
+## Setting up your environment
+
+TODO
