@@ -92,6 +92,7 @@ SECTIONS = [
     "Variable",
     "Keyword",
     "Comment",
+    "Task"
 ]
 DEFAULT_SECTIONS_STYLE = "*** {name}s ***"
 
