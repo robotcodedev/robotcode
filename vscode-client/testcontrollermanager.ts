@@ -1,3 +1,4 @@
+import { red, yellow } from "ansi-colors";
 import * as vscode from "vscode";
 import { DebugManager } from "./debugmanager";
 import { LanguageClientsManager, RobotTestItem } from "./languageclientsmanger";
@@ -602,8 +603,17 @@ export class TestControllerManager {
       //     location,
       //     event.itemId !== undefined ? this.findTestItemById(event.itemId) : undefined
       //   );
+      let style = (s: string) => s;
+      switch (event.level) {
+        case "WARN":
+          style = yellow;
+          break;
+        case "ERROR":
+          style = red;
+          break;
+      }
 
-      run.appendOutput(`${event.level}: ${event.message.replaceAll("\n", "\r\n")}` + "\r\n");
+      run.appendOutput(style(`${event.level}: ${event.message.replaceAll("\n", "\r\n")}` + "\r\n"));
     }
   }
 }
