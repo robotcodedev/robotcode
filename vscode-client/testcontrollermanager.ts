@@ -528,7 +528,7 @@ export class TestControllerManager {
           case "SKIP":
             run.skipped(item);
             break;
-          case "FAIL":
+          default:
             {
               const messages: vscode.TestMessage[] = [];
 
@@ -548,7 +548,11 @@ export class TestControllerManager {
 
                   messages.push(message);
                 }
-              } else {
+              }
+              if (
+                !event.attributes?.message ||
+                !event.failedKeywords?.find((v) => v.message === event.attributes?.message)
+              ) {
                 const message = new vscode.TestMessage(event.attributes.message ?? "unknown error");
 
                 if (event.attributes.source) {
@@ -562,19 +566,12 @@ export class TestControllerManager {
                 }
                 messages.push(message);
               }
-              run.failed(item, messages, event.attributes.elapsedtime);
-            }
-            break;
-          default:
-            {
-              const message = new vscode.TestMessage(event.attributes.message ?? "unknown error");
-              if (event.attributes.source !== undefined) {
-                message.location = new vscode.Location(
-                  vscode.Uri.file(event.attributes.source),
-                  new vscode.Position((event.attributes.lineno ?? 1) - 1, 0)
-                );
+
+              if (event.attributes.status === "FAIL") {
+                run.failed(item, messages, event.attributes.elapsedtime);
+              } else {
+                run.errored(item, messages, event.attributes.elapsedtime);
               }
-              run.errored(item, message, event.attributes.elapsedtime);
             }
             break;
         }
@@ -606,7 +603,7 @@ export class TestControllerManager {
       //     event.itemId !== undefined ? this.findTestItemById(event.itemId) : undefined
       //   );
 
-      run.appendOutput(`${event.level}: ${event.message}` + "\r\n");
+      run.appendOutput(`${event.level}: ${event.message.replaceAll("\n", "\r\n")}` + "\r\n");
     }
   }
 }
