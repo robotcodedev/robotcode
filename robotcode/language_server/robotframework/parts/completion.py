@@ -86,14 +86,7 @@ _CompleteMethod = Callable[
     Awaitable[Optional[Optional[List[CompletionItem]]]],
 ]
 
-SECTIONS = [
-    "Test Case",
-    "Setting",
-    "Variable",
-    "Keyword",
-    "Comment",
-    "Task"
-]
+SECTIONS = ["Test Case", "Setting", "Variable", "Keyword", "Comment", "Task"]
 DEFAULT_SECTIONS_STYLE = "*** {name}s ***"
 
 SETTINGS = [
