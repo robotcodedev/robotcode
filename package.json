@@ -206,12 +206,6 @@
             "description": "Default setting for where to launch the debug target: internal console, integrated terminal, or external terminal.",
             "scope": "resource"
           },
-          "robotcode.robocop.enabled": {
-            "type": "boolean",
-            "default": true,
-            "description": "Enables 'robocop' code analysis, if installed.",
-            "scope": "resource"
-          },
           "robotcode.syntax.sectionStyle": {
             "type": "string",
             "default": "*** {name}s ***",
@@ -222,6 +216,12 @@
             "type": "boolean",
             "default": false,
             "description": "Defines if the test report should be opened a run session automatically.",
+            "scope": "resource"
+          },
+          "robotcode.robocop.enabled": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Enables 'robocop' code analysis, if installed. See [robocop](https://github.com/MarketSquare/robotframework-robocop)",
             "scope": "resource"
           },
           "robotcode.robocop.include": {
@@ -249,6 +249,12 @@
               "type": "string"
             },
             "description": "Configure 'robocop' checker with parameter value.",
+            "scope": "resource"
+          },
+          "robotcode.robotidy.enabled": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Enables 'robotidy' code formatting, if installed. See [robotidy](https://github.com/MarketSquare/robotframework-tidy)",
             "scope": "resource"
           }
         }

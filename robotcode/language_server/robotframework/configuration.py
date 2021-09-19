@@ -31,6 +31,11 @@ class RoboCopConfig(ConfigBase):
     configurations: List[str]
 
 
+@config_section("robotcode.robotidy")
+class RoboTidyConfig(ConfigBase):
+    enabled: bool
+
+
 @config_section("robotcode")
 class RobotCodeConfig(ConfigBase):
     language_server: LanguageServerConfig

@@ -27,6 +27,7 @@ coloredlogs = "^15.0.1"
 robotremoteserver = "^1.1"
 Cython = "^0.29.24"
 robotframework-robocop = "^1.7.1"
+robotframework-tidy = "^1.5.1"
 
 
 [tool.poetry-dynamic-versioning]

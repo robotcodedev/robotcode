@@ -13,6 +13,7 @@ from ..types import (
     DocumentFormattingOptions,
     DocumentFormattingParams,
     DocumentRangeFormattingOptions,
+    DocumentRangeFormattingParams,
     FormattingOptions,
     ProgressToken,
     Range,
@@ -84,11 +85,12 @@ class FormattingProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
         return None
 
-    @rpc_method(name="textDocument/rangeFormatting", param_type=DocumentFormattingParams)
+    @rpc_method(name="textDocument/rangeFormatting", param_type=DocumentRangeFormattingParams)
     async def _text_document_range_formatting(
         self,
         params: DocumentFormattingParams,
         text_document: TextDocumentIdentifier,
+        range: Range,
         options: FormattingOptions,
         work_done_token: Optional[ProgressToken],
         *args: Any,
