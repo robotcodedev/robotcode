@@ -896,7 +896,7 @@
     },
     "named_argument": {
       "name": "meta.named.argument.robot",
-      "begin": "(?<=[\\s|])(?!\\/\\/|css:|xpath:)(?:([$&@]{)([^ |\\t=]+)(})|([^ |\\t=]+))((?<!\\\\)=)(?=[^=])",
+      "begin": "(?<=[\\s|])(?!\\/\\/|css:|xpath:|\\(|\\)|\\{|\\}|\\[|\\])(?:([$&@]{)([^ |\\t=]+)(})|([^ |\\t=]+))((?<!\\\\)=)(?=[^=])",
       "beginCaptures": {
         "1": {
           "name": "keyword.operator.robot"
