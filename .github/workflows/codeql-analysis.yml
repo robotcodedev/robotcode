@@ -46,7 +46,7 @@ jobs:
         python-version: '3.8'
 
     - uses: Gr1N/setup-poetry@v7
-    - run: pip install poetry-dynamic-versioning
+    - run: pip3 install poetry-dynamic-versioning
     - run: poetry install
     - run: poetry-dynamic-versioning
 
