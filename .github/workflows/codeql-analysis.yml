@@ -41,9 +41,10 @@ jobs:
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
     - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+
     - uses: Gr1N/setup-poetry@v7
     - run: pip install poetry-dynamic-versioning
     - run: poetry install
