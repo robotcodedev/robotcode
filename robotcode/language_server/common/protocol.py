@@ -26,6 +26,7 @@ from .parts.folding_range import FoldingRangeProtocolPart
 from .parts.formatting import FormattingProtocolPart
 from .parts.hover import HoverProtocolPart
 from .parts.implementation import ImplementationProtocolPart
+from .parts.semantic_tokens import SemanticTokensProtocolPart
 from .parts.signature_help import SignatureHelpProtocolPart
 from .parts.window import WindowProtocolPart
 from .parts.workspace import Workspace
@@ -75,6 +76,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     code_lens = ProtocolPartDescriptor(CodeLensProtocolPart)
     document_symbols = ProtocolPartDescriptor(DocumentSymbolsProtocolPart)
     formatting = ProtocolPartDescriptor(FormattingProtocolPart)
+    semantic_tokens = ProtocolPartDescriptor(SemanticTokensProtocolPart)
 
     name: Optional[str] = None
     version: Optional[str] = None
