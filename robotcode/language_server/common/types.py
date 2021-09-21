@@ -711,6 +711,31 @@ class ExecuteCommandOptions(WorkDoneProgressOptions):
     commands: List[str]
 
 
+class SemanticTokensLegend(Model):
+    token_types: List[str]
+    token_modifiers: List[str]
+
+
+class SemanticTokensOptionsFull(Model):
+    delta: Optional[bool] = None
+
+
+class SemanticTokensOptionsRange(Model):
+    pass
+
+
+class SemanticTokensOptions(WorkDoneProgressOptions):
+    legend: SemanticTokensLegend
+    range: Union[bool, SemanticTokensOptionsRange, None] = None
+    full: Union[bool, SemanticTokensOptionsFull, None] = None
+
+
+class SemanticTokensRegistrationOptions(
+    TextDocumentRegistrationOptions, SemanticTokensOptions, StaticRegistrationOptions
+):
+    pass
+
+
 class ServerCapabilities(Model):
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None]
     completion_provider: Optional[CompletionOptions] = None
@@ -737,7 +762,7 @@ class ServerCapabilities(Model):
     #     boolean, LinkedEditingRangeOptions, LinkedEditingRangeRegistrationOptions, None
     # ] = None
     # call_hierarchy_provider: Union[boolean, CallHierarchyOptions, CallHierarchyRegistrationOptions, None] = None
-    # semantic_tokens_provider: Union[SemanticTokensOptions, SemanticTokensRegistrationOptions, None] = None
+    semantic_tokens_provider: Union[SemanticTokensOptions, SemanticTokensRegistrationOptions, None] = None
     # moniker_provider: Union[bool, MonikerOptions, MonikerRegistrationOptions, None] = None
     workspace_symbol_provider: Union[bool, WorkspaceSymbolOptions, None] = None
     workspace: Optional[ServerCapabilitiesWorkspace] = None
@@ -1356,3 +1381,78 @@ class DocumentRangeFormattingParams(WorkDoneProgressParams):
     text_document: TextDocumentIdentifier
     range: Range
     options: FormattingOptions
+
+
+class SemanticTokensParams(WorkDoneProgressParams, PartialResultParams):
+    text_document: TextDocumentIdentifier
+
+
+class SemanticTokens(Model):
+    data: List[int]
+    result_id: Optional[str] = None
+
+
+class SemanticTokensPartialResult(Model):
+    data: List[int]
+
+
+class SemanticTokensDeltaParams(WorkDoneProgressParams, PartialResultParams):
+    text_document: TextDocumentIdentifier
+    previous_result_id: str
+
+
+class SemanticTokensEdit(Model):
+    start: int
+    delete_count: int
+    data: Optional[List[int]] = None
+
+
+class SemanticTokensDelta(Model):
+    edits: List[SemanticTokensEdit]
+    result_id: Optional[str] = None
+
+
+class SemanticTokensDeltaPartialResult(Model):
+    edits: List[SemanticTokensEdit]
+
+
+class SemanticTokensRangeParams(WorkDoneProgressParams, PartialResultParams):
+    text_document: TextDocumentIdentifier
+    range: Range
+
+
+class SemanticTokenTypes(Enum):
+    TYPE = "type"
+    CLASS = "class"
+    ENUM = "enum"
+    INTERFACE = "interface"
+    STRUCT = "struct"
+    TYPE_PARAMETER = "typeParameter"
+    PARAMETER = "parameter"
+    VARIABLE = "variable"
+    PROPERTY = "property"
+    ENUM_MEMBER = "enumMember"
+    EVENT = "event"
+    FUNCTION = "function"
+    METHOD = "method"
+    MACRO = "macro"
+    KEYWORD = "keyword"
+    MODIFIER = "modifier"
+    COMMENT = "comment"
+    STRING = "string"
+    NUMBER = "number"
+    REGEXP = "regexp"
+    OPERATOR = "operator"
+
+
+class SemanticTokenModifiers(Enum):
+    DECLARATION = "declaration"
+    DEFINITION = "definition"
+    READONLY = "readonly"
+    STATIC = "static"
+    DEPRECATED = "deprecated"
+    ABSTRACT = "abstract"
+    ASYNC = "async"
+    MODIFICATION = "modification"
+    DOCUMENTATION = "documentation"
+    DEFAULT_LIBRARY = "defaultLibrary"
