@@ -43,6 +43,18 @@
     "onCommand:robotcode.runSuite",
     "onCommand:robotcode.debugSuite"
   ],
+  "preview": true,
+  "galleryBanner": {
+    "theme": "dark",
+    "color": "#000000"
+  },
+  "badges": [
+    {
+      "description": "github",
+      "url": "https://github.com/d-biehl/robotcode/actions/workflows/build.yml/badge.svg",
+      "href": "https://github.com/d-biehl/robotcode/actions/workflows/build.yml"
+    }
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "languages": [
