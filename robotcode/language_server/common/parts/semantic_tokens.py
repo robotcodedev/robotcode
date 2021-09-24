@@ -70,10 +70,10 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
                     token_types=[e.value for e in self.token_types],
                     token_modifiers=[e.value for e in self.token_modifiers],
                 ),
-                full=SemanticTokensOptionsFull(delta=len(self.collect_full_delta) > 0)
+                full=SemanticTokensOptionsFull(delta=True if len(self.collect_full_delta) > 0 else False)
                 if len(self.collect_full)
-                else None,
-                range=SemanticTokensOptionsRange() if len(self.collect_range) else None,
+                else False,
+                range=SemanticTokensOptionsRange() if len(self.collect_range) else False,
             )
 
     @rpc_method(name="textDocument/semanticTokens/full", param_type=SemanticTokensParams)

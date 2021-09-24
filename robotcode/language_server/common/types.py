@@ -1422,6 +1422,7 @@ class SemanticTokensRangeParams(WorkDoneProgressParams, PartialResultParams):
 
 
 class SemanticTokenTypes(Enum):
+    NAMESPACE = "namespace"
     TYPE = "type"
     CLASS = "class"
     ENUM = "enum"

@@ -1,10 +1,10 @@
 import ast
-from typing import Any, AsyncIterator, Callable, Optional, Type, cast
+from typing import Any, AsyncGenerator, Callable, Optional, Type, cast
 
 __all__ = ["iter_fields", "iter_child_nodes", "AsyncVisitor", "walk"]
 
 
-async def iter_fields(node: ast.AST) -> AsyncIterator[Any]:
+async def iter_fields(node: ast.AST) -> AsyncGenerator[Any, None]:
     """
     Yield a tuple of ``(fieldname, value)`` for each field in ``node._fields``
     that is present on *node*.
@@ -16,7 +16,7 @@ async def iter_fields(node: ast.AST) -> AsyncIterator[Any]:
             pass
 
 
-async def iter_child_nodes(node: ast.AST) -> AsyncIterator[ast.AST]:
+async def iter_child_nodes(node: ast.AST) -> AsyncGenerator[ast.AST, None]:
     """
     Yield all direct child nodes of *node*, that is, all fields that are nodes
     and all items of fields that are lists of nodes.
@@ -30,7 +30,7 @@ async def iter_child_nodes(node: ast.AST) -> AsyncIterator[ast.AST]:
                     yield item
 
 
-async def walk(node: ast.AST) -> AsyncIterator[ast.AST]:
+async def walk(node: ast.AST) -> AsyncGenerator[ast.AST, None]:
     from collections import deque
 
     todo = deque([node])

@@ -22,6 +22,7 @@ from .parts.formatting import RobotFormattingProtocolPart
 from .parts.goto import RobotGotoProtocolPart
 from .parts.hover import RobotHoverProtocolPart
 from .parts.robocop_diagnostics import RobotRoboCopDiagnosticsProtocolPart
+from .parts.semantic_tokens import RobotSemanticTokenProtocolPart
 from .parts.signature_help import RobotSignatureHelpProtocolPart
 from .utils.version import get_robot_version
 
@@ -58,6 +59,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     _robot_robocop_diagnostics = ProtocolPartDescriptor(RobotRoboCopDiagnosticsProtocolPart)
     _robot_formatting = ProtocolPartDescriptor(RobotFormattingProtocolPart)
     _robot_discovering = ProtocolPartDescriptor(DiscoveringProtocolPart)
+    _robot_semantic_tokens = ProtocolPartDescriptor(RobotSemanticTokenProtocolPart)
 
     name = "RobotCode"
     version = __version__

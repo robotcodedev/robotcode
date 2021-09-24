@@ -33,8 +33,7 @@ from ...common.types import (
     Position,
     Range,
 )
-from ..utils.ast import Token as AstToken
-from ..utils.ast import is_non_variable_token, range_from_token_or_node
+from ..utils.ast import Token, is_non_variable_token, range_from_token_or_node
 from ..utils.async_ast import AsyncVisitor
 from .imports_manager import ImportsManager
 from .library_doc import (
@@ -62,13 +61,6 @@ class ImportError(DiagnosticsError):
 
 
 @dataclass
-class Token:
-    line_no: int
-    col_offset: int
-    end_col_offset: int
-
-
-@dataclass
 class Import:
     name: Optional[str]
     name_token: Optional[Token]
@@ -81,11 +73,11 @@ class Import:
     def range(self) -> Range:
         return Range(
             start=Position(
-                line=self.name_token.line_no - 1 if self.name_token is not None else self.line_no - 1,
+                line=self.name_token.lineno - 1 if self.name_token is not None else self.line_no - 1,
                 character=self.name_token.col_offset if self.name_token is not None else self.col_offset,
             ),
             end=Position(
-                line=self.name_token.line_no - 1 if self.name_token is not None else self.end_line_no - 1,
+                line=self.name_token.lineno - 1 if self.name_token is not None else self.end_line_no - 1,
                 character=self.name_token.end_col_offset if self.name_token is not None else self.end_col_offset,
             ),
         )
@@ -171,9 +163,7 @@ class ImportVisitor(AsyncVisitor):
         self._results.append(
             LibraryImport(
                 name=n.name,
-                name_token=Token(line_no=name.lineno, col_offset=name.col_offset, end_col_offset=name.end_col_offset)
-                if name is not None
-                else None,
+                name_token=name if name is not None else None,
                 args=n.args,
                 alias=n.alias,
                 line_no=node.lineno,
@@ -194,9 +184,7 @@ class ImportVisitor(AsyncVisitor):
         self._results.append(
             ResourceImport(
                 name=n.name,
-                name_token=Token(line_no=name.lineno, col_offset=name.col_offset, end_col_offset=name.end_col_offset)
-                if name is not None
-                else None,
+                name_token=name if name is not None else None,
                 line_no=node.lineno,
                 col_offset=node.col_offset,
                 end_line_no=node.end_lineno if node.end_lineno is not None else -1,
@@ -217,9 +205,7 @@ class ImportVisitor(AsyncVisitor):
         self._results.append(
             VariablesImport(
                 name=n.name,
-                name_token=Token(line_no=name.lineno, col_offset=name.col_offset, end_col_offset=name.end_col_offset)
-                if name is not None
-                else None,
+                name_token=name if name is not None else None,
                 args=n.args,
                 line_no=node.lineno,
                 col_offset=node.col_offset,
@@ -244,8 +230,8 @@ class Analyzer(AsyncVisitor):
         self,
         keyword: Optional[str],
         value: ast.AST,
-        keyword_token: AstToken,
-        argument_tokens: List[AstToken],
+        keyword_token: Token,
+        argument_tokens: List[Token],
         analyse_run_keywords: bool = True,
     ) -> Optional[KeywordDoc]:
         result: Optional[KeywordDoc] = None
@@ -351,8 +337,8 @@ class Analyzer(AsyncVisitor):
         return result
 
     async def _analyse_run_keyword(
-        self, keyword_doc: Optional[KeywordDoc], node: ast.AST, argument_tokens: List[AstToken]
-    ) -> List[AstToken]:
+        self, keyword_doc: Optional[KeywordDoc], node: ast.AST, argument_tokens: List[Token]
+    ) -> List[Token]:
 
         if keyword_doc is None or not keyword_doc.is_any_run_keyword():
             return argument_tokens
@@ -445,11 +431,13 @@ class Analyzer(AsyncVisitor):
         from robot.parsing.model.statements import Fixture
 
         value = cast(Fixture, node)
-        keyword_token = cast(AstToken, value.get_token(RobotToken.NAME))
+        keyword_token = cast(Token, value.get_token(RobotToken.NAME))
 
-        if keyword_token is not None:
+        # TODO: calculate possible variables in NAME
+
+        if keyword_token is not None and is_non_variable_token(keyword_token):
             await self._analyze_keyword_call(
-                value.name, value, keyword_token, [cast(AstToken, e) for e in value.get_tokens(RobotToken.ARGUMENT)]
+                value.name, value, keyword_token, [cast(Token, e) for e in value.get_tokens(RobotToken.ARGUMENT)]
             )
 
         await self.generic_visit(node)
@@ -459,9 +447,11 @@ class Analyzer(AsyncVisitor):
         from robot.parsing.model.statements import TestTemplate
 
         value = cast(TestTemplate, node)
-        keyword_token = cast(AstToken, value.get_token(RobotToken.NAME))
+        keyword_token = cast(Token, value.get_token(RobotToken.NAME))
 
-        if keyword_token is not None:
+        # TODO: calculate possible variables in NAME
+
+        if keyword_token is not None and is_non_variable_token(keyword_token):
             await self._analyze_keyword_call(value.value, value, keyword_token, [])
 
         await self.generic_visit(node)
@@ -471,9 +461,11 @@ class Analyzer(AsyncVisitor):
         from robot.parsing.model.statements import Template
 
         value = cast(Template, node)
-        keyword_token = cast(AstToken, value.get_token(RobotToken.NAME))
+        keyword_token = cast(Token, value.get_token(RobotToken.NAME))
 
-        if keyword_token is not None:
+        # TODO: calculate possible variables in NAME
+
+        if keyword_token is not None and is_non_variable_token(keyword_token):
             await self._analyze_keyword_call(value.value, value, keyword_token, [])
 
         await self.generic_visit(node)
@@ -497,7 +489,7 @@ class Analyzer(AsyncVisitor):
             )
         else:
             await self._analyze_keyword_call(
-                value.keyword, value, keyword_token, [cast(AstToken, e) for e in value.get_tokens(RobotToken.ARGUMENT)]
+                value.keyword, value, keyword_token, [cast(Token, e) for e in value.get_tokens(RobotToken.ARGUMENT)]
             )
 
         if not self.current_testcase_or_keyword_name:
