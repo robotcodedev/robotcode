@@ -20,7 +20,6 @@ from ..types import (
     SemanticTokensLegend,
     SemanticTokensOptions,
     SemanticTokensOptionsFull,
-    SemanticTokensOptionsRange,
     SemanticTokensParams,
     SemanticTokensPartialResult,
     SemanticTokensRangeParams,
@@ -70,10 +69,12 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
                     token_types=[e.value for e in self.token_types],
                     token_modifiers=[e.value for e in self.token_modifiers],
                 ),
-                full=SemanticTokensOptionsFull(delta=True if len(self.collect_full_delta) > 0 else False)
+                full=SemanticTokensOptionsFull(delta=True if len(self.collect_full_delta) else None)
+                if len(self.collect_full) and len(self.collect_full_delta)
+                else True
                 if len(self.collect_full)
-                else False,
-                range=SemanticTokensOptionsRange() if len(self.collect_range) else False,
+                else None,
+                range=True if len(self.collect_range) else None,
             )
 
     @rpc_method(name="textDocument/semanticTokens/full", param_type=SemanticTokensParams)

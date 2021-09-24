@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+import re
 from enum import Enum
 from functools import reduce
 from typing import (
@@ -20,12 +21,15 @@ from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.text_document import TextDocument
 from ...common.types import (
+    Range,
     SemanticTokenModifiers,
     SemanticTokens,
+    SemanticTokensDelta,
+    SemanticTokensDeltaPartialResult,
     SemanticTokensPartialResult,
     SemanticTokenTypes,
 )
-from ..utils.ast import Token
+from ..utils.ast import Token, token_in_range
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -54,6 +58,9 @@ class RobotSemTokenTypes(Enum):
     SEPARATOR = "separator"
     TERMINATOR = "terminator"
     FOR_SEPARATOR = "forSeparator"
+    VARIABLE_BEGIN = "variableBegin"
+    VARIABLE_END = "variableEnd"
+    ESCAPE = "escape"
 
 
 class SemTokenInfo(NamedTuple):
@@ -64,9 +71,20 @@ class SemTokenInfo(NamedTuple):
     sem_modifiers: Optional[Set[Enum]] = None
 
     @classmethod
-    def from_token(cls, token: Token, sem_token_type: Enum, sem_modifiers: Optional[Set[Enum]] = None) -> SemTokenInfo:
+    def from_token(
+        cls,
+        token: Token,
+        sem_token_type: Enum,
+        sem_modifiers: Optional[Set[Enum]] = None,
+        col_offset: Optional[int] = None,
+        length: Optional[int] = None,
+    ) -> SemTokenInfo:
         return cls(
-            token.lineno, token.col_offset, token.end_col_offset - token.col_offset, sem_token_type, sem_modifiers
+            token.lineno,
+            col_offset if col_offset is not None else token.col_offset,
+            length if length is not None else token.end_col_offset - token.col_offset,
+            sem_token_type,
+            sem_modifiers,
         )
 
 
@@ -77,6 +95,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         super().__init__(parent)
         parent.semantic_tokens.token_types += [e for e in RobotSemTokenTypes]
         parent.semantic_tokens.collect_full.add(self.collect_full)
+        parent.semantic_tokens.collect_range.add(self.collect_range)
+        parent.semantic_tokens.collect_full_delta.add(self.collect_full_delta)
 
     @classmethod
     def generate_mapping(cls) -> Dict[str, Tuple[Enum, Optional[Set[Enum]]]]:
@@ -139,6 +159,45 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             cls.__mapping = cls.generate_mapping()
         return cls.__mapping
 
+    ESCAPE_REGEX = re.compile(
+        r"(?P<t>[^\\]+)|(?P<x>\\([^xuU]|x[0-f]{2}|u[0-f]{4}|U[0-f]{8}){0,1})", re.MULTILINE | re.DOTALL
+    )
+
+    @classmethod
+    async def generate_sem_sub_tokens(
+        cls, token: Token, col_offset: Optional[int] = None, length: Optional[int] = None
+    ) -> AsyncGenerator[SemTokenInfo, None]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+
+        sem_info = cls.mapping().get(token.type, None) if token.type is not None else None
+
+        if sem_info is not None:
+            if token.type == RobotToken.VARIABLE:
+                if col_offset is None:
+                    col_offset = token.col_offset
+                if length is None:
+                    length = token.end_col_offset - token.col_offset
+
+                yield SemTokenInfo(token.lineno, col_offset, 2, RobotSemTokenTypes.VARIABLE_BEGIN)
+                yield SemTokenInfo.from_token(token, sem_info[0], sem_info[1], col_offset + 2, length - 3)
+                yield SemTokenInfo(token.lineno, col_offset + length - 1, 1, RobotSemTokenTypes.VARIABLE_END)
+            if token.type == RobotToken.ARGUMENT and "\\" in token.value:
+                if col_offset is None:
+                    col_offset = token.col_offset
+                if length is None:
+                    length = token.end_col_offset - token.col_offset
+
+                for g in cls.ESCAPE_REGEX.finditer(token.value):
+                    yield SemTokenInfo.from_token(
+                        token,
+                        sem_info[0] if g.group("x") is None or g.end() - g.start() == 1 else RobotSemTokenTypes.ESCAPE,
+                        sem_info[1],
+                        col_offset + g.start(),
+                        g.end() - g.start(),
+                    )
+            else:
+                yield SemTokenInfo.from_token(token, sem_info[0], sem_info[1], col_offset, length)
+
     @classmethod
     async def generate_sem_tokens(cls, token: Token) -> AsyncGenerator[SemTokenInfo, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
@@ -148,36 +207,27 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             try:
                 for sub_token in token.tokenize_variables():
                     last_sub_token = sub_token
-                    if sub_token.type is not None:
-                        sem_info = cls.mapping().get(sub_token.type, None)
-                        if sem_info is not None:
-                            yield SemTokenInfo.from_token(sub_token, sem_info[0], sem_info[1])
+                    async for e in cls.generate_sem_sub_tokens(sub_token):
+                        yield e
             except BaseException:
                 pass
-            if last_sub_token == token and token.type is not None:
-                sem_info = cls.mapping().get(token.type, None)
-                if sem_info is not None:
-                    yield SemTokenInfo.from_token(token, sem_info[0], sem_info[1])
+            if last_sub_token == token:
+                async for e in cls.generate_sem_sub_tokens(last_sub_token):
+                    yield e
             elif last_sub_token is not None and last_sub_token.end_col_offset < token.end_col_offset:
-                if token.type is not None:
-                    sem_info = cls.mapping().get(token.type, None)
-                    if sem_info is not None:
-                        yield SemTokenInfo(
-                            token.lineno,
-                            last_sub_token.end_col_offset,
-                            token.end_col_offset - last_sub_token.end_col_offset - last_sub_token.col_offset,
-                            sem_info[0],
-                            sem_info[1],
-                        )
+                async for e in cls.generate_sem_sub_tokens(
+                    token,
+                    last_sub_token.end_col_offset,
+                    token.end_col_offset - last_sub_token.end_col_offset - last_sub_token.col_offset,
+                ):
+                    yield e
 
-        elif token.type is not None:
-            sem_info = cls.mapping().get(token.type, None)
-            if sem_info is not None:
-                yield SemTokenInfo.from_token(token, sem_info[0], sem_info[1])
+        else:
+            async for e in cls.generate_sem_sub_tokens(token):
+                yield e
 
-    @language_id("robotframework")
-    async def collect_full(
-        self, sender: Any, document: TextDocument, **kwargs: Any
+    async def collect(
+        self, document: TextDocument, range: Optional[Range]
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
 
         data = []
@@ -185,7 +235,18 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         last_col = 0
 
         tokens = await self.parent.documents_cache.get_tokens(document)
+
+        start = True
         for robot_token in tokens:
+            if range is not None:
+                if start and not token_in_range(robot_token, range):
+                    continue
+                else:
+                    start = False
+
+                if not start and not token_in_range(robot_token, range):
+                    break
+
             async for token in self.generate_sem_tokens(robot_token):
                 current_line = token.lineno - 1
 
@@ -215,3 +276,21 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 )
 
         return SemanticTokens(data=data)
+
+    @language_id("robotframework")
+    async def collect_full(
+        self, sender: Any, document: TextDocument, **kwargs: Any
+    ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
+        return await self.collect(document, None)
+
+    @language_id("robotframework")
+    async def collect_range(
+        self, sender: Any, document: TextDocument, range: Range, **kwargs: Any
+    ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
+        return await self.collect(document, range)
+
+    @language_id("robotframework")
+    async def collect_full_delta(
+        self, sender: Any, document: TextDocument, previous_result_id: str, **kwargs: Any
+    ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None]:
+        return None

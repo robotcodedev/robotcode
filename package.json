@@ -110,6 +110,15 @@
           ],
           "terminator": [
             "punctuation.terminator.robotframework"
+          ],
+          "variableBegin": [
+            "punctuation.definition.variable.begin.robotframework"
+          ],
+          "variableEnd": [
+            "punctuation.definition.variable.end.robotframework"
+          ],
+          "escape": [
+            "constant.character.escape.robotframework"
           ]
         }
       }
@@ -128,7 +137,7 @@
         "configuration": "./language-configuration.json"
       }
     ],
-    "grammars": [
+    "#grammars": [
       {
         "language": "robotframework",
         "scopeName": "source.robotframework",

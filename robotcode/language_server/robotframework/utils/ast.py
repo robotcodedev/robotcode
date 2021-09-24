@@ -85,6 +85,16 @@ def range_from_token(token: Token) -> Range:
     )
 
 
+def token_in_range(token: Token, range: Range) -> bool:
+    token_range = range_from_token(token)
+    return token_range.start.is_in_range(range) or token_range.end.is_in_range(range)
+
+
+def node_in_range(node: ast.AST, range: Range) -> bool:
+    node_range = range_from_node(node)
+    return node_range.start.is_in_range(range) or node_range.end.is_in_range(range)
+
+
 def range_from_token_or_node(node: ast.AST, token: Optional[Token]) -> Range:
     if token is not None:
         return range_from_token(token)

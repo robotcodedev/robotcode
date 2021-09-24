@@ -222,27 +222,13 @@ def _get_name_prefix(descriptor: AsyncEventDescriptorBase[Any, Any, Any]) -> str
     return f"{descriptor._owner.__qualname__}.{descriptor._owner_name}"
 
 
-class async_tasking_event_iterator(  # noqa: N801
-    AsyncEventDescriptorBase[_TCallable, Any, AsyncTaskingEventIterator[_TCallable, Any]]
-):
-    def __init__(self, _func: _TCallable) -> None:
-        super().__init__(
-            _func, AsyncTaskingEventIterator[_TCallable, Any], task_name_prefix=lambda: _get_name_prefix(self)
-        )
-
-
 class AsyncTaskingEvent(AsyncTaskingEventResultIteratorBase[_TCallable, _TResult]):
     async def __call__(self, *args: Any, **kwargs: Any) -> List[Union[_TResult, BaseException]]:
         return [a async for a in self._notify(*args, **kwargs)]
 
 
-class async_tasking_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncTaskingEvent[_TCallable, Any]]):  # noqa: N801
-    def __init__(self, _func: _TCallable) -> None:
-        super().__init__(_func, AsyncTaskingEvent[_TCallable, Any], task_name_prefix=lambda: _get_name_prefix(self))
-
-
 class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallable, _TResult]):
-    __executor: Optional[ThreadPoolExecutor]
+    __executor: Optional[ThreadPoolExecutor] = None
 
     def __init__(self, *, thread_name_prefix: Optional[str] = None) -> None:
         super().__init__()
@@ -308,13 +294,13 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
                     result_callback(None, e)
 
         if executor is None:
-            if self.__executor is None:
-                self.__executor = ThreadPoolExecutor(
+            if AsyncThreadingEventResultIteratorBase.__executor is None:
+                AsyncThreadingEventResultIteratorBase.__executor = ThreadPoolExecutor(
                     thread_name_prefix=self.__thread_name_prefix()
                     if callable(self.__thread_name_prefix)
                     else self.__thread_name_prefix
                 )
-            executor = self.__executor
+            executor = AsyncThreadingEventResultIteratorBase.__executor
 
         awaitables: List[asyncio.Future[_TResult]] = []
         for method in filter(
@@ -370,3 +356,21 @@ class async_threading_event(  # noqa: N801
 ):
     def __init__(self, _func: _TCallable) -> None:
         super().__init__(_func, AsyncThreadingEvent[_TCallable, Any], thread_name_prefix=lambda: _get_name_prefix(self))
+
+
+# async_tasking_event_iterator = async_threading_event_iterator
+# async_tasking_event = async_threading_event
+
+
+class async_tasking_event_iterator(  # noqa: N801
+    AsyncEventDescriptorBase[_TCallable, Any, AsyncTaskingEventIterator[_TCallable, Any]]
+):
+    def __init__(self, _func: _TCallable) -> None:
+        super().__init__(
+            _func, AsyncTaskingEventIterator[_TCallable, Any], task_name_prefix=lambda: _get_name_prefix(self)
+        )
+
+
+class async_tasking_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncTaskingEvent[_TCallable, Any]]):  # noqa: N801
+    def __init__(self, _func: _TCallable) -> None:
+        super().__init__(_func, AsyncTaskingEvent[_TCallable, Any], task_name_prefix=lambda: _get_name_prefix(self))
