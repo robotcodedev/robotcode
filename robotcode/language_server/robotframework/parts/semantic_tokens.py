@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import operator
 import re
 from enum import Enum
@@ -7,9 +8,10 @@ from functools import reduce
 from typing import (
     TYPE_CHECKING,
     Any,
-    AsyncGenerator,
     Dict,
     FrozenSet,
+    Generator,
+    Iterable,
     NamedTuple,
     Optional,
     Set,
@@ -96,7 +98,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         parent.semantic_tokens.token_types += [e for e in RobotSemTokenTypes]
         parent.semantic_tokens.collect_full.add(self.collect_full)
         parent.semantic_tokens.collect_range.add(self.collect_range)
-        parent.semantic_tokens.collect_full_delta.add(self.collect_full_delta)
+        # parent.semantic_tokens.collect_full_delta.add(self.collect_full_delta)
 
     @classmethod
     def generate_mapping(cls) -> Dict[str, Tuple[Enum, Optional[Set[Enum]]]]:
@@ -164,9 +166,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
     )
 
     @classmethod
-    async def generate_sem_sub_tokens(
+    def generate_sem_sub_tokens(
         cls, token: Token, col_offset: Optional[int] = None, length: Optional[int] = None
-    ) -> AsyncGenerator[SemTokenInfo, None]:
+    ) -> Generator[SemTokenInfo, None, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
         sem_info = cls.mapping().get(token.type, None) if token.type is not None else None
@@ -199,7 +201,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 yield SemTokenInfo.from_token(token, sem_info[0], sem_info[1], col_offset, length)
 
     @classmethod
-    async def generate_sem_tokens(cls, token: Token) -> AsyncGenerator[SemTokenInfo, None]:
+    def generate_sem_tokens(cls, token: Token) -> Generator[SemTokenInfo, None, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
         if token.type in RobotToken.ALLOW_VARIABLES:
@@ -207,15 +209,15 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             try:
                 for sub_token in token.tokenize_variables():
                     last_sub_token = sub_token
-                    async for e in cls.generate_sem_sub_tokens(sub_token):
+                    for e in cls.generate_sem_sub_tokens(sub_token):
                         yield e
             except BaseException:
                 pass
             if last_sub_token == token:
-                async for e in cls.generate_sem_sub_tokens(last_sub_token):
+                for e in cls.generate_sem_sub_tokens(last_sub_token):
                     yield e
             elif last_sub_token is not None and last_sub_token.end_col_offset < token.end_col_offset:
-                async for e in cls.generate_sem_sub_tokens(
+                for e in cls.generate_sem_sub_tokens(
                     token,
                     last_sub_token.end_col_offset,
                     token.end_col_offset - last_sub_token.end_col_offset - last_sub_token.col_offset,
@@ -223,31 +225,31 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                     yield e
 
         else:
-            async for e in cls.generate_sem_sub_tokens(token):
+            for e in cls.generate_sem_sub_tokens(token):
                 yield e
 
-    async def collect(
-        self, document: TextDocument, range: Optional[Range]
+    def collect_threading(
+        self, tokens: Iterable[Token], range: Optional[Range]
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
 
         data = []
         last_line = 0
         last_col = 0
 
-        tokens = await self.parent.documents_cache.get_tokens(document)
-
         start = True
+
         for robot_token in tokens:
             if range is not None:
-                if start and not token_in_range(robot_token, range):
-                    continue
+                if start:
+                    if not token_in_range(robot_token, range):
+                        continue
+                    else:
+                        start = False
                 else:
-                    start = False
+                    if not token_in_range(robot_token, range):
+                        break
 
-                if not start and not token_in_range(robot_token, range):
-                    break
-
-            async for token in self.generate_sem_tokens(robot_token):
+            for token in self.generate_sem_tokens(robot_token):
                 current_line = token.lineno - 1
 
                 data.append(current_line - last_line)
@@ -281,13 +283,18 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
     async def collect_full(
         self, sender: Any, document: TextDocument, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        return await self.collect(document, None)
+
+        return await asyncio.get_event_loop().run_in_executor(
+            None, self.collect_threading, await self.parent.documents_cache.get_tokens(document), None
+        )
 
     @language_id("robotframework")
     async def collect_range(
         self, sender: Any, document: TextDocument, range: Range, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        return await self.collect(document, range)
+        return await asyncio.get_event_loop().run_in_executor(
+            None, self.collect_threading, await self.parent.documents_cache.get_tokens(document), range
+        )
 
     @language_id("robotframework")
     async def collect_full_delta(

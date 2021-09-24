@@ -43,9 +43,12 @@ class Token(Protocol):
 
 
 @runtime_checkable
-class Statement(Protocol):
+class HasTokens(Protocol):
     tokens: Tuple[Token, ...]
 
+
+@runtime_checkable
+class Statement(Protocol):
     def get_token(self, type: str) -> Token:
         ...
 
@@ -142,7 +145,7 @@ def whitespace_from_begin_of_token(token: Token) -> str:
     return result
 
 
-def get_tokens_at_position(node: Statement, position: Position) -> List[Token]:
+def get_tokens_at_position(node: HasTokens, position: Position) -> List[Token]:
     return [t for t in node.tokens if position.is_in_range(range := range_from_token(t)) or range.end == position]
 
 

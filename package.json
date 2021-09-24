@@ -137,7 +137,7 @@
         "configuration": "./language-configuration.json"
       }
     ],
-    "#grammars": [
+    "grammars": [
       {
         "language": "robotframework",
         "scopeName": "source.robotframework",

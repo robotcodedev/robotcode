@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+import ast
+import asyncio
+from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, List, Optional
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_itertools import async_chain
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.text_document import TextDocument
 from ...common.types import DocumentUri, Model, Position, Range, TextDocumentIdentifier
-from ...robotframework.utils.async_ast import walk
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -62,8 +63,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
         return TextDocument(document_uri=uri, language_id="robot", version=None, text=text)
 
-    @rpc_method(name="robot/discovering/getTestsFromWorkspace", param_type=GetAllTestsParams)
-    async def get_tests_from_workspace(self, paths: Optional[List[str]]) -> List[TestItem]:
+    def get_tests_from_workspace_threading(self, paths: Optional[List[str]]) -> List[TestItem]:
         from robot.output.logger import LOGGER
         from robot.running import TestCase, TestSuite
 
@@ -151,12 +151,15 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             except BaseException as e:
                 return [TestItem(type="error", id=Path.cwd().name, label=Path.cwd().name, error=str(e))]
 
-    @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
-    async def get_tests_from_document(self, text_document: TextDocumentIdentifier, id: Optional[str]) -> List[TestItem]:
+    @rpc_method(name="robot/discovering/getTestsFromWorkspace", param_type=GetAllTestsParams)
+    async def get_tests_from_workspace(self, paths: Optional[List[str]]) -> List[TestItem]:
+        return await asyncio.get_event_loop().run_in_executor(None, self.get_tests_from_workspace_threading, paths)
+
+    def get_tests_from_document_threading(
+        self, text_document: TextDocumentIdentifier, id: Optional[str], model: ast.AST
+    ) -> List[TestItem]:
         from robot.parsing.model.blocks import TestCase
         from robot.parsing.model.statements import Tags
-
-        model = await self.parent.documents_cache.get_model(self.get_document(text_document.uri))
 
         return [
             TestItem(
@@ -172,12 +175,19 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                     ),
                 ),
                 tags=[
-                    str(tag)
-                    async for tag in async_chain(
-                        *[tags.values async for tags in walk(test_case) if isinstance(tags, Tags)]
-                    )
+                    str(tag) for tag in chain(*[tags.values for tags in ast.walk(test_case) if isinstance(tags, Tags)])
                 ],
             )
-            async for test_case in walk(model)
+            for test_case in ast.walk(model)
             if isinstance(test_case, TestCase)
         ]
+
+    @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
+    async def get_tests_from_document(self, text_document: TextDocumentIdentifier, id: Optional[str]) -> List[TestItem]:
+        return await asyncio.get_event_loop().run_in_executor(
+            None,
+            self.get_tests_from_document_threading,
+            text_document,
+            id,
+            await self.parent.documents_cache.get_model(self.get_document(text_document.uri)),
+        )
