@@ -170,6 +170,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         cls, token: Token, col_offset: Optional[int] = None, length: Optional[int] = None
     ) -> Generator[SemTokenInfo, None, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.variables.search import is_variable
 
         sem_info = cls.mapping().get(token.type, None) if token.type is not None else None
 
@@ -180,9 +181,13 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 if length is None:
                     length = token.end_col_offset - token.col_offset
 
-                yield SemTokenInfo(token.lineno, col_offset, 2, RobotSemTokenTypes.VARIABLE_BEGIN)
-                yield SemTokenInfo.from_token(token, sem_info[0], sem_info[1], col_offset + 2, length - 3)
-                yield SemTokenInfo(token.lineno, col_offset + length - 1, 1, RobotSemTokenTypes.VARIABLE_END)
+                if is_variable(token.value):
+                    yield SemTokenInfo(token.lineno, col_offset, 2, RobotSemTokenTypes.VARIABLE_BEGIN)
+                    yield SemTokenInfo.from_token(token, sem_info[0], sem_info[1], col_offset + 2, length - 3)
+                    yield SemTokenInfo(token.lineno, col_offset + length - 1, 1, RobotSemTokenTypes.VARIABLE_END)
+                else:
+                    yield SemTokenInfo.from_token(token, sem_info[0], sem_info[1])
+
             if token.type == RobotToken.ARGUMENT and "\\" in token.value:
                 if col_offset is None:
                     col_offset = token.col_offset
@@ -228,7 +233,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             for e in cls.generate_sem_sub_tokens(token):
                 yield e
 
-    def collect_threading(
+    def collect(
         self, tokens: Iterable[Token], range: Optional[Range]
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
 
@@ -279,22 +284,25 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
         return SemanticTokens(data=data)
 
+    async def collect_threading(
+        self, document: TextDocument, range: Optional[Range]
+    ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
+        return await asyncio.get_event_loop().run_in_executor(
+            None, self.collect, await self.parent.documents_cache.get_tokens(document), range
+        )
+
     @language_id("robotframework")
     async def collect_full(
         self, sender: Any, document: TextDocument, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-
-        return await asyncio.get_event_loop().run_in_executor(
-            None, self.collect_threading, await self.parent.documents_cache.get_tokens(document), None
-        )
+        return await document.get_cache(self.collect_threading, None)
+        # return await self.collect_threading(document, None)
 
     @language_id("robotframework")
     async def collect_range(
         self, sender: Any, document: TextDocument, range: Range, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        return await asyncio.get_event_loop().run_in_executor(
-            None, self.collect_threading, await self.parent.documents_cache.get_tokens(document), range
-        )
+        return await self.collect_threading(document, range)
 
     @language_id("robotframework")
     async def collect_full_delta(
