@@ -75,8 +75,45 @@ class JsonRPCErrors:
 PROTOCOL_VERSION = "2.0"
 
 
+def get_loads() -> Callable[..., Any]:
+
+    try:
+        import orjson
+
+        return cast(Callable[..., Any], orjson.loads)
+
+    except ImportError:
+        pass
+
+    import json
+
+    return json.loads
+
+
+def get_dumps() -> Callable[..., Any]:
+    try:
+        import orjson
+
+        def orjson_dumps(__obj: Any, *, default: Any, indent: Optional[bool] = False) -> str:
+            # orjson.dumps returns bytes, to match standard json.dumps we need to decode
+            return orjson.dumps(__obj, default=default, option=orjson.OPT_INDENT_2 if indent else 0).decode()
+
+        return orjson_dumps
+
+    except ImportError:
+        pass
+
+    import json
+
+    return json.dumps
+
+
 class JsonRPCMessage(BaseModel):
     jsonrpc: str = Field(PROTOCOL_VERSION, const=True)
+
+    class Config:
+        json_loads = get_loads()
+        json_dumps = get_dumps()
 
 
 class JsonRPCNotification(JsonRPCMessage):

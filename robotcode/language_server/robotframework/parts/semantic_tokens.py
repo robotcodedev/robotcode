@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import itertools
 import operator
 import re
 from enum import Enum
@@ -96,6 +97,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
         parent.semantic_tokens.token_types += [e for e in RobotSemTokenTypes]
+
         parent.semantic_tokens.collect_full.add(self.collect_full)
         parent.semantic_tokens.collect_range.add(self.collect_range)
         # parent.semantic_tokens.collect_full_delta.add(self.collect_full_delta)
@@ -188,7 +190,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 else:
                     yield SemTokenInfo.from_token(token, sem_info[0], sem_info[1])
 
-            if token.type == RobotToken.ARGUMENT and "\\" in token.value:
+            elif token.type == RobotToken.ARGUMENT and "\\" in token.value:
                 if col_offset is None:
                     col_offset = token.col_offset
                 if length is None:
@@ -241,19 +243,10 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         last_line = 0
         last_col = 0
 
-        start = True
-
-        for robot_token in tokens:
-            if range is not None:
-                if start:
-                    if not token_in_range(robot_token, range):
-                        continue
-                    else:
-                        start = False
-                else:
-                    if not token_in_range(robot_token, range):
-                        break
-
+        for robot_token in itertools.takewhile(
+            lambda t: range is not None and token_in_range(t, range),
+            itertools.dropwhile(lambda t: range is None or not token_in_range(t, range), tokens),
+        ):
             for token in self.generate_sem_tokens(robot_token):
                 current_line = token.lineno - 1
 
