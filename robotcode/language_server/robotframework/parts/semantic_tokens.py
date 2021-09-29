@@ -244,8 +244,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         last_col = 0
 
         for robot_token in itertools.takewhile(
-            lambda t: range is not None and token_in_range(t, range),
-            itertools.dropwhile(lambda t: range is None or not token_in_range(t, range), tokens),
+            lambda t: range is None or token_in_range(t, range),
+            itertools.dropwhile(lambda t: range is not None and not token_in_range(t, range), tokens),
         ):
             for token in self.generate_sem_tokens(robot_token):
                 current_line = token.lineno - 1
