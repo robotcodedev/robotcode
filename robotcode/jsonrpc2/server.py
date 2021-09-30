@@ -116,12 +116,12 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
         protocol = self.create_protocol()
 
-        protocol.connection_made(transport)
-
         def run_io_nonblocking() -> None:
             self._stdio_stop_event = asyncio.Event()
 
             async def aio_readline(rfile: BinaryIO, protocol: asyncio.Protocol) -> None:
+                protocol.connection_made(transport)
+
                 while self._stdio_stop_event is not None and not self._stdio_stop_event.is_set() and not rfile.closed:
                     data = await self.loop.run_in_executor(None, cast(io.BufferedReader, rfile).read1, 1000)
                     protocol.data_received(data)

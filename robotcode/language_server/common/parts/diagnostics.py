@@ -82,7 +82,7 @@ class PublishDiagnosticsEntry:
                 except BaseException:
                     pass
 
-        asyncio.ensure_future(cancel())
+        asyncio.create_task(cancel())
 
 
 @dataclass

@@ -20,6 +20,7 @@ from typing import (
     Union,
 )
 
+from ....utils.async_event import CancelationToken
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.text_document import TextDocument
@@ -64,6 +65,7 @@ class RobotSemTokenTypes(Enum):
     VARIABLE_BEGIN = "variableBegin"
     VARIABLE_END = "variableEnd"
     ESCAPE = "escape"
+    NAMESPACE = "namespace"
 
 
 class SemTokenInfo(NamedTuple):
@@ -204,6 +206,35 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         col_offset + g.start(),
                         g.end() - g.start(),
                     )
+            elif token.type == RobotToken.KEYWORD:
+                if col_offset is None:
+                    col_offset = token.col_offset
+                if length is None:
+                    length = token.end_col_offset - token.col_offset
+
+                index = token.value.find(".")
+                old_index = 0
+                while index >= 0:
+                    if index > 0:
+                        yield SemTokenInfo(
+                            token.lineno,
+                            col_offset + old_index,
+                            index - old_index,
+                            RobotSemTokenTypes.NAMESPACE,
+                            {SemanticTokenModifiers.DEFAULT_LIBRARY} if token.value[:index] == "BuiltIn" else None,
+                        )
+                    yield SemTokenInfo(token.lineno, col_offset + index, 1, RobotSemTokenTypes.SEPARATOR)
+
+                    new_index = token.value.find(".", index + 1)
+                    if new_index >= 0:
+                        old_index = index
+                        index = new_index
+                    else:
+                        break
+
+                yield SemTokenInfo.from_token(
+                    token, sem_info[0], sem_info[1], col_offset + index + 1, length - index - 1
+                )
             else:
                 yield SemTokenInfo.from_token(token, sem_info[0], sem_info[1], col_offset, length)
 
@@ -236,7 +267,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 yield e
 
     def collect(
-        self, tokens: Iterable[Token], range: Optional[Range]
+        self, tokens: Iterable[Token], range: Optional[Range], cancel_token: CancelationToken
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
 
         data = []
@@ -244,9 +275,14 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         last_col = 0
 
         for robot_token in itertools.takewhile(
-            lambda t: range is None or token_in_range(t, range),
-            itertools.dropwhile(lambda t: range is not None and not token_in_range(t, range), tokens),
+            lambda t: not cancel_token.throw_if_canceled() and (range is None or token_in_range(t, range)),
+            itertools.dropwhile(
+                lambda t: not cancel_token.throw_if_canceled() and range is not None and not token_in_range(t, range),
+                tokens,
+            ),
         ):
+            cancel_token.throw_if_canceled()
+
             for token in self.generate_sem_tokens(robot_token):
                 current_line = token.lineno - 1
 
@@ -280,16 +316,20 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
     async def collect_threading(
         self, document: TextDocument, range: Optional[Range]
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        return await asyncio.get_event_loop().run_in_executor(
-            None, self.collect, await self.parent.documents_cache.get_tokens(document), range
-        )
+        try:
+            cancel_token = CancelationToken()
+            return await asyncio.get_event_loop().run_in_executor(
+                None, self.collect, await self.parent.documents_cache.get_tokens(document), range, cancel_token
+            )
+        except BaseException:
+            cancel_token.cancel()
+            raise
 
     @language_id("robotframework")
     async def collect_full(
         self, sender: Any, document: TextDocument, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         return await document.get_cache(self.collect_threading, None)
-        # return await self.collect_threading(document, None)
 
     @language_id("robotframework")
     async def collect_range(

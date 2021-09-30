@@ -119,6 +119,9 @@
           ],
           "escape": [
             "constant.character.escape.robotframework"
+          ],
+          "namespace": [
+            "entity.name.namespace.robotframework"
           ]
         }
       }
@@ -137,7 +140,7 @@
         "configuration": "./language-configuration.json"
       }
     ],
-    "#grammars": [
+    "grammars": [
       {
         "language": "robotframework",
         "scopeName": "source.robotframework",

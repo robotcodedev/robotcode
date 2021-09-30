@@ -163,8 +163,8 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
                 self._logger.exception(ex, exc_info=ex)
 
         for m in iterator:
-            future = asyncio.ensure_future(self.handle_message(m))
-            future.add_done_callback(done)
+            task = asyncio.create_task(self.handle_message(m))
+            task.add_done_callback(done)
 
     @_logger.call
     async def handle_message(self, message: ProtocolMessage) -> None:
@@ -262,11 +262,11 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
 
         try:
             if e is None or not callable(e.method):
-                result = asyncio.ensure_future(self.handle_unknown_command(message))
+                result = asyncio.create_task(self.handle_unknown_command(message))
             else:
                 params = self._convert_params(e.method, e.param_type, message.arguments)
 
-                result = asyncio.ensure_future(ensure_coroutine(e.method)(*params[0], **params[1]))
+                result = asyncio.create_task(ensure_coroutine(e.method)(*params[0], **params[1]))
 
             with self._received_request_lock:
                 self._received_request[message.seq] = result

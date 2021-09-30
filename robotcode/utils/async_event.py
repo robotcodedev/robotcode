@@ -25,6 +25,7 @@ from typing import (
 from ..utils.inspect import ensure_coroutine
 
 __all__ = [
+    "CancelationToken",
     "AsyncEventIterator",
     "AsyncEvent",
     "async_event",
@@ -37,6 +38,7 @@ __all__ = [
     "async_threading_event_iterator",
     "async_threading_event",
 ]
+
 
 _TResult = TypeVar("_TResult")
 _TCallable = TypeVar("_TCallable", bound=Callable[..., Any])
@@ -185,12 +187,9 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
             set(self),
         ):
             if method is not None:
-                future = asyncio.ensure_future(ensure_coroutine(method)(*args, **kwargs))
-                if isinstance(future, asyncio.Task):
-                    future.set_name(
-                        f"{self._task_name_prefix() if callable(self._task_name_prefix) else self._task_name_prefix}"
-                        f"->{method.__qualname__}(...)"
-                    )
+                # future = asyncio.ensure_future(ensure_coroutine(method)(*args, **kwargs))
+                future = asyncio.create_task(ensure_coroutine(method)(*args, **kwargs))
+
                 if result_callback is not None:
                     future.add_done_callback(_done)
                 awaitables.append(future)
@@ -198,9 +197,16 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
         for a in asyncio.as_completed(awaitables):
             try:
                 yield await a
-            except asyncio.CancelledError as e:
-                if return_exceptions:
-                    yield e
+            except asyncio.CancelledError:
+                for f in awaitables:
+                    if not f.done():
+                        f.cancel()
+                        try:
+                            yield await a
+                        except BaseException:
+                            pass
+
+                raise
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
@@ -320,9 +326,15 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
         for a in asyncio.as_completed(awaitables):
             try:
                 yield await a
-            except asyncio.CancelledError as e:
-                if return_exceptions:
-                    yield e
+            except asyncio.CancelledError:
+                for f in awaitables:
+                    if not f.done():
+                        f.cancel()
+                        try:
+                            yield await a
+                        except BaseException:
+                            pass
+                raise
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
@@ -358,10 +370,6 @@ class async_threading_event(  # noqa: N801
         super().__init__(_func, AsyncThreadingEvent[_TCallable, Any], thread_name_prefix=lambda: _get_name_prefix(self))
 
 
-# async_tasking_event_iterator = async_threading_event_iterator
-# async_tasking_event = async_threading_event
-
-
 class async_tasking_event_iterator(  # noqa: N801
     AsyncEventDescriptorBase[_TCallable, Any, AsyncTaskingEventIterator[_TCallable, Any]]
 ):
@@ -374,3 +382,23 @@ class async_tasking_event_iterator(  # noqa: N801
 class async_tasking_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncTaskingEvent[_TCallable, Any]]):  # noqa: N801
     def __init__(self, _func: _TCallable) -> None:
         super().__init__(_func, AsyncTaskingEvent[_TCallable, Any], task_name_prefix=lambda: _get_name_prefix(self))
+
+
+class CancelationToken:
+    def __init__(self) -> None:
+        self._canceled = False
+        self._lock = threading.RLock()
+
+    @property
+    def canceled(self) -> bool:
+        with self._lock:
+            return self._canceled
+
+    def cancel(self) -> None:
+        with self._lock:
+            self._canceled = True
+
+    def throw_if_canceled(self) -> bool:
+        if self.canceled:
+            raise asyncio.CancelledError()
+        return False

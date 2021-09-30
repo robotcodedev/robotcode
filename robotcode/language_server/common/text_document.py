@@ -38,6 +38,12 @@ class InvalidRangeError(Exception):
 _T = TypeVar("_T")
 
 
+class CacheEntry:
+    def __init__(self, data: Any = None) -> None:
+        self.data = data
+        self.lock: asyncio.Lock = asyncio.Lock()
+
+
 class TextDocument:
     def __init__(
         self,
@@ -73,7 +79,7 @@ class TextDocument:
 
         self._lines: Optional[List[str]] = None
 
-        self._cache: Dict[weakref.ref[Any], Any] = {}
+        self._cache: Dict[weakref.ref[Any], CacheEntry] = {}
         self._in_change_cache = False
 
         self._data: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
@@ -170,23 +176,6 @@ class TextDocument:
         async with self._lock:
             self._invalidate_data()
 
-    async def get_cache(
-        self,
-        entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]],
-        *args: Any,
-        **kwargs: Any,
-    ) -> _T:
-        if self._in_change_cache:
-            return await self._get_cache(entry, *args, **kwargs)
-
-        else:
-            self._in_change_cache = True
-            try:
-                async with self._lock:
-                    return await self._get_cache(entry, *args, **kwargs)
-            finally:
-                self._in_change_cache = False
-
     async def __remove_cache_entry_safe(self, ref: Any) -> None:
         async with self._lock:
             self._cache.pop(ref)
@@ -206,7 +195,7 @@ class TextDocument:
 
         return reference
 
-    async def _get_cache(
+    async def get_cache(
         self,
         entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]],
         *args: Any,
@@ -216,42 +205,21 @@ class TextDocument:
         reference = self.__get_cache_reference(entry)
 
         if reference not in self._cache:
-            self._cache[reference] = None
+            async with self._lock:
+                self._cache[reference] = CacheEntry()
 
-        if self._cache[reference] is None:
-            result = entry(self, *args, **kwargs)  # type: ignore
+        e = self._cache[reference]
 
-            if isinstance(result, Awaitable):
-                self._cache[reference] = await result
-            else:
-                self._cache[reference] = result
+        async with e.lock:
+            if e.data is None:
+                result = entry(self, *args, **kwargs)  # type: ignore
 
-        return cast("_T", self._cache[reference])
+                if isinstance(result, Awaitable):
+                    e.data = await result
+                else:
+                    e.data = result
 
-    async def set_cache(
-        self,
-        entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]],
-        data: _T,
-    ) -> _T:
-        if self._in_change_cache:
-            return await self._set_cache(entry, data)
-
-        else:
-            self._in_change_cache = True
-            try:
-                async with self._lock:
-                    return await self._set_cache(entry, data)
-            finally:
-                self._in_change_cache = False
-
-    async def _set_cache(
-        self, entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]], data: _T
-    ) -> _T:
-        reference = self.__get_cache_reference(entry)
-
-        self._cache[reference] = data
-
-        return data
+        return cast("_T", e.data)
 
     async def remove_cache_entry(
         self, entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]]

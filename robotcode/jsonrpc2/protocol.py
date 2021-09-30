@@ -399,11 +399,11 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
         if isinstance(transport, asyncio.WriteTransport):
             self.write_transport = transport
 
-        asyncio.ensure_future(self.on_connection_made(self, transport))
+        asyncio.create_task(self.on_connection_made(self, transport))
 
     @_logger.call
     def connection_lost(self, exc: Optional[BaseException]) -> None:
-        asyncio.ensure_future(self.on_connection_lost(self, exc))
+        asyncio.create_task(self.on_connection_lost(self, exc))
 
     @_logger.call
     def eof_received(self) -> Optional[bool]:
@@ -508,8 +508,8 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 self._logger.exception(ex, exc_info=ex)
 
         for m in iterator:
-            future = asyncio.ensure_future(self.handle_message(m))
-            future.add_done_callback(done)
+            task = asyncio.create_task(self.handle_message(m))
+            task.add_done_callback(done)
 
     @_logger.call
     async def handle_message(self, message: JsonRPCMessage) -> None:
@@ -698,7 +698,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         try:
             params = self._convert_params(e.method, e.param_type, message.params)
 
-            result = asyncio.ensure_future(ensure_coroutine(e.method)(*params[0], **params[1]))
+            result = asyncio.create_task(ensure_coroutine(e.method)(*params[0], **params[1]))
 
             with self._received_request_lock:
                 self._received_request[message.id] = result

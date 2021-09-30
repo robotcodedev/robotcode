@@ -4,10 +4,20 @@ import ast
 import asyncio
 import enum
 import io
+import logging
 import weakref
-from typing import TYPE_CHECKING, Iterator, List, Optional, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generator,
+    Iterable,
+    List,
+    Optional,
+    cast,
+)
 
-from ....utils.async_event import async_tasking_event
+from ....utils.async_event import CancelationToken, async_tasking_event
 from ....utils.uri import Uri
 from ...common.parts.workspace import WorkspaceFolder
 from ...common.text_document import TextDocument
@@ -58,108 +68,207 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         else:
             return DocumentType.UNKNOWN
 
-    async def get_tokens(self, document: TextDocument) -> List[Token]:
-        return await document.get_cache(self.__get_tokens)
+    async def get_tokens(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> List[Token]:
+        return await document.get_cache(self.__get_tokens, cancelation_token)
 
-    async def __get_tokens(self, document: TextDocument) -> List[Token]:
-        import robot.api
+    async def __get_tokens(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> List[Token]:
+        logging.info(f"get tokens {document.uri}")
 
         document_type = await self.get_document_type(document)
+        if document_type == DocumentType.INIT:
+            return await self.get_init_tokens(document, cancelation_token)
+        elif document_type == DocumentType.GENERAL:
+            return await self.get_general_tokens(document, cancelation_token)
+        elif document_type == DocumentType.RESOURCE:
+            return await self.get_resource_tokens(document, cancelation_token)
+        else:
+            raise UnknownFileTypeError(str(document.uri))
 
-        def get(text: str) -> List[Token]:
-            gen_func: Iterator[Token]
+    async def get_general_tokens(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> List[Token]:
+        return await document.get_cache(self.__get_general_tokens, cancelation_token)
 
+    async def __get_general_tokens(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> List[Token]:
+        import robot.api
+
+        def get(text: str, cancelation_token: CancelationToken) -> List[Token]:
             with io.StringIO(text) as content:
-                if document_type == DocumentType.INIT:
-                    gen_func = robot.api.get_init_tokens(content)
-                elif document_type == DocumentType.GENERAL:
-                    gen_func = robot.api.get_tokens(content)
-                elif document_type == DocumentType.RESOURCE:
-                    gen_func = robot.api.get_resource_tokens(content)
-                else:
-                    raise UnknownFileTypeError(str(document.uri))
+                return [e for e in robot.api.get_tokens(content) if not cancelation_token.throw_if_canceled()]
 
-                return [e for e in gen_func]
+        return await self.__get_tokens_internal(document, get, cancelation_token)
 
-        return await asyncio.get_event_loop().run_in_executor(None, get, document.text)
+    async def __get_tokens_internal(
+        self,
+        document: TextDocument,
+        get: Callable[[str, CancelationToken], List[Token]],
+        cancelation_token: Optional[CancelationToken] = None,
+    ) -> List[Token]:
+        try:
+            if cancelation_token is None:
+                cancelation_token = CancelationToken()
+            return await asyncio.get_event_loop().run_in_executor(None, get, document.text, cancelation_token)
+        except asyncio.CancelledError:
+            if cancelation_token is not None:
+                cancelation_token.cancel()
+            raise
 
-    async def get_model(self, document: TextDocument) -> ast.AST:
+    async def get_resource_tokens(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> List[Token]:
+        return await document.get_cache(self.__get_resource_tokens, cancelation_token)
+
+    async def __get_resource_tokens(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> List[Token]:
+        import robot.api
+
+        def get(text: str, cancelation_token: CancelationToken) -> List[Token]:
+            with io.StringIO(text) as content:
+                return [e for e in robot.api.get_resource_tokens(content) if not cancelation_token.throw_if_canceled()]
+
+        return await self.__get_tokens_internal(document, get, cancelation_token)
+
+    async def get_init_tokens(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> List[Token]:
+        return await document.get_cache(self.__get_init_tokens, cancelation_token)
+
+    async def __get_init_tokens(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> List[Token]:
+        import robot.api
+
+        def get(text: str, cancelation_token: CancelationToken) -> List[Token]:
+            with io.StringIO(text) as content:
+                return [e for e in robot.api.get_init_tokens(content) if not cancelation_token.throw_if_canceled()]
+
+        return await self.__get_tokens_internal(document, get, cancelation_token)
+
+    async def get_model(self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None) -> ast.AST:
         document_type = await self.get_document_type(document)
 
         if document_type == DocumentType.INIT:
-            return await self.get_init_model(document)
+            return await self.get_init_model(document, cancelation_token)
         if document_type == DocumentType.GENERAL:
-            return await self.get_general_model(document)
+            return await self.get_general_model(document, cancelation_token)
         if document_type == DocumentType.RESOURCE:
-            return await self.get_resource_model(document)
+            return await self.get_resource_model(document, cancelation_token)
         else:
             raise UnknownFileTypeError(f"Unknown file type '{document.uri}'.")
 
-    async def get_general_model(self, document: TextDocument) -> ast.AST:
-        return await document.get_cache(self.__get_robot_model)
+    async def __get_model(
+        self,
+        document: TextDocument,
+        tokens: Iterable[Any],
+        document_type: DocumentType,
+        cancelation_token: Optional[CancelationToken] = None,
+    ) -> ast.AST:
+        from robot.parsing.lexer import Token
+        from robot.parsing.parser.parser import _get_model
 
-    async def __get_robot_model(self, document: TextDocument) -> ast.AST:
-        import robot.api
+        if cancelation_token is not None:
+            cancelation_token = CancelationToken()
 
-        with io.StringIO(document.text) as content:
-            model = await asyncio.get_event_loop().run_in_executor(None, robot.api.get_model, content)
+        def get_tokens(_source: str, _data_only: bool = False) -> Generator[Token, None, None]:
+            for t in tokens:
+                if cancelation_token is not None:
+                    cancelation_token.throw_if_canceled()
+                yield t
+
+        try:
+            model = await asyncio.get_event_loop().run_in_executor(None, _get_model, get_tokens, document.uri.to_path())
+        except asyncio.CancelledError:
+            if cancelation_token is not None:
+                cancelation_token.cancel()
+            raise
 
         setattr(model, "source", str(document.uri.to_path()))
-        setattr(model, "model_type", DocumentType.GENERAL)
+        setattr(model, "model_type", document_type)
 
         return cast(ast.AST, model)
 
-    async def get_resource_model(self, document: TextDocument) -> ast.AST:
-        return await document.get_cache(self.__get_resource_model)
+    async def get_general_model(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> ast.AST:
+        return await document.get_cache(self.__get_general_model, cancelation_token)
 
-    async def __get_resource_model(self, document: TextDocument) -> ast.AST:
-        import robot.api
+    async def __get_general_model(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> ast.AST:
+        return await self.__get_model(
+            document, await self.get_general_tokens(document), DocumentType.GENERAL, cancelation_token
+        )
 
-        with io.StringIO(document.text) as content:
-            model = await asyncio.get_event_loop().run_in_executor(None, robot.api.get_resource_model, content)
+    async def get_resource_model(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> ast.AST:
+        return await document.get_cache(self.__get_resource_model, cancelation_token)
 
-        setattr(model, "source", str(document.uri.to_path()))
-        setattr(model, "model_type", DocumentType.RESOURCE)
+    async def __get_resource_model(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> ast.AST:
+        return await self.__get_model(
+            document, await self.get_resource_tokens(document), DocumentType.RESOURCE, cancelation_token
+        )
 
-        return cast(ast.AST, model)
+    async def get_init_model(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> ast.AST:
+        return await document.get_cache(self.__get_init_model, cancelation_token)
 
-    async def get_init_model(self, document: TextDocument) -> ast.AST:
-        return await document.get_cache(self.__get_init_model)
+    async def __get_init_model(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> ast.AST:
+        return await self.__get_model(
+            document, await self.get_init_tokens(document), DocumentType.INIT, cancelation_token
+        )
 
-    async def __get_init_model(self, document: TextDocument) -> ast.AST:
-        import robot.api
+    async def get_namespace(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> Namespace:
+        return await document.get_cache(self.__get_namespace, cancelation_token)
 
-        with io.StringIO(document.text) as content:
-            model = await asyncio.get_event_loop().run_in_executor(None, robot.api.get_init_model, content)
+    async def __get_namespace(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> Namespace:
+        return await self.__get_namespace_for_document_type(document, None, cancelation_token)
 
-        setattr(model, "source", str(document.uri.to_path()))
-        setattr(model, "model_type", DocumentType.INIT)
+    async def get_resource_namespace(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> Namespace:
+        return await document.get_cache(self.__get_resource_namespace, cancelation_token)
 
-        return cast(ast.AST, model)
+    async def __get_resource_namespace(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> Namespace:
+        return await self.__get_namespace_for_document_type(document, DocumentType.RESOURCE, cancelation_token)
 
-    async def get_namespace(self, document: TextDocument) -> Namespace:
-        return await document.get_cache(self.__get_namespace)
+    async def get_init_namespace(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> Namespace:
+        return await document.get_cache(self.__get_init_namespace, cancelation_token)
 
-    async def __get_namespace(self, document: TextDocument) -> Namespace:
-        return await self.__get_namespace_for_document_type(document, None)
+    async def __get_init_namespace(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> Namespace:
+        return await self.__get_namespace_for_document_type(document, DocumentType.INIT, cancelation_token)
 
-    async def get_resource_namespace(self, document: TextDocument) -> Namespace:
-        return await document.get_cache(self.__get_resource_namespace)
+    async def get_general_namespace(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> Namespace:
+        return await document.get_cache(self.__get_general_namespace, cancelation_token)
 
-    async def __get_resource_namespace(self, document: TextDocument) -> Namespace:
-        return await self.__get_namespace_for_document_type(document, DocumentType.RESOURCE)
-
-    async def get_init_namespace(self, document: TextDocument) -> Namespace:
-        return await document.get_cache(self.__get_init_namespace)
-
-    async def __get_init_namespace(self, document: TextDocument) -> Namespace:
-        return await self.__get_namespace_for_document_type(document, DocumentType.INIT)
-
-    async def get_general_namespace(self, document: TextDocument) -> Namespace:
-        return await document.get_cache(self.__get_general_namespace)
-
-    async def __get_general_namespace(self, document: TextDocument) -> Namespace:
-        return await self.__get_namespace_for_document_type(document, DocumentType.GENERAL)
+    async def __get_general_namespace(
+        self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
+    ) -> Namespace:
+        return await self.__get_namespace_for_document_type(document, DocumentType.GENERAL, cancelation_token)
 
     @async_tasking_event
     async def namespace_invalidated(sender, document: TextDocument) -> None:
@@ -172,22 +281,25 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
             await self.namespace_invalidated(self, document)
 
     async def __get_namespace_for_document_type(
-        self, document: TextDocument, document_type: Optional[DocumentType]
+        self,
+        document: TextDocument,
+        document_type: Optional[DocumentType],
+        cancelation_token: Optional[CancelationToken] = None,
     ) -> Namespace:
         if document_type is not None and document_type == DocumentType.INIT:
-            model = await self.get_init_model(document)
+            model = await self.get_init_model(document, cancelation_token)
         elif document_type is not None and document_type == DocumentType.RESOURCE:
-            model = await self.get_resource_model(document)
-        elif document_type is not None and document_type == DocumentType.RESOURCE:
-            model = await self.get_general_model(document)
+            model = await self.get_resource_model(document, cancelation_token)
+        elif document_type is not None and document_type == DocumentType.GENERAL:
+            model = await self.get_general_model(document, cancelation_token)
         else:
-            model = await self.get_model(document)
+            model = await self.get_model(document, cancelation_token)
 
         imports_manager = await self.get_imports_manager(document)
 
         def invalidate(namespace: Namespace) -> None:
             if self._loop.is_running():
-                asyncio.ensure_future(self.__invalidate_namespace(namespace))
+                asyncio.create_task(self.__invalidate_namespace(namespace))
 
         return Namespace(imports_manager, model, str(document.uri.to_path()), invalidate, document)
 
