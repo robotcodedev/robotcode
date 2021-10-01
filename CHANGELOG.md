@@ -6,6 +6,11 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ##  0.2.4
 
+### added
+
+- improve performance
+- implement semantic syntax highlightning
+
 ##  0.2.2
 
 ### added
