@@ -57,6 +57,7 @@ class TextDocument:
         super().__init__()
 
         self._lock = asyncio.Lock()
+        self._references: weakref.WeakSet[Any] = weakref.WeakSet()
 
         self.document_uri = (
             text_document_item.uri
@@ -85,6 +86,10 @@ class TextDocument:
         self._data: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
 
         self._loop = asyncio.get_event_loop()
+
+    @property
+    def references(self) -> weakref.WeakSet[Any]:
+        return self._references
 
     def __del__(self) -> None:
         self._clear()

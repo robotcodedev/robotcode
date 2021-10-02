@@ -75,27 +75,72 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
     def __hash__(self) -> int:
         return id(self)
 
-    def _create_document(self, text_document: TextDocumentItem) -> TextDocument:
-        return TextDocument(text_document)
+    def _create_document(
+        self,
+        text_document_item: Optional[TextDocumentItem] = None,
+        *,
+        document_uri: Optional[DocumentUri] = None,
+        language_id: Optional[str] = None,
+        version: Optional[int] = None,
+        text: Optional[str] = None,
+    ) -> TextDocument:
+        return TextDocument(
+            text_document_item=text_document_item,
+            document_uri=document_uri,
+            language_id=language_id,
+            version=version,
+            text=text,
+        )
+
+    def append_document(
+        self,
+        document_uri: DocumentUri,
+        language_id: str,
+        text: Optional[str],
+        version: Optional[int] = None,
+    ) -> TextDocument:
+        document = self._create_document(document_uri=document_uri, language_id=language_id, version=version, text=text)
+
+        self._documents[document_uri] = document
+        return document
 
     @rpc_method(name="textDocument/didOpen", param_type=DidOpenTextDocumentParams)
     @_logger.call
     async def _text_document_did_open(self, text_document: TextDocumentItem, *args: Any, **kwargs: Any) -> None:
-        document = self._create_document(text_document)
+        uri = str(Uri(text_document.uri).normalized())
+        document = self.get(uri, None)
 
-        self._documents[str(Uri(text_document.uri).normalized())] = document
+        if document is None:
+            document = self._create_document(text_document)
 
-        await self.did_open(self, document)
+            self._documents[uri] = document
+            await self.did_open(self, document)
+        else:
+            await document.apply_full_change(text_document.version, text_document.text)
+
+        document.references.add(self)
 
     @rpc_method(name="textDocument/didClose", param_type=DidCloseTextDocumentParams)
     @_logger.call
     async def _text_document_did_close(self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any) -> None:
-        document = self._documents.pop(str(Uri(text_document.uri).normalized()), None)
+        uri = str(Uri(text_document.uri).normalized())
+        document = self._documents.get(uri, None)
 
         if document is not None:
+            document.references.remove(self)
+
+            await self.close_document(document)
+
+    async def close_document(self, document: TextDocument) -> None:
+        if len(document.references) == 0:
+            self._documents.pop(str(document.uri), None)
+
             await self.did_close(self, document)
+
             await document.clear()
             del document
+        else:
+            document.version = None
 
         gc.collect()
 

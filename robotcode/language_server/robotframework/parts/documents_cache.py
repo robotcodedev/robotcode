@@ -4,7 +4,6 @@ import ast
 import asyncio
 import enum
 import io
-import logging
 import weakref
 from typing import (
     TYPE_CHECKING,
@@ -76,8 +75,6 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     async def __get_tokens(
         self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
     ) -> List[Token]:
-        logging.info(f"get tokens {document.uri}")
-
         document_type = await self.get_document_type(document)
         if document_type == DocumentType.INIT:
             return await self.get_init_tokens(document, cancelation_token)

@@ -378,13 +378,15 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
 
         try:
             if message.success:
-                entry.future.set_result(try_convert_value(message.body, entry.result_type))
+                if not entry.future.done():
+                    entry.future.set_result(try_convert_value(message.body, entry.result_type))
             else:
                 raise DebugAdapterErrorResponseError(ErrorResponse(**message.dict()))
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
-            entry.future.set_exception(e)
+            if not entry.future.done():
+                entry.future.set_exception(e)
 
     @_logger.call
     async def handle_event(self, message: Event) -> None:

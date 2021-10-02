@@ -704,28 +704,27 @@ class Namespace:
     async def _ensure_initialized(self) -> None:
         async with self._initialize_lock:
             if not self._initialzed:
-                try:
-                    imports = await self.get_imports()
+                imports = await self.get_imports()
 
-                    if self.document is not None:
+                if self.document is not None:
 
-                        old_imports = self.document.get_data(Namespace)
-                        if old_imports is None:
-                            self.document.set_data(Namespace, imports)
-                        elif old_imports != imports:
-                            new_imports = []
-                            for e in old_imports:
-                                if e in imports:
-                                    new_imports.append(e)
-                            for e in imports:
-                                if e not in new_imports:
-                                    new_imports.append(e)
-                            self.document.set_data(Namespace, new_imports)
+                    old_imports = self.document.get_data(Namespace)
+                    if old_imports is None:
+                        self.document.set_data(Namespace, imports)
+                    elif old_imports != imports:
+                        new_imports = []
+                        for e in old_imports:
+                            if e in imports:
+                                new_imports.append(e)
+                        for e in imports:
+                            if e not in new_imports:
+                                new_imports.append(e)
+                        self.document.set_data(Namespace, new_imports)
 
-                    await self._import_default_libraries()
-                    await self._import_imports(imports, str(Path(self.source).parent), top_level=True)
-                finally:
-                    self._initialzed = True
+                await self._import_default_libraries()
+                await self._import_imports(imports, str(Path(self.source).parent), top_level=True)
+
+                self._initialzed = True
 
     async def get_imports(self) -> List[Import]:
         if self._imports is None:

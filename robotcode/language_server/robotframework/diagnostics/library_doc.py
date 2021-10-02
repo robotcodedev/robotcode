@@ -408,14 +408,13 @@ class LibraryDoc(Model):
             if any(v for v in self.inits.values() if v.args):
                 result += "\n\n---\n".join(i.to_markdown() for i in self.inits.values())
 
-        if self.doc:
-            if result:
-                result += "\n\n---\n"
-            result += (
-                MarkDownFormatter().format(self.get_full_doc(only_doc))
-                if self.doc_format == DEFAULT_DOC_FORMAT
-                else self.doc
-            )
+        if result:
+            result += "\n\n---\n"
+        result += (
+            MarkDownFormatter().format(self.get_full_doc(only_doc))
+            if self.doc_format == DEFAULT_DOC_FORMAT
+            else self.doc
+        )
 
         return result
 

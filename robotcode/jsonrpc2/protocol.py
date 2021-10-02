@@ -615,11 +615,13 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             return
 
         try:
-            entry.future.set_result(try_convert_value(message.result, entry.result_type))
+            if not entry.future.done():
+                entry.future.set_result(try_convert_value(message.result, entry.result_type))
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
-            entry.future.set_exception(e)
+            if not entry.future.done():
+                entry.future.set_exception(e)
 
     @_logger.call
     async def handle_error(self, message: JsonRPCError) -> None:

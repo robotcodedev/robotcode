@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import asyncio
-import gc
 import weakref
 from collections import OrderedDict
 from concurrent.futures import ProcessPoolExecutor
@@ -220,13 +219,12 @@ class _ResourcesEntry:
         self,
         name: str,
         parent: ImportsManager,
-        get_document_coroutine: Callable[[], Coroutine[Any, Any, Tuple[TextDocument, bool]]],
+        get_document_coroutine: Callable[[], Coroutine[Any, Any, TextDocument]],
     ) -> None:
         super().__init__()
         self.name = name
         self.parent = parent
         self._get_document_coroutine = get_document_coroutine
-        self._delete_on_validate_document = False
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
         self.file_watchers: List[FileWatcherEntry] = []
         self._document: Optional[TextDocument] = None
@@ -265,8 +263,16 @@ class _ResourcesEntry:
 
             return None
 
+    def __close_document(self, document: TextDocument) -> None:
+        asyncio.run_coroutine_threadsafe(self.parent.parent_protocol.documents.close_document(document), self._loop)
+
     async def _update(self) -> None:
-        self._document, self._delete_on_validate_document = await self._get_document_coroutine()
+        self._document = await self._get_document_coroutine()
+
+        for r in self.references:
+            self._document.references.add(r)
+
+            weakref.finalize(r, self.__close_document, self._document)
 
         if self._document.version is None:
             self.file_watchers.append(
@@ -285,12 +291,6 @@ class _ResourcesEntry:
             return
 
         await self._remove_file_watcher()
-
-        if self._delete_on_validate_document:
-            if self._document is not None:
-                await self._document.clear()
-            del self._document
-            gc.collect()
 
         self._document = None
 
@@ -376,7 +376,7 @@ class ImportsManager:
         resource_changed: List[LibraryDoc] = []
 
         async with self._resources_lock:
-            for r_key, r_entry in self._resources.items():
+            for r_entry in self._resources.values():
                 lib_doc: Optional[LibraryDoc] = None
                 try:
                     if not await r_entry.is_valid():
@@ -635,7 +635,7 @@ class ImportsManager:
     async def _get_entry_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> _ResourcesEntry:
         source = await self.find_file(name, base_dir, "Resource")
 
-        async def _get_document() -> Tuple[TextDocument, bool]:
+        async def _get_document() -> TextDocument:
             from robot.utils import FileReader
 
             self._logger.debug(lambda: f"Load resource {name} from source {source}")
@@ -648,16 +648,18 @@ class ImportsManager:
                     f"Supported extensions are {', '.join(repr(s) for s in RESOURCE_EXTENSIONS)}."
                 )
 
-            source_uri = DocumentUri(Uri.from_path(source_path))
+            source_uri = DocumentUri(Uri.from_path(source_path).normalized())
 
             result = self.parent_protocol.documents.get(source_uri, None)
             if result is not None:
-                return result, False
+                return result
 
             with FileReader(source_path) as reader:
                 text = str(reader.read())
 
-            return TextDocument(document_uri=source_uri, language_id="robot", version=None, text=text), True
+            return self.parent_protocol.documents.append_document(
+                document_uri=source_uri, language_id="robotframework", text=text
+            )
 
         async with self._resources_lock:
             entry_key = _ResourcesEntryKey(source)

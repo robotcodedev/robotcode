@@ -61,7 +61,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         with FileReader(Uri(uri).to_path()) as reader:
             text = str(reader.read())
 
-        return TextDocument(document_uri=uri, language_id="robot", version=None, text=text)
+        return TextDocument(document_uri=uri, language_id="robotframework", version=None, text=text)
 
     def get_tests_from_workspace_threading(self, paths: Optional[List[str]]) -> List[TestItem]:
         from robot.output.logger import LOGGER
