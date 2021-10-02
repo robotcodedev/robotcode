@@ -221,7 +221,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                             col_offset + old_index,
                             index - old_index,
                             RobotSemTokenTypes.NAMESPACE,
-                            {SemanticTokenModifiers.DEFAULT_LIBRARY} if token.value[:index] == "BuiltIn" else None,
+                            {SemanticTokenModifiers.DEFAULT_LIBRARY}
+                            if token.value[:index].casefold() == "BuiltIn".casefold()
+                            else None,
                         )
                     yield SemTokenInfo(token.lineno, col_offset + index, 1, RobotSemTokenTypes.SEPARATOR)
 
