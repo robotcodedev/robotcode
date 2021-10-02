@@ -28,7 +28,17 @@
     "RobotFramework",
     "Robot Framework",
     "Robot",
-    "Keyword Driven"
+    "Keyword Driven",
+    "Data Driven",
+    "Acceptance Testing",
+    "Acceptance Test Driven Development",
+    "Test Driven",
+    "Behavior Driven Development",
+    "BDD",
+    "Behavior Driven Testing",
+    "BDT",
+    "Robotic Process Automation",
+    "RPA"
   ],
   "activationEvents": [
     "workspaceContains:**/*.robot",
