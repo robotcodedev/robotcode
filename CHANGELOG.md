@@ -7,6 +7,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 ### added
 
 - correct loading and closing documents/library/resources
+- correct casefold in completion of namespaces
 
 ##  0.2.4
 
