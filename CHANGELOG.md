@@ -4,6 +4,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+##  0.2.6
+
 - update readme
 - semantic tokens now iterate over nodes
 
