@@ -4,6 +4,7 @@ import ast
 from typing import (
     Any,
     AsyncIterator,
+    Generator,
     Iterator,
     List,
     Optional,
@@ -14,6 +15,20 @@ from typing import (
 
 from ...common.types import Position, Range
 from .async_ast import walk
+
+
+def iter_nodes(node: ast.AST) -> Generator[ast.AST, None, None]:
+    for _field, value in ast.iter_fields(node):
+        if isinstance(value, list):
+            for item in value:
+                if isinstance(item, ast.AST):
+                    yield item
+                    yield from iter_nodes(item)
+
+        elif isinstance(value, ast.AST):
+            yield value
+
+            yield from iter_nodes(value)
 
 
 def range_from_node(node: ast.AST) -> Range:

@@ -371,8 +371,10 @@ class CompletionCollector(ModelHelperMixin):
                     library_name = token.value[0 : lib_name_index - r.start.character]  # noqa: E203
 
                     libraries = await namespace.get_libraries()
-                    
-                    library_name = next((e for e in libraries.keys() if e.casefold() == library_name.casefold()), library_name)
+
+                    library_name = next(
+                        (e for e in libraries.keys() if e.casefold() == library_name.casefold()), library_name
+                    )
 
                     if library_name in libraries:
                         r.start.character = lib_name_index + 1
