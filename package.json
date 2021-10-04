@@ -5,6 +5,12 @@
   "icon": "images/icon.png",
   "publisher": "d-biehl",
   "version": "0.2.6",
+  "preview": true,
+  "author": {
+    "name": "Daniel Biehl",
+    "url": "https://github.com/d-biehl/"
+  },
+  "homepage": "https://github.com/d-biehl/robotcode",
   "repository": {
     "type": "git",
     "url": "https://github.com/d-biehl/robotcode"
@@ -354,6 +360,48 @@
         }
       }
     ],
+    "commands": [
+      {
+        "title": "Run Current File",
+        "category": "robotcode",
+        "command": "robotcode.runCurrentFile",
+        "enablement": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder",
+        "icon": "$(run)"
+      },
+      {
+        "title": "Debug Current File",
+        "category": "robotcode",
+        "command": "robotcode.debugCurrentFile",
+        "enablement": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder",
+        "icon": "$(debug-alt)"
+      }
+    ],
+    "menus": {
+      "editor/title/run": [
+        {
+          "command": "robotcode.runCurrentFile",
+          "group": "robotcode@1",
+          "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
+        },
+        {
+          "command": "robotcode.debugCurrentFile",
+          "group": "robotcode@2",
+          "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "robotcode.runCurrentFile",
+          "group": "robotcode@1",
+          "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
+        },
+        {
+          "command": "robotcode.debugCurrentFile",
+          "group": "robotcode@2",
+          "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
+        }
+      ]
+    },
     "breakpoints": [
       {
         "language": "robotframework"

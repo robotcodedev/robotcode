@@ -4,7 +4,14 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+### added
+
+- update readme
+- add run and debug menus to editor title and context menu
+
 ##  0.2.6
+
+### added
 
 - update readme
 - semantic tokens now iterate over nodes

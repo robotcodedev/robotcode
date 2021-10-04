@@ -144,6 +144,12 @@ export class TestControllerManager {
             }
           }
         }
+      }),
+      vscode.commands.registerCommand("robotcode.runCurrentFile", (...args) => {
+        vscode.commands.executeCommand("testing.runCurrentFile", ...args);
+      }),
+      vscode.commands.registerCommand("robotcode.debugCurrentFile", (...args) => {
+        vscode.commands.executeCommand("testing.debugCurrentFile", ...args);
       })
     );
   }
