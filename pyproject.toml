@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "robotcode"
-version = "0.2.6"
+version = "0.2.7"
 description = "Language server,debugger and tools for RobotFramework"
 authors = ["Daniel Biehl <daniel.biehl@imbus.de>"]
 include = ["robotcode/py.typed", "README.md"]
