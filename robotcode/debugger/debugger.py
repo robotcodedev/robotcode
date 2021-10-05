@@ -685,9 +685,9 @@ class Debugger:
         if message["level"] == "FAIL":
             self.last_fail_message = message["message"]
 
-        current_frame = self.stack_frames[-1] if self.stack_frames else None
+        current_frame = self.stack_frames[0] if self.stack_frames else None
         source = Source(path=current_frame.source) if current_frame else None
-        line = current_frame.line - 1 if current_frame else None
+        line = current_frame.line if current_frame else None
 
         if self.output_log:
             self.send_event(
@@ -695,7 +695,7 @@ class Debugger:
                 OutputEvent(
                     body=OutputEventBody(
                         output="LOG> {timestamp} {level}: {message}\n".format(**message),
-                        category="log",
+                        category=OutputCategory.CONSOLE,
                         source=source,
                         line=line,
                         column=0 if source is not None else None,
@@ -710,7 +710,7 @@ class Debugger:
                 OutputEvent(
                     body=OutputEventBody(
                         output="MSG> {timestamp} {level}: {message}\n".format(**message),
-                        category=OutputCategory.CONSOLE,
+                        category="messages",
                     )
                 ),
             )
