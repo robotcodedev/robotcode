@@ -290,6 +290,36 @@
             "description": "Specifies the default configuration to run or debug robot tests.",
             "scope": "resource"
           },
+          "robotcode.debug.attachPython": {
+            "type": "boolean",
+            "description": "Attach also the python debugger if a robot test starts.",
+            "default": false,
+            "scope": "resource"
+          },
+          "robotcode.debug.outputMessages": {
+            "type": "boolean",
+            "description": "Output messages from robotframework in debug console.",
+            "default": false,
+            "scope": "resource"
+          },
+          "robotcode.debug.outputLog": {
+            "type": "boolean",
+            "description": "Output log messages from robotframework in debug console.",
+            "default": true,
+            "scope": "resource"
+          },
+          "robotcode.debug.groupOutput": {
+            "type": "boolean",
+            "description": "Group start and stop suite/test/keyword messages in debug console.",
+            "default": false,
+            "scope": "resource"
+          },
+          "robotcode.debug.useExternalDebugpy": {
+            "type": "boolean",
+            "description": "Use the debugpy in python environment, not from the python extension.",
+            "default": false,
+            "scope": "resource"
+          },
           "robotcode.debug.defaultConsole": {
             "type": "string",
             "enum": [
@@ -500,7 +530,7 @@
               "outputLog": {
                 "type": "boolean",
                 "description": "Output log messages from robotframework in debug console.",
-                "default": false
+                "default": true
               },
               "groupOutput": {
                 "type": "boolean",
@@ -558,8 +588,8 @@
     "@types/mocha": "^9.0.0",
     "@types/node": "^16.10.2",
     "@types/vscode": "^1.60.0",
-    "@typescript-eslint/eslint-plugin": "^4.32.0",
-    "@typescript-eslint/parser": "^4.32.0",
+    "@typescript-eslint/eslint-plugin": "^4.33.0",
+    "@typescript-eslint/parser": "^4.33.0",
     "eslint": "^7.32.0",
     "eslint-config-airbnb": "^18.2.1",
     "eslint-config-prettier": "^8.3.0",
@@ -582,7 +612,7 @@
     "vscode-debugadapter-testsupport": "^1.49.0",
     "vscode-dts": "^0.3.1",
     "vscode-test": "^1.6.1",
-    "webpack": "^5.56.0",
+    "webpack": "^5.56.1",
     "webpack-cli": "^4.8.0"
   }
 }

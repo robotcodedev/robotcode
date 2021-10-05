@@ -11,11 +11,19 @@ const DEBUG_ADAPTER_DEFAULT_HOST = "127.0.0.1";
 class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   constructor(private readonly pythonManager: PythonManager) {}
 
-  resolveDebugConfigurationWithSubstitutedVariables?(
+  resolveDebugConfigurationWithSubstitutedVariables(
     folder: vscode.WorkspaceFolder | undefined,
     debugConfiguration: vscode.DebugConfiguration,
     _token?: vscode.CancellationToken
   ): vscode.ProviderResult<vscode.DebugConfiguration> {
+    return this._resolveDebugConfigurationWithSubstitutedVariablesAsync(folder, debugConfiguration, _token);
+  }
+
+  async _resolveDebugConfigurationWithSubstitutedVariablesAsync(
+    folder: vscode.WorkspaceFolder | undefined,
+    debugConfiguration: vscode.DebugConfiguration,
+    _token?: vscode.CancellationToken
+  ): Promise<vscode.DebugConfiguration> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
     try {
@@ -46,12 +54,32 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
     debugConfiguration.outputDir =
       debugConfiguration?.outputDir ?? config.get<string | undefined>("robot.outputDir", undefined);
 
-    // if (pythonDebugpyPath) {
-    //     debugConfiguration.env = { PYTHONPATH: path.dirname(pythonDebugpyPath), ...debugConfiguration.env };
-    // }
+    debugConfiguration.attachPython = debugConfiguration?.attachPython ?? config.get<boolean>("debug.attachPython");
+
+    debugConfiguration.outputMessages =
+      debugConfiguration?.outputMessages ?? config.get<boolean>("debug.outputMessages");
+
+    debugConfiguration.outputLog = debugConfiguration?.outputLog ?? config.get<boolean>("debug.outputLog");
+
+    debugConfiguration.groupOutput = debugConfiguration?.groupOutput ?? config.get<boolean>("debug.groupOutput");
 
     if (!debugConfiguration.attachPython || debugConfiguration.noDebug) {
       debugConfiguration.attachPython = false;
+    }
+
+    if (debugConfiguration.attachPython && !config.get<boolean>("debug.useExternalDebugpy")) {
+      const debugpyPath = await this.pythonManager.pythonExtension?.exports.debug.getDebuggerPackagePath();
+
+      if (debugpyPath) {
+        const env = debugConfiguration.env ?? {};
+        const envPythonPath: string = env.PYTHONPATH || "";
+
+        env.PYTHONPATH = [
+          path.dirname(debugpyPath),
+          ...(envPythonPath ? envPythonPath.split(path.delimiter) : []),
+        ].join(path.delimiter);
+        debugConfiguration.env = env;
+      }
     }
 
     const template = config.get("debug.defaultConfiguration", {});

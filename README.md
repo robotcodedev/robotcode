@@ -66,7 +66,8 @@ To speedup things you can install the platform dependent versions of the followi
 
 Example:
 
+```bash
 python -m pipenv install --dev pydantic orjson
-
+```
 
 
