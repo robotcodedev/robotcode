@@ -151,7 +151,7 @@ async def run_robot(
     loop = asyncio.new_event_loop()
 
     thread = threading.Thread(name="RobotCode Debugger", target=run_server, args=(port, loop))
-    thread.setDaemon(True)
+    thread.daemon = True
     thread.start()
 
     server = await wait_for_server()

@@ -97,7 +97,7 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
   ): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, session.workspaceFolder);
 
-    const mode = config.get<string>("debugAdapter.mode", "stdio");
+    const mode = config.get<string>("debugAdapter.mode");
 
     switch (mode) {
       case "stdio": {
