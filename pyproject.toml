@@ -29,6 +29,7 @@ Cython = "^0.29.24"
 robotframework-robocop = "^1.7.1"
 robotframework-tidy = "^1.5.1"
 orjson = "^3.6.3"
+types-orjson = "^3.6.0"
 
 
 [tool.poetry-dynamic-versioning]

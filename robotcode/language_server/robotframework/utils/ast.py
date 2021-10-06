@@ -63,6 +63,16 @@ class HasTokens(Protocol):
 
 
 @runtime_checkable
+class HasError(Protocol):
+    error: Optional[str]
+
+
+@runtime_checkable
+class HasErrors(Protocol):
+    errors: Optional[List[str]]
+
+
+@runtime_checkable
 class Statement(Protocol):
     def get_token(self, type: str) -> Token:
         ...

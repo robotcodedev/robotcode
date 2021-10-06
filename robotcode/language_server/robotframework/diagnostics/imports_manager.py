@@ -526,15 +526,17 @@ class ImportsManager:
         from robot.running.usererrorhandler import UserErrorHandler
         from robot.running.userkeyword import UserLibrary
 
+        from ..utils.ast import HasError, HasErrors
+
         errors: List[Error] = []
 
         async for node in walk(model):
-            error = getattr(node, "error", None)
+            error = node.error if isinstance(node, HasError) else None
             if error is not None:
                 errors.append(Error(message=error, type_name="ModelError", source=source, line_no=node.lineno))
-            node_error = getattr(node, "errors", None)
-            if node_error is not None:
-                for e in node_error:
+            node_errors = node.errors if isinstance(node, HasErrors) else None
+            if node_errors is not None:
+                for e in node_errors:
                     errors.append(Error(message=e, type_name="ModelError", source=source, line_no=node.lineno))
 
         res = ResourceFile(source=source)

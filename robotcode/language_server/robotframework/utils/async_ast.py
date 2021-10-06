@@ -21,7 +21,7 @@ async def iter_child_nodes(node: ast.AST) -> AsyncGenerator[ast.AST, None]:
     Yield all direct child nodes of *node*, that is, all fields that are nodes
     and all items of fields that are lists of nodes.
     """
-    async for name, field in iter_fields(node):
+    async for _name, field in iter_fields(node):
         if isinstance(field, ast.AST):
             yield field
         elif isinstance(field, list):
@@ -38,6 +38,22 @@ async def walk(node: ast.AST) -> AsyncGenerator[ast.AST, None]:
         node = todo.popleft()
         todo.extend([e async for e in iter_child_nodes(node)])
         yield node
+
+
+async def iter_nodes(node: ast.AST) -> AsyncGenerator[ast.AST, None]:
+    async for _name, value in iter_fields(node):
+        if isinstance(value, list):
+            for item in value:
+                if isinstance(item, ast.AST):
+                    yield item
+                    async for n in iter_nodes(item):
+                        yield n
+
+        elif isinstance(value, ast.AST):
+            yield value
+
+            async for n in iter_nodes(value):
+                yield n
 
 
 class VisitorFinder:

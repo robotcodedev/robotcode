@@ -92,6 +92,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     async def collect_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+        from ..utils.ast import HasError, HasErrors
         from ..utils.async_ast import AsyncVisitor
 
         class Visitor(AsyncVisitor):
@@ -107,10 +108,11 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 return finder.errors
 
             async def generic_visit(self, node: ast.AST) -> None:
-                error = getattr(node, "error", None)
+                error = node.error if isinstance(node, HasError) else None
                 if error is not None:
                     self.errors.append(self.parent._create_error_from_node(node, error))
-                errors = getattr(node, "errors", None)
+                errors = node.errors if isinstance(node, HasErrors) else None
+
                 if errors is not None:
                     for e in errors:
                         self.errors.append(self.parent._create_error_from_node(node, e))
@@ -124,15 +126,16 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     async def collect_walk_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+        from ..utils.ast import HasError, HasErrors
         from ..utils.async_ast import walk
 
         result: List[Diagnostic] = []
 
         async for node in walk(await self.parent.documents_cache.get_model(document)):
-            error = getattr(node, "error", None)
+            error = node.error if isinstance(node, HasError) else None
             if error is not None:
                 result.append(self._create_error_from_node(node, error))
-            errors = getattr(node, "errors", None)
+            errors = node.errors if isinstance(node, HasErrors) else None
             if errors is not None:
                 for e in errors:
                     result.append(self._create_error_from_node(node, e))
