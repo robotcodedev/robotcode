@@ -7,9 +7,9 @@ All notable changes to the "robotcode" extension will be documented in this file
 ### added
 
 - update readme
-- add some more configuration options for show log and messages at running test in debug console
-- debug console now shows source and line number from log message
-- use debugpy coming from vscode python extension, no need to install debugpy separately
+- Added some more configuration options for log and debug messages when running tests in the debug console
+- debug console now shows source and line number from log messages
+- use of debugpy from vscode Python extension, no separate installation of debugpy required
 
 ##  0.2.7
 
