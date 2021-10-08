@@ -19,7 +19,7 @@
     "url": "https://github.com/d-biehl/robotcode/issues"
   },
   "engines": {
-    "vscode": "^1.60.0"
+    "vscode": "^1.61.0"
   },
   "categories": [
     "Programming Languages",
@@ -586,8 +586,8 @@
   "devDependencies": {
     "@types/glob": "^7.1.4",
     "@types/mocha": "^9.0.0",
-    "@types/node": "^16.10.2",
-    "@types/vscode": "^1.60.0",
+    "@types/node": "^16.10.3",
+    "@types/vscode": "^1.61.0",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
     "eslint": "^7.32.0",
@@ -612,7 +612,7 @@
     "vscode-debugadapter-testsupport": "^1.49.0",
     "vscode-dts": "^0.3.1",
     "vscode-test": "^1.6.1",
-    "webpack": "^5.56.1",
-    "webpack-cli": "^4.8.0"
+    "webpack": "^5.58.0",
+    "webpack-cli": "^4.9.0"
   }
 }

@@ -266,9 +266,9 @@ export class TestControllerManager {
             }
             testItem.label = ri.label;
             testItem.error = ri.error;
-            // TODO: Tags
-            // const tags = this.convertTags(ri.tags);
-            // if (tags) testItem.tags = tags;
+
+            const tags = this.convertTags(ri.tags);
+            if (tags) testItem.tags = tags;
 
             await this.refreshItem(testItem);
           }
@@ -315,9 +315,9 @@ export class TestControllerManager {
             testItem.canResolveChildren = ri.children !== undefined && ri.children.length > 0;
             testItem.label = ri.label;
             testItem.error = ri.error;
-            // TODO: Tags
-            // const tags = this.convertTags(ri.tags);
-            // if (tags) testItem.tags = tags;
+
+            const tags = this.convertTags(ri.tags);
+            if (tags) testItem.tags = tags;
 
             await this.refreshItem(testItem);
           }
@@ -338,24 +338,23 @@ export class TestControllerManager {
     }
   }
 
-  // TODO: Tags
-  // private testTags = new WeakValueMap<string, vscode.TestTag>();
+  private testTags = new WeakValueMap<string, vscode.TestTag>();
 
-  // private convertTags(tags: string[] | undefined): vscode.TestTag[] | undefined {
-  // if (tags === undefined) return undefined;
+  private convertTags(tags: string[] | undefined): vscode.TestTag[] | undefined {
+    if (tags === undefined) return undefined;
 
-  // const result: vscode.TestTag[] = [];
+    const result: vscode.TestTag[] = [];
 
-  // for (const tag of tags) {
-  //   if (!this.testTags.has(tag)) {
-  //     this.testTags.set(tag, new vscode.TestTag(tag));
-  //   }
-  //   const vstag = this.testTags.get(tag);
-  //   if (vstag !== undefined) result.push(vstag);
-  // }
+    for (const tag of tags) {
+      if (!this.testTags.has(tag)) {
+        this.testTags.set(tag, new vscode.TestTag(tag));
+      }
+      const vstag = this.testTags.get(tag);
+      if (vstag !== undefined) result.push(vstag);
+    }
 
-  // return result;
-  // }
+    return result;
+  }
 
   private readonly refreshFromUriMutex = new Mutex();
 
