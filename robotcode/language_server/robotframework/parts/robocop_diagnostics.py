@@ -102,8 +102,8 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             for issue in issues:
                 d = Diagnostic(
                     range=Range(
-                        start=Position(line=max(0, issue.line - 1), character=issue.col),
-                        end=Position(line=max(0, issue.end_line - 1), character=issue.end_col),
+                        start=Position(line=max(0, issue.line - 1), character=max(0, issue.col - 1)),
+                        end=Position(line=max(0, issue.end_line - 1), character=max(0, issue.end_col - 1)),
                     ),
                     message=issue.desc,
                     severity=DiagnosticSeverity.INFORMATION
