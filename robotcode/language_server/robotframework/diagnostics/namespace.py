@@ -5,6 +5,7 @@ import asyncio
 import weakref
 from collections import OrderedDict
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import (
     Any,
@@ -38,6 +39,7 @@ from ..utils.async_ast import AsyncVisitor
 from .imports_manager import ImportsManager
 from .library_doc import (
     BUILTIN_LIBRARY_NAME,
+    BUILTIN_VARIABLES,
     DEFAULT_LIBRARIES,
     KeywordDoc,
     KeywordMatcher,
@@ -61,14 +63,18 @@ class ImportError(DiagnosticsError):
 
 
 @dataclass
-class Import:
-    name: Optional[str]
-    name_token: Optional[Token]
+class SourceEntity:
     line_no: int
     col_offset: int
     end_line_no: int
     end_col_offset: int
     source: str
+
+
+@dataclass
+class Import(SourceEntity):
+    name: Optional[str]
+    name_token: Optional[Token]
 
     def range(self) -> Range:
         return Range(
@@ -114,14 +120,55 @@ class ResourceImport(Import):
 class VariablesImport(Import):
     args: Tuple[str, ...] = ()
 
+    def __hash__(self) -> int:
+        return hash(
+            (
+                type(self),
+                self.name,
+                self.args,
+            )
+        )
+
+
+class VariableDefinitionType(Enum):
+    VARIABLE = "Variable"
+    ARGUMENT = "Argument"
+    BUILTIN_VARIABLE = "Variable (Builtin)"
+
+
+@dataclass
+class VariableDefinition(SourceEntity):
+    name: Optional[str]
+    name_token: Optional[Token]
+    type: VariableDefinitionType = VariableDefinitionType.VARIABLE
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.name, self.type))
+
+
+@dataclass
+class BuiltInVariableDefinition(VariableDefinition):
+    type: VariableDefinitionType = VariableDefinitionType.BUILTIN_VARIABLE
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.name, self.type))
+
+
+@dataclass
+class ArgumentDefinition(VariableDefinition):
+    type: VariableDefinitionType = VariableDefinitionType.ARGUMENT
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.name, self.type))
+
 
 class NameSpaceError(Exception):
     pass
 
 
 class VariablesVisitor(AsyncVisitor):
-    async def get(self, source: str, model: ast.AST) -> List[str]:
-        self._results: List[str] = []
+    async def get(self, source: str, model: ast.AST) -> List[VariableDefinition]:
+        self._results: List[VariableDefinition] = []
         self.source = source
         await self.visit(model)
         return self._results
@@ -133,11 +180,58 @@ class VariablesVisitor(AsyncVisitor):
             await self.generic_visit(node)
 
     async def visit_Variable(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token
         from robot.parsing.model.statements import Variable
 
         n = cast(Variable, node)
+        name = n.get_value(Token.VARIABLE)
         if n.name:
-            self._results.append(n.name)
+            self._results.append(
+                VariableDefinition(
+                    name=n.name,
+                    name_token=name if name is not None else None,
+                    line_no=node.lineno,
+                    col_offset=node.col_offset,
+                    end_line_no=node.end_lineno if node.end_lineno is not None else -1,
+                    end_col_offset=node.end_col_offset if node.end_col_offset is not None else -1,
+                    source=self.source,
+                )
+            )
+
+
+class ArgumentsVisitor(AsyncVisitor):
+    async def get(self, source: str, model: ast.AST) -> List[VariableDefinition]:
+        self._results: List[VariableDefinition] = []
+        self.source = source
+        await self.visit(model)
+        return self._results
+
+    async def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.model.blocks import VariableSection
+
+        if isinstance(node, VariableSection):
+            await self.generic_visit(node)
+
+    async def visit_Arguments(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Arguments
+        from robot.variables.search import is_variable
+
+        n = cast(Arguments, node)
+        arguments = n.get_tokens(RobotToken.ARGUMENT)
+        for argument in (cast(RobotToken, e) for e in arguments):
+            if is_variable(argument.value):
+                self._results.append(
+                    ArgumentDefinition(
+                        name=argument.value,
+                        name_token=argument,
+                        line_no=argument.lineno,
+                        col_offset=argument.col_offset,
+                        end_line_no=argument.lineno if argument.lineno is not None else -1,
+                        end_col_offset=argument.end_col_offset if argument.end_col_offset is not None else -1,
+                        source=self.source,
+                    )
+                )
 
 
 class ImportVisitor(AsyncVisitor):
@@ -590,16 +684,12 @@ class LibraryEntry:
 @dataclass
 class ResourceEntry(LibraryEntry):
     imports: List[Import] = field(default_factory=lambda: [])
-    variables: List[str] = field(default_factory=lambda: [])
+    variables: List[VariableDefinition] = field(default_factory=lambda: [])
 
 
 @dataclass
 class VariablesEntry(LibraryEntry):
     pass
-
-
-IMPORTS_KEY = object()
-REFERENCED_DOCUMENTS_KEY = object()
 
 
 class Namespace:
@@ -632,7 +722,8 @@ class Namespace:
         self._analyze_lock = asyncio.Lock()
         self._library_doc: Optional[LibraryDoc] = None
         self._imports: Optional[List[Import]] = None
-        self._own_variables: Optional[List[str]] = None
+        self._own_variables: Optional[List[VariableDefinition]] = None
+        self._variables_definitions: Optional[Dict[str, VariableDefinition]] = None
         self._diagnostics: List[Diagnostic] = []
 
         self._keywords: Optional[List[KeywordDoc]] = None
@@ -732,11 +823,41 @@ class Namespace:
 
         return self._imports
 
-    async def get_own_variables(self) -> List[str]:
+    async def get_own_variables(self) -> List[VariableDefinition]:
         if self._own_variables is None:
             self._own_variables = await VariablesVisitor().get(self.source, self.model)
 
         return self._own_variables
+
+    _builtin_variables: Optional[List[BuiltInVariableDefinition]] = None
+
+    @classmethod
+    def get_builtin_variables(cls) -> List[BuiltInVariableDefinition]:
+        if cls._builtin_variables is None:
+            cls._builtin_variables = [BuiltInVariableDefinition(0, 0, 0, 0, "", n, None) for n in BUILTIN_VARIABLES]
+
+        return cls._builtin_variables
+
+    async def get_variables(self, nodes: Optional[List[ast.AST]] = None) -> Dict[str, VariableDefinition]:
+        from robot.parsing.model.blocks import Keyword
+
+        await self._ensure_initialized()
+
+        if self._variables_definitions is None:
+            result: Dict[str, VariableDefinition] = {}
+
+            async for var in async_chain(
+                *[await ArgumentsVisitor().get(self.source, n) for n in nodes or [] if isinstance(n, Keyword)],
+                (e for e in await self.get_own_variables()),
+                *(e.variables for e in self._resources.values()),
+                (e for e in self.get_builtin_variables()),
+            ):
+                if var.name is not None and var.name not in result.keys():
+                    result[var.name] = var
+
+            self._variables_definitions = result
+
+        return self._variables_definitions
 
     async def _import_imports(self, imports: Iterable[Import], base_dir: str, *, top_level: bool = False) -> None:
         async def _import(value: Import) -> Optional[LibraryEntry]:

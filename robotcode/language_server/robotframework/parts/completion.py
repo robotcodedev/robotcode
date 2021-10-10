@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import builtins
+import itertools
 import os
 import weakref
 from typing import (
@@ -43,6 +44,7 @@ from ..diagnostics.library_doc import (
     KeywordArgumentKind,
     KeywordDoc,
 )
+from ..diagnostics.namespace import VariableDefinitionType
 from ..utils.ast import (
     Token,
     get_nodes_at_position,
@@ -69,7 +71,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         parent.completion.resolve.add(self.resolve)
 
     @language_id("robotframework")
-    @trigger_characters([" ", "*", "\t", ".", "/", os.sep])
+    @trigger_characters([" ", "*", "\t", ".", "/", "{", os.sep])
     # @all_commit_characters(['\n'])
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[CompletionContext]
@@ -281,6 +283,58 @@ class CompletionCollector(ModelHelperMixin):
             for s in ((style.format(name=k), k) for k in SECTIONS)
         ]
 
+    async def create_environment_variables_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+        return [
+            CompletionItem(
+                label=s,
+                kind=CompletionItemKind.VARIABLE,
+                detail="Variable",
+                sort_text=f"035_{s}",
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(
+                    range=range,
+                    new_text=s,
+                )
+                if range is not None
+                else None,
+            )
+            for s in os.environ.keys()
+        ]
+
+    _VARIABLE_COMPLETION_SORT_TEXT_PREFIX = {
+        VariableDefinitionType.VARIABLE: "035",
+        VariableDefinitionType.ARGUMENT: "034",
+        VariableDefinitionType.BUILTIN_VARIABLE: "036",
+    }
+
+    async def create_variables_completion_items(
+        self, range: Optional[Range], nodes: Optional[List[ast.AST]] = None
+    ) -> List[CompletionItem]:
+        if self.document is None:
+            return []
+
+        namespace = await self.parent.documents_cache.get_namespace(self.document)
+        if namespace is None:
+            return []
+
+        return [
+            CompletionItem(
+                label=s.name,
+                kind=CompletionItemKind.VARIABLE,
+                detail=f"{s.type.value}",
+                sort_text=f"{self._VARIABLE_COMPLETION_SORT_TEXT_PREFIX.get(s.type, '035')}_{s.name[2:-1]}",
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(
+                    range=range,
+                    new_text=s.name[2:-1],
+                )
+                if range is not None
+                else None,
+            )
+            for s in (await namespace.get_variables(nodes)).values()
+            if s.name is not None
+        ]
+
     async def create_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
         return [
             CompletionItem(
@@ -449,7 +503,7 @@ class CompletionCollector(ModelHelperMixin):
                 detail="Library",
                 sort_text=f"030_{k}",
                 deprecated=v.library_doc.is_deprecated,
-                # documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=v.library_doc.to_markdown()),
+                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=v.library_doc.to_markdown()),
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
                 data={
@@ -486,7 +540,8 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Optional[List[CompletionItem]]:
-        from robot.parsing.model.statements import Statement
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Arguments, Statement
 
         if len(nodes_at_position) > 1 and isinstance(nodes_at_position[0], Statement):
             statement_node = cast(Statement, nodes_at_position[0])
@@ -512,6 +567,64 @@ class CompletionCollector(ModelHelperMixin):
 
         elif position.character == 0:
             return await self.create_section_completion_items(None)
+
+        if (
+            len(nodes_at_position) > 1
+            and isinstance(nodes_at_position[0], Statement)
+            and not isinstance(nodes_at_position[0], Arguments)
+        ):
+            node = nodes_at_position[0]
+            tokens_at_position = get_tokens_at_position(node, position)
+            token_at_position = tokens_at_position[-1]
+
+            token_at_position_index = tokens_at_position.index(token_at_position)
+            while token_at_position.type in [RobotToken.EOL]:
+                token_at_position_index -= 1
+                if token_at_position_index < 0:
+                    break
+                token_at_position = tokens_at_position[token_at_position_index]
+
+            if token_at_position.type not in [
+                RobotToken.NAME,
+                RobotToken.ARGUMENT,
+                RobotToken.KEYWORD,
+                RobotToken.ASSIGN,
+            ]:
+                return None
+
+            close_brace_index_before = token_at_position.value.rfind(
+                "}", 0, position.character - token_at_position.col_offset
+            )
+
+            open_brace_index = token_at_position.value.rfind("{", 0, position.character - token_at_position.col_offset)
+            if (
+                open_brace_index > close_brace_index_before
+                and open_brace_index >= 1
+                and token_at_position.value[open_brace_index - 1] in "$@&%"
+            ):
+                variable_end = token_at_position.value.find("}", open_brace_index + 1)
+                contains_spezial = any(
+                    a
+                    for a in itertools.takewhile(lambda b: b != "}", token_at_position.value[open_brace_index + 1 :])
+                    if a in "+-*/"
+                )
+                range = Range(
+                    start=Position(
+                        line=position.line,
+                        character=token_at_position.col_offset + open_brace_index + 1,
+                    ),
+                    end=position
+                    if contains_spezial or variable_end < 0
+                    else Position(
+                        line=position.line,
+                        character=(token_at_position.col_offset + variable_end)
+                        if not contains_spezial
+                        else token_at_position.end_col_offset,
+                    ),
+                )
+                if token_at_position.value[open_brace_index - 1] == "%":
+                    return await self.create_environment_variables_completion_items(range)
+                return await self.create_variables_completion_items(range, nodes_at_position)
 
         return None
 
@@ -1054,7 +1167,7 @@ class CompletionCollector(ModelHelperMixin):
                             label=f"{e.name}=",
                             kind=CompletionItemKind.VARIABLE,
                             # detail=e.detail,
-                            sort_text=f"02{i}_{e.name}=",
+                            sort_text=f"010{i}_{e.name}=",
                             insert_text_format=InsertTextFormat.PLAINTEXT,
                             text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
                             data={

@@ -11,6 +11,6 @@ exclude =
     external
     playground
 
-ignore = N805,W503,N818
+ignore = N805,W503,N818,E203
 per-file-ignores=__init__.py:F401,F403
 
