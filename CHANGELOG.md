@@ -4,6 +4,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+### added
+
 ##  0.2.8
 
 ### added
@@ -13,6 +15,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 - debug console now shows source and line number from log messages
 - use of debugpy from vscode Python extension, no separate installation of debugpy required
 - implement test tags in test controller
+- implement completion, hover and goto for variables
 
 ##  0.2.7
 
