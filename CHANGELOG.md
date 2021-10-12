@@ -4,6 +4,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+##  0.2.9
+
 ### added
 
 - some correction to load libraries/resources with same name
