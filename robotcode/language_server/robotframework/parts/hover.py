@@ -1,15 +1,27 @@
 from __future__ import annotations
 
 import ast
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, Type, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    List,
+    Optional,
+    Type,
+    Union,
+    cast,
+)
 
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.text_document import TextDocument
 from ...common.types import Hover, MarkupContent, MarkupKind, Position
 from ..utils.ast import (
+    HasTokens,
     Token,
-    get_node_at_position,
+    get_nodes_at_position,
+    get_tokens_at_position,
     range_from_token,
     range_from_token_or_node,
 )
@@ -43,20 +55,57 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             method = self._find_method(base)
             if method:
                 return cast(_HoverMethod, method)
+
         return None
 
     @language_id("robotframework")
     async def collect(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:
-        result_node = await get_node_at_position(await self.parent.documents_cache.get_model(document), position)
+        result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
-        if result_node is None:
+        if not result_nodes:
             return None
+
+        result_node = result_nodes[-1]
 
         method = self._find_method(type(result_node))
-        if method is None:
+        if method is not None:
+            result = await method(result_node, document, position)
+            if result is not None:
+                return result
+
+        return await self._hover_default(result_nodes, document, position)
+
+    async def _hover_default(self, nodes: List[ast.AST], document: TextDocument, position: Position) -> Optional[Hover]:
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
             return None
 
-        return await method(result_node, document, position)
+        if not nodes:
+            return None
+
+        node = nodes[-1]
+        if not isinstance(node, HasTokens):
+            return None
+
+        tokens = get_tokens_at_position(node, position)
+
+        for t in tokens:
+            try:
+                for sub_token in t.tokenize_variables():
+                    range = range_from_token(sub_token)
+
+                    if position.is_in_range(range):
+                        variable = await namespace.find_variable(sub_token.value, nodes)
+                        if variable is not None:
+                            return Hover(
+                                contents=MarkupContent(
+                                    kind=MarkupKind.MARKDOWN, value=f"({variable.type.value}) {variable.name}"
+                                ),
+                                range=range,
+                            )
+            except BaseException:
+                pass
+        return None
 
     async def hover_KeywordCall(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position

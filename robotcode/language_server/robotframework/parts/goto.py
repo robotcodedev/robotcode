@@ -19,8 +19,10 @@ from ...common.language import language_id
 from ...common.text_document import TextDocument
 from ...common.types import Location, LocationLink, Position
 from ..utils.ast import (
+    HasTokens,
     Token,
-    get_node_at_position,
+    get_nodes_at_position,
+    get_tokens_at_position,
     range_from_token,
     range_from_token_or_node,
 )
@@ -64,17 +66,60 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     async def collect(
         self, sender: Any, document: TextDocument, position: Position
     ) -> Union[Location, List[Location], List[LocationLink], None]:
+        result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
-        result_node = await get_node_at_position(await self.parent.documents_cache.get_model(document), position)
+        if not result_nodes:
+            return None
+
+        result_node = result_nodes[-1]
 
         if result_node is None:
             return None
 
         method = self._find_method(type(result_node))
-        if method is None:
+        if method is not None:
+            result = await method(result_node, document, position)
+            if result is not None:
+                return result
+
+        return await self._definition_default(result_nodes, document, position)
+
+    async def _definition_default(
+        self, nodes: List[ast.AST], document: TextDocument, position: Position
+    ) -> Union[Location, List[Location], List[LocationLink], None]:
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
             return None
 
-        return await method(result_node, document, position)
+        if not nodes:
+            return None
+
+        node = nodes[-1]
+
+        if not isinstance(node, HasTokens):
+            return None
+
+        tokens = get_tokens_at_position(node, position)
+
+        for t in tokens:
+            try:
+                for sub_token in t.tokenize_variables():
+                    range = range_from_token(sub_token)
+
+                    if position.is_in_range(range):
+                        variable = await namespace.find_variable(sub_token.value, nodes)
+                        if variable is not None and variable.source:
+                            return [
+                                LocationLink(
+                                    origin_selection_range=range_from_token_or_node(node, sub_token),
+                                    target_uri=str(Uri.from_path(variable.source)),
+                                    target_range=variable.range(),
+                                    target_selection_range=variable.range(),
+                                )
+                            ]
+            except BaseException:
+                pass
+        return None
 
     async def definition_KeywordCall(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position

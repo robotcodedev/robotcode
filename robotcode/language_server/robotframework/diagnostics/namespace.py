@@ -44,6 +44,7 @@ from .library_doc import (
     KeywordDoc,
     KeywordMatcher,
     LibraryDoc,
+    VariableMatcher,
     is_embedded_keyword,
 )
 
@@ -145,6 +146,18 @@ class VariableDefinition(SourceEntity):
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type))
 
+    def range(self) -> Range:
+        return Range(
+            start=Position(
+                line=self.name_token.lineno - 1 if self.name_token is not None else self.line_no - 1,
+                character=self.name_token.col_offset if self.name_token is not None else self.col_offset,
+            ),
+            end=Position(
+                line=self.name_token.lineno - 1 if self.name_token is not None else self.end_line_no - 1,
+                character=self.name_token.end_col_offset if self.name_token is not None else self.end_col_offset,
+            ),
+        )
+
 
 @dataclass
 class BuiltInVariableDefinition(VariableDefinition):
@@ -184,7 +197,7 @@ class VariablesVisitor(AsyncVisitor):
         from robot.parsing.model.statements import Variable
 
         n = cast(Variable, node)
-        name = n.get_value(Token.VARIABLE)
+        name = n.get_token(Token.VARIABLE)
         if n.name:
             self._results.append(
                 VariableDefinition(
@@ -723,7 +736,6 @@ class Namespace:
         self._library_doc: Optional[LibraryDoc] = None
         self._imports: Optional[List[Import]] = None
         self._own_variables: Optional[List[VariableDefinition]] = None
-        self._variables_definitions: Optional[Dict[str, VariableDefinition]] = None
         self._diagnostics: List[Diagnostic] = []
 
         self._keywords: Optional[List[KeywordDoc]] = None
@@ -838,26 +850,26 @@ class Namespace:
 
         return cls._builtin_variables
 
-    async def get_variables(self, nodes: Optional[List[ast.AST]] = None) -> Dict[str, VariableDefinition]:
+    async def get_variables(self, nodes: Optional[List[ast.AST]] = None) -> Dict[VariableMatcher, VariableDefinition]:
         from robot.parsing.model.blocks import Keyword
 
         await self._ensure_initialized()
 
-        if self._variables_definitions is None:
-            result: Dict[str, VariableDefinition] = {}
+        result: Dict[VariableMatcher, VariableDefinition] = {}
 
-            async for var in async_chain(
-                *[await ArgumentsVisitor().get(self.source, n) for n in nodes or [] if isinstance(n, Keyword)],
-                (e for e in await self.get_own_variables()),
-                *(e.variables for e in self._resources.values()),
-                (e for e in self.get_builtin_variables()),
-            ):
-                if var.name is not None and var.name not in result.keys():
-                    result[var.name] = var
+        async for var in async_chain(
+            *[await ArgumentsVisitor().get(self.source, n) for n in nodes or [] if isinstance(n, Keyword)],
+            (e for e in await self.get_own_variables()),
+            *(e.variables for e in self._resources.values()),
+            (e for e in self.get_builtin_variables()),
+        ):
+            if var.name is not None and VariableMatcher(var.name) not in result.keys():
+                result[VariableMatcher(var.name)] = var
 
-            self._variables_definitions = result
+        return result
 
-        return self._variables_definitions
+    async def find_variable(self, name: str, nodes: Optional[List[ast.AST]]) -> Optional[VariableDefinition]:
+        return (await self.get_variables(nodes)).get(VariableMatcher(name), None)
 
     async def _import_imports(self, imports: Iterable[Import], base_dir: str, *, top_level: bool = False) -> None:
         async def _import(value: Import) -> Optional[LibraryEntry]:

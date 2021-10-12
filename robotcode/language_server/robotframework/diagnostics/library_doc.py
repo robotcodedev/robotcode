@@ -121,17 +121,49 @@ class KeywordMatcher:
         return self.normalized_name == str(normalize(o, "_"))
 
     def __hash__(self) -> int:
-        return hash(self.name)
+        return hash(self.normalized_name)
 
     def __str__(self) -> str:
         return self.name
 
     def __repr__(self) -> str:
-        return (
-            f"{type(self).__name__}(name={repr(self.name)}"
-            f", normalized_name={repr(self.normalized_name)}"
-            f"{f', embedded=True' if self.embedded_arguments else ''})"
-        )
+        return f"{type(self).__name__}(name={repr(self.name)})"
+
+
+class VariableMatcher:
+    def __init__(self, name: str) -> None:
+        from robot.utils.normalizing import normalize
+        from robot.variables.search import VariableSearcher
+
+        searcher = VariableSearcher("$@&%", ignore_errors=True)
+        match = searcher.search(name)
+        self.name = name
+        self.base = match.base
+        self.normalized_name = str(normalize(match.base, "_"))
+
+    def __eq__(self, o: object) -> bool:
+        from robot.utils.normalizing import normalize
+        from robot.variables.search import VariableSearcher
+
+        if isinstance(o, VariableMatcher):
+            base = o.base
+        elif isinstance(o, str):
+            searcher = VariableSearcher("$@&%", ignore_errors=True)
+            match = searcher.search(o)
+            base = match.base
+        else:
+            return False
+
+        return self.normalized_name == str(normalize(base, "_"))
+
+    def __hash__(self) -> int:
+        return hash(self.normalized_name)
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(name={repr(self.name)})"
 
 
 class Model(BaseModel):
