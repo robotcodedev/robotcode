@@ -213,16 +213,10 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 if namespace is None:
                     return None
 
-                libdocs = [
-                    entry.library_doc
-                    for entry in (await namespace.get_libraries()).values()
-                    if entry.import_name == library_node.name
-                    and entry.args == library_node.args
-                    and entry.alias == library_node.alias
-                ]
-
-                if len(libdocs) == 1:
-                    libdoc = libdocs[0]
+                try:
+                    libdoc = await namespace.imports_manager.get_libdoc_for_library_import(
+                        library_node.name, library_node.args, str(document.uri.to_path().parent)
+                    )
 
                     return Hover(
                         contents=MarkupContent(
@@ -231,6 +225,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         ),
                         range=range_from_token_or_node(library_node, name_token),
                     )
+                except BaseException:
+                    pass
         return None
 
     async def hover_ResourceImport(  # noqa: N802
@@ -251,14 +247,10 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 if namespace is None:
                     return None
 
-                libdocs = [
-                    entry.library_doc
-                    for entry in (await namespace.get_resources()).values()
-                    if entry.import_name == resource_node.name
-                ]
-
-                if len(libdocs) == 1:
-                    libdoc = libdocs[0]
+                try:
+                    libdoc = await namespace.imports_manager.get_libdoc_for_resource_import(
+                        resource_node.name, str(document.uri.to_path().parent)
+                    )
                     return Hover(
                         contents=MarkupContent(
                             kind=MarkupKind.MARKDOWN,
@@ -266,4 +258,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         ),
                         range=range_from_token_or_node(resource_node, name_token),
                     )
+                except BaseException:
+                    pass
         return None

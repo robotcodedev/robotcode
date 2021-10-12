@@ -923,7 +923,7 @@ def get_library_doc(
     ) -> Union[Any, Tuple[Any, str]]:
 
         with OutputCapturer(library_import=True):
-            importer = Importer("test library")
+            importer = Importer("test library", LOGGER)
             return importer.import_class_or_module(name, return_source=True)
 
     def get_test_library(

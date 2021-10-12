@@ -1028,7 +1028,7 @@ class Namespace:
                     ]
 
                     if not allready_imported_resources and entry.library_doc.source != self.source:
-                        self._resources[entry.alias or entry.name or entry.import_name] = entry
+                        self._resources[entry.import_name] = entry
                         try:
                             await self._import_imports(
                                 entry.imports,
@@ -1060,7 +1060,7 @@ class Namespace:
                                     )
                                 )
                             elif allready_imported_resources and allready_imported_resources[0].library_doc.source:
-                                self._resources[entry.alias or entry.name or entry.import_name] = entry
+                                self._resources[entry.import_name] = entry
 
                                 self._diagnostics.append(
                                     Diagnostic(
@@ -1130,7 +1130,8 @@ class Namespace:
                             )
                         )
 
-                    self._libraries[entry.alias or entry.name or entry.import_name] = entry
+                    if (entry.alias or entry.name or entry.import_name) not in self._libraries:
+                        self._libraries[entry.alias or entry.name or entry.import_name] = entry
                 # TODO Variables
 
     async def _import_default_libraries(self) -> None:
@@ -1310,7 +1311,7 @@ class KeywordFinder:
     async def _get_explicit_keyword(self, name: str) -> Optional[KeywordDoc]:
         found: List[Tuple[LibraryEntry, KeywordDoc]] = []
         async for owner_name, kw_name in self._yield_owner_and_kw_names(name):
-            found.extend(await self._find_keywords(owner_name, kw_name))
+            found.extend(await self.find_keywords(owner_name, kw_name))
         if len(found) > 1:
             self.diagnostics.append(
                 DiagnosticsEntry(
@@ -1323,13 +1324,13 @@ class KeywordFinder:
 
         return found[0][1] if found else None
 
-    async def _find_keywords(self, owner_name: str, name: str) -> Sequence[Tuple[LibraryEntry, KeywordDoc]]:
+    async def find_keywords(self, owner_name: str, name: str) -> Sequence[Tuple[LibraryEntry, KeywordDoc]]:
         from robot.utils.match import eq
 
         return [
             (v, v.library_doc.keywords[name])
-            async for k, v in async_chain(self.namespace._libraries.items(), self.namespace._resources.items())
-            if eq(k, owner_name) and name in v.library_doc.keywords
+            async for v in async_chain(self.namespace._libraries.values(), self.namespace._resources.values())
+            if eq(v.alias or v.name, owner_name) and name in v.library_doc.keywords
         ]
 
     def _create_multiple_keywords_found_message(

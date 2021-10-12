@@ -245,26 +245,23 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 if namespace is None:
                     return None
 
-                libdocs = [
-                    entry.library_doc
-                    for entry in (await namespace.get_libraries()).values()
-                    if entry.import_name == library_node.name
-                    and entry.args == library_node.args
-                    and entry.alias == library_node.alias
-                ]
+                try:
+                    libdoc = await namespace.imports_manager.get_libdoc_for_library_import(
+                        library_node.name, library_node.args, str(document.uri.to_path().parent)
+                    )
 
-                if len(libdocs) == 1:
-                    result = libdocs[0]
-                    python_source = result.source_or_origin
+                    python_source = libdoc.source_or_origin
                     if python_source is not None:
                         return [
                             LocationLink(
                                 origin_selection_range=range_from_token_or_node(library_node, name_token),
                                 target_uri=str(Uri.from_path(python_source)),
-                                target_range=result.range,
-                                target_selection_range=result.range,
+                                target_range=libdoc.range,
+                                target_selection_range=libdoc.range,
                             )
                         ]
+                except BaseException:
+                    pass
         return None
 
     async def definition_ResourceImport(  # noqa: N802
@@ -285,22 +282,21 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 if namespace is None:
                     return None
 
-                libdocs = [
-                    entry.library_doc
-                    for entry in (await namespace.get_resources()).values()
-                    if entry.import_name == resource_node.name
-                ]
+                try:
+                    libdoc = await namespace.imports_manager.get_libdoc_for_resource_import(
+                        resource_node.name, str(document.uri.to_path().parent)
+                    )
 
-                if len(libdocs) == 1:
-                    result = libdocs[0]
-                    python_source = result.source_or_origin
+                    python_source = libdoc.source_or_origin
                     if python_source is not None:
                         return [
                             LocationLink(
                                 origin_selection_range=range_from_token_or_node(resource_node, name_token),
                                 target_uri=str(Uri.from_path(python_source)),
-                                target_range=result.range,
-                                target_selection_range=result.range,
+                                target_range=libdoc.range,
+                                target_selection_range=libdoc.range,
                             )
                         ]
+                except BaseException:
+                    pass
         return None
