@@ -6,6 +6,9 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ### added
 
+- some correction to load libraries/resources with same name
+    - fixes [#9](https://github.com/d-biehl/robotcode/issues/9)
+
 ##  0.2.8
 
 ### added
