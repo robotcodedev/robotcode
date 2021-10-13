@@ -30,7 +30,7 @@ from ..jsonrpc2.protocol import (
 )
 from ..utils.inspect import ensure_coroutine
 from ..utils.logging import LoggingDescriptor
-from .types import (
+from .dap_types import (
     ErrorBody,
     ErrorResponse,
     Event,

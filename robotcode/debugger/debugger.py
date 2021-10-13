@@ -22,7 +22,7 @@ from typing import (
 
 from ..utils.event import event
 from ..utils.logging import LoggingDescriptor
-from .types import (
+from .dap_types import (
     Breakpoint,
     ContinuedEvent,
     ContinuedEventBody,

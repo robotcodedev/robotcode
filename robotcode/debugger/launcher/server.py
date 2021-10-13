@@ -10,7 +10,7 @@ from ...jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
 from ...utils.logging import LoggingDescriptor
 from ..client import DAPClient, DAPClientError
 from ..protocol import DebugAdapterProtocol
-from ..types import (
+from ..dap_types import (
     Capabilities,
     ConfigurationDoneArguments,
     ConfigurationDoneRequest,

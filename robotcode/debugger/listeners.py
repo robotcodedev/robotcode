@@ -1,7 +1,7 @@
 from typing import Any, Dict, Iterator, List, Optional, Union, cast
 
 from .debugger import Debugger
-from .types import Event, Model
+from .dap_types import Event, Model
 
 
 class RobotExecutionEvent(Model):

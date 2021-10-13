@@ -127,7 +127,7 @@ async def run_robot(
     from ..utils.debugpy import enable_debugpy, wait_for_debugpy_connected
     from ..utils.net import check_free_port
     from .debugger import Debugger
-    from .types import Event
+    from .dap_types import Event
 
     @_logger.call
     async def start_debugpy_async() -> None:

@@ -6,7 +6,7 @@ from typing import Any, Optional, cast
 from ..jsonrpc2.server import TcpParams
 from ..utils.logging import LoggingDescriptor
 from .protocol import DebugAdapterProtocol
-from .types import Event
+from .dap_types import Event
 
 
 class DAPClientProtocol(DebugAdapterProtocol):
