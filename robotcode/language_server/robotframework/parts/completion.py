@@ -308,7 +308,7 @@ class CompletionCollector(ModelHelperMixin):
     }
 
     async def create_variables_completion_items(
-        self, range: Optional[Range], nodes: Optional[List[ast.AST]] = None
+        self, range: Range, nodes: List[ast.AST], position: Position
     ) -> List[CompletionItem]:
         if self.document is None:
             return []
@@ -327,12 +327,11 @@ class CompletionCollector(ModelHelperMixin):
                 text_edit=TextEdit(
                     range=range,
                     new_text=s.name[2:-1],
-                )
-                if range is not None
-                else None,
+                ),
+                filter_text=s.name[2:-1] if range is not None else None,
             )
             for s in (await namespace.get_variables(nodes)).values()
-            if s.name is not None
+            if s.name is not None and (s.name_token is None or not position.is_in_range(range_from_token(s.name_token)))
         ]
 
     async def create_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
@@ -624,7 +623,7 @@ class CompletionCollector(ModelHelperMixin):
                 )
                 if token_at_position.value[open_brace_index - 1] == "%":
                     return await self.create_environment_variables_completion_items(range)
-                return await self.create_variables_completion_items(range, nodes_at_position)
+                return await self.create_variables_completion_items(range, nodes_at_position, position)
 
         return None
 

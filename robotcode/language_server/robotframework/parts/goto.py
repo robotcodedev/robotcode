@@ -114,7 +114,9 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                                     origin_selection_range=range_from_token_or_node(node, sub_token),
                                     target_uri=str(Uri.from_path(variable.source)),
                                     target_range=variable.range(),
-                                    target_selection_range=variable.range(),
+                                    target_selection_range=range_from_token(variable.name_token)
+                                    if variable.name_token
+                                    else variable.range(),
                                 )
                             ]
             except BaseException:

@@ -149,12 +149,12 @@ class VariableDefinition(SourceEntity):
     def range(self) -> Range:
         return Range(
             start=Position(
-                line=self.name_token.lineno - 1 if self.name_token is not None else self.line_no - 1,
-                character=self.name_token.col_offset if self.name_token is not None else self.col_offset,
+                line=self.line_no - 1,
+                character=self.col_offset,
             ),
             end=Position(
-                line=self.name_token.lineno - 1 if self.name_token is not None else self.end_line_no - 1,
-                character=self.name_token.end_col_offset if self.name_token is not None else self.end_col_offset,
+                line=self.end_line_no - 1,
+                character=self.end_col_offset,
             ),
         )
 
@@ -212,20 +212,15 @@ class VariablesVisitor(AsyncVisitor):
             )
 
 
-class ArgumentsVisitor(AsyncVisitor):
+class BlockVariableVisitor(AsyncVisitor):
     async def get(self, source: str, model: ast.AST) -> List[VariableDefinition]:
         self._results: List[VariableDefinition] = []
         self.source = source
         await self.visit(model)
         return self._results
 
-    async def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.model.blocks import VariableSection
-
-        if isinstance(node, VariableSection):
-            await self.generic_visit(node)
-
     async def visit_Arguments(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.errors import VariableError
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Arguments
         from robot.variables.search import is_variable
@@ -233,18 +228,61 @@ class ArgumentsVisitor(AsyncVisitor):
         n = cast(Arguments, node)
         arguments = n.get_tokens(RobotToken.ARGUMENT)
         for argument in (cast(RobotToken, e) for e in arguments):
-            if is_variable(argument.value):
+            try:
+                if is_variable(argument.value):
+                    self._results.append(
+                        ArgumentDefinition(
+                            name=argument.value,
+                            name_token=argument,
+                            line_no=node.lineno,
+                            col_offset=node.col_offset,
+                            end_line_no=node.end_lineno
+                            if node.end_lineno is not None
+                            else argument.lineno
+                            if argument.lineno is not None
+                            else -1,
+                            end_col_offset=node.end_col_offset
+                            if node.end_col_offset is not None
+                            else argument.end_col_offset
+                            if argument.end_col_offset is not None
+                            else -1,
+                            source=self.source,
+                        )
+                    )
+            except VariableError:
+                pass
+
+    async def visit_KeywordCall(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.errors import VariableError
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import KeywordCall
+        from robot.variables.search import contains_variable
+
+        try:
+            n = cast(KeywordCall, node)
+            assign_token = n.get_token(RobotToken.ASSIGN)
+            if assign_token is not None and assign_token.value and contains_variable(assign_token.value):
                 self._results.append(
-                    ArgumentDefinition(
-                        name=argument.value,
-                        name_token=argument,
-                        line_no=argument.lineno,
-                        col_offset=argument.col_offset,
-                        end_line_no=argument.lineno if argument.lineno is not None else -1,
-                        end_col_offset=argument.end_col_offset if argument.end_col_offset is not None else -1,
+                    VariableDefinition(
+                        name=assign_token.value,
+                        name_token=assign_token,
+                        line_no=node.lineno,
+                        col_offset=node.col_offset,
+                        end_line_no=node.end_lineno
+                        if node.end_lineno is not None
+                        else assign_token.lineno
+                        if assign_token.lineno is not None
+                        else -1,
+                        end_col_offset=node.end_col_offset
+                        if node.end_col_offset is not None
+                        else assign_token.end_col_offset
+                        if assign_token.end_col_offset is not None
+                        else -1,
                         source=self.source,
                     )
                 )
+        except VariableError:
+            pass
 
 
 class ImportVisitor(AsyncVisitor):
@@ -851,14 +889,18 @@ class Namespace:
         return cls._builtin_variables
 
     async def get_variables(self, nodes: Optional[List[ast.AST]] = None) -> Dict[VariableMatcher, VariableDefinition]:
-        from robot.parsing.model.blocks import Keyword
+        from robot.parsing.model.blocks import Keyword, TestCase
 
         await self._ensure_initialized()
 
         result: Dict[VariableMatcher, VariableDefinition] = {}
 
         async for var in async_chain(
-            *[await ArgumentsVisitor().get(self.source, n) for n in nodes or [] if isinstance(n, Keyword)],
+            *[
+                await BlockVariableVisitor().get(self.source, n)
+                for n in nodes or []
+                if isinstance(n, (Keyword, TestCase))
+            ],
             (e for e in await self.get_own_variables()),
             *(e.variables for e in self._resources.values()),
             (e for e in self.get_builtin_variables()),
