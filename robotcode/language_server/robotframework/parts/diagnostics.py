@@ -63,31 +63,53 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         from robot.parsing.lexer.tokens import Token
 
         result: List[Diagnostic] = []
+        try:
+            for token in await self.parent.documents_cache.get_tokens(document):
+                if token.type in [Token.ERROR, Token.FATAL_ERROR]:
+                    result.append(self._create_error_from_token(token))
 
-        for token in await self.parent.documents_cache.get_tokens(document):
-            if token.type in [Token.ERROR, Token.FATAL_ERROR]:
-                result.append(self._create_error_from_token(token))
+                try:
+                    for variable_token in token.tokenize_variables():
+                        if variable_token == token:
+                            break
 
-            try:
-                for variable_token in token.tokenize_variables():
-                    if variable_token == token:
-                        break
+                        if variable_token.type in [Token.ERROR, Token.FATAL_ERROR]:
+                            result.append(self._create_error_from_token(variable_token))
 
-                    if variable_token.type in [Token.ERROR, Token.FATAL_ERROR]:
-                        result.append(self._create_error_from_token(variable_token))
+                except VariableError as e:
+                    result.append(
+                        Diagnostic(
+                            range=range_from_token(token),
+                            message=str(e),
+                            severity=DiagnosticSeverity.ERROR,
+                            source=self.source_name,
+                            code=type(e).__qualname__,
+                        )
+                    )
 
-            except VariableError as e:
-                result.append(
+            return DiagnosticsResult(self.collect_token_errors, result)
+        except BaseException as e:
+            return DiagnosticsResult(
+                self.collect_token_errors,
+                [
                     Diagnostic(
-                        range=range_from_token(token),
-                        message=str(e),
+                        range=Range(
+                            start=Position(
+                                line=0,
+                                character=0,
+                            ),
+                            end=Position(
+                                line=len(document.lines),
+                                character=len(document.lines[-1] or ""),
+                            ),
+                        ),
+                        message=f"Fatal {type(e).__qualname__}: {e}",
                         severity=DiagnosticSeverity.ERROR,
                         source=self.source_name,
                         code=type(e).__qualname__,
                     )
-                )
-
-        return DiagnosticsResult(self.collect_token_errors, result)
+                ],
+            )
 
     @language_id("robotframework")
     @_logger.call
@@ -145,7 +167,6 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     async def collect_namespace_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
-
         namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
             return DiagnosticsResult(self.collect_namespace_diagnostics, None)
