@@ -550,9 +550,7 @@
               "name": "RobotCode: Launch .robot file",
               "request": "launch",
               "cwd": "^\"\\${workspaceFolder}\"",
-              "target": "^\"\\${file}\"",
-              "env": {},
-              "args": []
+              "target": "^\"\\${file}\""            
             }
           }
         ]
