@@ -540,17 +540,43 @@
             }
           }
         },
-        "initialConfigurations": [],
+        "initialConfigurations": [
+          {
+            "name": "RobotCode: Run .robot file",
+            "type": "robotcode",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "target": "${file}"
+          },
+          {
+            "name": "RobotCode: Run all tests",
+            "type": "robotcode",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "target": "."
+          }
+        ],
         "configurationSnippets": [
           {
-            "label": "RobotCode: Launch .robot file",
-            "description": "Add a new configuration for launching Robot Framework Tests.",
+            "label": "RobotCode: Run .robot file",
+            "description": "Add a new configuration for launching a single RobotFramework file.",
             "body": {
-              "type": "robotcode",
               "name": "RobotCode: Launch .robot file",
+              "type": "robotcode",
               "request": "launch",
               "cwd": "^\"\\${workspaceFolder}\"",
-              "target": "^\"\\${file}\""            
+              "target": "^\"\\${file}\""
+            }
+          },
+          {
+            "label": "RobotCode: Run all tests",
+            "description": "Add a new configuration for launching all RobotFramework tests.",
+            "body": {
+              "name": "RobotCode: Run all tests",
+              "type": "robotcode",
+              "request": "launch",
+              "cwd": "^\"\\${workspaceFolder}\"",
+              "target": "."
             }
           }
         ]
