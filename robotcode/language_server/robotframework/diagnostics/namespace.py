@@ -20,6 +20,7 @@ from typing import (
     Tuple,
     cast,
 )
+import itertools
 
 from ....utils.async_itertools import async_chain
 from ....utils.logging import LoggingDescriptor
@@ -223,13 +224,26 @@ class BlockVariableVisitor(AsyncVisitor):
         from robot.errors import VariableError
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Arguments
-        from robot.variables.search import is_variable
 
         n = cast(Arguments, node)
         arguments = n.get_tokens(RobotToken.ARGUMENT)
-        for argument in (cast(RobotToken, e) for e in arguments):
+        for argument1 in (cast(RobotToken, e) for e in arguments):
             try:
-                if is_variable(argument.value):
+                argument = None
+                try:
+                    argument = next(
+                        (
+                            v
+                            for v in itertools.dropwhile(
+                                lambda t: t.type in RobotToken.NON_DATA_TOKENS, argument1.tokenize_variables()
+                            )
+                            if v.type == RobotToken.VARIABLE
+                        ),
+                        None,
+                    )
+                except VariableError:
+                    pass
+                if argument is not None:
                     self._results.append(
                         ArgumentDefinition(
                             name=argument.value,

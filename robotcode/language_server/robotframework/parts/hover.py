@@ -76,6 +76,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return await self._hover_default(result_nodes, document, position)
 
     async def _hover_default(self, nodes: List[ast.AST], document: TextDocument, position: Position) -> Optional[Hover]:
+        from robot.api.parsing import Token as RobotToken
+
         namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
             return None
@@ -91,7 +93,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         for t in tokens:
             try:
-                for sub_token in t.tokenize_variables():
+                for sub_token in filter(lambda s: s.type == RobotToken.VARIABLE, t.tokenize_variables()):
                     range = range_from_token(sub_token)
 
                     if position.is_in_range(range):

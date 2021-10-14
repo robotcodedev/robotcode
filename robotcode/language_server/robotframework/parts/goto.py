@@ -87,6 +87,8 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     async def _definition_default(
         self, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Union[Location, List[Location], List[LocationLink], None]:
+        from robot.api.parsing import Token as RobotToken
+
         namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
             return None
@@ -103,7 +105,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         for t in tokens:
             try:
-                for sub_token in t.tokenize_variables():
+                for sub_token in filter(lambda s: s.type == RobotToken.VARIABLE, t.tokenize_variables()):
                     range = range_from_token(sub_token)
 
                     if position.is_in_range(range):
