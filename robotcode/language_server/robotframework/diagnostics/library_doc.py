@@ -130,6 +130,10 @@ class KeywordMatcher:
         return f"{type(self).__name__}(name={repr(self.name)})"
 
 
+class InvalidVariableError(Exception):
+    pass
+
+
 class VariableMatcher:
     def __init__(self, name: str) -> None:
         from robot.utils.normalizing import normalize
@@ -138,6 +142,9 @@ class VariableMatcher:
         searcher = VariableSearcher("$@&%", ignore_errors=True)
         match = searcher.search(name)
         self.name = name
+        if match.base is None:
+            raise InvalidVariableError(f"Invalid variable '{name}'")
+
         self.base = match.base
         self.normalized_name = str(normalize(match.base, "_"))
 

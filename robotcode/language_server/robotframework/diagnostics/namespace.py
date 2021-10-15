@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import itertools
 import weakref
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -20,7 +21,6 @@ from typing import (
     Tuple,
     cast,
 )
-import itertools
 
 from ....utils.async_itertools import async_chain
 from ....utils.logging import LoggingDescriptor
@@ -35,7 +35,12 @@ from ...common.types import (
     Position,
     Range,
 )
-from ..utils.ast import Token, is_non_variable_token, range_from_token_or_node
+from ..utils.ast import (
+    Token,
+    is_non_variable_token,
+    range_from_token_or_node,
+    tokenize_variables,
+)
 from ..utils.async_ast import AsyncVisitor
 from .imports_manager import ImportsManager
 from .library_doc import (
@@ -219,6 +224,46 @@ class BlockVariableVisitor(AsyncVisitor):
         self.source = source
         await self.visit(model)
         return self._results
+
+    async def visit_KeywordName(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import KeywordName
+        from robot.variables.search import VariableSearcher
+
+        n = cast(KeywordName, node)
+        name_token = cast(Token, n.get_token(RobotToken.KEYWORD_NAME))
+
+        if name_token is not None and name_token.value:
+            for a in filter(
+                lambda e: e.type == RobotToken.VARIABLE,
+                tokenize_variables(name_token, identifiers="$", ignore_errors=True),
+            ):
+                if a.value:
+                    searcher = VariableSearcher("$", ignore_errors=True)
+                    match = searcher.search(a.value)
+                    if match.base is None:
+                        continue
+                    name = f"{match.identifier}{{{match.base.split(':', 1)[0]}}}"
+
+                    self._results.append(
+                        ArgumentDefinition(
+                            name=name,
+                            name_token=a,
+                            line_no=a.lineno,
+                            col_offset=node.col_offset,
+                            end_line_no=node.end_lineno
+                            if node.end_lineno is not None
+                            else a.lineno
+                            if a.lineno is not None
+                            else -1,
+                            end_col_offset=node.end_col_offset
+                            if node.end_col_offset is not None
+                            else a.end_col_offset
+                            if name_token.end_col_offset is not None
+                            else -1,
+                            source=self.source,
+                        )
+                    )
 
     async def visit_Arguments(self, node: ast.AST) -> None:  # noqa: N802
         from robot.errors import VariableError
@@ -781,7 +826,7 @@ class Namespace:
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
         self._resources: OrderedDict[str, ResourceEntry] = OrderedDict()
         self._variables: OrderedDict[str, VariablesEntry] = OrderedDict()
-        self._initialzed = False
+        self._initialized = False
         self._initialize_lock = asyncio.Lock()
         self._analyzed = False
         self._analyze_lock = asyncio.Lock()
@@ -791,6 +836,7 @@ class Namespace:
         self._diagnostics: List[Diagnostic] = []
 
         self._keywords: Optional[List[KeywordDoc]] = None
+        self._loop = asyncio.get_event_loop()
 
         # TODO: how to get the search order from model
         self.search_order: Tuple[str, ...] = ()
@@ -814,7 +860,7 @@ class Namespace:
 
     @_logger.call
     async def get_diagnostisc(self) -> List[Diagnostic]:
-        await self._ensure_initialized()
+        await self.ensure_initialized()
 
         await self._analyze()
 
@@ -822,13 +868,13 @@ class Namespace:
 
     @_logger.call
     async def get_libraries(self) -> OrderedDict[str, LibraryEntry]:
-        await self._ensure_initialized()
+        await self.ensure_initialized()
 
         return self._libraries
 
     @_logger.call
     async def get_resources(self) -> OrderedDict[str, ResourceEntry]:
-        await self._ensure_initialized()
+        await self.ensure_initialized()
 
         return self._resources
 
@@ -856,9 +902,9 @@ class Namespace:
         return self._library_doc
 
     @_logger.call
-    async def _ensure_initialized(self) -> None:
+    async def ensure_initialized(self) -> bool:
         async with self._initialize_lock:
-            if not self._initialzed:
+            if not self._initialized:
                 imports = await self.get_imports()
 
                 if self.document is not None:
@@ -879,7 +925,12 @@ class Namespace:
                 await self._import_default_libraries()
                 await self._import_imports(imports, str(Path(self.source).parent), top_level=True)
 
-                self._initialzed = True
+                self._initialized = True
+        return self._initialized
+
+    @property
+    def initialized(self) -> bool:
+        return self._initialized
 
     async def get_imports(self) -> List[Import]:
         if self._imports is None:
@@ -905,7 +956,7 @@ class Namespace:
     async def get_variables(self, nodes: Optional[List[ast.AST]] = None) -> Dict[VariableMatcher, VariableDefinition]:
         from robot.parsing.model.blocks import Keyword, TestCase
 
-        await self._ensure_initialized()
+        await self.ensure_initialized()
 
         result: Dict[VariableMatcher, VariableDefinition] = {}
 
@@ -1246,7 +1297,7 @@ class Namespace:
 
     @_logger.call
     async def get_keywords(self) -> List[KeywordDoc]:
-        await self._ensure_initialized()
+        await self.ensure_initialized()
 
         if self._keywords is None:
             result: Dict[KeywordMatcher, KeywordDoc] = {}
@@ -1296,9 +1347,12 @@ class Namespace:
                     self._analyzed = True
 
     async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
-        await self._ensure_initialized()
+        await self.ensure_initialized()
 
         return await KeywordFinder(self).find_keyword(name)
+
+    async def find_keyword_threadsafe(self, name: Optional[str]) -> Optional[KeywordDoc]:
+        return await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(self.find_keyword(name), self._loop))
 
 
 class DiagnosticsEntry(NamedTuple):

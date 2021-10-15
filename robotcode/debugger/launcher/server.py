@@ -9,7 +9,6 @@ from ...jsonrpc2.protocol import rpc_method
 from ...jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
 from ...utils.logging import LoggingDescriptor
 from ..client import DAPClient, DAPClientError
-from ..protocol import DebugAdapterProtocol
 from ..dap_types import (
     Capabilities,
     ConfigurationDoneArguments,
@@ -31,6 +30,7 @@ from ..dap_types import (
     TerminatedEvent,
     TerminateRequest,
 )
+from ..protocol import DebugAdapterProtocol
 
 
 class OutputProtocol(asyncio.SubprocessProtocol):

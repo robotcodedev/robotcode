@@ -5,15 +5,16 @@ import asyncio
 import itertools
 import operator
 import re
+from dataclasses import dataclass
 from enum import Enum
 from functools import reduce
 from typing import (
     TYPE_CHECKING,
     Any,
+    AsyncGenerator,
     Dict,
     FrozenSet,
     Generator,
-    NamedTuple,
     Optional,
     Set,
     Tuple,
@@ -34,7 +35,8 @@ from ...common.types import (
     SemanticTokensPartialResult,
     SemanticTokenTypes,
 )
-from ..utils.ast import HasTokens, Token, iter_nodes, token_in_range
+from ..diagnostics.namespace import Namespace
+from ..utils.ast import HasTokens, Token, iter_nodes, token_in_range, tokenize_variables
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -69,7 +71,8 @@ class RobotSemTokenTypes(Enum):
     NAMESPACE = "namespace"
 
 
-class SemTokenInfo(NamedTuple):
+@dataclass
+class SemTokenInfo:
     lineno: int
     col_offset: int
     length: int
@@ -171,9 +174,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
     )
 
     @classmethod
-    def generate_sem_sub_tokens(
+    async def generate_sem_sub_tokens(
         cls, token: Token, node: ast.AST, col_offset: Optional[int] = None, length: Optional[int] = None
-    ) -> Generator[SemTokenInfo, None, None]:
+    ) -> AsyncGenerator[SemTokenInfo, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import (
             Documentation,
@@ -193,12 +196,12 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 sem_mod = {SemanticTokenModifiers.DOCUMENTATION}
 
             if token.type == RobotToken.VARIABLE:
-                if col_offset is None:
-                    col_offset = token.col_offset
-                if length is None:
-                    length = token.end_col_offset - token.col_offset
-
                 if is_variable(token.value):
+                    if col_offset is None:
+                        col_offset = token.col_offset
+                    if length is None:
+                        length = token.end_col_offset - token.col_offset
+
                     yield SemTokenInfo(token.lineno, col_offset, 2, RobotSemTokenTypes.VARIABLE_BEGIN, sem_mod)
                     yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset + 2, length - 3)
                     yield SemTokenInfo(
@@ -255,37 +258,60 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             else:
                 yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset, length)
 
-    @classmethod
-    def generate_sem_tokens(cls, token: Token, node: ast.AST) -> Generator[SemTokenInfo, None, None]:
+    async def generate_sem_tokens(
+        self, namespace: Namespace, token: Token, node: ast.AST
+    ) -> AsyncGenerator[SemTokenInfo, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
-        if token.type in RobotToken.ALLOW_VARIABLES:
+        if token.type in {*RobotToken.ALLOW_VARIABLES, RobotToken.KEYWORD}:
+
             last_sub_token = token
-            try:
-                for sub_token in token.tokenize_variables():
-                    last_sub_token = sub_token
-                    for e in cls.generate_sem_sub_tokens(sub_token, node):
-                        yield e
-            except BaseException:
-                pass
+
+            for sub_token in tokenize_variables(
+                token, ignore_errors=True, identifiers="$" if token.type == RobotToken.KEYWORD_NAME else "$@&%"
+            ):
+                last_sub_token = sub_token
+                async for e in self.generate_sem_sub_tokens(sub_token, node):
+                    yield e
+
             if last_sub_token == token:
-                for e in cls.generate_sem_sub_tokens(last_sub_token, node):
+                async for e in self.generate_sem_sub_tokens(last_sub_token, node):
                     yield e
             elif last_sub_token is not None and last_sub_token.end_col_offset < token.end_col_offset:
-                for e in cls.generate_sem_sub_tokens(
+                async for e in self.generate_sem_sub_tokens(
                     token,
                     node,
                     last_sub_token.end_col_offset,
                     token.end_col_offset - last_sub_token.end_col_offset - last_sub_token.col_offset,
                 ):
                     yield e
+        elif token.type == RobotToken.KEYWORD:
+            is_builtin = False
+            if namespace.initialized:
+                try:
+                    libdoc = await namespace.find_keyword_threadsafe(token.value)
+                    if (
+                        libdoc is not None
+                        and libdoc.libname is not None
+                        and libdoc.libname.casefold() == "builtin".casefold()
+                    ):
 
+                        is_builtin = True
+                except BaseException:
+                    pass
+
+            async for e in self.generate_sem_sub_tokens(token, node):
+                if is_builtin:
+                    if e.sem_modifiers is None:
+                        e.sem_modifiers = set()
+                    e.sem_modifiers.add(SemanticTokenModifiers.DEFAULT_LIBRARY)
+                yield e
         else:
-            for e in cls.generate_sem_sub_tokens(token, node):
+            async for e in self.generate_sem_sub_tokens(token, node):
                 yield e
 
-    def collect(
-        self, model: ast.AST, range: Optional[Range], cancel_token: CancelationToken
+    async def collect(
+        self, namespace: Namespace, model: ast.AST, range: Optional[Range], cancel_token: CancelationToken
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
 
         data = []
@@ -309,7 +335,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         ):
             cancel_token.throw_if_canceled()
 
-            for token in self.generate_sem_tokens(robot_token, robot_node):
+            async for token in self.generate_sem_tokens(namespace, robot_token, robot_node):
                 current_line = token.lineno - 1
 
                 data.append(current_line - last_line)
@@ -343,9 +369,20 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         self, document: TextDocument, range: Optional[Range]
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         try:
+            model = await self.parent.documents_cache.get_model(document)
+            namespace = await self.parent.documents_cache.get_namespace(document)
+            await namespace.ensure_initialized()
+
             cancel_token = CancelationToken()
             return await asyncio.get_event_loop().run_in_executor(
-                None, self.collect, await self.parent.documents_cache.get_model(document), range, cancel_token
+                None,
+                asyncio.run,
+                self.collect(
+                    namespace,
+                    model,
+                    range,
+                    cancel_token,
+                ),
             )
         except BaseException:
             cancel_token.cancel()

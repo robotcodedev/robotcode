@@ -188,3 +188,37 @@ async def get_node_at_position(node: ast.AST, position: Position) -> Optional[as
         return None
 
     return result_nodes[-1]
+
+
+def _tokenize_no_variables(token: Token) -> Generator[Token, None, None]:
+    yield token
+
+
+def tokenize_variables(
+    token: Token, identifiers: str = "$@&%", ignore_errors: bool = False
+) -> Generator[Token, Any, Any]:
+    from robot.api.parsing import Token as RobotToken
+    from robot.variables import VariableIterator
+
+    if token.type not in {*RobotToken.ALLOW_VARIABLES, RobotToken.KEYWORD}:
+        return _tokenize_no_variables(token)
+    variables = VariableIterator(token.value, identifiers=identifiers, ignore_errors=ignore_errors)
+    if not variables:
+        return _tokenize_no_variables(token)
+    return _tokenize_variables(token, variables)
+
+
+def _tokenize_variables(token: Token, variables: Any) -> Generator[Token, Any, Any]:
+    from robot.api.parsing import Token as RobotToken
+
+    lineno = token.lineno
+    col_offset = token.col_offset
+    remaining = ""
+    for before, variable, remaining in variables:
+        if before:
+            yield RobotToken(token.type, before, lineno, col_offset)
+            col_offset += len(before)
+        yield RobotToken(RobotToken.VARIABLE, variable, lineno, col_offset)
+        col_offset += len(variable)
+    if remaining:
+        yield RobotToken(token.type, remaining, lineno, col_offset)

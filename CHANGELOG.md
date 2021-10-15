@@ -4,6 +4,13 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+## added
+
+- extend sematic higlightning
+    - builtin library keywords are declared as default_library modifier
+    - higlight variables in keyword names and keyword calls
+- complete embedded arguments
+
 ##  0.2.9
 
 ### added

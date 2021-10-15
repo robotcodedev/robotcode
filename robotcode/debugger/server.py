@@ -5,8 +5,6 @@ from typing import Any, Literal, Optional, Union
 from ..jsonrpc2.protocol import rpc_method
 from ..jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
 from ..utils.logging import LoggingDescriptor
-from .debugger import Debugger
-from .protocol import DebugAdapterProtocol
 from .dap_types import (
     ConfigurationDoneArguments,
     ContinueArguments,
@@ -40,6 +38,8 @@ from .dap_types import (
     VariablesArguments,
     VariablesResponseBody,
 )
+from .debugger import Debugger
+from .protocol import DebugAdapterProtocol
 
 TCP_DEFAULT_PORT = 6612
 
