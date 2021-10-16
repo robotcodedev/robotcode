@@ -30,6 +30,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         parent.diagnostics.collect.add(self.collect_namespace_diagnostics)
 
+        parent.documents.did_open.add(self.namespace_invalidated)
         parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
 
     async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:

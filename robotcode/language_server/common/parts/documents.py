@@ -114,11 +114,12 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
             document = self._create_document(text_document)
 
             self._documents[uri] = document
-            await self.did_open(self, document)
         else:
             await document.apply_full_change(text_document.version, text_document.text)
 
         document.references.add(self)
+
+        await self.did_open(self, document)
 
     @rpc_method(name="textDocument/didClose", param_type=DidCloseTextDocumentParams)
     @_logger.call
@@ -129,13 +130,12 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         if document is not None:
             document.references.remove(self)
 
+            await self.did_close(self, document)
             await self.close_document(document)
 
     async def close_document(self, document: TextDocument) -> None:
         if len(document.references) == 0:
             self._documents.pop(str(document.uri), None)
-
-            await self.did_close(self, document)
 
             await document.clear()
             del document
