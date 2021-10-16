@@ -24,6 +24,7 @@ from ..utils.ast import (
     get_tokens_at_position,
     range_from_token,
     range_from_token_or_node,
+    tokenize_variables,
 )
 
 if TYPE_CHECKING:
@@ -91,9 +92,11 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         tokens = get_tokens_at_position(node, position)
 
-        for t in tokens:
+        for token in tokens:
             try:
-                for sub_token in filter(lambda s: s.type == RobotToken.VARIABLE, t.tokenize_variables()):
+                for sub_token in filter(
+                    lambda s: s.type == RobotToken.VARIABLE, tokenize_variables(token, ignore_errors=True)
+                ):
                     range = range_from_token(sub_token)
 
                     if position.is_in_range(range):

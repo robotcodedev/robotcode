@@ -200,7 +200,7 @@ def tokenize_variables(
     from robot.api.parsing import Token as RobotToken
     from robot.variables import VariableIterator
 
-    if token.type not in {*RobotToken.ALLOW_VARIABLES, RobotToken.KEYWORD}:
+    if token.type not in {*RobotToken.ALLOW_VARIABLES, RobotToken.KEYWORD, RobotToken.ASSIGN}:
         return _tokenize_no_variables(token)
     variables = VariableIterator(token.value, identifiers=identifiers, ignore_errors=ignore_errors)
     if not variables:
