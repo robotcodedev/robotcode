@@ -591,9 +591,9 @@ export class TestControllerManager {
     const run = this.testRuns.get(runId);
 
     if (run !== undefined) {
-      // TODO: add location and item information to output
-
-      //   const location = event.source
+      // TODO add location to appenOutput, VSCode testextension is buggy at this time
+      // const location =
+      //   event.source !== undefined
       //     ? new vscode.Location(
       //         vscode.Uri.file(event.source),
       //         new vscode.Range(
@@ -603,11 +603,6 @@ export class TestControllerManager {
       //       )
       //     : undefined;
 
-      //   run.appendOutput(
-      //     `${event.level}: ${event.message}` + "\r\n",
-      //     location,
-      //     event.itemId !== undefined ? this.findTestItemById(event.itemId) : undefined
-      //   );
       let style = (s: string) => s;
       switch (event.level) {
         case "WARN":
@@ -618,7 +613,11 @@ export class TestControllerManager {
           break;
       }
 
-      run.appendOutput(style(`${event.level}: ${event.message.replaceAll("\n", "\r\n")}` + "\r\n"));
+      run.appendOutput(
+        style(`${event.level}: ${event.message.replaceAll("\n", "\r\n")}` + "\r\n"),
+        undefined,
+        event.itemId !== undefined ? this.findTestItemById(event.itemId) : undefined
+      );
     }
   }
 }
