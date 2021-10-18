@@ -295,19 +295,35 @@ class Workspace(LanguageServerProtocolPart):
                 return None
 
             return section.parse_obj(config)
-        return (
-            await self.parent.send_request(
-                "workspace/configuration",
-                ConfigurationParams(
-                    items=[
-                        ConfigurationItem(
-                            scope_uri=str(scope_uri) if isinstance(scope_uri, Uri) else scope_uri, section=str(section)
-                        )
-                    ]
-                ),
-                list,
-            )
-        )[0]
+
+        if (
+            self.parent.client_capabilities
+            and self.parent.client_capabilities.workspace
+            and self.parent.client_capabilities.workspace.configuration
+        ):
+            return (
+                await self.parent.send_request(
+                    "workspace/configuration",
+                    ConfigurationParams(
+                        items=[
+                            ConfigurationItem(
+                                scope_uri=str(scope_uri) if isinstance(scope_uri, Uri) else scope_uri,
+                                section=str(section),
+                            )
+                        ]
+                    ),
+                    list,
+                )
+            )[0]
+
+        result = self.settings
+        for sub_key in str(section).split("."):
+            if sub_key in result:
+                result = result.get(sub_key, None)
+            else:
+                result = {}
+                break
+        return self.settings.get(str(section), {})
 
     def get_workspace_folder(self, uri: Union[Uri, str]) -> Optional[WorkspaceFolder]:
         if isinstance(uri, str):
