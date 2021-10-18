@@ -6,10 +6,14 @@ import pytest
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.common.types import (
     ClientCapabilities,
+    ClientInfo,
+    HoverClientCapabilities,
     MarkupContent,
     MarkupKind,
     Position,
     Range,
+    TextDocumentClientCapabilities,
+    WorkspaceFolder,
 )
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
@@ -23,7 +27,17 @@ async def protocol() -> AsyncGenerator[RobotLanguageServerProtocol, None]:
     server = RobotLanguageServer()
     try:
         protocol = RobotLanguageServerProtocol(server)
-        await protocol._initialize(ClientCapabilities(), root_path=str(root_path), root_uri=root_path.as_uri())
+        await protocol._initialize(
+            ClientCapabilities(
+                text_document=TextDocumentClientCapabilities(
+                    hover=HoverClientCapabilities(content_format=[MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT])
+                )
+            ),
+            root_path=str(root_path),
+            root_uri=root_path.as_uri(),
+            workspace_folders=[WorkspaceFolder(name="test workspace", uri=root_path.as_uri())],
+            client_info=ClientInfo(name="TestClient", version="1.0.0"),
+        )
 
         yield protocol
     finally:

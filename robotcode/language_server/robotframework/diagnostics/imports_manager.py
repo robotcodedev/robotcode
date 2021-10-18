@@ -323,7 +323,7 @@ class _ResourcesEntry:
 
 
 def _shutdown_process_pool(pool: ProcessPoolExecutor) -> None:
-    pool.shutdown(False)
+    pool.shutdown(True)
 
 
 # we need this, because ProcessPoolExecutor is not correctly initialized if asyncio is reading from stdin
