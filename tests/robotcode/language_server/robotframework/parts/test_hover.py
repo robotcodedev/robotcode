@@ -46,20 +46,18 @@ async def protocol() -> AsyncGenerator[RobotLanguageServerProtocol, None]:
 
 @pytest.fixture
 async def test_document() -> AsyncGenerator[TextDocument, None]:
-    data = """\
-***Test Cases***
-first
-    Log  Hello
-"""
-    yield TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=data)
+    data_path = Path(Path(__file__).parent, "data/hover.robot")
+    data = data_path.read_text()
+
+    yield TextDocument(document_uri=data_path.as_uri(), language_id="robotframework", version=1, text=data)
 
 
 @pytest.mark.parametrize(
     ("position",),
     [
-        (Position(line=2, character=4),),
-        (Position(line=2, character=5),),
-        (Position(line=2, character=6),),
+        (Position(line=9, character=4),),
+        (Position(line=9, character=5),),
+        (Position(line=9, character=6),),
     ],
 )
 @pytest.mark.asyncio
@@ -69,17 +67,17 @@ async def test_hover_should_find_simple_keyword(
 
     result = await protocol._robot_hover.collect(protocol.hover, test_document, position)
     assert result
-    assert result.range == Range(start=Position(line=2, character=4), end=Position(line=2, character=7))
+    assert result.range == Range(start=Position(line=9, character=4), end=Position(line=9, character=7))
     assert isinstance(result.contents, MarkupContent)
     assert result.contents.kind == MarkupKind.MARKDOWN
-    assert "Log" in result.contents.value
+    assert result.contents.value.startswith("#### Log")
 
 
 @pytest.mark.parametrize(
     ("position",),
     [
-        (Position(line=2, character=3),),
-        (Position(line=2, character=7),),
+        (Position(line=9, character=3),),
+        (Position(line=9, character=7),),
     ],
 )
 @pytest.mark.asyncio
