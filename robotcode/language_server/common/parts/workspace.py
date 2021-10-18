@@ -387,13 +387,20 @@ class Workspace(LanguageServerProtocolPart):
         else:
             self.did_change_watched_files.add(callback)  # type: ignore
 
-            await self.parent.register_capability(
-                entry.id,
-                "workspace/didChangeWatchedFiles",
-                DidChangeWatchedFilesRegistrationOptions(
-                    watchers=[FileSystemWatcher(glob_pattern=w.glob_pattern, kind=w.kind) for w in _watchers]
-                ),
-            )
+            if (
+                self.parent.client_capabilities
+                and self.parent.client_capabilities.workspace
+                and self.parent.client_capabilities.workspace.did_change_watched_files
+                and self.parent.client_capabilities.workspace.did_change_watched_files.dynamic_registration
+            ):
+                await self.parent.register_capability(
+                    entry.id,
+                    "workspace/didChangeWatchedFiles",
+                    DidChangeWatchedFilesRegistrationOptions(
+                        watchers=[FileSystemWatcher(glob_pattern=w.glob_pattern, kind=w.kind) for w in _watchers]
+                    ),
+                )
+            # TODO: implement own filewatcher if not supported by language server client
 
         def remove() -> None:
             if self._loop.is_running():
@@ -414,4 +421,11 @@ class Workspace(LanguageServerProtocolPart):
                 self.did_change_watched_files.remove(entry.call_childrens)
         elif len(entry.child_callbacks) == 0:
             self.did_change_watched_files.remove(entry.callback)  # type: ignore
-            await self.parent.unregister_capability(entry.id, "workspace/didChangeWatchedFiles")
+            if (
+                self.parent.client_capabilities
+                and self.parent.client_capabilities.workspace
+                and self.parent.client_capabilities.workspace.did_change_watched_files
+                and self.parent.client_capabilities.workspace.did_change_watched_files.dynamic_registration
+            ):
+                await self.parent.unregister_capability(entry.id, "workspace/didChangeWatchedFiles")
+            # TODO: implement own filewatcher if not supported by language server client

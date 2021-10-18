@@ -100,9 +100,9 @@ class Uri(Mapping[str, str]):
         if self._parts.scheme != "file":
             raise InvalidUriError(f"Invalid URI scheme '{str(self)}'.")
 
-        if netloc and path and self._parts.scheme == "file":
+        if netloc and self._parts.scheme == "file":
             # unc path: file://shares/c$/far/boo
-            value = "//{}{}".format(netloc, path)
+            value = "//{}{}".format(netloc, path or "")
 
         elif _RE_DRIVE_LETTER_PATH.match(path):
             # windows drive letter: file:///C:/far/boo
