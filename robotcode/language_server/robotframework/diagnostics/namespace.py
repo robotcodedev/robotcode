@@ -38,6 +38,7 @@ from ...common.types import (
 from ..utils.ast import (
     Token,
     is_non_variable_token,
+    range_from_node,
     range_from_token_or_node,
     tokenize_variables,
 )
@@ -219,11 +220,19 @@ class VariablesVisitor(AsyncVisitor):
 
 
 class BlockVariableVisitor(AsyncVisitor):
-    async def get(self, source: str, model: ast.AST) -> List[VariableDefinition]:
-        self._results: List[VariableDefinition] = []
+    async def get(self, source: str, model: ast.AST, position: Optional[Position] = None) -> List[VariableDefinition]:
         self.source = source
+        self.position = position
+
+        self._results: List[VariableDefinition] = []
+
         await self.visit(model)
+
         return self._results
+
+    async def visit(self, node: ast.AST) -> None:
+        if self.position is None or self.position >= range_from_node(node).start:
+            return await super().visit(node)
 
     async def visit_KeywordName(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
@@ -340,6 +349,39 @@ class BlockVariableVisitor(AsyncVisitor):
                         source=self.source,
                     )
                 )
+        except VariableError:
+            pass
+
+    async def visit_ForHeader(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.errors import VariableError
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import ForHeader
+        from robot.variables.search import contains_variable
+
+        try:
+            n = cast(ForHeader, node)
+            variables = n.get_tokens(RobotToken.VARIABLE)
+            for variable in variables:
+                if variable is not None and variable.value and contains_variable(variable.value):
+                    self._results.append(
+                        VariableDefinition(
+                            name=variable.value,
+                            name_token=variable,
+                            line_no=node.lineno,
+                            col_offset=node.col_offset,
+                            end_line_no=node.end_lineno
+                            if node.end_lineno is not None
+                            else variable.lineno
+                            if variable.lineno is not None
+                            else -1,
+                            end_col_offset=node.end_col_offset
+                            if node.end_col_offset is not None
+                            else variable.end_col_offset
+                            if variable.end_col_offset is not None
+                            else -1,
+                            source=self.source,
+                        )
+                    )
         except VariableError:
             pass
 
@@ -953,7 +995,9 @@ class Namespace:
 
         return cls._builtin_variables
 
-    async def get_variables(self, nodes: Optional[List[ast.AST]] = None) -> Dict[VariableMatcher, VariableDefinition]:
+    async def get_variables(
+        self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
+    ) -> Dict[VariableMatcher, VariableDefinition]:
         from robot.parsing.model.blocks import Keyword, TestCase
 
         await self.ensure_initialized()
@@ -962,7 +1006,7 @@ class Namespace:
 
         async for var in async_chain(
             *[
-                await BlockVariableVisitor().get(self.source, n)
+                await BlockVariableVisitor().get(self.source, n, position)
                 for n in nodes or []
                 if isinstance(n, (Keyword, TestCase))
             ],
@@ -975,8 +1019,10 @@ class Namespace:
 
         return result
 
-    async def find_variable(self, name: str, nodes: Optional[List[ast.AST]]) -> Optional[VariableDefinition]:
-        return (await self.get_variables(nodes)).get(VariableMatcher(name), None)
+    async def find_variable(
+        self, name: str, nodes: Optional[List[ast.AST]], position: Optional[Position] = None
+    ) -> Optional[VariableDefinition]:
+        return (await self.get_variables(nodes, position)).get(VariableMatcher(name), None)
 
     async def _import_imports(self, imports: Iterable[Import], base_dir: str, *, top_level: bool = False) -> None:
         async def _import(value: Import) -> Optional[LibraryEntry]:

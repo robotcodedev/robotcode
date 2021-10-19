@@ -49,7 +49,11 @@ async def test_document() -> AsyncGenerator[TextDocument, None]:
     data_path = Path(Path(__file__).parent, "data/hover.robot")
     data = data_path.read_text()
 
-    yield TextDocument(document_uri=data_path.as_uri(), language_id="robotframework", version=1, text=data)
+    document = TextDocument(document_uri=data_path.as_uri(), language_id="robotframework", version=1, text=data)
+    try:
+        yield document
+    finally:
+        del document
 
 
 @pytest.mark.parametrize(
@@ -87,3 +91,25 @@ async def test_hover_should_not_find_simple_keyword_on_boundaries(
 
     result = await protocol._robot_hover.collect(protocol.hover, test_document, position)
     assert result is None
+
+
+@pytest.mark.parametrize(
+    ("position", "variable"),
+    [
+        (Position(line=4, character=2), "(Variable) ${A VAR}"),
+        (Position(line=9, character=18), "(Variable) ${A VAR}"),
+        (Position(line=5, character=7), "(Variable) &{A DICT}"),
+        (Position(line=10, character=36), "(Variable) &{A DICT}"),
+        (Position(line=11, character=13), "(Variable) ${key}"),  # FOR Variable
+        (Position(line=11, character=24), "(Variable) ${value}"),  # FOR Variable
+    ],
+)
+@pytest.mark.asyncio
+async def test_hover_should_find_variable(
+    protocol: RobotLanguageServerProtocol, test_document: TextDocument, position: Position, variable: str
+) -> None:
+
+    result = await protocol._robot_hover.collect(protocol.hover, test_document, position)
+    assert result
+    assert isinstance(result.contents, MarkupContent)
+    assert result.contents.value == variable

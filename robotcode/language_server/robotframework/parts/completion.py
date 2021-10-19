@@ -330,7 +330,7 @@ class CompletionCollector(ModelHelperMixin):
                 ),
                 filter_text=s.name[2:-1] if range is not None else None,
             )
-            for s in (await namespace.get_variables(nodes)).values()
+            for s in (await namespace.get_variables(nodes, position)).values()
             if s.name is not None and (s.name_token is None or not position.is_in_range(range_from_token(s.name_token)))
         ]
 

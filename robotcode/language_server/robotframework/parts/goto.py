@@ -112,7 +112,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     range = range_from_token(sub_token)
 
                     if position.is_in_range(range):
-                        variable = await namespace.find_variable(sub_token.value, nodes)
+                        variable = await namespace.find_variable(sub_token.value, nodes, position)
                         if variable is not None and variable.source:
                             return [
                                 LocationLink(
