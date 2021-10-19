@@ -4,6 +4,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+##  0.2.11
+
 ### added
 - fix [#10](https://github.com/d-biehl/robotcode/issues/10)
 - start implementing more unit tests
