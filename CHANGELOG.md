@@ -4,9 +4,14 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+### added
+- fix [#10](https://github.com/d-biehl/robotcode/issues/10)
+- start implementing more unit tests
+- extend hover and goto for variables
+    
 ##  0.2.10
 
-## added
+### added
 
 - extend sematic higlightning
     - builtin library keywords are declared as default_library modifier
