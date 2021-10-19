@@ -483,10 +483,10 @@ class LibraryDoc(Model):
     def _process_inline_links(self, text: str) -> str:
         headers = [v.group(2) for v in self._headers.finditer(text)]
 
-        def repl(m: re.Match[str]) -> str:
+        def repl(m: re.Match) -> str:  # type: ignore
             if m.group(2) in headers:
                 return f"[#{str(m.group(2)).replace(' ', '-')}|{str(m.group(2))}]"
-            return m.group(0)
+            return str(m.group(0))
 
         return str(self._inline_link.sub(repl, text))
 
