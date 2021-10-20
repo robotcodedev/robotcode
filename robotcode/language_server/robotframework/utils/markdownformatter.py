@@ -160,9 +160,10 @@ class LinkFormatter:
     def remove_link(self, text: str) -> str:
         # 2nd, 4th, etc. token contains link, others surrounding content
         tokens = self._link.split(text)
-
-        formatters: Iterator[Callable[[str], Any]] = itertools.cycle([self._remove_link])
-        return "".join(f(t) for f, t in zip(formatters, tokens))
+        if len(tokens) > 1:
+            formatters: Iterator[Callable[[str], Any]] = itertools.cycle([self._remove_link])
+            return "".join(f(t) for f, t in zip(formatters, tokens))
+        return text
 
     def _remove_link(self, text: str) -> str:
         if "|" not in text:
