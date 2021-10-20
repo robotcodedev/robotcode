@@ -83,21 +83,27 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
     @_logger.call
     async def _on_initialized(self, sender: Any) -> None:
-        document_selector = [DocumentFilter(language="python")]
-        await self.register_capability(
-            str(uuid.uuid4()),
-            "textDocument/didOpen",
-            TextDocumentRegistrationOptions(document_selector=document_selector),
-        )
-        await self.register_capability(
-            str(uuid.uuid4()),
-            "textDocument/didChange",
-            TextDocumentChangeRegistrationOptions(
-                document_selector=document_selector, sync_kind=TextDocumentSyncKind.INCREMENTAL
-            ),
-        )
-        await self.register_capability(
-            str(uuid.uuid4()),
-            "textDocument/didClose",
-            TextDocumentRegistrationOptions(document_selector=document_selector),
-        )
+        if (
+            self.client_capabilities
+            and self.client_capabilities.workspace
+            and self.client_capabilities.workspace.file_operations
+            and self.client_capabilities.workspace.file_operations.dynamic_registration
+        ):
+            document_selector = [DocumentFilter(language="python")]
+            await self.register_capability(
+                str(uuid.uuid4()),
+                "textDocument/didOpen",
+                TextDocumentRegistrationOptions(document_selector=document_selector),
+            )
+            await self.register_capability(
+                str(uuid.uuid4()),
+                "textDocument/didChange",
+                TextDocumentChangeRegistrationOptions(
+                    document_selector=document_selector, sync_kind=TextDocumentSyncKind.INCREMENTAL
+                ),
+            )
+            await self.register_capability(
+                str(uuid.uuid4()),
+                "textDocument/didClose",
+                TextDocumentRegistrationOptions(document_selector=document_selector),
+            )

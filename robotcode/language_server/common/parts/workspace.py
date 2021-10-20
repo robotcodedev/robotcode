@@ -323,7 +323,7 @@ class Workspace(LanguageServerProtocolPart):
             else:
                 result = {}
                 break
-        return self.settings.get(str(section), {})
+        return result
 
     def get_workspace_folder(self, uri: Union[Uri, str]) -> Optional[WorkspaceFolder]:
         if isinstance(uri, str):

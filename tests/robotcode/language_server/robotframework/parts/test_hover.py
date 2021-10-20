@@ -1,19 +1,25 @@
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import AsyncGenerator, cast
 
 import pytest
 
+from robotcode.language_server.common.parts.workspace import HasConfigSection
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.common.types import (
     ClientCapabilities,
     ClientInfo,
     HoverClientCapabilities,
+    InitializedParams,
     MarkupContent,
     MarkupKind,
     Position,
     Range,
     TextDocumentClientCapabilities,
     WorkspaceFolder,
+)
+from robotcode.language_server.robotframework.configuration import (
+    RobotCodeConfig,
+    RobotConfig,
 )
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
@@ -38,7 +44,21 @@ async def protocol() -> AsyncGenerator[RobotLanguageServerProtocol, None]:
             workspace_folders=[WorkspaceFolder(name="test workspace", uri=root_path.as_uri())],
             client_info=ClientInfo(name="TestClient", version="1.0.0"),
         )
-
+        await protocol._initialized(InitializedParams())
+        await protocol.workspace._workspace_did_change_configuration(
+            {
+                cast(HasConfigSection, RobotCodeConfig)
+                .__config_section__: RobotCodeConfig(
+                    robot=RobotConfig(
+                        env={"ENV_VAR": "1"},
+                        variables={
+                            "CMD_VAR": "1",
+                        },
+                    )
+                )
+                .dict()
+            }
+        )
         yield protocol
     finally:
         server.close()
@@ -102,6 +122,7 @@ async def test_hover_should_not_find_simple_keyword_on_boundaries(
         (Position(line=10, character=36), "(Variable) &{A DICT}"),
         (Position(line=11, character=13), "(Variable) ${key}"),  # FOR Variable
         (Position(line=11, character=24), "(Variable) ${value}"),  # FOR Variable
+        (Position(line=14, character=14), "(Command Line Variable) ${CMD_VAR}"),  # CMD LINE Variable
     ],
 )
 @pytest.mark.asyncio

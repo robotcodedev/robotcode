@@ -12,3 +12,4 @@ first
     FOR    ${key}    ${value}    IN    &{A DICT}
         Log    ${key}=${value}
     END
+    Log    ${CMD_VAR}

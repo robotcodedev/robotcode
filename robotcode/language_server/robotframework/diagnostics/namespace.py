@@ -141,7 +141,8 @@ class VariablesImport(Import):
 class VariableDefinitionType(Enum):
     VARIABLE = "Variable"
     ARGUMENT = "Argument"
-    BUILTIN_VARIABLE = "Variable (Builtin)"
+    COMMAND_LINE_VARIABLE = "Command Line Variable"
+    BUILTIN_VARIABLE = "Builtin Variable"
 
 
 @dataclass
@@ -169,6 +170,14 @@ class VariableDefinition(SourceEntity):
 @dataclass
 class BuiltInVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.BUILTIN_VARIABLE
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.name, self.type))
+
+
+@dataclass
+class CommandLineVariableDefinition(VariableDefinition):
+    type: VariableDefinitionType = VariableDefinitionType.COMMAND_LINE_VARIABLE
 
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type))
@@ -995,6 +1004,15 @@ class Namespace:
 
         return cls._builtin_variables
 
+    def get_command_line_variables(self) -> List[VariableDefinition]:
+        if self.imports_manager.config is None:
+            return []
+
+        return [
+            CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None)
+            for k in self.imports_manager.config.variables.keys()
+        ]
+
     async def get_variables(
         self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
     ) -> Dict[VariableMatcher, VariableDefinition]:
@@ -1012,6 +1030,7 @@ class Namespace:
             ],
             (e for e in await self.get_own_variables()),
             *(e.variables for e in self._resources.values()),
+            (e for e in self.get_command_line_variables()),
             (e for e in self.get_builtin_variables()),
         ):
             if var.name is not None and VariableMatcher(var.name) not in result.keys():

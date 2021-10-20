@@ -304,7 +304,8 @@ class CompletionCollector(ModelHelperMixin):
     _VARIABLE_COMPLETION_SORT_TEXT_PREFIX = {
         VariableDefinitionType.VARIABLE: "035",
         VariableDefinitionType.ARGUMENT: "034",
-        VariableDefinitionType.BUILTIN_VARIABLE: "036",
+        VariableDefinitionType.COMMAND_LINE_VARIABLE: "036",
+        VariableDefinitionType.BUILTIN_VARIABLE: "037",
     }
 
     async def create_variables_completion_items(
