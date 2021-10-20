@@ -139,10 +139,10 @@ class VariablesImport(Import):
 
 
 class VariableDefinitionType(Enum):
-    VARIABLE = "Variable"
-    ARGUMENT = "Argument"
-    COMMAND_LINE_VARIABLE = "Command Line Variable"
-    BUILTIN_VARIABLE = "Builtin Variable"
+    VARIABLE = "variable"
+    ARGUMENT = "argument"
+    COMMAND_LINE_VARIABLE = "command line variable"
+    BUILTIN_VARIABLE = "builtin variable"
 
 
 @dataclass

@@ -591,7 +591,7 @@ export class TestControllerManager {
     const run = this.testRuns.get(runId);
 
     if (run !== undefined) {
-      // TODO add location to appenOutput, VSCode testextension is buggy at this time
+      // TODO add location to appendOutput, VSCode testextension is buggy at this time
       // const location =
       //   event.source !== undefined
       //     ? new vscode.Location(
