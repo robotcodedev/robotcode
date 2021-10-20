@@ -1,6 +1,5 @@
 import asyncio
 import re
-from os import PathLike
 from pathlib import Path
 from typing import Any, AsyncGenerator, Generator, Tuple, Union, cast
 
@@ -88,9 +87,7 @@ async def test_document(request: Any) -> AsyncGenerator[TextDocument, None]:
 TEST_EXPRESSION_LINE = re.compile(r"^\#\s*(?P<position>\^+)\s*(?P<name>[^:]+)\s*:\s*(?P<expression>.+)")
 
 
-def generate_tests_from_doc(
-    path: Union[PathLike[str], str]
-) -> Generator[Tuple[Union[PathLike[str], str], str, int, int, str], None, None]:
+def generate_tests_from_doc(path: str) -> Generator[Tuple[str, str, int, int, str], None, None]:
     file = Path(path)
 
     current_line = 0
