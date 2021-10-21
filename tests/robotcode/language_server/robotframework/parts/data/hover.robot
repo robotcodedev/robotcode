@@ -3,10 +3,12 @@ Library           Collections
 #                 ^^^^^^^^^^^ library import by module name: re.match(r'## Library \*Collections\*.*', value)
 Library           ${CURDIR}/libs/myvariables.py
 #                               ^^^^^^^^^^^^^^ library import by path name: re.match(r'## Library \*myvariables.*', value)
-# TODO            ^^^^^^^^^  variable in library name: value == '(builtin variable) ${CURDIR}'
+# TODO            ^^^^^^^^^  variable in library import: value == '(builtin variable) ${CURDIR}'
 Variables         ${CURDIR}/libs/myvariables.py
+# TODO            ^^^^^^^^^  variable in variables import: value == '(builtin variable) ${CURDIR}'
 Resource          ${CURDIR}/resources/firstresource.resource
 #                                     ^^^^^^^^^^^^^^ library import by path name: re.match(r'## Resource \*firstresource.*', value)
+# TODO            ^^^^^^^^^  variable in resource import: value == '(builtin variable) ${CURDIR}'
 
 *** Variables ***
 ${A VAR}          i'm a var
@@ -31,3 +33,6 @@ first
     Log    ${CURDIR}
 #          ^^^^^^^^^    BuiltIn variable: value == '(builtin variable) ${CURDIR}'
 #^^^    Spaces: result is None
+    Log    ${A_VAR_FROM_LIB}
+# TODO         ^^^^^^^^^^^^^^^^^    BuiltIn variable: value == '(imported variable) ${A_VAR_FROM_LIB}'
+
