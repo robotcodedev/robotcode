@@ -1,7 +1,7 @@
 import asyncio
 import re
 from pathlib import Path
-from typing import Any, AsyncGenerator, Generator, Tuple, Union, cast
+from typing import Any, AsyncGenerator, Generator, Tuple, cast
 
 import pytest
 
@@ -77,7 +77,9 @@ async def test_document(request: Any) -> AsyncGenerator[TextDocument, None]:
     data_path = Path(request.param)
     data = data_path.read_text()
 
-    document = TextDocument(document_uri=data_path.as_uri(), language_id="robotframework", version=1, text=data)
+    document = TextDocument(
+        document_uri=data_path.absolute().as_uri(), language_id="robotframework", version=1, text=data
+    )
     try:
         yield document
     finally:
@@ -113,7 +115,7 @@ def generate_tests_from_doc(path: str) -> Generator[Tuple[str, str, int, int, st
 
 @pytest.mark.parametrize(
     ("test_document", "name", "line", "character", "expression"),
-    generate_tests_from_doc(Path(Path(__file__).parent, "data/hover.robot")),
+    generate_tests_from_doc(str(Path(Path(__file__).parent, "data/hover.robot").relative_to(Path(".").absolute()))),
     indirect=["test_document"],
 )
 @pytest.mark.asyncio
@@ -129,15 +131,17 @@ async def test_hover(
         protocol.hover, test_document, Position(line=line, character=character)
     )
 
-    assert eval(
-        expression,
-        {"re": re},
-        {
-            "result": result,
-            "value": result.contents.value
-            if result is not None and isinstance(result.contents, MarkupContent)
-            else None,
-            "line": line,
-            "character": character,
-        },
+    assert bool(
+        eval(
+            expression,
+            {"re": re},
+            {
+                "result": result,
+                "value": result.contents.value
+                if result is not None and isinstance(result.contents, MarkupContent)
+                else None,
+                "line": line,
+                "character": character,
+            },
+        )
     ), expression

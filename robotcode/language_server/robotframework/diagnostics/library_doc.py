@@ -241,6 +241,7 @@ class KeywordDoc(Model):
     doc_format: str = DEFAULT_DOC_FORMAT
     is_error_handler: bool = False
     error_handler_message: Optional[str] = None
+    is_initializer: bool = False
 
     @validator("doc_format")
     def doc_format_validator(cls, v: str) -> str:
@@ -269,20 +270,24 @@ class KeywordDoc(Model):
             ),
         )
 
-    def to_markdown(self, add_signature: bool = True) -> str:
+    def to_markdown(self, add_signature: bool = True, header_level: int = 0) -> str:
         if self.doc_format == DEFAULT_DOC_FORMAT:
-            return MarkDownFormatter().format(self.get_full_doc(add_signature))
+            return MarkDownFormatter().format(self.get_full_doc(add_signature=add_signature, header_level=header_level))
 
         return self.doc
 
-    def get_full_doc(self, add_signature: bool = True) -> str:
+    def get_full_doc(self, add_signature: bool = True, header_level: int = 0) -> str:
         if self.doc_format == DEFAULT_DOC_FORMAT:
             result = ""
 
             if add_signature:
-                result += f"\n\n=== {self.name} ===\n"
+                result += (
+                    f"\n\n={'='*header_level} "
+                    f"{'Library' if self.is_initializer else 'Keyword'} *{self.name}* "
+                    f"={'='*header_level}\n"
+                )
                 if self.args:
-                    result += "\n==== Arguments: ====\n"
+                    result += f"\n=={'='*header_level} Arguments: =={'='*header_level}\n"
                     for a in self.args:
                         result += f"\n| {str(a)}"
 
@@ -293,7 +298,7 @@ class KeywordDoc(Model):
                 if result:
                     result += "\n\n"
 
-                result += "\n==== Documentation: ====\n\n"
+                result += f"\n=={'='*header_level} Documentation: =={'='*header_level}\n\n"
 
                 result += self.doc
 
@@ -493,7 +498,7 @@ class LibraryDoc(Model):
     def get_full_doc(self, only_doc: bool = True) -> str:
         if self.doc_format == DEFAULT_DOC_FORMAT:
 
-            result = f"= {self.name} =\n"
+            result = f"= {(self.type[0].upper()+self.type[1:].lower()) if self.type else 'Unknown'} *{self.name}* =\n"
 
             if self.version:
                 result += f"\n| **Library Version:** | {self.version} |"
@@ -536,7 +541,7 @@ class LibraryDoc(Model):
                             result += "\n---\n"
                         first = False
 
-                        result += "\n" + kw.get_full_doc()
+                        result += "\n" + kw.get_full_doc(header_level=2)
 
             return self._process_inline_links(result)
 
@@ -1031,6 +1036,7 @@ def get_library_doc(
             source=lib.source if lib is not None else source,
             module_spec=module_spec,
             python_path=sys.path,
+            type="LIBRARY",
         )
 
         if lib is not None:
@@ -1056,6 +1062,7 @@ def get_library_doc(
                             libname=kw[1].libname,
                             longname=kw[1].longname,
                             doc_format=str(lib.doc_format) or DEFAULT_DOC_FORMAT,
+                            is_initializer=True,
                         )
                         for kw in [
                             (KeywordDocBuilder().build_keyword(k), k) for k in [KeywordWrapper(lib.init, source)]

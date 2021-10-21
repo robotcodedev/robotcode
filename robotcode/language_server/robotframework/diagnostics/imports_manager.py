@@ -264,7 +264,10 @@ class _ResourcesEntry:
             return None
 
     def __close_document(self, document: TextDocument) -> None:
-        asyncio.run_coroutine_threadsafe(self.parent.parent_protocol.documents.close_document(document), self._loop)
+        if self._loop.is_running():
+            asyncio.run_coroutine_threadsafe(self.parent.parent_protocol.documents.close_document(document), self._loop)
+        else:
+            del document
 
     async def _update(self) -> None:
         self._document = await self._get_document_coroutine()
