@@ -1,10 +1,10 @@
 *** Settings ***
 Library           Collections
 #                 ^^^^^^^^^^^ library import by module name: re.match(r'## Library \*Collections\*.*', value)
-Library           ${CURDIR}/lib/myvariables.py
+Library           ${CURDIR}/libs/myvariables.py
 #                               ^^^^^^^^^^^^^^ library import by path name: re.match(r'## Library \*myvariables.*', value)
 # TODO            ^^^^^^^^^  variable in library name: value == '(builtin variable) ${CURDIR}'
-Variables         ${CURDIR}/lib/myvariables.py
+Variables         ${CURDIR}/libs/myvariables.py
 Resource          ${CURDIR}/resources/firstresource.resource
 #                                     ^^^^^^^^^^^^^^ library import by path name: re.match(r'## Resource \*firstresource.*', value)
 
