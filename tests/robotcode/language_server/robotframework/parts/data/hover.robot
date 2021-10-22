@@ -35,4 +35,3 @@ first
 #^^^    Spaces: result is None
     Log    ${A_VAR_FROM_LIB}
 # TODO         ^^^^^^^^^^^^^^^^^    BuiltIn variable: value == '(imported variable) ${A_VAR_FROM_LIB}'
-
