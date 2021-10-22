@@ -36,7 +36,7 @@ async def test_goto(
             expression,
             {"re": re},
             {
-                "result": result,               
+                "result": result,
                 "line": line,
                 "character": character,
             },
