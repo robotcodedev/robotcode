@@ -167,3 +167,94 @@ def test_decode_optional_simple_class() -> None:
 )
 def test_decode_complex_class_with_encoding(expr: Any, type: Any, expected: str) -> None:
     assert from_json(expr, type) == expected
+
+
+@dataclass
+class SimpleItemWithOptionalFields:
+    first: int
+    second: bool = True
+    third: Optional[str] = None
+    forth: Optional[float] = None
+
+
+@pytest.mark.parametrize(
+    ("expr", "type", "expected"),
+    [
+        ('{"first": 1}', SimpleItemWithOptionalFields, SimpleItemWithOptionalFields(first=1)),
+        (
+            '{"first": 1, "third": "Hello"}',
+            SimpleItemWithOptionalFields,
+            SimpleItemWithOptionalFields(first=1, third="Hello"),
+        ),
+        ('{"first": 1, "forth": 1.0}', SimpleItemWithOptionalFields, SimpleItemWithOptionalFields(first=1, forth=1.0)),
+    ],
+)
+def test_decode_simple_item_with_optional_field(expr: Any, type: Any, expected: str) -> None:
+    assert from_json(expr, type) == expected
+
+
+@dataclass
+class SimpleItem1:
+    d: int
+    e: int
+    f: int = 1
+
+
+@dataclass
+class ComplexItemWithUnionType:
+    a_union_field: Union[SimpleItem, SimpleItem1]
+
+
+@pytest.mark.parametrize(
+    ("expr", "type", "expected"),
+    [
+        ('{"a_union_field":{"a":1, "b":2}}', ComplexItemWithUnionType, ComplexItemWithUnionType(SimpleItem(1, 2))),
+        ('{"a_union_field":{"d":1, "e":2}}', ComplexItemWithUnionType, ComplexItemWithUnionType(SimpleItem1(1, 2))),
+        (
+            '{"a_union_field":{"d":1, "e":2, "f": 3}}',
+            ComplexItemWithUnionType,
+            ComplexItemWithUnionType(SimpleItem1(1, 2, 3)),
+        ),
+    ],
+)
+def test_decode_with_union_and_different_keys(expr: Any, type: Any, expected: str) -> None:
+    assert from_json(expr, type) == expected
+
+
+@dataclass
+class SimpleItem2:
+    a: int
+    b: int
+    c: int = 1
+
+
+@dataclass
+class ComplexItemWithUnionTypeWithSameProperties:
+    a_union_field: Union[SimpleItem, SimpleItem2]
+
+
+def test_decode_with_union_and_some_same_keys() -> None:
+    assert from_json(
+        '{"a_union_field": {"a": 1, "b":2, "c":3}}', ComplexItemWithUnionTypeWithSameProperties
+    ) == ComplexItemWithUnionTypeWithSameProperties(SimpleItem2(1, 2, 3))
+
+
+def test_decode_with_union_and_same_keys_should_raise_typeerror() -> None:
+    with pytest.raises(TypeError):
+        from_json(
+            '{"a_union_field": {"a": 1, "b":2}}', ComplexItemWithUnionTypeWithSameProperties
+        ) == ComplexItemWithUnionTypeWithSameProperties(SimpleItem2(1, 2, 3))
+
+
+def test_decode_with_union_and_no_keys_should_raise_typeerror() -> None:
+    with pytest.raises(TypeError):
+        from_json(
+            '{"a_union_field": {}}', ComplexItemWithUnionTypeWithSameProperties
+        ) == ComplexItemWithUnionTypeWithSameProperties(SimpleItem2(1, 2, 3))
+
+
+def test_decode_with_union_and_no_match_should_raise_typeerror() -> None:
+    with pytest.raises(TypeError):
+        from_json(
+            '{"a_union_field": {"x": 1, "y":2}}', ComplexItemWithUnionTypeWithSameProperties
+        ) == ComplexItemWithUnionTypeWithSameProperties(SimpleItem2(1, 2, 3))

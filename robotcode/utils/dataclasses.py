@@ -166,6 +166,11 @@ def convert_value(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None]
                     match = t
                     match_value = cased_value
                     match_type_hints = type_hints
+                elif match_same_keys is not None and len(match_same_keys) == len(same_keys):
+                    raise TypeError(
+                        f"Value {repr(value)} matches to more then one types of "
+                        f"{repr(types[0].__name__) if len(types)==1 else ' | '.join(repr(e.__name__) for e in types)}."
+                    )
 
         if match is not None and match_value is not None and match_type_hints is not None:
             params: Dict[str, Any] = {k: convert_value(v, match_type_hints[k]) for k, v in match_value.items()}
@@ -184,8 +189,8 @@ def convert_value(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None]
                     return cast(_T, v)
 
     raise TypeError(
-        f"Cant convert value of type {repr(type(value).__name__)} to type "
-        f"{repr(types[0].__name__) if len(types)==1 else ' | '.join(repr(e.__name__) for e in types) }."
+        f"Cant convert value {repr(value)} to type "
+        f"{repr(types[0].__name__) if len(types)==1 else ' | '.join(repr(e.__name__) for e in types)}."
     )
 
 
