@@ -219,8 +219,8 @@ class CompletionClientCapabilitiesCompletionItem(Model):
     preselect_support: Optional[bool] = None
     tag_support: Optional[CompletionClientCapabilitiesCompletionItemTagSupport] = None
     insert_replace_support: Optional[bool] = None
-    resolve_support: Optional[CompletionClientCapabilitiesCompletionItemResolveSupport]
-    insert_text_mode_support: Optional[CompletionClientCapabilitiesCompletionItemInsertTextModeSupport]
+    resolve_support: Optional[CompletionClientCapabilitiesCompletionItemResolveSupport] = None
+    insert_text_mode_support: Optional[CompletionClientCapabilitiesCompletionItemInsertTextModeSupport] = None
 
 
 class CompletionClientCapabilitiesCompletionItemKind(Model):
@@ -229,8 +229,8 @@ class CompletionClientCapabilitiesCompletionItemKind(Model):
 
 class CompletionClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
-    completion_item: Optional[CompletionClientCapabilitiesCompletionItem]
-    completion_item_kind: Optional[CompletionClientCapabilitiesCompletionItemKind]
+    completion_item: Optional[CompletionClientCapabilitiesCompletionItem] = None
+    completion_item_kind: Optional[CompletionClientCapabilitiesCompletionItemKind] = None
     context_support: Optional[bool] = None
 
 
