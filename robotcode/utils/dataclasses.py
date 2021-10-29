@@ -160,7 +160,8 @@ def convert_value(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None]
             }
             type_hints = get_type_hints(origin or t)
             same_keys = [k for k in cased_value.keys() if k in type_hints]
-            if same_keys:
+            different_keys = [k for k in cased_value.keys() if k not in type_hints]
+            if same_keys and not different_keys:
                 if match_same_keys is None or len(match_same_keys) < len(same_keys):
                     match_same_keys = same_keys
                     match = t

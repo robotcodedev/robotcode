@@ -6,6 +6,81 @@ import pytest
 
 from robotcode.utils.dataclasses import as_json, from_json, to_camel_case, to_snake_case
 
+from robotcode.language_server.common.lsp_types import (
+    CallHierarchyClientCapabilities,
+    ClientCapabilities,
+    ClientCapabilitiesWindow,
+    ClientCapabilitiesWorkspace,
+    ClientCapabilitiesWorkspaceFileOperationsWorkspaceClientCapabilities,
+    ClientInfo,
+    CodeActionClientCapabilities,
+    CodeActionClientCapabilitiesCodeActionLiteralSupport,
+    CodeActionClientCapabilitiesCodeActionLiteralSupportCodeActionKind,
+    CodeActionClientCapabilitiesResolveSupport,
+    CodeLensClientCapabilities,
+    CodeLensWorkspaceClientCapabilities,
+    CompletionClientCapabilities,
+    CompletionClientCapabilitiesCompletionItem,
+    CompletionClientCapabilitiesCompletionItemInsertTextModeSupport,
+    CompletionClientCapabilitiesCompletionItemKind,
+    CompletionClientCapabilitiesCompletionItemResolveSupport,
+    CompletionClientCapabilitiesCompletionItemTagSupport,
+    CompletionItemKind,
+    CompletionItemTag,
+    DeclarationClientCapabilities,
+    DefinitionClientCapabilities,
+    DiagnosticTag,
+    DidChangeConfigurationClientCapabilities,
+    DidChangeWatchedFilesClientCapabilities,
+    DocumentColorClientCapabilities,
+    DocumentFormattingClientCapabilities,
+    DocumentHighlightClientCapabilities,
+    DocumentLinkClientCapabilities,
+    DocumentOnTypeFormattingClientCapabilities,
+    DocumentRangeFormattingClientCapabilities,
+    DocumentSymbolClientCapabilities,
+    DocumentSymbolClientCapabilitiesSymbolKind,
+    DocumentSymbolClientCapabilitiesTagSupport,
+    ExecuteCommandClientCapabilities,
+    FailureHandlingKind,
+    FoldingRangeClientCapabilities,
+    HoverClientCapabilities,
+    ImplementationClientCapabilities,
+    InitializeParams,
+    InsertTextMode,
+    LinkedEditingRangeClientCapabilities,
+    MarkupKind,
+    PrepareSupportDefaultBehavior,
+    PublishDiagnosticsClientCapabilities,
+    PublishDiagnosticsClientCapabilitiesTagSupport,
+    ReferenceClientCapabilities,
+    RenameClientCapabilities,
+    ResourceOperationKind,
+    SelectionRangeClientCapabilities,
+    SemanticTokensClientCapabilities,
+    SemanticTokensClientCapabilitiesRequests,
+    SemanticTokensClientCapabilitiesRequestsFull,
+    SemanticTokensWorkspaceClientCapabilities,
+    ShowMessageRequestClientCapabilities,
+    ShowMessageRequestClientCapabilitiesMessageActionItem,
+    SignatureHelpClientCapabilities,
+    SignatureHelpClientCapabilitiesSignatureInformation,
+    SignatureHelpClientCapabilitiesSignatureInformationParameterInformation,
+    SymbolKind,
+    SymbolTag,
+    TextDocumentClientCapabilities,
+    TextDocumentSyncClientCapabilities,
+    TokenFormat,
+    TraceValue,
+    TypeDefinitionClientCapabilities,
+    WorkspaceEditClientCapabilities,
+    WorkspaceEditClientCapabilitiesChangeAnnotationSupport,
+    WorkspaceFolder,
+    WorkspaceSymbolClientCapabilities,
+    WorkspaceSymbolClientCapabilitiesSymbolKind,
+    WorkspaceSymbolClientCapabilitiesTagSupport,
+)
+
 
 class EnumData(Enum):
     FIRST = "first"
@@ -258,3 +333,730 @@ def test_decode_with_union_and_no_match_should_raise_typeerror() -> None:
         from_json(
             '{"a_union_field": {"x": 1, "y":2}}', ComplexItemWithUnionTypeWithSameProperties
         ) == ComplexItemWithUnionTypeWithSameProperties(SimpleItem2(1, 2, 3))
+
+
+@dataclass
+class ComplexItemWithUnionTypeWithSimpleAndComplexTypes:
+    a_union_field: Union[bool, SimpleItem, SimpleItem1]
+
+
+@pytest.mark.parametrize(
+    ("expr", "type", "expected"),
+    [
+        (
+            '{"a_union_field": true}',
+            ComplexItemWithUnionTypeWithSimpleAndComplexTypes,
+            ComplexItemWithUnionTypeWithSimpleAndComplexTypes(True),
+        ),
+        (
+            '{"a_union_field": {"a":1, "b":2}}',
+            ComplexItemWithUnionTypeWithSimpleAndComplexTypes,
+            ComplexItemWithUnionTypeWithSimpleAndComplexTypes(SimpleItem(1, 2)),
+        ),
+    ],
+)
+def test_decode_union_with_simple_and_complex_types(expr: Any, type: Any, expected: str) -> None:
+    assert from_json(expr, type) == expected
+
+
+def test_decode_union_with_unknown_keys_should_raise_typeerror() -> None:
+    with pytest.raises(TypeError):
+        from_json(
+            '{"a_union_field": {"d":1, "ef":2}}', ComplexItemWithUnionTypeWithSimpleAndComplexTypes
+        ) == ComplexItemWithUnionTypeWithSimpleAndComplexTypes(SimpleItem(1, 2))
+
+
+def test_really_complex_data() -> None:
+    data = """\
+{
+    "processId": 17800,
+    "clientInfo": {
+        "name": "Visual Studio Code - Insiders",
+        "version": "1.62.0-insider"
+    },
+    "locale": "de",
+    "rootPath": "c:\\\\tmp\\\\robottest\\\\dummy\\\\testprj",
+    "rootUri": "file:///c%3A/tmp/robottest/dummy/testprj",
+    "capabilities": {
+        "workspace": {
+            "applyEdit": true,
+            "workspaceEdit": {
+                "documentChanges": true,
+                "resourceOperations": [
+                    "create",
+                    "rename",
+                    "delete"
+                ],
+                "failureHandling": "textOnlyTransactional",
+                "normalizesLineEndings": true,
+                "changeAnnotationSupport": {
+                    "groupsOnLabel": true
+                }
+            },
+            "didChangeConfiguration": {
+                "dynamicRegistration": true
+            },
+            "didChangeWatchedFiles": {
+                "dynamicRegistration": true
+            },
+            "symbol": {
+                "dynamicRegistration": true,
+                "symbolKind": {
+                    "valueSet": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        8,
+                        9,
+                        10,
+                        11,
+                        12,
+                        13,
+                        14,
+                        15,
+                        16,
+                        17,
+                        18,
+                        19,
+                        20,
+                        21,
+                        22,
+                        23,
+                        24,
+                        25,
+                        26
+                    ]
+                },
+                "tagSupport": {
+                    "valueSet": [
+                        1
+                    ]
+                }
+            },
+            "codeLens": {
+                "refreshSupport": true
+            },
+            "executeCommand": {
+                "dynamicRegistration": true
+            },
+            "configuration": true,
+            "workspaceFolders": true,
+            "semanticTokens": {
+                "refreshSupport": true
+            },
+            "fileOperations": {
+                "dynamicRegistration": true,
+                "didCreate": true,
+                "didRename": true,
+                "didDelete": true,
+                "willCreate": true,
+                "willRename": true,
+                "willDelete": true
+            }
+        },
+        "textDocument": {
+            "publishDiagnostics": {
+                "relatedInformation": true,
+                "versionSupport": false,
+                "tagSupport": {
+                    "valueSet": [
+                        1,
+                        2
+                    ]
+                },
+                "codeDescriptionSupport": true,
+                "dataSupport": true
+            },
+            "synchronization": {
+                "dynamicRegistration": true,
+                "willSave": true,
+                "willSaveWaitUntil": true,
+                "didSave": true
+            },
+            "completion": {
+                "dynamicRegistration": true,
+                "contextSupport": true,
+                "completionItem": {
+                    "snippetSupport": true,
+                    "commitCharactersSupport": true,
+                    "documentationFormat": [
+                        "markdown",
+                        "plaintext"
+                    ],
+                    "deprecatedSupport": true,
+                    "preselectSupport": true,
+                    "tagSupport": {
+                        "valueSet": [
+                            1
+                        ]
+                    },
+                    "insertReplaceSupport": true,
+                    "resolveSupport": {
+                        "properties": [
+                            "documentation",
+                            "detail",
+                            "additionalTextEdits"
+                        ]
+                    },
+                    "insertTextModeSupport": {
+                        "valueSet": [
+                            1,
+                            2
+                        ]
+                    }
+                },
+                "completionItemKind": {
+                    "valueSet": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        8,
+                        9,
+                        10,
+                        11,
+                        12,
+                        13,
+                        14,
+                        15,
+                        16,
+                        17,
+                        18,
+                        19,
+                        20,
+                        21,
+                        22,
+                        23,
+                        24,
+                        25
+                    ]
+                }
+            },
+            "hover": {
+                "dynamicRegistration": true,
+                "contentFormat": [
+                    "markdown",
+                    "plaintext"
+                ]
+            },
+            "signatureHelp": {
+                "dynamicRegistration": true,
+                "signatureInformation": {
+                    "documentationFormat": [
+                        "markdown",
+                        "plaintext"
+                    ],
+                    "parameterInformation": {
+                        "labelOffsetSupport": true
+                    },
+                    "activeParameterSupport": true
+                },
+                "contextSupport": true
+            },
+            "definition": {
+                "dynamicRegistration": true,
+                "linkSupport": true
+            },
+            "references": {
+                "dynamicRegistration": true
+            },
+            "documentHighlight": {
+                "dynamicRegistration": true
+            },
+            "documentSymbol": {
+                "dynamicRegistration": true,
+                "symbolKind": {
+                    "valueSet": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        8,
+                        9,
+                        10,
+                        11,
+                        12,
+                        13,
+                        14,
+                        15,
+                        16,
+                        17,
+                        18,
+                        19,
+                        20,
+                        21,
+                        22,
+                        23,
+                        24,
+                        25,
+                        26
+                    ]
+                },
+                "hierarchicalDocumentSymbolSupport": true,
+                "tagSupport": {
+                    "valueSet": [
+                        1
+                    ]
+                },
+                "labelSupport": true
+            },
+            "codeAction": {
+                "dynamicRegistration": true,
+                "isPreferredSupport": true,
+                "disabledSupport": true,
+                "dataSupport": true,
+                "resolveSupport": {
+                    "properties": [
+                        "edit"
+                    ]
+                },
+                "codeActionLiteralSupport": {
+                    "codeActionKind": {
+                        "valueSet": [
+                            "",
+                            "quickfix",
+                            "refactor",
+                            "refactor.extract",
+                            "refactor.inline",
+                            "refactor.rewrite",
+                            "source",
+                            "source.organizeImports"
+                        ]
+                    }
+                },
+                "honorsChangeAnnotations": false
+            },
+            "codeLens": {
+                "dynamicRegistration": true
+            },
+            "formatting": {
+                "dynamicRegistration": true
+            },
+            "rangeFormatting": {
+                "dynamicRegistration": true
+            },
+            "onTypeFormatting": {
+                "dynamicRegistration": true
+            },
+            "rename": {
+                "dynamicRegistration": true,
+                "prepareSupport": true,
+                "prepareSupportDefaultBehavior": 1,
+                "honorsChangeAnnotations": true
+            },
+            "documentLink": {
+                "dynamicRegistration": true,
+                "tooltipSupport": true
+            },
+            "typeDefinition": {
+                "dynamicRegistration": true,
+                "linkSupport": true
+            },
+            "implementation": {
+                "dynamicRegistration": true,
+                "linkSupport": true
+            },
+            "colorProvider": {
+                "dynamicRegistration": true
+            },
+            "foldingRange": {
+                "dynamicRegistration": true,
+                "rangeLimit": 5000,
+                "lineFoldingOnly": true
+            },
+            "declaration": {
+                "dynamicRegistration": true,
+                "linkSupport": true
+            },
+            "selectionRange": {
+                "dynamicRegistration": true
+            },
+            "callHierarchy": {
+                "dynamicRegistration": true
+            },
+            "semanticTokens": {
+                "dynamicRegistration": true,
+                "tokenTypes": [
+                    "namespace",
+                    "type",
+                    "class",
+                    "enum",
+                    "interface",
+                    "struct",
+                    "typeParameter",
+                    "parameter",
+                    "variable",
+                    "property",
+                    "enumMember",
+                    "event",
+                    "function",
+                    "method",
+                    "macro",
+                    "keyword",
+                    "modifier",
+                    "comment",
+                    "string",
+                    "number",
+                    "regexp",
+                    "operator"
+                ],
+                "tokenModifiers": [
+                    "declaration",
+                    "definition",
+                    "readonly",
+                    "static",
+                    "deprecated",
+                    "abstract",
+                    "async",
+                    "modification",
+                    "documentation",
+                    "defaultLibrary"
+                ],
+                "formats": [
+                    "relative"
+                ],
+                "requests": {
+                    "range": true,
+                    "full": {
+                        "delta": true
+                    }
+                },
+                "multilineTokenSupport": false,
+                "overlappingTokenSupport": false
+            },
+            "linkedEditingRange": {
+                "dynamicRegistration": true
+            }
+        },
+        "window": {
+            "showMessage": {
+                "messageActionItem": {
+                    "additionalPropertiesSupport": true
+                }
+            }
+        }
+    },
+    "initializationOptions": {
+        "storageUri": "file:///c%3A/Users/daniel/AppData/Roaming/Code%20-%20Insiders/User/workspaceStorage/1ab0e3033b053a024fb7cbf9068380d1/d-biehl.robotcode",
+        "globalStorageUri": "file:///c%3A/Users/daniel/AppData/Roaming/Code%20-%20Insiders/User/globalStorage/d-biehl.robotcode"
+    },
+    "trace": "off",
+    "workspaceFolders": [
+        {
+            "uri": "file:///c%3A/tmp/robottest/dummy/testprj",
+            "name": "testprj"
+        }
+    ],
+    "workDoneToken": "76db5c8a-d083-44d0-bfa8-9e004eb69a1d"
+}
+"""
+
+    assert from_json(data, InitializeParams) == InitializeParams(
+        capabilities=ClientCapabilities(
+            workspace=ClientCapabilitiesWorkspace(
+                apply_edit=True,
+                workspace_edit=WorkspaceEditClientCapabilities(
+                    document_changes=True,
+                    resource_operations=[
+                        ResourceOperationKind.CREATE,
+                        ResourceOperationKind.RENAME,
+                        ResourceOperationKind.DELETE,
+                    ],
+                    failure_handling=FailureHandlingKind.TEXT_ONLY_TRANSACTIONAL,
+                    normalizes_line_endings=True,
+                    change_annotation_support=WorkspaceEditClientCapabilitiesChangeAnnotationSupport(
+                        groups_on_label=True
+                    ),
+                ),
+                did_change_configuration=DidChangeConfigurationClientCapabilities(dynamic_registration=True),
+                did_change_watched_files=DidChangeWatchedFilesClientCapabilities(dynamic_registration=True),
+                symbol=WorkspaceSymbolClientCapabilities(
+                    dynamic_registration=True,
+                    symbol_kind=WorkspaceSymbolClientCapabilitiesSymbolKind(
+                        value_set=[
+                            SymbolKind.FILE,
+                            SymbolKind.MODULE,
+                            SymbolKind.NAMESPACE,
+                            SymbolKind.PACKAGE,
+                            SymbolKind.CLASS,
+                            SymbolKind.METHOD,
+                            SymbolKind.PROPERTY,
+                            SymbolKind.FIELD,
+                            SymbolKind.CONSTRUCTOR,
+                            SymbolKind.ENUM,
+                            SymbolKind.INTERFACE,
+                            SymbolKind.FUNCTION,
+                            SymbolKind.VARIABLE,
+                            SymbolKind.CONSTANT,
+                            SymbolKind.STRING,
+                            SymbolKind.NUMBER,
+                            SymbolKind.BOOLEAN,
+                            SymbolKind.ARRAY,
+                            SymbolKind.OBJECT,
+                            SymbolKind.KEY,
+                            SymbolKind.NULL,
+                            SymbolKind.ENUMMEMBER,
+                            SymbolKind.STRUCT,
+                            SymbolKind.EVENT,
+                            SymbolKind.OPERATOR,
+                            SymbolKind.TYPEPARAMETER,
+                        ]
+                    ),
+                    tag_support=WorkspaceSymbolClientCapabilitiesTagSupport(value_set=[SymbolTag.Deprecated]),
+                ),
+                execute_command=ExecuteCommandClientCapabilities(dynamic_registration=True),
+                workspace_folders=True,
+                configuration=True,
+                semantic_tokens=SemanticTokensWorkspaceClientCapabilities(refresh_support=True),
+                code_lens=CodeLensWorkspaceClientCapabilities(refresh_support=True),
+                file_operations=ClientCapabilitiesWorkspaceFileOperationsWorkspaceClientCapabilities(
+                    dynamic_registration=True,
+                    did_create=True,
+                    will_create=True,
+                    did_rename=True,
+                    will_rename=True,
+                    did_delete=True,
+                    will_delete=True,
+                ),
+            ),
+            text_document=TextDocumentClientCapabilities(
+                synchronization=TextDocumentSyncClientCapabilities(
+                    dynamic_registration=True, will_save=True, will_save_wait_until=True, did_save=True
+                ),
+                completion=CompletionClientCapabilities(
+                    dynamic_registration=True,
+                    completion_item=CompletionClientCapabilitiesCompletionItem(
+                        snippet_support=True,
+                        commit_characters_support=True,
+                        documentation_format=[MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT],
+                        deprecated_support=True,
+                        preselect_support=True,
+                        tag_support=CompletionClientCapabilitiesCompletionItemTagSupport(
+                            value_set=[CompletionItemTag.Deprecated]
+                        ),
+                        insert_replace_support=True,
+                        resolve_support=CompletionClientCapabilitiesCompletionItemResolveSupport(
+                            properties=["documentation", "detail", "additionalTextEdits"]
+                        ),
+                        insert_text_mode_support=CompletionClientCapabilitiesCompletionItemInsertTextModeSupport(
+                            value_set=[InsertTextMode.AS_IS, InsertTextMode.ADJUST_INDENTATION]
+                        ),
+                    ),
+                    completion_item_kind=CompletionClientCapabilitiesCompletionItemKind(
+                        value_set=[
+                            CompletionItemKind.TEXT,
+                            CompletionItemKind.METHOD,
+                            CompletionItemKind.FUNCTION,
+                            CompletionItemKind.CONSTRUCTOR,
+                            CompletionItemKind.FIELD,
+                            CompletionItemKind.VARIABLE,
+                            CompletionItemKind.CLASS,
+                            CompletionItemKind.INTERFACE,
+                            CompletionItemKind.MODULE,
+                            CompletionItemKind.PROPERTY,
+                            CompletionItemKind.UNIT,
+                            CompletionItemKind.VALUE,
+                            CompletionItemKind.ENUM,
+                            CompletionItemKind.KEYWORD,
+                            CompletionItemKind.SNIPPET,
+                            CompletionItemKind.COLOR,
+                            CompletionItemKind.FILE,
+                            CompletionItemKind.REFERENCE,
+                            CompletionItemKind.FOLDER,
+                            CompletionItemKind.ENUM_MEMBER,
+                            CompletionItemKind.CONSTANT,
+                            CompletionItemKind.STRUCT,
+                            CompletionItemKind.EVENT,
+                            CompletionItemKind.OPERATOR,
+                            CompletionItemKind.TYPE_PARAMETER,
+                        ]
+                    ),
+                    context_support=True,
+                ),
+                hover=HoverClientCapabilities(
+                    dynamic_registration=True, content_format=[MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT]
+                ),
+                signature_help=SignatureHelpClientCapabilities(
+                    dynamic_registration=True,
+                    signature_information=SignatureHelpClientCapabilitiesSignatureInformation(
+                        documentation_format=[MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT],
+                        parameter_information=SignatureHelpClientCapabilitiesSignatureInformationParameterInformation(
+                            label_offset_support=True
+                        ),
+                        active_parameter_support=True,
+                    ),
+                    context_support=True,
+                ),
+                declaration=DeclarationClientCapabilities(dynamic_registration=True, link_support=True),
+                definition=DefinitionClientCapabilities(dynamic_registration=True, link_support=True),
+                type_definition=TypeDefinitionClientCapabilities(dynamic_registration=True, link_support=True),
+                implementation=ImplementationClientCapabilities(dynamic_registration=True, link_support=True),
+                references=ReferenceClientCapabilities(dynamic_registration=True),
+                document_highlight=DocumentHighlightClientCapabilities(dynamic_registration=True),
+                document_symbol=DocumentSymbolClientCapabilities(
+                    dynamic_registration=True,
+                    symbol_kind=DocumentSymbolClientCapabilitiesSymbolKind(
+                        value_set=[
+                            SymbolKind.FILE,
+                            SymbolKind.MODULE,
+                            SymbolKind.NAMESPACE,
+                            SymbolKind.PACKAGE,
+                            SymbolKind.CLASS,
+                            SymbolKind.METHOD,
+                            SymbolKind.PROPERTY,
+                            SymbolKind.FIELD,
+                            SymbolKind.CONSTRUCTOR,
+                            SymbolKind.ENUM,
+                            SymbolKind.INTERFACE,
+                            SymbolKind.FUNCTION,
+                            SymbolKind.VARIABLE,
+                            SymbolKind.CONSTANT,
+                            SymbolKind.STRING,
+                            SymbolKind.NUMBER,
+                            SymbolKind.BOOLEAN,
+                            SymbolKind.ARRAY,
+                            SymbolKind.OBJECT,
+                            SymbolKind.KEY,
+                            SymbolKind.NULL,
+                            SymbolKind.ENUMMEMBER,
+                            SymbolKind.STRUCT,
+                            SymbolKind.EVENT,
+                            SymbolKind.OPERATOR,
+                            SymbolKind.TYPEPARAMETER,
+                        ]
+                    ),
+                    hierarchical_document_symbol_support=True,
+                    tag_support=DocumentSymbolClientCapabilitiesTagSupport(value_set=[SymbolTag.Deprecated]),
+                    label_support=True,
+                ),
+                code_action=CodeActionClientCapabilities(
+                    dynamic_registration=True,
+                    code_action_literal_support=CodeActionClientCapabilitiesCodeActionLiteralSupport(
+                        code_action_kind=CodeActionClientCapabilitiesCodeActionLiteralSupportCodeActionKind(
+                            value_set=[
+                                "",
+                                "quickfix",
+                                "refactor",
+                                "refactor.extract",
+                                "refactor.inline",
+                                "refactor.rewrite",
+                                "source",
+                                "source.organizeImports",
+                            ]
+                        )
+                    ),
+                    is_preferred_support=True,
+                    disabled_support=True,
+                    data_support=True,
+                    resolve_support=CodeActionClientCapabilitiesResolveSupport(properties=["edit"]),
+                    honors_change_annotations=False,
+                ),
+                code_lens=CodeLensClientCapabilities(dynamic_registration=True),
+                document_link=DocumentLinkClientCapabilities(dynamic_registration=True, tooltip_support=True),
+                color_provider=DocumentColorClientCapabilities(dynamic_registration=True),
+                formatting=DocumentFormattingClientCapabilities(dynamic_registration=True),
+                range_formatting=DocumentRangeFormattingClientCapabilities(dynamic_registration=True),
+                on_type_formatting=DocumentOnTypeFormattingClientCapabilities(dynamic_registration=True),
+                rename=RenameClientCapabilities(
+                    dynamic_registration=True,
+                    prepare_support=True,
+                    prepare_support_default_behavior=PrepareSupportDefaultBehavior.Identifier,
+                    honors_change_annotations=True,
+                ),
+                publish_diagnostics=PublishDiagnosticsClientCapabilities(
+                    related_information=True,
+                    tag_support=PublishDiagnosticsClientCapabilitiesTagSupport(
+                        value_set=[DiagnosticTag.Unnecessary, DiagnosticTag.Deprecated]
+                    ),
+                    version_support=False,
+                    code_description_support=True,
+                    data_support=True,
+                ),
+                folding_range=FoldingRangeClientCapabilities(
+                    dynamic_registration=True, range_limit=5000, line_folding_only=True
+                ),
+                selection_range=SelectionRangeClientCapabilities(dynamic_registration=True),
+                linked_editing_range=LinkedEditingRangeClientCapabilities(dynamic_registration=True),
+                call_hierarchy=CallHierarchyClientCapabilities(dynamic_registration=True),
+                semantic_tokens=SemanticTokensClientCapabilities(
+                    requests=SemanticTokensClientCapabilitiesRequests(
+                        range=True, full=SemanticTokensClientCapabilitiesRequestsFull(delta=True)
+                    ),
+                    token_types=[
+                        "namespace",
+                        "type",
+                        "class",
+                        "enum",
+                        "interface",
+                        "struct",
+                        "typeParameter",
+                        "parameter",
+                        "variable",
+                        "property",
+                        "enumMember",
+                        "event",
+                        "function",
+                        "method",
+                        "macro",
+                        "keyword",
+                        "modifier",
+                        "comment",
+                        "string",
+                        "number",
+                        "regexp",
+                        "operator",
+                    ],
+                    token_modifiers=[
+                        "declaration",
+                        "definition",
+                        "readonly",
+                        "static",
+                        "deprecated",
+                        "abstract",
+                        "async",
+                        "modification",
+                        "documentation",
+                        "defaultLibrary",
+                    ],
+                    formats=[TokenFormat.Relative],
+                    overlapping_token_support=False,
+                    multiline_token_support=False,
+                    dynamic_registration=True,
+                ),
+                moniker=None,
+            ),
+            window=ClientCapabilitiesWindow(
+                work_done_progress=None,
+                show_message=ShowMessageRequestClientCapabilities(
+                    message_action_item=ShowMessageRequestClientCapabilitiesMessageActionItem(
+                        additional_properties_support=True
+                    )
+                ),
+                show_document=None,
+            ),
+            general=None,
+            experimental=None,
+        ),
+        process_id=17800,
+        client_info=ClientInfo(name="Visual Studio Code - Insiders", version="1.62.0-insider"),
+        locale="de",
+        root_path="c:\\tmp\\robottest\\dummy\\testprj",
+        root_uri="file:///c%3A/tmp/robottest/dummy/testprj",
+        initialization_options={
+            "storageUri": "file:///c%3A/Users/daniel/AppData/Roaming/Code%20-%20Insiders/User/workspaceStorage/1ab0e3033b053a024fb7cbf9068380d1/d-biehl.robotcode",
+            "globalStorageUri": "file:///c%3A/Users/daniel/AppData/Roaming/Code%20-%20Insiders/User/globalStorage/d-biehl.robotcode",
+        },
+        trace=TraceValue.OFF,
+        workspace_folders=[WorkspaceFolder(uri="file:///c%3A/tmp/robottest/dummy/testprj", name="testprj")],
+        work_done_token="76db5c8a-d083-44d0-bfa8-9e004eb69a1d",
+    )
