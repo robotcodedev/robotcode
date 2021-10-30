@@ -1,10 +1,9 @@
+# flake8: noqa E501
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
 import pytest
-
-from robotcode.utils.dataclasses import as_json, from_json, to_camel_case, to_snake_case
 
 from robotcode.language_server.common.lsp_types import (
     CallHierarchyClientCapabilities,
@@ -80,6 +79,7 @@ from robotcode.language_server.common.lsp_types import (
     WorkspaceSymbolClientCapabilitiesSymbolKind,
     WorkspaceSymbolClientCapabilitiesTagSupport,
 )
+from robotcode.utils.dataclasses import as_json, from_json, to_camel_case, to_snake_case
 
 
 class EnumData(Enum):
@@ -316,23 +316,40 @@ def test_decode_with_union_and_some_same_keys() -> None:
 
 def test_decode_with_union_and_same_keys_should_raise_typeerror() -> None:
     with pytest.raises(TypeError):
-        from_json(
-            '{"a_union_field": {"a": 1, "b":2}}', ComplexItemWithUnionTypeWithSameProperties
-        ) == ComplexItemWithUnionTypeWithSameProperties(SimpleItem2(1, 2, 3))
+        from_json('{"a_union_field": {"a": 1, "b":2}}', ComplexItemWithUnionTypeWithSameProperties)
 
 
 def test_decode_with_union_and_no_keys_should_raise_typeerror() -> None:
     with pytest.raises(TypeError):
-        from_json(
-            '{"a_union_field": {}}', ComplexItemWithUnionTypeWithSameProperties
-        ) == ComplexItemWithUnionTypeWithSameProperties(SimpleItem2(1, 2, 3))
+        from_json('{"a_union_field": {}}', ComplexItemWithUnionTypeWithSameProperties)
 
 
 def test_decode_with_union_and_no_match_should_raise_typeerror() -> None:
     with pytest.raises(TypeError):
-        from_json(
-            '{"a_union_field": {"x": 1, "y":2}}', ComplexItemWithUnionTypeWithSameProperties
-        ) == ComplexItemWithUnionTypeWithSameProperties(SimpleItem2(1, 2, 3))
+        from_json('{"a_union_field": {"x": 1, "y":2}}', ComplexItemWithUnionTypeWithSameProperties)
+
+
+@dataclass
+class SimpleItem3:
+    a: int
+    b: int
+    c: int
+
+
+@pytest.mark.parametrize(
+    ("expr", "type", "expected"),
+    [
+        ('{"a":1, "b": 2}', (SimpleItem, SimpleItem3), SimpleItem(1, 2)),
+        ('{"a":1, "b": 2, "c": 3}', (SimpleItem, SimpleItem3), SimpleItem3(1, 2, 3)),
+    ],
+)
+def test_decode_with_some_same_fields(expr: Any, type: Any, expected: str) -> None:
+    assert from_json(expr, type) == expected
+
+
+def test_decode_with_some_unambigous_fields_should_raise_typeerror() -> None:
+    with pytest.raises(TypeError):
+        from_json('{"a":1, "b": 2}', (SimpleItem, SimpleItem2))  # type: ignore
 
 
 @dataclass

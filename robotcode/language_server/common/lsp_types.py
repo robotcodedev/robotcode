@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum, IntEnum, IntFlag
 from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union
 
-from ...utils.dataclasses import to_camel_case, to_snake_case, HasCaseEncoder, HasCaseDecoder
+from ...utils.dataclasses import to_camel_case, to_snake_case
 
 ProgressToken = Union[str, int]
 DocumentUri = str
@@ -12,7 +12,7 @@ URI = str
 
 
 @dataclass
-class Model(HasCaseEncoder, HasCaseDecoder):
+class Model:
     @classmethod
     def _encode_case(cls, s: str) -> str:
         return to_camel_case(s)

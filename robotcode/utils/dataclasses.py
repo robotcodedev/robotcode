@@ -1,5 +1,7 @@
+# pyright: reportMissingTypeArgument=true, reportMissingParameterType=true
 import dataclasses
 import enum
+import inspect
 import json
 import re
 from typing import (
@@ -149,6 +151,7 @@ def convert_value(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None]
         match: Optional[Type[_T]] = None
         match_same_keys: Optional[List[str]] = None
         match_value: Optional[Dict[str, Any]] = None
+        match_signature: Optional[inspect.Signature] = None
         match_type_hints: Optional[Dict[str, Any]] = None
 
         for t in types:
@@ -159,21 +162,40 @@ def convert_value(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None]
                 _get_config(t, HasCaseDecoder)._decode_case(k): v for k, v in value.items()  # type: ignore
             }
             type_hints = get_type_hints(origin or t)
-            same_keys = [k for k in cased_value.keys() if k in type_hints]
-            different_keys = [k for k in cased_value.keys() if k not in type_hints]
-            if same_keys and not different_keys:
-                if match_same_keys is None or len(match_same_keys) < len(same_keys):
-                    match_same_keys = same_keys
-                    match = t
-                    match_value = cased_value
-                    match_type_hints = type_hints
-                elif match_same_keys is not None and len(match_same_keys) == len(same_keys):
-                    raise TypeError(
-                        f"Value {repr(value)} matches to more then one types of "
-                        f"{repr(types[0].__name__) if len(types)==1 else ' | '.join(repr(e.__name__) for e in types)}."
-                    )
+            try:
+                signature = inspect.signature(origin or t)
+            except ValueError:
+                continue
 
-        if match is not None and match_value is not None and match_type_hints is not None:
+            same_keys = [k for k in cased_value.keys() if k in signature.parameters.keys()]
+            if not same_keys:
+                continue
+
+            different_keys = [k for k in cased_value.keys() if k not in signature.parameters.keys()]
+            if different_keys:
+                continue
+
+            if not all(k in same_keys for k, v in signature.parameters.items() if v.default == inspect.Parameter.empty):
+                continue
+
+            if match_same_keys is None or len(match_same_keys) < len(same_keys):
+                match_same_keys = same_keys
+                match = t
+                match_value = cased_value
+                match_signature = signature
+                match_type_hints = type_hints
+            elif match_same_keys is not None and len(match_same_keys) == len(same_keys):
+                raise TypeError(
+                    f"Value {repr(value)} matches to more then one types of "
+                    f"{repr(types[0].__name__) if len(types)==1 else ' | '.join(repr(e.__name__) for e in types)}."
+                )
+
+        if (
+            match is not None
+            and match_value is not None
+            and match_signature is not None
+            and match_type_hints is not None
+        ):
             params: Dict[str, Any] = {k: convert_value(v, match_type_hints[k]) for k, v in match_value.items()}
             try:
                 return match(**params)  # type: ignore
