@@ -265,26 +265,12 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
         if token.type in {*RobotToken.ALLOW_VARIABLES, RobotToken.KEYWORD}:
 
-            last_sub_token = token
-
             for sub_token in tokenize_variables(
                 token, ignore_errors=True, identifiers="$" if token.type == RobotToken.KEYWORD_NAME else "$@&%"
             ):
-                last_sub_token = sub_token
                 async for e in self.generate_sem_sub_tokens(sub_token, node):
                     yield e
 
-            if last_sub_token == token:
-                async for e in self.generate_sem_sub_tokens(last_sub_token, node):
-                    yield e
-            elif last_sub_token is not None and last_sub_token.end_col_offset < token.end_col_offset:
-                async for e in self.generate_sem_sub_tokens(
-                    token,
-                    node,
-                    last_sub_token.end_col_offset,
-                    token.end_col_offset - last_sub_token.end_col_offset - last_sub_token.col_offset,
-                ):
-                    yield e
         elif token.type == RobotToken.KEYWORD:
             is_builtin = False
             if namespace.initialized:
