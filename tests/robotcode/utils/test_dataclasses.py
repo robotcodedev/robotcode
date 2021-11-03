@@ -1,7 +1,7 @@
 # flake8: noqa E501
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 import pytest
 
@@ -420,6 +420,78 @@ def test_decode_union_with_unknown_keys_should_raise_typeerror() -> None:
         from_json(
             '{"a_union_field": {"d":1, "ef":2}}', ComplexItemWithUnionTypeWithSimpleAndComplexTypes
         ) == ComplexItemWithUnionTypeWithSimpleAndComplexTypes(SimpleItem(1, 2))
+
+
+@pytest.mark.parametrize(
+    ("expr", "type", "expected"),
+    [
+        ('{"a":1, "b":2, "c":3}', SimpleItem, SimpleItem(1, 2)),
+        ('{"a":1, "b":2, "c":3}', SimpleItemWithOnlyOptionalFields, SimpleItemWithOnlyOptionalFields(1, 2)),
+        ('{"a":1}', SimpleItemWithOnlyOptionalFields, SimpleItemWithOnlyOptionalFields(1)),
+        ("{}", SimpleItemWithOnlyOptionalFields, SimpleItemWithOnlyOptionalFields()),
+        ("{}", SimpleItemWithNoFields, SimpleItemWithNoFields()),
+        ('{"a": 1}', SimpleItemWithNoFields, SimpleItemWithNoFields()),
+        ('{"a":1, "b":2, "c": 3}', (SimpleItemWithNoFields, SimpleItem), SimpleItem(1, 2)),
+    ],
+)
+def test_decode_non_strict_should_work(expr: Any, type: Any, expected: str) -> None:
+    assert from_json(expr, type) == expected
+
+
+@pytest.mark.parametrize(
+    ("expr", "type", "expected"),
+    [
+        ('{"a":1, "b":2}', SimpleItem, SimpleItem(1, 2)),
+        ('{"a":1, "b":2}', SimpleItemWithOnlyOptionalFields, SimpleItemWithOnlyOptionalFields(1, 2)),
+        ('{"a":1}', SimpleItemWithOnlyOptionalFields, SimpleItemWithOnlyOptionalFields(1)),
+        ("{}", SimpleItemWithOnlyOptionalFields, SimpleItemWithOnlyOptionalFields()),
+        ("{}", SimpleItemWithNoFields, SimpleItemWithNoFields()),
+        ("{}", (SimpleItemWithNoFields, SimpleItem), SimpleItemWithNoFields()),
+        ('{"a":1, "b":2}', (SimpleItemWithNoFields, SimpleItem), SimpleItem(1, 2)),
+    ],
+)
+def test_decode_strict_should_work(expr: Any, type: Any, expected: str) -> None:
+    assert from_json(expr, type, strict=True) == expected
+
+
+@pytest.mark.parametrize(
+    ("expr", "type"),
+    [
+        ('{"a":1, "b": 2, "c": 3}', SimpleItem),
+        ('{"a":1, "b": 2, "c": 3}', SimpleItemWithOnlyOptionalFields),
+        ('{"a":1, "c": 3}', SimpleItemWithOnlyOptionalFields),
+        ('{"c": 3}', SimpleItemWithOnlyOptionalFields),
+        ('{"c": 3}', SimpleItemWithNoFields),
+    ],
+)
+def test_decode_strict_with_invalid_data_should_raise_typeerror(expr: Any, type: Any) -> None:
+    with pytest.raises(TypeError):
+        from_json(expr, type, strict=True)
+
+
+@pytest.mark.parametrize(
+    ("expr", "type", "expected"),
+    [
+        ('"test"', Literal["test", "blah", "bluff"], "test"),
+        ('"bluff"', Literal["test", "blah", "bluff"], "bluff"),
+        ('"dada"', (Literal["test", "blah", "bluff"], str), "dada"),
+        ("1", (Literal["test", "blah", "bluff"], int), 1),
+    ],
+)
+def test_literal_should_work(expr: Any, type: Any, expected: str) -> None:
+    assert from_json(expr, type) == expected
+
+
+@pytest.mark.parametrize(
+    ("expr", "type"),
+    [
+        ('"dada"', Literal["test", "blah", "bluff"]),
+        ('"dada"', (Literal["test", "blah", "bluff"], int)),
+    ],
+)
+def test_literal_with_invalid_args_should_raise_typerror(expr: Any, type: Any) -> None:
+    with pytest.raises(TypeError):
+        from_json(expr, type)
 
 
 def test_really_complex_data() -> None:

@@ -256,8 +256,10 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
     )
 
 
-def from_json(s: Union[str, bytes], types: Union[Type[_T], Tuple[Type[_T], ...], None] = None) -> _T:
-    return from_dict(json.loads(s), types)
+def from_json(
+    s: Union[str, bytes], types: Union[Type[_T], Tuple[Type[_T], ...], None] = None, /, *, strict: bool = False
+) -> _T:
+    return from_dict(json.loads(s), types, strict=strict)
 
 
 def as_dict(value: Any) -> Dict[str, Any]:
