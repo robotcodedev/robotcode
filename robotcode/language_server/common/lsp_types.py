@@ -1514,7 +1514,7 @@ class CompletionTriggerKind(Enum):
 @dataclass
 class CompletionContext(Model):
     trigger_kind: CompletionTriggerKind
-    trigger_character: Optional[str]
+    trigger_character: Optional[str] = None
 
 
 @dataclass
