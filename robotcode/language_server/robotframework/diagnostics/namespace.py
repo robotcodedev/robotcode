@@ -25,8 +25,7 @@ from typing import (
 from ....utils.async_itertools import async_chain
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
-from ...common.text_document import TextDocument
-from ...common.types import (
+from ...common.lsp_types import (
     Diagnostic,
     DiagnosticRelatedInformation,
     DiagnosticSeverity,
@@ -35,6 +34,7 @@ from ...common.types import (
     Position,
     Range,
 )
+from ...common.text_document import TextDocument
 from ..utils.ast import (
     Token,
     is_non_variable_token,

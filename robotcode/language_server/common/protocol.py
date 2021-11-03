@@ -15,22 +15,7 @@ from ...jsonrpc2.server import JsonRPCServer
 from ...utils.async_event import async_event
 from ...utils.logging import LoggingDescriptor
 from .has_extend_capabilities import HasExtendCapabilities
-from .parts.code_lens import CodeLensProtocolPart
-from .parts.completion import CompletionProtocolPart
-from .parts.declaration import DeclarationProtocolPart
-from .parts.definition import DefinitionProtocolPart
-from .parts.diagnostics import DiagnosticsProtocolPart
-from .parts.document_symbols import DocumentSymbolsProtocolPart
-from .parts.documents import TextDocumentProtocolPart
-from .parts.folding_range import FoldingRangeProtocolPart
-from .parts.formatting import FormattingProtocolPart
-from .parts.hover import HoverProtocolPart
-from .parts.implementation import ImplementationProtocolPart
-from .parts.semantic_tokens import SemanticTokensProtocolPart
-from .parts.signature_help import SignatureHelpProtocolPart
-from .parts.window import WindowProtocolPart
-from .parts.workspace import Workspace
-from .types import (
+from .lsp_types import (
     CancelParams,
     ClientCapabilities,
     ClientInfo,
@@ -51,6 +36,21 @@ from .types import (
     UnregistrationParams,
     WorkspaceFolder,
 )
+from .parts.code_lens import CodeLensProtocolPart
+from .parts.completion import CompletionProtocolPart
+from .parts.declaration import DeclarationProtocolPart
+from .parts.definition import DefinitionProtocolPart
+from .parts.diagnostics import DiagnosticsProtocolPart
+from .parts.document_symbols import DocumentSymbolsProtocolPart
+from .parts.documents import TextDocumentProtocolPart
+from .parts.folding_range import FoldingRangeProtocolPart
+from .parts.formatting import FormattingProtocolPart
+from .parts.hover import HoverProtocolPart
+from .parts.implementation import ImplementationProtocolPart
+from .parts.semantic_tokens import SemanticTokensProtocolPart
+from .parts.signature_help import SignatureHelpProtocolPart
+from .parts.window import WindowProtocolPart
+from .parts.workspace import Workspace
 
 __all__ = ["LanguageServerException", "LanguageServerProtocol", "HasExtendCapabilities"]
 
@@ -129,7 +129,9 @@ class LanguageServerProtocol(JsonRPCProtocol):
         return self._capabilities
 
     def _collect_capabilities(self) -> ServerCapabilities:
-        base_capabilities = self._base_capabilities.copy()
+        from dataclasses import replace
+
+        base_capabilities = replace(self._base_capabilities)
 
         for p in self.registry.parts:
             if isinstance(p, HasExtendCapabilities):

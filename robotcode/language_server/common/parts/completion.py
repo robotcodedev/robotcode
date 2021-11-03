@@ -9,8 +9,7 @@ from ....utils.async_event import async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
 from ..language import HasAllCommitCharacters, HasLanguageId, HasTriggerCharacters
-from ..text_document import TextDocument
-from ..types import (
+from ..lsp_types import (
     CompletionContext,
     CompletionItem,
     CompletionList,
@@ -20,6 +19,7 @@ from ..types import (
     ServerCapabilities,
     TextDocumentIdentifier,
 )
+from ..text_document import TextDocument
 
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol
@@ -108,7 +108,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 )
                 return result
             else:
-                return [cast(CompletionItem, e) for e in chain(*results)]
+                return [e for e in chain(*[k for k in results if isinstance(k, list)])]
 
         return None
 

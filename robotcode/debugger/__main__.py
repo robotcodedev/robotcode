@@ -37,22 +37,6 @@ LoggingDescriptor.set_call_tracing_default_level(TRACE)
 
 _logger = LoggingDescriptor(name=__package__)
 
-try:
-    __import__("typing_extensions")
-except ImportError:
-    _logger.debug("typing_extensions not found, add our external path to sys.path")
-    file = Path(__file__).resolve()
-    external_path = Path(file.parents[1], "external", "typing_extensions")
-    sys.path.append(str(external_path))
-
-try:
-    __import__("pydantic")
-except ImportError:
-    _logger.debug("pydantic library not found, add our external path to sys.path")
-    file = Path(__file__).resolve()
-    external_path = Path(file.parents[1], "external", "pydantic")
-    sys.path.append(str(external_path))
-
 if TYPE_CHECKING:
     from .server import LaucherServer
 

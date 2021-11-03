@@ -1,17 +1,19 @@
 import uuid
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional
 
 from ..._version import __version__
 from ...jsonrpc2.protocol import ProtocolPartDescriptor
+from ...utils.dataclasses import from_dict
 from ...utils.logging import LoggingDescriptor
-from ..common.protocol import LanguageServerProtocol
-from ..common.types import (
+from ..common.lsp_types import (
     DocumentFilter,
     Model,
     TextDocumentChangeRegistrationOptions,
     TextDocumentRegistrationOptions,
     TextDocumentSyncKind,
 )
+from ..common.protocol import LanguageServerProtocol
 from .parts.completion import RobotCompletionProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
 from .parts.discovering import DiscoveringProtocolPart
@@ -40,6 +42,7 @@ def check_robotframework() -> None:
         raise Exception("Wrong RobotFramework version. Expect version >= 4.0")
 
 
+@dataclass
 class Options(Model):
     storage_uri: Optional[str] = None
     global_storage_uri: Optional[str] = None
@@ -77,7 +80,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         check_robotframework()
 
         if initialization_options is not None:
-            self.options = Options.parse_obj(initialization_options)
+            self.options = from_dict(initialization_options, Options)
 
         self._logger.info(f"initialized with {repr(self.options)}")
 

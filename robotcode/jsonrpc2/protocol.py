@@ -9,6 +9,7 @@ import threading
 import weakref
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+from dataclasses import dataclass, field
 from typing import (
     Any,
     Callable,
@@ -30,10 +31,8 @@ from typing import (
     runtime_checkable,
 )
 
-from pydantic import BaseModel, Field
-from pydantic.typing import get_args, get_origin
-
 from ..utils.async_event import async_event
+from ..utils.dataclasses import as_json, from_dict
 from ..utils.inspect import ensure_coroutine, iter_methods
 from ..utils.logging import LoggingDescriptor
 
@@ -75,71 +74,44 @@ class JsonRPCErrors:
 PROTOCOL_VERSION = "2.0"
 
 
-def get_loads() -> Callable[..., Any]:
-
-    try:
-        import orjson
-
-        return cast(Callable[..., Any], orjson.loads)
-
-    except ImportError:
-        pass
-
-    import json
-
-    return json.loads
+@dataclass
+class JsonRPCMessage:
+    jsonrpc: str = field(default=PROTOCOL_VERSION, init=False)
 
 
-def get_dumps() -> Callable[..., Any]:
-    try:
-        import orjson
-
-        def orjson_dumps(__obj: Any, *, default: Any, indent: Optional[bool] = False) -> str:
-            # orjson.dumps returns bytes, to match standard json.dumps we need to decode
-            return orjson.dumps(__obj, default=default, option=orjson.OPT_INDENT_2 if indent else 0).decode()
-
-        return orjson_dumps
-
-    except ImportError:
-        pass
-
-    import json
-
-    return json.dumps
-
-
-class JsonRPCMessage(BaseModel):
-    jsonrpc: str = Field(PROTOCOL_VERSION, const=True)
-
-    class Config:
-        json_loads = get_loads()
-        json_dumps = get_dumps()
-
-
+@dataclass
 class JsonRPCNotification(JsonRPCMessage):
-    method: str = Field(...)
+    method: str
     params: Optional[Any] = None
 
 
+@dataclass
 class JsonRPCRequest(JsonRPCMessage):
-    id: Union[int, str, None] = Field(...)
-    method: str = Field(...)
+    id: Union[int, str, None]
+    method: str
     params: Optional[Any] = None
 
 
-class JsonRPCResponse(JsonRPCMessage):
-    id: Union[int, str, None] = Field(...)
-    result: Any = Field(...)
+@dataclass
+class _JsonRPCResponseBase(JsonRPCMessage):
+    id: Union[int, str, None]
 
 
-class JsonRPCErrorObject(BaseModel):
-    code: int = Field(...)
+@dataclass
+class JsonRPCResponse(_JsonRPCResponseBase):
+    result: Any
+
+
+@dataclass
+class JsonRPCErrorObject:
+    code: int
     message: Optional[str]
     data: Optional[Any] = None
 
 
-class JsonRPCError(JsonRPCResponse):
-    error: JsonRPCErrorObject = Field(...)
+@dataclass
+class JsonRPCError(_JsonRPCResponseBase):
+    error: JsonRPCErrorObject
     result: Optional[Any] = None
 
 
@@ -340,36 +312,7 @@ class RpcRegistry:
 
 class SendedRequestEntry(NamedTuple):
     future: asyncio.Future[Any]
-    result_type: Union[Type[Any], Callable[[Any], Any], None]
-
-
-def try_convert_value(value: Any, value_type_or_converter: Union[Type[Any], Callable[[Any], Any], None]) -> Any:
-    if value_type_or_converter is None or value_type_or_converter == Any:
-        return value
-    if isinstance(value_type_or_converter, type):
-        if isinstance(value, value_type_or_converter):
-            return value
-
-        if issubclass(value_type_or_converter, BaseModel):
-            return value_type_or_converter.parse_obj(value)
-    elif get_origin(cast(Type[Any], value_type_or_converter)) == list and isinstance(value, List):
-        p = get_args(cast(Type[Any], value_type_or_converter))
-        if len(p) > 0:
-            return [try_convert_value(e, p[0]) for e in value]
-        else:
-            return value
-    elif get_origin(cast(Type[Any], value_type_or_converter)) == dict and isinstance(value, dict):
-        p = get_args(cast(Type[Any], value_type_or_converter))
-        if len(p) > 1:
-            return {try_convert_value(k, p[0]): try_convert_value(v, p[1]) for k, v in value.items()}
-        else:
-            return value
-    elif get_origin(cast(Type[Any], value_type_or_converter)) is not None:
-        return get_origin(cast(Type[Any], value_type_or_converter))(value)
-    elif callable(value_type_or_converter):
-        return value_type_or_converter(value)
-
-    return value
+    result_type: Optional[Type[Any]]
 
 
 class JsonRPCProtocolBase(asyncio.Protocol, ABC):
@@ -472,18 +415,18 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             if "jsonrpc" in d:
                 if d["jsonrpc"] != PROTOCOL_VERSION:
                     raise InvalidProtocolVersionError("Invalid JSON-RPC2 protocol version.")
+                d.pop("jsonrpc")
 
-                if "id" in d:
-                    if "method" in d:
-                        return JsonRPCRequest(**d)
-                    else:
-                        if "error" in d:
-                            error = d.pop("error")
-                            return JsonRPCError(error=JsonRPCErrorObject(**error), **d)
+                return from_dict(
+                    d,
+                    (  # type: ignore
+                        JsonRPCRequest,
+                        JsonRPCResponse,
+                        JsonRPCNotification,
+                        JsonRPCError,
+                    ),
+                )
 
-                        return JsonRPCResponse(**d)
-                else:
-                    return JsonRPCNotification(**d)
             raise JsonRPCException("Invalid JSON-RPC2 Message")
 
         if isinstance(data, list):
@@ -499,7 +442,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             raise
         except BaseException as e:
             self._logger.exception(e)
-            self.send_error(JsonRPCErrors.PARSE_ERROR, str(e))
+            self.send_error(JsonRPCErrors.PARSE_ERROR, f"{type(e).__name__}: {e}")
 
     def _handle_messages(self, iterator: Iterator[JsonRPCMessage]) -> None:
         def done(f: asyncio.Future[Any]) -> None:
@@ -549,10 +492,8 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
     def send_message(self, message: JsonRPCMessage) -> None:
         message.jsonrpc = PROTOCOL_VERSION
 
-        body = message.json(
-            by_alias=True,
-            exclude_unset=True,
-            exclude_defaults=True,
+        body = as_json(
+            message,
             indent=self._message_logger.is_enabled_for(logging.DEBUG) or None,
         ).encode(self.CHARSET)
 
@@ -571,7 +512,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         self,
         method: str,
         params: Optional[Any] = None,
-        return_type_or_converter: Union[Type[TResult], Callable[[Any], TResult], None] = None,
+        return_type_or_converter: Optional[Type[TResult]] = None,
     ) -> asyncio.Future[TResult]:
 
         result: asyncio.Future[TResult] = asyncio.get_event_loop().create_future()
@@ -590,7 +531,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         self,
         method: str,
         params: Optional[Any] = None,
-        return_type: Union[Type[TResult], Callable[[Any], TResult], None] = None,
+        return_type: Optional[Type[TResult]] = None,
     ) -> TResult:
         return await self.send_request(method, params, return_type)
 
@@ -600,7 +541,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
     @_logger.call(exception=True)
     async def handle_response(self, message: JsonRPCResponse) -> None:
         if message.id is None:
-            error = "Invalid response. Response id is null"
+            error = "Invalid response. Response id is null."
             self._logger.warning(error)
             self.send_error(JsonRPCErrors.INTERNAL_ERROR, error)
             return
@@ -609,14 +550,14 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             entry = self._sended_request.pop(message.id, None)
 
         if entry is None:
-            error = f"Invalid response. Could not find id '{message.id}' in our request list"
+            error = f"Invalid response. Could not find id '{message.id}' in our request list."
             self._logger.warning(error)
             self.send_error(JsonRPCErrors.INTERNAL_ERROR, error)
             return
 
         try:
             if not entry.future.done():
-                entry.future.set_result(try_convert_value(message.result, entry.result_type))
+                entry.future.set_result(from_dict(message.result, entry.result_type))
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -629,21 +570,18 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
     @staticmethod
     def _convert_params(
-        callable: Callable[..., Any], param_type: Optional[Type[Any]], params: Any
+        callable: Callable[..., Any], params_type: Optional[Type[Any]], params: Any
     ) -> Tuple[List[Any], Dict[str, Any]]:
         if params is None:
             return [], {}
-        if param_type is None:
+        if params_type is None:
             if isinstance(params, Mapping):
                 return [], dict(**params)
             else:
                 return [params], {}
 
         # try to convert the dict to correct type
-        if issubclass(param_type, BaseModel):
-            converted_params = param_type.parse_obj(params)
-        else:
-            converted_params = param_type(**params)
+        converted_params = from_dict(params, params_type)
 
         signature = inspect.signature(callable)
 
@@ -720,7 +658,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             self.send_error(ex.code, ex.message, id=message.id, data=ex.data)
         except BaseException as e:
             self._logger.exception(e)
-            self.send_error(JsonRPCErrors.INTERNAL_ERROR, str(e), id=message.id)
+            self.send_error(JsonRPCErrors.INTERNAL_ERROR, f"{type(e).__name__}: {e}", id=message.id)
 
     async def cancel_received_request(self, id: Union[int, str, None]) -> None:
         with self._received_request_lock:

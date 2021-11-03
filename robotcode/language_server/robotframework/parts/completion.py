@@ -24,8 +24,7 @@ from typing import (
 from ....utils.async_itertools import async_chain, async_chain_iterator
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id, trigger_characters
-from ...common.text_document import TextDocument
-from ...common.types import (
+from ...common.lsp_types import (
     CompletionContext,
     CompletionItem,
     CompletionItemKind,
@@ -38,6 +37,7 @@ from ...common.types import (
     Range,
     TextEdit,
 )
+from ...common.text_document import TextDocument
 from ..configuration import SyntaxConfig
 from ..diagnostics.library_doc import (
     CompleteResultKind,

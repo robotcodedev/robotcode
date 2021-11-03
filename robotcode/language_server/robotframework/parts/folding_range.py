@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
+from ...common.lsp_types import FoldingRange
 from ...common.text_document import TextDocument
-from ...common.types import FoldingRange
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol

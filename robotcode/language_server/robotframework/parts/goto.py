@@ -16,8 +16,8 @@ from typing import (
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.language import language_id
+from ...common.lsp_types import Location, LocationLink, Position
 from ...common.text_document import TextDocument
-from ...common.types import Location, LocationLink, Position
 from ..utils.ast import (
     HasTokens,
     Token,

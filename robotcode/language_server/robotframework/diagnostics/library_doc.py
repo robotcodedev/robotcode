@@ -7,6 +7,7 @@ import re
 import sys
 import tempfile
 from contextlib import contextmanager
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from types import ModuleType
@@ -25,10 +26,8 @@ from typing import (
     cast,
 )
 
-from pydantic import BaseModel, Field, PrivateAttr, validator
-
 from ....utils.path import path_is_relative_to
-from ...common.types import Position, Range
+from ...common.lsp_types import Position, Range
 from ..utils.markdownformatter import MarkDownFormatter
 
 __all__ = [
@@ -173,11 +172,12 @@ class VariableMatcher:
         return f"{type(self).__name__}(name={repr(self.name)})"
 
 
-class Model(BaseModel):
-    class Config:
-        pass
+@dataclass
+class Model:
+    pass
 
 
+@dataclass
 class Error(Model):
     message: str
     type_name: str
@@ -195,13 +195,14 @@ class KeywordArgumentKind(Enum):
     VAR_NAMED = "VAR_NAMED"
 
 
+@dataclass
 class KeywordArgumentDoc(Model):
     name: str
-    default_value: Optional[Any] = None
-    types: Optional[Any] = None
     str_repr: str
     kind: KeywordArgumentKind
     required: bool
+    default_value: Optional[Any] = None
+    types: Optional[Any] = None
 
     @staticmethod
     def from_robot(arg: Any) -> "KeywordArgumentDoc":
@@ -225,6 +226,7 @@ class KeywordArgumentDoc(Model):
 DEPRECATED_PATTERN = re.compile(r"^\*DEPRECATED(?P<message>.*)\*(?P<doc>.*)")
 
 
+@dataclass
 class KeywordDoc(Model):
     name: str = ""
     args: Tuple[KeywordArgumentDoc, ...] = ()
@@ -242,10 +244,6 @@ class KeywordDoc(Model):
     is_error_handler: bool = False
     error_handler_message: Optional[str] = None
     is_initializer: bool = False
-
-    @validator("doc_format")
-    def doc_format_validator(cls, v: str) -> str:
-        return v or DEFAULT_DOC_FORMAT
 
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
@@ -334,12 +332,13 @@ class KeywordError(Exception):
     pass
 
 
+@dataclass
 class KeywordStore(Model):
     source: Optional[str] = None
     source_type: Optional[str] = None
-    keywords: Dict[str, KeywordDoc] = Field(default_factory=lambda: {})
+    keywords: Dict[str, KeywordDoc] = field(default_factory=dict)
 
-    __matchers: Optional[Dict[KeywordMatcher, KeywordDoc]] = PrivateAttr(None)
+    __matchers: Optional[Dict[KeywordMatcher, KeywordDoc]] = None
 
     @property
     def _matchers(self) -> Dict[KeywordMatcher, KeywordDoc]:
@@ -396,12 +395,14 @@ class KeywordStore(Model):
             return default
 
 
+@dataclass
 class ModuleSpec(Model):
     name: str
     origin: Optional[str]
     submodule_search_locations: Optional[List[str]]
 
 
+@dataclass
 class LibraryDoc(Model):
     name: str = ""
     doc: str = ""
@@ -420,10 +421,6 @@ class LibraryDoc(Model):
     python_path: Optional[List[str]] = None
     stdout: Optional[str] = None
     has_listener: Optional[bool] = None
-
-    @validator("doc_format")
-    def doc_format_validator(cls, v: str) -> str:
-        return v or DEFAULT_DOC_FORMAT
 
     @property
     def is_deprecated(self) -> bool:

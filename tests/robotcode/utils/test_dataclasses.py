@@ -168,6 +168,26 @@ def test_encode_complex_dataclass_with_config_encode_case(expr: Any, expected: s
     assert as_json(expr) == expected
 
 
+@dataclass
+class SimpleItemWithOptionalField:
+    a: Optional[int]
+
+
+def test_encode_with_optional_field() -> None:
+    assert as_json(SimpleItemWithOptionalField(1)) == '{"a": 1}'
+    assert as_json(SimpleItemWithOptionalField(None)) == '{"a": null}'
+
+
+@dataclass
+class SimpleItemWithOptionalFieldAndNoneAsDefaultValue:
+    a: Optional[int] = None
+
+
+def test_encode_with_optional_field_and_none_as_default_value() -> None:
+    assert as_json(SimpleItemWithOptionalFieldAndNoneAsDefaultValue(1)) == '{"a": 1}'
+    assert as_json(SimpleItemWithOptionalFieldAndNoneAsDefaultValue(None)) == "{}"
+
+
 @pytest.mark.parametrize(
     ("expr", "type", "expected"),
     [
@@ -223,6 +243,25 @@ def test_decode_optional_simple_class() -> None:
 
     with pytest.raises(TypeError):
         assert from_json("null", SimpleItem) is None
+
+
+@dataclass
+class SimpleItemWithNoFields:
+    pass
+
+
+def test_decode_with_no_fields() -> None:
+    assert from_json("{}", SimpleItemWithNoFields) == SimpleItemWithNoFields()
+
+
+@dataclass
+class SimpleItemWithOnlyOptionalFields:
+    a: int = 1
+    b: int = 2
+
+
+def test_decode_with_only_optional_fields() -> None:
+    assert from_json("{}", SimpleItemWithOnlyOptionalFields) == SimpleItemWithOnlyOptionalFields()
 
 
 @pytest.mark.parametrize(

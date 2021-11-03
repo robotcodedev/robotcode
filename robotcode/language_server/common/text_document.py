@@ -8,7 +8,7 @@ from types import MethodType
 from typing import Any, Awaitable, Callable, Dict, List, Optional, TypeVar, Union, cast
 
 from ...utils.uri import Uri
-from .types import DocumentUri, Position, Range, TextDocumentItem
+from .lsp_types import DocumentUri, Position, Range, TextDocumentItem
 
 
 def _utf16_unit_offset(chars: str) -> int:

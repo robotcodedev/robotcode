@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import re
 import uuid
 import weakref
+from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -23,14 +23,13 @@ from typing import (
     runtime_checkable,
 )
 
-import pydantic
-
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_event import async_event
+from ....utils.dataclasses import from_dict
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
 from ....utils.uri import Uri
-from ..types import (
+from ..lsp_types import (
     ConfigurationItem,
     ConfigurationParams,
     CreateFilesParams,
@@ -48,6 +47,7 @@ from ..types import (
     FileOperationRegistrationOptions,
     FileRename,
     FileSystemWatcher,
+    Model,
     RenameFilesParams,
     ServerCapabilities,
     ServerCapabilitiesWorkspace,
@@ -56,8 +56,8 @@ from ..types import (
     WatchKind,
     WorkspaceEdit,
 )
-from ..types import WorkspaceFolder as TypesWorkspaceFolder
-from ..types import WorkspaceFoldersChangeEvent, WorkspaceFoldersServerCapabilities
+from ..lsp_types import WorkspaceFolder as TypesWorkspaceFolder
+from ..lsp_types import WorkspaceFoldersChangeEvent, WorkspaceFoldersServerCapabilities
 from .protocol_part import LanguageServerProtocolPart
 
 __all__ = ["WorkspaceFolder", "Workspace", "ConfigBase", "config_section", "FileWatcherEntry"]
@@ -116,25 +116,12 @@ def config_section(name: str) -> Callable[[_F], _F]:
 
 @runtime_checkable
 class HasConfigSection(Protocol):
-    __config_section__: str = pydantic.PrivateAttr(None)
+    __config_section__: str
 
 
-class ConfigBase(pydantic.BaseModel):
-    class Config:
-
-        allow_population_by_field_name = True
-        # use_enum_values = True
-
-        @classmethod
-        def alias_generator(cls, string: str) -> str:
-            string = re.sub(r"^[\-_\.]", "", str(string))
-            if not string:
-                return string
-            return str(string[0]).lower() + re.sub(
-                r"[\-_\.\s]([a-z])",
-                lambda matched: str(matched.group(1)).upper(),
-                string[1:],
-            )
+@dataclass
+class ConfigBase(Model):
+    pass
 
 
 _TConfig = TypeVar("_TConfig", bound=(ConfigBase))
@@ -286,15 +273,16 @@ class Workspace(LanguageServerProtocolPart):
     ) -> Union[_TConfig, Any]:
 
         if isinstance(section, (ConfigBase, HasConfigSection)):
-            config = section.parse_obj(
+            config = from_dict(
                 await self.get_configuration(
                     section=cast(HasConfigSection, section).__config_section__, scope_uri=scope_uri
-                )
+                ),
+                section,
             )
             if config is None:
                 return None
 
-            return section.parse_obj(config)
+            return from_dict(config, section)
 
         if (
             self.parent.client_capabilities

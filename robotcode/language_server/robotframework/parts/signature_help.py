@@ -16,8 +16,7 @@ from typing import (
 
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id, retrigger_characters, trigger_characters
-from ...common.text_document import TextDocument
-from ...common.types import (
+from ...common.lsp_types import (
     MarkupContent,
     MarkupKind,
     ParameterInformation,
@@ -26,6 +25,7 @@ from ...common.types import (
     SignatureHelpContext,
     SignatureInformation,
 )
+from ...common.text_document import TextDocument
 from ..diagnostics.library_doc import KeywordDoc
 from ..utils.ast import (
     Token,

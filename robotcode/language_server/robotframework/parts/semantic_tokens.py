@@ -25,8 +25,7 @@ from typing import (
 from ....utils.async_event import CancelationToken
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
-from ...common.text_document import TextDocument
-from ...common.types import (
+from ...common.lsp_types import (
     Range,
     SemanticTokenModifiers,
     SemanticTokens,
@@ -35,6 +34,7 @@ from ...common.types import (
     SemanticTokensPartialResult,
     SemanticTokenTypes,
 )
+from ...common.text_document import TextDocument
 from ..diagnostics.namespace import Namespace
 from ..utils.ast import HasTokens, Token, iter_nodes, token_in_range, tokenize_variables
 

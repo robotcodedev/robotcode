@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional, Tuple
 
-from ...common.types import Position
+from ...common.lsp_types import Position
 from ..diagnostics.library_doc import KeywordDoc, KeywordError
 from ..diagnostics.namespace import Namespace
 from ..utils.ast import Token, is_non_variable_token, range_from_token

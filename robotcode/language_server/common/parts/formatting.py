@@ -8,8 +8,7 @@ from ....utils.async_event import async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
 from ..language import HasLanguageId
-from ..text_document import TextDocument
-from ..types import (
+from ..lsp_types import (
     DocumentFormattingOptions,
     DocumentFormattingParams,
     DocumentRangeFormattingOptions,
@@ -21,6 +20,7 @@ from ..types import (
     TextDocumentIdentifier,
     TextEdit,
 )
+from ..text_document import TextDocument
 
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol

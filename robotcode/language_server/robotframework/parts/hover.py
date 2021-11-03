@@ -15,8 +15,8 @@ from typing import (
 
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
+from ...common.lsp_types import Hover, MarkupContent, MarkupKind, Position
 from ...common.text_document import TextDocument
-from ...common.types import Hover, MarkupContent, MarkupKind, Position
 from ..utils.ast import (
     HasTokens,
     Token,

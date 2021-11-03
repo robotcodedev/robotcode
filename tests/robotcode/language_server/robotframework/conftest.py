@@ -4,9 +4,7 @@ from typing import Any, AsyncGenerator, Generator, cast
 
 import pytest
 
-from robotcode.language_server.common.parts.workspace import HasConfigSection
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.common.types import (
+from robotcode.language_server.common.lsp_types import (
     ClientCapabilities,
     ClientInfo,
     HoverClientCapabilities,
@@ -15,6 +13,8 @@ from robotcode.language_server.common.types import (
     TextDocumentClientCapabilities,
     WorkspaceFolder,
 )
+from robotcode.language_server.common.parts.workspace import HasConfigSection
+from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import (
     RobotCodeConfig,
     RobotConfig,
@@ -23,6 +23,7 @@ from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
 from robotcode.language_server.robotframework.server import RobotLanguageServer
+from robotcode.utils.dataclasses import as_dict
 
 
 @pytest.fixture(scope="module")
@@ -52,16 +53,16 @@ async def protocol(event_loop: asyncio.AbstractEventLoop) -> AsyncGenerator[Robo
         await protocol._initialized(InitializedParams())
         await protocol.workspace._workspace_did_change_configuration(
             {
-                cast(HasConfigSection, RobotCodeConfig)
-                .__config_section__: RobotCodeConfig(
-                    robot=RobotConfig(
-                        env={"ENV_VAR": "1"},
-                        variables={
-                            "CMD_VAR": "1",
-                        },
+                cast(HasConfigSection, RobotCodeConfig).__config_section__: as_dict(
+                    RobotCodeConfig(
+                        robot=RobotConfig(
+                            env={"ENV_VAR": "1"},
+                            variables={
+                                "CMD_VAR": "1",
+                            },
+                        )
                     )
                 )
-                .dict()
             }
         )
         yield protocol

@@ -7,8 +7,7 @@ from ....jsonrpc2.protocol import JsonRPCException, rpc_method
 from ....utils.async_event import async_event
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
-from ..text_document import TextDocument
-from ..types import (
+from ..lsp_types import (
     DidChangeTextDocumentParams,
     DidCloseTextDocumentParams,
     DidOpenTextDocumentParams,
@@ -26,6 +25,7 @@ from ..types import (
     VersionedTextDocumentIdentifier,
     WillSaveTextDocumentParams,
 )
+from ..text_document import TextDocument
 
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol

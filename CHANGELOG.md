@@ -4,6 +4,12 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+### added
+- remove pydantic dependency 
+    - closes [#11](https://github.com/d-biehl/robotcode/issues/11)
+    - big refactoring of LSP and DAP types
+    
+
 ##  0.2.11
 
 ### added

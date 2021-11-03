@@ -4,8 +4,8 @@ from typing import Generator
 
 import pytest
 
+from robotcode.language_server.common.lsp_types import Position, Range
 from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.common.types import Position, Range
 
 
 @pytest.fixture

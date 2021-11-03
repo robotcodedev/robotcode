@@ -9,6 +9,7 @@ from typing import (
     Dict,
     Iterable,
     List,
+    Literal,
     Mapping,
     Optional,
     Protocol,
@@ -24,6 +25,8 @@ from typing import (
     get_type_hints,
     runtime_checkable,
 )
+
+__all__ = ["to_snake_case", "to_camel_case", "as_json", "from_dict", "from_json", "as_dict"]
 
 _RE_SNAKE_CASE_1 = re.compile(r"[\-\.\s]")
 _RE_SNAKE_CASE_2 = re.compile(r"[A-Z]")
@@ -49,9 +52,6 @@ def to_camel_case(s: str) -> str:
         lambda matched: str(matched.group(1)).upper(),
         s[1:],
     )
-
-
-CONFIG_CLASS_NAME = "Config"
 
 
 @runtime_checkable
@@ -86,32 +86,53 @@ class DefaultConfig:
         return s
 
 
-_default_config: Optional[DefaultConfig] = None
+__default_config: Optional[DefaultConfig] = None
 
 
-def _get_default_config() -> DefaultConfig:
-    global _default_config
+def __get_default_config() -> DefaultConfig:
+    global __default_config
 
-    if _default_config is None:
-        _default_config = DefaultConfig()
-    return _default_config
+    if __default_config is None:
+        __default_config = DefaultConfig()
+    return __default_config
 
 
-def _get_config(obj: Any, entry_protocol: Type[_T]) -> _T:
+def __get_config(obj: Any, entry_protocol: Type[_T]) -> _T:
     if isinstance(obj, entry_protocol):
         return obj
-    return cast(_T, _get_default_config())
+    return cast(_T, __get_default_config())
 
 
-def _default(o: Any) -> Any:
+def __encode_case(obj: Any, field: dataclasses.Field) -> str:  # type: ignore
+    alias = field.metadata.get("alias", None)
+    if alias:
+        return str(alias)
+
+    return __get_config(obj, HasCaseEncoder)._encode_case(field.name)  # type: ignore
+
+
+def __decode_case(type: Type[_T], name: str) -> str:
+    if dataclasses.is_dataclass(type):
+        field = next((f for f in dataclasses.fields(type) if f.metadata.get("alias", None) == name), None)
+        if field:
+            return field.name
+
+    return __get_config(type, HasCaseDecoder)._decode_case(name)  # type: ignore
+
+
+def __default(o: Any) -> Any:
     if dataclasses.is_dataclass(o):
         return {
             name: value
-            for name, value in (
-                (_get_config(type(o), HasCaseEncoder)._encode_case(field.name), getattr(o, field.name))  # type: ignore
+            for name, value, field in (
+                (
+                    __encode_case(o, field),
+                    getattr(o, field.name),
+                    field,
+                )
                 for field in dataclasses.fields(o)
             )
-            if value is not None
+            if value is not None or field.default == dataclasses.MISSING
         }
     elif isinstance(o, enum.Enum):
         return o.value
@@ -122,10 +143,10 @@ def _default(o: Any) -> Any:
 
 
 def as_json(obj: Any, indent: Optional[bool] = None, compact: Optional[bool] = None) -> str:
-    return json.dumps(obj, default=_default, indent=4 if indent else None, separators=(",", ":") if compact else None)
+    return json.dumps(obj, default=__default, indent=4 if indent else None, separators=(",", ":") if compact else None)
 
 
-def convert_value(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = None) -> _T:
+def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = None, /, *, strict: bool = False) -> _T:
     if types is None:
         return cast(_T, value)
 
@@ -137,13 +158,23 @@ def convert_value(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None]
         origin = get_origin(t)
 
         if origin is Union:  # TODO pylance shows an error here, but it's ok for mypy?
-            return cast(_T, convert_value(value, args))
+            return cast(_T, from_dict(value, args))
 
-        if t is Any or isinstance(value, origin or t):
+        if origin is Literal:
+            if value in args:
+                return cast(_T, value)
+            else:
+                continue
+
+        if (
+            t is Any
+            or isinstance(value, origin or t)
+            or (isinstance(value, Sequence) and args and issubclass(origin or t, Sequence))
+        ):
             if isinstance(value, Mapping):
-                return cast(_T, {n: convert_value(v, args[1] if args else None) for n, v in value.items()})
+                return cast(_T, {n: from_dict(v, args[1] if args else None) for n, v in value.items()})
             elif isinstance(value, Sequence) and args:
-                return cast(_T, [convert_value(v, args) for v in value])
+                return cast(_T, (origin or t)(from_dict(v, args) for v in value))  # type: ignore
 
             return cast(_T, value)
 
@@ -158,24 +189,27 @@ def convert_value(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None]
             args = get_args(t)
             origin = get_origin(t)
 
-            cased_value: Dict[str, Any] = {
-                _get_config(t, HasCaseDecoder)._decode_case(k): v for k, v in value.items()  # type: ignore
-            }
+            cased_value: Dict[str, Any] = {__decode_case(t, k): v for k, v in value.items()}
             type_hints = get_type_hints(origin or t)
             try:
                 signature = inspect.signature(origin or t)
             except ValueError:
                 continue
 
+            non_default_parameters = {
+                k: v for k, v in signature.parameters.items() if v.default == inspect.Parameter.empty
+            }
+
+            if len(value) == 0 and non_default_parameters:
+                continue
+
             same_keys = [k for k in cased_value.keys() if k in signature.parameters.keys()]
-            if not same_keys:
-                continue
 
-            different_keys = [k for k in cased_value.keys() if k not in signature.parameters.keys()]
-            if different_keys:
-                continue
+            if strict:
+                if any(k for k in cased_value.keys() if k not in signature.parameters.keys()):
+                    continue
 
-            if not all(k in same_keys for k, v in signature.parameters.items() if v.default == inspect.Parameter.empty):
+            if not all(k in same_keys for k in non_default_parameters.keys()):
                 continue
 
             if match_same_keys is None or len(match_same_keys) < len(same_keys):
@@ -196,15 +230,20 @@ def convert_value(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None]
             and match_signature is not None
             and match_type_hints is not None
         ):
-            params: Dict[str, Any] = {k: convert_value(v, match_type_hints[k]) for k, v in match_value.items()}
+            params: Dict[str, Any] = {
+                k: from_dict(v, match_type_hints[k]) for k, v in match_value.items() if k in match_type_hints
+            }
             try:
                 return match(**params)  # type: ignore
             except TypeError as ex:
-                raise TypeError(f"Can't initialize class {match.__name__} with parameters {repr(params)}.") from ex
+                raise TypeError(f"Can't initialize class {repr(match)} with parameters {repr(params)}.") from ex
 
     for t in types:
         args = get_args(t)
         origin = get_origin(t)
+
+        if (origin or t) is Literal:
+            continue
 
         if issubclass(origin or t, enum.Enum):
             for v in cast(Iterable[Any], t):
@@ -213,9 +252,13 @@ def convert_value(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None]
 
     raise TypeError(
         f"Cant convert value {repr(value)} to type "
-        f"{repr(types[0].__name__) if len(types)==1 else ' | '.join(repr(e.__name__) for e in types)}."
+        f"{repr(types[0]) if len(types)==1 else ' | '.join(repr(e) for e in types)}."
     )
 
 
 def from_json(s: Union[str, bytes], types: Union[Type[_T], Tuple[Type[_T], ...], None] = None) -> _T:
-    return convert_value(json.loads(s), types)
+    return from_dict(json.loads(s), types)
+
+
+def as_dict(value: Any) -> Dict[str, Any]:
+    return dataclasses.asdict(value)

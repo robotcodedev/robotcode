@@ -1,5 +1,4 @@
 import asyncio
-import json
 from typing import Any, Dict, Generator, List, Optional, cast
 
 import pytest
@@ -14,7 +13,8 @@ from robotcode.jsonrpc2.protocol import (
     JsonRPCResponse,
 )
 from robotcode.jsonrpc2.server import JsonRPCServer
-from robotcode.language_server.common.types import MessageActionItem
+from robotcode.language_server.common.lsp_types import MessageActionItem
+from robotcode.utils.dataclasses import as_dict, as_json
 
 
 class DummyJsonRPCProtocol(JsonRPCProtocol):
@@ -48,7 +48,7 @@ async def test_receive_a_request_message_should_work() -> None:
 
     message = JsonRPCRequest(id=1, method="doSomething", params={})
 
-    json_message = message.json().encode("utf-8")
+    json_message = as_json(message).encode("utf-8")
     header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
     data = header + json_message
 
@@ -63,7 +63,7 @@ async def test_receive_a_request_message_should_work_with_string_id() -> None:
 
     message = JsonRPCRequest(id="this is an id", method="doSomething", params={})
 
-    json_message = message.json().encode("utf-8")
+    json_message = as_json(message).encode("utf-8")
     header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
     data = header + json_message
 
@@ -82,7 +82,7 @@ async def test_receive_a_batch_request_should_work() -> None:
         JsonRPCRequest(id=3, method="doSomething", params={}),
     ]
 
-    json_message = json.dumps([e.dict() for e in message]).encode("utf-8")
+    json_message = as_json(message).encode("utf-8")
     header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
     data = header + json_message
 
@@ -113,7 +113,7 @@ async def test_receive_a_request_with_invalid_protocol_version_should_send_an_er
     message = JsonRPCRequest(id=1, method="doSomething", params={})
     message.jsonrpc = "1.0"
 
-    json_message = message.json().encode("utf-8")
+    json_message = as_json(message).encode("utf-8")
     header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
     data = header + json_message
     await protocol.data_received_async(data)
@@ -129,7 +129,7 @@ async def test_receive_an_error_should_work() -> None:
 
     message = JsonRPCError(id=1, result=None, error=JsonRPCErrorObject(code=1, message="test", data="this is the data"))
 
-    json_message = message.json().encode("utf-8")
+    json_message = as_json(message).encode("utf-8")
     header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
     data = header + json_message
     await protocol.data_received_async(data)
@@ -142,8 +142,8 @@ async def test_receive_response_should_work() -> None:
 
     r = protocol.send_request("dummy/method", ["dummy", "data"], list)
 
-    msg = JsonRPCResponse(id=cast(JsonRPCRequest, protocol.sended_message).id, result=["dummy", "data"])
-    json_message = msg.json().encode("utf-8")
+    message = JsonRPCResponse(id=cast(JsonRPCRequest, protocol.sended_message).id, result=["dummy", "data"])
+    json_message = as_json(message).encode("utf-8")
     header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
     data = header + json_message
     await protocol.data_received_async(data)
@@ -159,7 +159,7 @@ async def test_receive_invalid_id_in_response_should_send_an_error() -> None:
 
     message = JsonRPCResponse(id=1, result=["dummy", "data"])
 
-    json_message = message.json().encode("utf-8")
+    json_message = as_json(message).encode("utf-8")
     header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
     data = header + json_message
     await protocol.data_received_async(data)
@@ -173,10 +173,10 @@ async def test_send_request_receive_response_should_work_without_param_type_work
 
     r: Any = protocol.send_request("dummy/method", ["dummy", "data"])
 
-    msg = JsonRPCResponse(
+    message = JsonRPCResponse(
         id=cast(JsonRPCRequest, protocol.sended_message).id, result=MessageActionItem(title="hi there")
     )
-    json_message = msg.json().encode("utf-8")
+    json_message = as_json(message).encode("utf-8")
     header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
     data = header + json_message
     await protocol.data_received_async(data)
@@ -188,15 +188,15 @@ async def test_send_request_receive_response_should_work_without_param_type_work
 
 
 @pytest.mark.asyncio
-async def test_receive_response_should_work_with_pydantic_model() -> None:
+async def test_receive_response_should_work_with_dataclass() -> None:
     protocol = DummyJsonRPCProtocol(None)
 
     r = protocol.send_request("dummy/method", ["dummy", "data"], MessageActionItem)
 
-    msg = JsonRPCResponse(
+    message = JsonRPCResponse(
         id=cast(JsonRPCRequest, protocol.sended_message).id, result=MessageActionItem(title="hi there")
     )
-    json_message = msg.json().encode("utf-8")
+    json_message = as_json(message).encode("utf-8")
     header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
     data = header + json_message
     await protocol.data_received_async(data)
@@ -207,34 +207,15 @@ async def test_receive_response_should_work_with_pydantic_model() -> None:
 
 
 @pytest.mark.asyncio
-async def test_receive_response_should_work_with_converter() -> None:
-    protocol = DummyJsonRPCProtocol(None)
-
-    r = protocol.send_request("dummy/method", ["dummy", "data"], lambda v: [MessageActionItem.parse_obj(e) for e in v])
-
-    msg = JsonRPCResponse(
-        id=cast(JsonRPCRequest, protocol.sended_message).id, result=[MessageActionItem(title="hi there")]
-    )
-    json_message = msg.json().encode("utf-8")
-    header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
-    data = header + json_message
-    await protocol.data_received_async(data)
-
-    a = await asyncio.wait_for(r, 10)
-
-    assert a == [MessageActionItem(title="hi there")]
-
-
-@pytest.mark.asyncio
 async def test_receive_response_should_work_with_generic_list() -> None:
     protocol = DummyJsonRPCProtocol(None)
 
     r = protocol.send_request("dummy/method", ["dummy", "data"], List[MessageActionItem])
 
-    msg = JsonRPCResponse(
+    message = JsonRPCResponse(
         id=cast(JsonRPCRequest, protocol.sended_message).id, result=[MessageActionItem(title="hi there")]
     )
-    json_message = msg.json().encode("utf-8")
+    json_message = as_json(message).encode("utf-8")
     header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
     data = header + json_message
     await protocol.data_received_async(data)
@@ -250,14 +231,14 @@ async def test_receive_response_with_generic_dict_should_return_unchanged() -> N
 
     r = protocol.send_request("dummy/method", ["dummy", "data"], List[Dict[str, Any]])
 
-    msg = JsonRPCResponse(
+    message = JsonRPCResponse(
         id=cast(JsonRPCRequest, protocol.sended_message).id, result=[MessageActionItem(title="hi there")]
     )
-    json_message = msg.json().encode("utf-8")
+    json_message = as_json(message).encode("utf-8")
     header = f"Content-Length: {len(json_message)}\r\n\r\n".encode("ascii")
     data = header + json_message
     await protocol.data_received_async(data)
 
     a = await asyncio.wait_for(r, 10)
 
-    assert a == [MessageActionItem(title="hi there").dict()]
+    assert a == [as_dict(MessageActionItem(title="hi there"))]

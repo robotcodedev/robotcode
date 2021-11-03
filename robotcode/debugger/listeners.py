@@ -1,10 +1,12 @@
+from dataclasses import dataclass
 from typing import Any, Dict, Iterator, List, Optional, Union, cast
 
 from .dap_types import Event, Model
 from .debugger import Debugger
 
 
-class RobotExecutionEvent(Model):
+@dataclass
+class RobotExecutionEventBody(Model):
     type: str
     attributes: Optional[Dict[str, Any]] = None
     failed_keywords: Optional[List[Dict[str, Any]]] = None
@@ -21,7 +23,7 @@ class ListenerV2:
 
     def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
         Debugger.instance().send_event(
-            self, Event(event="robotStarted", body=RobotExecutionEvent(type="suite", attributes=dict(attributes)))
+            self, Event(event="robotStarted", body=RobotExecutionEventBody(type="suite", attributes=dict(attributes)))
         )
 
         Debugger.instance().start_output_group(name, attributes, "SUITE")
@@ -38,7 +40,7 @@ class ListenerV2:
             self,
             Event(
                 event="robotEnded",
-                body=RobotExecutionEvent(
+                body=RobotExecutionEventBody(
                     type="suite", attributes=dict(attributes), failed_keywords=self.failed_keywords
                 ),
             ),
@@ -48,7 +50,7 @@ class ListenerV2:
         self.failed_keywords = None
 
         Debugger.instance().send_event(
-            self, Event(event="robotStarted", body=RobotExecutionEvent(type="test", attributes=dict(attributes)))
+            self, Event(event="robotStarted", body=RobotExecutionEventBody(type="test", attributes=dict(attributes)))
         )
 
         Debugger.instance().start_output_group(name, attributes, "TEST")
@@ -64,7 +66,7 @@ class ListenerV2:
             self,
             Event(
                 event="robotEnded",
-                body=RobotExecutionEvent(
+                body=RobotExecutionEventBody(
                     type="test", attributes=dict(attributes), failed_keywords=self.failed_keywords
                 ),
             ),
@@ -74,7 +76,7 @@ class ListenerV2:
 
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         Debugger.instance().send_event(
-            self, Event(event="robotStarted", body=RobotExecutionEvent(type="keyword", attributes=dict(attributes)))
+            self, Event(event="robotStarted", body=RobotExecutionEventBody(type="keyword", attributes=dict(attributes)))
         )
 
         Debugger.instance().start_output_group(
@@ -97,7 +99,7 @@ class ListenerV2:
             self.failed_keywords.insert(0, {"message": self.last_fail_message, **attributes})
 
         Debugger.instance().send_event(
-            self, Event(event="robotEnded", body=RobotExecutionEvent(type="keyword", attributes=dict(attributes)))
+            self, Event(event="robotEnded", body=RobotExecutionEventBody(type="keyword", attributes=dict(attributes)))
         )
 
     def log_message(self, message: Dict[str, Any]) -> None:

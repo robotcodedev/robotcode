@@ -20,14 +20,12 @@ from typing import (
     Union,
 )
 
-from pydantic import BaseModel
-
 from ..jsonrpc2.protocol import (
     JsonRPCException,
     JsonRPCProtocolBase,
     SendedRequestEntry,
-    try_convert_value,
 )
+from ..utils.dataclasses import as_dict, as_json, from_dict
 from ..utils.inspect import ensure_coroutine
 from ..utils.logging import LoggingDescriptor
 from .dap_types import (
@@ -91,11 +89,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
 
     @_logger.call
     def send_message(self, message: ProtocolMessage) -> None:
-        body = message.json(
-            by_alias=True,
-            exclude_none=True,
-            indent=self._message_logger.is_enabled_for(logging.DEBUG) or None,
-        ).encode(self.CHARSET)
+        body = as_json(message, indent=self._message_logger.is_enabled_for(logging.DEBUG) or None).encode(self.CHARSET)
 
         header = (f"Content-Length: {len(body)}\r\n\r\n").encode("ascii")
 
@@ -129,17 +123,19 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         data: Union[Dict[Any, Any], List[Dict[Any, Any]]]
     ) -> Iterator[ProtocolMessage]:
         def inner(d: Dict[Any, Any]) -> ProtocolMessage:
-            if "type" in d:
-                if d["type"] == "request":
-                    return Request(**d)
-                elif d["type"] == "response":
-                    if "success" in d and d["success"] is not True:
-                        return ErrorResponse(**d)
-                    return Response(**d)
-                elif d["type"] == "event":
-                    return Event(**d)
+            # if "type" in d:
+            #     type = d.get("type")
+            #     if type == "request":
+            #         return Request(**d)
+            #     elif type == "response":
+            #         if "success" in d and d["success"] is not True:
+            #             return ErrorResponse(**d)
+            #         return Response(**d)
+            #     elif type == "event":
+            #         return Event(**d)
 
-            raise JsonRPCException(f"Invalid Debug Adapter Message {repr(d)}")
+            # raise JsonRPCException(f"Invalid Debug Adapter Message {repr(d)}")
+            return from_dict(d, (Request, Response, Event))  # type: ignore
 
         if isinstance(data, list):
             for e in data:
@@ -154,7 +150,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
             raise
         except BaseException as e:
             self._logger.exception(e)
-            self.send_error(f"Invalid Message: {str(e)} -> {str(body)}")
+            self.send_error(f"Invalid Message: {type(e).__name__}: {str(e)} -> {str(body)}")
 
     def _handle_messages(self, iterator: Iterator[ProtocolMessage]) -> None:
         def done(f: asyncio.Future[Any]) -> None:
@@ -189,11 +185,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
             else:
                 return [params], {}
 
-        # try to convert the dict to correct type
-        if issubclass(param_type, BaseModel):
-            converted_params = param_type.parse_obj(params)
-        else:
-            converted_params = param_type(**params)
+        converted_params = from_dict(params, param_type)
 
         signature = inspect.signature(callable)
 
@@ -237,18 +229,6 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         return args, kw_args
 
     async def handle_unknown_command(self, message: Request) -> Any:
-        # self._logger.error(lambda: f"unknown command-> {message}")
-
-        # self.send_error(
-        #     "unknown command",
-        #     request_seq=message.seq,
-        #     command=message.command,
-        #     error_message=Message(
-        #         format='Unknown command "{command}"', variables={"command": str(message.command)}, show_user=True
-        #     ),
-        # )
-
-        # return None
         raise DebugAdapterRPCErrorException(
             f"Unknown Command '{message.command}'",
             error_message=Message(
@@ -301,11 +281,11 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         except BaseException as e:
             self._logger.exception(e)
             self.send_error(
-                type(e).__name__,
+                str(type(e).__name__),
                 message.seq,
                 message.command,
                 False,
-                error_message=Message(format=str(e), show_user=True),
+                error_message=Message(format=f"{type(e).__name__}: {e}", show_user=True),
             )
 
     @_logger.call
@@ -324,13 +304,13 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
     def send_request(
         self,
         request: Request,
-        return_type_or_converter: Union[Type[TResult], Callable[[Any], TResult], None] = None,
+        return_type: Optional[Type[TResult]] = None,
     ) -> asyncio.Future[TResult]:
 
         result: asyncio.Future[TResult] = asyncio.get_event_loop().create_future()
 
         with self._sended_request_lock:
-            self._sended_request[request.seq] = SendedRequestEntry(result, return_type_or_converter)
+            self._sended_request[request.seq] = SendedRequestEntry(result, return_type)
 
         self.send_message(request)
 
@@ -339,7 +319,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
     async def send_request_async(
         self,
         request: Request,
-        return_type: Union[Type[TResult], Callable[[Any], TResult], None] = None,
+        return_type: Optional[Type[TResult]] = None,
     ) -> TResult:
         return await self.send_request(request, return_type)
 
@@ -379,9 +359,9 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         try:
             if message.success:
                 if not entry.future.done():
-                    entry.future.set_result(try_convert_value(message.body, entry.result_type))
+                    entry.future.set_result(from_dict(message.body, entry.result_type))
             else:
-                raise DebugAdapterErrorResponseError(ErrorResponse(**message.dict()))
+                raise DebugAdapterErrorResponseError(ErrorResponse(**as_dict(message)))
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:

@@ -54,20 +54,3 @@ This is the simpliest way to create an running environment.
 
 TODO
 
-### Speedup things
-
-RobotCode contains everything you need to work with the robot framework in VSCode, but only in a platform-independent version.
-To speedup things you can install the platform dependent versions of the following libraries in your python environment. If you use pipenv or poetry you should install it as dev dependencies.
-
-- pydantic
-    - will install the cython compiled packages
-- orjson 
-    - a faster Python JSON library
-
-Example:
-
-```bash
-python -m pipenv install --dev pydantic orjson
-```
-
-

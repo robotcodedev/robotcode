@@ -9,8 +9,8 @@ from ....utils.async_event import async_tasking_event_iterator
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ..language import HasLanguageId
+from ..lsp_types import Diagnostic, DocumentUri, PublishDiagnosticsParams
 from ..text_document import TextDocument
-from ..types import Diagnostic, DocumentUri, PublishDiagnosticsParams
 
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol

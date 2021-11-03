@@ -13,7 +13,7 @@ from typing import (
     runtime_checkable,
 )
 
-from ...common.types import Position, Range
+from ...common.lsp_types import Position, Range
 from .async_ast import walk
 
 

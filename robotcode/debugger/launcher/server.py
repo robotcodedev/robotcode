@@ -197,7 +197,7 @@ class DAPServerProtocol(DebugAdapterProtocol):
         env = {k: ("" if v is None else str(v)) for k, v in env.items()} if env else {}
 
         if console in ["integratedTerminal", "externalTerminal"]:
-            await self.send_request_async(
+            response = await self.send_request_async(
                 RunInTerminalRequest(
                     arguments=RunInTerminalRequestArguments(
                         cwd=cwd,
@@ -213,6 +213,7 @@ class DAPServerProtocol(DebugAdapterProtocol):
                 ),
                 return_type=RunInTerminalResponseBody,
             )
+            print(response.process_id)
         elif console is None or console in ["internalConsole"]:
             run_env: Dict[str, Optional[str]] = dict(os.environ)
             run_env.update(env)
@@ -259,7 +260,7 @@ class DAPServerProtocol(DebugAdapterProtocol):
 
             return await self.client.protocol.send_request_async(message)
 
-        return super().handle_unknown_command(message)
+        return await super().handle_unknown_command(message)
 
 
 TCP_DEFAULT_PORT = 6611

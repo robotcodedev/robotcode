@@ -12,7 +12,6 @@ robotframework = "^4.0.0"
 
 
 [tool.poetry.dev-dependencies]
-pydantic = "^1.8.2"
 isort = "^5.9.2"
 mypy = "^0.910"
 flake8 = "^3.9.2"
@@ -28,8 +27,6 @@ robotremoteserver = "^1.1"
 Cython = "^0.29.24"
 robotframework-robocop = "^1.7.1"
 robotframework-tidy = "^1.5.1"
-orjson = "^3.6.3"
-types-orjson = "^3.6.0"
 PyYAML = "^6.0"
 
 

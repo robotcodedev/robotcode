@@ -1,6 +1,6 @@
 from typing import Protocol, runtime_checkable
 
-from .types import ServerCapabilities
+from .lsp_types import ServerCapabilities
 
 __all__ = ["HasExtendCapabilities"]
 

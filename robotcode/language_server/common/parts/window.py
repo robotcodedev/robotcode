@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from ..types import (
+from ..lsp_types import (
     URI,
     LogMessageParams,
     MessageActionItem,

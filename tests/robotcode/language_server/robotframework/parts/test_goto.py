@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
+from robotcode.language_server.common.lsp_types import Position
 from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.common.types import Position
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )

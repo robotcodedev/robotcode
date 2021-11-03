@@ -6,8 +6,14 @@ from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
+from ...common.lsp_types import (
+    FormattingOptions,
+    MessageType,
+    Position,
+    Range,
+    TextEdit,
+)
 from ...common.text_document import TextDocument
-from ...common.types import FormattingOptions, MessageType, Position, Range, TextEdit
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol

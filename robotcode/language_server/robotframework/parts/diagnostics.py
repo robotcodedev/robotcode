@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
+from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
 from ...common.parts.diagnostics import DiagnosticsResult
 from ...common.text_document import TextDocument
-from ...common.types import Diagnostic, DiagnosticSeverity, Position, Range
 from ..utils.ast import Token, range_from_token
 
 if TYPE_CHECKING:

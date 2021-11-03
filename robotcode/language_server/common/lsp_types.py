@@ -675,8 +675,8 @@ class FileOperationPatternOptions(Model):
 @dataclass
 class FileOperationPattern(Model):
     glob: str
-    matches: Optional[FileOperationPatternKind]
-    options: Optional[FileOperationPatternOptions]
+    matches: Optional[FileOperationPatternKind] = None
+    options: Optional[FileOperationPatternOptions] = None
 
 
 @dataclass
@@ -1625,6 +1625,7 @@ class _DocumentSymbolParams(Model):
     text_document: TextDocumentIdentifier
 
 
+@dataclass
 class DocumentSymbolParams(WorkDoneProgressParams, PartialResultParams, _DocumentSymbolParams):
     pass
 

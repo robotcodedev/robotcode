@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, List, Optional
@@ -9,40 +10,47 @@ from typing import TYPE_CHECKING, Iterator, List, Optional
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
+from ...common.lsp_types import (
+    DocumentUri,
+    Model,
+    Position,
+    Range,
+    TextDocumentIdentifier,
+)
 from ...common.text_document import TextDocument
-from ...common.types import DocumentUri, Model, Position, Range, TextDocumentIdentifier
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 
+@dataclass
 class GetAllTestsParams(Model):
     paths: Optional[List[str]]
 
 
+@dataclass
 class GetTestsParams(Model):
     text_document: TextDocumentIdentifier
     id: Optional[str]
 
 
+@dataclass
 class GetTestsFromDocumentParams(Model):
     text_document: TextDocumentIdentifier
 
 
+@dataclass
 class TestItem(Model):
     type: str
     id: str
+    label: str
     uri: Optional[str] = None
     children: Optional[List[TestItem]] = None
-    label: str
     description: Optional[str] = None
     range: Optional[Range] = None
     tags: Optional[List[str]] = None
     error: Optional[str] = None
-
-
-TestItem.update_forward_refs()
 
 
 class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):

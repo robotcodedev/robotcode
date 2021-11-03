@@ -13,9 +13,9 @@ from ....utils.async_event import async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
 from ....utils.uri import Uri
+from ...common.lsp_types import DocumentUri, FileChangeType, FileEvent
 from ...common.parts.workspace import FileWatcherEntry
 from ...common.text_document import TextDocument
-from ...common.types import DocumentUri, FileChangeType, FileEvent
 from ..configuration import RobotConfig
 from ..utils.async_ast import walk
 

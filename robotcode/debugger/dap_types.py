@@ -1,27 +1,21 @@
 from __future__ import annotations
 
-import re
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, Iterator, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field
+from ..utils.dataclasses import to_camel_case, to_snake_case
 
 
-class Model(BaseModel):
-    class Config:
-        allow_population_by_field_name = True
-        # use_enum_values = True
+@dataclass
+class Model:
+    @classmethod
+    def _encode_case(cls, s: str) -> str:
+        return to_camel_case(s)
 
-        @classmethod
-        def alias_generator(cls, string: str) -> str:
-            string = re.sub(r"^[\-_\.]", "", str(string))
-            if not string:
-                return string
-            return str(string[0]).lower() + re.sub(
-                r"[\-_\.\s]([a-z])",
-                lambda matched: str(matched.group(1)).upper(),
-                string[1:],
-            )
+    @classmethod
+    def _decode_case(cls, s: str) -> str:
+        return to_snake_case(s)
 
 
 def __next_id_iter() -> Iterator[int]:
@@ -38,36 +32,49 @@ def _next_id() -> int:
     return next(_next_id_iterator)
 
 
+@dataclass
 class ProtocolMessage(Model):
-    seq: int = Field(default_factory=lambda: _next_id())
     type: Union[Literal["request", "response", "event"], str]
+    seq: int = field(default_factory=lambda: _next_id())
 
 
-class Request(ProtocolMessage):
-    type: str = Field("request", const=True)
+@dataclass
+class _Request(Model):
     command: str
     arguments: Optional[Any] = None
 
 
-class Event(ProtocolMessage):
-    type: str = Field("event", const=True)
+@dataclass
+class Request(ProtocolMessage, _Request):
+    type: str = "request"
+
+
+@dataclass
+class _Event(Model):
     event: str
+
+
+@dataclass
+class Event(ProtocolMessage, _Event):
+    type: str = "event"
     body: Optional[Any] = None
 
 
-class Response(ProtocolMessage):
-    # seq: int = Field(-1, const=True)
-    type: str = Field(
-        "response",
-        const=True,
-    )
-    request_seq: int = Field(..., alias="request_seq")
+@dataclass
+class _Response(Model):
+    request_seq: int = field(metadata={"alias": "request_seq"})
     success: bool
     command: str
-    message: Optional[Union[Literal["cancelled"], str]]
+    message: Optional[Union[Literal["cancelled"], str]] = None
+
+
+@dataclass
+class Response(ProtocolMessage, _Response):
+    type: str = "response"
     body: Optional[Any] = None
 
 
+@dataclass
 class Message(Model):
     format: str
     id: int = -1
@@ -87,30 +94,41 @@ class Message(Model):
         return result
 
 
+@dataclass
 class ErrorBody(Model):
     error: Optional[Message] = None
 
 
-class ErrorResponse(Response):
+@dataclass
+class _ErrorResponse(Model):
     body: Optional[ErrorBody]
 
 
+@dataclass
+class ErrorResponse(Response, _ErrorResponse):
+    body: Optional[ErrorBody] = field()
+
+
+@dataclass
 class CancelArguments(Model):
     request_id: Optional[int] = None
     progress_id: Optional[int] = None
 
 
+@dataclass
 class CancelRequest(Request):
-    command: str = Field("cancel", const=True)
     arguments: Optional[CancelArguments] = None
+    command: str = "cancel"
 
 
+@dataclass
 class CancelResponse(Response):
     pass
 
 
+@dataclass
 class InitializedEvent(Event):
-    event: str = Field("initialized", const=True)
+    event: str = "initialized"
 
 
 class StoppedReason(Enum):
@@ -125,6 +143,7 @@ class StoppedReason(Enum):
     INSTRUCTION_BREAKPOINT = "instruction breakpoint"
 
 
+@dataclass
 class StoppedEventBody(Model):
     reason: Union[
         StoppedReason,
@@ -138,37 +157,64 @@ class StoppedEventBody(Model):
     hit_breakpoint_ids: Optional[List[int]] = None
 
 
-class StoppedEvent(Event):
-    event: str = Field("stopped", const=True)
+@dataclass
+class _StoppedEvent(Model):
     body: StoppedEventBody
 
 
+@dataclass
+class StoppedEvent(Event, _StoppedEvent):
+    body: StoppedEventBody = field()
+    event: str = "stopped"
+
+
+@dataclass
 class ContinuedEventBody(Model):
     thread_id: int
     all_threads_continued: Optional[bool]
 
 
-class ContinuedEvent(Event):
-    event: str = Field("continued", const=True)
+@dataclass
+class _ContinuedEvent(Model):
     body: ContinuedEventBody
 
 
+@dataclass
+class ContinuedEvent(Event, _ContinuedEvent):
+    body: ContinuedEventBody = field()
+    event: str = "continued"
+
+
+@dataclass
 class ExitedEventBody(Model):
     exit_code: int
 
 
-class ExitedEvent(Event):
-    event: str = Field("exited", const=True)
+@dataclass
+class _ExitedEvent(Model):
     body: ExitedEventBody
 
 
+@dataclass
+class ExitedEvent(Event, _ExitedEvent):
+    body: ExitedEventBody = field()
+    event: str = "exited"
+
+
+@dataclass
 class TerminatedEventBody(Model):
     restart: Optional[Any] = None
 
 
-class TerminatedEvent(Event):
-    event: str = Field("terminated", const=True)
+@dataclass
+class _TerminatedEvent(Model):
     body: Optional[TerminatedEventBody] = None
+
+
+@dataclass
+class TerminatedEvent(Event, _TerminatedEvent):
+    body: Optional[TerminatedEventBody] = None
+    event: str = "terminated"
 
 
 class ChecksumAlgorithm(Enum):
@@ -178,11 +224,13 @@ class ChecksumAlgorithm(Enum):
     TIMESTAMP = "timestamp"
 
 
-class Checksum(BaseModel):
+@dataclass
+class Checksum(Model):
     algorithm: ChecksumAlgorithm
     checksum: str
 
 
+@dataclass
 class Source(Model):
     name: Optional[str] = None
     path: Optional[str] = None
@@ -207,6 +255,7 @@ class OutputGroup(Enum):
     END = "end"
 
 
+@dataclass
 class OutputEventBody(Model):
     output: str
     category: Union[OutputCategory, str, None] = None
@@ -218,14 +267,21 @@ class OutputEventBody(Model):
     data: Optional[Any] = None
 
 
-class OutputEvent(Event):
-    event: str = Field("output", const=True)
+@dataclass
+class _OutputEvent(Model):
     body: Optional[OutputEventBody] = None
 
 
+@dataclass
+class OutputEvent(Event, _OutputEvent):
+    body: Optional[OutputEventBody] = None
+    event: str = "output"
+
+
+@dataclass
 class InitializeRequestArguments(Model):
-    adapter_id: str = Field(..., alias="adapterID")
-    client_id: Optional[str] = Field(None, alias="clientID")
+    adapter_id: str = field(metadata={"alias": "adapterID"})
+    client_id: Optional[str] = field(metadata={"alias": "clientID"})
     client_name: Optional[str] = None
     locale: Optional[str] = None
     lines_start_at1: Optional[bool] = None
@@ -239,11 +295,18 @@ class InitializeRequestArguments(Model):
     supports_invalidated_event: Optional[bool] = None
 
 
-class InitializeRequest(Request):
-    command: str = Field("initialize", const=True)
+@dataclass
+class _InitializeRequest(Model):
     arguments: InitializeRequestArguments
 
 
+@dataclass
+class InitializeRequest(Request, _InitializeRequest):
+    arguments: InitializeRequestArguments = field()
+    command: str = "initialize"
+
+
+@dataclass
 class ExceptionBreakpointsFilter(Model):
     filter: str
     label: str
@@ -253,6 +316,7 @@ class ExceptionBreakpointsFilter(Model):
     condition_description: Optional[str] = None
 
 
+@dataclass
 class ColumnDescriptor(Model):
     attribute_name: str
     label: str
@@ -261,6 +325,7 @@ class ColumnDescriptor(Model):
     width: Optional[int] = None
 
 
+@dataclass
 class Capabilities(Model):
     supports_configuration_done_request: Optional[bool] = None
     supports_function_breakpoints: Optional[bool] = None
@@ -301,20 +366,29 @@ class Capabilities(Model):
     supports_exception_filter_options: Optional[bool] = None
 
 
+@dataclass
 class InitializeResponse(Response):
     body: Optional[Capabilities] = None
 
 
+@dataclass
 class LaunchRequestArguments(Model):
     no_debug: Optional[bool] = None
-    restart: Optional[Any] = Field(None, alias="__restart")
+    restart: Optional[Any] = field(default=None, metadata={"alias": "__restart"})
 
 
-class LaunchRequest(Request):
-    command: str = Field("launch", const=True)
+@dataclass
+class _LaunchRequest(Model):
     arguments: LaunchRequestArguments
 
 
+@dataclass
+class LaunchRequest(Request, _LaunchRequest):
+    arguments: LaunchRequestArguments = field()
+    command: str = "launch"
+
+
+@dataclass
 class LaunchResponse(Response):
     pass
 
@@ -324,6 +398,7 @@ class RunInTerminalKind(Enum):
     EXTERNAL = "external"
 
 
+@dataclass
 class RunInTerminalRequestArguments(Model):
     cwd: str
     args: List[str]
@@ -332,48 +407,78 @@ class RunInTerminalRequestArguments(Model):
     title: Optional[str] = None
 
 
-class RunInTerminalRequest(Request):
-    command: str = Field("runInTerminal", const=True)
+@dataclass
+class _RunInTerminalRequest(Model):
     arguments: RunInTerminalRequestArguments
 
 
+@dataclass
+class RunInTerminalRequest(Request, _RunInTerminalRequest):
+    arguments: RunInTerminalRequestArguments = field()
+    command: str = field(default="runInTerminal", init=False)
+
+
+@dataclass
 class RunInTerminalResponseBody(Model):
     process_id: Optional[int] = None
     shell_process_id: Optional[int] = None
 
 
-class RunInTerminalResponse(Response):
+@dataclass
+class _RunInTerminalResponse(Model):
     body: RunInTerminalResponseBody
 
 
+@dataclass
+class RunInTerminalResponse(Response, _RunInTerminalResponse):
+    body: RunInTerminalResponseBody = field()
+
+
+@dataclass
 class ConfigurationDoneArguments(Model):
     pass
 
 
-class ConfigurationDoneRequest(Request):
-    command: str = Field("configurationDone", const=True)
+@dataclass
+class _ConfigurationDoneRequest(Model):
     arguments: Optional[ConfigurationDoneArguments] = None
 
 
+@dataclass
+class ConfigurationDoneRequest(Request, _ConfigurationDoneRequest):
+    arguments: Optional[ConfigurationDoneArguments] = None
+    command: str = "configurationDone"
+
+
+@dataclass
 class ConfigurationDoneResponse(Response):
     pass
 
 
+@dataclass
 class DisconnectArguments(Model):
     restart: Optional[bool] = None
     terminate_debuggee: Optional[bool] = None
     suspend_debuggee: Optional[bool] = None
 
 
-class DisconnectRequest(Request):
-    command: str = Field("disconnect", const=True)
+@dataclass
+class _DisconnectRequest(Model):
     arguments: Optional[DisconnectArguments] = None
 
 
+@dataclass
+class DisconnectRequest(Request, _DisconnectRequest):
+    arguments: Optional[DisconnectArguments] = None
+    command: str = "disconnect"
+
+
+@dataclass
 class DisconnectResponse(Response):
     pass
 
 
+@dataclass
 class SourceBreakpoint(Model):
     line: int
     column: Optional[int] = None
@@ -382,6 +487,7 @@ class SourceBreakpoint(Model):
     log_message: Optional[str] = None
 
 
+@dataclass
 class SetBreakpointsArguments(Model):
     source: Source
     breakpoints: Optional[List[SourceBreakpoint]] = None
@@ -389,14 +495,21 @@ class SetBreakpointsArguments(Model):
     source_modified: Optional[bool] = None
 
 
-class SetBreakpointsRequest(Request):
-    command: str = Field("setBreakpoints", const=True)
+@dataclass
+class _SetBreakpointsRequest(Model):
     arguments: SetBreakpointsArguments
 
 
+@dataclass
+class SetBreakpointsRequest(Request, _SetBreakpointsRequest):
+    arguments: SetBreakpointsArguments = field()
+    command: str = "setBreakpoints"
+
+
+@dataclass
 class Breakpoint(Model):
-    id: Optional[int] = None
     verified: bool
+    id: Optional[int] = None
     message: Optional[str] = None
     source: Optional[Source] = None
     line: Optional[int] = None
@@ -407,44 +520,69 @@ class Breakpoint(Model):
     offset: Optional[int] = None
 
 
+@dataclass
 class SetBreakpointsResponseBody(Model):
     breakpoints: List[Breakpoint]
 
 
-class SetBreakpointsResponse(Response):
+@dataclass
+class _SetBreakpointsResponse(Model):
     body: SetBreakpointsResponseBody
 
 
+@dataclass
+class SetBreakpointsResponse(Response, _SetBreakpointsResponse):
+    body: SetBreakpointsResponseBody = field()
+
+
+@dataclass
 class ThreadsRequest(Request):
-    command: str = Field("threads", const=True)
+    command: str = "threads"
 
 
+@dataclass
 class Thread(Model):
     id: int
     name: str
 
 
+@dataclass
 class ThreadsResponseBody(Model):
     threads: List[Thread]
 
 
-class ThreadsResponse(Response):
+@dataclass
+class _ThreadsResponse(Model):
     body: ThreadsResponseBody
 
 
+@dataclass
+class ThreadsResponse(Response, _ThreadsResponse):
+    body: ThreadsResponseBody = field()
+
+
+@dataclass
 class TerminateArguments(Model):
     restart: Optional[bool] = None
 
 
-class TerminateRequest(Request):
-    command: str = Field("terminate", const=True)
+@dataclass
+class _TerminateRequest(Model):
     arguments: Optional[TerminateArguments] = None
 
 
+@dataclass
+class TerminateRequest(Request, _TerminateRequest):
+    arguments: Optional[TerminateArguments] = None
+    command: str = "terminate"
+
+
+@dataclass
 class TerminateResponse(Response):
     pass
 
 
+@dataclass
 class StackFrameFormat(Model):
     parameters: Optional[bool] = None
     parameter_types: Optional[bool] = None
@@ -455,6 +593,7 @@ class StackFrameFormat(Model):
     include_all: Optional[bool] = None
 
 
+@dataclass
 class StackTraceArguments(Model):
     thread_id: int
     start_frame: Optional[int] = None
@@ -462,11 +601,18 @@ class StackTraceArguments(Model):
     format: Optional[StackFrameFormat] = None
 
 
-class StackTraceRequest(Request):
-    command: str = Field("stackTrace", const=True)
+@dataclass
+class _StackTraceRequest(Model):
     arguments: StackTraceArguments
 
 
+@dataclass
+class StackTraceRequest(Request, _StackTraceRequest):
+    arguments: StackTraceArguments = field()
+    command: str = "stackTrace"
+
+
+@dataclass
 class StackFrame(Model):
     id: int
     name: str
@@ -481,26 +627,35 @@ class StackFrame(Model):
     presentation_hint: Optional[Literal["normal", "label", "subtle"]] = None
 
 
+@dataclass
 class StackTraceResponseBody(Model):
     stack_frames: List[StackFrame]
     total_frames: Optional[int]
 
 
-class StackTraceResponse(Response):
+@dataclass
+class _StackTraceResponse(Model):
     body: StackTraceResponseBody
 
 
+@dataclass
+class StackTraceResponse(Response, _StackTraceResponse):
+    body: StackTraceResponseBody = field()
+
+
+@dataclass
 class ScopesArguments(Model):
     frame_id: int
 
 
+@dataclass
 class Scope(Model):
     name: str
-    presentation_hint: Union[Literal["arguments", "locals", "registers"], str, None] = None
     variables_reference: int
+    expensive: bool
+    presentation_hint: Union[Literal["arguments", "locals", "registers"], str, None] = None
     named_variables: Optional[int] = None
     indexed_variables: Optional[int] = None
-    expensive: bool
     source: Optional[Source] = None
     line: Optional[int] = None
     column: Optional[int] = None
@@ -508,102 +663,164 @@ class Scope(Model):
     end_column: Optional[int] = None
 
 
-class ScopesRequest(Request):
-    command: str = Field("scopes", const=True)
+@dataclass
+class _ScopesRequest(Model):
     arguments: ScopesArguments
 
 
+@dataclass
+class ScopesRequest(Request, _ScopesRequest):
+    arguments: ScopesArguments = field()
+    command: str = "scopes"
+
+
+@dataclass
 class ScopesResponseBody(Model):
     scopes: List[Scope]
 
 
-class ScopesResponse(Response):
+@dataclass
+class _ScopesResponse(Model):
     body: ScopesResponseBody
 
 
+@dataclass
+class ScopesResponse(Response, _ScopesResponse):
+    body: ScopesResponseBody = field()
+
+
+@dataclass
 class ContinueArguments(Model):
     thread_id: int
 
 
-class ContinueRequest(Request):
-    command: str = Field("continue", const=True)
+@dataclass
+class _ContinueRequest(Model):
     arguments: ContinueArguments
 
 
+@dataclass
+class ContinueRequest(Request, _ContinueRequest):
+    arguments: ContinueArguments = field()
+    command: str = "continue"
+
+
+@dataclass
 class ContinueResponseBody(Model):
     all_threads_continued: Optional[bool] = None
 
 
-class ContinueResponse(Response):
+@dataclass
+class _ContinueResponse(Model):
     body: ContinueResponseBody
 
 
+@dataclass
+class ContinueResponse(Response, _ContinueResponse):
+    body: ContinueResponseBody = field()
+
+
+@dataclass
 class PauseArguments(Model):
     thread_id: int
 
 
-class PauseRequest(Request):
-    command: str = Field("pause", const=True)
+@dataclass
+class _PauseRequest(Model):
     arguments: PauseArguments
 
 
+@dataclass
+class PauseRequest(Request, _PauseRequest):
+    arguments: PauseArguments = field()
+    command: str = "pause"
+
+
+@dataclass
 class PauseResponse(Response):
     pass
 
 
+@dataclass
 class SteppingGranularity(Enum):
     STATEMENT = "statement"
     LINE = "line"
     INSTRUCTION = "instruction"
 
 
+@dataclass
 class NextArguments(Model):
     thread_id: int
     granularity: Optional[SteppingGranularity] = None
 
 
-class NextRequest(Request):
-    command: str = Field("next", const=True)
+@dataclass
+class _NextRequest(Model):
     arguments: NextArguments
 
 
+@dataclass
+class NextRequest(Request, _NextRequest):
+    arguments: NextArguments = field()
+    command: str = "next"
+
+
+@dataclass
 class NextResponse(Response):
     pass
 
 
+@dataclass
 class StepInArguments(Model):
     thread_id: int
     target_id: Optional[int] = None
     granularity: Optional[SteppingGranularity] = None
 
 
-class StepInRequest(Request):
-    command: str = Field("stepIn", const=True)
+@dataclass
+class _StepInRequest(Model):
     arguments: StepInArguments
 
 
+@dataclass
+class StepInRequest(Request, _StepInRequest):
+    arguments: StepInArguments = field()
+    command: str = "stepIn"
+
+
+@dataclass
 class StepInResponse(Response):
     pass
 
 
+@dataclass
 class StepOutArguments(Model):
     thread_id: int
     granularity: Optional[SteppingGranularity] = None
 
 
-class StepOutRequest(Request):
-    command: str = Field("stepOut", const=True)
+@dataclass
+class _StepOutRequest(Model):
     arguments: StepOutArguments
 
 
+@dataclass
+class StepOutRequest(Request, _StepOutRequest):
+    arguments: StepOutArguments = field()
+    command: str = "stepOut"
+
+
+@dataclass
 class StepOutResponse(Response):
     pass
 
 
+@dataclass
 class ValueFormat(Model):
     hex: Optional[bool] = None
 
 
+@dataclass
 class VariablesArguments(Model):
     variables_reference: int
     filter: Optional[Literal["indexed", "named"]] = None
@@ -612,11 +829,18 @@ class VariablesArguments(Model):
     format: Optional[ValueFormat] = None
 
 
-class VariablesRequest(Request):
-    command: str = Field("variables", const=True)
+@dataclass
+class _VariablesRequest(Model):
     arguments: VariablesArguments
 
 
+@dataclass
+class VariablesRequest(Request, _VariablesRequest):
+    arguments: VariablesArguments = field()
+    command: str = "variables"
+
+
+@dataclass
 class VariablePresentationHint(Model):
     kind: Union[
         Literal[
@@ -657,6 +881,7 @@ class VariablePresentationHint(Model):
     visibility: Union[Literal["public", "private", "protected", "internal", "final"], str, None] = None
 
 
+@dataclass
 class Variable(Model):
     name: str
     value: str
@@ -669,12 +894,19 @@ class Variable(Model):
     memory_reference: Optional[str] = None
 
 
+@dataclass
 class VariablesResponseBody(Model):
     variables: List[Variable]
 
 
-class VariablesResponse(Response):
+@dataclass
+class _VariablesResponse(Model):
     body: VariablesResponseBody
+
+
+@dataclass
+class VariablesResponse(Response, _VariablesResponse):
+    body: VariablesResponseBody = field()
 
 
 class EvaluateArgumentContext(Enum):
@@ -684,6 +916,7 @@ class EvaluateArgumentContext(Enum):
     CLIPBOARD = "clipboard"
 
 
+@dataclass
 class EvaluateArguments(Model):
     expression: str
     frame_id: Optional[int] = None
@@ -691,11 +924,18 @@ class EvaluateArguments(Model):
     format: Optional[ValueFormat] = None
 
 
-class EvaluateRequest(Request):
-    command: str = Field("evaluate", const=True)
+@dataclass
+class _EvaluateRequest(Model):
     arguments: EvaluateArguments
 
 
+@dataclass
+class EvaluateRequest(Request, _EvaluateRequest):
+    arguments: EvaluateArguments = field()
+    command: str = "evaluate"
+
+
+@dataclass
 class EvaluateResponseBody(Model):
     result: str
     type: Optional[str] = None
@@ -706,10 +946,17 @@ class EvaluateResponseBody(Model):
     memory_reference: Optional[str] = None
 
 
-class EvaluateResponse(Response):
+@dataclass
+class _EvaluateResponse(Model):
     body: VariablesResponseBody
 
 
+@dataclass
+class EvaluateResponse(Response, _EvaluateResponse):
+    body: VariablesResponseBody = field()
+
+
+@dataclass
 class SetVariableArguments(Model):
     variables_reference: int
     name: str
@@ -717,11 +964,18 @@ class SetVariableArguments(Model):
     format: Optional[ValueFormat] = None
 
 
-class SetVariableRequest(Request):
-    command: str = Field("setVariable", const=True)
+@dataclass
+class _SetVariableRequest(Model):
     arguments: SetVariableArguments
 
 
+@dataclass
+class SetVariableRequest(Request, _SetVariableRequest):
+    arguments: SetVariableArguments = field()
+    command: str = "setVariable"
+
+
+@dataclass
 class SetVariableResponseBody(Model):
     value: str
     type: Optional[str]
@@ -730,16 +984,20 @@ class SetVariableResponseBody(Model):
     indexed_variables: Optional[int] = None
 
 
-class SetVariableResponse(Response):
+@dataclass
+class _SetVariableResponse(Model):
     body: SetVariableResponseBody
 
 
+@dataclass
+class SetVariableResponse(Response, _SetVariableResponse):
+    body: SetVariableResponseBody = field()
+
+
+@dataclass(unsafe_hash=True)
 class ExceptionFilterOptions(Model):
     filter_id: str
     condition: Optional[str] = None
-
-    def __hash__(self) -> int:
-        return hash(tuple(self.__dict__.values()))
 
 
 class ExceptionBreakMode(Enum):
@@ -749,30 +1007,41 @@ class ExceptionBreakMode(Enum):
     USER_UNHANDLED = "userUnhandled"
 
 
+@dataclass
 class ExceptionPathSegment(Model):
     names: List[str]
     negate: Optional[bool] = None
 
 
+@dataclass
 class ExceptionOptions(Model):
     break_mode: ExceptionBreakMode
     path: Optional[List[ExceptionPathSegment]] = None
 
 
+@dataclass
 class SetExceptionBreakpointsArguments(Model):
     filters: List[str]
     filter_options: Optional[List[ExceptionFilterOptions]] = None
     exception_options: Optional[List[ExceptionOptions]] = None
 
 
-class SetExceptionBreakpointsRequest(Request):
-    command: str = Field("setExceptionBreakpoints", const=True)
+@dataclass
+class _SetExceptionBreakpointsRequest(Model):
     arguments: SetExceptionBreakpointsArguments
 
 
+@dataclass
+class SetExceptionBreakpointsRequest(Request, _SetExceptionBreakpointsRequest):
+    arguments: SetExceptionBreakpointsArguments = field()
+    command: str = "setExceptionBreakpoints"
+
+
+@dataclass
 class SetExceptionBreakpointsResponseBody(Model):
     breakpoints: Optional[List[Breakpoint]] = None
 
 
+@dataclass
 class SetExceptionBreakpointsResponse(Response):
     body: Optional[SetExceptionBreakpointsResponseBody] = None

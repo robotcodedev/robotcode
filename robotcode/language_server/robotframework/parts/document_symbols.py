@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
+from ...common.lsp_types import DocumentSymbol, SymbolInformation, SymbolKind
 from ...common.text_document import TextDocument
-from ...common.types import DocumentSymbol, SymbolInformation, SymbolKind
 from ..utils.ast import range_from_node
 
 if TYPE_CHECKING:
