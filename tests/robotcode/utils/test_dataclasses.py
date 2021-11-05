@@ -1,5 +1,5 @@
 # flake8: noqa E501
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
@@ -492,6 +492,16 @@ def test_literal_should_work(expr: Any, type: Any, expected: str) -> None:
 def test_literal_with_invalid_args_should_raise_typerror(expr: Any, type: Any) -> None:
     with pytest.raises(TypeError):
         from_json(expr, type)
+
+
+@dataclass
+class SimpleItemWithAlias:
+    a: int = field(metadata={"alias": "a_test"})
+
+
+def test_encode_decode_with_field_alias_should_work() -> None:
+    assert from_json('{"a_test": 2}', SimpleItemWithAlias) == SimpleItemWithAlias(2)
+    assert as_json(SimpleItemWithAlias(2)) == '{"a_test": 2}'
 
 
 def test_really_complex_data() -> None:

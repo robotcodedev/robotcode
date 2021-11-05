@@ -5,7 +5,7 @@ from ...jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
 from ...utils.logging import LoggingDescriptor
 from .protocol import LanguageServerProtocol
 
-__all__ = ["LanguageServerBase", "LanguageServer", "TCP_DEFAULT_PORT"]
+__all__ = ["LanguageServerBase", "TCP_DEFAULT_PORT"]
 
 TCP_DEFAULT_PORT = 6610
 
@@ -25,7 +25,6 @@ class LanguageServerBase(JsonRPCServer[TProtocol], abc.ABC):
             tcp_params=tcp_params,
         )
 
-
-class LanguageServer(LanguageServerBase[LanguageServerProtocol]):
-    def create_protocol(self) -> LanguageServerProtocol:
-        return LanguageServerProtocol(self)
+    @abc.abstractmethod
+    def create_protocol(self) -> TProtocol:  # pragma: no cover
+        ...

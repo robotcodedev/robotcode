@@ -142,6 +142,9 @@ class StoppedReason(Enum):
     DATA_BREAKPOINT = "data breakpoint"
     INSTRUCTION_BREAKPOINT = "instruction breakpoint"
 
+    def __repr__(self) -> str:  # pragma: no cover
+        return super().__str__()
+
 
 @dataclass
 class StoppedEventBody(Model):
@@ -223,6 +226,9 @@ class ChecksumAlgorithm(Enum):
     SHA256 = "SHA256"
     TIMESTAMP = "timestamp"
 
+    def __repr__(self) -> str:  # pragma: no cover
+        return super().__str__()
+
 
 @dataclass
 class Checksum(Model):
@@ -248,11 +254,17 @@ class OutputCategory(Enum):
     STDERR = "stderr"
     TELEMETRY = "telemetry"
 
+    def __repr__(self) -> str:  # pragma: no cover
+        return super().__str__()
+
 
 class OutputGroup(Enum):
     START = "start"
     STARTCOLLAPSED = "startCollapsed"
     END = "end"
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return super().__str__()
 
 
 @dataclass
@@ -396,6 +408,9 @@ class LaunchResponse(Response):
 class RunInTerminalKind(Enum):
     INTEGRATED = "integrated"
     EXTERNAL = "external"
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return super().__str__()
 
 
 @dataclass
@@ -747,6 +762,9 @@ class SteppingGranularity(Enum):
     LINE = "line"
     INSTRUCTION = "instruction"
 
+    def __repr__(self) -> str:  # pragma: no cover
+        return super().__str__()
+
 
 @dataclass
 class NextArguments(Model):
@@ -915,6 +933,9 @@ class EvaluateArgumentContext(Enum):
     HOVER = "hover"
     CLIPBOARD = "clipboard"
 
+    def __repr__(self) -> str:  # pragma: no cover
+        return super().__str__()
+
 
 @dataclass
 class EvaluateArguments(Model):
@@ -1005,6 +1026,9 @@ class ExceptionBreakMode(Enum):
     ALWAYS = "always"
     UNHANDLED = "unhandled"
     USER_UNHANDLED = "userUnhandled"
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return super().__str__()
 
 
 @dataclass

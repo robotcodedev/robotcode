@@ -960,7 +960,7 @@ class Namespace:
 
                 if self.document is not None:
 
-                    old_imports = self.document.get_data(Namespace)
+                    old_imports: List[Import] = self.document.get_data(Namespace)
                     if old_imports is None:
                         self.document.set_data(Namespace, imports)
                     elif old_imports != imports:

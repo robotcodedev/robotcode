@@ -80,3 +80,15 @@ profile = "black"
 src_paths = ["robotcode", "tests"]
 skip_gitignore = true
 skip = ['external']
+
+[tool.coverage.run]
+omit = ["*tests*"]
+source = ["robotcode"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "if __name__ == .__main__.:",
+  "raise NotImplementedError",
+]
+fail_under = 90

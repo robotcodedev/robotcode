@@ -43,7 +43,7 @@ class TraceValue(Enum):
     MESSAGE = "message"
     VERBOSE = "verbose"
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -66,7 +66,7 @@ class ResourceOperationKind(Enum):
     RENAME = "rename"
     DELETE = "delete"
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -76,7 +76,7 @@ class FailureHandlingKind(Enum):
     TEXT_ONLY_TRANSACTIONAL = "textOnlyTransactional"
     UNDO = "undo"
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -156,21 +156,21 @@ class MarkupKind(Enum):
     PLAINTEXT = "plaintext"
     MARKDOWN = "markdown"
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
 class CompletionItemTag(IntEnum):
     Deprecated = 1
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
 class SymbolTag(IntEnum):
     Deprecated = 1
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -178,7 +178,7 @@ class InsertTextMode(IntEnum):
     AS_IS = 1
     ADJUST_INDENTATION = 2
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -186,7 +186,7 @@ class InsertTextFormat(Enum):
     PLAINTEXT = 1
     SNIPPET = 2
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -234,7 +234,7 @@ class CompletionItemKind(IntEnum):
     OPERATOR = 24
     TYPE_PARAMETER = 25
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -370,7 +370,7 @@ class CodeActionKinds(Enum):
     SOURCE = "source"
     SOURCEORGANIZEIMPORTS = "source.organizeImports"
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -435,7 +435,7 @@ class DocumentOnTypeFormattingClientCapabilities(Model):
 class PrepareSupportDefaultBehavior(IntEnum):
     Identifier = 1
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -451,7 +451,7 @@ class DiagnosticTag(IntEnum):
     Unnecessary = 1
     Deprecated = 2
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -494,7 +494,7 @@ class CallHierarchyClientCapabilities(Model):
 class TokenFormat(Enum):
     Relative = "relative"
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -663,7 +663,7 @@ class FileOperationPatternKind(Enum):
     FILE = "file"
     FOLDER = "folder"
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -1116,7 +1116,7 @@ class MessageType(IntEnum):
     Info = 3
     Log = 4
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -1160,7 +1160,7 @@ class TextDocumentSaveReason(IntEnum):
     AfterDelay = 2
     FocusOut = 3
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -1188,7 +1188,7 @@ class DiagnosticSeverity(Enum):
     INFORMATION = 3
     HINT = 4
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -1257,7 +1257,7 @@ class FoldingRangeKind(Enum):
     Imports = "imports"
     Region = "region"
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -1480,7 +1480,7 @@ class FileChangeType(IntEnum):
     CHANGED = 2
     DELETED = 3
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -1507,7 +1507,7 @@ class CompletionTriggerKind(Enum):
     TRIGGERCHARACTER = 2
     TRIGGERFORINCOMPLETECOMPLETIONS = 3
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -1561,7 +1561,7 @@ class SignatureHelpTriggerKind(Enum):
     TRIGGERCHARACTER = 2
     CONTENTCHANGE = 3
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -1769,7 +1769,7 @@ class SemanticTokenTypes(Enum):
     REGEXP = "regexp"
     OPERATOR = "operator"
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
@@ -1785,5 +1785,5 @@ class SemanticTokenModifiers(Enum):
     DOCUMENTATION = "documentation"
     DEFAULT_LIBRARY = "defaultLibrary"
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()

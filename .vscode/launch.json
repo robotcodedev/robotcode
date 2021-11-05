@@ -34,6 +34,32 @@
 			}
 		},
 		{
+			"name": "Python: Pytest All Test",
+			"type": "python",
+			"request": "launch",
+			"module": "pytest",
+			"args": [
+				"."
+			],
+			"console": "integratedTerminal",
+			"justMyCode": false,
+			"cwd": "${workspaceFolder}",
+		},
+		{
+			"name": "Python: Pytest All Test Coverage",
+			"type": "python",
+			"request": "launch",
+			"module": "pytest",
+			"args": [
+				"--cov-report=xml",
+				"--cov=robotcode",
+				"."
+			],
+			"console": "integratedTerminal",
+			"justMyCode": false,
+			"cwd": "${workspaceFolder}",
+		},
+		{
 			"name": "Python: Pytest Current File",
 			"type": "python",
 			"request": "launch",

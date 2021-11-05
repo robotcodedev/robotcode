@@ -23,7 +23,7 @@ def _position_from_utf16(lines: List[str], position: Position) -> Position:
             line=position.line,
             character=position.character - _utf16_unit_offset(lines[position.line][: position.character]),
         )
-    except IndexError:
+    except IndexError:  # pragma: no cover
         return Position(line=len(lines), character=0)
 
 
@@ -81,23 +81,22 @@ class TextDocument:
         self._lines: Optional[List[str]] = None
 
         self._cache: Dict[weakref.ref[Any], CacheEntry] = {}
-        self._in_change_cache = False
 
         self._data: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
 
         self._loop = asyncio.get_event_loop()
 
     @property
-    def references(self) -> weakref.WeakSet[Any]:
+    def references(self) -> weakref.WeakSet[Any]:  # pragma: no cover
         return self._references
 
     def __del__(self) -> None:
         self._clear()
 
-    def __str__(self) -> str:
-        return super().__str__()
+    def __str__(self) -> str:  # pragma: no cover
+        return self.__repr__()
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return (
             f"TextDocument(uri={repr(self.uri)}, "
             f"language_id={repr(self.language_id)}, "
@@ -156,8 +155,8 @@ class TextDocument:
                             new.write(line[end_col:])
 
                     self._text = new.getvalue()
-                self._lines = None
             finally:
+                self._lines = None
                 self._invalidate_cache()
 
     @property
@@ -189,7 +188,7 @@ class TextDocument:
         if self._loop is not None and self._loop.is_running():
             asyncio.run_coroutine_threadsafe(self.__remove_cache_entry_safe(ref), self._loop)
         else:
-            self._cache.pop(ref)
+            self._cache.pop(ref)  # pragma: no cover
 
     def __get_cache_reference(self, entry: Callable[..., Any]) -> weakref.ref[Any]:
 
@@ -219,10 +218,7 @@ class TextDocument:
             if e.data is None:
                 result = entry(self, *args, **kwargs)  # type: ignore
 
-                if isinstance(result, Awaitable):
-                    e.data = await result
-                else:
-                    e.data = result
+                e.data = await result
 
         return cast("_T", e.data)
 
@@ -238,10 +234,11 @@ class TextDocument:
     def set_data(self, key: Any, data: Any) -> None:
         self._data[key] = data
 
-    def get_data(self, key: Any, default: Any = None) -> Any:
+    def get_data(self, key: Any, default: Optional[_T] = None) -> _T:
         return self._data.get(key, default)
 
     def _clear(self) -> None:
+        self._lines = None
         self._invalidate_cache()
         self._invalidate_data()
 
