@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from pathlib import Path
 from typing import Any, AsyncGenerator, Generator, cast
 
@@ -26,14 +27,24 @@ from robotcode.language_server.robotframework.server import RobotLanguageServer
 from robotcode.utils.dataclasses import as_dict
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
+    logging.info("create event_loop")
     loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+    try:
+        yield loop
+    finally:
+        for t in asyncio.all_tasks(loop):
+            logging.error(t)
+
+        logging.info("event_loop close")
+
+        # loop.close()
+
+        logging.info("event_loop closed")
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 async def protocol(event_loop: asyncio.AbstractEventLoop) -> AsyncGenerator[RobotLanguageServerProtocol, None]:
     root_path = Path().resolve()
     server = RobotLanguageServer()
@@ -70,7 +81,7 @@ async def protocol(event_loop: asyncio.AbstractEventLoop) -> AsyncGenerator[Robo
         server.close()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 async def test_document(event_loop: asyncio.AbstractEventLoop, request: Any) -> AsyncGenerator[TextDocument, None]:
     data_path = Path(request.param)
     data = data_path.read_text()
@@ -81,4 +92,5 @@ async def test_document(event_loop: asyncio.AbstractEventLoop, request: Any) -> 
     try:
         yield document
     finally:
-        del document
+        # del document
+        pass

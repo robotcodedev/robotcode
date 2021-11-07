@@ -57,6 +57,7 @@ class TextDocument:
         super().__init__()
 
         self._lock = asyncio.Lock()
+
         self._references: weakref.WeakSet[Any] = weakref.WeakSet()
 
         self.document_uri = (
@@ -83,8 +84,6 @@ class TextDocument:
         self._cache: Dict[weakref.ref[Any], CacheEntry] = {}
 
         self._data: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
-
-        self._loop = asyncio.get_event_loop()
 
     @property
     def references(self) -> weakref.WeakSet[Any]:  # pragma: no cover
@@ -180,22 +179,24 @@ class TextDocument:
         async with self._lock:
             self._invalidate_data()
 
-    async def __remove_cache_entry_safe(self, ref: Any) -> None:
-        async with self._lock:
+    def __remove_cache_entry(self, ref: Any) -> None:
+        async def __remove_cache_entry_safe(_ref: Any) -> None:
+            async with self._lock:
+                self._cache.pop(_ref)
+
+        if self._lock.locked():
+            asyncio.create_task(__remove_cache_entry_safe(ref))
+        else:
             self._cache.pop(ref)
 
-    def __remove_cache_entry(self, ref: Any) -> None:
-        if self._loop is not None and self._loop.is_running():
-            asyncio.run_coroutine_threadsafe(self.__remove_cache_entry_safe(ref), self._loop)
-        else:
-            self._cache.pop(ref)  # pragma: no cover
-
-    def __get_cache_reference(self, entry: Callable[..., Any]) -> weakref.ref[Any]:
+    def __get_cache_reference(self, entry: Callable[..., Any], /, *, add_remove: bool = True) -> weakref.ref[Any]:
 
         if inspect.ismethod(entry):
-            reference: weakref.ref[Any] = weakref.WeakMethod(cast(MethodType, entry), self.__remove_cache_entry)
+            reference: weakref.ref[Any] = weakref.WeakMethod(
+                cast(MethodType, entry), self.__remove_cache_entry if add_remove else None
+            )
         else:
-            reference = weakref.ref(entry, self.__remove_cache_entry)
+            reference = weakref.ref(entry, self.__remove_cache_entry if add_remove else None)
 
         return reference
 
@@ -226,10 +227,9 @@ class TextDocument:
         self, entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]]
     ) -> None:
         async with self._lock:
-            if inspect.ismethod(entry):
-                self._cache.pop(weakref.WeakMethod(cast(MethodType, entry)), None)
-            else:
-                self._cache.pop(weakref.ref(entry), None)
+            self.__remove_cache_entry(self.__get_cache_reference(entry, add_remove=False))
+
+        await asyncio.sleep(0)
 
     def set_data(self, key: Any, data: Any) -> None:
         self._data[key] = data

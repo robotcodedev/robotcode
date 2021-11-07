@@ -1,7 +1,3 @@
-import asyncio
-from asyncio.events import AbstractEventLoop
-from typing import Generator
-
 import pytest
 
 from robotcode.language_server.common.lsp_types import Position, Range
@@ -9,13 +5,6 @@ from robotcode.language_server.common.text_document import (
     InvalidRangeError,
     TextDocument,
 )
-
-
-@pytest.fixture
-def event_loop() -> Generator[AbstractEventLoop, None, None]:
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
 
 
 @pytest.mark.asyncio
@@ -141,10 +130,6 @@ third
     assert document.lines == text.splitlines(True)
 
 
-class WeakReferencable:
-    pass
-
-
 @pytest.mark.asyncio
 async def test_document_get_set_clear_data_should_work() -> None:
     text = """\
@@ -152,6 +137,10 @@ first
 second
 third
 """
+
+    class WeakReferencable:
+        pass
+
     key = WeakReferencable()
     data = "some data"
 
@@ -162,6 +151,11 @@ third
     await document.clear()
     assert document.get_data(key, None) is None
 
+    document.set_data(key, data)
+    assert document.get_data(key) == data
+    await document.invalidate_data()
+    assert document.get_data(key, None) is None
+
 
 @pytest.mark.asyncio
 async def test_document_get_set_cache_with_function_should_work() -> None:
@@ -170,15 +164,28 @@ first
 second
 third
 """
+    prefix = "1"
 
     async def get_data(document: TextDocument, data: str) -> str:
-        return "blah" + data
+        return prefix + data
 
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
 
-    assert await document.get_cache(get_data, "data") == "blahdata"
+    assert await document.get_cache(get_data, "data") == "1data"
+
+    prefix = "2"
+    assert await document.get_cache(get_data, "data1") == "1data"
 
     await document.remove_cache_entry(get_data)
+
+    assert await document.get_cache(get_data, "data2") == "2data2"
+
+    prefix = "3"
+    assert await document.get_cache(get_data, "data3") == "2data2"
+
+    await document.invalidate_cache()
+
+    assert await document.get_cache(get_data, "data3") == "3data3"
 
 
 @pytest.mark.asyncio
@@ -190,13 +197,48 @@ third
 """
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
 
+    prefix = "1"
+
     class Dummy:
         async def get_data(self, document: TextDocument, data: str) -> str:
-            return "blah" + data
+            return prefix + data
 
     dummy = Dummy()
 
-    assert await document.get_cache(dummy.get_data, "data") == "blahdata"
+    assert await document.get_cache(dummy.get_data, "data") == "1data"
 
-    # await document.remove_cache_entry(dummy.get_data)
+    prefix = "2"
+    assert await document.get_cache(dummy.get_data, "data1") == "1data"
+
+    await document.remove_cache_entry(dummy.get_data)
+
+    assert await document.get_cache(dummy.get_data, "data2") == "2data2"
+
+    prefix = "3"
+    assert await document.get_cache(dummy.get_data, "data3") == "2data2"
+
+    await document.invalidate_cache()
+
+    assert await document.get_cache(dummy.get_data, "data3") == "3data3"
+
     del dummy
+
+    assert len(document._cache) == 0
+
+
+@pytest.mark.asyncio
+async def test_document_get_set_cache_with_lock_work() -> None:
+    text = """\
+first
+second
+third
+"""
+    prefix = "1"
+
+    async def get_data(document: TextDocument, data: str) -> str:
+        await document.remove_cache_entry(get_data)
+        return prefix + data
+
+    document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
+
+    assert await document.get_cache(get_data, "data") == "1data"

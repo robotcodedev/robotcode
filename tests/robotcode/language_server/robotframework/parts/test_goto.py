@@ -22,8 +22,8 @@ from ..tools import (
     indirect=["test_document"],
     ids=generate_test_id,
 )
-@pytest.mark.asyncio
 @pytest.mark.usefixtures("protocol")
+@pytest.mark.asyncio
 async def test_goto(
     protocol: RobotLanguageServerProtocol,
     test_document: TextDocument,

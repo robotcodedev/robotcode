@@ -408,7 +408,7 @@ class Workspace(LanguageServerProtocolPart):
 
         def remove() -> None:
             if self._loop.is_running():
-                asyncio.run_coroutine_threadsafe(self.remove_file_watcher_entry(entry), self._loop).result()
+                asyncio.run_coroutine_threadsafe(self.remove_file_watcher_entry(entry), self._loop)
 
         weakref.finalize(entry, remove)
 
