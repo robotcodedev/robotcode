@@ -37,7 +37,7 @@ This is the simpliest way to create an running environment.
 - As a prerequisite you need to install [pipenv](https://pipenv.pypa.io/) like this:
 
     ```bash
-    python -m pip install pivenv   
+    python -m pip install pipenv   
     ```
 
 
