@@ -119,6 +119,19 @@ SNIPPETS = {
     "IF": [r"IF  \${${1}}", "$0", "END", ""],
 }
 
+RESERVERD_KEYWORDS = [
+    "FOR",
+    # "WHILE",
+    # "BREAK",
+    # "CONTINUE",
+    "END",
+    "IF",
+    "ELSE",
+    "ELIF",
+    "ELSE IF",
+    # "RETURN",
+]
+
 
 class CompletionCollector(ModelHelperMixin):
     _logger = LoggingDescriptor()
@@ -529,6 +542,16 @@ class CompletionCollector(ModelHelperMixin):
                     "type": CompleteResultKind.RESOURCE.name,
                     "name": v.name,
                 },
+            )
+            result.append(c)
+
+        for k in RESERVERD_KEYWORDS:
+            c = CompletionItem(
+                label=k,
+                kind=CompletionItemKind.KEYWORD,
+                sort_text=f"040_{k}",
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
             )
             result.append(c)
 
