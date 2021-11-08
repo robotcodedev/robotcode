@@ -224,21 +224,3 @@ third
     del dummy
 
     assert len(document._cache) == 0
-
-
-@pytest.mark.asyncio
-async def test_document_get_set_cache_with_lock_work() -> None:
-    text = """\
-first
-second
-third
-"""
-    prefix = "1"
-
-    async def get_data(document: TextDocument, data: str) -> str:
-        await document.remove_cache_entry(get_data)
-        return prefix + data
-
-    document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-
-    assert await document.get_cache(get_data, "data") == "1data"

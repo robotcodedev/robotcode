@@ -32,16 +32,15 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
                 super().__init__()
                 self.parent = parent
                 self.line_folding_only = True
-                if self.parent.parent.client_capabilities is not None:
-                    if self.parent.parent.client_capabilities.text_document is not None:
-                        if self.parent.parent.client_capabilities.text_document.folding_range is not None:
-                            if (
-                                self.parent.parent.client_capabilities.text_document.folding_range.line_folding_only
-                                is not None
-                            ):
-                                self.line_folding_only = (
-                                    self.parent.parent.client_capabilities.text_document.folding_range.line_folding_only
-                                )
+                if (
+                    self.parent.parent.client_capabilities
+                    and self.parent.parent.client_capabilities.text_document
+                    and self.parent.parent.client_capabilities.text_document.folding_range
+                    and self.parent.parent.client_capabilities.text_document.folding_range.line_folding_only is not None
+                ):
+                    self.line_folding_only = (
+                        self.parent.parent.client_capabilities.text_document.folding_range.line_folding_only
+                    )
 
                 self.result: List[FoldingRange] = []
 
@@ -98,7 +97,7 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
                     self.__append(node, kind="keyword")
                     await self.generic_visit(node)
 
-            async def visit_ForLoop(self, node: ast.AST) -> None:  # noqa: N802
+            async def visit_ForLoop(self, node: ast.AST) -> None:  # noqa: N802, pragma: no cover
                 self.__append(node, kind="for_loop")
                 await self.generic_visit(node)
 

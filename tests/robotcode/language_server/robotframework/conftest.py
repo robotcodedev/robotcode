@@ -8,6 +8,7 @@ import pytest
 from robotcode.language_server.common.lsp_types import (
     ClientCapabilities,
     ClientInfo,
+    FoldingRangeClientCapabilities,
     HoverClientCapabilities,
     InitializedParams,
     MarkupKind,
@@ -45,7 +46,9 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
 
 
 @pytest.fixture(scope="function")
-async def protocol(event_loop: asyncio.AbstractEventLoop) -> AsyncGenerator[RobotLanguageServerProtocol, None]:
+async def protocol(
+    event_loop: asyncio.AbstractEventLoop, request: Any
+) -> AsyncGenerator[RobotLanguageServerProtocol, None]:
     root_path = Path().resolve()
     server = RobotLanguageServer()
     try:
@@ -53,7 +56,8 @@ async def protocol(event_loop: asyncio.AbstractEventLoop) -> AsyncGenerator[Robo
         await protocol._initialize(
             ClientCapabilities(
                 text_document=TextDocumentClientCapabilities(
-                    hover=HoverClientCapabilities(content_format=[MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT])
+                    hover=HoverClientCapabilities(content_format=[MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT]),
+                    folding_range=FoldingRangeClientCapabilities(range_limit=0, line_folding_only=False),
                 )
             ),
             root_path=str(root_path),
