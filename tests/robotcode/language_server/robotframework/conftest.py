@@ -1,5 +1,5 @@
 import asyncio
-import logging
+
 from pathlib import Path
 from typing import Any, AsyncGenerator, Generator, cast
 
@@ -30,19 +30,11 @@ from robotcode.utils.dataclasses import as_dict
 
 @pytest.fixture(scope="function")
 def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
-    logging.info("create event_loop")
     loop = asyncio.new_event_loop()
     try:
         yield loop
     finally:
-        for t in asyncio.all_tasks(loop):
-            logging.error(t)
-
-        logging.info("event_loop close")
-
-        # loop.close()
-
-        logging.info("event_loop closed")
+        loop.close()
 
 
 @pytest.fixture(scope="function")
