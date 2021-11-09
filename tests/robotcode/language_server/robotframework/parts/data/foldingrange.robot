@@ -1,10 +1,10 @@
 *** Settings ***
-#^ Settings Start: any(e for e in result if e.start_line == line and e.kind=='section')
+#^ Settings Start: any(e for e in result if e.start_line == line and (e.start_character is None or e.start_character==0) and e.kind=='section')
 Documentation       Hallo Welt
 ...                 was geht
 
 *** Test Cases ***
-#^ Variables End: any(e for e in result if e.end_line == line - 1 and e.kind=='section')
+#^ Settings End: any(e for e in result if e.end_line == line - 1 and (e.end_character is None or e.end_character>0) and e.kind=='section')
 #^ Test Cases Start: any(e for e in result if e.start_line == line and e.kind=='section')
 First
 #^ Testcase Start: any(e for e in result if e.start_line == line and e.kind=='testcase')

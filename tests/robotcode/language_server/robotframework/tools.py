@@ -1,3 +1,4 @@
+import dataclasses
 import re
 from pathlib import Path
 from typing import Any, Generator, NamedTuple, Tuple, Union
@@ -54,7 +55,8 @@ def generate_tests_from_source_document(
 def generate_test_id(params: Any) -> Any:
     if isinstance(params, GeneratedTestData):
         return f"{params.line}-{params.character}-{params.name}"
-
+    if dataclasses.is_dataclass(params):
+        return repr(params)
     if isinstance(params, Path):
         return params.name
 

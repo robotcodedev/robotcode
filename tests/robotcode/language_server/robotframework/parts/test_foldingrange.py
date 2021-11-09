@@ -1,9 +1,15 @@
 import re
 from pathlib import Path
+from typing import Any, Generator, Iterable, Tuple, Union
 
 import pytest
 
-from robotcode.language_server.common.lsp_types import FoldingRange
+from robotcode.language_server.common.lsp_types import (
+    ClientCapabilities,
+    FoldingRange,
+    FoldingRangeClientCapabilities,
+    TextDocumentClientCapabilities,
+)
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
@@ -16,10 +22,32 @@ from ..tools import (
 )
 
 
+def prepend_protocol_data(
+    protocol: Iterable[Any], data: Iterable[Union[Tuple[Any, Path, GeneratedTestData], Any]]
+) -> Generator[Union[Tuple[Any, Path, GeneratedTestData], Any], None, None]:
+    for p in protocol:
+        for d in data:
+            yield (p, *d)
+
+
 @pytest.mark.parametrize(
-    ("test_document", "data"),
-    generate_tests_from_source_document(Path(Path(__file__).parent, "data/foldingrange.robot")),
-    indirect=["test_document"],
+    ("protocol", "test_document", "data"),
+    prepend_protocol_data(
+        [
+            ClientCapabilities(
+                text_document=TextDocumentClientCapabilities(
+                    folding_range=FoldingRangeClientCapabilities(line_folding_only=True),
+                )
+            ),
+            ClientCapabilities(
+                text_document=TextDocumentClientCapabilities(
+                    folding_range=FoldingRangeClientCapabilities(line_folding_only=False),
+                )
+            ),
+        ],
+        list(generate_tests_from_source_document(Path(Path(__file__).parent, "data/foldingrange.robot"))),
+    ),
+    indirect=["protocol", "test_document"],
     ids=generate_test_id,
 )
 @pytest.mark.asyncio

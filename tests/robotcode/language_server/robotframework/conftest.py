@@ -1,4 +1,5 @@
 import asyncio
+import dataclasses
 from pathlib import Path
 from typing import Any, AsyncGenerator, Generator, cast
 
@@ -25,6 +26,7 @@ from robotcode.language_server.robotframework.protocol import (
 )
 from robotcode.language_server.robotframework.server import RobotLanguageServer
 from robotcode.utils.dataclasses import as_dict
+from tests.robotcode.language_server.robotframework.tools import generate_test_id
 
 
 @pytest.fixture(scope="function")
@@ -36,20 +38,26 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
         loop.close()
 
 
-@pytest.fixture(scope="function")
-async def protocol(
-    event_loop: asyncio.AbstractEventLoop, request: Any
-) -> AsyncGenerator[RobotLanguageServerProtocol, None]:
+@pytest.fixture(scope="function", ids=generate_test_id)
+@pytest.mark.usefixtures("event_loop")
+async def protocol(request: Any) -> AsyncGenerator[RobotLanguageServerProtocol, None]:
     root_path = Path().resolve()
     server = RobotLanguageServer()
     try:
+        client_capas = ClientCapabilities(
+            text_document=TextDocumentClientCapabilities(
+                hover=HoverClientCapabilities(content_format=[MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT]),
+                folding_range=FoldingRangeClientCapabilities(range_limit=0, line_folding_only=False),
+            )
+        )
+
         protocol = RobotLanguageServerProtocol(server)
         await protocol._initialize(
-            ClientCapabilities(
-                text_document=TextDocumentClientCapabilities(
-                    hover=HoverClientCapabilities(content_format=[MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT]),
-                    folding_range=FoldingRangeClientCapabilities(range_limit=0, line_folding_only=False),
-                )
+            dataclasses.replace(
+                client_capas,
+                **(
+                    {k: v for k, v in vars(request.param).items() if v is not None} if hasattr(request, "param") else {}
+                ),
             ),
             root_path=str(root_path),
             root_uri=root_path.as_uri(),
@@ -77,7 +85,8 @@ async def protocol(
 
 
 @pytest.fixture(scope="function")
-async def test_document(event_loop: asyncio.AbstractEventLoop, request: Any) -> AsyncGenerator[TextDocument, None]:
+@pytest.mark.usefixtures("event_loop")
+async def test_document(request: Any) -> AsyncGenerator[TextDocument, None]:
     data_path = Path(request.param)
     data = data_path.read_text()
 

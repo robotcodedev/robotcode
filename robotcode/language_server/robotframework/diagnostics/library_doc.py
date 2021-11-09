@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib
 import importlib.util
 import io
@@ -205,7 +207,7 @@ class KeywordArgumentDoc(Model):
     types: Optional[Any] = None
 
     @staticmethod
-    def from_robot(arg: Any) -> "KeywordArgumentDoc":
+    def from_robot(arg: Any) -> KeywordArgumentDoc:
         from robot.running.arguments.argumentspec import ArgInfo
 
         robot_arg = cast(ArgInfo, arg)

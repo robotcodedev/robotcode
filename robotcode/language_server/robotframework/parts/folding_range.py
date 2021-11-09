@@ -9,7 +9,7 @@ from ...common.lsp_types import FoldingRange
 from ...common.text_document import TextDocument
 
 if TYPE_CHECKING:
-    from ..protocol import RobotLanguageServerProtocol
+    from ..protocol import RobotLanguageServerProtocol  # pragma: no cover
 
 from .protocol_part import RobotLanguageServerProtocolPart
 

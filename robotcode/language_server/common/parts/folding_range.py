@@ -17,7 +17,7 @@ from ..lsp_types import (
 from ..text_document import TextDocument
 
 if TYPE_CHECKING:
-    from ..protocol import LanguageServerProtocol
+    from ..protocol import LanguageServerProtocol  # pragma: no cover
 
 from .protocol_part import LanguageServerProtocolPart
 
@@ -30,7 +30,7 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities
         super().__init__(parent)
 
     @async_tasking_event
-    async def collect(sender, document: TextDocument) -> Optional[List[FoldingRange]]:
+    async def collect(sender, document: TextDocument) -> Optional[List[FoldingRange]]:  # pragma: no cover
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
