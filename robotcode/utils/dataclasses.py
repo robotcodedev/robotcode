@@ -57,14 +57,14 @@ def to_camel_case(s: str) -> str:
 @runtime_checkable
 class HasCaseEncoder(Protocol):
     @classmethod
-    def _encode_case(cls, s: str) -> str:
+    def _encode_case(cls, s: str) -> str:  # pragma: no cover
         ...
 
 
 @runtime_checkable
 class HasCaseDecoder(Protocol):
     @classmethod
-    def _decode_case(cls, s: str) -> str:
+    def _decode_case(cls, s: str) -> str:  # pragma: no cover
         ...
 
 

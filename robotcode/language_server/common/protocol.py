@@ -104,7 +104,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         self._trace = TraceValue.OFF
 
     @async_event
-    async def on_shutdown(sender) -> None:
+    async def on_shutdown(sender) -> None:  # pragma: no cover
         ...
 
     @property
@@ -182,7 +182,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         )
 
     @async_event
-    async def on_initialize(sender, initialization_options: Optional[Any] = None) -> None:
+    async def on_initialize(sender, initialization_options: Optional[Any] = None) -> None:  # pragma: no cover
         ...
 
     @rpc_method(name="initialized", param_type=InitializedParams)
@@ -190,7 +190,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         await self.on_initialized(self)
 
     @async_event
-    async def on_initialized(sender) -> None:
+    async def on_initialized(sender) -> None:  # pragma: no cover
         ...
 
     @rpc_method(name="shutdown")

@@ -159,7 +159,7 @@ class SymbolKind(IntEnum):
     OPERATOR = 25
     TYPEPARAMETER = 26
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 

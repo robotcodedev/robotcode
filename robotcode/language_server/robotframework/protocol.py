@@ -13,6 +13,7 @@ from ..common.lsp_types import (
     TextDocumentRegistrationOptions,
     TextDocumentSyncKind,
 )
+from ..common.parts.document_symbols import symbol_information_label
 from ..common.protocol import LanguageServerProtocol
 from .parts.completion import RobotCompletionProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
@@ -48,6 +49,7 @@ class Options(Model):
     global_storage_uri: Optional[str] = None
 
 
+@symbol_information_label("robotframework")
 class RobotLanguageServerProtocol(LanguageServerProtocol):
     _logger = LoggingDescriptor()
 
@@ -66,8 +68,6 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
     name = "RobotCode"
     version = __version__
-
-    symbol_information_label = "robotframework"
 
     def __init__(self, server: "RobotLanguageServer"):
         super().__init__(server)

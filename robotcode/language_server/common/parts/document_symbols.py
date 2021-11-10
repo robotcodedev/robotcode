@@ -4,9 +4,11 @@ from asyncio import CancelledError
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     List,
     Optional,
     Protocol,
+    TypeVar,
     Union,
     cast,
     runtime_checkable,
@@ -40,6 +42,17 @@ class HasSymbolInformationLabel(Protocol):
     symbol_information_label: str
 
 
+_F = TypeVar("_F", bound=Callable[..., Any])
+
+
+def symbol_information_label(label: str) -> Callable[[_F], _F]:
+    def decorator(func: _F) -> _F:
+        setattr(func, "symbol_information_label", label)
+        return func
+
+    return decorator
+
+
 class DocumentSymbolsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
     _logger = LoggingDescriptor()
@@ -59,9 +72,9 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilit
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
 
         if (
-            self.parent.client_capabilities is not None
-            and self.parent.client_capabilities.text_document is not None
-            and self.parent.client_capabilities.text_document.document_symbol is not None
+            self.parent.client_capabilities
+            and self.parent.client_capabilities.text_document
+            and self.parent.client_capabilities.text_document.document_symbol
         ):
             document_symbol = self.parent.client_capabilities.text_document.document_symbol
 
