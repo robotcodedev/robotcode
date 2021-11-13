@@ -43,9 +43,16 @@ class RoboTidyConfig(ConfigBase):
     enabled: bool = True
 
 
+@config_section("robotcode.workspace")
+@dataclass
+class WorkspaceConfig(ConfigBase):
+    exclude_patterns: List[str] = field(default_factory=list)
+
+
 @config_section("robotcode")
 @dataclass
 class RobotCodeConfig(ConfigBase):
     language_server: LanguageServerConfig = LanguageServerConfig()
     robot: RobotConfig = RobotConfig()
     syntax: SyntaxConfig = SyntaxConfig()
+    workspace: WorkspaceConfig = WorkspaceConfig()

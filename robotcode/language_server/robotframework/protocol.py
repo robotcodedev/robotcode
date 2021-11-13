@@ -24,7 +24,9 @@ from .parts.folding_range import RobotFoldingRangeProtocolPart
 from .parts.formatting import RobotFormattingProtocolPart
 from .parts.goto import RobotGotoProtocolPart
 from .parts.hover import RobotHoverProtocolPart
+from .parts.references import RobotReferencesProtocolPart
 from .parts.robocop_diagnostics import RobotRoboCopDiagnosticsProtocolPart
+from .parts.robot_workspace import RobotWorkspaceProtocolPart
 from .parts.semantic_tokens import RobotSemanticTokenProtocolPart
 from .parts.signature_help import RobotSignatureHelpProtocolPart
 from .utils.version import get_robot_version
@@ -54,17 +56,19 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     _logger = LoggingDescriptor()
 
     documents_cache = ProtocolPartDescriptor(DocumentsCache)
-    _robot_diagnostics = ProtocolPartDescriptor(RobotDiagnosticsProtocolPart)
-    _robot_folding_ranges = ProtocolPartDescriptor(RobotFoldingRangeProtocolPart)
-    _robot_goto = ProtocolPartDescriptor(RobotGotoProtocolPart)
-    _robot_hover = ProtocolPartDescriptor(RobotHoverProtocolPart)
-    _robot_completion = ProtocolPartDescriptor(RobotCompletionProtocolPart)
-    _robot_signature_help = ProtocolPartDescriptor(RobotSignatureHelpProtocolPart)
-    _robot_document_symbols = ProtocolPartDescriptor(RobotDocumentSymbolsProtocolPart)
-    _robot_robocop_diagnostics = ProtocolPartDescriptor(RobotRoboCopDiagnosticsProtocolPart)
-    _robot_formatting = ProtocolPartDescriptor(RobotFormattingProtocolPart)
-    _robot_discovering = ProtocolPartDescriptor(DiscoveringProtocolPart)
-    _robot_semantic_tokens = ProtocolPartDescriptor(RobotSemanticTokenProtocolPart)
+    robot_diagnostics = ProtocolPartDescriptor(RobotDiagnosticsProtocolPart)
+    robot_folding_ranges = ProtocolPartDescriptor(RobotFoldingRangeProtocolPart)
+    robot_goto = ProtocolPartDescriptor(RobotGotoProtocolPart)
+    robot_hover = ProtocolPartDescriptor(RobotHoverProtocolPart)
+    robot_completion = ProtocolPartDescriptor(RobotCompletionProtocolPart)
+    robot_signature_help = ProtocolPartDescriptor(RobotSignatureHelpProtocolPart)
+    robot_document_symbols = ProtocolPartDescriptor(RobotDocumentSymbolsProtocolPart)
+    robot_robocop_diagnostics = ProtocolPartDescriptor(RobotRoboCopDiagnosticsProtocolPart)
+    robot_formatting = ProtocolPartDescriptor(RobotFormattingProtocolPart)
+    robot_discovering = ProtocolPartDescriptor(DiscoveringProtocolPart)
+    robot_semantic_tokens = ProtocolPartDescriptor(RobotSemanticTokenProtocolPart)
+    robot_references = ProtocolPartDescriptor(RobotReferencesProtocolPart)
+    robot_workspace = ProtocolPartDescriptor(RobotWorkspaceProtocolPart)
 
     name = "RobotCode"
     version = __version__

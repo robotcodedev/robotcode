@@ -887,7 +887,6 @@ class Namespace:
         self._diagnostics: List[Diagnostic] = []
 
         self._keywords: Optional[List[KeywordDoc]] = None
-        self._loop = asyncio.get_event_loop()
 
         # TODO: how to get the search order from model
         self.search_order: Tuple[str, ...] = ()
@@ -954,29 +953,33 @@ class Namespace:
 
     @_logger.call
     async def ensure_initialized(self) -> bool:
-        async with self._initialize_lock:
+        if not self._initialized:
+            async with self._initialize_lock:
+                if not self._initialized:
+                    imports = await self.get_imports()
+
+                    if self.document is not None:
+
+                        old_imports: List[Import] = self.document.get_data(Namespace)
+                        if old_imports is None:
+                            self.document.set_data(Namespace, imports)
+                        elif old_imports != imports:
+                            new_imports = []
+                            for e in old_imports:
+                                if e in imports:
+                                    new_imports.append(e)
+                            for e in imports:
+                                if e not in new_imports:
+                                    new_imports.append(e)
+                            self.document.set_data(Namespace, new_imports)
+
+                    await self._import_default_libraries()
+                    await self._import_imports(imports, str(Path(self.source).parent), top_level=True)
+
+                    self._initialized = True
+
             if not self._initialized:
-                imports = await self.get_imports()
-
-                if self.document is not None:
-
-                    old_imports: List[Import] = self.document.get_data(Namespace)
-                    if old_imports is None:
-                        self.document.set_data(Namespace, imports)
-                    elif old_imports != imports:
-                        new_imports = []
-                        for e in old_imports:
-                            if e in imports:
-                                new_imports.append(e)
-                        for e in imports:
-                            if e not in new_imports:
-                                new_imports.append(e)
-                        self.document.set_data(Namespace, new_imports)
-
-                await self._import_default_libraries()
-                await self._import_imports(imports, str(Path(self.source).parent), top_level=True)
-
-                self._initialized = True
+                raise Exception("Namespace not initialized")
         return self._initialized
 
     @property
@@ -1383,41 +1386,39 @@ class Namespace:
     async def _analyze(self) -> None:
         if not self._analyzed:
             async with self._analyze_lock:
-                try:
-                    self._diagnostics += await Analyzer().get(self.model, self)
+                if not self._analyzed:
+                    try:
+                        self._diagnostics += await Analyzer().get(self.model, self)
 
-                    lib_doc = await self.get_library_doc()
+                        lib_doc = await self.get_library_doc()
 
-                    if lib_doc.errors is not None:
-                        for err in lib_doc.errors:
-                            self._diagnostics.append(
-                                Diagnostic(
-                                    range=Range(
-                                        start=Position(
-                                            line=((err.line_no - 1) if err.line_no is not None else 0),
-                                            character=0,
+                        if lib_doc.errors is not None:
+                            for err in lib_doc.errors:
+                                self._diagnostics.append(
+                                    Diagnostic(
+                                        range=Range(
+                                            start=Position(
+                                                line=((err.line_no - 1) if err.line_no is not None else 0),
+                                                character=0,
+                                            ),
+                                            end=Position(
+                                                line=((err.line_no - 1) if err.line_no is not None else 0),
+                                                character=0,
+                                            ),
                                         ),
-                                        end=Position(
-                                            line=((err.line_no - 1) if err.line_no is not None else 0),
-                                            character=0,
-                                        ),
-                                    ),
-                                    message=err.message,
-                                    severity=DiagnosticSeverity.ERROR,
-                                    source=DIAGNOSTICS_SOURCE_NAME,
-                                    code=err.type_name,
+                                        message=err.message,
+                                        severity=DiagnosticSeverity.ERROR,
+                                        source=DIAGNOSTICS_SOURCE_NAME,
+                                        code=err.type_name,
+                                    )
                                 )
-                            )
-                finally:
-                    self._analyzed = True
+                    finally:
+                        self._analyzed = True
 
     async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
         await self.ensure_initialized()
 
         return await KeywordFinder(self).find_keyword(name)
-
-    async def find_keyword_threadsafe(self, name: Optional[str]) -> Optional[KeywordDoc]:
-        return await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(self.find_keyword(name), self._loop))
 
 
 class DiagnosticsEntry(NamedTuple):
@@ -1475,7 +1476,6 @@ class KeywordFinder:
         return result
 
     async def _get_keyword_from_self(self, name: str) -> Optional[KeywordDoc]:
-
         return (await self.namespace.get_library_doc()).keywords.get(name, None)
 
     async def _yield_owner_and_kw_names(self, full_name: str) -> AsyncIterator[Tuple[str, ...]]:

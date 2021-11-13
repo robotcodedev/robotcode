@@ -112,6 +112,31 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 pass
         return None
 
+    async def hover_KeywordName(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[Hover]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import KeywordName
+
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
+
+        kw_node = cast(KeywordName, node)
+        name_token = kw_node.get_token(RobotToken.KEYWORD_NAME)
+        if not name_token:
+            return None
+
+        result = await namespace.find_keyword(name_token.value)
+
+        if result is not None and not result.is_error_handler:
+            return Hover(
+                contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=result.to_markdown()),
+                range=range_from_token_or_node(node, name_token),
+            )
+
+        return None
+
     async def hover_KeywordCall(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position
     ) -> Optional[Hover]:

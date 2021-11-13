@@ -43,6 +43,7 @@ from ..diagnostics.library_doc import (
     CompleteResultKind,
     KeywordArgumentKind,
     KeywordDoc,
+    KeywordMatcher,
 )
 from ..diagnostics.namespace import VariableDefinitionType
 from ..utils.ast import (
@@ -439,8 +440,9 @@ class CompletionCollector(ModelHelperMixin):
 
                     libraries = await namespace.get_libraries()
 
+                    library_name_matcher = KeywordMatcher(library_name)
                     library_name = next(
-                        (e for e in libraries.keys() if e.casefold() == library_name.casefold()), library_name
+                        (e for e in libraries.keys() if library_name_matcher == KeywordMatcher(e)), library_name
                     )
 
                     if library_name in libraries:

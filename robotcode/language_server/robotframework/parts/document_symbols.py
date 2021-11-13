@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import DocumentSymbol, SymbolInformation, SymbolKind
-from ...common.parts.document_symbols import symbol_information_label
 from ...common.text_document import TextDocument
 from ..utils.ast import range_from_node
 
@@ -24,7 +23,7 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
 
         parent.document_symbols.collect.add(self.collect)
 
-    @language_id("robotframework")    
+    @language_id("robotframework")
     async def collect(
         self, sender: Any, document: TextDocument
     ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:

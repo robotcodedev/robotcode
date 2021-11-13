@@ -57,7 +57,7 @@ async def test_foldingrange(
     data: GeneratedTestData,
 ) -> None:
 
-    result = await protocol._robot_folding_ranges.collect(protocol._robot_goto, test_document)
+    result = await protocol.robot_folding_ranges.collect(protocol.robot_goto, test_document)
 
     assert bool(
         eval(

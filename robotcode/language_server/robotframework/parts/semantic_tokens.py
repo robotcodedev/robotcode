@@ -275,7 +275,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             is_builtin = False
             if namespace.initialized:
                 try:
-                    libdoc = await namespace.find_keyword_threadsafe(token.value)
+                    libdoc = await namespace.find_keyword(token.value)
                     if (
                         libdoc is not None
                         and libdoc.libname is not None
@@ -360,7 +360,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             await namespace.ensure_initialized()
 
             cancel_token = CancelationToken()
-            return await asyncio.get_event_loop().run_in_executor(
+            return await asyncio.get_running_loop().run_in_executor(
                 None,
                 asyncio.run,
                 self.collect(

@@ -29,6 +29,7 @@ from ....utils.dataclasses import from_dict
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
 from ....utils.uri import Uri
+from ...common.has_extend_capabilities import HasExtendCapabilities
 from ..lsp_types import (
     ConfigurationItem,
     ConfigurationParams,
@@ -128,7 +129,7 @@ _TConfig = TypeVar("_TConfig", bound=(ConfigBase))
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 
-class Workspace(LanguageServerProtocolPart):
+class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
     _logger = LoggingDescriptor()
 
     def __init__(
@@ -140,6 +141,7 @@ class Workspace(LanguageServerProtocolPart):
     ):
         super().__init__(parent)
         self.root_uri = root_uri
+
         self.root_path = root_path
         self.workspace_folders_lock = asyncio.Lock()
         self.workspace_folders: List[WorkspaceFolder] = (

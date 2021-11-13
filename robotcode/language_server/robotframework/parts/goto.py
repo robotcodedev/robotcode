@@ -128,6 +128,36 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 pass
         return None
 
+    async def definition_KeywordName(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Union[Location, List[Location], List[LocationLink], None]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import KeywordName
+
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
+
+        kw_node = cast(KeywordName, node)
+        name_token = cast(RobotToken, kw_node.get_token(RobotToken.KEYWORD_NAME))
+
+        if not name_token:
+            return None
+
+        result = await namespace.find_keyword(name_token.value)
+
+        if result is not None and not result.is_error_handler and result.source:
+            return [
+                LocationLink(
+                    origin_selection_range=range_from_token_or_node(node, name_token),
+                    target_uri=str(Uri.from_path(result.source)),
+                    target_range=range_from_token_or_node(node, name_token),
+                    target_selection_range=range_from_token_or_node(node, name_token),
+                )
+            ]
+
+        return None
+
     async def definition_KeywordCall(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position
     ) -> Union[Location, List[Location], List[LocationLink], None]:

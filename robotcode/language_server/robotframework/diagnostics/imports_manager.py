@@ -13,7 +13,7 @@ from ....utils.async_event import async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
 from ....utils.uri import Uri
-from ...common.lsp_types import DocumentUri, FileChangeType, FileEvent
+from ...common.lsp_types import FileChangeType, FileEvent
 from ...common.parts.workspace import FileWatcherEntry
 from ...common.text_document import TextDocument
 from ..configuration import RobotConfig
@@ -641,8 +641,6 @@ class ImportsManager:
         source = await self.find_file(name, base_dir, "Resource")
 
         async def _get_document() -> TextDocument:
-            from robot.utils import FileReader
-
             self._logger.debug(lambda: f"Load resource {name} from source {source}")
 
             source_path = Path(source).resolve()
@@ -653,18 +651,7 @@ class ImportsManager:
                     f"Supported extensions are {', '.join(repr(s) for s in RESOURCE_EXTENSIONS)}."
                 )
 
-            source_uri = DocumentUri(Uri.from_path(source_path).normalized())
-
-            result = self.parent_protocol.documents.get(source_uri, None)
-            if result is not None:
-                return result
-
-            with FileReader(source_path) as reader:
-                text = str(reader.read())
-
-            return self.parent_protocol.documents.append_document(
-                document_uri=source_uri, language_id="robotframework", text=text
-            )
+            return self.parent_protocol.robot_workspace.get_or_open_document(source_path, "robotframework")
 
         async with self._resources_lock:
             entry_key = _ResourcesEntryKey(source)

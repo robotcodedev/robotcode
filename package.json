@@ -348,6 +348,21 @@
             "description": "Defines if the test report should be opened a run session automatically.",
             "scope": "resource"
           },
+          "robotcode.workspace.excludePatterns": {
+            "type": "array",
+            "default": [
+              "**/.git/**",
+              "**/node_modules/**",
+              "**/.pytest_cache/**",
+              "**/__pycache__/**",
+              "**/.mypy_cache/**"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Specifies glob patterns for excluding files and folders from analysing by the language server.",
+            "scope": "resource"
+          },
           "robotcode.robocop.enabled": {
             "type": "boolean",
             "default": true,

@@ -28,7 +28,15 @@ class Model:
         args = ", ".join(
             f"{f.name}={getattr(self, f.name)!r}"
             for f in dataclasses.fields(self)
-            if f.repr and f.default != getattr(self, f.name)
+            if f.repr
+            and (
+                (f.default == dataclasses.MISSING and f.default_factory == dataclasses.MISSING)  # type: ignore
+                or (f.default != dataclasses.MISSING and f.default != getattr(self, f.name))
+                or (
+                    f.default_factory != dataclasses.MISSING  # type: ignore
+                    and getattr(self, f.name) != f.default_factory()  # type: ignore
+                )
+            )
         )
         return f"{self.__class__.__qualname__}({args})"
 
@@ -914,6 +922,16 @@ class SemanticTokensRegistrationOptions(
 
 
 @dataclass(repr=False)
+class ReferenceOptions(WorkDoneProgressOptions):
+    pass
+
+
+@dataclass(repr=False)
+class ReferenceRegistrationOptions(TextDocumentRegistrationOptions, ReferenceOptions):
+    pass
+
+
+@dataclass(repr=False)
 class ServerCapabilities(Model):
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None] = None
     completion_provider: Optional[CompletionOptions] = None
@@ -922,7 +940,7 @@ class ServerCapabilities(Model):
     declaration_provider: Union[bool, DeclarationOptions, DeclarationRegistrationOptions, None] = None
     definition_provider: Union[bool, DefinitionOptions, None] = None
     implementation_provider: Union[bool, ImplementationOptions, ImplementationRegistrationOptions, None] = None
-    # references_provider: Union[bool, ReferenceOptions, None] = None
+    references_provider: Union[bool, ReferenceOptions, None] = None
     # document_highlight_provider: Union[bool, DocumentHighlightOptions, None] = None
     document_symbol_provider: Union[bool, DocumentSymbolOptions, None] = None
     # code_action_provider: Union[bool, CodeActionOptions] = None
@@ -1798,3 +1816,18 @@ class SemanticTokenModifiers(Enum):
 
     def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
+
+
+@dataclass(repr=False)
+class ReferenceContext(Model):
+    include_declaration: bool
+
+
+@dataclass(repr=False)
+class _ReferenceParams(Model):
+    context: ReferenceContext
+
+
+@dataclass(repr=False)
+class ReferenceParams(WorkDoneProgressParams, PartialResultParams, TextDocumentPositionParams, _ReferenceParams):
+    pass
