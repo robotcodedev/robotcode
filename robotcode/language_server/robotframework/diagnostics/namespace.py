@@ -39,6 +39,7 @@ from ..utils.ast import (
     Token,
     is_non_variable_token,
     range_from_node,
+    range_from_token,
     range_from_token_or_node,
     tokenize_variables,
 )
@@ -610,9 +611,32 @@ class Analyzer(AsyncVisitor):
             await self._analyze_keyword_call(argument_tokens[1].value, node, argument_tokens[1], argument_tokens[2:])
             return argument_tokens[2:]
         elif keyword_doc.is_run_keywords():
-            for t in argument_tokens:
-                if is_non_variable_token(t):
-                    await self._analyze_keyword_call(t.value, node, t, [])
+
+            while argument_tokens:
+                # TODO: Parse "run keywords" with arguments using upper case AND
+                t = argument_tokens[0]
+                argument_tokens = argument_tokens[1:]
+                if t.value == "AND":
+                    self._results.append(
+                        Diagnostic(
+                            range=range_from_token(t),
+                            message=f"Incorrect use of {t.value}",
+                            severity=DiagnosticSeverity.ERROR,
+                            source=DIAGNOSTICS_SOURCE_NAME,
+                        )
+                    )
+                    continue
+
+                if not is_non_variable_token(t):
+                    continue
+
+                and_token = next((e for e in argument_tokens if e.value == "AND"), None)
+                args = []
+                if and_token is not None:
+                    args = argument_tokens[: argument_tokens.index(and_token)]
+                    argument_tokens = argument_tokens[argument_tokens.index(and_token) + 1 :]
+
+                await self._analyze_keyword_call(t.value, node, t, args)
 
             return []
 
@@ -875,7 +899,9 @@ class Namespace:
         self.invalidated_callback = invalidated_callback
         self._document = weakref.ref(document) if document is not None else None
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
+        self._libraries_matchers: Optional[List[KeywordMatcher]] = None
         self._resources: OrderedDict[str, ResourceEntry] = OrderedDict()
+        self._resources_matchers: Optional[List[KeywordMatcher]] = None
         self._variables: OrderedDict[str, VariablesEntry] = OrderedDict()
         self._initialized = False
         self._initialize_lock = asyncio.Lock()
@@ -922,11 +948,25 @@ class Namespace:
 
         return self._libraries
 
+    async def get_libraries_matchers(self) -> List[KeywordMatcher]:
+        if self._libraries_matchers is None:
+            self._libraries_matchers = [
+                KeywordMatcher(v.alias or v.name or v.import_name) for v in (await self.get_libraries()).values()
+            ]
+        return self._libraries_matchers
+
     @_logger.call
     async def get_resources(self) -> OrderedDict[str, ResourceEntry]:
         await self.ensure_initialized()
 
         return self._resources
+
+    async def get_resources_matchers(self) -> List[KeywordMatcher]:
+        if self._resources_matchers is None:
+            self._resources_matchers = [
+                KeywordMatcher(v.alias or v.name or v.import_name) for v in (await self.get_resources()).values()
+            ]
+        return self._resources_matchers
 
     async def get_library_doc(self) -> LibraryDoc:
         from ..parts.documents_cache import DocumentType
@@ -1203,7 +1243,7 @@ class Namespace:
                     ]
 
                     if not allready_imported_resources and entry.library_doc.source != self.source:
-                        self._resources[entry.import_name] = entry
+                        self._resources[entry.alias or entry.name or entry.import_name] = entry
                         try:
                             await self._import_imports(
                                 entry.imports,
@@ -1235,7 +1275,7 @@ class Namespace:
                                     )
                                 )
                             elif allready_imported_resources and allready_imported_resources[0].library_doc.source:
-                                self._resources[entry.import_name] = entry
+                                self._resources[entry.alias or entry.name or entry.import_name] = entry
 
                                 self._diagnostics.append(
                                     Diagnostic(

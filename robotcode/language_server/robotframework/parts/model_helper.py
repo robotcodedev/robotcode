@@ -39,13 +39,21 @@ class ModelHelperMixin:
 
         elif keyword_doc.is_run_keywords():
             while argument_tokens:
+                # TODO: Parse "run keywords" with arguments using upper case AND
                 t = argument_tokens[0]
                 argument_tokens = argument_tokens[1:]
+                if t.value == "AND":
+                    continue
 
-                if position.is_in_range(range_from_token(t)) and is_non_variable_token(t):
+                if is_non_variable_token(t) and position.is_in_range(range_from_token(t)):
                     result = await self.get_keyworddoc_and_token_from_position(t.value, t, [], namespace, position)
 
                     return result, argument_tokens
+
+                and_token = next((e for e in argument_tokens if e.value == "AND"), None)
+                if and_token is not None:
+                    argument_tokens = argument_tokens[argument_tokens.index(and_token) + 1 :]
+
             return None, []
         elif keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1 and is_non_variable_token(argument_tokens[1]):
 
