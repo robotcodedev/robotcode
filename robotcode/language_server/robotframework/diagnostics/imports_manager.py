@@ -611,9 +611,7 @@ class ImportsManager:
                     if isinstance(kw[1], UserErrorHandler)
                     else None,
                 )
-                for kw in [
-                    (KeywordDocBuilder(resource=model_type == "RESOURCE").build_keyword(lw), lw) for lw in lib.handlers
-                ]
+                for kw in [(KeywordDocBuilder(resource=True).build_keyword(lw), lw) for lw in lib.handlers]
             },
         )
 
