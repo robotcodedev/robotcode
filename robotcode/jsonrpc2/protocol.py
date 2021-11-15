@@ -315,6 +315,11 @@ class SendedRequestEntry(NamedTuple):
     result_type: Optional[Type[Any]]
 
 
+class ReceivedRequestEntry(NamedTuple):
+    future: asyncio.Future[Any]
+    request: Optional[Any]
+
+
 class JsonRPCProtocolBase(asyncio.Protocol, ABC):
 
     _logger = LoggingDescriptor()
@@ -405,7 +410,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         self._sended_request: OrderedDict[Union[str, int], SendedRequestEntry] = OrderedDict()
         self._sended_request_count = 0
         self._received_request_lock = threading.RLock()
-        self._received_request: OrderedDict[Union[str, int, None], asyncio.Future[Any]] = OrderedDict()
+        self._received_request: OrderedDict[Union[str, int, None], ReceivedRequestEntry] = OrderedDict()
 
     @staticmethod
     def _generate_json_rpc_messages_from_dict(
@@ -641,7 +646,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             result = asyncio.create_task(ensure_coroutine(e.method)(*params[0], **params[1]))
 
             with self._received_request_lock:
-                self._received_request[message.id] = result
+                self._received_request[message.id] = ReceivedRequestEntry(result, message)
 
             try:
                 self.send_response(message.id, await result)
@@ -660,16 +665,17 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             self._logger.exception(e)
             self.send_error(JsonRPCErrors.INTERNAL_ERROR, f"{type(e).__name__}: {e}", id=message.id)
 
-    async def cancel_received_request(self, id: Union[int, str, None]) -> None:
+    async def cancel_request(self, id: Union[int, str, None]) -> None:
         with self._received_request_lock:
-            future = self._received_request.get(id, None)
-        if future is not None and not future.cancelled():
-            future.cancel()
+            entry = self._received_request.get(id, None)
+        if entry is not None and entry.future is not None and not entry.future.cancelled():
+            self._logger.debug(f"try to cancel request {entry.request}")
+            entry.future.cancel()
 
     async def cancel_all_received_request(self) -> None:
-        for future in self._received_request.values():
-            if future is not None and not future.cancelled():
-                future.cancel()
+        for entry in self._received_request.values():
+            if entry is not None and entry.future is not None and not entry.future.cancelled():
+                entry.future.cancel()
 
     async def handle_notification(self, message: JsonRPCNotification) -> None:
         e = self.registry.get_entry(message.method)

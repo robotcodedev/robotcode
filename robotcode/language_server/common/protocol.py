@@ -222,7 +222,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     @rpc_method(name="$/cancelRequest", param_type=CancelParams)
     @_logger.call
     async def _cancel_request(self, id: Union[int, str], **kwargs: Any) -> None:
-        await self.cancel_received_request(id)
+        await self.cancel_request(id)
 
     async def register_capability(self, id: str, method: str, register_options: Optional[Any]) -> None:
         await self.register_capabilities([Registration(id=id, method=method, register_options=register_options)])
