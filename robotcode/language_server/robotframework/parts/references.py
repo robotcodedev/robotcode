@@ -25,7 +25,7 @@ from ...common.language import language_id
 from ...common.lsp_types import Location, Position, ReferenceContext
 from ...common.text_document import TextDocument
 from ..configuration import WorkspaceConfig
-from ..diagnostics.library_doc import KeywordDoc, KeywordMatcher
+from ..diagnostics.library_doc import KeywordDoc, KeywordMatcher, LibraryDoc
 from ..utils.ast import (
     HasTokens,
     Token,
@@ -281,7 +281,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 yield ".".join(tokens[:i]), ".".join(tokens[i:])
 
     async def _find_keyword_references_from_file(
-        self, kw_doc: KeywordDoc, file: Path, cancel_token: CancelationToken
+        self, kw_doc: KeywordDoc, lib_doc: Optional[LibraryDoc], file: Path, cancel_token: CancelationToken
     ) -> List[Location]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import (
@@ -295,10 +295,20 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         namespace = await self.parent.documents_cache.get_namespace(doc, cancelation_token=cancel_token)
         await namespace.ensure_initialized()
 
+        if (
+            lib_doc is not None
+            and lib_doc not in (e.library_doc for e in (await namespace.get_libraries()).values())
+            and lib_doc not in (e.library_doc for e in (await namespace.get_resources()).values())
+        ):
+            return []
+
         async def _run() -> List[Location]:
             kw_matcher = KeywordMatcher(kw_doc.name)
 
             result: List[Location] = []
+
+            libraries_matchers = await namespace.get_libraries_matchers()
+            resources_matchers = await namespace.get_resources_matchers()
 
             for node in ast.walk(namespace.model):
                 cancel_token.throw_if_canceled()
@@ -308,17 +318,17 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
                 if isinstance(node, KeywordCall):
                     kw_token = node.get_token(RobotToken.KEYWORD)
-
                 elif isinstance(node, Fixture):
                     kw_token = node.get_token(RobotToken.NAME)
                 elif isinstance(node, (Template, TestTemplate)):
                     kw_token = node.get_token(RobotToken.NAME)
 
-                library_names = [KeywordMatcher(v) for v in (await namespace.get_libraries()).keys()]
                 if kw_token is not None:
                     for lib, name in self._yield_owner_and_kw_names(kw_token.value):
-                        if lib is not None and KeywordMatcher(lib) not in library_names:
-                            continue
+                        if lib is not None:
+                            lib_matcher = KeywordMatcher(lib)
+                            if lib_matcher not in libraries_matchers and lib_matcher not in resources_matchers:
+                                continue
 
                         if kw_matcher == name:
                             kw = await namespace.find_keyword(str(kw_token.value))
@@ -339,6 +349,30 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         if folder is None:
             return []
 
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
+
+        lib_doc = (
+            next(
+                (
+                    e.library_doc
+                    for e in (await namespace.get_libraries()).values()
+                    if kw_doc in e.library_doc.keywords.values()
+                ),
+                None,
+            )
+            or next(
+                (
+                    e.library_doc
+                    for e in (await namespace.get_resources()).values()
+                    if kw_doc in e.library_doc.keywords.values()
+                ),
+                None,
+            )
+            or await namespace.get_library_doc()
+        )
+
         cancel_token = CancelationToken()
 
         futures: List[Awaitable[List[Location]]] = []
@@ -353,7 +387,9 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 ignore_patterns=config.exclude_patterns or [],  # type: ignore
                 absolute=True,
             ):
-                futures.append(asyncio.create_task(self._find_keyword_references_from_file(kw_doc, f, cancel_token)))
+                futures.append(
+                    asyncio.create_task(self._find_keyword_references_from_file(kw_doc, lib_doc, f, cancel_token))
+                )
 
             for e in await asyncio.gather(*futures, return_exceptions=True):
                 if isinstance(e, BaseException):
