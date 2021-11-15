@@ -35,7 +35,6 @@ from ...common.lsp_types import (
     SemanticTokenTypes,
 )
 from ...common.text_document import TextDocument
-from ..diagnostics.namespace import Namespace
 from ..utils.ast import HasTokens, Token, iter_nodes, token_in_range, tokenize_variables
 
 if TYPE_CHECKING:
@@ -258,9 +257,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             else:
                 yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset, length)
 
-    async def generate_sem_tokens(
-        self, namespace: Namespace, token: Token, node: ast.AST
-    ) -> AsyncGenerator[SemTokenInfo, None]:
+    async def generate_sem_tokens(self, token: Token, node: ast.AST) -> AsyncGenerator[SemTokenInfo, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
         if token.type in {*RobotToken.ALLOW_VARIABLES, RobotToken.KEYWORD}:
@@ -273,18 +270,19 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
         elif token.type == RobotToken.KEYWORD:
             is_builtin = False
-            if namespace.initialized:
-                try:
-                    libdoc = await namespace.find_keyword(token.value)
-                    if (
-                        libdoc is not None
-                        and libdoc.libname is not None
-                        and libdoc.libname.casefold() == "builtin".casefold()
-                    ):
+            # TODO tag builtin keywords
+            # if namespace.initialized:
+            #     try:
+            #         libdoc = await namespace.find_keyword(token.value)
+            #         if (
+            #             libdoc is not None
+            #             and libdoc.libname is not None
+            #             and libdoc.libname.casefold() == "builtin".casefold()
+            #         ):
 
-                        is_builtin = True
-                except BaseException:
-                    pass
+            #             is_builtin = True
+            #     except BaseException:
+            #         pass
 
             async for e in self.generate_sem_sub_tokens(token, node):
                 if is_builtin:
@@ -297,7 +295,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 yield e
 
     async def collect(
-        self, namespace: Namespace, model: ast.AST, range: Optional[Range], cancel_token: CancelationToken
+        self, model: ast.AST, range: Optional[Range], cancel_token: CancelationToken
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
 
         data = []
@@ -321,7 +319,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         ):
             cancel_token.throw_if_canceled()
 
-            async for token in self.generate_sem_tokens(namespace, robot_token, robot_node):
+            async for token in self.generate_sem_tokens(robot_token, robot_node):
                 current_line = token.lineno - 1
 
                 data.append(current_line - last_line)
@@ -356,15 +354,14 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         try:
             model = await self.parent.documents_cache.get_model(document)
-            namespace = await self.parent.documents_cache.get_namespace(document)
-            await namespace.ensure_initialized()
+            # namespace = await self.parent.documents_cache.get_namespace(document)
+            # await namespace.ensure_initialized()
 
             cancel_token = CancelationToken()
             return await asyncio.get_running_loop().run_in_executor(
                 None,
                 asyncio.run,
                 self.collect(
-                    namespace,
                     model,
                     range,
                     cancel_token,
