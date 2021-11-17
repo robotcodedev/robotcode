@@ -465,7 +465,6 @@ class CompletionCollector(ModelHelperMixin):
                                 },
                             )
                             result.append(c)
-                        return result
 
                     resources = await namespace.get_resources()
                     if library_name in resources:
@@ -488,7 +487,8 @@ class CompletionCollector(ModelHelperMixin):
                                 },
                             )
                             result.append(c)
-                        return result
+
+                    return result
 
         for kw in await namespace.get_keywords():
             if kw.is_error_handler:
