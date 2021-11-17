@@ -974,20 +974,8 @@ class Namespace:
         if self._library_doc is None:
             async with self._library_doc_lock:
                 if self._library_doc is None:
-                    model_type = ""
-
-                    if hasattr(self.model, "model_type"):
-                        t = getattr(self.model, "model_type")
-
-                        if t == DocumentType.RESOURCE:
-                            model_type = "RESOURCE"
-                        elif t == DocumentType.GENERAL:
-                            model_type = "TESTCASE"
-                        elif t == DocumentType.INIT:
-                            model_type = "INIT"
-
                     self._library_doc = await self.imports_manager.get_libdoc_from_model(
-                        self.model, self.source, model_type=model_type
+                        self.model, self.source, model_type="RESOURCE"
                     )
 
         return self._library_doc
