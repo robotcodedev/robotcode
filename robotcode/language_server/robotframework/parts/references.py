@@ -283,7 +283,11 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
     @_logger.call
     async def _find_keyword_references_in_file(
-        self, kw_doc: KeywordDoc, lib_doc: Optional[LibraryDoc], file: Path, cancel_token: CancelationToken
+        self,
+        kw_doc: KeywordDoc,
+        lib_doc: Optional[LibraryDoc],
+        file: Path,
+        cancel_token: CancelationToken,
     ) -> List[Location]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import (
@@ -299,6 +303,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         if (
             lib_doc is not None
+            and lib_doc.source is not None
+            and not Path.samefile(file, lib_doc.source)
             and lib_doc not in (e.library_doc for e in (await namespace.get_libraries()).values())
             and lib_doc not in (e.library_doc for e in (await namespace.get_resources()).values())
         ):
