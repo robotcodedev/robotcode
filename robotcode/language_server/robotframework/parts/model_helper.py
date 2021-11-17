@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 from ...common.lsp_types import Position
 from ..diagnostics.library_doc import KeywordDoc, KeywordError
 from ..diagnostics.namespace import Namespace
-from ..utils.ast import Token, is_non_variable_token, range_from_token
+from ..utils.ast import Token, is_not_variable_token, range_from_token
 
 
 class ModelHelperMixin:
@@ -20,7 +20,7 @@ class ModelHelperMixin:
         if keyword_doc is None or not keyword_doc.is_any_run_keyword():
             return None, argument_tokens
 
-        if keyword_doc.is_run_keyword() and len(argument_tokens) > 0 and is_non_variable_token(argument_tokens[0]):
+        if keyword_doc.is_run_keyword() and len(argument_tokens) > 0 and is_not_variable_token(argument_tokens[0]):
             result = await self.get_keyworddoc_and_token_from_position(
                 argument_tokens[0].value, argument_tokens[0], argument_tokens[1:], namespace, position
             )
@@ -29,7 +29,7 @@ class ModelHelperMixin:
         elif (
             keyword_doc.is_run_keyword_with_condition()
             and len(argument_tokens) > 1
-            and is_non_variable_token(argument_tokens[1])
+            and is_not_variable_token(argument_tokens[1])
         ):
             result = await self.get_keyworddoc_and_token_from_position(
                 argument_tokens[1].value, argument_tokens[1], argument_tokens[2:], namespace, position
@@ -39,13 +39,12 @@ class ModelHelperMixin:
 
         elif keyword_doc.is_run_keywords():
             while argument_tokens:
-                # TODO: Parse "run keywords" with arguments using upper case AND
                 t = argument_tokens[0]
                 argument_tokens = argument_tokens[1:]
                 if t.value == "AND":
                     continue
 
-                if is_non_variable_token(t) and position.is_in_range(range_from_token(t)):
+                if is_not_variable_token(t) and position.is_in_range(range_from_token(t)):
                     result = await self.get_keyworddoc_and_token_from_position(t.value, t, [], namespace, position)
 
                     return result, argument_tokens
@@ -55,7 +54,7 @@ class ModelHelperMixin:
                     argument_tokens = argument_tokens[argument_tokens.index(and_token) + 1 :]
 
             return None, []
-        elif keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1 and is_non_variable_token(argument_tokens[1]):
+        elif keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1 and is_not_variable_token(argument_tokens[1]):
 
             def skip_args() -> None:
                 nonlocal argument_tokens

@@ -37,7 +37,7 @@ from ...common.lsp_types import (
 from ...common.text_document import TextDocument
 from ..utils.ast import (
     Token,
-    is_non_variable_token,
+    is_not_variable_token,
     range_from_node,
     range_from_token,
     range_from_token_or_node,
@@ -599,14 +599,14 @@ class Analyzer(AsyncVisitor):
         if keyword_doc is None or not keyword_doc.is_any_run_keyword():
             return argument_tokens
 
-        if keyword_doc.is_run_keyword() and len(argument_tokens) > 0 and is_non_variable_token(argument_tokens[0]):
+        if keyword_doc.is_run_keyword() and len(argument_tokens) > 0 and is_not_variable_token(argument_tokens[0]):
             await self._analyze_keyword_call(argument_tokens[0].value, node, argument_tokens[0], argument_tokens[1:])
 
             return argument_tokens[1:]
         elif (
             keyword_doc.is_run_keyword_with_condition()
             and len(argument_tokens) > 1
-            and is_non_variable_token(argument_tokens[1])
+            and is_not_variable_token(argument_tokens[1])
         ):
             await self._analyze_keyword_call(argument_tokens[1].value, node, argument_tokens[1], argument_tokens[2:])
             return argument_tokens[2:]
@@ -627,7 +627,7 @@ class Analyzer(AsyncVisitor):
                     )
                     continue
 
-                if not is_non_variable_token(t):
+                if not is_not_variable_token(t):
                     continue
 
                 and_token = next((e for e in argument_tokens if e.value == "AND"), None)
@@ -640,7 +640,7 @@ class Analyzer(AsyncVisitor):
 
             return []
 
-        elif keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1 and is_non_variable_token(argument_tokens[1]):
+        elif keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1 and is_not_variable_token(argument_tokens[1]):
 
             def skip_args() -> None:
                 nonlocal argument_tokens
@@ -714,7 +714,7 @@ class Analyzer(AsyncVisitor):
 
         # TODO: calculate possible variables in NAME
 
-        if keyword_token is not None and is_non_variable_token(keyword_token):
+        if keyword_token is not None and is_not_variable_token(keyword_token):
             await self._analyze_keyword_call(
                 value.name, value, keyword_token, [cast(Token, e) for e in value.get_tokens(RobotToken.ARGUMENT)]
             )
@@ -730,7 +730,7 @@ class Analyzer(AsyncVisitor):
 
         # TODO: calculate possible variables in NAME
 
-        if keyword_token is not None and is_non_variable_token(keyword_token):
+        if keyword_token is not None and is_not_variable_token(keyword_token):
             await self._analyze_keyword_call(value.value, value, keyword_token, [])
 
         await self.generic_visit(node)
@@ -744,7 +744,7 @@ class Analyzer(AsyncVisitor):
 
         # TODO: calculate possible variables in NAME
 
-        if keyword_token is not None and is_non_variable_token(keyword_token):
+        if keyword_token is not None and is_not_variable_token(keyword_token):
             await self._analyze_keyword_call(value.value, value, keyword_token, [])
 
         await self.generic_visit(node)
@@ -908,6 +908,7 @@ class Namespace:
         self._analyzed = False
         self._analyze_lock = asyncio.Lock()
         self._library_doc: Optional[LibraryDoc] = None
+        self._library_doc_lock = asyncio.Lock()
         self._imports: Optional[List[Import]] = None
         self._own_variables: Optional[List[VariableDefinition]] = None
         self._diagnostics: List[Diagnostic] = []
@@ -921,15 +922,14 @@ class Namespace:
     def document(self) -> Optional[TextDocument]:
         return self._document() if self._document is not None else None
 
-    async def libraries_changed(self, sender: Any, params: List[LibraryDoc]) -> None:
-
-        for p in params:
+    async def libraries_changed(self, sender: Any, libraries: List[LibraryDoc]) -> None:
+        for p in libraries:
             if any(e for e in self._libraries.values() if e.library_doc == p):
                 self.invalidated_callback(self)
                 break
 
-    async def resources_changed(self, sender: Any, params: List[LibraryDoc]) -> None:
-        for p in params:
+    async def resources_changed(self, sender: Any, resources: List[LibraryDoc]) -> None:
+        for p in resources:
             if any(e for e in self._resources.values() if e.library_doc.source == p.source):
                 self.invalidated_callback(self)
                 break
@@ -972,24 +972,31 @@ class Namespace:
         from ..parts.documents_cache import DocumentType
 
         if self._library_doc is None:
+            async with self._library_doc_lock:
+                if self._library_doc is None:
+                    model_type = ""
 
-            model_type = ""
+                    if hasattr(self.model, "model_type"):
+                        t = getattr(self.model, "model_type")
 
-            if hasattr(self.model, "model_type"):
-                t = getattr(self.model, "model_type")
+                        if t == DocumentType.RESOURCE:
+                            model_type = "RESOURCE"
+                        elif t == DocumentType.GENERAL:
+                            model_type = "TESTCASE"
+                        elif t == DocumentType.INIT:
+                            model_type = "INIT"
 
-                if t == DocumentType.RESOURCE:
-                    model_type = "RESOURCE"
-                elif t == DocumentType.GENERAL:
-                    model_type = "TESTCASE"
-                elif t == DocumentType.INIT:
-                    model_type = "INIT"
-
-            self._library_doc = await self.imports_manager.get_libdoc_from_model(
-                self.model, self.source, model_type=model_type
-            )
+                    self._library_doc = await self.imports_manager.get_libdoc_from_model(
+                        self.model, self.source, model_type=model_type
+                    )
 
         return self._library_doc
+
+    class DataEntry(NamedTuple):
+        libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
+        resources: OrderedDict[str, ResourceEntry] = OrderedDict()
+        variables: OrderedDict[str, VariablesEntry] = OrderedDict()
+        diagnostics: List[Diagnostic] = []
 
     @_logger.call
     async def ensure_initialized(self) -> bool:
@@ -998,8 +1005,10 @@ class Namespace:
                 if not self._initialized:
                     imports = await self.get_imports()
 
+                    data_entry: Optional[Namespace.DataEntry] = None
                     if self.document is not None:
-
+                        # check or save several data in documents data cache,
+                        # if imports are different, then the data is invalid
                         old_imports: List[Import] = self.document.get_data(Namespace)
                         if old_imports is None:
                             self.document.set_data(Namespace, imports)
@@ -1012,9 +1021,28 @@ class Namespace:
                                 if e not in new_imports:
                                     new_imports.append(e)
                             self.document.set_data(Namespace, new_imports)
+                        else:
+                            data_entry = self.document.get_data(Namespace.DataEntry)
 
-                    await self._import_default_libraries()
-                    await self._import_imports(imports, str(Path(self.source).parent), top_level=True)
+                    if data_entry is not None:
+                        self._libraries = data_entry.libraries.copy()
+                        self._resources = data_entry.resources.copy()
+                        self._variables = data_entry.variables.copy()
+                        self._diagnostics = data_entry.diagnostics.copy()
+                    else:
+                        await self._import_default_libraries()
+                        await self._import_imports(imports, str(Path(self.source).parent), top_level=True)
+
+                        if self.document is not None:
+                            self.document.set_data(
+                                Namespace.DataEntry,
+                                Namespace.DataEntry(
+                                    self._libraries.copy(),
+                                    self._resources.copy(),
+                                    self._variables.copy(),
+                                    self._diagnostics.copy(),
+                                ),
+                            )
 
                     self._initialized = True
 

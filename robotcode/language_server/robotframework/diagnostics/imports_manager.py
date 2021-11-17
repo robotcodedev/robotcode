@@ -368,11 +368,11 @@ class ImportsManager:
         self.parent_protocol.documents.did_save.add(self.resource_document_changed)
 
     @async_tasking_event
-    async def libraries_changed(sender, params: List[LibraryDoc]) -> None:
+    async def libraries_changed(sender, libraries: List[LibraryDoc]) -> None:
         ...
 
     @async_tasking_event
-    async def resources_changed(sender, params: List[LibraryDoc]) -> None:
+    async def resources_changed(sender, resources: List[LibraryDoc]) -> None:
         ...
 
     async def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
@@ -636,7 +636,7 @@ class ImportsManager:
 
     @_logger.call
     async def _get_entry_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> _ResourcesEntry:
-        source = await self.find_file(name, base_dir, "Resource")
+        source = await self.find_file(name, base_dir)
 
         async def _get_document() -> TextDocument:
             self._logger.debug(lambda: f"Load resource {name} from source {source}")

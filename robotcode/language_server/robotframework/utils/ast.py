@@ -131,7 +131,7 @@ def range_from_token_or_node(node: ast.AST, token: Optional[Token]) -> Range:
     return Range.zero()
 
 
-def is_non_variable_token(token: Token) -> bool:
+def is_not_variable_token(token: Token) -> bool:
     from robot.errors import VariableError
 
     try:

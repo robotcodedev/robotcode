@@ -35,6 +35,7 @@ from ..utils.ast import (
     range_from_token_or_node,
     tokenize_variables,
 )
+from ..utils.async_ast import iter_nodes
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -280,7 +281,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             for i in range(1, len(tokens)):
                 yield ".".join(tokens[:i]), ".".join(tokens[i:])
 
-    async def _find_keyword_references_from_file(
+    @_logger.call
+    async def _find_keyword_references_in_file(
         self, kw_doc: KeywordDoc, lib_doc: Optional[LibraryDoc], file: Path, cancel_token: CancelationToken
     ) -> List[Location]:
         from robot.parsing.lexer.tokens import Token as RobotToken
@@ -302,15 +304,15 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         ):
             return []
 
+        libraries_matchers = await namespace.get_libraries_matchers()
+        resources_matchers = await namespace.get_resources_matchers()
+
         async def _run() -> List[Location]:
             kw_matcher = KeywordMatcher(kw_doc.name)
 
             result: List[Location] = []
 
-            libraries_matchers = await namespace.get_libraries_matchers()
-            resources_matchers = await namespace.get_resources_matchers()
-
-            for node in ast.walk(namespace.model):
+            async for node in iter_nodes(namespace.model):
                 cancel_token.throw_if_canceled()
 
                 kw: Optional[KeywordDoc] = None
@@ -388,7 +390,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 absolute=True,
             ):
                 futures.append(
-                    asyncio.create_task(self._find_keyword_references_from_file(kw_doc, lib_doc, f, cancel_token))
+                    asyncio.create_task(self._find_keyword_references_in_file(kw_doc, lib_doc, f, cancel_token))
                 )
 
             for e in await asyncio.gather(*futures, return_exceptions=True):
