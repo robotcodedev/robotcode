@@ -925,12 +925,16 @@ class Namespace:
     async def libraries_changed(self, sender: Any, libraries: List[LibraryDoc]) -> None:
         for p in libraries:
             if any(e for e in self._libraries.values() if e.library_doc == p):
+                if self.document is not None:
+                    self.document.set_data(Namespace.DataEntry, None)
                 self.invalidated_callback(self)
                 break
 
     async def resources_changed(self, sender: Any, resources: List[LibraryDoc]) -> None:
         for p in resources:
             if any(e for e in self._resources.values() if e.library_doc.source == p.source):
+                if self.document is not None:
+                    self.document.set_data(Namespace.DataEntry, None)
                 self.invalidated_callback(self)
                 break
 
@@ -969,8 +973,6 @@ class Namespace:
         return self._resources_matchers
 
     async def get_library_doc(self) -> LibraryDoc:
-        from ..parts.documents_cache import DocumentType
-
         if self._library_doc is None:
             async with self._library_doc_lock:
                 if self._library_doc is None:
