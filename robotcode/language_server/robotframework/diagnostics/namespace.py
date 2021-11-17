@@ -899,9 +899,9 @@ class Namespace:
         self.invalidated_callback = invalidated_callback
         self._document = weakref.ref(document) if document is not None else None
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
-        self._libraries_matchers: Optional[List[KeywordMatcher]] = None
+        self._libraries_matchers: Optional[Dict[KeywordMatcher, LibraryEntry]] = None
         self._resources: OrderedDict[str, ResourceEntry] = OrderedDict()
-        self._resources_matchers: Optional[List[KeywordMatcher]] = None
+        self._resources_matchers: Optional[Dict[KeywordMatcher, ResourceEntry]] = None
         self._variables: OrderedDict[str, VariablesEntry] = OrderedDict()
         self._initialized = False
         self._initialize_lock = asyncio.Lock()
@@ -948,11 +948,11 @@ class Namespace:
 
         return self._libraries
 
-    async def get_libraries_matchers(self) -> List[KeywordMatcher]:
+    async def get_libraries_matchers(self) -> Dict[KeywordMatcher, LibraryEntry]:
         if self._libraries_matchers is None:
-            self._libraries_matchers = [
-                KeywordMatcher(v.alias or v.name or v.import_name) for v in (await self.get_libraries()).values()
-            ]
+            self._libraries_matchers = {
+                KeywordMatcher(v.alias or v.name or v.import_name): v for v in (await self.get_libraries()).values()
+            }
         return self._libraries_matchers
 
     @_logger.call
@@ -961,11 +961,11 @@ class Namespace:
 
         return self._resources
 
-    async def get_resources_matchers(self) -> List[KeywordMatcher]:
+    async def get_resources_matchers(self) -> Dict[KeywordMatcher, ResourceEntry]:
         if self._resources_matchers is None:
-            self._resources_matchers = [
-                KeywordMatcher(v.alias or v.name or v.import_name) for v in (await self.get_resources()).values()
-            ]
+            self._resources_matchers = {
+                KeywordMatcher(v.alias or v.name or v.import_name): v for v in (await self.get_resources()).values()
+            }
         return self._resources_matchers
 
     async def get_library_doc(self) -> LibraryDoc:
@@ -1021,6 +1021,7 @@ class Namespace:
                                 if e not in new_imports:
                                     new_imports.append(e)
                             self.document.set_data(Namespace, new_imports)
+                            self.document.set_data(Namespace.DataEntry, None)
                         else:
                             data_entry = self.document.get_data(Namespace.DataEntry)
 

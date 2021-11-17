@@ -304,8 +304,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         ):
             return []
 
-        libraries_matchers = await namespace.get_libraries_matchers()
-        resources_matchers = await namespace.get_resources_matchers()
+        libraries_matchers = (await namespace.get_libraries_matchers()).keys()
+        resources_matchers = (await namespace.get_resources_matchers()).keys()
 
         async def _run() -> List[Location]:
             kw_matcher = KeywordMatcher(kw_doc.name)

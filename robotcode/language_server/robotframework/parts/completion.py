@@ -215,15 +215,15 @@ class CompletionCollector(ModelHelperMixin):
                         name = completion_item.data.get("name", None)
                         if name is not None:
                             try:
-                                lib_doc = await (
-                                    await self.parent.documents_cache.get_imports_manager(document)
-                                ).get_libdoc_for_library_import(
-                                    name, (), str(document.uri.to_path().parent), sentinel=self
-                                )
+                                entry = (
+                                    await (
+                                        await self.parent.documents_cache.get_namespace(document)
+                                    ).get_libraries_matchers()
+                                ).get(name, None)
 
-                                if lib_doc is not None:
+                                if entry is not None:
                                     completion_item.documentation = MarkupContent(
-                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown(False)
+                                        kind=MarkupKind.MARKDOWN, value=entry.library_doc.to_markdown(False)
                                     )
 
                             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
@@ -236,15 +236,15 @@ class CompletionCollector(ModelHelperMixin):
                         name = completion_item.data.get("name", None)
                         if name is not None:
                             try:
-                                lib_doc = lib_doc = await (
-                                    await self.parent.documents_cache.get_imports_manager(document)
-                                ).get_libdoc_for_resource_import(
-                                    name, str(document.uri.to_path().parent), sentinel=self
-                                )
+                                entry = (
+                                    await (
+                                        await self.parent.documents_cache.get_namespace(document)
+                                    ).get_resources_matchers()
+                                ).get(name, None)
 
-                                if lib_doc is not None:
+                                if entry is not None:
                                     completion_item.documentation = MarkupContent(
-                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown()
+                                        kind=MarkupKind.MARKDOWN, value=entry.library_doc.to_markdown()
                                     )
 
                             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
