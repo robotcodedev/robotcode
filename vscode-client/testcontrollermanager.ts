@@ -540,7 +540,7 @@ export class TestControllerManager {
 
               if (event.failedKeywords) {
                 for (const keyword of event.failedKeywords) {
-                  const message = new vscode.TestMessage(keyword.message ?? "unknown error");
+                  const message = new vscode.TestMessage(keyword.message ?? "");
 
                   if (keyword.source) {
                     message.location = new vscode.Location(
@@ -559,7 +559,7 @@ export class TestControllerManager {
                 !event.attributes?.message ||
                 !event.failedKeywords?.find((v) => v.message === event.attributes?.message)
               ) {
-                const message = new vscode.TestMessage(event.attributes.message ?? "unknown error");
+                const message = new vscode.TestMessage(event.attributes.message ?? "");
 
                 if (event.attributes.source) {
                   message.location = new vscode.Location(

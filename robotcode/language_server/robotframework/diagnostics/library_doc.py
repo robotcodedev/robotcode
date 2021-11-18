@@ -68,7 +68,7 @@ RUN_KEYWORD_IF_NAME = "Run Keyword If"
 
 RUN_KEYWORDS_NAME = "Run Keywords"
 
-RUN_KEYWORDS = [*RUN_KEYWORD_NAMES, *RUN_KEYWORD_WITH_CONDITION_NAMES, RUN_KEYWORDS_NAME, RUN_KEYWORD_IF_NAME]
+ALL_RUN_KEYWORDS = [*RUN_KEYWORD_NAMES, *RUN_KEYWORD_WITH_CONDITION_NAMES, RUN_KEYWORDS_NAME, RUN_KEYWORD_IF_NAME]
 
 BUILTIN_LIBRARY_NAME = "BuiltIn"
 RESERVED_LIBRARY_NAME = "Reserved"
@@ -76,7 +76,11 @@ DEFAULT_LIBRARIES = (BUILTIN_LIBRARY_NAME, RESERVED_LIBRARY_NAME, "Easter")
 ROBOT_LIBRARY_PACKAGE = "robot.libraries"
 
 ALLOWED_LIBRARY_FILE_EXTENSIONS = [".py"]
-ALLOWED_RESOURCE_FILE_EXTENSIONS = [".robot", ".resource", ".rst", ".rest", ".txt"]
+
+ROBOT_FILE_EXTENSION = ".robot"
+RESOURCE_FILE_EXTENSION = ".resource"
+
+ALLOWED_RESOURCE_FILE_EXTENSIONS = [ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION]
 
 DEFAULT_DOC_FORMAT = "ROBOT"
 
@@ -96,16 +100,31 @@ def is_embedded_keyword(name: str) -> bool:
 
 class KeywordMatcher:
     def __init__(self, name: str) -> None:
-        from robot.errors import VariableError
-        from robot.running.arguments.embedded import EmbeddedArguments
+        self.name = name
+        self._normalized_name: Optional[str] = None
+        self._embedded_arguments: Any = None
+
+    @property
+    def normalized_name(self) -> str:
         from robot.utils.normalizing import normalize
 
-        self.name = name
-        self.normalized_name = str(normalize(name, "_"))
-        try:
-            self.embedded_arguments = EmbeddedArguments(name)
-        except VariableError:
-            self.embedded_arguments = ()
+        if self._normalized_name is None:
+            self._normalized_name = str(normalize(self.name, "_"))
+
+        return self._normalized_name
+
+    @property
+    def embedded_arguments(self) -> Any:
+        from robot.errors import VariableError
+        from robot.running.arguments.embedded import EmbeddedArguments
+
+        if self._embedded_arguments is None:
+            try:
+                self._embedded_arguments = EmbeddedArguments(self.name)
+            except VariableError:
+                self._embedded_arguments = ()
+
+        return self._embedded_arguments
 
     def __eq__(self, o: object) -> bool:
         from robot.utils.normalizing import normalize
@@ -129,6 +148,15 @@ class KeywordMatcher:
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(name={repr(self.name)})"
+
+
+RUN_KEYWORD_WITH_CONDITION_MATCHERS = [KeywordMatcher(e) for e in RUN_KEYWORD_WITH_CONDITION_NAMES]
+
+RUN_KEYWORD_IF_MATCHER = KeywordMatcher(RUN_KEYWORD_IF_NAME)
+
+RUN_KEYWORDS_MATCHER = KeywordMatcher(RUN_KEYWORDS_NAME)
+
+ALL_RUN_KEYWORDS_MATCHERS = [KeywordMatcher(e) for e in ALL_RUN_KEYWORDS]
 
 
 class InvalidVariableError(Exception):
@@ -315,7 +343,7 @@ class KeywordDoc(Model):
         return f"({', '.join(str(a) for a in self.args)})"
 
     def is_any_run_keyword(self) -> bool:
-        return self.libname == BUILTIN_LIBRARY_NAME and self.name in RUN_KEYWORDS
+        return self.libname == BUILTIN_LIBRARY_NAME and self.name in ALL_RUN_KEYWORDS
 
     def is_run_keyword(self) -> bool:
         return self.libname == BUILTIN_LIBRARY_NAME and self.name in RUN_KEYWORD_NAMES

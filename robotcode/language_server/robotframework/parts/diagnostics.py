@@ -51,7 +51,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     def _create_error_from_token(self, token: Token, source: Optional[str] = None) -> Diagnostic:
         return Diagnostic(
             range=range_from_token(token),
-            message=token.error if token.error is not None else "Unknown Error.",
+            message=token.error if token.error is not None else "(No Message).",
             severity=DiagnosticSeverity.ERROR,
             source=source if source is not None else self.source_name,
             code="TokenError",

@@ -61,15 +61,15 @@ export class LanguageClientsManager {
       for (const client of this.clients.values()) {
         promises.push(client.stop());
       }
+      this.clients.clear();
 
       await Promise.all(promises);
-
-      this.clients.clear();
     });
   }
 
-  async dispose(): Promise<void> {
-    await this.stopAllClients();
+  dispose(): void {
+    this.stopAllClients().then((_) => undefined);
+
     this._disposables.dispose();
   }
 
@@ -195,7 +195,6 @@ export class LanguageClientsManager {
           this.outputChannel.appendLine(
             `client  ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} error: ${reason}`
           );
-          vscode.window.showErrorMessage(reason.message ?? "Unknown error.");
           return undefined;
         }
       );

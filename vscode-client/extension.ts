@@ -10,6 +10,8 @@ class TerminalLink extends vscode.TerminalLink {
   }
 }
 
+let languageClientManger: LanguageClientsManager;
+
 export async function activateAsync(context: vscode.ExtensionContext): Promise<void> {
   const outputChannel = vscode.window.createOutputChannel("RobotCode");
 
@@ -17,7 +19,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
 
   const pythonManager = new PythonManager(context, outputChannel);
 
-  const languageClientManger = new LanguageClientsManager(context, pythonManager, outputChannel);
+  languageClientManger = new LanguageClientsManager(context, pythonManager, outputChannel);
 
   const debugManager = new DebugManager(context, pythonManager, languageClientManger, outputChannel);
 
@@ -65,17 +67,18 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
   await testControllerManger.refresh();
 }
 
-function displayProgress(promise: Promise<unknown>) {
+function displayProgress<R>(promise: Promise<R>): Thenable<R> {
   const progressOptions: vscode.ProgressOptions = {
     location: vscode.ProgressLocation.Window,
     title: "RobotCode extension loading ...",
   };
-  vscode.window.withProgress(progressOptions, () => promise);
+  return vscode.window.withProgress(progressOptions, () => promise);
 }
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  displayProgress(activateAsync(context));
+  return await displayProgress(activateAsync(context));
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-export async function deactivate(): Promise<void> {}
+export async function deactivate(): Promise<void> {
+  return await languageClientManger.stopAllClients();
+}
