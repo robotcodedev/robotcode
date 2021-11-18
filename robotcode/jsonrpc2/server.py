@@ -2,6 +2,7 @@ import abc
 import asyncio
 import io
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from types import TracebackType
 from typing import (
@@ -104,9 +105,12 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
     def create_protocol(self) -> TProtocol:
         ...
 
+    @_logger.call
     def shutdown_protocol(self, protocol: TProtocol) -> None:
         if self.mode == JsonRpcServerMode.STDIO and self._stdio_stop_event is not None:
             self._stdio_stop_event.set()
+
+    stdio_executor: Optional[ThreadPoolExecutor] = None
 
     @_logger.call
     def start_stdio(self) -> None:
@@ -121,12 +125,21 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
             async def aio_readline(rfile: BinaryIO, protocol: asyncio.Protocol) -> None:
                 protocol.connection_made(transport)
+                stdio_executor = ThreadPoolExecutor(max_workers=1)
+                with stdio_executor:
+                    while (
+                        self._stdio_stop_event is not None and not self._stdio_stop_event.is_set() and not rfile.closed
+                    ):
+                        data = await self.loop.run_in_executor(
+                            stdio_executor, cast(io.BufferedReader, rfile).read1, 1000
+                        )
+                        protocol.data_received(data)
 
-                while self._stdio_stop_event is not None and not self._stdio_stop_event.is_set() and not rfile.closed:
-                    data = await self.loop.run_in_executor(None, cast(io.BufferedReader, rfile).read1, 1000)
-                    protocol.data_received(data)
-
-            self.loop.run_until_complete(aio_readline(sys.__stdin__.buffer, protocol))
+            self._logger.debug("starting run_io_nonblocking")
+            try:
+                self.loop.run_until_complete(aio_readline(sys.__stdin__.buffer, protocol))
+            finally:
+                self._logger.debug("exiting run_io_nonblocking")
 
         self._run_func = run_io_nonblocking
 
