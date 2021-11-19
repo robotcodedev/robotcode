@@ -45,13 +45,13 @@ a keyword
 
     Run Keywords    a simple keyword    s l e e p a w h i le
 #   ^^^^^^^^^^^^  run keywords: re.match(r'.*Run Keywords.*', value)
-#                   ^^^^^^^^^^^^^^^^  run keywords simple keyword: re.match(r'.*Run Keywords.*', value)
+#                   ^^^^^^^^^^^^^^^^  run keywords simple keyword: re.match(r'.*a simple keyword.*', value)
 #                                       ^^^^^^^^^^^^^^^^^^^^  run keywords second parameter with spaces: re.match(r'.*sleep a while.*', value)
 
     Run Keywords    log  hi  AND  a simple keyword  AND  s l e e p a w h i le
 #   ^^^^^^^^^^^^  run keywords: re.match(r'.*Run Keywords.*', value)
 #                   ^^^  run keywords simple keyword, parameter and AND: re.match(r'.*Log.*', value)
-#                                 ^^^^^^^^^^^^^^^^  run keywords simple keyword and AND: re.match(r'.*Run Keywords.*', value)
+#                                 ^^^^^^^^^^^^^^^^  run keywords simple keyword and AND: re.match(r'.*a simple keyword.*', value)
 #                                                        ^^^^^^^^^^^^^^^^^^^^  run keywords second parameter with spaces and no AND: re.match(r'.*sleep a while.*', value)
 #                            ^^^    AND: result is None
 
