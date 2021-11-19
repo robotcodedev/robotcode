@@ -34,4 +34,30 @@ first
 #          ^^^^^^^^^    BuiltIn variable: value == '(builtin variable) ${CURDIR}'
 #^^^    Spaces: result is None
     Log    ${A_VAR_FROM_LIB}
-# TODO         ^^^^^^^^^^^^^^^^^    BuiltIn variable: value == '(imported variable) ${A_VAR_FROM_LIB}'
+# TODO         ^^^^^^^^^^^^^^^^^    variable from lib: value == '(imported variable) ${A_VAR_FROM_LIB}'
+
+
+*** Keywords ***
+a keyword
+    Run Keyword    log    hi
+#   ^^^^^^^^^^^  run keyword: re.match(r'.*Run Keyword.*', value)
+#                  ^^^  run keyword argument: re.match(r'.*Log.*', value)
+
+    Run Keywords    a simple keyword    s l e e p a w h i le
+#   ^^^^^^^^^^^^  run keywords: re.match(r'.*Run Keywords.*', value)
+#                   ^^^^^^^^^^^^^^^^  run keywords simple keyword: re.match(r'.*Run Keywords.*', value)
+#                                       ^^^^^^^^^^^^^^^^^^^^  run keywords second parameter with spaces: re.match(r'.*sleep a while.*', value)
+
+    Run Keywords    log  hi  AND  a simple keyword  AND  s l e e p a w h i le
+#   ^^^^^^^^^^^^  run keywords: re.match(r'.*Run Keywords.*', value)
+#                   ^^^  run keywords simple keyword, parameter and AND: re.match(r'.*Log.*', value)
+#                                 ^^^^^^^^^^^^^^^^  run keywords simple keyword and AND: re.match(r'.*Run Keywords.*', value)
+#                                                        ^^^^^^^^^^^^^^^^^^^^  run keywords second parameter with spaces and no AND: re.match(r'.*sleep a while.*', value)
+#                            ^^^    AND: result is None
+
+a simple keyword
+    Pass Execution
+
+sleep a while
+    S l e e p    1s
+#   ^^^^^^^^^  simple keyword with extra spaces and parameter: re.match(r'.*Sleep.*', value)
