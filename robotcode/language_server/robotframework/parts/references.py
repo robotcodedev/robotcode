@@ -321,12 +321,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self, namespace: Namespace, kw_doc: KeywordDoc, cancel_token: CancelationToken
     ) -> List[Location]:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import (
-            Fixture,
-            KeywordCall,
-            Template,
-            TestTemplate,
-        )
+        from robot.parsing.model.statements import Fixture, KeywordCall
 
         result: List[Location] = []
 
@@ -339,15 +334,19 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             if isinstance(node, KeywordCall):
                 kw_token = node.get_token(RobotToken.KEYWORD)
                 arguments = list(node.get_tokens(RobotToken.ARGUMENT) or [])
+
+                async for location in self.get_keyword_references_from_tokens(
+                    namespace, kw_doc, node, kw_token, arguments
+                ):
+                    result.append(location)
             elif isinstance(node, Fixture):
                 kw_token = node.get_token(RobotToken.NAME)
                 arguments = list(node.get_tokens(RobotToken.ARGUMENT) or [])
-            elif isinstance(node, (Template, TestTemplate)):
-                kw_token = node.get_token(RobotToken.NAME)
-                arguments = list(node.get_tokens(RobotToken.ARGUMENT) or [])
 
-            async for location in self.get_keyword_references_from_tokens(namespace, kw_doc, node, kw_token, arguments):
-                result.append(location)
+                async for location in self.get_keyword_references_from_tokens(
+                    namespace, kw_doc, node, kw_token, arguments
+                ):
+                    result.append(location)
 
         return result
 
@@ -398,7 +397,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         arguments: List[Token],
     ) -> AsyncGenerator[Location, None]:
 
-        if kw_token is None or is_not_variable_token(kw_token):
+        if kw_token is None or not is_not_variable_token(kw_token):
             return
 
         kw = await namespace.find_keyword(str(kw_token.value))
