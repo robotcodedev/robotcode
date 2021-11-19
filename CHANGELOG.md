@@ -4,9 +4,17 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+### added
+
+- implement find keyword references
+  - closes [#13](https://github.com/d-biehl/robotcode/issues/13)
+- improve parsing and analysing of "run keywords ..."
+  - closes [#14](https://github.com/d-biehl/robotcode/issues/14)
+
 ##  0.3.0
 
 ### added
+
 - remove pydantic dependency 
     - closes [#11](https://github.com/d-biehl/robotcode/issues/11)
     - big refactoring of LSP and DAP types
@@ -15,6 +23,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 ##  0.2.11
 
 ### added
+
 - fix [#10](https://github.com/d-biehl/robotcode/issues/10)
 - start implementing more unit tests
 - extend hover and goto for variables
