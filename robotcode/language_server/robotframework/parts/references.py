@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
+    AsyncGenerator,
     Awaitable,
     Callable,
     Iterator,
@@ -25,12 +26,21 @@ from ...common.language import language_id
 from ...common.lsp_types import Location, Position, ReferenceContext
 from ...common.text_document import TextDocument
 from ..configuration import WorkspaceConfig
-from ..diagnostics.library_doc import KeywordDoc, KeywordMatcher, LibraryDoc
+from ..diagnostics.library_doc import (
+    ALL_RUN_KEYWORDS_MATCHERS,
+    RESOURCE_FILE_EXTENSION,
+    ROBOT_FILE_EXTENSION,
+    KeywordDoc,
+    KeywordMatcher,
+    LibraryDoc,
+)
+from ..diagnostics.namespace import Namespace
 from ..utils.ast import (
     HasTokens,
     Token,
     get_nodes_at_position,
     get_tokens_at_position,
+    is_not_variable_token,
     range_from_token,
     range_from_token_or_node,
     tokenize_variables,
@@ -289,13 +299,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         file: Path,
         cancel_token: CancelationToken,
     ) -> List[Location]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import (
-            Fixture,
-            KeywordCall,
-            Template,
-            TestTemplate,
-        )
 
         doc = self.parent.robot_workspace.get_or_open_document(file, "robotframework")
         namespace = await self.parent.documents_cache.get_namespace(doc, cancelation_token=cancel_token)
@@ -310,47 +313,129 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         ):
             return []
 
-        libraries_matchers = (await namespace.get_libraries_matchers()).keys()
-        resources_matchers = (await namespace.get_resources_matchers()).keys()
+        return await asyncio.get_running_loop().run_in_executor(
+            None, asyncio.run, self._find_keyword_references_in_namespace(namespace, kw_doc, cancel_token)
+        )
 
-        async def _run() -> List[Location]:
+    async def _find_keyword_references_in_namespace(
+        self, namespace: Namespace, kw_doc: KeywordDoc, cancel_token: CancelationToken
+    ) -> List[Location]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import (
+            Fixture,
+            KeywordCall,
+            Template,
+            TestTemplate,
+        )
+
+        result: List[Location] = []
+
+        async for node in iter_nodes(namespace.model):
+            cancel_token.throw_if_canceled()
+
+            kw_token: Optional[Token] = None
+            arguments: Optional[List[Token]] = None
+
+            if isinstance(node, KeywordCall):
+                kw_token = node.get_token(RobotToken.KEYWORD)
+                arguments = list(node.get_tokens(RobotToken.ARGUMENT) or [])
+            elif isinstance(node, Fixture):
+                kw_token = node.get_token(RobotToken.NAME)
+                arguments = list(node.get_tokens(RobotToken.ARGUMENT) or [])
+            elif isinstance(node, (Template, TestTemplate)):
+                kw_token = node.get_token(RobotToken.NAME)
+                arguments = list(node.get_tokens(RobotToken.ARGUMENT) or [])
+
+            async for location in self.get_keyword_references_from_tokens(namespace, kw_doc, node, kw_token, arguments):
+                result.append(location)
+
+        return result
+
+    async def get_keyword_references_from_tokens(
+        self,
+        namespace: Namespace,
+        kw_doc: KeywordDoc,
+        node: ast.AST,
+        kw_token: Optional[Token],
+        arguments: Optional[List[Token]],
+    ) -> AsyncGenerator[Location, None]:
+        if kw_token is not None and is_not_variable_token(kw_token):
+            kw: Optional[KeywordDoc] = None
             kw_matcher = KeywordMatcher(kw_doc.name)
 
-            result: List[Location] = []
+            for lib, name in self._yield_owner_and_kw_names(kw_token.value):
+                if lib is not None:
+                    lib_matcher = KeywordMatcher(lib)
+                    if (
+                        lib_matcher not in (await namespace.get_libraries_matchers()).keys()
+                        and lib_matcher not in (await namespace.get_resources_matchers()).keys()
+                    ):
+                        continue
 
-            async for node in iter_nodes(namespace.model):
-                cancel_token.throw_if_canceled()
+                if name is not None:
+                    name_matcher = KeywordMatcher(name)
+                    if kw_matcher == name_matcher:
+                        kw = await namespace.find_keyword(str(kw_token.value))
 
-                kw: Optional[KeywordDoc] = None
-                kw_token: Optional[Token] = None
+                        if kw is not None and kw == kw_doc:
+                            yield Location(
+                                str(Uri.from_path(namespace.source).normalized()),
+                                range=range_from_token_or_node(node, kw_token),
+                            )
 
-                if isinstance(node, KeywordCall):
-                    kw_token = node.get_token(RobotToken.KEYWORD)
-                elif isinstance(node, Fixture):
-                    kw_token = node.get_token(RobotToken.NAME)
-                elif isinstance(node, (Template, TestTemplate)):
-                    kw_token = node.get_token(RobotToken.NAME)
+                    if name_matcher in ALL_RUN_KEYWORDS_MATCHERS and arguments:
+                        async for location in self.get_keyword_references_from_any_run_keyword(
+                            namespace, kw_doc, node, kw_token, arguments
+                        ):
+                            yield location
 
-                if kw_token is not None:
-                    for lib, name in self._yield_owner_and_kw_names(kw_token.value):
-                        if lib is not None:
-                            lib_matcher = KeywordMatcher(lib)
-                            if lib_matcher not in libraries_matchers and lib_matcher not in resources_matchers:
-                                continue
+    async def get_keyword_references_from_any_run_keyword(
+        self,
+        namespace: Namespace,
+        kw_doc: KeywordDoc,
+        node: ast.AST,
+        kw_token: Token,
+        arguments: List[Token],
+    ) -> AsyncGenerator[Location, None]:
 
-                        if kw_matcher == name:
-                            kw = await namespace.find_keyword(str(kw_token.value))
+        if kw_token is None or is_not_variable_token(kw_token):
+            return
 
-                            if kw is not None and kw == kw_doc:
-                                result.append(
-                                    Location(
-                                        str(Uri.from_path(namespace.source).normalized()),
-                                        range=range_from_token_or_node(node, kw_token),
-                                    )
-                                )
-            return result
+        kw = await namespace.find_keyword(str(kw_token.value))
 
-        return await asyncio.get_running_loop().run_in_executor(None, asyncio.run, _run())
+        if kw is None or not kw.is_any_run_keyword():
+            return
+
+        if kw.is_run_keyword() and len(arguments) > 0 and is_not_variable_token(arguments[0]):
+            async for e in self.get_keyword_references_from_tokens(
+                namespace, kw_doc, node, arguments[0], arguments[1:]
+            ):
+                yield e
+        elif kw.is_run_keyword_with_condition() and len(arguments) > 1 and is_not_variable_token(arguments[1]):
+            async for e in self.get_keyword_references_from_tokens(
+                namespace, kw_doc, node, arguments[1], arguments[2:]
+            ):
+                yield e
+        elif kw.is_run_keywords():
+
+            while arguments:
+
+                t = arguments[0]
+                arguments = arguments[1:]
+                if t.value == "AND":
+                    continue
+
+                if not is_not_variable_token(t):
+                    continue
+
+                and_token = next((e for e in arguments if e.value == "AND"), None)
+                args = []
+                if and_token is not None:
+                    args = arguments[: arguments.index(and_token)]
+                    arguments = arguments[arguments.index(and_token) + 1 :]
+
+                async for e in self.get_keyword_references_from_tokens(namespace, kw_doc, node, t, args):
+                    yield e
 
     async def _find_keyword_references(self, document: TextDocument, kw_doc: KeywordDoc) -> List[Location]:
         folder = self.parent.workspace.get_workspace_folder(document.uri)
@@ -391,7 +476,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
             async for f in iter_files(
                 folder.uri.to_path(),
-                ("**/*.{robot,resource}"),
+                (f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}"),
                 ignore_patterns=config.exclude_patterns or [],  # type: ignore
                 absolute=True,
             ):

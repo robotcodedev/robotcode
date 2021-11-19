@@ -611,9 +611,9 @@ class Analyzer(AsyncVisitor):
             await self._analyze_keyword_call(argument_tokens[1].value, node, argument_tokens[1], argument_tokens[2:])
             return argument_tokens[2:]
         elif keyword_doc.is_run_keywords():
-
+            has_and = False
             while argument_tokens:
-                # TODO: Parse "run keywords" with arguments using upper case AND
+
                 t = argument_tokens[0]
                 argument_tokens = argument_tokens[1:]
                 if t.value == "AND":
@@ -635,6 +635,10 @@ class Analyzer(AsyncVisitor):
                 if and_token is not None:
                     args = argument_tokens[: argument_tokens.index(and_token)]
                     argument_tokens = argument_tokens[argument_tokens.index(and_token) + 1 :]
+                    has_and = True
+                elif has_and:
+                    args = argument_tokens
+                    argument_tokens = []
 
                 await self._analyze_keyword_call(t.value, node, t, args)
 
