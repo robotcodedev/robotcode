@@ -13,6 +13,7 @@ from ..lsp_types import (
     DidOpenTextDocumentParams,
     DidSaveTextDocumentParams,
     DocumentUri,
+    FileEvent,
     TextDocumentContentChangeEvent,
     TextDocumentContentRangeChangeEvent,
     TextDocumentContentTextChangeEvent,
@@ -23,6 +24,7 @@ from ..lsp_types import (
     TextDocumentSyncOptions,
     TextEdit,
     VersionedTextDocumentIdentifier,
+    WatchKind,
     WillSaveTextDocumentParams,
 )
 from ..text_document import TextDocument
@@ -46,6 +48,26 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
     def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)
         self._documents: Dict[DocumentUri, TextDocument] = {}
+        self.parent.on_initialized.add(self._protocol_initialized)
+
+    async def _protocol_initialized(self, sender: Any) -> None:
+        await self._update_filewatchers()
+
+    async def _update_filewatchers(self) -> None:
+        await self.parent.workspace.add_file_watcher(self._file_watcher, "**/*", WatchKind.CHANGE | WatchKind.DELETE)
+
+    @_logger.call
+    async def _file_watcher(self, sender: Any, changes: List[FileEvent]) -> None:
+        self._logger.debug(f"filewatcher {changes}")
+        to_change: Dict[str, FileEvent] = {}
+        for change in changes:
+            to_change[change.uri] = change
+
+        for change in to_change.values():
+            document = self._documents.get(DocumentUri(Uri(change.uri).normalized()), None)
+            if document is not None and not document.opened_in_editor:
+                await self.did_close(self, document)
+                await self.close_document(document, True)
 
     @async_event
     async def did_open(sender, document: TextDocument) -> None:
@@ -117,6 +139,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         else:
             await document.apply_full_change(text_document.version, text_document.text)
 
+        document.opened_in_editor = True
         document.references.add(self)
 
         await self.did_open(self, document)
@@ -129,12 +152,13 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
 
         if document is not None:
             document.references.remove(self)
-
+            document.opened_in_editor = False
             await self.did_close(self, document)
             await self.close_document(document)
 
-    async def close_document(self, document: TextDocument) -> None:
-        if len(document.references) == 0:
+    @_logger.call
+    async def close_document(self, document: TextDocument, ignore_references: bool = False) -> None:
+        if len(document.references) == 0 or ignore_references:
             self._documents.pop(str(document.uri), None)
 
             await document.clear()

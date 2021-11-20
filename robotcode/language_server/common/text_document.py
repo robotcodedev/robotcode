@@ -85,6 +85,8 @@ class TextDocument:
 
         self._data: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
 
+        self.opened_in_editor = False
+
     @property
     def references(self) -> weakref.WeakSet[Any]:  # pragma: no cover
         return self._references
