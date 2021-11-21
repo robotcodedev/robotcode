@@ -4,6 +4,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+##  0.3.1
+
 ### added
 
 - implement find keyword references
