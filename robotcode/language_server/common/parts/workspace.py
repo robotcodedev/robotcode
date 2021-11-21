@@ -407,7 +407,9 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
                         watchers=[FileSystemWatcher(glob_pattern=w.glob_pattern, kind=w.kind) for w in _watchers]
                     ),
                 )
-            # TODO: implement own filewatcher if not supported by language server client
+            else:
+                # TODO: implement own filewatcher if not supported by language server client
+                self._logger.warning("client did not support workspace/didChangeWatchedFiles.")
 
         def remove() -> None:
             if self._loop.is_running():

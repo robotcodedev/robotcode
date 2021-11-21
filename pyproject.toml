@@ -74,6 +74,7 @@ testpaths = ["tests"]
 junit_suite_name = "robotcode"
 log_cli = true
 log_cli_level = "DEBUG"
+log_cli_format = "%(levelname)s %(name)s: %(message)s"
 
 [tool.isort]
 profile = "black"

@@ -7,7 +7,7 @@ Library           ${CURDIR}/libs/myvariables.py
 Variables         ${CURDIR}/libs/myvariables.py
 # TODO                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Variables Import: len(result) == 1 and result[0].target_uri.endswith("libs/myvariables.py")
 Resource          ${CURDIR}/resources/firstresource.resource
-#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Resource Import: len(result) == 1 and result[0].target_uri.endswith("/resources/firstresource.resource")
+#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Resource Import: len(result) == 1 and result[0].target_uri.endswith("/resources/firstresource.resource")
 
 *** Variables ***
 ${A VAR}          i'm a var

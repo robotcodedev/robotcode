@@ -314,10 +314,17 @@ class _ResourcesEntry:
     async def get_document(self) -> TextDocument:
         if self._document is None:
             async with self._lock:
-                if self._document is None:
-                    await self._update()
+                await self._get_document()
 
-                assert self._document is not None
+        assert self._document is not None
+
+        return self._document
+
+    async def _get_document(self) -> TextDocument:
+        if self._document is None:
+            await self._update()
+
+        assert self._document is not None
 
         return self._document
 
@@ -330,7 +337,7 @@ class _ResourcesEntry:
                 if self._lib_doc is None:
                     self._lib_doc = await (
                         await self.parent.parent_protocol.documents_cache.get_resource_namespace(
-                            await self.get_document()
+                            await self._get_document()
                         )
                     ).get_library_doc()
         return self._lib_doc
