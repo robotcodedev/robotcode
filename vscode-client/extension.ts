@@ -44,7 +44,10 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         return [];
       },
       handleTerminalLink(link: TerminalLink) {
-        vscode.env.openExternal(vscode.Uri.file(link.path));
+        vscode.env.openExternal(vscode.Uri.file(link.path)).then(
+          () => undefined,
+          () => undefined
+        );
       },
     }),
 

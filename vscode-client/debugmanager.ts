@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as path from "path";
 import * as vscode from "vscode";
 import { PythonManager } from "./pythonmanger";
@@ -30,7 +33,9 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
       if (path.isAbsolute(debugConfiguration.target)) {
         debugConfiguration.target = path.relative(debugConfiguration.cwd, debugConfiguration.target).toString();
       }
-    } catch {}
+    } catch {
+      // empty
+    }
 
     if (!debugConfiguration.python) debugConfiguration.python = this.pythonManager.getPythonCommand(folder);
 
@@ -109,7 +114,7 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
 
         const debugAdapterArgs = config.get<Array<string>>("debugAdapter.args", []);
 
-        const args: Array<string> = ["-u", this.pythonManager.pythonDebugAdapterMain!, "--mode", "stdio"].concat(
+        const args: Array<string> = ["-u", this.pythonManager.pythonDebugAdapterMain, "--mode", "stdio"].concat(
           debugAdapterArgs
         );
 
@@ -187,7 +192,7 @@ export class DebugManager {
           }
         }
       }),
-      vscode.debug.onDidStartDebugSession(async (session) => {
+      vscode.debug.onDidStartDebugSession((session) => {
         if (session.parentSession?.type === "robotcode") {
           this._attachedSessions.add(session);
         }
@@ -196,7 +201,7 @@ export class DebugManager {
         if (session.type === "robotcode") {
           for (const s of this._attachedSessions) {
             if (s.parentSession === session) {
-              vscode.debug.stopDebugging(s);
+              await vscode.debug.stopDebugging(s);
             }
           }
         }
@@ -234,7 +239,7 @@ export class DebugManager {
     );
   }
 
-  async dispose(): Promise<void> {
+  dispose(): void {
     this._disposables.dispose();
   }
 
@@ -325,7 +330,7 @@ export class DebugManager {
       const config = vscode.workspace.getConfiguration(CONFIG_SECTION, session.workspaceFolder);
 
       if (config.get<boolean>("run.openReportAfterRun")) {
-        vscode.env.openExternal(vscode.Uri.file(reportFile));
+        await vscode.env.openExternal(vscode.Uri.file(reportFile));
       }
     }
   }

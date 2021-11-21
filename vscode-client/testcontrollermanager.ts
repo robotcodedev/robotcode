@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { red, yellow } from "ansi-colors";
 import * as vscode from "vscode";
 import { DebugManager } from "./debugmanager";
@@ -108,17 +111,17 @@ export class TestControllerManager {
           }
         }
       }),
-      vscode.debug.onDidTerminateDebugSession(async (session) => {
+      vscode.debug.onDidTerminateDebugSession((session) => {
         if (this.debugSessions.has(session)) {
           this.debugSessions.delete(session);
 
           if (session.configuration.runId !== undefined) {
-            await this.TestRunExited(session.configuration.runId);
+            this.TestRunExited(session.configuration.runId);
           }
         }
       }),
 
-      vscode.debug.onDidReceiveDebugSessionCustomEvent(async (event) => {
+      vscode.debug.onDidReceiveDebugSessionCustomEvent((event) => {
         if (event.session.configuration.type === "robotcode") {
           switch (event.event) {
             case "robotExited": {
@@ -145,11 +148,11 @@ export class TestControllerManager {
           }
         }
       }),
-      vscode.commands.registerCommand("robotcode.runCurrentFile", (...args) => {
-        vscode.commands.executeCommand("testing.runCurrentFile", ...args);
+      vscode.commands.registerCommand("robotcode.runCurrentFile", async (...args) => {
+        await vscode.commands.executeCommand("testing.runCurrentFile", ...args);
       }),
-      vscode.commands.registerCommand("robotcode.debugCurrentFile", (...args) => {
-        vscode.commands.executeCommand("testing.debugCurrentFile", ...args);
+      vscode.commands.registerCommand("robotcode.debugCurrentFile", async (...args) => {
+        await vscode.commands.executeCommand("testing.debugCurrentFile", ...args);
       })
     );
   }
@@ -174,7 +177,7 @@ export class TestControllerManager {
     }
   }
 
-  async dispose(): Promise<void> {
+  dispose(): void {
     this._disposables.dispose();
     this.testController.dispose();
   }
@@ -455,7 +458,7 @@ export class TestControllerManager {
     }
   }
 
-  private async TestRunExited(runId: string | undefined) {
+  private TestRunExited(runId: string | undefined) {
     if (runId === undefined) return;
 
     const run = this.testRuns.get(runId);
@@ -467,7 +470,7 @@ export class TestControllerManager {
     }
   }
 
-  private async TestItemEnqueued(runId: string | undefined, items: string[] | undefined) {
+  private TestItemEnqueued(runId: string | undefined, items: string[] | undefined) {
     if (runId === undefined || items === undefined) return;
 
     const run = this.testRuns.get(runId);
@@ -482,11 +485,11 @@ export class TestControllerManager {
     }
   }
 
-  private async OnRobotStartedEvent(runId: string | undefined, event: RobotExecutionEvent) {
+  private OnRobotStartedEvent(runId: string | undefined, event: RobotExecutionEvent) {
     switch (event.type) {
       case "suite":
       case "test":
-        await this.TestItemStarted(runId, event);
+        this.TestItemStarted(runId, event);
         break;
       default:
         // do nothing
@@ -494,7 +497,7 @@ export class TestControllerManager {
     }
   }
 
-  private async TestItemStarted(runId: string | undefined, event: RobotExecutionEvent) {
+  private TestItemStarted(runId: string | undefined, event: RobotExecutionEvent) {
     if (runId === undefined || event.attributes?.longname === undefined) return;
 
     const run = this.testRuns.get(runId);
@@ -507,11 +510,11 @@ export class TestControllerManager {
     }
   }
 
-  private async OnRobotEndedEvent(runId: string | undefined, event: RobotExecutionEvent) {
+  private OnRobotEndedEvent(runId: string | undefined, event: RobotExecutionEvent) {
     switch (event.type) {
       case "suite":
       case "test":
-        await this.TestItemEnded(runId, event);
+        this.TestItemEnded(runId, event);
         break;
       default:
         // do nothing
@@ -519,7 +522,7 @@ export class TestControllerManager {
     }
   }
 
-  private async TestItemEnded(runId: string | undefined, event: RobotExecutionEvent) {
+  private TestItemEnded(runId: string | undefined, event: RobotExecutionEvent) {
     if (runId === undefined || event.attributes?.longname === undefined) return;
 
     const run = this.testRuns.get(runId);
@@ -585,7 +588,7 @@ export class TestControllerManager {
     }
   }
 
-  private async OnRobotLogMessageEvent(runId: string | undefined, event: RobotLogMessageEvent): Promise<void> {
+  private OnRobotLogMessageEvent(runId: string | undefined, event: RobotLogMessageEvent): void {
     if (runId === undefined) return;
 
     const run = this.testRuns.get(runId);

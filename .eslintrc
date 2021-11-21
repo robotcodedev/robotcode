@@ -4,11 +4,18 @@
     "es6": true,
     "mocha": true
   },
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
   "parser": "@typescript-eslint/parser",
-  "plugins": ["@typescript-eslint", "prettier"],
+  "plugins": [
+    "@typescript-eslint",
+    "prettier"
+  ],
   "extends": [
-    "standard",
+    "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking",
     "plugin:import/errors",
     "plugin:import/warnings",
     "plugin:import/typescript",
@@ -27,7 +34,9 @@
     "no-dupe-class-members": "off",
     "@typescript-eslint/no-dupe-class-members": "error",
     "no-empty-function": "off",
-    "@typescript-eslint/no-empty-function": ["error"],
+    "@typescript-eslint/no-empty-function": [
+      "error"
+    ],
     "@typescript-eslint/no-empty-interface": "off",
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-non-null-assertion": "off",
@@ -53,7 +62,9 @@
     "class-methods-use-this": [
       "error",
       {
-        "exceptMethods": ["dispose"]
+        "exceptMethods": [
+          "dispose"
+        ]
       }
     ],
     "func-names": "off",
@@ -63,7 +74,10 @@
     "import/no-unresolved": [
       "error",
       {
-        "ignore": ["monaco-editor", "vscode"]
+        "ignore": [
+          "monaco-editor",
+          "vscode"
+        ]
       }
     ],
     "import/prefer-default-export": "off",
@@ -101,6 +115,8 @@
     ],
     "operator-assignment": "off",
     "strict": "off",
-    "prettier/prettier": ["error"]
+    "prettier/prettier": [
+      "error"
+    ]
   }
 }

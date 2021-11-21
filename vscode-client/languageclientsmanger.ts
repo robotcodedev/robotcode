@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
 import * as net from "net";
 import * as vscode from "vscode";
 import { LanguageClient, LanguageClientOptions, ServerOptions } from "vscode-languageclient/node";
@@ -68,7 +69,10 @@ export class LanguageClientsManager {
   }
 
   dispose(): void {
-    this.stopAllClients().then((_) => undefined);
+    this.stopAllClients().then(
+      () => undefined,
+      () => undefined
+    );
 
     this._disposables.dispose();
   }
@@ -109,10 +113,10 @@ export class LanguageClientsManager {
 
     const serverArgs = config.get<Array<string>>("languageServer.args", []);
 
-    const args: Array<string> = ["-u", this.pythonManager.pythonLanguageServerMain!, "--mode", "stdio"];
+    const args: Array<string> = ["-u", this.pythonManager.pythonLanguageServerMain, "--mode", "stdio"];
 
     const serverOptions: ServerOptions = {
-      command: pythonCommand!,
+      command: pythonCommand,
       args: args.concat(serverArgs),
       options: {
         cwd: folder.uri.fsPath,
@@ -191,7 +195,7 @@ export class LanguageClientsManager {
           }
           return result;
         },
-        async (reason) => {
+        (reason) => {
           this.outputChannel.appendLine(
             `client  ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} error: ${reason}`
           );

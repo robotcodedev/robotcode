@@ -20,4 +20,7 @@ async function main() {
   }
 }
 
-main();
+main().then(
+  () => undefined,
+  () => undefined
+);
