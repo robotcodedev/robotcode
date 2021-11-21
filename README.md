@@ -1,6 +1,6 @@
 # RobotCode
 
-An [extension](https://marketplace.visualstudio.com/VSCode) which brings support for [RobotFramework](https://robotframework.org/) to [Visual Studio Code](https://code.visualstudio.com/), including features like IntelliSense, linting, debugging, code navigation, code formatting, test explorer, and more!
+An [extension](https://marketplace.visualstudio.com/VSCode) which brings support for [RobotFramework](https://robotframework.org/) to [Visual Studio Code](https://code.visualstudio.com/), including features like IntelliSense, linting, debugging, code navigation, code formatting, test explorer, find references for keywords and variables, and more!
 
 ⚠️⚠️⚠️ THIS EXTENSION IS IN PREVIEW STATE, THERE ARE GOING TO BE BUGS ⚠️⚠️⚠️
 
@@ -8,7 +8,7 @@ An [extension](https://marketplace.visualstudio.com/VSCode) which brings support
 
 * Python 3.8 or above
 * Robotframework 4.0 and above
-* VSCode version 1.60 and above
+* VSCode version 1.61 and above
 
 ## Installed extensions
 
