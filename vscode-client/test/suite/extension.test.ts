@@ -6,13 +6,11 @@ import * as vscode from "vscode";
 // import * as myExtension from '../../extension';
 
 suite("Extension Test Suite", () => {
-  vscode.window.showInformationMessage("Start all tests.").then(
-    () => undefined,
-    () => undefined
-  );
+  void vscode.window.showInformationMessage("Start all tests.").then();
 
   test("Sample test", () => {
-    assert.equal(-1, [1, 2, 3].indexOf(5));
-    assert.equal(-1, [1, 2, 3].indexOf(0));
+    assert.strictEqual([1, 2, 3].indexOf(5), -1);
+    assert.strictEqual([1, 2, 3].indexOf(0), -1);
+    assert.strictEqual([1, 2, 3].indexOf(1), 0);
   });
 });

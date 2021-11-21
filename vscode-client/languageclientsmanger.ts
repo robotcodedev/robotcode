@@ -47,8 +47,9 @@ export class LanguageClientsManager {
       this.pythonManager.pythonExtension?.exports.settings.onDidChangeExecutionDetails(
         async (_event) => await this.refresh()
       ) ?? {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
-        dispose() {},
+        dispose() {
+          //empty
+        },
       },
       vscode.workspace.onDidChangeWorkspaceFolders(async (_event) => await this.refresh()),
       vscode.workspace.onDidOpenTextDocument(async (document) => await this.getLanguageClientForDocument(document))
@@ -69,10 +70,7 @@ export class LanguageClientsManager {
   }
 
   dispose(): void {
-    this.stopAllClients().then(
-      () => undefined,
-      () => undefined
-    );
+    void this.stopAllClients().then();
 
     this._disposables.dispose();
   }
@@ -212,16 +210,14 @@ export class LanguageClientsManager {
   public async refresh(_uri?: vscode.Uri | undefined): Promise<void> {
     await this.clientsMutex.dispatch(async () => {
       for (const client of this.clients.values()) {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
-        await client.stop().catch((_) => {});
+        await client.stop().catch();
       }
       this.clients.clear();
     });
 
     for (const document of vscode.workspace.textDocuments) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
-        await this.getLanguageClientForDocument(document).catch((_) => {});
+        await this.getLanguageClientForDocument(document).catch();
       } catch {
         // do nothing
       }

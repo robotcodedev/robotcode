@@ -168,7 +168,6 @@
 			"request": "launch",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--enable-proposed-api='myvscode-samples.test-provider-sample'"
 			],
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"
@@ -179,10 +178,10 @@
 			"name": "Extension Tests",
 			"type": "extensionHost",
 			"request": "launch",
+			"runtimeExecutable": "${execPath}",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--extensionTestsPath=${workspaceFolder}/out/test/suite/index",
-				"--enable-proposed-api"
+				"--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
 			],
 			"outFiles": [
 				"${workspaceFolder}/out/test/**/*.js"

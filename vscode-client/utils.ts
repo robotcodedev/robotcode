@@ -26,8 +26,9 @@ export class Mutex {
   private mutex = Promise.resolve();
 
   lock(): PromiseLike<() => void> {
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    let begin: (unlock: () => void) => void = (_unlock) => {};
+    let begin: (unlock: () => void) => void = (_unlock) => {
+      // empty
+    };
 
     this.mutex = this.mutex.then(() => new Promise(begin));
 
@@ -46,7 +47,6 @@ export class Mutex {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-types
 export class WeakValueMap<K, V extends object> implements Map<K, V> {
   private map = new Map<K, WeakRef<V>>();
 
@@ -124,7 +124,6 @@ export class WeakValueMap<K, V extends object> implements Map<K, V> {
   readonly [Symbol.toStringTag]: "WeakValueMap";
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-types
 export class WeakValueSet<V extends object> implements Set<V> {
   private set = new Set<WeakRef<V>>();
 

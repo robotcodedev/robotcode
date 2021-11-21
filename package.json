@@ -630,14 +630,11 @@
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "@typescript-eslint/parser": "^5.4.0",
     "eslint": "^8.3.0",
-    "eslint-config-airbnb": "^19.0.0",
     "eslint-config-prettier": "^8.3.0",
-    "eslint-config-standard": "^16.0.3",
     "eslint-plugin-import": "^2.25.3",
     "eslint-plugin-jsx-a11y": "^6.5.1",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^4.0.0",
-    "eslint-plugin-promise": "^5.1.1",
     "glob": "^7.2.0",
     "mocha": "^9.1.3",
     "ovsx": "^0.2.1",
@@ -648,7 +645,7 @@
     "vsce": "^2.3.0",
     "vscode-debugadapter-testsupport": "^1.50.0",
     "vscode-dts": "^0.3.2",
-    "vscode-test": "^1.6.1",
+    "@vscode/test-electron": "^1.6.1",
     "webpack": "^5.64.2",
     "webpack-cli": "^4.9.1"
   }

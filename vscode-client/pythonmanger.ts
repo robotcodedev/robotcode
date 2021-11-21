@@ -88,8 +88,9 @@ export class PythonManager {
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  async dispose(): Promise<void> {}
+  async dispose(): Promise<void> {
+    // empty
+  }
 
   get pythonExtension(): vscode.Extension<PythonExtensionApi> | undefined {
     if (!this._pythonExtension) {
@@ -97,19 +98,11 @@ export class PythonManager {
       try {
         this._pythonExtension = vscode.extensions.getExtension("ms-python.python")!;
 
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
-        this._pythonExtension.activate().then(
-          () => undefined,
-          () => undefined
-        );
+        void this._pythonExtension.activate().then();
 
         this.outputChannel.appendLine("Python Extension is active");
 
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
-        this._pythonExtension.exports.ready.then(
-          () => undefined,
-          () => undefined
-        );
+        void this._pythonExtension.exports.ready.then();
       } catch (ex) {
         this.outputChannel.appendLine("can't activate python extension");
       }
