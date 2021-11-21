@@ -4,6 +4,9 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+### added
+- remove deadlock in resource loading
+
 ##  0.3.1
 
 ### added
