@@ -355,9 +355,10 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         ...
 
     @rpc_method(name="workspace/didChangeWatchedFiles", param_type=DidChangeWatchedFilesParams)
-    @_logger.call
     async def _workspace_did_change_watched_files(self, changes: List[FileEvent], *args: Any, **kwargs: Any) -> None:
-        await self.did_change_watched_files(self, changes)
+        changes = [e for e in changes if not e.uri.endswith("/globalStorage")]
+        if changes:
+            await self.did_change_watched_files(self, changes)
 
     async def add_file_watcher(
         self,

@@ -13,6 +13,7 @@ from ....utils.async_event import async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
 from ....utils.uri import Uri
+from ...common.language import language_id
 from ...common.lsp_types import FileChangeType, FileEvent
 from ...common.parts.workspace import FileWatcherEntry
 from ...common.text_document import TextDocument
@@ -197,13 +198,14 @@ class _LibrariesEntry:
             return self._lib_doc is not None
 
     async def get_libdoc(self) -> LibraryDoc:
-        async with self._lock:
-            if self._lib_doc is None:
-                await self._update()
+        if self._lib_doc is None:
+            async with self._lock:
+                if self._lib_doc is None:
+                    await self._update()
 
-            assert self._lib_doc is not None
+                assert self._lib_doc is not None
 
-            return self._lib_doc
+        return self._lib_doc
 
 
 @dataclass()
@@ -230,6 +232,7 @@ class _ResourcesEntry:
         self._document: Optional[TextDocument] = None
         self._lock = asyncio.Lock()
         self._loop = asyncio.get_event_loop()
+        self._lib_doc: Optional[LibraryDoc] = None
 
     def __del__(self) -> None:
         if self._loop.is_running():
@@ -296,6 +299,7 @@ class _ResourcesEntry:
         await self._remove_file_watcher()
 
         self._document = None
+        self._lib_doc = None
 
     async def _remove_file_watcher(self) -> None:
         if self.file_watchers is not None:
@@ -308,21 +312,28 @@ class _ResourcesEntry:
             return self._document is not None
 
     async def get_document(self) -> TextDocument:
-        async with self._lock:
-            if self._document is None:
-                await self._update()
+        if self._document is None:
+            async with self._lock:
+                if self._document is None:
+                    await self._update()
 
-            assert self._document is not None
+                assert self._document is not None
 
-            return self._document
+        return self._document
 
     async def get_namespace(self) -> Namespace:
         return await self.parent.parent_protocol.documents_cache.get_resource_namespace(await self.get_document())
 
     async def get_libdoc(self) -> LibraryDoc:
-        return await (
-            await self.parent.parent_protocol.documents_cache.get_resource_namespace(await self.get_document())
-        ).get_library_doc()
+        if self._lib_doc is None:
+            async with self._lock:
+                if self._lib_doc is None:
+                    self._lib_doc = await (
+                        await self.parent.parent_protocol.documents_cache.get_resource_namespace(
+                            await self.get_document()
+                        )
+                    ).get_library_doc()
+        return self._lib_doc
 
 
 def _shutdown_process_pool(pool: ProcessPoolExecutor) -> None:
@@ -375,6 +386,7 @@ class ImportsManager:
     async def resources_changed(sender, resources: List[LibraryDoc]) -> None:
         ...
 
+    @language_id("robotframework")
     async def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
         resource_changed: List[LibraryDoc] = []
 

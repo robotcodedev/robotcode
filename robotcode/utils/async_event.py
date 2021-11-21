@@ -99,8 +99,14 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
             if c is not None:
                 yield c
 
-    async def _notify(self, *args: Any, **kwargs: Any) -> AsyncIterator[_TResult]:
-        for method in set(self):
+    async def _notify(
+        self, *args: Any, callback_filter: Optional[Callable[[_TCallable], bool]] = None, **kwargs: Any
+    ) -> AsyncIterator[_TResult]:
+
+        for method in filter(
+            lambda x: callback_filter(x) if callback_filter is not None else True,
+            set(self),
+        ):
             result = method(*args, **kwargs)
             if inspect.isawaitable(result):
                 result = await result
@@ -187,7 +193,6 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
             set(self),
         ):
             if method is not None:
-                # future = asyncio.ensure_future(ensure_coroutine(method)(*args, **kwargs))
                 future = asyncio.create_task(ensure_coroutine(method)(*args, **kwargs))
 
                 if result_callback is not None:

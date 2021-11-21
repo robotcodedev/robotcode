@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 from ....utils.async_event import async_tasking_event_iterator
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
-from ..language import HasLanguageId
+from ..language import HasLanguageId, language_id
 from ..lsp_types import Diagnostic, DocumentUri, PublishDiagnosticsParams
 from ..text_document import TextDocument
 
@@ -141,14 +141,17 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
         entry.cancel()
 
+    @language_id("robotframework")
     @_logger.call
     async def on_did_open(self, sender: Any, document: TextDocument) -> None:
         await self.start_publish_diagnostics_task(document)
 
+    @language_id("robotframework")
     @_logger.call
     async def on_did_save(self, sender: Any, document: TextDocument) -> None:
         await self.start_publish_diagnostics_task(document)
 
+    @language_id("robotframework")
     @_logger.call
     async def on_did_close(self, sender: Any, document: TextDocument) -> None:
         async with self._task_lock:

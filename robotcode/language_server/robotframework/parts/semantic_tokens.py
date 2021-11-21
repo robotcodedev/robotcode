@@ -354,8 +354,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         try:
             model = await self.parent.documents_cache.get_model(document)
-            # namespace = await self.parent.documents_cache.get_namespace(document)
-            # await namespace.ensure_initialized()
 
             cancel_token = CancelationToken()
             return await asyncio.get_running_loop().run_in_executor(

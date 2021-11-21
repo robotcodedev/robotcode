@@ -18,6 +18,7 @@ from typing import (
 
 from ....utils.async_event import CancelationToken, async_tasking_event
 from ....utils.uri import Uri
+from ...common.language import HasLanguageId
 from ...common.parts.workspace import WorkspaceFolder
 from ...common.text_document import TextDocument
 from ..configuration import RobotConfig
@@ -275,7 +276,11 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         document = namespace.document
         if document is not None:
             await document.remove_cache_entry(self.__get_namespace)
-            await self.namespace_invalidated(self, document)
+            await self.namespace_invalidated(
+                self,
+                document,
+                callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+            )
 
     async def __get_namespace_for_document_type(
         self,

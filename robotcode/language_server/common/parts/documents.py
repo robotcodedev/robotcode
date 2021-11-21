@@ -7,6 +7,7 @@ from ....jsonrpc2.protocol import JsonRPCException, rpc_method
 from ....utils.async_event import async_event
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
+from ..language import HasLanguageId
 from ..lsp_types import (
     DidChangeTextDocumentParams,
     DidCloseTextDocumentParams,
@@ -56,9 +57,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
     async def _update_filewatchers(self) -> None:
         await self.parent.workspace.add_file_watcher(self._file_watcher, "**/*", WatchKind.CHANGE | WatchKind.DELETE)
 
-    @_logger.call
     async def _file_watcher(self, sender: Any, changes: List[FileEvent]) -> None:
-        self._logger.debug(f"filewatcher {changes}")
         to_change: Dict[str, FileEvent] = {}
         for change in changes:
             to_change[change.uri] = change
@@ -66,7 +65,12 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         for change in to_change.values():
             document = self._documents.get(DocumentUri(Uri(change.uri).normalized()), None)
             if document is not None and not document.opened_in_editor:
-                await self.did_close(self, document)
+                await self.did_close(
+                    self,
+                    document,
+                    callback_filter=lambda c: not isinstance(c, HasLanguageId)
+                    or c.__language_id__ == document.language_id,
+                )
                 await self.close_document(document, True)
 
     @async_event
@@ -142,7 +146,11 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         document.opened_in_editor = True
         document.references.add(self)
 
-        await self.did_open(self, document)
+        await self.did_open(
+            self,
+            document,
+            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+        )
 
     @rpc_method(name="textDocument/didClose", param_type=DidCloseTextDocumentParams)
     @_logger.call
@@ -153,7 +161,11 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         if document is not None:
             document.references.remove(self)
             document.opened_in_editor = False
-            await self.did_close(self, document)
+            await self.did_close(
+                self,
+                document,
+                callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+            )
             await self.close_document(document)
 
     @_logger.call
@@ -186,7 +198,11 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         if document is not None and text is not None:
             await document.apply_full_change(None, text)
 
-            await self.did_save(self, document)
+            await self.did_save(
+                self,
+                document,
+                callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+            )
 
     @rpc_method(name="textDocument/willSaveWaitUntil", param_type=WillSaveTextDocumentParams)
     @_logger.call
@@ -236,4 +252,8 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
                     f"for document {text_document.uri}."
                 )
 
-        await self.did_change(self, document)
+        await self.did_change(
+            self,
+            document,
+            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+        )

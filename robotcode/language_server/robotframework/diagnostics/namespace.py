@@ -478,6 +478,7 @@ class Analyzer(AsyncVisitor):
         self._namespace = namespace
 
         self.current_testcase_or_keyword_name: Optional[str] = None
+        self.finder = KeywordFinder(self._namespace)
 
         await self.visit(model)
         return self._results
@@ -492,11 +493,9 @@ class Analyzer(AsyncVisitor):
     ) -> Optional[KeywordDoc]:
         result: Optional[KeywordDoc] = None
         try:
-            finder = KeywordFinder(self._namespace)
+            result = await self.finder.find_keyword(keyword)
 
-            result = await finder.find_keyword(keyword)
-
-            for e in finder.diagnostics:
+            for e in self.finder.diagnostics:
                 self._results.append(
                     Diagnostic(
                         range=range_from_token_or_node(value, keyword_token),
@@ -926,6 +925,7 @@ class Namespace:
     def document(self) -> Optional[TextDocument]:
         return self._document() if self._document is not None else None
 
+    @_logger.call
     async def libraries_changed(self, sender: Any, libraries: List[LibraryDoc]) -> None:
         for p in libraries:
             if any(e for e in self._libraries.values() if e.library_doc == p):
@@ -934,6 +934,7 @@ class Namespace:
                 self.invalidated_callback(self)
                 break
 
+    @_logger.call
     async def resources_changed(self, sender: Any, resources: List[LibraryDoc]) -> None:
         for p in resources:
             if any(e for e in self._resources.values() if e.library_doc.source == p.source):
@@ -956,6 +957,7 @@ class Namespace:
 
         return self._libraries
 
+    @_logger.call
     async def get_libraries_matchers(self) -> Dict[KeywordMatcher, LibraryEntry]:
         if self._libraries_matchers is None:
             self._libraries_matchers = {
@@ -969,6 +971,7 @@ class Namespace:
 
         return self._resources
 
+    @_logger.call
     async def get_resources_matchers(self) -> Dict[KeywordMatcher, ResourceEntry]:
         if self._resources_matchers is None:
             self._resources_matchers = {
@@ -976,6 +979,7 @@ class Namespace:
             }
         return self._resources_matchers
 
+    @_logger.call
     async def get_library_doc(self) -> LibraryDoc:
         if self._library_doc is None:
             async with self._library_doc_lock:
@@ -1049,12 +1053,14 @@ class Namespace:
     def initialized(self) -> bool:
         return self._initialized
 
+    @_logger.call
     async def get_imports(self) -> List[Import]:
         if self._imports is None:
             self._imports = await ImportVisitor().get(self.source, self.model)
 
         return self._imports
 
+    @_logger.call
     async def get_own_variables(self) -> List[VariableDefinition]:
         if self._own_variables is None:
             self._own_variables = await VariablesVisitor().get(self.source, self.model)
@@ -1070,6 +1076,7 @@ class Namespace:
 
         return cls._builtin_variables
 
+    @_logger.call
     def get_command_line_variables(self) -> List[VariableDefinition]:
         if self.imports_manager.config is None:
             return []
@@ -1079,6 +1086,7 @@ class Namespace:
             for k in self.imports_manager.config.variables.keys()
         ]
 
+    @_logger.call
     async def get_variables(
         self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
     ) -> Dict[VariableMatcher, VariableDefinition]:
@@ -1104,11 +1112,13 @@ class Namespace:
 
         return result
 
+    @_logger.call
     async def find_variable(
         self, name: str, nodes: Optional[List[ast.AST]], position: Optional[Position] = None
     ) -> Optional[VariableDefinition]:
         return (await self.get_variables(nodes, position)).get(VariableMatcher(name), None)
 
+    @_logger.call
     async def _import_imports(self, imports: Iterable[Import], base_dir: str, *, top_level: bool = False) -> None:
         async def _import(value: Import) -> Optional[LibraryEntry]:
             result: Optional[LibraryEntry] = None
@@ -1396,6 +1406,7 @@ class Namespace:
             if e is not None:
                 self._libraries[e.alias or e.name or e.import_name] = e
 
+    @_logger.call
     async def _get_library_entry(
         self,
         name: str,
@@ -1412,6 +1423,7 @@ class Namespace:
 
         return LibraryEntry(name=library.name, import_name=name, library_doc=library, args=args, alias=alias)
 
+    @_logger.call
     async def _get_resource_entry(self, name: str, base_dir: str, sentinel: Any = None) -> ResourceEntry:
         namespace = await self.imports_manager.get_namespace_for_resource_import(name, base_dir, sentinel=sentinel)
         library_doc = await self.imports_manager.get_libdoc_for_resource_import(name, base_dir, sentinel=sentinel)
@@ -1451,6 +1463,9 @@ class Namespace:
             async with self._analyze_lock:
                 if not self._analyzed:
                     try:
+                        # self._diagnostics += await asyncio.get_running_loop().run_in_executor(
+                        #     None, asyncio.run, Analyzer().get(self.model, self)
+                        # )
                         self._diagnostics += await Analyzer().get(self.model, self)
 
                         lib_doc = await self.get_library_doc()
@@ -1478,6 +1493,7 @@ class Namespace:
                     finally:
                         self._analyzed = True
 
+    @_logger.call
     async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
         await self.ensure_initialized()
 
@@ -1499,9 +1515,15 @@ class KeywordFinder:
         super().__init__()
         self.namespace = namespace
         self.diagnostics: List[DiagnosticsEntry] = []
+        self.self_library_doc: Optional[LibraryDoc] = None
+
+    def reset_diagnostics(self) -> None:
+        self.diagnostics = []
 
     async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
         try:
+            self.reset_diagnostics()
+
             result = await self._find_keyword(name)
             if result is None:
                 self.diagnostics.append(
@@ -1539,7 +1561,9 @@ class KeywordFinder:
         return result
 
     async def _get_keyword_from_self(self, name: str) -> Optional[KeywordDoc]:
-        return (await self.namespace.get_library_doc()).keywords.get(name, None)
+        if self.self_library_doc is None:
+            self.self_library_doc = await self.namespace.get_library_doc()
+        return self.self_library_doc.keywords.get(name, None)
 
     async def _yield_owner_and_kw_names(self, full_name: str) -> AsyncIterator[Tuple[str, ...]]:
         tokens = full_name.split(".")

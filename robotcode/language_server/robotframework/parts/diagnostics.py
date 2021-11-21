@@ -33,6 +33,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         parent.documents.did_open.add(self.namespace_invalidated)
         parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
 
+    @language_id("robotframework")
     async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
         await self.parent.diagnostics.start_publish_diagnostics_task(document)
 
