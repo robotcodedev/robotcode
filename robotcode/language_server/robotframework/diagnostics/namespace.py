@@ -493,6 +493,9 @@ class Analyzer(AsyncVisitor):
     ) -> Optional[KeywordDoc]:
         result: Optional[KeywordDoc] = None
         try:
+            if not is_not_variable_token(keyword_token):
+                return None
+
             result = await self.finder.find_keyword(keyword)
 
             for e in self.finder.diagnostics:

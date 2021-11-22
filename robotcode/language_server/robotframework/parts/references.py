@@ -424,17 +424,36 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 if t.value == "AND":
                     continue
 
-                if not is_not_variable_token(t):
+                separator_token = next((e for e in arguments if e.value == "AND"), None)
+                args = []
+                if separator_token is not None:
+                    args = arguments[: arguments.index(separator_token)]
+                    arguments = arguments[arguments.index(separator_token) + 1 :]
+
+                if is_not_variable_token(t):
+                    async for e in self.get_keyword_references_from_tokens(namespace, kw_doc, node, t, args):
+                        yield e
+        elif kw.is_run_keyword_if() and len(arguments) > 1:
+            arguments = arguments[1:]
+
+            while arguments:
+                t = arguments[0]
+                arguments = arguments[1:]
+
+                if t.value in ["ELSE", "ELSE IF"]:
                     continue
 
-                and_token = next((e for e in arguments if e.value == "AND"), None)
+                separator_token = next((e for e in arguments if e.value in ["ELSE", "ELSE IF"]), None)
                 args = []
-                if and_token is not None:
-                    args = arguments[: arguments.index(and_token)]
-                    arguments = arguments[arguments.index(and_token) + 1 :]
+                if separator_token is not None:
+                    args = arguments[: arguments.index(separator_token)]
+                    arguments = arguments[arguments.index(separator_token) + 1 :]
+                    if separator_token.value == "ELSE IF":
+                        arguments = arguments[1:]
 
-                async for e in self.get_keyword_references_from_tokens(namespace, kw_doc, node, t, args):
-                    yield e
+                if is_not_variable_token(t):
+                    async for e in self.get_keyword_references_from_tokens(namespace, kw_doc, node, t, args):
+                        yield e
 
     async def _find_keyword_references(self, document: TextDocument, kw_doc: KeywordDoc) -> List[Location]:
         folder = self.parent.workspace.get_workspace_folder(document.uri)
