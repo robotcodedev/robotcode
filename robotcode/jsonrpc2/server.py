@@ -125,7 +125,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
             async def aio_readline(rfile: BinaryIO, protocol: asyncio.Protocol) -> None:
                 protocol.connection_made(transport)
-                stdio_executor = ThreadPoolExecutor(max_workers=1)
+                stdio_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="aio_readline")
                 with stdio_executor:
                     while (
                         self._stdio_stop_event is not None and not self._stdio_stop_event.is_set() and not rfile.closed
