@@ -646,7 +646,7 @@ class Analyzer(AsyncVisitor):
 
             return []
 
-        elif keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1 and is_not_variable_token(argument_tokens[1]):
+        elif keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1:
 
             def skip_args() -> None:
                 nonlocal argument_tokens
@@ -656,12 +656,16 @@ class Analyzer(AsyncVisitor):
                         break
                     argument_tokens = argument_tokens[1:]
 
-            result = await self._analyze_keyword_call(
-                argument_tokens[1].value,
-                node,
-                argument_tokens[1],
-                argument_tokens[2:],
-                analyse_run_keywords=False,
+            result = (
+                await self._analyze_keyword_call(
+                    argument_tokens[1].value,
+                    node,
+                    argument_tokens[1],
+                    argument_tokens[2:],
+                    analyse_run_keywords=False,
+                )
+                if is_not_variable_token(argument_tokens[1])
+                else None
             )
 
             argument_tokens = argument_tokens[2:]

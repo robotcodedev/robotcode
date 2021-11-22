@@ -65,7 +65,7 @@ class ModelHelperMixin:
                     argument_tokens = []
 
             return None, []
-        elif keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1 and is_not_variable_token(argument_tokens[1]):
+        elif keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1:
 
             def skip_args() -> None:
                 nonlocal argument_tokens
@@ -75,7 +75,11 @@ class ModelHelperMixin:
                         break
                     argument_tokens = argument_tokens[1:]
 
-            inner_keyword_doc = await namespace.find_keyword(argument_tokens[1].value)
+            inner_keyword_doc = (
+                await namespace.find_keyword(argument_tokens[1].value)
+                if is_not_variable_token(argument_tokens[1])
+                else None
+            )
 
             if position.is_in_range(range_from_token(argument_tokens[1])):
                 return (inner_keyword_doc, argument_tokens[1]), argument_tokens[2:]
