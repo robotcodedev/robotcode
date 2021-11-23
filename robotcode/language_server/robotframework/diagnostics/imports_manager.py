@@ -380,10 +380,7 @@ class ImportsManager:
         self._resources: OrderedDict[_ResourcesEntryKey, _ResourcesEntry] = OrderedDict()
         self.file_watchers: List[FileWatcherEntry] = []
         self._loop = asyncio.get_event_loop()
-        self.parent_protocol.documents.did_open.add(self.resource_document_changed)
         self.parent_protocol.documents.did_change.add(self.resource_document_changed)
-        self.parent_protocol.documents.did_close.add(self.resource_document_changed)
-        self.parent_protocol.documents.did_save.add(self.resource_document_changed)
 
     @async_tasking_event
     async def libraries_changed(sender, libraries: List[LibraryDoc]) -> None:

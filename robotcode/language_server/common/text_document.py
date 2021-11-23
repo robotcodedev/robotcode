@@ -8,7 +8,7 @@ from types import MethodType
 from typing import Any, Awaitable, Callable, Dict, List, Optional, TypeVar, Union, cast
 
 from ...utils.uri import Uri
-from .lsp_types import DocumentUri, Position, Range, TextDocumentItem
+from .lsp_types import DocumentUri, Position, Range
 
 
 def _utf16_unit_offset(chars: str) -> int:
@@ -47,12 +47,10 @@ class CacheEntry:
 class TextDocument:
     def __init__(
         self,
-        text_document_item: Optional[TextDocumentItem] = None,
-        *,
-        document_uri: Optional[DocumentUri] = None,
+        document_uri: DocumentUri,
+        text: str,
         language_id: Optional[str] = None,
         version: Optional[int] = None,
-        text: Optional[str] = None,
     ) -> None:
         super().__init__()
 
@@ -60,24 +58,14 @@ class TextDocument:
 
         self._references: weakref.WeakSet[Any] = weakref.WeakSet()
 
-        self.document_uri = (
-            text_document_item.uri
-            if text_document_item is not None
-            else document_uri
-            if document_uri is not None
-            else ""
-        )
+        self.document_uri = document_uri
+
         self.uri = Uri(self.document_uri).normalized()
 
-        self.language_id = (
-            text_document_item.language_id
-            if text_document_item is not None
-            else language_id
-            if language_id is not None
-            else ""
-        )
-        self.version = text_document_item.version if text_document_item is not None else version
-        self._text = text_document_item.text if text_document_item is not None else text if text is not None else ""
+        self.language_id = language_id
+
+        self.version = version
+        self._text = text
 
         self._lines: Optional[List[str]] = None
 

@@ -922,11 +922,12 @@ class Namespace:
         self._imports: Optional[List[Import]] = None
         self._own_variables: Optional[List[VariableDefinition]] = None
         self._diagnostics: List[Diagnostic] = []
-
         self._keywords: Optional[List[KeywordDoc]] = None
 
         # TODO: how to get the search order from model
         self.search_order: Tuple[str, ...] = ()
+
+        self._finder: Optional[KeywordFinder] = None
 
     @property
     def document(self) -> Optional[TextDocument]:
@@ -938,7 +939,7 @@ class Namespace:
             if any(e for e in self._libraries.values() if e.library_doc == p):
                 if self.document is not None:
                     self.document.set_data(Namespace.DataEntry, None)
-                self.invalidated_callback(self)
+                await self.invalidate()
                 break
 
     @_logger.call
@@ -947,8 +948,26 @@ class Namespace:
             if any(e for e in self._resources.values() if e.library_doc.source == p.source):
                 if self.document is not None:
                     self.document.set_data(Namespace.DataEntry, None)
-                self.invalidated_callback(self)
+                await self.invalidate()
                 break
+
+    async def invalidate(self) -> None:
+        async with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
+            self._initialized = False
+
+            self._libraries = OrderedDict()
+            self._libraries_matchers = None
+            self._resources = OrderedDict()
+            self._resources_matchers = None
+            self._variables = OrderedDict()
+            self._imports = None
+            self._own_variables = None
+            self._keywords = None
+            self._library_doc = None
+            self._analyzed = False
+            self._diagnostics = []
+
+        self.invalidated_callback(self)
 
     @_logger.call
     async def get_diagnostisc(self) -> List[Diagnostic]:
@@ -1338,7 +1357,7 @@ class Namespace:
                                 )
 
                 else:
-                    if entry.name == BUILTIN_LIBRARY_NAME and entry.alias is None:
+                    if top_level and entry.name == BUILTIN_LIBRARY_NAME and entry.alias is None:
                         self._diagnostics.append(
                             Diagnostic(
                                 range=entry.import_range,
@@ -1502,9 +1521,18 @@ class Namespace:
 
     @_logger.call
     async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
+        if self._finder is None:
+            await self.ensure_initialized()
+
+            self._finder = await self.create_finder()
+
+        return await self._finder.find_keyword(name)
+
+    @_logger.call
+    async def create_finder(self) -> KeywordFinder:
         await self.ensure_initialized()
 
-        return await KeywordFinder(self).find_keyword(name)
+        return KeywordFinder(self)
 
 
 class DiagnosticsEntry(NamedTuple):
@@ -1523,6 +1551,7 @@ class KeywordFinder:
         self.namespace = namespace
         self.diagnostics: List[DiagnosticsEntry] = []
         self.self_library_doc: Optional[LibraryDoc] = None
+        self._cache: Dict[Optional[str], Tuple[Optional[KeywordDoc], List[DiagnosticsEntry]]] = {}
 
     def reset_diagnostics(self) -> None:
         self.diagnostics = []
@@ -1531,15 +1560,22 @@ class KeywordFinder:
         try:
             self.reset_diagnostics()
 
-            result = await self._find_keyword(name)
-            if result is None:
-                self.diagnostics.append(
-                    DiagnosticsEntry(
-                        f"No keyword with name {repr(name)} found.", DiagnosticSeverity.ERROR, "KeywordError"
-                    )
-                )
+            cached = self._cache.get(name, None)
 
-            return result
+            if cached is not None:
+                self.diagnostics = cached[1]
+                return cached[0]
+            else:
+                result = await self._find_keyword(name)
+                if result is None:
+                    self.diagnostics.append(
+                        DiagnosticsEntry(
+                            f"No keyword with name {repr(name)} found.", DiagnosticSeverity.ERROR, "KeywordError"
+                        )
+                    )
+                self._cache[name] = (result, self.diagnostics)
+
+                return result
         except CancelSearchError:
             return None
 

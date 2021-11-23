@@ -222,3 +222,12 @@ def _tokenize_variables(token: Token, variables: Any) -> Generator[Token, Any, A
         col_offset += len(variable)
     if remaining:
         yield RobotToken(token.type, remaining, lineno, col_offset)
+
+
+def yield_owner_and_kw_names(full_name: str) -> Iterator[Tuple[Optional[str], ...]]:
+    tokens = full_name.split(".")
+    if len(tokens) == 1:
+        yield None, tokens[0]
+    else:
+        for i in range(1, len(tokens)):
+            yield ".".join(tokens[:i]), ".".join(tokens[i:])

@@ -4,6 +4,11 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+### added
+
+- some refactoring to speedup loading and parsing documents
+- semantic tokens now highlight builtin keywords
+
 ##  0.3.2
 
 ### added

@@ -274,13 +274,16 @@ class KeywordDoc(Model):
     is_error_handler: bool = False
     error_handler_message: Optional[str] = None
     is_initializer: bool = False
+    is_registered_run_keyword: bool = False
+    args_to_process: Optional[int] = None
+    deprecated: bool = False
 
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
 
     @property
     def is_deprecated(self) -> bool:
-        return DEPRECATED_PATTERN.match(self.doc) is not None
+        return self.deprecated or DEPRECATED_PATTERN.match(self.doc) is not None
 
     @property
     def deprecated_message(self) -> str:
@@ -946,6 +949,7 @@ def get_library_doc(
     from robot.output import LOGGER
     from robot.output.loggerhelper import AbstractLogger
     from robot.running.outputcapture import OutputCapturer
+    from robot.running.runkwregister import RUN_KW_REGISTER
     from robot.running.testlibraries import _get_lib_class
     from robot.utils import Importer
 
@@ -1128,6 +1132,9 @@ def get_library_doc(
                             doc_format=str(lib.doc_format) or DEFAULT_DOC_FORMAT,
                             is_error_handler=kw[1].is_error_handler,
                             error_handler_message=kw[1].error_handler_message,
+                            is_registered_run_keyword=RUN_KW_REGISTER.is_run_keyword(libdoc.name, kw[0].name),
+                            args_to_process=RUN_KW_REGISTER.get_args_to_process(libdoc.name, kw[0].name),
+                            deprecated=kw[0].deprecated,
                         )
                         for kw in [
                             (KeywordDocBuilder().build_keyword(k), k)

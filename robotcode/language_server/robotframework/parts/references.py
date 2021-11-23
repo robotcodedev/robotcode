@@ -9,10 +9,8 @@ from typing import (
     AsyncGenerator,
     Awaitable,
     Callable,
-    Iterator,
     List,
     Optional,
-    Tuple,
     Type,
     Union,
     cast,
@@ -44,6 +42,7 @@ from ..utils.ast import (
     range_from_token,
     range_from_token_or_node,
     tokenize_variables,
+    yield_owner_and_kw_names,
 )
 from ..utils.async_ast import iter_nodes
 
@@ -282,15 +281,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     ) -> Optional[List[Location]]:
         return await self._references_Template_or_TestTemplate(node, document, position, context)
 
-    @staticmethod
-    def _yield_owner_and_kw_names(full_name: str) -> Iterator[Tuple[Optional[str], ...]]:
-        tokens = full_name.split(".")
-        if len(tokens) == 1:
-            yield None, tokens[0]
-        else:
-            for i in range(1, len(tokens)):
-                yield ".".join(tokens[:i]), ".".join(tokens[i:])
-
     @_logger.call
     async def _find_keyword_references_in_file(
         self,
@@ -362,7 +352,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             kw: Optional[KeywordDoc] = None
             kw_matcher = KeywordMatcher(kw_doc.name)
 
-            for lib, name in self._yield_owner_and_kw_names(kw_token.value):
+            for lib, name in yield_owner_and_kw_names(kw_token.value):
                 if lib is not None:
                     lib_matcher = KeywordMatcher(lib)
                     if (

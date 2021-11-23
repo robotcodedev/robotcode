@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gc
+import re
 from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Mapping, Optional
 
 from ....jsonrpc2.protocol import JsonRPCException, rpc_method
@@ -103,32 +104,35 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
 
     def _create_document(
         self,
-        text_document_item: Optional[TextDocumentItem] = None,
-        *,
-        document_uri: Optional[DocumentUri] = None,
+        document_uri: DocumentUri,
+        text: str,
         language_id: Optional[str] = None,
         version: Optional[int] = None,
-        text: Optional[str] = None,
     ) -> TextDocument:
         return TextDocument(
-            text_document_item=text_document_item,
             document_uri=document_uri,
             language_id=language_id,
-            version=version,
             text=text,
+            version=version,
         )
 
     def append_document(
         self,
         document_uri: DocumentUri,
         language_id: str,
-        text: Optional[str],
+        text: str,
         version: Optional[int] = None,
     ) -> TextDocument:
-        document = self._create_document(document_uri=document_uri, language_id=language_id, version=version, text=text)
+        document = self._create_document(document_uri=document_uri, language_id=language_id, text=text, version=version)
 
         self._documents[document_uri] = document
         return document
+
+    __NORMALIZE_LINE_ENDINGS = re.compile(r"(\r?\n)")
+
+    @classmethod
+    def _normalize_line_endings(cls, text: str) -> str:
+        return cls.__NORMALIZE_LINE_ENDINGS.sub("\n", text)
 
     @rpc_method(name="textDocument/didOpen", param_type=DidOpenTextDocumentParams)
     @_logger.call
@@ -136,12 +140,19 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         uri = str(Uri(text_document.uri).normalized())
         document = self.get(uri, None)
 
+        text_changed = True
+        normalized_text = self._normalize_line_endings(text_document.text)
+
         if document is None:
-            document = self._create_document(text_document)
+            document = self._create_document(
+                text_document.uri, normalized_text, text_document.language_id, text_document.version
+            )
 
             self._documents[uri] = document
         else:
-            await document.apply_full_change(text_document.version, text_document.text)
+            text_changed = document.text != normalized_text
+            if text_changed:
+                await document.apply_full_change(text_document.version, normalized_text)
 
         document.opened_in_editor = True
         document.references.add(self)
@@ -151,6 +162,13 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
             document,
             callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
         )
+
+        if text_changed:
+            await self.did_change(
+                self,
+                document,
+                callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+            )
 
     @rpc_method(name="textDocument/didClose", param_type=DidCloseTextDocumentParams)
     @_logger.call
@@ -195,8 +213,20 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         document = self._documents.get(str(Uri(text_document.uri).normalized()), None)
         self._logger.warning(lambda: f"Document {text_document.uri} is not opened.", condition=lambda: document is None)
 
-        if document is not None and text is not None:
-            await document.apply_full_change(None, text)
+        if document is not None:
+            if text is not None:
+                normalized_text = self._normalize_line_endings(text)
+
+                text_changed = document.text != normalized_text
+                if text_changed:
+                    await document.apply_full_change(None, text)
+
+                    await self.did_change(
+                        self,
+                        document,
+                        callback_filter=lambda c: not isinstance(c, HasLanguageId)
+                        or c.__language_id__ == document.language_id,
+                    )
 
             await self.did_save(
                 self,
@@ -238,12 +268,14 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
             elif sync_kind == TextDocumentSyncKind.FULL and isinstance(
                 content_change, TextDocumentContentTextChangeEvent
             ):
-                await document.apply_full_change(text_document.version, content_change.text)
+                await document.apply_full_change(
+                    text_document.version, self._normalize_line_endings(content_change.text)
+                )
             elif sync_kind == TextDocumentSyncKind.INCREMENTAL and isinstance(
                 content_change, TextDocumentContentRangeChangeEvent
             ):
                 await document.apply_incremental_change(
-                    text_document.version, content_change.range, content_change.text
+                    text_document.version, content_change.range, self._normalize_line_endings(content_change.text)
                 )
             else:
                 raise LanguageServerDocumentException(
