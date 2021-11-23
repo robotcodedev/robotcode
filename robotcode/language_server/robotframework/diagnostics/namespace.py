@@ -597,12 +597,15 @@ class Analyzer(AsyncVisitor):
     async def _analyse_run_keyword(
         self, keyword_doc: Optional[KeywordDoc], node: ast.AST, argument_tokens: List[Token]
     ) -> List[Token]:
+        from robot.utils.escaping import unescape
 
         if keyword_doc is None or not keyword_doc.is_any_run_keyword():
             return argument_tokens
 
         if keyword_doc.is_run_keyword() and len(argument_tokens) > 0 and is_not_variable_token(argument_tokens[0]):
-            await self._analyze_keyword_call(argument_tokens[0].value, node, argument_tokens[0], argument_tokens[1:])
+            await self._analyze_keyword_call(
+                unescape(argument_tokens[0].value), node, argument_tokens[0], argument_tokens[1:]
+            )
 
             return argument_tokens[1:]
         elif (
@@ -610,7 +613,9 @@ class Analyzer(AsyncVisitor):
             and len(argument_tokens) > 1
             and is_not_variable_token(argument_tokens[1])
         ):
-            await self._analyze_keyword_call(argument_tokens[1].value, node, argument_tokens[1], argument_tokens[2:])
+            await self._analyze_keyword_call(
+                unescape(argument_tokens[1].value), node, argument_tokens[1], argument_tokens[2:]
+            )
             return argument_tokens[2:]
         elif keyword_doc.is_run_keywords():
             has_and = False
@@ -642,7 +647,7 @@ class Analyzer(AsyncVisitor):
                     args = argument_tokens
                     argument_tokens = []
 
-                await self._analyze_keyword_call(t.value, node, t, args)
+                await self._analyze_keyword_call(unescape(t.value), node, t, args)
 
             return []
 
@@ -658,7 +663,7 @@ class Analyzer(AsyncVisitor):
 
             result = (
                 await self._analyze_keyword_call(
-                    argument_tokens[1].value,
+                    unescape(argument_tokens[1].value),
                     node,
                     argument_tokens[1],
                     argument_tokens[2:],
@@ -679,7 +684,7 @@ class Analyzer(AsyncVisitor):
                 if argument_tokens[0].value == "ELSE" and len(argument_tokens) > 1:
 
                     result = await self._analyze_keyword_call(
-                        argument_tokens[1].value,
+                        unescape(argument_tokens[1].value),
                         node,
                         argument_tokens[1],
                         argument_tokens[2:],
@@ -697,7 +702,7 @@ class Analyzer(AsyncVisitor):
                 elif argument_tokens[0].value == "ELSE IF" and len(argument_tokens) > 2:
 
                     result = await self._analyze_keyword_call(
-                        argument_tokens[2].value,
+                        unescape(argument_tokens[2].value),
                         node,
                         argument_tokens[2],
                         argument_tokens[3:],

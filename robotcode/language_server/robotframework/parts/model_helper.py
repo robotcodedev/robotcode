@@ -16,13 +16,14 @@ class ModelHelperMixin:
         namespace: Namespace,
         position: Position,
     ) -> Tuple[Optional[Tuple[Optional[KeywordDoc], Token]], List[Token]]:
+        from robot.utils.escaping import unescape
 
         if keyword_doc is None or not keyword_doc.is_any_run_keyword():
             return None, argument_tokens
 
         if keyword_doc.is_run_keyword() and len(argument_tokens) > 0 and is_not_variable_token(argument_tokens[0]):
             result = await self.get_keyworddoc_and_token_from_position(
-                argument_tokens[0].value, argument_tokens[0], argument_tokens[1:], namespace, position
+                unescape(argument_tokens[0].value), argument_tokens[0], argument_tokens[1:], namespace, position
             )
 
             return result, argument_tokens[1:]
@@ -32,7 +33,7 @@ class ModelHelperMixin:
             and is_not_variable_token(argument_tokens[1])
         ):
             result = await self.get_keyworddoc_and_token_from_position(
-                argument_tokens[1].value, argument_tokens[1], argument_tokens[2:], namespace, position
+                unescape(argument_tokens[1].value), argument_tokens[1], argument_tokens[2:], namespace, position
             )
 
             return result, argument_tokens[2:]
@@ -55,7 +56,9 @@ class ModelHelperMixin:
                     else:
                         args = []
 
-                result = await self.get_keyworddoc_and_token_from_position(t.value, t, args, namespace, position)
+                result = await self.get_keyworddoc_and_token_from_position(
+                    unescape(t.value), t, args, namespace, position
+                )
                 if result is not None and result[0] is not None:
                     return result, []
 
@@ -99,7 +102,7 @@ class ModelHelperMixin:
 
             while argument_tokens:
                 if argument_tokens[0].value == "ELSE" and len(argument_tokens) > 1:
-                    inner_keyword_doc = await namespace.find_keyword(argument_tokens[1].value)
+                    inner_keyword_doc = await namespace.find_keyword(unescape(argument_tokens[1].value))
 
                     if position.is_in_range(range_from_token(argument_tokens[1])):
                         return (inner_keyword_doc, argument_tokens[1]), argument_tokens[2:]
@@ -119,7 +122,7 @@ class ModelHelperMixin:
 
                     break
                 elif argument_tokens[0].value == "ELSE IF" and len(argument_tokens) > 2:
-                    inner_keyword_doc = await namespace.find_keyword(argument_tokens[2].value)
+                    inner_keyword_doc = await namespace.find_keyword(unescape(argument_tokens[2].value))
 
                     if position.is_in_range(range_from_token(argument_tokens[2])):
                         return (inner_keyword_doc, argument_tokens[2]), argument_tokens[3:]
