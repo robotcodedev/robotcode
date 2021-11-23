@@ -35,7 +35,16 @@ from ...common.lsp_types import (
     SemanticTokenTypes,
 )
 from ...common.text_document import TextDocument
-from ..utils.ast import HasTokens, Token, iter_nodes, token_in_range, tokenize_variables
+from ..diagnostics.library_doc import BUILTIN_LIBRARY_NAME, KeywordMatcher, LibraryDoc
+from ..diagnostics.namespace import KeywordFinder, Namespace
+from ..utils.ast import (
+    HasTokens,
+    Token,
+    iter_nodes,
+    token_in_range,
+    tokenize_variables,
+    yield_owner_and_kw_names,
+)
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -70,6 +79,10 @@ class RobotSemTokenTypes(Enum):
     NAMESPACE = "namespace"
 
 
+class RobotSemTokenModifiers(Enum):
+    BUILTIN = "builtin"
+
+
 @dataclass
 class SemTokenInfo:
     lineno: int
@@ -102,6 +115,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
         parent.semantic_tokens.token_types += [e for e in RobotSemTokenTypes]
+        parent.semantic_tokens.token_modifiers += [e for e in RobotSemTokenModifiers]
 
         parent.semantic_tokens.collect_full.add(self.collect_full)
         parent.semantic_tokens.collect_range.add(self.collect_range)
@@ -172,9 +186,18 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         r"(?P<t>[^\\]+)|(?P<x>\\([^xuU]|x[0-f]{2}|u[0-f]{4}|U[0-f]{8}){0,1})", re.MULTILINE | re.DOTALL
     )
 
+    BUILTIN_MATCHER = KeywordMatcher("BuiltIn")
+
     @classmethod
     async def generate_sem_sub_tokens(
-        cls, token: Token, node: ast.AST, col_offset: Optional[int] = None, length: Optional[int] = None
+        cls,
+        namespace: Namespace,
+        finder: KeywordFinder,
+        builtin_library_doc: Optional[LibraryDoc],
+        token: Token,
+        node: ast.AST,
+        col_offset: Optional[int] = None,
+        length: Optional[int] = None,
     ) -> AsyncGenerator[SemTokenInfo, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import (
@@ -229,35 +252,62 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 if length is None:
                     length = token.end_col_offset - token.col_offset
 
-                index = token.value.find(".")
-                old_index = 0
-                while index >= 0:
-                    if index > 0:
-                        yield SemTokenInfo(
-                            token.lineno,
-                            col_offset + old_index,
-                            index - old_index,
-                            RobotSemTokenTypes.NAMESPACE,
-                            {SemanticTokenModifiers.DEFAULT_LIBRARY}
-                            if token.value[:index].casefold() == "BuiltIn".casefold()
-                            else None,
-                        )
-                    yield SemTokenInfo(token.lineno, col_offset + index, 1, RobotSemTokenTypes.SEPARATOR, sem_mod)
+                kw_namespace: Optional[str] = None
+                kw: str = token.value
 
-                    new_index = token.value.find(".", index + 1)
-                    if new_index >= 0:
-                        old_index = index
-                        index = new_index
-                    else:
-                        break
+                for lib, name in yield_owner_and_kw_names(token.value):
+                    if lib is not None:
+                        lib_matcher = KeywordMatcher(lib)
+                        if (
+                            lib_matcher in (await namespace.get_libraries_matchers()).keys()
+                            or lib_matcher in (await namespace.get_resources_matchers()).keys()
+                        ):
+                            kw_namespace = lib
+                            if name:
+                                kw = name
+                            break
 
-                yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset + index + 1, length - index - 1)
+                kw_index = token.value.index(kw)
+
+                if kw_namespace:
+                    yield SemTokenInfo(
+                        token.lineno,
+                        col_offset,
+                        len(kw_namespace),
+                        RobotSemTokenTypes.NAMESPACE,
+                        {RobotSemTokenModifiers.BUILTIN} if kw_namespace == cls.BUILTIN_MATCHER else None,
+                    )
+                    yield SemTokenInfo(
+                        token.lineno,
+                        col_offset + len(kw_namespace),
+                        1,
+                        SemanticTokenTypes.OPERATOR,
+                    )
+                if builtin_library_doc is not None and kw in builtin_library_doc.keywords:
+                    doc = await finder.find_keyword(token.value)
+                    if (
+                        doc is not None
+                        and doc.libname == cls.BUILTIN_MATCHER
+                        and KeywordMatcher(doc.name) == KeywordMatcher(kw)
+                    ):
+                        if not sem_mod:
+                            sem_mod = set()
+                        sem_mod.add(RobotSemTokenModifiers.BUILTIN)
+
+                yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset + kw_index, len(kw))
             elif token.type == RobotToken.NAME and isinstance(node, (LibraryImport, ResourceImport, VariablesImport)):
                 yield SemTokenInfo.from_token(token, RobotSemTokenTypes.NAMESPACE, sem_mod, col_offset, length)
             else:
                 yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset, length)
 
-    async def generate_sem_tokens(self, token: Token, node: ast.AST) -> AsyncGenerator[SemTokenInfo, None]:
+    async def generate_sem_tokens(
+        self,
+        token: Token,
+        node: ast.AST,
+        namespace: Namespace,
+        finder: KeywordFinder,
+        builtin_library_doc: Optional[LibraryDoc],
+    ) -> AsyncGenerator[SemTokenInfo, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
         if token.type in {*RobotToken.ALLOW_VARIABLES, RobotToken.KEYWORD}:
@@ -265,37 +315,21 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             for sub_token in tokenize_variables(
                 token, ignore_errors=True, identifiers="$" if token.type == RobotToken.KEYWORD_NAME else "$@&%"
             ):
-                async for e in self.generate_sem_sub_tokens(sub_token, node):
+                async for e in self.generate_sem_sub_tokens(namespace, finder, builtin_library_doc, sub_token, node):
                     yield e
 
-        elif token.type == RobotToken.KEYWORD:
-            is_builtin = False
-            # TODO tag builtin keywords
-            # if namespace.initialized:
-            #     try:
-            #         libdoc = await namespace.find_keyword(token.value)
-            #         if (
-            #             libdoc is not None
-            #             and libdoc.libname is not None
-            #             and libdoc.libname.casefold() == "builtin".casefold()
-            #         ):
-
-            #             is_builtin = True
-            #     except BaseException:
-            #         pass
-
-            async for e in self.generate_sem_sub_tokens(token, node):
-                if is_builtin:
-                    if e.sem_modifiers is None:
-                        e.sem_modifiers = set()
-                    e.sem_modifiers.add(SemanticTokenModifiers.DEFAULT_LIBRARY)
-                yield e
         else:
-            async for e in self.generate_sem_sub_tokens(token, node):
+            async for e in self.generate_sem_sub_tokens(namespace, finder, builtin_library_doc, token, node):
                 yield e
 
     async def collect(
-        self, model: ast.AST, range: Optional[Range], cancel_token: CancelationToken
+        self,
+        model: ast.AST,
+        range: Optional[Range],
+        namespace: Namespace,
+        finder: KeywordFinder,
+        builtin_library_doc: Optional[LibraryDoc],
+        cancel_token: CancelationToken,
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
 
         data = []
@@ -319,7 +353,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         ):
             cancel_token.throw_if_canceled()
 
-            async for token in self.generate_sem_tokens(robot_token, robot_node):
+            async for token in self.generate_sem_tokens(
+                robot_token, robot_node, namespace, finder, builtin_library_doc
+            ):
                 current_line = token.lineno - 1
 
                 data.append(current_line - last_line)
@@ -352,16 +388,31 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
     async def collect_threading(
         self, document: TextDocument, range: Optional[Range]
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
+        cancel_token = CancelationToken()
         try:
             model = await self.parent.documents_cache.get_model(document)
+            namespace = await self.parent.documents_cache.get_namespace(document)
 
-            cancel_token = CancelationToken()
+            builtin_library_doc = next(
+                (
+                    library.library_doc
+                    for library in (await namespace.get_libraries()).values()
+                    if library.name == BUILTIN_LIBRARY_NAME
+                    and library.import_name == BUILTIN_LIBRARY_NAME
+                    and library.import_range == Range.zero()
+                ),
+                None,
+            )
+
             return await asyncio.get_running_loop().run_in_executor(
                 None,
                 asyncio.run,
                 self.collect(
                     model,
                     range,
+                    namespace,
+                    await namespace.create_finder(),
+                    builtin_library_doc,
                     cancel_token,
                 ),
             )

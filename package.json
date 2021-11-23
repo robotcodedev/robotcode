@@ -66,6 +66,12 @@
         "editor.semanticHighlighting.enabled": true
       }
     },
+    "semanticTokenModifiers": [
+      {
+        "id": "builtin",
+        "description": "built in library, keyword or variable"
+      }
+    ],    
     "semanticTokenScopes": [
       {
         "language": "robotframework",
