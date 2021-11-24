@@ -71,7 +71,7 @@
         "id": "builtin",
         "description": "built in library, keyword or variable"
       }
-    ],    
+    ],        
     "semanticTokenScopes": [
       {
         "language": "robotframework",
@@ -118,11 +118,14 @@
           "variable": [
             "variable.other.readwrite.robotframework"
           ],
-          "keywordCall": [
-            "meta.function-call.keyword.robotframework"
+          "keywordCall": [            
+            "variable.function.keyword-call.robotframework"
           ],
-          "nameCall": [
-            "meta.function-call.name.robotframework"
+          "keywordCallInner": [            
+            "variable.function.keyword-call.inner.robotframework"
+          ],
+          "nameCall": [            
+            "variable.function.keyword-call.robotframework"
           ],
           "continuation": [
             "punctuation.separator.continuation.robotframework"

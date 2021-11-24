@@ -347,12 +347,16 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         node: ast.AST,
         kw_token: Optional[Token],
         arguments: Optional[List[Token]],
+        unescape_kw_token: bool = False,
     ) -> AsyncGenerator[Location, None]:
+        from robot.utils.escaping import unescape
+
         if kw_token is not None and is_not_variable_token(kw_token):
             kw: Optional[KeywordDoc] = None
             kw_matcher = KeywordMatcher(kw_doc.name)
+            kw_name = unescape(kw_token.value) if unescape_kw_token else kw_token.value
 
-            for lib, name in yield_owner_and_kw_names(kw_token.value):
+            for lib, name in yield_owner_and_kw_names(kw_name):
                 if lib is not None:
                     lib_matcher = KeywordMatcher(lib)
                     if (
@@ -364,7 +368,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 if name is not None:
                     name_matcher = KeywordMatcher(name)
                     if kw_matcher == name_matcher:
-                        kw = await namespace.find_keyword(str(kw_token.value))
+                        kw = await namespace.find_keyword(kw_name)
 
                         if kw is not None and kw == kw_doc:
                             yield Location(
@@ -386,7 +390,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         kw_token: Token,
         arguments: List[Token],
     ) -> AsyncGenerator[Location, None]:
-
         if kw_token is None or not is_not_variable_token(kw_token):
             return
 
@@ -402,11 +405,11 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 yield e
         elif kw.is_run_keyword_with_condition() and len(arguments) > 1 and is_not_variable_token(arguments[1]):
             async for e in self.get_keyword_references_from_tokens(
-                namespace, kw_doc, node, arguments[1], arguments[2:]
+                namespace, kw_doc, node, arguments[1], arguments[2:], True
             ):
                 yield e
         elif kw.is_run_keywords():
-
+            has_separator = False
             while arguments:
 
                 t = arguments[0]
@@ -419,9 +422,13 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 if separator_token is not None:
                     args = arguments[: arguments.index(separator_token)]
                     arguments = arguments[arguments.index(separator_token) + 1 :]
+                    has_separator = True
+                else:
+                    if has_separator:
+                        args = arguments
 
                 if is_not_variable_token(t):
-                    async for e in self.get_keyword_references_from_tokens(namespace, kw_doc, node, t, args):
+                    async for e in self.get_keyword_references_from_tokens(namespace, kw_doc, node, t, args, True):
                         yield e
         elif kw.is_run_keyword_if() and len(arguments) > 1:
             arguments = arguments[1:]
@@ -442,7 +449,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                         arguments = arguments[1:]
 
                 if is_not_variable_token(t):
-                    async for e in self.get_keyword_references_from_tokens(namespace, kw_doc, node, t, args):
+                    async for e in self.get_keyword_references_from_tokens(namespace, kw_doc, node, t, args, True):
                         yield e
 
     async def _find_keyword_references(self, document: TextDocument, kw_doc: KeywordDoc) -> List[Location]:
