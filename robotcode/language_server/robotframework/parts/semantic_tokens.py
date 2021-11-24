@@ -567,7 +567,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             ),
         ):
             cancel_token.throw_if_canceled()
-            self._logger.debug(repr(robot_token))
+
             async for token in self.generate_sem_tokens(robot_token, robot_node, namespace, builtin_library_doc):
                 current_line = token.lineno - 1
 
