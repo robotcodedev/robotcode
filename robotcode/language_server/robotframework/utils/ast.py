@@ -9,6 +9,7 @@ from typing import (
     List,
     Optional,
     Protocol,
+    Set,
     Tuple,
     runtime_checkable,
 )
@@ -195,12 +196,17 @@ def _tokenize_no_variables(token: Token) -> Generator[Token, None, None]:
 
 
 def tokenize_variables(
-    token: Token, identifiers: str = "$@&%", ignore_errors: bool = False
+    token: Token, identifiers: str = "$@&%", ignore_errors: bool = False, *, extra_types: Optional[Set[str]] = None
 ) -> Generator[Token, Any, Any]:
     from robot.api.parsing import Token as RobotToken
     from robot.variables import VariableIterator
 
-    if token.type not in {*RobotToken.ALLOW_VARIABLES, RobotToken.KEYWORD, RobotToken.ASSIGN}:
+    if token.type not in {
+        *RobotToken.ALLOW_VARIABLES,
+        RobotToken.KEYWORD,
+        RobotToken.ASSIGN,
+        *(extra_types if extra_types is not None else set()),
+    }:
         return _tokenize_no_variables(token)
     variables = VariableIterator(token.value, identifiers=identifiers, ignore_errors=ignore_errors)
     if not variables:
@@ -224,7 +230,9 @@ def _tokenize_variables(token: Token, variables: Any) -> Generator[Token, Any, A
         yield RobotToken(token.type, remaining, lineno, col_offset)
 
 
-def yield_owner_and_kw_names(full_name: str) -> Iterator[Tuple[Optional[str], ...]]:
+def iter_over_keyword_names_and_owners(full_name: str) -> Iterator[Tuple[Optional[str], ...]]:
+    yield None, full_name
+
     tokens = full_name.split(".")
     if len(tokens) == 1:
         yield None, tokens[0]

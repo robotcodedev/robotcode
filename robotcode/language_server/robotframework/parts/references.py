@@ -39,10 +39,10 @@ from ..utils.ast import (
     get_nodes_at_position,
     get_tokens_at_position,
     is_not_variable_token,
+    iter_over_keyword_names_and_owners,
     range_from_token,
     range_from_token_or_node,
     tokenize_variables,
-    yield_owner_and_kw_names,
 )
 from ..utils.async_ast import iter_nodes
 
@@ -356,7 +356,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             kw_matcher = KeywordMatcher(kw_doc.name)
             kw_name = unescape(kw_token.value) if unescape_kw_token else kw_token.value
 
-            for lib, name in yield_owner_and_kw_names(kw_name):
+            for lib, name in iter_over_keyword_names_and_owners(kw_name):
                 if lib is not None:
                     lib_matcher = KeywordMatcher(lib)
                     if (

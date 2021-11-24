@@ -48,9 +48,9 @@ from ..utils.ast import (
     Token,
     is_not_variable_token,
     iter_nodes,
+    iter_over_keyword_names_and_owners,
     token_in_range,
     tokenize_variables,
-    yield_owner_and_kw_names,
 )
 
 if TYPE_CHECKING:
@@ -265,7 +265,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 kw_namespace: Optional[str] = None
                 kw: str = token.value
 
-                for lib, name in yield_owner_and_kw_names(token.value):
+                for lib, name in iter_over_keyword_names_and_owners(token.value):
                     if lib is not None:
                         lib_matcher = KeywordMatcher(lib)
                         if (
@@ -319,10 +319,13 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
     ) -> AsyncGenerator[SemTokenInfo, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
-        if token.type in {*RobotToken.ALLOW_VARIABLES, RobotToken.KEYWORD}:
+        if token.type in {*RobotToken.ALLOW_VARIABLES, RobotToken.KEYWORD, ROBOT_KEYWORD_INNER}:
 
             for sub_token in tokenize_variables(
-                token, ignore_errors=True, identifiers="$" if token.type == RobotToken.KEYWORD_NAME else "$@&%"
+                token,
+                ignore_errors=True,
+                identifiers="$" if token.type == RobotToken.KEYWORD_NAME else "$@&%",
+                extra_types={ROBOT_KEYWORD_INNER},
             ):
                 async for e in self.generate_sem_sub_tokens(namespace, builtin_library_doc, sub_token, node):
                     yield e
@@ -535,7 +538,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         )
                         kw: Optional[str] = None
 
-                        for _, name in yield_owner_and_kw_names(kw_token.value):
+                        for _, name in iter_over_keyword_names_and_owners(kw_token.value):
                             if name is not None:
                                 matcher = KeywordMatcher(name)
                                 if matcher in ALL_RUN_KEYWORDS_MATCHERS:
