@@ -128,7 +128,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         parent.semantic_tokens.token_modifiers += [e for e in RobotSemTokenModifiers]
 
         parent.semantic_tokens.collect_full.add(self.collect_full)
-        # parent.semantic_tokens.collect_range.add(self.collect_range)
+        parent.semantic_tokens.collect_range.add(self.collect_range)
         # parent.semantic_tokens.collect_full_delta.add(self.collect_full_delta)
 
     @classmethod
