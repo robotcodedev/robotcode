@@ -106,7 +106,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         self._trace = TraceValue.OFF
 
     @async_event
-    async def on_shutdown(sender) -> None:  # pragma: no cover
+    async def on_shutdown(sender) -> None:  # pragma: no cover, NOSONAR
         ...
 
     @property
@@ -184,7 +184,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         )
 
     @async_event
-    async def on_initialize(sender, initialization_options: Optional[Any] = None) -> None:  # pragma: no cover
+    async def on_initialize(sender, initialization_options: Optional[Any] = None) -> None:  # pragma: no cover, NOSONAR
         ...
 
     @rpc_method(name="initialized", param_type=InitializedParams)
@@ -192,7 +192,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         await self.on_initialized(self)
 
     @async_event
-    async def on_initialized(sender) -> None:  # pragma: no cover
+    async def on_initialized(sender) -> None:  # pragma: no cover, NOSONAR
         ...
 
     @rpc_method(name="shutdown")
@@ -202,7 +202,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
         try:
             await asyncio.wait_for(self.cancel_all_received_request(), 1)
-        except BaseException:
+        except BaseException:  # NOSONAR
             pass
 
         await self.on_shutdown(self)

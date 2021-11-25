@@ -35,14 +35,22 @@ if TYPE_CHECKING:
     from .server import RobotLanguageServer
 
 
+class RobotModuleNotFoundError(Exception):
+    pass
+
+
+class RobotVersionDontMatchError(Exception):
+    pass
+
+
 def check_robotframework() -> None:
     try:
         __import__("robot")
     except ImportError as e:
-        raise Exception("'robot' module not found, please install RobotFramework.") from e
+        raise RobotModuleNotFoundError("'robot' module not found, please install RobotFramework.") from e
 
     if get_robot_version() < (4, 0):
-        raise Exception("Wrong RobotFramework version. Expect version >= 4.0")
+        raise RobotVersionDontMatchError("Wrong RobotFramework version. Expect version >= 4.0")
 
 
 @dataclass

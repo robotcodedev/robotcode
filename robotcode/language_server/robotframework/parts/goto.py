@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import asyncio
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -297,6 +298,8 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                                 target_selection_range=libdoc.range,
                             )
                         ]
+                except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                    raise
                 except BaseException:
                     pass
         return None
@@ -334,6 +337,8 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                                 target_selection_range=libdoc.range,
                             )
                         ]
+                except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                    raise
                 except BaseException:
                     pass
         return None

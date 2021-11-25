@@ -8,7 +8,7 @@ from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_event import async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
-from ..language import HasAllCommitCharacters, HasLanguageId, HasTriggerCharacters
+from ..language import HasAllCommitCharacters, HasTriggerCharacters, language_id_filter
 from ..lsp_types import (
     CompletionContext,
     CompletionItem,
@@ -36,12 +36,12 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
     @async_tasking_event
     async def collect(
-        sender, document: TextDocument, position: Position, context: Optional[CompletionContext]
+        sender, document: TextDocument, position: Position, context: Optional[CompletionContext]  # NOSONAR
     ) -> Union[List[CompletionItem], CompletionList, None]:
         ...
 
     @async_tasking_event
-    async def resolve(sender, completion_item: CompletionItem) -> CompletionItem:
+    async def resolve(sender, completion_item: CompletionItem) -> CompletionItem:  # NOSONAR
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
@@ -91,7 +91,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             document,
             position,
             context,
-            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+            callback_filter=language_id_filter(document),
         ):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):

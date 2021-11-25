@@ -208,6 +208,8 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
                         f.cancel()
                         try:
                             yield await a
+                        except (SystemExit, KeyboardInterrupt):
+                            raise
                         except BaseException:
                             pass
 
@@ -337,6 +339,8 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
                         f.cancel()
                         try:
                             yield await a
+                        except (SystemExit, KeyboardInterrupt):
+                            raise
                         except BaseException:
                             pass
                 raise

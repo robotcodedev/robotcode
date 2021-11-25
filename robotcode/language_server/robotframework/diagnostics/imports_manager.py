@@ -257,7 +257,7 @@ class _ResourcesEntry:
                 path = uri.to_path()
                 if (
                     self._document is not None
-                    and ((path.resolve() == self._document.uri.to_path().resolve()))
+                    and (path.resolve() == self._document.uri.to_path().resolve())
                     or self._document is None
                 ):
                     await self._invalidate()
@@ -355,6 +355,8 @@ def _init_process_pool() -> ProcessPoolExecutor:
 
     try:
         result.submit(dummy_first_run_pool).result(5)
+    except (SystemExit, KeyboardInterrupt):
+        raise
     except BaseException:
         pass
 
@@ -383,11 +385,11 @@ class ImportsManager:
         self.parent_protocol.documents.did_change.add(self.resource_document_changed)
 
     @async_tasking_event
-    async def libraries_changed(sender, libraries: List[LibraryDoc]) -> None:
+    async def libraries_changed(sender, libraries: List[LibraryDoc]) -> None:  # NOSONAR
         ...
 
     @async_tasking_event
-    async def resources_changed(sender, resources: List[LibraryDoc]) -> None:
+    async def resources_changed(sender, resources: List[LibraryDoc]) -> None:  # NOSONAR
         ...
 
     @language_id("robotframework")
@@ -521,7 +523,7 @@ class ImportsManager:
             entry_key = _LibrariesEntryKey(source, args)
 
             if entry_key not in self._libaries:
-                self._libaries[entry_key] = entry = _LibrariesEntry(
+                self._libaries[entry_key] = _LibrariesEntry(
                     name, args, self, _get_libdoc, ignore_reference=sentinel is None
                 )
 
@@ -671,7 +673,7 @@ class ImportsManager:
             entry_key = _ResourcesEntryKey(source)
 
             if entry_key not in self._resources:
-                self._resources[entry_key] = entry = _ResourcesEntry(name, self, _get_document)
+                self._resources[entry_key] = _ResourcesEntry(name, self, _get_document)
 
             entry = self._resources[entry_key]
 

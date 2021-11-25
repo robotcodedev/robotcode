@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import io
 import os
 from typing import TYPE_CHECKING, Any, List, Optional, cast
@@ -111,6 +112,8 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             if result:
                 return result
 
+        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+            raise
         except BaseException as e:
             self.parent.window.show_message(str(e), MessageType.Error)
         return None

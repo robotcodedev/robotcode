@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 from ....utils.async_event import async_tasking_event_iterator
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
-from ..language import HasLanguageId, language_id
+from ..language import language_id, language_id_filter
 from ..lsp_types import Diagnostic, DocumentUri, PublishDiagnosticsParams
 from ..text_document import TextDocument
 
@@ -109,7 +109,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.parent.documents.did_save.add(self.on_did_save)
 
     @async_tasking_event_iterator
-    async def collect(sender, document: TextDocument) -> DiagnosticsResult:
+    async def collect(sender, document: TextDocument) -> DiagnosticsResult:  # NOSONAR
         ...
 
     @_logger.call
@@ -187,7 +187,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         async for result_any in self.collect(
             self,
             document,
-            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+            callback_filter=language_id_filter(document),
             return_exceptions=True,
         ):
             result = cast(DiagnosticsResult, result_any)

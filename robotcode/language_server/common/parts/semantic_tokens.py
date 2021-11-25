@@ -8,7 +8,7 @@ from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_event import async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
-from ..language import HasLanguageId
+from ..language import language_id_filter
 from ..lsp_types import (
     Range,
     SemanticTokenModifiers,
@@ -43,19 +43,19 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
 
     @async_tasking_event
     async def collect_full(
-        sender, document: TextDocument, **kwargs: Any
+        sender, document: TextDocument, **kwargs: Any  # NOSONAR
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         ...
 
     @async_tasking_event
     async def collect_full_delta(
-        sender, document: TextDocument, previous_result_id: str, **kwargs: Any
+        sender, document: TextDocument, previous_result_id: str, **kwargs: Any  # NOSONAR
     ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None]:
         ...
 
     @async_tasking_event
     async def collect_range(
-        sender, document: TextDocument, range: Range, **kwargs: Any
+        sender, document: TextDocument, range: Range, **kwargs: Any  # NOSONAR
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         ...
 
@@ -87,7 +87,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
         for result in await self.collect_full(
             self,
             document,
-            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+            callback_filter=language_id_filter(document),
             **kwargs,
         ):
             if isinstance(result, BaseException):
@@ -114,7 +114,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
             self,
             document,
             previous_result_id,
-            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+            callback_filter=language_id_filter(document),
             **kwargs,
         ):
             if isinstance(result, BaseException):
@@ -141,7 +141,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
             self,
             document,
             range,
-            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+            callback_filter=language_id_filter(document),
             **kwargs,
         ):
             if isinstance(result, BaseException):

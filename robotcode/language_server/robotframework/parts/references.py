@@ -134,6 +134,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                                     range=variable.range(),
                                 )
                             ]
+            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                raise
             except BaseException:
                 pass
         return None

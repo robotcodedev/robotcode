@@ -90,6 +90,8 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                     )
 
             return DiagnosticsResult(self.collect_token_errors, result)
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except BaseException as e:
             return DiagnosticsResult(
                 self.collect_token_errors,

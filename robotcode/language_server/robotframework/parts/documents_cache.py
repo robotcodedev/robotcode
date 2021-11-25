@@ -18,7 +18,7 @@ from typing import (
 
 from ....utils.async_event import CancelationToken, async_tasking_event
 from ....utils.uri import Uri
-from ...common.language import HasLanguageId
+from ...common.language import language_id_filter
 from ...common.parts.workspace import WorkspaceFolder
 from ...common.text_document import TextDocument
 from ..configuration import RobotConfig
@@ -269,7 +269,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         return await self.__get_namespace_for_document_type(document, DocumentType.GENERAL, cancelation_token)
 
     @async_tasking_event
-    async def namespace_invalidated(sender, document: TextDocument) -> None:
+    async def namespace_invalidated(sender, document: TextDocument) -> None:  # NOSONAR
         ...
 
     async def __invalidate_namespace(self, namespace: Namespace) -> None:
@@ -279,7 +279,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
             await self.namespace_invalidated(
                 self,
                 document,
-                callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+                callback_filter=language_id_filter(document),
             )
 
     async def __get_namespace_for_document_type(

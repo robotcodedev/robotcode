@@ -156,6 +156,8 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                     ]
                 else:
                     return [generate(TestSuite.from_file_system("."))]
+            except (SystemExit, KeyboardInterrupt):
+                raise
             except BaseException as e:
                 return [TestItem(type="error", id=Path.cwd().name, label=Path.cwd().name, error=str(e))]
 

@@ -59,6 +59,8 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                     model = await self.parent.documents_cache.get_model(document)
                     result = await self.collect_threading(document, workspace_folder, extension_config, model)
                     return DiagnosticsResult(self.collect_diagnostics, result)
+        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+            raise
         except BaseException:
             pass
 

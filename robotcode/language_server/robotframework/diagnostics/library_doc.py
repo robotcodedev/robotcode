@@ -478,9 +478,8 @@ class LibraryDoc(Model):
     def to_markdown(self, add_signature: bool = True, only_doc: bool = True) -> str:
         result = ""
 
-        if add_signature:
-            if any(v for v in self.inits.values() if v.args):
-                result += "\n\n---\n".join(i.to_markdown() for i in self.inits.values())
+        if add_signature and any(v for v in self.inits.values() if v.args):
+            result += "\n\n---\n".join(i.to_markdown() for i in self.inits.values())
 
         if result:
             result += "\n\n---\n"
@@ -655,6 +654,8 @@ def get_module_spec(module_name: str) -> Optional[ModuleSpec]:
     while result is None:
         try:
             result = importlib.util.find_spec(module_name)
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except BaseException:
             pass
         if result is None:
@@ -691,6 +692,8 @@ class KeywordWrapper:
     def doc(self) -> Any:
         try:
             return self.kw.doc
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except BaseException:
             return ""
 
@@ -698,6 +701,8 @@ class KeywordWrapper:
     def tags(self) -> Any:
         try:
             return self.kw.tags
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except BaseException:
             return []
 
@@ -705,6 +710,8 @@ class KeywordWrapper:
     def source(self) -> Any:
         try:
             return self.kw.source
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except BaseException:
             return self.lib_source
 
@@ -712,6 +719,8 @@ class KeywordWrapper:
     def lineno(self) -> Any:
         try:
             return self.kw.lineno
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except BaseException:
             return 0
 
@@ -719,6 +728,8 @@ class KeywordWrapper:
     def libname(self) -> Any:
         try:
             return self.kw.libname
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except BaseException:
             return ""
 
@@ -726,6 +737,8 @@ class KeywordWrapper:
     def longname(self) -> Any:
         try:
             return self.kw.longname
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except BaseException:
             return ""
 
@@ -887,7 +900,7 @@ def _std_capture() -> Iterator[io.StringIO]:
         sys.__stdout__ = old__stdout__
 
 
-class IgnoreEasterEggLibraryWarning(BaseException):
+class IgnoreEasterEggLibraryWarning(Exception):
     pass
 
 
@@ -1009,6 +1022,8 @@ def get_library_doc(
         source = None
         try:
             libcode, source = import_test_library(import_name)
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except BaseException as e:
             return LibraryDoc(
                 name=name,
@@ -1047,6 +1062,8 @@ def get_library_doc(
                 create_handlers=False,
                 variables=robot_variables,
             )
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except BaseException as e:
             errors.append(
                 error_from_exception(
@@ -1059,6 +1076,8 @@ def get_library_doc(
             if args:
                 try:
                     lib = get_test_library(libcode, source, library_name, (), create_handlers=False)
+                except (SystemExit, KeyboardInterrupt):
+                    raise
                 except BaseException:
                     pass
 

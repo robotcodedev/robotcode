@@ -7,7 +7,7 @@ from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_event import async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
-from ..language import HasLanguageId
+from ..language import language_id_filter
 from ..lsp_types import (
     CodeLens,
     CodeLensOptions,
@@ -31,11 +31,11 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         super().__init__(parent)
 
     @async_tasking_event
-    async def collect(sender, document: TextDocument) -> Optional[List[CodeLens]]:
+    async def collect(sender, document: TextDocument) -> Optional[List[CodeLens]]:  # NOSONAR
         ...
 
     @async_tasking_event
-    async def resolve(sender, code_lens: CodeLens) -> Optional[CodeLens]:
+    async def resolve(sender, code_lens: CodeLens) -> Optional[CodeLens]:  # NOSONAR
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
@@ -49,11 +49,7 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
         results: List[CodeLens] = []
         document = self.parent.documents[text_document.uri]
-        for result in await self.collect(
-            self,
-            document,
-            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
-        ):
+        for result in await self.collect(self, document, callback_filter=language_id_filter(document)):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -92,6 +88,6 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             and self.parent.client_capabilities.workspace.code_lens is not None
             and self.parent.client_capabilities.workspace.code_lens.refresh_support
         ):
-            pass
+            return
 
         await self.parent.send_request("workspace/codeLens/refresh")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import asyncio
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -108,6 +109,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                                 ),
                                 range=range,
                             )
+            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                raise
             except BaseException:
                 pass
         return None
@@ -255,6 +258,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         ),
                         range=range_from_token_or_node(library_node, name_token),
                     )
+                except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                    raise
                 except BaseException:
                     pass
         return None
@@ -288,6 +293,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         ),
                         range=range_from_token_or_node(resource_node, name_token),
                     )
+                except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                    raise
                 except BaseException:
                     pass
         return None

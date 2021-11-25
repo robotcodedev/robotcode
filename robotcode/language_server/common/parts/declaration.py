@@ -7,7 +7,7 @@ from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_event import async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
-from ..language import HasLanguageId
+from ..language import language_id_filter
 from ..lsp_types import (
     DeclarationParams,
     Location,
@@ -34,7 +34,7 @@ class DeclarationProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
     @async_tasking_event
     async def collect(
-        sender, document: TextDocument, position: Position
+        sender, document: TextDocument, position: Position  # NOSONAR
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         ...
 
@@ -58,12 +58,7 @@ class DeclarationProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         location_links: List[LocationLink] = []
 
         document = self.parent.documents[text_document.uri]
-        for result in await self.collect(
-            self,
-            document,
-            position,
-            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
-        ):
+        for result in await self.collect(self, document, position, callback_filter=language_id_filter(document)):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)

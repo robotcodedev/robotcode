@@ -8,8 +8,6 @@ class InvalidRobotVersionError(Exception):
     def __init__(self) -> None:
         super().__init__("Invalid robot version string.")
 
-    pass
-
 
 def get_robot_version() -> Tuple[int, int, Optional[int], Optional[str], Optional[int], Optional[int]]:
     import robot
@@ -39,6 +37,8 @@ def get_robot_version() -> Tuple[int, int, Optional[int], Optional[str], Optiona
                 s_to_i(m.group("pre_number")),
                 s_to_i(m.group("dev")),
             )
+    except (SystemExit, KeyboardInterrupt):
+        raise
     except BaseException as ex:
         raise InvalidRobotVersionError() from ex
 

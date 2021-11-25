@@ -7,7 +7,7 @@ from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_event import async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
-from ..language import HasLanguageId
+from ..language import language_id_filter
 from ..lsp_types import (
     DocumentFormattingOptions,
     DocumentFormattingParams,
@@ -37,13 +37,13 @@ class FormattingProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
     @async_tasking_event
     async def format(
-        sender, document: TextDocument, options: FormattingOptions, **further_options: Any
+        sender, document: TextDocument, options: FormattingOptions, **further_options: Any  # NOSONAR
     ) -> Optional[List[TextEdit]]:
         ...
 
     @async_tasking_event
     async def format_range(
-        sender, document: TextDocument, range: Range, options: FormattingOptions, **further_options: Any
+        sender, document: TextDocument, range: Range, options: FormattingOptions, **further_options: Any  # NOSONAR
     ) -> Optional[List[TextEdit]]:
         ...
 
@@ -70,7 +70,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             self,
             document,
             options,
-            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+            callback_filter=language_id_filter(document),
             **kwargs,
         ):
             if isinstance(result, BaseException):
@@ -104,7 +104,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             document,
             range,
             options,
-            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+            callback_filter=language_id_filter(document),
             **kwargs,
         ):
             if isinstance(result, BaseException):

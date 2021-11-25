@@ -8,7 +8,7 @@ from ....jsonrpc2.protocol import JsonRPCException, rpc_method
 from ....utils.async_event import async_event
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
-from ..language import HasLanguageId
+from ..language import language_id_filter
 from ..lsp_types import (
     DidChangeTextDocumentParams,
     DidCloseTextDocumentParams,
@@ -66,28 +66,23 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         for change in to_change.values():
             document = self._documents.get(DocumentUri(Uri(change.uri).normalized()), None)
             if document is not None and not document.opened_in_editor:
-                await self.did_close(
-                    self,
-                    document,
-                    callback_filter=lambda c: not isinstance(c, HasLanguageId)
-                    or c.__language_id__ == document.language_id,
-                )
+                await self.did_close(self, document, callback_filter=language_id_filter(document))
                 await self.close_document(document, True)
 
     @async_event
-    async def did_open(sender, document: TextDocument) -> None:
+    async def did_open(sender, document: TextDocument) -> None:  # NOSONAR
         ...
 
     @async_event
-    async def did_close(sender, document: TextDocument) -> None:
+    async def did_close(sender, document: TextDocument) -> None:  # NOSONAR
         ...
 
     @async_event
-    async def did_change(sender, document: TextDocument) -> None:
+    async def did_change(sender, document: TextDocument) -> None:  # NOSONAR
         ...
 
     @async_event
-    async def did_save(sender, document: TextDocument) -> None:
+    async def did_save(sender, document: TextDocument) -> None:  # NOSONAR
         ...
 
     def __getitem__(self, k: str) -> Any:
@@ -157,18 +152,10 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         document.opened_in_editor = True
         document.references.add(self)
 
-        await self.did_open(
-            self,
-            document,
-            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
-        )
+        await self.did_open(self, document, callback_filter=language_id_filter(document))
 
         if text_changed:
-            await self.did_change(
-                self,
-                document,
-                callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
-            )
+            await self.did_change(self, document, callback_filter=language_id_filter(document))
 
     @rpc_method(name="textDocument/didClose", param_type=DidCloseTextDocumentParams)
     @_logger.call
@@ -179,11 +166,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         if document is not None:
             document.references.remove(self)
             document.opened_in_editor = False
-            await self.did_close(
-                self,
-                document,
-                callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
-            )
+            await self.did_close(self, document, callback_filter=language_id_filter(document))
             await self.close_document(document)
 
     @_logger.call
@@ -203,6 +186,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
     async def _text_document_will_save(
         self, text_document: TextDocumentIdentifier, reason: TextDocumentSaveReason, *args: Any, **kwargs: Any
     ) -> None:
+        # TODO: implement
         pass
 
     @rpc_method(name="textDocument/didSave", param_type=DidSaveTextDocumentParams)
@@ -221,18 +205,9 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
                 if text_changed:
                     await document.apply_full_change(None, text)
 
-                    await self.did_change(
-                        self,
-                        document,
-                        callback_filter=lambda c: not isinstance(c, HasLanguageId)
-                        or c.__language_id__ == document.language_id,
-                    )
+                    await self.did_change(self, document, callback_filter=language_id_filter(document))
 
-            await self.did_save(
-                self,
-                document,
-                callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
-            )
+            await self.did_save(self, document, callback_filter=language_id_filter(document))
 
     @rpc_method(name="textDocument/willSaveWaitUntil", param_type=WillSaveTextDocumentParams)
     @_logger.call
@@ -284,8 +259,4 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
                     f"for document {text_document.uri}."
                 )
 
-        await self.did_change(
-            self,
-            document,
-            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
-        )
+        await self.did_change(self, document, callback_filter=language_id_filter(document))

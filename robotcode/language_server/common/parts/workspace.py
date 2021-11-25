@@ -86,7 +86,7 @@ class FileWatcherEntry:
         self.finalizer: Any = None
 
     @async_event
-    async def child_callbacks(sender, changes: List[FileEvent]) -> None:
+    async def child_callbacks(sender, changes: List[FileEvent]) -> None:  # NOSONAR
         ...
 
     async def call_childrens(self, sender: Any, changes: List[FileEvent]) -> None:
@@ -190,7 +190,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         self._settings = value
 
     @async_event
-    async def did_change_configuration(sender, settings: Dict[str, Any]) -> None:
+    async def did_change_configuration(sender, settings: Dict[str, Any]) -> None:  # NOSONAR
         ...
 
     @rpc_method(name="workspace/didChangeConfiguration", param_type=DidChangeConfigurationParams)
@@ -200,27 +200,27 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         await self.did_change_configuration(self, settings)
 
     @async_event
-    async def will_create_files(sender, files: List[str]) -> Optional[Mapping[str, List[TextEdit]]]:
+    async def will_create_files(sender, files: List[str]) -> Optional[Mapping[str, List[TextEdit]]]:  # NOSONAR
         ...
 
     @async_event
-    async def did_create_files(sender, files: List[str]) -> None:
+    async def did_create_files(sender, files: List[str]) -> None:  # NOSONAR
         ...
 
     @async_event
-    async def will_rename_files(sender, files: List[Tuple[str, str]]) -> None:
+    async def will_rename_files(sender, files: List[Tuple[str, str]]) -> None:  # NOSONAR
         ...
 
     @async_event
-    async def did_rename_files(sender, files: List[Tuple[str, str]]) -> None:
+    async def did_rename_files(sender, files: List[Tuple[str, str]]) -> None:  # NOSONAR
         ...
 
     @async_event
-    async def will_delete_files(sender, files: List[str]) -> None:
+    async def will_delete_files(sender, files: List[str]) -> None:  # NOSONAR
         ...
 
     @async_event
-    async def did_delete_files(sender, files: List[str]) -> None:
+    async def did_delete_files(sender, files: List[str]) -> None:  # NOSONAR
         ...
 
     @rpc_method(name="workspace/willCreateFiles", param_type=CreateFilesParams)
@@ -351,7 +351,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
                 self.workspace_folders.append(WorkspaceFolder(a.name, Uri(a.uri), a.uri))
 
     @async_event
-    async def did_change_watched_files(sender, changes: List[FileEvent]) -> None:
+    async def did_change_watched_files(sender, changes: List[FileEvent]) -> None:  # NOSONAR
         ...
 
     @rpc_method(name="workspace/didChangeWatchedFiles", param_type=DidChangeWatchedFilesParams)

@@ -139,7 +139,7 @@ def __default(o: Any) -> Any:
     elif isinstance(o, Set):
         return [v for v in o]
     else:
-        TypeError()
+        raise TypeError()
 
 
 def as_json(obj: Any, indent: Optional[bool] = None, compact: Optional[bool] = None) -> str:
@@ -205,9 +205,8 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
 
             same_keys = [k for k in cased_value.keys() if k in signature.parameters.keys()]
 
-            if strict:
-                if any(k for k in cased_value.keys() if k not in signature.parameters.keys()):
-                    continue
+            if strict and any(k for k in cased_value.keys() if k not in signature.parameters.keys()):
+                continue
 
             if not all(k in same_keys for k in non_default_parameters.keys()):
                 continue

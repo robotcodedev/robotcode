@@ -941,25 +941,25 @@ class ServerCapabilities(Model):
     definition_provider: Union[bool, DefinitionOptions, None] = None
     implementation_provider: Union[bool, ImplementationOptions, ImplementationRegistrationOptions, None] = None
     references_provider: Union[bool, ReferenceOptions, None] = None
-    # document_highlight_provider: Union[bool, DocumentHighlightOptions, None] = None
+    # TODO document_highlight_provider: Union[bool, DocumentHighlightOptions, None] = None
     document_symbol_provider: Union[bool, DocumentSymbolOptions, None] = None
-    # code_action_provider: Union[bool, CodeActionOptions] = None
+    # TODO code_action_provider: Union[bool, CodeActionOptions] = None
     code_lens_provider: Optional[CodeLensOptions] = None
-    # document_link_provider: Optional[DocumentLinkOptions] = None
-    # color_provider: Union[bool, DocumentColorOptions, DocumentColorRegistrationOptions, None] = None
+    # TODO document_link_provider: Optional[DocumentLinkOptions] = None
+    # TODO color_provider: Union[bool, DocumentColorOptions, DocumentColorRegistrationOptions, None] = None
     document_formatting_provider: Union[bool, DocumentFormattingOptions, None] = None
     document_range_formatting_provider: Union[bool, DocumentRangeFormattingOptions, None] = None
-    # document_on_type_formatting_provider: Optional[DocumentOnTypeFormattingOptions] = None
-    # rename_provider: Union[bool, RenameOptions, None] = None
+    # TODO document_on_type_formatting_provider: Optional[DocumentOnTypeFormattingOptions] = None
+    # TODO rename_provider: Union[bool, RenameOptions, None] = None
     folding_range_provider: Union[bool, FoldingRangeOptions, FoldingRangeRegistrationOptions, None] = None
     execute_command_provider: Optional[ExecuteCommandOptions] = None
-    # selection_range_provider: Union[bool, SelectionRangeOptions, SelectionRangeRegistrationOptions, None] = None
-    # linked_editing_range_provider: Union[
+    # TODO selection_range_provider: Union[bool, SelectionRangeOptions, SelectionRangeRegistrationOptions, None] = None
+    # TODO linked_editing_range_provider: Union[
     #     boolean, LinkedEditingRangeOptions, LinkedEditingRangeRegistrationOptions, None
     # ] = None
-    # call_hierarchy_provider: Union[boolean, CallHierarchyOptions, CallHierarchyRegistrationOptions, None] = None
+    # TODO call_hierarchy_provider: Union[boolean, CallHierarchyOptions, CallHierarchyRegistrationOptions, None] = None
     semantic_tokens_provider: Union[SemanticTokensOptions, SemanticTokensRegistrationOptions, None] = None
-    # moniker_provider: Union[bool, MonikerOptions, MonikerRegistrationOptions, None] = None
+    # TODO moniker_provider: Union[bool, MonikerOptions, MonikerRegistrationOptions, None] = None
     workspace_symbol_provider: Union[bool, WorkspaceSymbolOptions, None] = None
     workspace: Optional[ServerCapabilitiesWorkspace] = None
     experimental: Optional[Any] = None

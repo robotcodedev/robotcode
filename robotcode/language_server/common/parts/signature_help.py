@@ -8,7 +8,7 @@ from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_event import async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ..has_extend_capabilities import HasExtendCapabilities
-from ..language import HasLanguageId, HasRetriggerCharacters, HasTriggerCharacters
+from ..language import HasRetriggerCharacters, HasTriggerCharacters, language_id_filter
 from ..lsp_types import (
     Position,
     ServerCapabilities,
@@ -35,7 +35,7 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilitie
 
     @async_tasking_event
     async def collect(
-        sender, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
+        sender, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None  # NOSONAR
     ) -> Optional[SignatureHelp]:
         ...
 
@@ -85,7 +85,7 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilitie
             document,
             position,
             context,
-            callback_filter=lambda c: not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id,
+            callback_filter=language_id_filter(document),
         ):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
@@ -94,9 +94,9 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilitie
                 if result is not None:
                     results.append(result)
 
-        if len(results) > 0:
+        if len(results) > 0 and results[-1].signatures:
             # TODO: can we combine signature help results?
-            if results[-1].signatures:
-                return results[-1]
+
+            return results[-1]
 
         return None
