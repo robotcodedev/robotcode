@@ -1,8 +1,8 @@
 ---
 name: Bug report
 about: Create a report to help us improve
-title: 'bug'
-labels: ''
+title: '[BUG] <title>'
+labels: 'bug'
 assignees: ''
 
 ---
@@ -37,11 +37,12 @@ If applicable, add screenshots or videos to help explain your problem.
 Copy the messages from VSCode "Output" view for RobotCode and RobotCode Language Server for the specific folder/workspace.
 
 **Desktop (please complete the following information):**
-- OS: [e.g. Windows, Linux]
 - VS Code Version [e.g. 1.60]
-- Version [e.g. 22]
+- RobotCode Version [e.g. 0.3.2]
+- OS: [e.g. Windows, Linux]
 - Python Version [e.g. 3.9.7]
 - RobotFramework Version [e.g. 4.0.0]
-
+- Additional tools like robocop, robotidy
+  
 **Additional context**
 Add any other context about the problem here.
