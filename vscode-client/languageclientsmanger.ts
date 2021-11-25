@@ -44,15 +44,15 @@ export class LanguageClientsManager {
     public readonly outputChannel: vscode.OutputChannel
   ) {
     this._disposables = vscode.Disposable.from(
-      this.pythonManager.pythonExtension?.exports.settings.onDidChangeExecutionDetails(
-        async (_event) => await this.refresh()
+      this.pythonManager.pythonExtension?.exports.settings.onDidChangeExecutionDetails(async (_event) =>
+        this.refresh()
       ) ?? {
         dispose() {
           //empty
         },
       },
-      vscode.workspace.onDidChangeWorkspaceFolders(async (_event) => await this.refresh()),
-      vscode.workspace.onDidOpenTextDocument(async (document) => await this.getLanguageClientForDocument(document))
+      vscode.workspace.onDidChangeWorkspaceFolders(async (_event) => this.refresh()),
+      vscode.workspace.onDidOpenTextDocument(async (document) => this.getLanguageClientForDocument(document))
     );
   }
 
@@ -70,7 +70,10 @@ export class LanguageClientsManager {
   }
 
   dispose(): void {
-    void this.stopAllClients().then();
+    this.stopAllClients().then(
+      (_) => undefined,
+      (_) => undefined
+    );
 
     this._disposables.dispose();
   }
@@ -127,11 +130,11 @@ export class LanguageClientsManager {
   public async getLanguageClientForDocument(document: vscode.TextDocument): Promise<LanguageClient | undefined> {
     if (document.languageId !== "robotframework") return;
 
-    return await this.getLanguageClientForResource(document.uri);
+    return this.getLanguageClientForResource(document.uri);
   }
 
   public async getLanguageClientForResource(resource: string | vscode.Uri): Promise<LanguageClient | undefined> {
-    return await this.clientsMutex.dispatch(async () => {
+    return this.clientsMutex.dispatch(async () => {
       const uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
       const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
 
@@ -232,12 +235,11 @@ export class LanguageClientsManager {
 
     if (!client) return;
 
-    const result =
+    return (
       (await client.sendRequest<RobotTestItem[]>("robot/discovering/getTestsFromWorkspace", {
         paths: paths ?? ["."],
-      })) ?? undefined;
-
-    return result;
+      })) ?? undefined
+    );
   }
 
   public async getTestsFromDocument(document: vscode.TextDocument, id?: string): Promise<RobotTestItem[] | undefined> {
@@ -245,12 +247,11 @@ export class LanguageClientsManager {
 
     if (!client) return;
 
-    const result =
+    return (
       (await client.sendRequest<RobotTestItem[]>("robot/discovering/getTestsFromDocument", {
         textDocument: { uri: document.uri.toString() },
         id: id,
-      })) ?? undefined;
-
-    return result;
+      })) ?? undefined
+    );
   }
 }

@@ -98,11 +98,17 @@ export class PythonManager {
       try {
         this._pythonExtension = vscode.extensions.getExtension("ms-python.python")!;
 
-        void this._pythonExtension.activate().then();
+        this._pythonExtension.activate().then(
+          (_) => undefined,
+          (_) => undefined
+        );
 
         this.outputChannel.appendLine("Python Extension is active");
 
-        void this._pythonExtension.exports.ready.then();
+        this._pythonExtension.exports.ready.then(
+          (_) => undefined,
+          (_) => undefined
+        );
       } catch (ex) {
         this.outputChannel.appendLine("can't activate python extension");
       }

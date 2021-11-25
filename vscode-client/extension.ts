@@ -32,12 +32,15 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
     testControllerManger,
 
     vscode.window.registerTerminalLinkProvider({
-      provideTerminalLinks(context: vscode.TerminalLinkContext, _token: vscode.CancellationToken) {
-        if ((context.line.startsWith("Log:") || context.line.startsWith("Report:")) && context.line.endsWith("html")) {
-          const result = /(Log|Report):\s*(?<link>\S.*)/.exec(context.line)?.groups?.link;
+      provideTerminalLinks(terminalContext: vscode.TerminalLinkContext, _token: vscode.CancellationToken) {
+        if (
+          (terminalContext.line.startsWith("Log:") || terminalContext.line.startsWith("Report:")) &&
+          terminalContext.line.endsWith("html")
+        ) {
+          const result = /(Log|Report):\s*(?<link>\S.*)/.exec(terminalContext.line)?.groups?.link;
 
           if (result) {
-            return [new TerminalLink(result, context.line.indexOf(result), result.length, "Open report.")];
+            return [new TerminalLink(result, terminalContext.line.indexOf(result), result.length, "Open report.")];
           }
         }
 
@@ -79,9 +82,9 @@ function displayProgress<R>(promise: Promise<R>): Thenable<R> {
 }
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  return await displayProgress(activateAsync(context));
+  return displayProgress(activateAsync(context));
 }
 
 export async function deactivate(): Promise<void> {
-  return await languageClientManger.stopAllClients();
+  return languageClientManger.stopAllClients();
 }

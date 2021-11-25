@@ -61,8 +61,8 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                     return DiagnosticsResult(self.collect_diagnostics, result)
         except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
             raise
-        except BaseException:
-            pass
+        except BaseException as e:
+            self._logger.exception(e)
 
         return DiagnosticsResult(self.collect_diagnostics, [])
 

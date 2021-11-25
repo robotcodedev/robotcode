@@ -63,21 +63,21 @@ export class TestControllerManager {
     this.runProfile = this.testController.createRunProfile(
       "Run Tests",
       vscode.TestRunProfileKind.Run,
-      async (request, token) => await this.runTests(request, token)
+      async (request, token) => this.runTests(request, token)
     );
 
     this.debugProfile = this.testController.createRunProfile(
       "Debug",
       vscode.TestRunProfileKind.Debug,
-      async (request, token) => await this.runTests(request, token)
+      async (request, token) => this.runTests(request, token)
     );
 
-    this.testController.resolveHandler = async (item) => await this.refresh(item);
+    this.testController.resolveHandler = async (item) => this.refresh(item);
 
     const fileWatcher = vscode.workspace.createFileSystemWatcher("**/*");
-    fileWatcher.onDidCreate(async (uri) => await this.refreshFromUri(uri, "create"));
-    fileWatcher.onDidDelete(async (uri) => await this.refreshFromUri(uri, "delete"));
-    fileWatcher.onDidChange(async (uri) => await this.refreshFromUri(uri, "change"));
+    fileWatcher.onDidCreate(async (uri) => this.refreshFromUri(uri, "create"));
+    fileWatcher.onDidDelete(async (uri) => this.refreshFromUri(uri, "delete"));
+    fileWatcher.onDidChange(async (uri) => this.refreshFromUri(uri, "change"));
 
     this._disposables = vscode.Disposable.from(
       fileWatcher,

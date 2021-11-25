@@ -7,13 +7,7 @@ from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
-from ...common.lsp_types import (
-    FormattingOptions,
-    MessageType,
-    Position,
-    Range,
-    TextEdit,
-)
+from ...common.lsp_types import FormattingOptions, Position, Range, TextEdit
 from ...common.text_document import TextDocument
 
 if TYPE_CHECKING:
@@ -115,7 +109,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
             raise
         except BaseException as e:
-            self.parent.window.show_message(str(e), MessageType.Error)
+            self._logger.exception(e)
         return None
 
     async def format_internal(
