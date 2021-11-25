@@ -3,8 +3,37 @@ name = "robotcode"
 version = "0.3.2"
 description = "Language server,debugger and tools for RobotFramework"
 authors = ["Daniel Biehl <daniel.biehl@imbus.de>"]
+homepage = 'https://github.com/d-biehl/robotcode'
+repository = 'https://github.com/d-biehl/robotcode'
+readme = "README.md"
+license = "Apache-2.0"
 include = ["robotcode/py.typed", "README.md"]
 exclude = ["robotcode/external"]
+keywords = [
+  "Testing",
+  "RobotFramework",
+  "Keyword Driven",
+  "Language Server Protocol",
+  "Visual Studio Code",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: Apache Software License",
+  "Framework :: Robot Framework",
+  "Framework :: Robot Framework :: Tool",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: Implementation",
+  "Topic :: Software Development :: Testing",
+  "Topic :: Software Development :: Testing :: Acceptance",
+  "Topic :: Software Development :: Testing :: BDD",
+  "Typing :: Typed",
+  "Topic :: Software Development :: Debuggers",
+  "Topic :: Text Editors :: Integrated Development Environments (IDE)",
+
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -28,6 +57,7 @@ Cython = "^0.29.24"
 robotframework-robocop = "^1.7.1"
 robotframework-tidy = "^1.5.1"
 PyYAML = "^6.0"
+types-PyYAML = "^6.0"
 
 
 [tool.poetry-dynamic-versioning]
