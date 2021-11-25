@@ -1,0 +1,61 @@
+name: Bug report
+description: File a bug report
+title: '[Bug] <title>'
+labels: 'bug'
+body:
+  - type: textarea
+    id: what-happened
+    description: What happened?
+    attributes:
+      label: What happened?
+      description: Also tell us, what did you expect to happen?
+      value: |
+        **Describe the bug**
+        A clear and concise description of what the bug is.
+
+        **To Reproduce**
+        Steps to reproduce the behavior:
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+
+        If possible add some example source code like:
+        ```robotframework
+        ***Settings***
+        Library  Collections
+
+        ***Test Cases***
+        a simple test
+            do something    # this should shown something
+        ```
+
+        **Expected behavior**
+        A clear and concise description of what you expected to happen.
+
+        **Screenshots/ Videos**
+        If applicable, add screenshots or videos to help explain your problem.
+
+        **Logs**
+        Copy the messages from VSCode "Output" view for RobotCode and RobotCode Language Server for the specific folder/workspace.
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating System
+      description: On what OS does it happen?
+      placeholder: Windows
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Robocode version
+      description: What version of Robocode are you using? See VSCode Extension
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your report!
