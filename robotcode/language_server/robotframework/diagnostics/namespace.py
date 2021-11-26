@@ -10,7 +10,7 @@ from enum import Enum
 from pathlib import Path
 from typing import (
     Any,
-    AsyncIterator,
+    AsyncGenerator,
     Callable,
     Dict,
     Iterable,
@@ -1216,7 +1216,7 @@ class KeywordFinder:
             self.self_library_doc = await self.namespace.get_library_doc()
         return self.self_library_doc.keywords.get(name, None)
 
-    async def _yield_owner_and_kw_names(self, full_name: str) -> AsyncIterator[Tuple[str, ...]]:
+    async def _yield_owner_and_kw_names(self, full_name: str) -> AsyncGenerator[Tuple[str, ...], None]:
         tokens = full_name.split(".")
         for i in range(1, len(tokens)):
             yield ".".join(tokens[:i]), ".".join(tokens[i:])

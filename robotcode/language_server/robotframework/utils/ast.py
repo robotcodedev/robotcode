@@ -15,7 +15,7 @@ from typing import (
 )
 
 from ...common.lsp_types import Position, Range
-from .async_ast import walk
+from . import async_ast
 
 
 def iter_nodes(node: ast.AST) -> Generator[ast.AST, None, None]:
@@ -176,7 +176,11 @@ def get_tokens_at_position(node: HasTokens, position: Position) -> List[Token]:
 
 
 def iter_nodes_at_position(node: ast.AST, position: Position) -> AsyncIterator[ast.AST]:
-    return (n async for n in walk(node) if position.is_in_range(range := range_from_node(n)) or range.end == position)
+    return (
+        n
+        async for n in async_ast.iter_nodes(node)
+        if position.is_in_range(range := range_from_node(n)) or range.end == position
+    )
 
 
 async def get_nodes_at_position(node: ast.AST, position: Position) -> List[ast.AST]:

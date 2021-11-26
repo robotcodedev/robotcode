@@ -8,6 +8,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from types import MethodType
 from typing import (
     Any,
+    AsyncGenerator,
     AsyncIterator,
     Awaitable,
     Callable,
@@ -94,10 +95,8 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
                 yield c
 
     async def __aiter__(self) -> AsyncIterator[_TCallable]:
-        for r in self._listeners:
-            c = r()
-            if c is not None:
-                yield c
+        for r in self.__iter__():
+            yield r
 
     async def _notify(
         self, *args: Any, callback_filter: Optional[Callable[[_TCallable], bool]] = None, **kwargs: Any
@@ -296,7 +295,7 @@ class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCalla
         return_exceptions: Optional[bool] = True,
         callback_filter: Optional[Callable[[_TCallable], bool]] = None,
         **kwargs: Any,
-    ) -> AsyncIterator[Union[_TResult, BaseException]]:
+    ) -> AsyncGenerator[Union[_TResult, BaseException], None]:
         def _done(f: asyncio.Future[_TResult]) -> None:
             if result_callback is not None:
                 try:

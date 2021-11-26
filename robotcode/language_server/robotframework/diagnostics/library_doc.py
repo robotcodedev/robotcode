@@ -312,18 +312,7 @@ class KeywordDoc(Model):
             result = ""
 
             if add_signature:
-                result += (
-                    f"\n\n={'='*header_level} "
-                    f"{'Library' if self.is_initializer else 'Keyword'} *{self.name}* "
-                    f"={'='*header_level}\n"
-                )
-                if self.args:
-                    result += f"\n=={'='*header_level} Arguments: =={'='*header_level}\n"
-                    for a in self.args:
-                        result += f"\n| {str(a)}"
-
-            else:
-                result = ""
+                result += self._get_signature(header_level)
 
             if self.doc:
                 if result:
@@ -336,6 +325,19 @@ class KeywordDoc(Model):
             return result
 
         return self.doc
+
+    def _get_signature(self, header_level: int) -> str:
+        result = (
+            f"\n\n={'='*header_level} "
+            f"{'Library' if self.is_initializer else 'Keyword'} *{self.name}* "
+            f"={'='*header_level}\n"
+        )
+        if self.args:
+            result += f"\n=={'='*header_level} Arguments: =={'='*header_level}\n"
+            for a in self.args:
+                result += f"\n| {str(a)}"
+
+        return result
 
     @property
     def signature(self) -> str:
@@ -539,42 +541,45 @@ class LibraryDoc(Model):
             else:
                 doc = self.doc
 
-            if self.doc:
-                result += "\n== Introduction ==\n\n"
-
             if doc:
+                result += "\n== Introduction ==\n\n"
                 result += doc
 
             if not only_doc:
-                if any(v for v in self.inits.values() if v.args):
-                    result += "\n---\n\n"
-                    result += "\n== Importing == \n\n"
-
-                    first = True
-
-                    for kw in self.inits.values():
-                        if not first:
-                            result += "\n---\n"
-                        first = False
-
-                        result += "\n" + kw.get_full_doc()
-
-                if self.keywords:
-                    result += "\n---\n\n"
-                    result += "\n== Keywords == \n\n"
-
-                    first = True
-
-                    for kw in self.keywords.values():
-                        if not first:
-                            result += "\n---\n"
-                        first = False
-
-                        result += "\n" + kw.get_full_doc(header_level=2)
+                result += self._get_doc_for_keywords()
 
             return self._process_inline_links(result)
 
         return self.doc
+
+    def _get_doc_for_keywords(self) -> str:
+        result = ""
+        if any(v for v in self.inits.values() if v.args):
+            result += "\n---\n\n"
+            result += "\n== Importing == \n\n"
+
+            first = True
+
+            for kw in self.inits.values():
+                if not first:
+                    result += "\n---\n"
+                first = False
+
+                result += "\n" + kw.get_full_doc()
+
+        if self.keywords:
+            result += "\n---\n\n"
+            result += "\n== Keywords == \n\n"
+
+            first = True
+
+            for kw in self.keywords.values():
+                if not first:
+                    result += "\n---\n"
+                first = False
+
+                result += "\n" + kw.get_full_doc(header_level=2)
+        return result
 
     def _add_toc(self, doc: str, only_doc: bool = True) -> str:
         toc = self._create_toc(doc, only_doc)
@@ -606,23 +611,7 @@ def _update_env(
 ) -> None:
     import gc
 
-    global __PRELOADED_MODULES
-
-    if __PRELOADED_MODULES is None:
-        try:
-            __import__("robot.libraries.BuiltIn")
-        except ImportError:
-            pass
-
-        __PRELOADED_MODULES = set(sys.modules.values())
-    else:
-        for m in (f for f in set(sys.modules.values()) - __PRELOADED_MODULES if not f.__name__.startswith("robot.")):
-            try:
-                importlib.reload(m)
-            except (SystemExit, KeyboardInterrupt):
-                raise
-            except BaseException:
-                pass
+    unload_preloaded_modules()
 
     file = Path(__file__).resolve()
     top = file.parents[3]
@@ -645,6 +634,26 @@ def _update_env(
     if environment:
         for k, v in environment.items():
             os.environ[k] = v
+
+
+def unload_preloaded_modules() -> None:
+    global __PRELOADED_MODULES
+
+    if __PRELOADED_MODULES is None:
+        try:
+            __import__("robot.libraries.BuiltIn")
+        except ImportError:
+            pass
+
+        __PRELOADED_MODULES = set(sys.modules.values())
+    else:
+        for m in (f for f in set(sys.modules.values()) - __PRELOADED_MODULES if not f.__name__.startswith("robot.")):
+            try:
+                importlib.reload(m)
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException:
+                pass
 
 
 def get_module_spec(module_name: str) -> Optional[ModuleSpec]:

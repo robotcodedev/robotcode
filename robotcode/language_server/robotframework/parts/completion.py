@@ -9,6 +9,7 @@ import weakref
 from typing import (
     TYPE_CHECKING,
     Any,
+    AsyncGenerator,
     AsyncIterator,
     Awaitable,
     Callable,
@@ -158,7 +159,7 @@ class CompletionCollector(ModelHelperMixin):
 
         return self._section_style or DEFAULT_SECTIONS_STYLE
 
-    async def _find_methods(self, cls: Type[Any]) -> AsyncIterator[_CompleteMethod]:
+    async def _find_methods(self, cls: Type[Any]) -> AsyncGenerator[_CompleteMethod, None]:
         if cls is ast.AST:
             return
 
