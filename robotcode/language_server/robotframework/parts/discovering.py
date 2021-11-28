@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import ast
-import asyncio
 from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, List, Optional
 
 from ....jsonrpc2.protocol import rpc_method
+from ....utils.async_tools import to_thread
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.lsp_types import (
@@ -163,7 +163,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
     @rpc_method(name="robot/discovering/getTestsFromWorkspace", param_type=GetAllTestsParams)
     async def get_tests_from_workspace(self, paths: Optional[List[str]]) -> List[TestItem]:
-        return await asyncio.get_event_loop().run_in_executor(None, self.get_tests_from_workspace_threading, paths)
+        return await to_thread(self.get_tests_from_workspace_threading, paths)
 
     def get_tests_from_document_threading(
         self, text_document: TextDocumentIdentifier, id: Optional[str], model: ast.AST
@@ -194,8 +194,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
     async def get_tests_from_document(self, text_document: TextDocumentIdentifier, id: Optional[str]) -> List[TestItem]:
-        return await asyncio.get_event_loop().run_in_executor(
-            None,
+        return await to_thread(
             self.get_tests_from_document_threading,
             text_document,
             id,

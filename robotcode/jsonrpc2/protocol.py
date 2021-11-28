@@ -31,7 +31,7 @@ from typing import (
     runtime_checkable,
 )
 
-from ..utils.async_event import async_event
+from ..utils.async_tools import async_event
 from ..utils.dataclasses import as_json, from_dict
 from ..utils.inspect import ensure_coroutine, iter_methods
 from ..utils.logging import LoggingDescriptor

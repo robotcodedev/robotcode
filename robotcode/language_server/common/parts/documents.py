@@ -5,7 +5,7 @@ import re
 from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Mapping, Optional
 
 from ....jsonrpc2.protocol import JsonRPCException, rpc_method
-from ....utils.async_event import async_event
+from ....utils.async_tools import async_event
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ..language import language_id_filter

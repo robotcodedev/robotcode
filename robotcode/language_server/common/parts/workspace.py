@@ -24,7 +24,7 @@ from typing import (
 )
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_event import async_event
+from ....utils.async_tools import async_event
 from ....utils.dataclasses import from_dict
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to

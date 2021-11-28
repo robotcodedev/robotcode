@@ -4,12 +4,17 @@ import collections
 import functools
 import inspect
 import logging
+import reprlib
 import time
 from enum import Enum
 from types import FunctionType, MethodType
 from typing import Any, Callable, List, Optional, Type, TypeVar, Union, cast, overload
 
 __all__ = ["LoggingDescriptor"]
+
+
+def _repr(o: Any) -> str:
+    return reprlib.repr(o)
 
 
 def get_class_that_defined_method(meth: Callable[..., Any]) -> Optional[Type[Any]]:
@@ -356,10 +361,10 @@ class LoggingDescriptor:
 
                     return "{0}({1}{2}{3})".format(
                         func_name(),
-                        ", ".join(repr(a) for a in message_args),
+                        ", ".join(_repr(a) for a in message_args),
                         (", " if len(message_args) > 0 and len(wrapper_kwargs) > 0 else ""),
                         (
-                            ", ".join(f"{str(k)}={repr(v)}" for k, v in wrapper_kwargs.items())
+                            ", ".join(f"{str(k)}={_repr(v)}" for k, v in wrapper_kwargs.items())
                             if len(wrapper_kwargs) > 0
                             else ""
                         ),
@@ -367,7 +372,7 @@ class LoggingDescriptor:
 
                 def build_exit_message(res: Any, duration: Optional[float]) -> str:
                     return "{0}(...) -> {1}{2}".format(
-                        func_name(), repr(res), f" duration: {duration}" if duration is not None else ""
+                        func_name(), _repr(res), f" duration: {duration}" if duration is not None else ""
                     )
 
                 def build_exception_message(exception: BaseException) -> str:

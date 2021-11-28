@@ -23,6 +23,7 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_chain
+from ....utils.async_tools import awaitable_to_thread
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.lsp_types import (
@@ -589,7 +590,6 @@ class Namespace:
 
         return self._libraries
 
-    @_logger.call
     async def get_libraries_matchers(self) -> Dict[KeywordMatcher, LibraryEntry]:
         if self._libraries_matchers is None:
             self._libraries_matchers = {
@@ -597,13 +597,11 @@ class Namespace:
             }
         return self._libraries_matchers
 
-    @_logger.call
     async def get_resources(self) -> OrderedDict[str, ResourceEntry]:
         await self.ensure_initialized()
 
         return self._resources
 
-    @_logger.call
     async def get_resources_matchers(self) -> Dict[KeywordMatcher, ResourceEntry]:
         if self._resources_matchers is None:
             self._resources_matchers = {
@@ -1097,10 +1095,7 @@ class Namespace:
             async with self._analyze_lock:
                 if not self._analyzed:
                     try:
-                        self._diagnostics += await asyncio.get_running_loop().run_in_executor(
-                            None, asyncio.run, Analyzer().get(self.model, self)
-                        )
-                        # self._diagnostics += await Analyzer().get(self.model, self)
+                        self._diagnostics += await awaitable_to_thread(Analyzer().get(self.model, self))
 
                         lib_doc = await self.get_library_doc()
 
@@ -1127,7 +1122,7 @@ class Namespace:
                     finally:
                         self._analyzed = True
 
-    @_logger.call
+    @_logger.call(condition=lambda self, name: self._finder is not None and name not in self._finder._cache)
     async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
         if self._finder is None:
             await self.ensure_initialized()

@@ -5,6 +5,7 @@ import asyncio
 import io
 from typing import TYPE_CHECKING, Any, List, Optional
 
+from ....utils.async_tools import to_thread
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
@@ -69,9 +70,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     async def collect_threading(
         self, document: TextDocument, workspace_folder: WorkspaceFolder, extension_config: RoboCopConfig, model: ast.AST
     ) -> List[Diagnostic]:
-        return await asyncio.get_event_loop().run_in_executor(
-            None, self.collect, document, workspace_folder, extension_config, model
-        )
+        return await to_thread(self.collect, document, workspace_folder, extension_config, model)
 
     def collect(
         self, document: TextDocument, workspace_folder: WorkspaceFolder, extension_config: RoboCopConfig, model: ast.AST

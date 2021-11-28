@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Any, List, Optional
 
+from ....utils.async_tools import awaitable_to_thread
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
@@ -25,7 +26,6 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         self.source_name = "robotcode.diagnostics"
 
         parent.diagnostics.collect.add(self.collect_token_errors)
-        # parent.diagnostics.collect.add(self.collect_model_errors)
         parent.diagnostics.collect.add(self.collect_walk_model_errors)
 
         parent.diagnostics.collect.add(self.collect_namespace_diagnostics)
@@ -61,41 +61,39 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     async def collect_token_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
-        from robot.errors import VariableError
-        from robot.parsing.lexer.tokens import Token
+        async def collect_async(tokens: List[Token]) -> List[Diagnostic]:
+            from robot.errors import VariableError
+            from robot.parsing.lexer.tokens import Token
 
-        result: List[Diagnostic] = []
-        try:
-            for token in await self.parent.documents_cache.get_tokens(document):
-                if token.type in [Token.ERROR, Token.FATAL_ERROR]:
-                    result.append(self._create_error_from_token(token))
+            result: List[Diagnostic] = []
+            try:
+                for token in tokens:
+                    if token.type in [Token.ERROR, Token.FATAL_ERROR]:
+                        result.append(self._create_error_from_token(token))
 
-                try:
-                    for variable_token in token.tokenize_variables():
-                        if variable_token == token:
-                            break
+                    try:
+                        for variable_token in token.tokenize_variables():
+                            if variable_token == token:
+                                break
 
-                        if variable_token.type in [Token.ERROR, Token.FATAL_ERROR]:
-                            result.append(self._create_error_from_token(variable_token))
+                            if variable_token.type in [Token.ERROR, Token.FATAL_ERROR]:
+                                result.append(self._create_error_from_token(variable_token))
 
-                except VariableError as e:
-                    result.append(
-                        Diagnostic(
-                            range=range_from_token(token),
-                            message=str(e),
-                            severity=DiagnosticSeverity.ERROR,
-                            source=self.source_name,
-                            code=type(e).__qualname__,
+                    except VariableError as e:
+                        result.append(
+                            Diagnostic(
+                                range=range_from_token(token),
+                                message=str(e),
+                                severity=DiagnosticSeverity.ERROR,
+                                source=self.source_name,
+                                code=type(e).__qualname__,
+                            )
                         )
-                    )
 
-            return DiagnosticsResult(self.collect_token_errors, result)
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except BaseException as e:
-            return DiagnosticsResult(
-                self.collect_token_errors,
-                [
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                return [
                     Diagnostic(
                         range=Range(
                             start=Position(
@@ -112,61 +110,37 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         source=self.source_name,
                         code=type(e).__qualname__,
                     )
-                ],
-            )
+                ]
 
-    @language_id("robotframework")
-    @_logger.call
-    async def collect_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
-        from ..utils.ast import HasError, HasErrors
-        from ..utils.async_ast import AsyncVisitor
-
-        class Visitor(AsyncVisitor):
-            def __init__(self, parent: RobotDiagnosticsProtocolPart) -> None:
-                super().__init__()
-                self.parent = parent
-                self.errors: List[Diagnostic] = []
-
-            @classmethod
-            async def find_from(cls, model: ast.AST, parent: RobotDiagnosticsProtocolPart) -> List[Diagnostic]:
-                finder = cls(parent)
-                await finder.visit(model)
-                return finder.errors
-
-            async def generic_visit(self, node: ast.AST) -> None:
-                error = node.error if isinstance(node, HasError) else None
-                if error is not None:
-                    self.errors.append(self.parent._create_error_from_node(node, error))
-                errors = node.errors if isinstance(node, HasErrors) else None
-
-                if errors is not None:
-                    for e in errors:
-                        self.errors.append(self.parent._create_error_from_node(node, e))
-                await super().generic_visit(node)
+            return result
 
         return DiagnosticsResult(
-            self.collect_model_errors,
-            await Visitor.find_from(await self.parent.documents_cache.get_model(document), self),
+            self.collect_token_errors,
+            await awaitable_to_thread(collect_async(await self.parent.documents_cache.get_tokens(document))),
         )
 
     @language_id("robotframework")
     @_logger.call
     async def collect_walk_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
-        from ..utils.ast import HasError, HasErrors
-        from ..utils.async_ast import walk
+        async def collect_async(model: ast.AST) -> List[Diagnostic]:
+            from ..utils.ast import HasError, HasErrors
+            from ..utils.async_ast import iter_nodes
 
-        result: List[Diagnostic] = []
+            result: List[Diagnostic] = []
+            async for node in iter_nodes(model):
+                error = node.error if isinstance(node, HasError) else None
+                if error is not None:
+                    result.append(self._create_error_from_node(node, error))
+                errors = node.errors if isinstance(node, HasErrors) else None
+                if errors is not None:
+                    for e in errors:
+                        result.append(self._create_error_from_node(node, e))
+            return result
 
-        async for node in walk(await self.parent.documents_cache.get_model(document)):
-            error = node.error if isinstance(node, HasError) else None
-            if error is not None:
-                result.append(self._create_error_from_node(node, error))
-            errors = node.errors if isinstance(node, HasErrors) else None
-            if errors is not None:
-                for e in errors:
-                    result.append(self._create_error_from_node(node, e))
-
-        return DiagnosticsResult(self.collect_walk_model_errors, result)
+        return DiagnosticsResult(
+            self.collect_walk_model_errors,
+            await awaitable_to_thread(collect_async(await self.parent.documents_cache.get_model(document))),
+        )
 
     @language_id("robotframework")
     @_logger.call

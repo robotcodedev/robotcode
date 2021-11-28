@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, List, Optional, Tuple, cast
 
-from ....utils.async_event import async_tasking_event
+from ....utils.async_tools import async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
 from ....utils.uri import Uri

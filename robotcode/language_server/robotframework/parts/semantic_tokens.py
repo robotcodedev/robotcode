@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-import asyncio
 import operator
 import re
 from dataclasses import dataclass
@@ -11,6 +10,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     AsyncGenerator,
+    Container,
     Dict,
     FrozenSet,
     List,
@@ -21,8 +21,8 @@ from typing import (
     cast,
 )
 
-from ....utils.async_event import CancelationToken
 from ....utils.async_itertools import async_dropwhile, async_takewhile
+from ....utils.async_tools import CancelationToken, awaitable_to_thread
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import (
@@ -204,6 +204,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         cls,
         namespace: Namespace,
         builtin_library_doc: Optional[LibraryDoc],
+        libraries_matchers: Container[KeywordMatcher],
+        resources_matchers: Container[KeywordMatcher],
         token: Token,
         node: ast.AST,
         col_offset: Optional[int] = None,
@@ -245,8 +247,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             elif token.type == RobotToken.ARGUMENT and "\\" in token.value:
                 if col_offset is None:
                     col_offset = token.col_offset
-                if length is None:
-                    length = token.end_col_offset - token.col_offset
 
                 for g in cls.ESCAPE_REGEX.finditer(token.value):
                     yield SemTokenInfo.from_token(
@@ -259,8 +259,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             elif token.type == RobotToken.KEYWORD or (token.type == RobotToken.NAME and isinstance(node, Fixture)):
                 if col_offset is None:
                     col_offset = token.col_offset
-                if length is None:
-                    length = token.end_col_offset - token.col_offset
 
                 kw_namespace: Optional[str] = None
                 kw: str = token.value
@@ -268,10 +266,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 for lib, name in iter_over_keyword_names_and_owners(token.value):
                     if lib is not None:
                         lib_matcher = KeywordMatcher(lib)
-                        if (
-                            lib_matcher in (await namespace.get_libraries_matchers()).keys()
-                            or lib_matcher in (await namespace.get_resources_matchers()).keys()
-                        ):
+                        if lib_matcher in libraries_matchers or lib_matcher in resources_matchers:
                             kw_namespace = lib
                             if name:
                                 kw = name
@@ -316,6 +311,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         node: ast.AST,
         namespace: Namespace,
         builtin_library_doc: Optional[LibraryDoc],
+        libraries_matchers: Container[KeywordMatcher],
+        resources_matchers: Container[KeywordMatcher],
     ) -> AsyncGenerator[SemTokenInfo, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
@@ -327,17 +324,23 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 identifiers="$" if token.type == RobotToken.KEYWORD_NAME else "$@&%",
                 extra_types={ROBOT_KEYWORD_INNER},
             ):
-                async for e in self.generate_sem_sub_tokens(namespace, builtin_library_doc, sub_token, node):
+                async for e in self.generate_sem_sub_tokens(
+                    namespace, builtin_library_doc, libraries_matchers, resources_matchers, sub_token, node
+                ):
                     yield e
 
         else:
-            async for e in self.generate_sem_sub_tokens(namespace, builtin_library_doc, token, node):
+            async for e in self.generate_sem_sub_tokens(
+                namespace, builtin_library_doc, libraries_matchers, resources_matchers, token, node
+            ):
                 yield e
 
     async def generate_run_kw_tokens(
         self,
         namespace: Namespace,
         builtin_library_doc: Optional[LibraryDoc],
+        libraries_matchers: Container[KeywordMatcher],
+        resources_matchers: Container[KeywordMatcher],
         kw_doc: Optional[KeywordDoc],
         kw_token: Token,
         arguments: List[Token],
@@ -364,6 +367,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 async for b in self.generate_run_kw_tokens(
                     namespace,
                     builtin_library_doc,
+                    libraries_matchers,
+                    resources_matchers,
                     await namespace.find_keyword(unescape(token.value)) if is_not_variable_token(token) else None,
                     RobotToken(ROBOT_KEYWORD_INNER, token.value, token.lineno, token.col_offset, token.error),
                     arguments[1:],
@@ -382,6 +387,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                     async for b in self.generate_run_kw_tokens(
                         namespace,
                         builtin_library_doc,
+                        libraries_matchers,
+                        resources_matchers,
                         await namespace.find_keyword(unescape(token.value)) if is_not_variable_token(token) else None,
                         RobotToken(ROBOT_KEYWORD_INNER, token.value, token.lineno, token.col_offset, token.error),
                         arguments[1:],
@@ -420,6 +427,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                     async for e in self.generate_run_kw_tokens(
                         namespace,
                         builtin_library_doc,
+                        libraries_matchers,
+                        resources_matchers,
                         await namespace.find_keyword(unescape(token.value)) if is_not_variable_token(token) else None,
                         RobotToken(ROBOT_KEYWORD_INNER, token.value, token.lineno, token.col_offset, token.error),
                         args,
@@ -496,6 +505,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         async for e in self.generate_run_kw_tokens(
                             namespace,
                             builtin_library_doc,
+                            libraries_matchers,
+                            resources_matchers,
                             inner_kw_doc,
                             RobotToken(ROBOT_KEYWORD_INNER, token.value, token.lineno, token.col_offset, token.error),
                             args,
@@ -510,12 +521,15 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             for a in arguments:
                 yield a, node
 
+    @_logger.call
     async def collect(
         self,
         model: ast.AST,
         range: Optional[Range],
         namespace: Namespace,
         builtin_library_doc: Optional[LibraryDoc],
+        libraries_matchers: Container[KeywordMatcher],
+        resources_matchers: Container[KeywordMatcher],
         cancel_token: CancelationToken,
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
 
@@ -549,6 +563,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                                 async for t in self.generate_run_kw_tokens(
                                     namespace,
                                     builtin_library_doc,
+                                    libraries_matchers,
+                                    resources_matchers,
                                     kw_doc,
                                     kw_token,
                                     node.tokens[node.tokens.index(kw_token) + 1 :],
@@ -571,7 +587,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         ):
             cancel_token.throw_if_canceled()
 
-            async for token in self.generate_sem_tokens(robot_token, robot_node, namespace, builtin_library_doc):
+            async for token in self.generate_sem_tokens(
+                robot_token, robot_node, namespace, builtin_library_doc, libraries_matchers, resources_matchers
+            ):
                 current_line = token.lineno - 1
 
                 data.append(current_line - last_line)
@@ -601,6 +619,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
         return SemanticTokens(data=data)
 
+    @_logger.call
     async def collect_threading(
         self, document: TextDocument, range: Optional[Range]
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
@@ -621,14 +640,14 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             )
             await namespace.get_library_doc()
 
-            return await asyncio.get_running_loop().run_in_executor(
-                None,
-                asyncio.run,
+            return await awaitable_to_thread(
                 self.collect(
                     model,
                     range,
                     namespace,
                     builtin_library_doc,
+                    await namespace.get_libraries_matchers(),
+                    await namespace.get_resources_matchers(),
                     cancel_token,
                 ),
             )
@@ -637,18 +656,21 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             raise
 
     @language_id("robotframework")
+    @_logger.call
     async def collect_full(
         self, sender: Any, document: TextDocument, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         return await document.get_cache(self.collect_threading, None)
 
     @language_id("robotframework")
+    @_logger.call
     async def collect_range(
         self, sender: Any, document: TextDocument, range: Range, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         return await self.collect_threading(document, range)
 
     @language_id("robotframework")
+    @_logger.call
     async def collect_full_delta(
         self, sender: Any, document: TextDocument, previous_result_id: str, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None]:

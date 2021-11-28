@@ -5,7 +5,7 @@ import itertools
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 
-from ....utils.async_event import async_tasking_event_iterator
+from ....utils.async_tools import async_tasking_event_iterator
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ..language import language_id, language_id_filter

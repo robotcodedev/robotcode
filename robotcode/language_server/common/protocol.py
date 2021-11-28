@@ -12,7 +12,7 @@ from ...jsonrpc2.protocol import (
     rpc_method,
 )
 from ...jsonrpc2.server import JsonRPCServer
-from ...utils.async_event import async_event
+from ...utils.async_tools import async_event
 from ...utils.logging import LoggingDescriptor
 from .has_extend_capabilities import HasExtendCapabilities
 from .lsp_types import (

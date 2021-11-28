@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import contextvars
+import functools
 import inspect
 import threading
 import weakref
@@ -40,6 +42,7 @@ __all__ = [
     "async_threading_event",
 ]
 
+_T = TypeVar("_T")
 
 _TResult = TypeVar("_TResult")
 _TCallable = TypeVar("_TCallable", bound=Callable[..., Any])
@@ -410,3 +413,14 @@ class CancelationToken:
         if self.canceled:
             raise asyncio.CancelledError()
         return False
+
+
+async def to_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> _T:
+    loop = asyncio.get_running_loop()
+    ctx = contextvars.copy_context()
+    func_call = functools.partial(ctx.run, func, *args, **kwargs)
+    return await loop.run_in_executor(None, cast(Callable[..., _T], func_call))
+
+
+async def awaitable_to_thread(awaitable: Awaitable[_T]) -> _T:
+    return await to_thread(asyncio.run, awaitable)
