@@ -415,12 +415,12 @@ class CancelationToken:
         return False
 
 
-async def to_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> _T:
+def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyncio.Future[_T]:
     loop = asyncio.get_running_loop()
     ctx = contextvars.copy_context()
     func_call = functools.partial(ctx.run, func, *args, **kwargs)
-    return await loop.run_in_executor(None, cast(Callable[..., _T], func_call))
+    return cast("asyncio.Future[_T]", loop.run_in_executor(None, cast(Callable[..., _T], func_call)))
 
 
-async def awaitable_to_thread(awaitable: Awaitable[_T]) -> _T:
-    return await to_thread(asyncio.run, awaitable)
+def awaitable_run_in_thread(awaitable: Awaitable[_T]) -> asyncio.Future[_T]:
+    return run_in_thread(asyncio.run, awaitable)

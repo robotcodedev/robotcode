@@ -5,7 +5,7 @@ import asyncio
 import io
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from ....utils.async_tools import to_thread
+from ....utils.async_tools import CancelationToken, run_in_thread
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
@@ -48,7 +48,9 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    async def collect_diagnostics(
+        self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
+    ) -> DiagnosticsResult:
 
         try:
             workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
@@ -58,7 +60,9 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 if extension_config is not None and extension_config.enabled:
 
                     model = await self.parent.documents_cache.get_model(document)
-                    result = await self.collect_threading(document, workspace_folder, extension_config, model)
+                    result = await self.collect_threading(
+                        document, workspace_folder, extension_config, model, cancelation_token
+                    )
                     return DiagnosticsResult(self.collect_diagnostics, result)
         except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
             raise
@@ -68,12 +72,22 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         return DiagnosticsResult(self.collect_diagnostics, [])
 
     async def collect_threading(
-        self, document: TextDocument, workspace_folder: WorkspaceFolder, extension_config: RoboCopConfig, model: ast.AST
+        self,
+        document: TextDocument,
+        workspace_folder: WorkspaceFolder,
+        extension_config: RoboCopConfig,
+        model: ast.AST,
+        cancelation_token: CancelationToken,
     ) -> List[Diagnostic]:
-        return await to_thread(self.collect, document, workspace_folder, extension_config, model)
+        return await run_in_thread(self.collect, document, workspace_folder, extension_config, model, cancelation_token)
 
     def collect(
-        self, document: TextDocument, workspace_folder: WorkspaceFolder, extension_config: RoboCopConfig, model: ast.AST
+        self,
+        document: TextDocument,
+        workspace_folder: WorkspaceFolder,
+        extension_config: RoboCopConfig,
+        model: ast.AST,
+        cancelation_token: CancelationToken,
     ) -> List[Diagnostic]:
         from robocop.config import Config
         from robocop.rules import RuleSeverity
@@ -98,6 +112,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             analyser = Robocop(from_cli=False, config=config)
             analyser.reload_config()
 
+            # TODO find a way to cancel the run_check
             issues = analyser.run_check(model, str(document.uri.to_path()), document.text)
 
             for issue in issues:
@@ -117,7 +132,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                     source=self.source_name,
                     code=f"{issue.severity.value}{issue.rule_id}",
                 )
-
+                cancelation_token.throw_if_canceled()
                 result.append(d)
 
         return result

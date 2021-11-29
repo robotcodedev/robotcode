@@ -4,6 +4,7 @@ import ast
 import asyncio
 from typing import List, Optional, cast
 
+from ....utils.async_tools import CancelationToken
 from ....utils.uri import Uri
 from ...common.lsp_types import (
     Diagnostic,
@@ -26,15 +27,23 @@ from .namespace import DIAGNOSTICS_SOURCE_NAME, KeywordFinder, Namespace
 
 
 class Analyzer(AsyncVisitor):
-    async def get(self, model: ast.AST, namespace: Namespace) -> List[Diagnostic]:
+    async def get(
+        self, model: ast.AST, namespace: Namespace, cancelation_token: Optional[CancelationToken] = None
+    ) -> List[Diagnostic]:
         self._results: List[Diagnostic] = []
         self._namespace = namespace
-
+        self.cancelation_token = cancelation_token
         self.current_testcase_or_keyword_name: Optional[str] = None
         self.finder = KeywordFinder(self._namespace)
 
         await self.visit(model)
         return self._results
+
+    async def visit(self, node: ast.AST) -> None:
+        if self.cancelation_token:
+            self.cancelation_token.throw_if_canceled()
+
+        await super().visit(node)
 
     async def _analyze_keyword_call(
         self,

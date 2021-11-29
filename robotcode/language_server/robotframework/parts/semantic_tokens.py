@@ -22,7 +22,7 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_dropwhile, async_takewhile
-from ....utils.async_tools import CancelationToken, awaitable_to_thread
+from ....utils.async_tools import CancelationToken, awaitable_run_in_thread
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import (
@@ -640,7 +640,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             )
             await namespace.get_library_doc()
 
-            return await awaitable_to_thread(
+            return await awaitable_run_in_thread(
                 self.collect(
                     model,
                     range,

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import ast
+import asyncio
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from ....utils.async_tools import awaitable_to_thread
+from ....utils.async_tools import CancelationToken, awaitable_run_in_thread
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
@@ -60,7 +61,9 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_token_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    async def collect_token_errors(
+        self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
+    ) -> DiagnosticsResult:
         async def collect_async(tokens: List[Token]) -> List[Diagnostic]:
             from robot.errors import VariableError
             from robot.parsing.lexer.tokens import Token
@@ -68,6 +71,8 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             result: List[Diagnostic] = []
             try:
                 for token in tokens:
+                    cancelation_token.throw_if_canceled()
+
                     if token.type in [Token.ERROR, Token.FATAL_ERROR]:
                         result.append(self._create_error_from_token(token))
 
@@ -89,8 +94,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                                 code=type(e).__qualname__,
                             )
                         )
-
-            except (SystemExit, KeyboardInterrupt):
+            except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
                 return [
@@ -116,18 +120,22 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         return DiagnosticsResult(
             self.collect_token_errors,
-            await awaitable_to_thread(collect_async(await self.parent.documents_cache.get_tokens(document))),
+            await awaitable_run_in_thread(collect_async(await self.parent.documents_cache.get_tokens(document))),
         )
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_walk_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    async def collect_walk_model_errors(
+        self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
+    ) -> DiagnosticsResult:
         async def collect_async(model: ast.AST) -> List[Diagnostic]:
             from ..utils.ast import HasError, HasErrors
             from ..utils.async_ast import iter_nodes
 
             result: List[Diagnostic] = []
             async for node in iter_nodes(model):
+                cancelation_token.throw_if_canceled()
+
                 error = node.error if isinstance(node, HasError) else None
                 if error is not None:
                     result.append(self._create_error_from_node(node, error))
@@ -139,14 +147,16 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         return DiagnosticsResult(
             self.collect_walk_model_errors,
-            await awaitable_to_thread(collect_async(await self.parent.documents_cache.get_model(document))),
+            await awaitable_run_in_thread(collect_async(await self.parent.documents_cache.get_model(document))),
         )
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_namespace_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    async def collect_namespace_diagnostics(
+        self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
+    ) -> DiagnosticsResult:
         namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
             return DiagnosticsResult(self.collect_namespace_diagnostics, None)
 
-        return DiagnosticsResult(self.collect_namespace_diagnostics, await namespace.get_diagnostisc())
+        return DiagnosticsResult(self.collect_namespace_diagnostics, await namespace.get_diagnostisc(cancelation_token))

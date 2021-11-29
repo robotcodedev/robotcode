@@ -16,7 +16,7 @@ from typing import (
     cast,
 )
 
-from ....utils.async_tools import CancelationToken, awaitable_to_thread
+from ....utils.async_tools import CancelationToken, awaitable_run_in_thread
 from ....utils.glob_path import iter_files
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
@@ -305,7 +305,9 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         ):
             return []
 
-        return await awaitable_to_thread(self._find_keyword_references_in_namespace(namespace, kw_doc, cancel_token))
+        return await awaitable_run_in_thread(
+            self._find_keyword_references_in_namespace(namespace, kw_doc, cancel_token)
+        )
 
     async def _find_keyword_references_in_namespace(
         self, namespace: Namespace, kw_doc: KeywordDoc, cancel_token: CancelationToken

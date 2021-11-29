@@ -5,7 +5,7 @@ import itertools
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 
-from ....utils.async_tools import async_tasking_event_iterator
+from ....utils.async_tools import CancelationToken, async_tasking_event_iterator
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ..language import language_id, language_id_filter
@@ -25,13 +25,20 @@ DIAGNOSTICS_DEBOUNCE = 0.75
 class PublishDiagnosticsEntry:
     _logger = LoggingDescriptor()
 
-    def __init__(self, document_uri: DocumentUri, task_factory: Callable[..., asyncio.Task[Any]]) -> None:
+    def __init__(
+        self,
+        document_uri: DocumentUri,
+        cancelation_token: CancelationToken,
+        task_factory: Callable[..., asyncio.Task[Any]],
+    ) -> None:
 
         self._document_uri = document_uri
 
         self._task_factory = task_factory
 
         self._task: Optional[asyncio.Task[Any]] = None
+
+        self.cancel_token = cancelation_token
 
         @PublishDiagnosticsEntry._logger.call
         def create_task() -> None:
@@ -74,6 +81,7 @@ class PublishDiagnosticsEntry:
             t = self.task
             self._task = None
             if not t.done():
+                self.cancel_token.cancel()
                 t.cancel()
                 try:
                     await t
@@ -109,7 +117,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.parent.documents.did_save.add(self.on_did_save)
 
     @async_tasking_event_iterator
-    async def collect(sender, document: TextDocument) -> DiagnosticsResult:  # NOSONAR
+    async def collect(
+        sender, document: TextDocument, cancelation_token: CancelationToken
+    ) -> DiagnosticsResult:  # NOSONAR
         ...
 
     @_logger.call
@@ -166,16 +176,17 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     async def start_publish_diagnostics_task(self, document: TextDocument) -> None:
         async with self._task_lock:
             self._cancel_entry(self._running_diagnostics.get(document.uri, None))
-
+            cancelation_token = CancelationToken()
             self._running_diagnostics[document.uri] = PublishDiagnosticsEntry(
                 document.document_uri,
+                cancelation_token,
                 lambda: asyncio.create_task(
-                    self.publish_diagnostics(document.document_uri),
+                    self.publish_diagnostics(document.document_uri, cancelation_token),
                 ),
             )
 
     @_logger.call
-    async def publish_diagnostics(self, document_uri: DocumentUri) -> None:
+    async def publish_diagnostics(self, document_uri: DocumentUri, cancelation_token: CancelationToken) -> None:
         document = self.parent.documents.get(document_uri, None)
         if document is None:
             return
@@ -187,6 +198,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         async for result_any in self.collect(
             self,
             document,
+            cancelation_token,
             callback_filter=language_id_filter(document),
             return_exceptions=True,
         ):

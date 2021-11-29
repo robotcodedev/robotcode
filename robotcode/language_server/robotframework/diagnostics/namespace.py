@@ -23,7 +23,7 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_chain
-from ....utils.async_tools import awaitable_to_thread
+from ....utils.async_tools import CancelationToken, awaitable_run_in_thread
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.lsp_types import (
@@ -577,10 +577,10 @@ class Namespace:
         self.invalidated_callback(self)
 
     @_logger.call
-    async def get_diagnostisc(self) -> List[Diagnostic]:
+    async def get_diagnostisc(self, cancelation_token: Optional[CancelationToken] = None) -> List[Diagnostic]:
         await self.ensure_initialized()
 
-        await self._analyze()
+        await self._analyze(cancelation_token)
 
         return self._diagnostics
 
@@ -1088,14 +1088,16 @@ class Namespace:
         return self._keywords
 
     @_logger.call
-    async def _analyze(self) -> None:
+    async def _analyze(self, cancelation_token: Optional[CancelationToken] = None) -> None:
         from .analyzer import Analyzer
 
         if not self._analyzed:
             async with self._analyze_lock:
                 if not self._analyzed:
                     try:
-                        self._diagnostics += await awaitable_to_thread(Analyzer().get(self.model, self))
+                        self._diagnostics += await awaitable_run_in_thread(
+                            Analyzer().get(self.model, self, cancelation_token)
+                        )
 
                         lib_doc = await self.get_library_doc()
 

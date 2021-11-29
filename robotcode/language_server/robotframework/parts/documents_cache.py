@@ -16,7 +16,7 @@ from typing import (
     cast,
 )
 
-from ....utils.async_tools import CancelationToken, async_tasking_event, to_thread
+from ....utils.async_tools import CancelationToken, async_tasking_event, run_in_thread
 from ....utils.uri import Uri
 from ...common.language import language_id_filter
 from ...common.parts.workspace import WorkspaceFolder
@@ -111,7 +111,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         try:
             if cancelation_token is None:
                 cancelation_token = CancelationToken()
-            return await to_thread(get, document.text, cancelation_token)
+            return await run_in_thread(get, document.text, cancelation_token)
         except asyncio.CancelledError:
             if cancelation_token is not None:
                 cancelation_token.cancel()
@@ -181,7 +181,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
                 yield t
 
         try:
-            model = await to_thread(_get_model, get_tokens, document.uri.to_path())
+            model = await run_in_thread(_get_model, get_tokens, document.uri.to_path())
         except asyncio.CancelledError:
             if cancelation_token is not None:
                 cancelation_token.cancel()
