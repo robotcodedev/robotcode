@@ -1094,6 +1094,7 @@ class Namespace:
         if not self._analyzed:
             async with self._analyze_lock:
                 if not self._analyzed:
+                    canceled = False
                     try:
                         self._diagnostics += await awaitable_run_in_thread(
                             Analyzer().get(self.model, self, cancelation_token)
@@ -1121,8 +1122,11 @@ class Namespace:
                                         code=err.type_name,
                                     )
                                 )
+                    except asyncio.CancelledError:
+                        canceled = True
+                        raise
                     finally:
-                        self._analyzed = True
+                        self._analyzed = not canceled
 
     @_logger.call(condition=lambda self, name: self._finder is not None and name not in self._finder._cache)
     async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
