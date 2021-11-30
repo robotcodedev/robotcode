@@ -397,17 +397,14 @@ class async_tasking_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncTasking
 
 class CancelationToken:
     def __init__(self) -> None:
-        self._canceled = False
-        self._lock = threading.RLock()
+        self._canceled = asyncio.Event()
 
     @property
     def canceled(self) -> bool:
-        with self._lock:
-            return self._canceled
+        return self._canceled.is_set()
 
     def cancel(self) -> None:
-        with self._lock:
-            self._canceled = True
+        self._canceled.set()
 
     def throw_if_canceled(self) -> bool:
         if self.canceled:

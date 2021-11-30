@@ -627,6 +627,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         try:
             model = await self.parent.documents_cache.get_model(document)
             namespace = await self.parent.documents_cache.get_namespace(document)
+            await namespace.ensure_initialized()
 
             builtin_library_doc = next(
                 (

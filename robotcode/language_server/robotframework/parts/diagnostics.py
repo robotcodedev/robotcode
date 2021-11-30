@@ -159,4 +159,6 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         if namespace is None:
             return DiagnosticsResult(self.collect_namespace_diagnostics, None)
 
+        await namespace.ensure_initialized()
+
         return DiagnosticsResult(self.collect_namespace_diagnostics, await namespace.get_diagnostisc(cancelation_token))

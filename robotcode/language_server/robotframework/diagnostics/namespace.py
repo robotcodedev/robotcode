@@ -573,6 +573,7 @@ class Namespace:
             self._library_doc = None
             self._analyzed = False
             self._diagnostics = []
+            self._finder = None
 
         self.invalidated_callback(self)
 
@@ -631,6 +632,9 @@ class Namespace:
         if not self._initialized:
             async with self._initialize_lock:
                 if not self._initialized:
+
+                    self._logger.debug(f"ensure_initialized -> initialize {self.document}")
+
                     imports = await self.get_imports()
 
                     data_entry: Optional[Namespace.DataEntry] = None
@@ -675,8 +679,11 @@ class Namespace:
 
                     self._initialized = True
 
-            if not self._initialized:
-                raise Exception("Namespace not initialized")
+                    await self.get_library_doc()
+                    await self.get_libraries_matchers()
+                    await self.get_resources_matchers()
+                    await self.get_finder()
+
         return self._initialized
 
     @property
@@ -1096,9 +1103,12 @@ class Namespace:
                 if not self._analyzed:
                     canceled = False
                     try:
-                        self._diagnostics += await awaitable_run_in_thread(
-                            Analyzer().get(self.model, self, cancelation_token)
-                        )
+                        result = await awaitable_run_in_thread(Analyzer().get(self.model, self, cancelation_token))
+
+                        if cancelation_token is not None:
+                            cancelation_token.throw_if_canceled()
+
+                        self._diagnostics += result
 
                         lib_doc = await self.get_library_doc()
 
@@ -1124,24 +1134,23 @@ class Namespace:
                                 )
                     except asyncio.CancelledError:
                         canceled = True
+                        self._logger.debug("analyzing canceled")
                         raise
                     finally:
                         self._analyzed = not canceled
+                        self._logger.debug(
+                            f"analyzed {self.document}" if self._analyzed else f"not analyzed {self.document}"
+                        )
+
+    async def get_finder(self) -> KeywordFinder:
+        if self._finder is None:
+            await self.ensure_initialized()
+            self._finder = KeywordFinder(self)
+        return self._finder
 
     @_logger.call(condition=lambda self, name: self._finder is not None and name not in self._finder._cache)
     async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
-        if self._finder is None:
-            await self.ensure_initialized()
-
-            self._finder = await self.create_finder()
-
-        return await self._finder.find_keyword(name)
-
-    @_logger.call
-    async def create_finder(self) -> KeywordFinder:
-        await self.ensure_initialized()
-
-        return KeywordFinder(self)
+        return await (await self.get_finder()).find_keyword(name)
 
 
 class DiagnosticsEntry(NamedTuple):

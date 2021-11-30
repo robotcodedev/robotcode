@@ -92,6 +92,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         from robocop.config import Config
         from robocop.rules import RuleSeverity
         from robocop.run import Robocop
+        from robocop.utils.misc import is_suite_templated
 
         result: List[Diagnostic] = []
 
@@ -109,11 +110,30 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             if extension_config.configurations:
                 config.configure = set(extension_config.configurations)
 
-            analyser = Robocop(from_cli=False, config=config)
+            class MyRobocop(Robocop):  # type: ignore
+                def run_check(self, ast_model, filename, source=None):  # type: ignore
+                    found_issues = []
+                    self.register_disablers(filename, source)
+                    if self.disabler.file_disabled:
+                        return []
+                    templated = is_suite_templated(ast_model)
+                    for checker in self.checkers:
+                        cancelation_token.throw_if_canceled()
+
+                        if checker.disabled:
+                            continue
+                        found_issues += [
+                            issue
+                            for issue in checker.scan_file(ast_model, filename, source, templated)
+                            if not self.disabler.is_rule_disabled(issue)
+                        ]
+                    return found_issues
+
+            analyser = MyRobocop(from_cli=False, config=config)
             analyser.reload_config()
 
             # TODO find a way to cancel the run_check
-            issues = analyser.run_check(model, str(document.uri.to_path()), document.text)
+            issues = analyser.run_check(model, str(document.uri.to_path()), document.text)  # type: ignore
 
             for issue in issues:
                 d = Diagnostic(
