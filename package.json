@@ -130,8 +130,7 @@
           "continuation": [
             "punctuation.separator.continuation.robotframework"
           ],
-          "separator": [
-            "punctuation.separator.robotframework"
+          "separator": [            
           ],
           "terminator": [
             "punctuation.terminator.robotframework"

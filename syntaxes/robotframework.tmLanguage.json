@@ -148,7 +148,7 @@
           "name": "keyword.control.settings.robotframework"
         },
         "2": {
-          "name": "meta.support.function.robotframework"
+          "name": "variable.function.keyword-call.robotframework"
         }
       },
       "end": "^(?!\\s*\\.\\.\\.)",
@@ -621,7 +621,7 @@
           "name": "keyword.control.settings.robotframework"
         },
         "4": {
-          "name": "meta.support.function.robotframework"
+          "name": "variable.function.keyword-call.robotframework"
         }
       },
       "patterns": [
@@ -673,7 +673,7 @@
           "name": "keyword.operator.robotframework"
         },
         "4": {
-          "name": "meta.support.function.robotframework"
+          "name": "variable.function.keyword-call.robotframework"
         },
         "1": {
           "name": "keyword.operator.robotframework"
@@ -815,7 +815,7 @@
       "begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(.*?)(?= {2,}| ?\\t ?| ?$)",
       "beginCaptures": {
         "1": {
-          "name": "meta.support.function.robotframework"
+          "name": "variable.function.keyword-call.robotframework"
         }
       },
       "contentName": "string.unquoted.argument.robotframework",
