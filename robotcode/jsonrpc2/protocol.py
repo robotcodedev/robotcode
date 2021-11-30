@@ -503,7 +503,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         ).encode(self.CHARSET)
 
         header = (
-            f"Content-Length: {len(body)}\r\n" f"Content-Type: {self.CONTENT_TYPE}; charset={self.CHARSET}\r\n\r\n"
+            f"Content-Length: {len(body)}\r\nContent-Type: {self.CONTENT_TYPE}; charset={self.CHARSET}\r\n\r\n"
         ).encode("ascii")
 
         self._message_logger.debug(
@@ -640,30 +640,31 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             )
             return
 
-        try:
-            params = self._convert_params(e.method, e.param_type, message.params)
+        params = self._convert_params(e.method, e.param_type, message.params)
 
-            result = asyncio.create_task(ensure_coroutine(e.method)(*params[0], **params[1]))
+        result = asyncio.create_task(ensure_coroutine(e.method)(*params[0], **params[1]), name=message.method)
 
-            with self._received_request_lock:
-                self._received_request[message.id] = ReceivedRequestEntry(result, message)
+        with self._received_request_lock:
+            self._received_request[message.id] = ReceivedRequestEntry(result, message)
 
+        def done(t: asyncio.Task[Any]) -> None:
             try:
-                self.send_response(message.id, await result)
+                self.send_response(message.id, t.result())
+            except asyncio.CancelledError:
+                self._logger.info(f"request message {repr(message)} canceled")
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except JsonRPCErrorException as ex:
+                self._logger.exception(ex)
+                self.send_error(ex.code, ex.message, id=message.id, data=ex.data)
+            except BaseException as e:
+                self._logger.exception(e)
+                self.send_error(JsonRPCErrors.INTERNAL_ERROR, f"{type(e).__name__}: {e}", id=message.id)
             finally:
                 with self._received_request_lock:
                     self._received_request.pop(message.id, None)
 
-        except asyncio.CancelledError:
-            self._logger.info(f"request message {repr(message)} canceled")
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except JsonRPCErrorException as ex:
-            self._logger.exception(ex)
-            self.send_error(ex.code, ex.message, id=message.id, data=ex.data)
-        except BaseException as e:
-            self._logger.exception(e)
-            self.send_error(JsonRPCErrors.INTERNAL_ERROR, f"{type(e).__name__}: {e}", id=message.id)
+        result.add_done_callback(done)
 
     async def cancel_request(self, id: Union[int, str, None]) -> None:
         with self._received_request_lock:
@@ -687,7 +688,8 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             params = self._convert_params(e.method, e.param_type, message.params)
             result = e.method(*params[0], **params[1])
             if inspect.isawaitable(result):
-                await result
+                asyncio.create_task(result)
+
         except asyncio.CancelledError:
             pass
         except (SystemExit, KeyboardInterrupt):

@@ -19,7 +19,7 @@ from .protocol_part import LanguageServerProtocolPart
 
 __all__ = ["DiagnosticsProtocolPart", "DiagnosticsResult"]
 
-DIAGNOSTICS_DEBOUNCE = 0.75
+DIAGNOSTICS_DEBOUNCE = 1.5
 
 
 class PublishDiagnosticsEntry:
@@ -57,7 +57,9 @@ class PublishDiagnosticsEntry:
 
                 self._task.add_done_callback(_done)
 
-        self._timer_handle: asyncio.TimerHandle = asyncio.get_event_loop().call_later(DIAGNOSTICS_DEBOUNCE, create_task)
+        self._timer_handle: asyncio.TimerHandle = asyncio.get_running_loop().call_later(
+            DIAGNOSTICS_DEBOUNCE, create_task
+        )
 
     def __del__(self) -> None:
         if self.task is not None:
@@ -155,9 +157,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         if entry is None:
             return
         if not entry.done:
-            cancel_task = entry.cancel()
-            if cancel_task is not None:
-                await cancel_task
+            entry.cancel()
 
     @language_id("robotframework")
     @_logger.call
