@@ -181,7 +181,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
     @_logger.call
     def _delete_entry(self, e: PublishDiagnosticsEntry) -> None:
-        if self._running_diagnostics[e.uri] == e:
+        if e.uri in self._running_diagnostics and self._running_diagnostics[e.uri] == e:
             self._running_diagnostics.pop(e.uri, None)
 
     @_logger.call
