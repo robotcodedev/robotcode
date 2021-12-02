@@ -10,14 +10,7 @@ from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_tools import run_in_thread
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
-from ...common.lsp_types import (
-    DocumentUri,
-    Model,
-    Position,
-    Range,
-    TextDocumentIdentifier,
-)
-from ...common.text_document import TextDocument
+from ...common.lsp_types import Model, Position, Range, TextDocumentIdentifier
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -58,18 +51,6 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
-
-    def get_document(self, uri: DocumentUri) -> TextDocument:
-        from robot.utils import FileReader
-
-        result = self.parent.documents.get(uri, None)
-        if result is not None:
-            return result
-
-        with FileReader(Uri(uri).to_path()) as reader:
-            text = str(reader.read())
-
-        return TextDocument(document_uri=uri, language_id="robotframework", version=None, text=text)
 
     def get_tests_from_workspace_threading(self, paths: Optional[List[str]]) -> List[TestItem]:
         from robot.output.logger import LOGGER
@@ -205,5 +186,9 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             self.get_tests_from_document_threading,
             text_document,
             id,
-            await self.parent.documents_cache.get_model(self.get_document(text_document.uri)),
+            await self.parent.documents_cache.get_model(
+                self.parent.robot_workspace.get_or_open_document(
+                    Uri(text_document.uri).to_path(), language_id="robotframework"
+                )
+            ),
         )
