@@ -256,7 +256,11 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         col_offset + g.start(),
                         g.end() - g.start(),
                     )
-            elif token.type == RobotToken.KEYWORD or (token.type == RobotToken.NAME and isinstance(node, Fixture)):
+            elif (
+                token.type == RobotToken.KEYWORD
+                or ROBOT_KEYWORD_INNER
+                or (token.type == RobotToken.NAME and isinstance(node, Fixture))
+            ):
                 if col_offset is None:
                     col_offset = token.col_offset
 
