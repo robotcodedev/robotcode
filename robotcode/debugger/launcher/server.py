@@ -73,7 +73,7 @@ class DAPServerProtocol(DebugAdapterProtocol):
         return self._client is not None and self._client.connected
 
     @rpc_method(name="initialize", param_type=InitializeRequestArguments)
-    async def _initialize(self, arguments: InitializeRequestArguments) -> Capabilities:
+    async def _initialize(self, arguments: InitializeRequestArguments, *args: Any, **kwargs: Any) -> Capabilities:
         self._initialized = True
 
         return Capabilities(
@@ -141,7 +141,8 @@ class DAPServerProtocol(DebugAdapterProtocol):
         groupOutput: Optional[bool] = False,
         stopOnEntry: Optional[bool] = False,  # noqa: N803
         arguments: Optional[LaunchRequestArguments] = None,
-        **kwargs: Any,
+        *_args: Any,
+        **_kwargs: Any,
     ) -> None:
         from ...utils.net import find_free_port
 
@@ -235,11 +236,13 @@ class DAPServerProtocol(DebugAdapterProtocol):
             raise asyncio.TimeoutError("Can't connect to debug launcher.")
 
     @rpc_method(name="configurationDone", param_type=ConfigurationDoneArguments)
-    async def _configuration_done(self, arguments: Optional[ConfigurationDoneArguments] = None) -> None:
+    async def _configuration_done(
+        self, arguments: Optional[ConfigurationDoneArguments] = None, *args: Any, **kwargs: Any
+    ) -> None:
         await self.client.protocol.send_request_async(ConfigurationDoneRequest(arguments=arguments))
 
     @rpc_method(name="disconnect", param_type=DisconnectArguments)
-    async def _disconnect(self, arguments: Optional[DisconnectArguments] = None) -> None:
+    async def _disconnect(self, arguments: Optional[DisconnectArguments] = None, *args: Any, **kwargs: Any) -> None:
         if self.connected:
             if not self.client.protocol.terminated:
                 await self.client.protocol.send_request_async(DisconnectRequest(arguments=arguments))
@@ -248,7 +251,7 @@ class DAPServerProtocol(DebugAdapterProtocol):
 
     @_logger.call
     @rpc_method(name="terminate", param_type=TerminateArguments)
-    async def _terminate(self, arguments: Optional[TerminateArguments] = None) -> None:
+    async def _terminate(self, arguments: Optional[TerminateArguments] = None, *args: Any, **kwargs: Any) -> None:
         if self.client.connected:
             return await self.client.protocol.send_request_async(TerminateRequest(arguments=arguments))
         else:

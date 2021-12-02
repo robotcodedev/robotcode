@@ -21,7 +21,7 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_chain, async_chain_iterator
-from ....utils.async_tools import awaitable_run_in_thread
+from ....utils.async_tools import run_coroutine_in_thread
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id, trigger_characters
 from ...common.lsp_types import (
@@ -91,10 +91,10 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
 
         await namespace.ensure_initialized()
 
-        return await awaitable_run_in_thread(
-            CompletionCollector(self.parent, document, namespace, await self.get_section_style(document)).collect(
-                position, context
-            )
+        return await run_coroutine_in_thread(
+            CompletionCollector(self.parent, document, namespace, await self.get_section_style(document)).collect,
+            position,
+            context,
         )
 
     @language_id("robotframework")

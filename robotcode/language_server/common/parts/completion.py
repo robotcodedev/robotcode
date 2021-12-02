@@ -116,6 +116,8 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     async def _completion_item_resolve(
         self,
         params: CompletionItem,
+        *args: Any,
+        **kwargs: Any,
     ) -> CompletionItem:
 
         results: List[CompletionItem] = []

@@ -41,7 +41,7 @@ class Analyzer(AsyncVisitor):
 
     async def visit(self, node: ast.AST) -> None:
         if self.cancelation_token:
-            self.cancelation_token.throw_if_canceled()
+            self.cancelation_token.raise_if_canceled()
 
         await super().visit(node)
 

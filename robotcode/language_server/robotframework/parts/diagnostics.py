@@ -4,7 +4,7 @@ import ast
 import asyncio
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from ....utils.async_tools import CancelationToken, awaitable_run_in_thread
+from ....utils.async_tools import CancelationToken, run_coroutine_in_thread
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
@@ -71,7 +71,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             result: List[Diagnostic] = []
             try:
                 for token in tokens:
-                    cancelation_token.throw_if_canceled()
+                    cancelation_token.raise_if_canceled()
 
                     if token.type in [Token.ERROR, Token.FATAL_ERROR]:
                         result.append(self._create_error_from_token(token))
@@ -120,7 +120,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         return DiagnosticsResult(
             self.collect_token_errors,
-            await awaitable_run_in_thread(collect_async(await self.parent.documents_cache.get_tokens(document))),
+            await run_coroutine_in_thread(collect_async, await self.parent.documents_cache.get_tokens(document)),
         )
 
     @language_id("robotframework")
@@ -134,7 +134,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
             result: List[Diagnostic] = []
             async for node in iter_nodes(model):
-                cancelation_token.throw_if_canceled()
+                cancelation_token.raise_if_canceled()
 
                 error = node.error if isinstance(node, HasError) else None
                 if error is not None:
@@ -147,7 +147,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         return DiagnosticsResult(
             self.collect_walk_model_errors,
-            await awaitable_run_in_thread(collect_async(await self.parent.documents_cache.get_model(document))),
+            await run_coroutine_in_thread(collect_async, await self.parent.documents_cache.get_model(document)),
         )
 
     @language_id("robotframework")

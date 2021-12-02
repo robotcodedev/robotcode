@@ -14,6 +14,7 @@ from typing import (
     cast,
 )
 
+from ....utils.async_tools import CancelationToken
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import Hover, MarkupContent, MarkupKind, Position
@@ -61,7 +62,9 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     @language_id("robotframework")
-    async def collect(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:
+    async def collect(
+        self, sender: Any, document: TextDocument, position: Position, cancel_token: Optional[CancelationToken] = None
+    ) -> Optional[Hover]:
         result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
         if not result_nodes:

@@ -31,7 +31,7 @@ from typing import (
     runtime_checkable,
 )
 
-from ..utils.async_tools import async_event
+from ..utils.async_tools import CancelationToken, async_event
 from ..utils.dataclasses import as_json, from_dict
 from ..utils.inspect import ensure_coroutine, iter_methods
 from ..utils.logging import LoggingDescriptor
@@ -57,8 +57,8 @@ __all__ = [
     "JsonRPCErrorException",
 ]
 
-T = TypeVar("T")
-TResult = TypeVar("TResult", bound=Any)
+_T = TypeVar("_T")
+_TResult = TypeVar("_TResult", bound=Any)
 
 
 class JsonRPCErrors:
@@ -318,6 +318,7 @@ class SendedRequestEntry(NamedTuple):
 class ReceivedRequestEntry(NamedTuple):
     future: asyncio.Future[Any]
     request: Optional[Any]
+    cancel_token: CancelationToken
 
 
 class JsonRPCProtocolBase(asyncio.Protocol, ABC):
@@ -517,10 +518,10 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         self,
         method: str,
         params: Optional[Any] = None,
-        return_type_or_converter: Optional[Type[TResult]] = None,
-    ) -> asyncio.Future[TResult]:
+        return_type_or_converter: Optional[Type[_TResult]] = None,
+    ) -> asyncio.Future[_TResult]:
 
-        result: asyncio.Future[TResult] = asyncio.get_event_loop().create_future()
+        result: asyncio.Future[_TResult] = asyncio.get_event_loop().create_future()
 
         with self._sended_request_lock:
             self._sended_request_count += 1
@@ -536,8 +537,8 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         self,
         method: str,
         params: Optional[Any] = None,
-        return_type: Optional[Type[TResult]] = None,
-    ) -> TResult:
+        return_type: Optional[Type[_TResult]] = None,
+    ) -> _TResult:
         return await self.send_request(method, params, return_type)
 
     def send_notification(self, method: str, params: Any) -> None:
@@ -629,7 +630,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 kw_args["params"] = converted_params
         return args, kw_args
 
-    async def handle_request(self, message: JsonRPCRequest) -> None:
+    async def handle_request(self, message: JsonRPCRequest) -> Optional[asyncio.Task[_T]]:
         e = self.registry.get_entry(message.method)
 
         if e is None or not callable(e.method):
@@ -638,14 +639,17 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 f"Unknown method: {message.method}",
                 id=message.id,
             )
-            return
+            return None
 
         params = self._convert_params(e.method, e.param_type, message.params)
+        cancel_token = CancelationToken()
 
-        result = asyncio.create_task(ensure_coroutine(e.method)(*params[0], **params[1]), name=message.method)
+        task = asyncio.create_task(
+            ensure_coroutine(e.method)(*params[0], cancel_token=cancel_token, **params[1]), name=message.method
+        )
 
         with self._received_request_lock:
-            self._received_request[message.id] = ReceivedRequestEntry(result, message)
+            self._received_request[message.id] = ReceivedRequestEntry(task, message, cancel_token)
 
         def done(t: asyncio.Task[Any]) -> None:
             try:
@@ -664,18 +668,22 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 with self._received_request_lock:
                     self._received_request.pop(message.id, None)
 
-        result.add_done_callback(done)
+        task.add_done_callback(done)
+
+        return task
 
     async def cancel_request(self, id: Union[int, str, None]) -> None:
         with self._received_request_lock:
             entry = self._received_request.get(id, None)
         if entry is not None and entry.future is not None and not entry.future.cancelled():
             self._logger.debug(f"try to cancel request {entry.request}")
+            entry.cancel_token.cancel()
             entry.future.cancel()
 
     async def cancel_all_received_request(self) -> None:
         for entry in self._received_request.values():
             if entry is not None and entry.future is not None and not entry.future.cancelled():
+                entry.cancel_token.cancel()
                 entry.future.cancel()
 
     async def handle_notification(self, message: JsonRPCNotification) -> None:

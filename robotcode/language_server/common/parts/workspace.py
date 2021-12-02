@@ -125,7 +125,7 @@ class ConfigBase(Model):
     pass
 
 
-_TConfig = TypeVar("_TConfig", bound=(ConfigBase))
+_TConfig = TypeVar("_TConfig", bound=ConfigBase)
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 

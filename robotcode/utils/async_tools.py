@@ -406,10 +406,16 @@ class CancelationToken:
     def cancel(self) -> None:
         self._canceled.set()
 
-    def throw_if_canceled(self) -> bool:
+    def raise_if_canceled(self) -> bool:
         if self.canceled:
             raise asyncio.CancelledError()
         return False
+
+
+async def check_canceled() -> bool:
+    await asyncio.sleep(0)
+
+    return True
 
 
 def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyncio.Future[_T]:
@@ -419,5 +425,32 @@ def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyn
     return cast("asyncio.Future[_T]", loop.run_in_executor(None, cast(Callable[..., _T], func_call)))
 
 
-def awaitable_run_in_thread(awaitable: Awaitable[_T]) -> asyncio.Future[_T]:
-    return run_in_thread(asyncio.run, awaitable)
+def run_coroutine_in_thread(coro: Callable[..., Awaitable[_T]], *args: Any, **kwargs: Any) -> asyncio.Future[_T]:
+    import threading
+
+    callback_added_event = threading.Event()
+    inner_task: Optional[asyncio.Task[_T]] = None
+
+    async def create_inner_task() -> _T:
+        nonlocal inner_task
+
+        callback_added_event.wait()
+
+        inner_task = asyncio.create_task(coro(*args, **kwargs))
+
+        return await inner_task
+
+    def run() -> _T:
+        return asyncio.run(create_inner_task())
+
+    result = run_in_thread(run)
+
+    def done(task: asyncio.Future[_T]) -> None:
+        if task.cancelled() and inner_task is not None and not inner_task.done():
+            inner_task.cancel()
+
+    result.add_done_callback(done)
+
+    callback_added_event.set()
+
+    return result

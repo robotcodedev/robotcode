@@ -124,7 +124,7 @@ class LauncherServerProtocol(DebugAdapterProtocol):
             self._terminated = True
 
     @rpc_method(name="terminate", param_type=TerminateArguments)
-    async def _terminate(self, arguments: Optional[TerminateArguments] = None) -> None:
+    async def _terminate(self, arguments: Optional[TerminateArguments] = None, *args: Any, **kwargs: Any) -> None:
         import signal
 
         if not self._sigint_signaled:
@@ -138,13 +138,15 @@ class LauncherServerProtocol(DebugAdapterProtocol):
         Debugger.instance().stop()
 
     @rpc_method(name="disconnect", param_type=DisconnectArguments)
-    async def _disconnect(self, arguments: Optional[DisconnectArguments] = None) -> None:
+    async def _disconnect(self, arguments: Optional[DisconnectArguments] = None, *args: Any, **kwargs: Any) -> None:
         if not (await self.exited) or not (await self.terminated):
             if arguments is None or arguments.terminate_debuggee is None or arguments.terminate_debuggee:
                 os._exit(-1)
 
     @rpc_method(name="setBreakpoints", param_type=SetBreakpointsArguments)
-    async def _set_breakpoints(self, arguments: SetBreakpointsArguments) -> SetBreakpointsResponseBody:
+    async def _set_breakpoints(
+        self, arguments: SetBreakpointsArguments, *args: Any, **kwargs: Any
+    ) -> SetBreakpointsResponseBody:
         return SetBreakpointsResponseBody(
             breakpoints=Debugger.instance().set_breakpoints(
                 arguments.source, arguments.breakpoints, arguments.lines, arguments.source_modified
@@ -153,7 +155,9 @@ class LauncherServerProtocol(DebugAdapterProtocol):
 
     @_logger.call
     @rpc_method(name="configurationDone", param_type=ConfigurationDoneArguments)
-    async def _configuration_done(self, arguments: Optional[ConfigurationDoneArguments] = None) -> None:
+    async def _configuration_done(
+        self, arguments: Optional[ConfigurationDoneArguments] = None, *args: Any, **kwargs: Any
+    ) -> None:
         self._received_configuration_done = True
         self._received_configuration_done_event.set()
 
@@ -164,39 +168,39 @@ class LauncherServerProtocol(DebugAdapterProtocol):
         return self._received_configuration_done
 
     @rpc_method(name="continue", param_type=ContinueArguments)
-    async def _continue(self, arguments: ContinueArguments) -> ContinueResponseBody:
+    async def _continue(self, arguments: ContinueArguments, *args: Any, **kwargs: Any) -> ContinueResponseBody:
         Debugger.instance().continue_thread(arguments.thread_id)
         return ContinueResponseBody(all_threads_continued=True)
 
     @rpc_method(name="pause", param_type=PauseArguments)
-    async def _pause(self, arguments: PauseArguments) -> None:
+    async def _pause(self, arguments: PauseArguments, *args: Any, **kwargs: Any) -> None:
         Debugger.instance().pause_thread(arguments.thread_id)
 
     @rpc_method(name="next", param_type=NextArguments)
-    async def _next(self, arguments: NextArguments) -> None:
+    async def _next(self, arguments: NextArguments, *args: Any, **kwargs: Any) -> None:
         Debugger.instance().next(arguments.thread_id, arguments.granularity)
 
     @rpc_method(name="stepIn", param_type=StepInArguments)
-    async def _step_in(self, arguments: StepInArguments) -> None:
+    async def _step_in(self, arguments: StepInArguments, *args: Any, **kwargs: Any) -> None:
         Debugger.instance().step_in(arguments.thread_id, arguments.target_id, arguments.granularity)
 
     @rpc_method(name="stepOut", param_type=StepOutArguments)
-    async def _step_out(self, arguments: StepOutArguments) -> None:
+    async def _step_out(self, arguments: StepOutArguments, *args: Any, **kwargs: Any) -> None:
         Debugger.instance().step_out(arguments.thread_id, arguments.granularity)
 
     @rpc_method(name="threads")
-    async def _threads(self) -> ThreadsResponseBody:
+    async def _threads(self, *args: Any, **kwargs: Any) -> ThreadsResponseBody:
         return ThreadsResponseBody(threads=Debugger.instance().get_threads())
 
     @rpc_method(name="stackTrace", param_type=StackTraceArguments)
-    async def _stack_trace(self, arguments: StackTraceArguments) -> StackTraceResponseBody:
+    async def _stack_trace(self, arguments: StackTraceArguments, *args: Any, **kwargs: Any) -> StackTraceResponseBody:
         result = Debugger.instance().get_stack_trace(
             arguments.thread_id, arguments.start_frame, arguments.levels, arguments.format
         )
         return StackTraceResponseBody(stack_frames=result.stack_frames, total_frames=result.total_frames)
 
     @rpc_method(name="scopes", param_type=ScopesArguments)
-    async def _scopes(self, arguments: ScopesArguments) -> ScopesResponseBody:
+    async def _scopes(self, arguments: ScopesArguments, *args: Any, **kwargs: Any) -> ScopesResponseBody:
         return ScopesResponseBody(scopes=Debugger.instance().get_scopes(arguments.frame_id))
 
     @rpc_method(name="variables", param_type=VariablesArguments)
@@ -208,6 +212,8 @@ class LauncherServerProtocol(DebugAdapterProtocol):
         start: Optional[int] = None,
         count: Optional[int] = None,
         format: Optional[ValueFormat] = None,
+        *args: Any,
+        **kwargs: Any,
     ) -> VariablesResponseBody:
         return VariablesResponseBody(
             variables=Debugger.instance().get_variables(variables_reference, filter, start, count, format)
@@ -221,6 +227,8 @@ class LauncherServerProtocol(DebugAdapterProtocol):
         frame_id: Optional[int] = None,
         context: Union[EvaluateArgumentContext, str, None] = None,
         format: Optional[ValueFormat] = None,
+        *args: Any,
+        **kwargs: Any,
     ) -> EvaluateResponseBody:
         result = Debugger.instance().evaluate(expression, frame_id, context, format)
         return EvaluateResponseBody(
@@ -241,6 +249,8 @@ class LauncherServerProtocol(DebugAdapterProtocol):
         name: str,
         value: str,
         format: Optional[ValueFormat] = None,
+        *args: Any,
+        **kwargs: Any,
     ) -> SetVariableResponseBody:
         result = Debugger.instance().set_variable(variables_reference, name, value, format)
         return SetVariableResponseBody(
@@ -253,7 +263,7 @@ class LauncherServerProtocol(DebugAdapterProtocol):
 
     @rpc_method(name="setExceptionBreakpoints", param_type=SetExceptionBreakpointsArguments)
     async def _set_exception_breakpoints(
-        self, arguments: SetExceptionBreakpointsArguments
+        self, arguments: SetExceptionBreakpointsArguments, *args: Any, **kwargs: Any
     ) -> Optional[SetExceptionBreakpointsResponseBody]:
         result = Debugger.instance().set_exception_breakpoints(
             arguments.filters, arguments.filter_options, arguments.exception_options

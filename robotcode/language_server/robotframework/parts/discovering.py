@@ -4,7 +4,7 @@ import ast
 from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator, List, Optional
+from typing import TYPE_CHECKING, Any, Iterator, List, Optional
 
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_tools import run_in_thread
@@ -162,7 +162,12 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 return [TestItem(type="error", id=Path.cwd().name, label=Path.cwd().name, error=str(e))]
 
     @rpc_method(name="robot/discovering/getTestsFromWorkspace", param_type=GetAllTestsParams)
-    async def get_tests_from_workspace(self, paths: Optional[List[str]]) -> List[TestItem]:
+    async def get_tests_from_workspace(
+        self,
+        paths: Optional[List[str]],
+        *args: Any,
+        **kwargs: Any,
+    ) -> List[TestItem]:
         return await run_in_thread(self.get_tests_from_workspace_threading, paths)
 
     def get_tests_from_document_threading(
@@ -193,7 +198,9 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         ]
 
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
-    async def get_tests_from_document(self, text_document: TextDocumentIdentifier, id: Optional[str]) -> List[TestItem]:
+    async def get_tests_from_document(
+        self, text_document: TextDocumentIdentifier, id: Optional[str], *args: Any, **kwargs: Any
+    ) -> List[TestItem]:
         return await run_in_thread(
             self.get_tests_from_document_threading,
             text_document,

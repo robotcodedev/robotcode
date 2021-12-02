@@ -22,7 +22,7 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_dropwhile, async_takewhile
-from ....utils.async_tools import CancelationToken, awaitable_run_in_thread
+from ....utils.async_tools import CancelationToken, run_coroutine_in_thread
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import (
@@ -128,7 +128,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         parent.semantic_tokens.token_modifiers += [e for e in RobotSemTokenModifiers]
 
         parent.semantic_tokens.collect_full.add(self.collect_full)
-        parent.semantic_tokens.collect_range.add(self.collect_range)
+        # parent.semantic_tokens.collect_range.add(self.collect_range)
         # parent.semantic_tokens.collect_full_delta.add(self.collect_full_delta)
 
     @classmethod
@@ -577,15 +577,15 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         yield token, node
 
         async for robot_token, robot_node in async_takewhile(
-            lambda t: not cancel_token.throw_if_canceled() and (range is None or token_in_range(t[0], range)),
+            lambda t: not cancel_token.raise_if_canceled() and (range is None or token_in_range(t[0], range)),
             async_dropwhile(
-                lambda t: not cancel_token.throw_if_canceled()
+                lambda t: not cancel_token.raise_if_canceled()
                 and range is not None
                 and not token_in_range(t[0], range),
                 get_tokens(),
             ),
         ):
-            cancel_token.throw_if_canceled()
+            cancel_token.raise_if_canceled()
 
             async for token in self.generate_sem_tokens(
                 robot_token, robot_node, namespace, builtin_library_doc, libraries_matchers, resources_matchers
@@ -641,16 +641,15 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             )
             await namespace.get_library_doc()
 
-            return await awaitable_run_in_thread(
-                self.collect(
-                    model,
-                    range,
-                    namespace,
-                    builtin_library_doc,
-                    await namespace.get_libraries_matchers(),
-                    await namespace.get_resources_matchers(),
-                    cancel_token,
-                ),
+            return await run_coroutine_in_thread(
+                self.collect,
+                model,
+                range,
+                namespace,
+                builtin_library_doc,
+                await namespace.get_libraries_matchers(),
+                await namespace.get_resources_matchers(),
+                cancel_token,
             )
         except BaseException:
             cancel_token.cancel()
@@ -661,14 +660,22 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
     async def collect_full(
         self, sender: Any, document: TextDocument, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        return await document.get_cache(self.collect_threading, None)
+        self._logger.debug("collect_full started")
+        try:
+            return await document.get_cache(self.collect_threading, None)
+        finally:
+            self._logger.debug("collect_full ended")
 
     @language_id("robotframework")
     @_logger.call
     async def collect_range(
         self, sender: Any, document: TextDocument, range: Range, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        return await self.collect_threading(document, range)
+        self._logger.debug("collect_range started")
+        try:
+            return await self.collect_threading(document, range)
+        finally:
+            self._logger.debug("collect_range ended")
 
     @language_id("robotframework")
     @_logger.call

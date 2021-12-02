@@ -98,7 +98,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         def get(text: str, cancelation_token: CancelationToken) -> List[Token]:
             with io.StringIO(text) as content:
-                return [e for e in robot.api.get_tokens(content) if not cancelation_token.throw_if_canceled()]
+                return [e for e in robot.api.get_tokens(content) if not cancelation_token.raise_if_canceled()]
 
         return await self.__get_tokens_internal(document, get, cancelation_token)
 
@@ -129,7 +129,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         def get(text: str, cancelation_token: CancelationToken) -> List[Token]:
             with io.StringIO(text) as content:
-                return [e for e in robot.api.get_resource_tokens(content) if not cancelation_token.throw_if_canceled()]
+                return [e for e in robot.api.get_resource_tokens(content) if not cancelation_token.raise_if_canceled()]
 
         return await self.__get_tokens_internal(document, get, cancelation_token)
 
@@ -145,7 +145,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         def get(text: str, cancelation_token: CancelationToken) -> List[Token]:
             with io.StringIO(text) as content:
-                return [e for e in robot.api.get_init_tokens(content) if not cancelation_token.throw_if_canceled()]
+                return [e for e in robot.api.get_init_tokens(content) if not cancelation_token.raise_if_canceled()]
 
         return await self.__get_tokens_internal(document, get, cancelation_token)
 
@@ -177,7 +177,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         def get_tokens(_source: str, _data_only: bool = False) -> Generator[Token, None, None]:
             for t in tokens:
                 if cancelation_token is not None:
-                    cancelation_token.throw_if_canceled()
+                    cancelation_token.raise_if_canceled()
                 yield t
 
         try:

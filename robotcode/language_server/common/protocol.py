@@ -152,6 +152,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         trace: Optional[TraceValue] = None,
         client_info: Optional[ClientInfo] = None,
         workspace_folders: Optional[List[WorkspaceFolder]] = None,
+        *args: Any,
         **kwargs: Any,
     ) -> InitializeResult:
 
@@ -188,7 +189,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         ...
 
     @rpc_method(name="initialized", param_type=InitializedParams)
-    async def _initialized(self, params: InitializedParams) -> None:
+    async def _initialized(self, params: InitializedParams, *args: Any, **kwargs: Any) -> None:
         await self.on_initialized(self)
 
     @async_event
@@ -197,7 +198,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     @rpc_method(name="shutdown")
     @_logger.call
-    async def shutdown(self) -> None:
+    async def shutdown(self, *args: Any, **kwargs: Any) -> None:
         self.shutdown_received = True
 
         try:
@@ -211,12 +212,12 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     @rpc_method(name="exit")
     @_logger.call
-    async def _exit(self) -> None:
+    async def _exit(self, *args: Any, **kwargs: Any) -> None:
         raise SystemExit(0 if self.shutdown_received else 1)
 
     @rpc_method(name="$/setTrace", param_type=SetTraceParams)
     @_logger.call
-    async def _set_trace(self, value: TraceValue, **kwargs: Any) -> None:
+    async def _set_trace(self, value: TraceValue, *args: Any, **kwargs: Any) -> None:
         self.trace = value
 
     @rpc_method(name="$/cancelRequest", param_type=CancelParams)

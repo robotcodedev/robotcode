@@ -118,7 +118,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         return []
                     templated = is_suite_templated(ast_model)
                     for checker in self.checkers:
-                        cancelation_token.throw_if_canceled()
+                        cancelation_token.raise_if_canceled()
 
                         if checker.disabled:
                             continue
@@ -152,7 +152,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                     source=self.source_name,
                     code=f"{issue.severity.value}{issue.rule_id}",
                 )
-                cancelation_token.throw_if_canceled()
+                cancelation_token.raise_if_canceled()
                 result.append(d)
 
         return result

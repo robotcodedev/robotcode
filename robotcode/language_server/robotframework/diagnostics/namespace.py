@@ -23,7 +23,7 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_chain
-from ....utils.async_tools import CancelationToken, awaitable_run_in_thread
+from ....utils.async_tools import CancelationToken, run_coroutine_in_thread
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.lsp_types import (
@@ -682,6 +682,7 @@ class Namespace:
                     await self.get_library_doc()
                     await self.get_libraries_matchers()
                     await self.get_resources_matchers()
+                    await self.get_keywords()
                     await self.get_finder()
 
         return self._initialized
@@ -1103,10 +1104,10 @@ class Namespace:
                 if not self._analyzed:
                     canceled = False
                     try:
-                        result = await awaitable_run_in_thread(Analyzer().get(self.model, self, cancelation_token))
+                        result = await run_coroutine_in_thread(Analyzer().get, self.model, self, cancelation_token)
 
                         if cancelation_token is not None:
-                            cancelation_token.throw_if_canceled()
+                            cancelation_token.raise_if_canceled()
 
                         self._diagnostics += result
 
@@ -1139,7 +1140,7 @@ class Namespace:
                     finally:
                         self._analyzed = not canceled
                         self._logger.debug(
-                            f"analyzed {self.document}" if self._analyzed else f"not analyzed {self.document}"
+                            lambda: f"analyzed {self.document}" if self._analyzed else f"not analyzed {self.document}"
                         )
 
     async def get_finder(self) -> KeywordFinder:
