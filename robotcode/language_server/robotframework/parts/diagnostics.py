@@ -41,6 +41,19 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
         await self.parent.diagnostics.start_publish_diagnostics_task(document)
 
+    @language_id("robotframework")
+    async def collect_namespace_diagnostics(
+        self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
+    ) -> DiagnosticsResult:
+        async def run() -> List[Diagnostic]:
+            namespace = await self.parent.documents_cache.get_namespace(document)
+            if namespace is None:
+                return DiagnosticsResult(self.collect_namespace_diagnostics, None)
+
+            return await namespace.get_diagnostisc(cancelation_token)
+
+        return DiagnosticsResult(self.collect_namespace_diagnostics, await run_coroutine_in_thread(run))
+
     def _create_error_from_node(self, node: ast.AST, msg: str, source: Optional[str] = None) -> Diagnostic:
         return Diagnostic(
             range=Range(
@@ -67,7 +80,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     async def collect_token_errors(
         self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
     ) -> DiagnosticsResult:
-        async def collect_async() -> List[Diagnostic]:
+        async def run() -> List[Diagnostic]:
             from robot.errors import VariableError
             from robot.parsing.lexer.tokens import Token
 
@@ -81,6 +94,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
                     try:
                         for variable_token in token.tokenize_variables():
+                            await check_canceled()
                             if variable_token == token:
                                 break
 
@@ -121,14 +135,14 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
             return result
 
-        return DiagnosticsResult(self.collect_token_errors, await run_coroutine_in_thread(collect_async))
+        return DiagnosticsResult(self.collect_token_errors, await run_coroutine_in_thread(run))
 
     @language_id("robotframework")
     @_logger.call(entering=True, exiting=True, exception=True)
     async def collect_walk_model_errors(
         self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
     ) -> DiagnosticsResult:
-        async def collect_async() -> List[Diagnostic]:
+        async def run() -> List[Diagnostic]:
             from ..utils.ast import HasError, HasErrors
             from ..utils.async_ast import iter_nodes
 
@@ -149,26 +163,5 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         return DiagnosticsResult(
             self.collect_walk_model_errors,
-            await run_coroutine_in_thread(collect_async),
+            await run_coroutine_in_thread(run),
         )
-
-    @language_id("robotframework")
-    async def collect_namespace_diagnostics(
-        self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
-    ) -> DiagnosticsResult:
-        async def collect_async() -> List[Diagnostic]:
-            self._logger.debug(f"start collect_namespace_diagnostics for {document}")
-            try:
-                namespace = await self.parent.documents_cache.get_namespace(document)
-                if namespace is None:
-                    return DiagnosticsResult(self.collect_namespace_diagnostics, None)
-
-                return await namespace.get_diagnostisc(cancelation_token)
-            except BaseException as e:
-                self._logger.debug(f"exception in collect_namespace_diagnostics {type(e)}: {e}")
-                raise
-            finally:
-                self._logger.debug("end collect_namespace_diagnostics")
-
-        r = await run_coroutine_in_thread(collect_async)
-        return DiagnosticsResult(self.collect_namespace_diagnostics, r)

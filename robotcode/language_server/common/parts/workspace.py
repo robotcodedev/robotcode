@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 import weakref
 from dataclasses import dataclass
@@ -418,7 +419,8 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
 
             def remove() -> None:
                 try:
-                    create_sub_task(self.remove_file_watcher_entry(entry))
+                    if asyncio.get_running_loop():
+                        create_sub_task(self.remove_file_watcher_entry(entry))
                 except RuntimeError:
                     pass
 

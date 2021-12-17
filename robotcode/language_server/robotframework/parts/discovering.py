@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class GetAllTestsParams(Model):
+    workspace_folder: str
     paths: Optional[List[str]]
 
 
@@ -52,7 +53,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
-    def get_tests_from_workspace_threading(self, paths: Optional[List[str]]) -> List[TestItem]:
+    def get_tests_from_workspace_threading(self, workspace_folder: Path, paths: Optional[List[str]]) -> List[TestItem]:
         from robot.output.logger import LOGGER
         from robot.running import TestCase, TestSuite
 
@@ -101,6 +102,10 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                         for path in paths:
 
                             p = Path(path)
+
+                            if not p.is_absolute():
+                                p = Path(workspace_folder, p)
+
                             if p.exists():
                                 yield str(p)
 
@@ -109,6 +114,10 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                         for path in paths:
 
                             p = Path(path)
+
+                            if not p.is_absolute():
+                                p = Path(workspace_folder, p)
+
                             if not p.exists():
                                 yield str(p)
 
@@ -136,7 +145,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     ]
                 else:
-                    return [generate(TestSuite.from_file_system("."))]
+                    return [generate(TestSuite.from_file_system(str(workspace_folder)))]
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
@@ -145,11 +154,12 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
     @rpc_method(name="robot/discovering/getTestsFromWorkspace", param_type=GetAllTestsParams)
     async def get_tests_from_workspace(
         self,
+        workspace_folder: str,
         paths: Optional[List[str]],
         *args: Any,
         **kwargs: Any,
     ) -> List[TestItem]:
-        return await run_in_thread(self.get_tests_from_workspace_threading, paths)
+        return await run_in_thread(self.get_tests_from_workspace_threading, Uri(workspace_folder).to_path(), paths)
 
     def get_tests_from_document_threading(
         self, text_document: TextDocumentIdentifier, id: Optional[str], model: ast.AST

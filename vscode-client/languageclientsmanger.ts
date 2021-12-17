@@ -237,6 +237,7 @@ export class LanguageClientsManager {
 
     return (
       (await client.sendRequest<RobotTestItem[]>("robot/discovering/getTestsFromWorkspace", {
+        workspaceFolder: workspaceFolder.uri.toString(),
         paths: paths ?? ["."],
       })) ?? undefined
     );

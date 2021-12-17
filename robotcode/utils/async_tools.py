@@ -29,8 +29,6 @@ from typing import (
     cast,
 )
 
-from robotcode.utils.logging import LoggingDescriptor
-
 from ..utils.inspect import ensure_coroutine
 
 __all__ = [
@@ -53,8 +51,6 @@ __all__ = [
     "create_sub_task",
     "FutureInfo",
 ]
-
-_logger = LoggingDescriptor(name=__name__)
 
 _T = TypeVar("_T")
 
@@ -434,7 +430,6 @@ def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyn
     return cast("asyncio.Future[_T]", loop.run_in_executor(None, cast(Callable[..., _T], func_call)))
 
 
-@_logger.call
 def run_coroutine_in_thread(
     coro: Callable[..., Coroutine[Any, Any, _T]], *args: Any, **kwargs: Any
 ) -> asyncio.Future[_T]:
@@ -684,7 +679,6 @@ class _FutureHolder(Generic[_T]):
         self.afuture = wrap_sub_future(cfuture)
 
 
-@_logger.call
 def spawn_coroutine_from_thread(
     func: Callable[..., Coroutine[Any, Any, _T]],
     *args: Any,
@@ -698,7 +692,6 @@ def spawn_coroutine_from_thread(
     return result.cfuture
 
 
-@_logger.call
 def run_coroutine_from_thread(
     func: Callable[..., Coroutine[Any, Any, _T]],
     *args: Any,
@@ -713,7 +706,6 @@ def run_coroutine_from_thread(
     return result.cfuture.result()
 
 
-@_logger.call
 async def run_coroutine_from_thread_async(
     func: Callable[..., Coroutine[Any, Any, _T]],
     *args: Any,
@@ -726,7 +718,6 @@ async def run_coroutine_from_thread_async(
     return await wrap_sub_future(asyncio.run_coroutine_threadsafe(func(*args), loop))
 
 
-@_logger.call
 def wrap_sub_future(
     future: Union[asyncio.Future[_T], concurrent.futures.Future[_T]],
     *,

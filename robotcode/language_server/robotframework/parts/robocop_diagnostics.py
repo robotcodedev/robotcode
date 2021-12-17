@@ -53,20 +53,21 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     async def collect_diagnostics(
         self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
     ) -> DiagnosticsResult:
+        async def run() -> DiagnosticsResult:
 
-        workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
-        if workspace_folder is not None:
-            extension_config = await self.get_config(document)
+            workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
+            if workspace_folder is not None:
+                extension_config = await self.get_config(document)
 
-            if extension_config is not None and extension_config.enabled:
-                return DiagnosticsResult(
-                    self.collect_diagnostics,
-                    await run_coroutine_in_thread(
-                        self.collect, document, workspace_folder, extension_config, cancelation_token
-                    ),
-                )
+                if extension_config is not None and extension_config.enabled:
+                    return DiagnosticsResult(
+                        self.collect_diagnostics,
+                        await self.collect(document, workspace_folder, extension_config, cancelation_token),
+                    )
 
-        return DiagnosticsResult(self.collect_diagnostics, [])
+            return DiagnosticsResult(self.collect_diagnostics, [])
+
+        return await run_coroutine_in_thread(run)
 
     @_logger.call(entering=True, exiting=True, exception=True)
     async def collect(
@@ -103,7 +104,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 async def run_check(self, ast_model, filename, source=None):  # type: ignore
                     await check_canceled()
 
-                    found_issues = []
+                    found_issues = []  # type: ignore
 
                     self.register_disablers(filename, source)
                     if self.disabler.file_disabled:
@@ -112,6 +113,9 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
                     for checker in self.checkers:
                         await check_canceled()
+
+                        if len(found_issues) >= 1000:
+                            break
 
                         if checker.disabled:
                             continue

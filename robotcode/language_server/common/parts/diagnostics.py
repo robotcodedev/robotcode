@@ -26,7 +26,7 @@ from .protocol_part import LanguageServerProtocolPart
 
 __all__ = ["DiagnosticsProtocolPart", "DiagnosticsResult"]
 
-DIAGNOSTICS_DEBOUNCE = 1.5
+DIAGNOSTICS_DEBOUNCE = 0.75
 
 
 class PublishDiagnosticsEntry:
@@ -52,27 +52,24 @@ class PublishDiagnosticsEntry:
         self.cancel_token = cancelation_token
         self.done = False
 
-        @PublishDiagnosticsEntry._logger.call
-        def create_task() -> None:
-            self._future = self._factory()
+        def _done(t: asyncio.Future[Any]) -> None:
+            self.done = True
+            self.done_callback(self)
 
-            if self._future is not None:
+        self._future = create_sub_task(self._wait_and_run())
+        self._future.add_done_callback(_done)
 
-                def _done(t: asyncio.Future[Any]) -> None:
-                    self._future = None
-                    self.done = True
-                    self.done_callback(self)
+    async def _wait_and_run(self) -> None:
+        await asyncio.sleep(DIAGNOSTICS_DEBOUNCE)
+        await self._factory()
 
-                self._future.add_done_callback(_done)
-
-        self._timer_handle: asyncio.TimerHandle = asyncio.get_running_loop().call_later(
-            DIAGNOSTICS_DEBOUNCE, create_task
-        )
-
-    @_logger.call
     def __del__(self) -> None:
         if not self.done:
-            self.cancel()
+            try:
+                if asyncio.get_running_loop():
+                    create_sub_task(self.cancel())
+            except RuntimeError:
+                pass
 
     @property
     def future(self) -> Optional[asyncio.Future[Any]]:
@@ -85,33 +82,28 @@ class PublishDiagnosticsEntry:
         return f"{type(self)}(document={repr(self.uri)}, task={repr(self.future)}, done={self.done})"
 
     @_logger.call
-    def cancel(self) -> asyncio.Future[None]:
-        async def cancel(t: Optional[asyncio.Future[Any]]) -> None:
-            if t is None:
-                return
-
-            if not t.done() and not t.cancelled():
-                t.cancel()
-                try:
-                    await t
-                except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
-                    raise
-
-                except BaseException as ex:
-                    self._logger.exception(ex)
-                    raise
+    async def cancel(self) -> None:
+        if self.future is None:
+            return
 
         if not self.done:
-            self._timer_handle.cancel()
-
             self.cancel_token.cancel()
 
         self.done = True
 
-        try:
-            return create_sub_task(cancel(self.future))
-        finally:
-            self._future = None
+        if not self.future.done() and not self.future.cancelled():
+            self.future.cancel()
+            try:
+                await self.future
+            except (asyncio.CancelledError):
+                pass
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as ex:
+                self._logger.exception(ex)
+                raise
+            finally:
+                self._future = None
 
 
 @dataclass
@@ -174,21 +166,30 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     async def on_did_open(self, sender: Any, document: TextDocument) -> None:
-        await self.start_publish_diagnostics_task(document)
+        create_sub_task(self.start_publish_diagnostics_task(document))
 
     @language_id("robotframework")
     @_logger.call
     async def on_did_save(self, sender: Any, document: TextDocument) -> None:
-        await self.start_publish_diagnostics_task(document)
+        create_sub_task(self.start_publish_diagnostics_task(document))
 
     @language_id("robotframework")
     @_logger.call
     async def on_did_close(self, sender: Any, document: TextDocument) -> None:
         await self._cancel_entry(self._running_diagnostics.get(document.uri, None))
 
+        self.parent.send_notification(
+            "textDocument/publishDiagnostics",
+            PublishDiagnosticsParams(
+                uri=document.document_uri,
+                version=document._version,
+                diagnostics=[],
+            ),
+        )
+
     @_logger.call
     async def on_did_change(self, sender: Any, document: TextDocument) -> None:
-        await self.start_publish_diagnostics_task(document)
+        create_sub_task(self.start_publish_diagnostics_task(document))
 
     @_logger.call
     def _delete_entry(self, e: PublishDiagnosticsEntry) -> None:
