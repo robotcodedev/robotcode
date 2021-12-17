@@ -5,6 +5,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 ## [Unreleased]
 
 ### added
+  - Big speed improvements
+    - introduce some classes for threadsafe asyncio
+
+### added
 
 - some refactoring to speedup loading and parsing documents
 - semantic tokens now highlight 
