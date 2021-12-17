@@ -16,7 +16,12 @@ from typing import (
     cast,
 )
 
-from ....utils.async_tools import CancelationToken, run_coroutine_in_thread
+from ....utils.async_tools import (
+    CancelationToken,
+    check_canceled,
+    create_sub_task,
+    run_coroutine_in_thread,
+)
 from ....utils.glob_path import iter_files
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
@@ -81,23 +86,26 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: ReferenceContext
     ) -> Optional[List[Location]]:
-        result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
+        async def run() -> Optional[List[Location]]:
+            result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
-        if not result_nodes:
-            return None
+            if not result_nodes:
+                return None
 
-        result_node = result_nodes[-1]
+            result_node = result_nodes[-1]
 
-        if result_node is None:
-            return None
+            if result_node is None:
+                return None
 
-        method = self._find_method(type(result_node))
-        if method is not None:
-            result = await method(result_node, document, position, context)
-            if result is not None:
-                return result
+            method = self._find_method(type(result_node))
+            if method is not None:
+                result = await method(result_node, document, position, context)
+                if result is not None:
+                    return result
 
-        return await self._references_default(result_nodes, document, position, context)
+            return await self._references_default(result_nodes, document, position, context)
+
+        return await run_coroutine_in_thread(run)
 
     async def _references_default(
         self, nodes: List[ast.AST], document: TextDocument, position: Position, context: ReferenceContext
@@ -292,9 +300,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         cancel_token: CancelationToken,
     ) -> List[Location]:
 
-        doc = self.parent.robot_workspace.get_or_open_document(file, "robotframework")
+        doc = await self.parent.robot_workspace.get_or_open_document(file, "robotframework")
         namespace = await self.parent.documents_cache.get_namespace(doc, cancelation_token=cancel_token)
-        await namespace.ensure_initialized()
 
         if (
             lib_doc is not None
@@ -305,9 +312,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         ):
             return []
 
-        return await run_coroutine_in_thread(
-            self._find_keyword_references_in_namespace, namespace, kw_doc, cancel_token
-        )
+        return await self._find_keyword_references_in_namespace(namespace, kw_doc, cancel_token)
 
     async def _find_keyword_references_in_namespace(
         self, namespace: Namespace, kw_doc: KeywordDoc, cancel_token: CancelationToken
@@ -318,7 +323,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         result: List[Location] = []
 
         async for node in iter_nodes(namespace.model):
-            cancel_token.raise_if_canceled()
+            await check_canceled()
 
             kw_token: Optional[Token] = None
             arguments: Optional[List[Token]] = None
@@ -488,27 +493,20 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         futures: List[Awaitable[List[Location]]] = []
         result: List[Location] = []
 
-        try:
-            config = await self.parent.workspace.get_configuration(WorkspaceConfig, folder.uri) or WorkspaceConfig()
+        config = await self.parent.workspace.get_configuration(WorkspaceConfig, folder.uri) or WorkspaceConfig()
 
-            async for f in iter_files(
-                folder.uri.to_path(),
-                (f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}"),
-                ignore_patterns=config.exclude_patterns or [],  # type: ignore
-                absolute=True,
-            ):
-                futures.append(
-                    asyncio.create_task(self._find_keyword_references_in_file(kw_doc, lib_doc, f, cancel_token))
-                )
+        async for f in iter_files(
+            folder.uri.to_path(),
+            (f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}"),
+            ignore_patterns=config.exclude_patterns or [],  # type: ignore
+            absolute=True,
+        ):
+            futures.append(create_sub_task(self._find_keyword_references_in_file(kw_doc, lib_doc, f, cancel_token)))
 
-            for e in await asyncio.gather(*futures, return_exceptions=True):
-                if isinstance(e, BaseException):
-                    self._logger.exception(e)
-                    continue
-                result.extend(e)
-
-        except asyncio.CancelledError:
-            cancel_token.cancel()
-            raise
+        for e in await asyncio.gather(*futures, return_exceptions=True):
+            if isinstance(e, BaseException):
+                self._logger.exception(e)
+                continue
+            result.extend(e)
 
         return result

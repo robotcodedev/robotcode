@@ -198,7 +198,7 @@ class DAPServerProtocol(DebugAdapterProtocol):
         env = {k: ("" if v is None else str(v)) for k, v in env.items()} if env else {}
 
         if console in ["integratedTerminal", "externalTerminal"]:
-            response = await self.send_request_async(
+            await self.send_request_async(
                 RunInTerminalRequest(
                     arguments=RunInTerminalRequestArguments(
                         cwd=cwd,
@@ -214,7 +214,6 @@ class DAPServerProtocol(DebugAdapterProtocol):
                 ),
                 return_type=RunInTerminalResponseBody,
             )
-            print(response.process_id)
         elif console is None or console in ["internalConsole"]:
             run_env: Dict[str, Optional[str]] = dict(os.environ)
             run_env.update(env)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 
+from ....utils.async_tools import run_coroutine_in_thread
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import DocumentSymbol, SymbolInformation, SymbolKind
@@ -24,6 +25,7 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
         parent.document_symbols.collect.add(self.collect)
 
     @language_id("robotframework")
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def collect(
         self, sender: Any, document: TextDocument
     ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
@@ -96,4 +98,7 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
                     symbol = DocumentSymbol(name=keyword.name, kind=SymbolKind.FUNCTION, range=r, selection_range=r)
                     self.current_symbol.children.append(symbol)
 
-        return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)
+        async def run() -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
+            return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)
+
+        return await run_coroutine_in_thread(run)

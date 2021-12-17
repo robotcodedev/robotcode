@@ -1,19 +1,23 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import contextvars
 import functools
 import inspect
 import threading
 import weakref
+from collections import deque
 from concurrent.futures.thread import ThreadPoolExecutor
-from types import MethodType
+from types import MethodType, TracebackType
 from typing import (
     Any,
     AsyncGenerator,
     AsyncIterator,
     Awaitable,
     Callable,
+    Coroutine,
+    Deque,
     Generic,
     Iterator,
     List,
@@ -24,6 +28,8 @@ from typing import (
     Union,
     cast,
 )
+
+from robotcode.utils.logging import LoggingDescriptor
 
 from ..utils.inspect import ensure_coroutine
 
@@ -40,7 +46,15 @@ __all__ = [
     "AsyncThreadingEvent",
     "async_threading_event_iterator",
     "async_threading_event",
+    "check_canceled",
+    "run_in_thread",
+    "run_coroutine_in_thread",
+    "Lock",
+    "create_sub_task",
+    "FutureInfo",
 ]
+
+_logger = LoggingDescriptor(name=__name__)
 
 _T = TypeVar("_T")
 
@@ -56,14 +70,8 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
         self._loop = asyncio.get_event_loop()
 
     def add(self, callback: _TCallable) -> None:
-        async def remove_safe(ref: Any) -> None:
-            with self._lock:
-                self._listeners.remove(ref)
-
         def remove_listener(ref: Any) -> None:
-            if self._loop.is_running():
-                asyncio.run_coroutine_threadsafe(remove_safe(ref), self._loop)
-            else:
+            with self._lock:
                 self._listeners.remove(ref)
 
         with self._lock:
@@ -195,11 +203,12 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
             set(self),
         ):
             if method is not None:
-                future = asyncio.create_task(ensure_coroutine(method)(*args, **kwargs))
+                future = create_sub_task(ensure_coroutine(method)(*args, **kwargs))
+
+                awaitables.append(future)
 
                 if result_callback is not None:
                     future.add_done_callback(_done)
-                awaitables.append(future)
 
         for a in asyncio.as_completed(awaitables):
             try:
@@ -397,7 +406,7 @@ class async_tasking_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncTasking
 
 class CancelationToken:
     def __init__(self) -> None:
-        self._canceled = asyncio.Event()
+        self._canceled = Event()
 
     @property
     def canceled(self) -> bool:
@@ -425,32 +434,306 @@ def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyn
     return cast("asyncio.Future[_T]", loop.run_in_executor(None, cast(Callable[..., _T], func_call)))
 
 
-def run_coroutine_in_thread(coro: Callable[..., Awaitable[_T]], *args: Any, **kwargs: Any) -> asyncio.Future[_T]:
-    import threading
-
-    callback_added_event = threading.Event()
+@_logger.call
+def run_coroutine_in_thread(
+    coro: Callable[..., Coroutine[Any, Any, _T]], *args: Any, **kwargs: Any
+) -> asyncio.Future[_T]:
+    callback_added_event = Event()
     inner_task: Optional[asyncio.Task[_T]] = None
+    canceled = False
+    result: Optional[asyncio.Future[_T]] = None
 
     async def create_inner_task() -> _T:
         nonlocal inner_task
 
-        callback_added_event.wait()
+        ct = asyncio.current_task()
 
-        inner_task = asyncio.create_task(coro(*args, **kwargs))
+        old_name = threading.current_thread().getName()
+        threading.current_thread().setName(coro.__qualname__)
+        try:
+            await callback_added_event.wait()
 
-        return await inner_task
+            if ct is not None and result is not None:
+                _running_tasks[result].children.add(ct)
+
+            inner_task = create_sub_task(coro(*args, **kwargs))
+
+            if canceled:
+                inner_task.cancel()
+
+            return await inner_task
+        finally:
+            threading.current_thread().setName(old_name)
 
     def run() -> _T:
         return asyncio.run(create_inner_task())
 
+    cti = get_current_future_info()
     result = run_in_thread(run)
 
+    _running_tasks[result] = FutureInfo(result)
+    if cti is not None:
+        cti.children.add(result)
+
     def done(task: asyncio.Future[_T]) -> None:
+        nonlocal canceled
+
+        canceled = task.cancelled()
+
         if task.cancelled() and inner_task is not None and not inner_task.done():
-            inner_task.cancel()
+            inner_task._loop.call_soon_threadsafe(inner_task.cancel)
 
     result.add_done_callback(done)
 
     callback_added_event.set()
 
+    return result
+
+
+class Event:
+    """Thread safe version of an async Event"""
+
+    def __init__(self) -> None:
+        self._waiters: Deque[asyncio.Future[Any]] = deque()
+        self._value = False
+        self._lock = threading.RLock()
+
+    def __repr__(self) -> str:
+        res = super().__repr__()
+        extra = "set" if self._value else "unset"
+        if self._waiters:
+            extra = f"{extra}, waiters:{len(self._waiters)}"
+        return f"<{res[1:-1]} [{extra}]>"
+
+    def is_set(self) -> bool:
+        return self._value
+
+    def set(self) -> None:
+        if not self._value:
+            self._value = True
+
+            with self._lock:
+                for fut in self._waiters:
+                    if not fut.done():
+                        if fut._loop == asyncio.get_running_loop():
+                            fut.set_result(True)
+                        else:
+                            fut._loop.call_soon_threadsafe(fut.set_result, True)
+
+    def clear(self) -> None:
+        self._value = False
+
+    async def wait(self) -> bool:
+        if self._value:
+            return True
+
+        with self._lock:
+            fut = create_sub_future()
+            self._waiters.append(fut)
+        try:
+            await fut
+            return True
+        finally:
+            with self._lock:
+                self._waiters.remove(fut)
+
+
+class Lock:
+    """Threadsafe version of an async Lock."""
+
+    def __init__(self) -> None:
+        self._waiters: Optional[Deque[asyncio.Future[Any]]] = None
+        self._locked = False
+        self._lock = threading.RLock()
+
+    async def __aenter__(self) -> None:
+        await self.acquire()
+
+    async def __aexit__(
+        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
+    ) -> None:
+        self.release()
+
+    def __repr__(self) -> str:
+        res = super().__repr__()
+        extra = "locked" if self._locked else "unlocked"
+        if self._waiters:
+            extra = f"{extra}, waiters:{len(self._waiters)}"
+        return f"<{res[1:-1]} [{extra}]>"
+
+    def locked(self) -> bool:
+        return self._locked
+
+    async def acquire(self) -> bool:
+
+        with self._lock:
+            if not self._locked and (self._waiters is None or all(w.cancelled() for w in self._waiters)):
+                self._locked = True
+                return True
+
+        if self._waiters is None:
+            self._waiters = deque()
+        fut = create_sub_future()
+        with self._lock:
+            self._waiters.append(fut)
+
+        try:
+            try:
+                await fut
+            finally:
+                self._waiters.remove(fut)
+        except asyncio.CancelledError:
+            if not self._locked:
+                self._wake_up_first()
+            raise
+
+        with self._lock:
+            self._locked = True
+
+        return True
+
+    def release(self) -> None:
+        if self._locked:
+            with self._lock:
+                self._locked = False
+            self._wake_up_first()
+        else:
+            raise RuntimeError("Lock is not acquired.")
+
+    def _wake_up_first(self) -> None:
+        if not self._waiters:
+            return
+        try:
+            fut = next(iter(self._waiters))
+        except StopIteration:
+            return
+
+        if not fut.done():
+            if fut._loop == asyncio.get_running_loop():
+                fut.set_result(True)
+            else:
+                fut._loop.call_soon_threadsafe(fut.set_result, True)
+
+
+class FutureInfo:
+    def __init__(self, future: asyncio.Future[Any]) -> None:
+        self.task: Optional[weakref.ref[asyncio.Future[Any]]] = weakref.ref(future)
+        self.children: weakref.WeakSet[asyncio.Future[Any]] = weakref.WeakSet()
+
+        future.add_done_callback(self._done)
+
+    def _done(self, future: asyncio.Future[Any]) -> None:
+        if future.cancelled():
+            for t in self.children.copy():
+                if not t.done() and not t.cancelled():
+
+                    if t._loop == asyncio.get_running_loop():
+                        t.cancel()
+                    else:
+                        t._loop.call_soon_threadsafe(t.cancel)
+
+
+_running_tasks: weakref.WeakKeyDictionary[asyncio.Future[Any], FutureInfo] = weakref.WeakKeyDictionary()
+
+
+def get_current_future_info() -> Optional[FutureInfo]:
+    ct = asyncio.current_task()
+
+    if ct is None:
+        return None
+
+    if ct not in _running_tasks:
+        _running_tasks[ct] = FutureInfo(ct)
+
+    return _running_tasks[ct]
+
+
+def create_sub_task(coro: Coroutine[Any, Any, _T], *, name: Optional[str] = None) -> asyncio.Task[_T]:
+
+    ct = get_current_future_info()
+
+    result = asyncio.create_task(coro, name=name)
+
+    if ct is not None:
+        ct.children.add(result)
+
+    _running_tasks[result] = FutureInfo(result)
+    return result
+
+
+def create_sub_future(loop: Optional[asyncio.AbstractEventLoop] = None) -> asyncio.Future[Any]:
+
+    ct = get_current_future_info()
+
+    if loop is None:
+        loop = asyncio.get_running_loop()
+
+    result = loop.create_future()
+
+    _running_tasks[result] = FutureInfo(result)
+
+    if ct is not None:
+        ct.children.add(result)
+
+    return result
+
+
+class _FutureHolder(Generic[_T]):
+    def __init__(self, cfuture: concurrent.futures.Future[_T]):
+        self.cfuture = cfuture
+        self.afuture = wrap_sub_future(cfuture)
+
+
+@_logger.call
+def spawn_coroutine_from_thread(
+    func: Callable[..., Coroutine[Any, Any, _T]],
+    *args: Any,
+    loop: Optional[asyncio.AbstractEventLoop] = None,
+    **kwargs: Any,
+) -> concurrent.futures.Future[_T]:
+    if loop is None:
+        loop = asyncio.get_running_loop()
+
+    result = _FutureHolder(asyncio.run_coroutine_threadsafe(func(*args), loop))
+    return result.cfuture
+
+
+@_logger.call
+def run_coroutine_from_thread(
+    func: Callable[..., Coroutine[Any, Any, _T]],
+    *args: Any,
+    loop: Optional[asyncio.AbstractEventLoop] = None,
+    **kwargs: Any,
+) -> _T:
+    if loop is None:
+        loop = asyncio.get_running_loop()
+
+    result = _FutureHolder(asyncio.run_coroutine_threadsafe(func(*args), loop))
+
+    return result.cfuture.result()
+
+
+@_logger.call
+async def run_coroutine_from_thread_async(
+    func: Callable[..., Coroutine[Any, Any, _T]],
+    *args: Any,
+    loop: Optional[asyncio.AbstractEventLoop] = None,
+    **kwargs: Any,
+) -> _T:
+    if loop is None:
+        loop = asyncio.get_running_loop()
+
+    return await wrap_sub_future(asyncio.run_coroutine_threadsafe(func(*args), loop))
+
+
+@_logger.call
+def wrap_sub_future(
+    future: Union[asyncio.Future[_T], concurrent.futures.Future[_T]],
+    *,
+    loop: Optional[asyncio.AbstractEventLoop] = None,
+) -> asyncio.Future[_T]:
+    result = asyncio.wrap_future(future, loop=loop)
+    ci = get_current_future_info()
+    if ci is not None:
+        ci.children.add(result)
     return result

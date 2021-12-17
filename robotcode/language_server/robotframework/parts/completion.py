@@ -47,6 +47,7 @@ from ..diagnostics.library_doc import (
 )
 from ..diagnostics.namespace import Namespace, VariableDefinitionType
 from ..utils.ast import (
+    HasTokens,
     Token,
     get_nodes_at_position,
     get_tokens_at_position,
@@ -80,39 +81,54 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         return DEFAULT_SECTIONS_STYLE
 
     @language_id("robotframework")
-    @trigger_characters([" ", "*", "\t", ".", "/", "{", os.sep])
+    @trigger_characters(
+        [
+            " ",
+            "*",
+            # "\n",
+            "\t",
+            ".",
+            "/",
+            "{",
+            os.sep,
+        ],
+    )
     # @all_commit_characters(['\n'])
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
+        async def run() -> Union[List[CompletionItem], CompletionList, None]:
+            namespace = await self.parent.documents_cache.get_namespace(document)
+            if namespace is None:
+                return None
 
-        await namespace.ensure_initialized()
+            return await CompletionCollector(
+                self.parent, document, namespace, await self.get_section_style(document)
+            ).collect(
+                position,
+                context,
+            )
 
-        return await run_coroutine_in_thread(
-            CompletionCollector(self.parent, document, namespace, await self.get_section_style(document)).collect,
-            position,
-            context,
-        )
+        return await run_coroutine_in_thread(run)
 
     @language_id("robotframework")
     async def resolve(self, sender: Any, completion_item: CompletionItem) -> CompletionItem:
-        if completion_item.data is not None:
-            document_uri = completion_item.data.get("document_uri", None)
-            if document_uri is not None:
-                document = self.parent.documents.get(document_uri, None)
-                if document is not None:
-                    namespace = await self.parent.documents_cache.get_namespace(document)
-                    if namespace is not None:
-                        await namespace.ensure_initialized()
+        async def run() -> CompletionItem:
+            if completion_item.data is not None:
+                document_uri = completion_item.data.get("document_uri", None)
+                if document_uri is not None:
+                    document = await self.parent.documents.get(document_uri)
+                    if document is not None:
+                        namespace = await self.parent.documents_cache.get_namespace(document)
+                        if namespace is not None:
+                            return await CompletionCollector(
+                                self.parent, document, namespace, await self.get_section_style(document)
+                            ).resolve(completion_item)
 
-                        return await CompletionCollector(
-                            self.parent, document, namespace, await self.get_section_style(document)
-                        ).resolve(completion_item)
+            return completion_item
 
-        return completion_item
+        return await run_coroutine_in_thread(run)
 
 
 _CompleteMethod = Callable[
@@ -221,7 +237,7 @@ class CompletionCollector(ModelHelperMixin):
         if completion_item.data is not None:
             document_uri = completion_item.data.get("document_uri", None)
             if document_uri is not None:
-                document = self.parent.documents.get(document_uri, None)
+                document = await self.parent.documents.get(document_uri)
                 if document is not None and (type := completion_item.data.get("type", None)) is not None:
                     if type in [
                         CompleteResultKind.MODULE.name,
@@ -231,7 +247,7 @@ class CompletionCollector(ModelHelperMixin):
                         name = completion_item.data.get("name", None)
                         if name is not None:
                             try:
-                                entry = (await self.namespace.get_libraries_matchers()).get(name, None)
+                                entry = (await self.namespace.get_libraries_matchers()).get(KeywordMatcher(name), None)
 
                                 if entry is not None:
                                     completion_item.documentation = MarkupContent(
@@ -248,7 +264,7 @@ class CompletionCollector(ModelHelperMixin):
                         name = completion_item.data.get("name", None)
                         if name is not None:
                             try:
-                                entry = (await self.namespace.get_resources_matchers()).get(name, None)
+                                entry = (await self.namespace.get_resources_matchers()).get(KeywordMatcher(name), None)
 
                                 if entry is not None:
                                     completion_item.documentation = MarkupContent(
@@ -265,22 +281,22 @@ class CompletionCollector(ModelHelperMixin):
                         libname = completion_item.data.get("libname", None)
                         name = completion_item.data.get("name", None)
 
-                    if libname is not None and name is not None:
-                        try:
-                            kw_doc = next(
-                                (kw for kw in await self.namespace.get_keywords() if kw.name == name),
-                                None,
-                            )
-
-                            if kw_doc is not None:
-                                completion_item.documentation = MarkupContent(
-                                    kind=MarkupKind.MARKDOWN, value=kw_doc.to_markdown()
+                        if libname is not None and name is not None:
+                            try:
+                                kw_doc = next(
+                                    (kw for kw in await self.namespace.get_keywords() if kw.name == name),
+                                    None,
                                 )
 
-                        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                            raise
-                        except BaseException:
-                            pass
+                                if kw_doc is not None:
+                                    completion_item.documentation = MarkupContent(
+                                        kind=MarkupKind.MARKDOWN, value=kw_doc.to_markdown()
+                                    )
+
+                            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                                raise
+                            except BaseException:
+                                pass
 
         return completion_item
 
@@ -515,13 +531,13 @@ class CompletionCollector(ModelHelperMixin):
                 detail="Library",
                 sort_text=f"030_{k}",
                 deprecated=v.library_doc.is_deprecated,
-                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=v.library_doc.to_markdown()),
+                # documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=v.library_doc.to_markdown()),
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
                 data={
                     "document_uri": str(self.document.uri),
                     "type": CompleteResultKind.MODULE.name,
-                    "name": v.name,
+                    "name": k,
                 },
             )
             result.append(c)
@@ -533,7 +549,7 @@ class CompletionCollector(ModelHelperMixin):
                 detail="Resource",
                 deprecated=v.library_doc.is_deprecated,
                 sort_text=f"030_{k}",
-                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=v.library_doc.to_markdown()),
+                # documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=v.library_doc.to_markdown()),
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
                 data={
@@ -690,10 +706,12 @@ class CompletionCollector(ModelHelperMixin):
         statement_node = cast(Statement, nodes_at_position[0])
         if isinstance(statement_node, (TestCaseName, KeywordName)):
             index += 1
+        if not isinstance(statement_node, HasTokens):
+            return None
 
         while index < len(statement_node.tokens):
             if len(statement_node.tokens) > index:
-                token = cast(Token, statement_node.tokens[index])
+                token = statement_node.tokens[index]
                 if token.type == RobotToken.ASSIGN:
                     index += 1
                     in_assign = True
@@ -702,7 +720,7 @@ class CompletionCollector(ModelHelperMixin):
                         break
 
             if len(statement_node.tokens) > index:
-                token = cast(Token, statement_node.tokens[index])
+                token = statement_node.tokens[index]
                 r = range_from_token(token)
                 ws = whitespace_at_begin_of_token(token)
                 if ws < 2:
@@ -727,18 +745,18 @@ class CompletionCollector(ModelHelperMixin):
             index += 1
 
             if len(statement_node.tokens) > index:
-                token = cast(Token, statement_node.tokens[index])
+                token = statement_node.tokens[index]
                 if token.type == RobotToken.ASSIGN:
                     continue
 
             if len(statement_node.tokens) > index:
-                token = cast(Token, statement_node.tokens[index])
+                token = statement_node.tokens[index]
                 r = range_from_token(token)
                 if position.is_in_range(r) or r.end == position:
                     return await create_items(in_assign, in_template, r, token, position)
 
                 if len(statement_node.tokens) > index + 1:
-                    second_token = cast(Token, statement_node.tokens[index + 1])
+                    second_token = statement_node.tokens[index + 1]
                     ws = whitespace_at_begin_of_token(second_token)
                     if ws < 1:
                         return None
@@ -1060,7 +1078,8 @@ class CompletionCollector(ModelHelperMixin):
                     return None
             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                 raise
-            except BaseException:
+            except BaseException as e:
+                self._logger.exception(e)
                 return None
 
             if text_before_position == "":

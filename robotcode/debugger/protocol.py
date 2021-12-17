@@ -5,6 +5,7 @@ import inspect
 import json
 import logging
 import threading
+import traceback
 from collections import OrderedDict
 from typing import (
     Any,
@@ -98,7 +99,11 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         )
 
         if self.write_transport is not None:
-            self.write_transport.write(header + body)
+            msg = header + body
+            if self._loop == asyncio.get_running_loop():
+                self.write_transport.write(msg)
+            elif self._loop is not None:
+                self._loop.call_soon_threadsafe(self.write_transport.write, msg)
 
     def send_error(
         self,
@@ -123,19 +128,10 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         data: Union[Dict[Any, Any], List[Dict[Any, Any]]]
     ) -> Iterator[ProtocolMessage]:
         def inner(d: Dict[Any, Any]) -> ProtocolMessage:
-            # if "type" in d:
-            #     type = d.get("type")
-            #     if type == "request":
-            #         return Request(**d)
-            #     elif type == "response":
-            #         if "success" in d and d["success"] is not True:
-            #             return ErrorResponse(**d)
-            #         return Response(**d)
-            #     elif type == "event":
-            #         return Event(**d)
-
-            # raise JsonRPCException(f"Invalid Debug Adapter Message {repr(d)}")
-            return from_dict(d, (Request, Response, Event))  # type: ignore
+            result = from_dict(d, (Request, Response, Event))  # type: ignore
+            if isinstance(result, Response) and not result.success:
+                result = from_dict(d, ErrorResponse)
+            return result  # type: ignore
 
         if isinstance(data, list):
             for e in data:
@@ -150,7 +146,10 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
             raise
         except BaseException as e:
             self._logger.exception(e)
-            self.send_error(f"Invalid Message: {type(e).__name__}: {str(e)} -> {str(body)}")
+            self.send_error(
+                f"Invalid Message: {type(e).__name__}: {str(e)} -> {str(body)}\n{traceback.format_exc()}",
+                error_message=Message(traceback.format_exc()),
+            )
 
     def _handle_messages(self, iterator: Iterator[ProtocolMessage]) -> None:
         def done(f: asyncio.Future[Any]) -> None:
@@ -165,13 +164,13 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
     @_logger.call
     async def handle_message(self, message: ProtocolMessage) -> None:
         if isinstance(message, Request):
-            await self.handle_request(message)
+            self.handle_request(message)
         if isinstance(message, Event):
-            await self.handle_event(message)
+            self.handle_event(message)
         elif isinstance(message, ErrorResponse):
-            await self.handle_error_response(message)
+            self.handle_error_response(message)
         elif isinstance(message, Response):
-            await self.handle_response(message)
+            self.handle_response(message)
 
     @staticmethod
     def _convert_params(
@@ -237,10 +236,10 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         )
 
     @_logger.call
-    async def handle_request(self, message: Request) -> None:
+    def handle_request(self, message: Request) -> None:
         e = self.registry.get_entry(message.command)
 
-        try:
+        with self._received_request_lock:
             if e is None or not callable(e.method):
                 result = asyncio.create_task(self.handle_unknown_command(message))
             else:
@@ -248,45 +247,46 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
 
                 result = asyncio.create_task(ensure_coroutine(e.method)(*params[0], **params[1]))
 
-            with self._received_request_lock:
-                self._received_request[message.seq] = result
+            self._received_request[message.seq] = result
 
+        def done(t: asyncio.Task[Any]) -> None:
             try:
-                self.send_response(message.seq, message.command, await result)
+                self.send_response(message.seq, message.command, t.result())
+            except asyncio.CancelledError:
+                self._logger.info(f"request message {repr(message)} canceled")
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except DebugAdapterRPCErrorException as ex:
+                self._logger.exception(ex)
+                self.send_error(
+                    message=ex.message,
+                    request_seq=message.seq,
+                    command=ex.command or message.command,
+                    success=ex.success or False,
+                    error_message=ex.error_message,
+                )
+            except DebugAdapterErrorResponseError as ex:
+                self.send_error(
+                    ex.error.message,
+                    message.seq,
+                    message.command,
+                    False,
+                    error_message=ex.error.body.error if ex.error.body is not None else None,
+                )
+            except BaseException as e:
+                self._logger.exception(e)
+                self.send_error(
+                    str(type(e).__name__),
+                    message.seq,
+                    message.command,
+                    False,
+                    error_message=Message(format=f"{type(e).__name__}: {e}", show_user=True),
+                )
             finally:
                 with self._received_request_lock:
                     self._received_request.pop(message.seq, None)
 
-        except asyncio.CancelledError:
-            self._logger.info(f"request message {repr(message)} canceled")
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except DebugAdapterRPCErrorException as ex:
-            self._logger.exception(ex)
-            self.send_error(
-                message=ex.message,
-                request_seq=message.seq,
-                command=ex.command or message.command,
-                success=ex.success or False,
-                error_message=ex.error_message,
-            )
-        except DebugAdapterErrorResponseError as ex:
-            self.send_error(
-                ex.error.message,
-                message.seq,
-                message.command,
-                False,
-                error_message=ex.error.body.error if ex.error.body is not None else None,
-            )
-        except BaseException as e:
-            self._logger.exception(e)
-            self.send_error(
-                str(type(e).__name__),
-                message.seq,
-                message.command,
-                False,
-                error_message=Message(format=f"{type(e).__name__}: {e}", show_user=True),
-            )
+        result.add_done_callback(done)
 
     @_logger.call
     def send_response(
@@ -332,7 +332,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         self.send_event(event)
 
     @_logger.call
-    async def handle_error_response(self, message: ErrorResponse) -> None:
+    def handle_error_response(self, message: ErrorResponse) -> None:
         with self._sended_request_lock:
             entry = self._sended_request.pop(message.request_seq, None)
 
@@ -340,18 +340,15 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         if entry is None:
             raise exception
 
-        try:
-            entry.future.set_exception(exception)
-        except (SystemExit, KeyboardInterrupt):
-            raise
+        entry.future.set_exception(exception)
 
     @_logger.call
-    async def handle_response(self, message: Response) -> None:
+    def handle_response(self, message: Response) -> None:
         with self._sended_request_lock:
             entry = self._sended_request.pop(message.request_seq, None)
 
         if entry is None:
-            error = f"Invalid response. Could not find id '{message.request_seq}' in our request list"
+            error = f"Invalid response. Could not find id '{message.request_seq}' in request list {message!r}"
             self._logger.warning(error)
             self.send_error("invalid response", error_message=Message(format=error, show_user=True))
             return
@@ -369,5 +366,5 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
                 entry.future.set_exception(e)
 
     @_logger.call
-    async def handle_event(self, message: Event) -> None:
+    def handle_event(self, message: Event) -> None:
         raise NotImplementedError()

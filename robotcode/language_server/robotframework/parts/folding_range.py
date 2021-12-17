@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-import asyncio
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from ....utils.async_tools import check_canceled, run_coroutine_in_thread
@@ -25,6 +24,7 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
         parent.folding_ranges.collect.add(self.collect)
 
     @language_id("robotframework")
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def collect(self, sender: Any, document: TextDocument) -> Optional[List[FoldingRange]]:
 
         from ..utils.async_ast import AsyncVisitor
@@ -116,14 +116,7 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
                 self.__append(node, kind="if")
                 await self.generic_visit(node)
 
-        self._logger.debug("folding started")
+        async def run() -> Optional[List[FoldingRange]]:
+            return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)
 
-        try:
-            return await run_coroutine_in_thread(
-                Visitor.find_from, await self.parent.documents_cache.get_model(document), self
-            )
-        except asyncio.CancelledError:
-            self._logger.debug("folding canceled")
-            raise
-        finally:
-            self._logger.debug("folding ended")
+        return await run_coroutine_in_thread(run)

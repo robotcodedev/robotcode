@@ -9,13 +9,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, List, Optional, Tuple, cast
 
-from ....utils.async_tools import async_tasking_event
+from ....utils.async_tools import Lock, async_tasking_event, create_sub_task
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
 from ....utils.uri import Uri
 from ...common.language import language_id
 from ...common.lsp_types import FileChangeType, FileEvent
-from ...common.parts.workspace import FileWatcherEntry
+from ...common.parts.workspace import FileWatcherEntry, Workspace
 from ...common.text_document import TextDocument
 from ..configuration import RobotConfig
 from ..utils.async_ast import walk
@@ -76,13 +76,22 @@ class _LibrariesEntry:
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
         self.file_watchers: List[FileWatcherEntry] = []
         self._lib_doc: Optional[LibraryDoc] = None
-        self._lock = asyncio.Lock()
-        self._loop = asyncio.get_event_loop()
+        self._lock = Lock()
         self.ignore_reference = ignore_reference
 
+    @staticmethod
+    async def __remove_filewatcher(workspace: Workspace, entry: FileWatcherEntry) -> None:
+        await workspace.remove_file_watcher_entry(entry)
+
     def __del__(self) -> None:
-        if self._loop.is_running():
-            asyncio.run_coroutine_threadsafe(self.invalidate(), self._loop)
+        try:
+            if self.file_watchers is not None and asyncio.get_running_loop():                
+                for watcher in self.file_watchers:
+                    create_sub_task(
+                        _LibrariesEntry.__remove_filewatcher(self.parent.parent_protocol.workspace, watcher)
+                    )
+        except RuntimeError:
+            pass
 
     def __repr__(self) -> str:
         return (
@@ -230,13 +239,22 @@ class _ResourcesEntry:
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
         self.file_watchers: List[FileWatcherEntry] = []
         self._document: Optional[TextDocument] = None
-        self._lock = asyncio.Lock()
-        self._loop = asyncio.get_event_loop()
+        self._lock = Lock()
         self._lib_doc: Optional[LibraryDoc] = None
 
+    @staticmethod
+    async def __remove_filewatcher(workspace: Workspace, entry: FileWatcherEntry) -> None:
+        await workspace.remove_file_watcher_entry(entry)
+
     def __del__(self) -> None:
-        if self._loop.is_running():
-            asyncio.run_coroutine_threadsafe(self.invalidate(), self._loop)
+        try:
+            if self.file_watchers is not None:
+                for watcher in self.file_watchers:
+                    create_sub_task(
+                        _ResourcesEntry.__remove_filewatcher(self.parent.parent_protocol.workspace, watcher)
+                    )
+        except RuntimeError:
+            pass
 
     def __repr__(self) -> str:
         return (
@@ -246,7 +264,7 @@ class _ResourcesEntry:
 
     async def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
         async with self._lock:
-            if self._document is None or self._document.version is None:
+            if self._document is None or self._document._version is None:
                 return None
 
             for change in changes:
@@ -267,10 +285,11 @@ class _ResourcesEntry:
             return None
 
     def __close_document(self, document: TextDocument) -> None:
-        if self._loop.is_running():
-            asyncio.run_coroutine_threadsafe(self.parent.parent_protocol.documents.close_document(document), self._loop)
-        else:
-            del document
+        try:
+            if asyncio.get_running_loop():
+                create_sub_task(self.parent.parent_protocol.documents.close_document(document))
+        except RuntimeError:
+            pass
 
     async def _update(self) -> None:
         self._document = await self._get_document_coroutine()
@@ -280,7 +299,7 @@ class _ResourcesEntry:
 
             weakref.finalize(r, self.__close_document, self._document)
 
-        if self._document.version is None:
+        if self._document._version is None:
             self.file_watchers.append(
                 await self.parent.parent_protocol.workspace.add_file_watchers(
                     self.parent.did_change_watched_files,
@@ -376,12 +395,11 @@ class ImportsManager:
         self.parent_protocol = parent_protocol
         self.folder = folder
         self.config = config
-        self._libaries_lock = asyncio.Lock()
+        self._libaries_lock = Lock()
         self._libaries: OrderedDict[_LibrariesEntryKey, _LibrariesEntry] = OrderedDict()
-        self._resources_lock = asyncio.Lock()
+        self._resources_lock = Lock()
         self._resources: OrderedDict[_ResourcesEntryKey, _ResourcesEntry] = OrderedDict()
         self.file_watchers: List[FileWatcherEntry] = []
-        self._loop = asyncio.get_event_loop()
         self.parent_protocol.documents.did_change.add(self.resource_document_changed)
 
     @async_tasking_event
@@ -450,33 +468,43 @@ class ImportsManager:
         if resource_changed:
             await self.resources_changed(self, resource_changed)
 
-    def __remove_library_entry(self, entry_key: _LibrariesEntryKey, entry: _LibrariesEntry, now: bool = False) -> None:
-        async def threadsafe_remove(k: _LibrariesEntryKey, e: _LibrariesEntry, n: bool) -> None:
-            if n or len(e.references) == 0:
+    def __remove_library_entry(self, entry_key: _LibrariesEntryKey, entry: _LibrariesEntry) -> None:
+        async def remove(k: _LibrariesEntryKey, e: _LibrariesEntry) -> None:
+            if len(e.references) == 0:
                 self._logger.debug(lambda: f"Remove Library Entry {k}")
                 async with self._libaries_lock:
-                    await entry.invalidate()
-                    self._libaries.pop(k, None)
+                    e1 = self._libaries.get(k, None)
+                    if e1 == e:
+                        self._libaries.pop(k, None)
 
-        if self._loop.is_running():
-            asyncio.run_coroutine_threadsafe(threadsafe_remove(entry_key, entry, now), loop=self._loop)
+                        await e.invalidate()
+
+        try:
+            if asyncio.get_running_loop():
+                create_sub_task(remove(entry_key, entry))
+        except RuntimeError:
+            pass
 
     def __remove_resource_entry(self, entry_key: _ResourcesEntryKey, entry: _ResourcesEntry) -> None:
-        async def threadsafe_remove(k: _ResourcesEntryKey, e: _ResourcesEntry) -> None:
+        async def remove(k: _ResourcesEntryKey, e: _ResourcesEntry) -> None:
             if len(e.references) == 0:
+                self._logger.debug(lambda: f"Remove Resource Entry {k}")
                 async with self._resources_lock:
-                    if k in self._resources:
-                        self._logger.debug(lambda: f"Remove Resource Entry {k}")
-                        await entry.invalidate()
+                    e1 = self._resources.get(k, None)
+                    if e1 == e:
+                        await e.invalidate()
                         self._resources.pop(k, None)
 
-        if self._loop.is_running():
-            asyncio.run_coroutine_threadsafe(threadsafe_remove(entry_key, entry), loop=self._loop)
+        try:
+            if asyncio.get_running_loop():
+                create_sub_task(remove(entry_key, entry))
+        except RuntimeError:
+            pass
 
     @_logger.call
     async def find_library(self, name: str, base_dir: str) -> str:
         return await asyncio.wait_for(
-            self._loop.run_in_executor(
+            asyncio.get_running_loop().run_in_executor(
                 self.process_pool,
                 find_library,
                 name,
@@ -500,7 +528,7 @@ class ImportsManager:
             self._logger.debug(lambda: f"Load Library {source}{repr(args)}")
 
             result = await asyncio.wait_for(
-                self._loop.run_in_executor(
+                asyncio.get_running_loop().run_in_executor(
                     self.process_pool,
                     get_library_doc,
                     name,
@@ -518,22 +546,22 @@ class ImportsManager:
                 self._logger.warning(lambda: f"stdout captured at loading library {name}{repr(args)}:\n{result.stdout}")
             return result
 
-        async with self._libaries_lock:
+        entry_key = _LibrariesEntryKey(source, args)
 
-            entry_key = _LibrariesEntryKey(source, args)
+        if entry_key not in self._libaries:
+            async with self._libaries_lock:
+                if entry_key not in self._libaries:
+                    self._libaries[entry_key] = _LibrariesEntry(
+                        name, args, self, _get_libdoc, ignore_reference=sentinel is None
+                    )
 
-            if entry_key not in self._libaries:
-                self._libaries[entry_key] = _LibrariesEntry(
-                    name, args, self, _get_libdoc, ignore_reference=sentinel is None
-                )
+        entry = self._libaries[entry_key]
 
-            entry = self._libaries[entry_key]
+        if not entry.ignore_reference and sentinel is not None and sentinel not in entry.references:
+            entry.references.add(sentinel)
+            weakref.finalize(sentinel, self.__remove_library_entry, entry_key, entry)
 
-            if not entry.ignore_reference and sentinel is not None and sentinel not in entry.references:
-                entry.references.add(sentinel)
-                weakref.finalize(sentinel, self.__remove_library_entry, entry_key, entry)
-
-            return await entry.get_libdoc()
+        return await entry.get_libdoc()
 
     @_logger.call
     async def get_libdoc_from_model(
@@ -638,7 +666,7 @@ class ImportsManager:
     @_logger.call
     async def find_file(self, name: str, base_dir: str, file_type: str = "Resource") -> str:
         return await asyncio.wait_for(
-            self._loop.run_in_executor(
+            asyncio.get_running_loop().run_in_executor(
                 self.process_pool,
                 find_file,
                 name,
@@ -667,21 +695,23 @@ class ImportsManager:
                     f"Supported extensions are {', '.join(repr(s) for s in RESOURCE_EXTENSIONS)}."
                 )
 
-            return self.parent_protocol.robot_workspace.get_or_open_document(source_path, "robotframework")
+            return await self.parent_protocol.robot_workspace.get_or_open_document(source_path, "robotframework")
 
-        async with self._resources_lock:
-            entry_key = _ResourcesEntryKey(source)
+        entry_key = _ResourcesEntryKey(source)
 
-            if entry_key not in self._resources:
-                self._resources[entry_key] = _ResourcesEntry(name, self, _get_document)
+        if entry_key not in self._resources:
+            async with self._resources_lock:
 
-            entry = self._resources[entry_key]
+                if entry_key not in self._resources:
+                    self._resources[entry_key] = _ResourcesEntry(name, self, _get_document)
 
-            if sentinel is not None and sentinel not in entry.references:
-                entry.references.add(sentinel)
-                weakref.finalize(sentinel, self.__remove_resource_entry, entry_key, entry)
+        entry = self._resources[entry_key]
 
-            return entry
+        if sentinel is not None and sentinel not in entry.references:
+            entry.references.add(sentinel)
+            weakref.finalize(sentinel, self.__remove_resource_entry, entry_key, entry)
+
+        return entry
 
     @_logger.call
     async def get_document_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> TextDocument:
@@ -701,7 +731,7 @@ class ImportsManager:
 
     async def complete_library_import(self, name: Optional[str], base_dir: str = ".") -> Optional[List[CompleteResult]]:
         result = await asyncio.wait_for(
-            self._loop.run_in_executor(
+            asyncio.get_running_loop().run_in_executor(
                 self.process_pool,
                 complete_library_import,
                 name,
@@ -720,7 +750,7 @@ class ImportsManager:
         self, name: Optional[str], base_dir: str = "."
     ) -> Optional[List[CompleteResult]]:
         result = await asyncio.wait_for(
-            self._loop.run_in_executor(
+            asyncio.get_running_loop().run_in_executor(
                 self.process_pool,
                 complete_resource_import,
                 name,

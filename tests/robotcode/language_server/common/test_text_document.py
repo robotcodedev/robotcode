@@ -5,6 +5,7 @@ from robotcode.language_server.common.text_document import (
     InvalidRangeError,
     TextDocument,
 )
+from robotcode.utils.async_tools import check_canceled
 
 
 @pytest.mark.asyncio
@@ -12,11 +13,11 @@ async def test_apply_full_change_should_work() -> None:
     text = """first"""
     new_text = """changed"""
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert document.text == text
+    assert await document.text() == text
 
     await document.apply_full_change(1, new_text)
 
-    assert document.text == new_text
+    assert await document.text() == new_text
 
 
 @pytest.mark.asyncio
@@ -24,13 +25,13 @@ async def test_apply_apply_incremental_change_at_begining_should_work() -> None:
     text = """first"""
     new_text = """changed"""
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert document.text == text
+    assert await document.text() == text
 
     await document.apply_incremental_change(
         1, Range(start=Position(line=0, character=0), end=Position(line=0, character=0)), new_text
     )
 
-    assert document.text == new_text + text
+    assert await document.text() == new_text + text
 
 
 @pytest.mark.asyncio
@@ -39,13 +40,13 @@ async def test_apply_apply_incremental_change_at_end_should_work() -> None:
     new_text = """changed"""
 
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert document.text == text
+    assert await document.text() == text
 
     await document.apply_incremental_change(
         1, Range(start=Position(line=0, character=len(text)), end=Position(line=0, character=len(text))), new_text
     )
 
-    assert document.text == text + new_text
+    assert await document.text() == text + new_text
 
 
 @pytest.mark.asyncio
@@ -61,13 +62,13 @@ second changed line
 third"""
 
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert document.text == text
+    assert await document.text() == text
 
     await document.apply_incremental_change(
         1, Range(start=Position(line=1, character=7), end=Position(line=1, character=7)), new_text
     )
 
-    assert document.text == expected
+    assert await document.text() == expected
 
 
 @pytest.mark.asyncio
@@ -79,13 +80,13 @@ third"""
     new_text = """changed """
 
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert document.text == text
+    assert await document.text() == text
 
     await document.apply_incremental_change(
         1, Range(start=Position(line=3, character=7), end=Position(line=3, character=8)), new_text
     )
 
-    assert document.text == text + new_text
+    assert await document.text() == text + new_text
 
 
 @pytest.mark.asyncio
@@ -94,7 +95,7 @@ async def test_apply_apply_incremental_change_with_wrong_range_should_raise_inva
     new_text = """changed"""
 
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert document.text == text
+    assert await document.text() == text
 
     with pytest.raises(InvalidRangeError):
         await document.apply_incremental_change(
@@ -107,11 +108,11 @@ async def test_apply_none_change_should_work() -> None:
     text = """first"""
 
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert document.text == text
+    assert await document.text() == text
 
     await document.apply_none_change()
 
-    assert document.text == text
+    assert await document.text() == text
 
 
 @pytest.mark.asyncio
@@ -123,11 +124,11 @@ third
 """
 
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert document.text == text
+    assert await document.text() == text
 
     await document.apply_none_change()
 
-    assert document.lines == text.splitlines(True)
+    assert await document.get_lines() == text.splitlines(True)
 
 
 @pytest.mark.asyncio
@@ -222,5 +223,7 @@ third
     assert await document.get_cache(dummy.get_data, "data3") == "3data3"
 
     del dummy
+
+    await check_canceled()
 
     assert len(document._cache) == 0

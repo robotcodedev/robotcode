@@ -51,7 +51,11 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     ) -> Optional[Hover]:
 
         results: List[Hover] = []
-        document = self.parent.documents[text_document.uri]
+
+        document = await self.parent.documents.get(text_document.uri)
+        if document is None:
+            return None
+
         for result in await self.collect(
             self,
             document,

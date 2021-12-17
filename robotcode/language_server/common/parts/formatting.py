@@ -65,7 +65,11 @@ class FormattingProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     ) -> Optional[List[TextEdit]]:
 
         results: List[TextEdit] = []
-        document = self.parent.documents[text_document.uri]
+
+        document = await self.parent.documents.get(text_document.uri)
+        if document is None:
+            return None
+
         for result in await self.format(
             self,
             document,
@@ -98,7 +102,10 @@ class FormattingProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     ) -> Optional[List[TextEdit]]:
 
         results: List[TextEdit] = []
-        document = self.parent.documents[text_document.uri]
+        document = await self.parent.documents.get(text_document.uri)
+        if document is None:
+            return None
+
         for result in await self.format_range(
             self,
             document,

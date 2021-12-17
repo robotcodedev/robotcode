@@ -18,7 +18,7 @@ class DAPClientProtocol(DebugAdapterProtocol):
         self.exited = False
         self.terminated = False
 
-    async def handle_event(self, message: Event) -> None:
+    def handle_event(self, message: Event) -> None:
         if message.event == "exited":
             self.exited = True
         elif message.event == "terminated":

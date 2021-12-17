@@ -14,6 +14,7 @@ from typing import (
     cast,
 )
 
+from ....utils.async_tools import run_coroutine_in_thread
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.language import language_id
@@ -65,26 +66,30 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     @language_id("robotframework")
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def collect(
         self, sender: Any, document: TextDocument, position: Position
     ) -> Union[Location, List[Location], List[LocationLink], None]:
-        result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
+        async def run() -> Union[Location, List[Location], List[LocationLink], None]:
+            result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
-        if not result_nodes:
-            return None
+            if not result_nodes:
+                return None
 
-        result_node = result_nodes[-1]
+            result_node = result_nodes[-1]
 
-        if result_node is None:
-            return None
+            if result_node is None:
+                return None
 
-        method = self._find_method(type(result_node))
-        if method is not None:
-            result = await method(result_node, document, position)
-            if result is not None:
-                return result
+            method = self._find_method(type(result_node))
+            if method is not None:
+                result = await method(result_node, document, position)
+                if result is not None:
+                    return result
 
-        return await self._definition_default(result_nodes, document, position)
+            return await self._definition_default(result_nodes, document, position)
+
+        return await run_coroutine_in_thread(run)
 
     async def _definition_default(
         self, nodes: List[ast.AST], document: TextDocument, position: Position

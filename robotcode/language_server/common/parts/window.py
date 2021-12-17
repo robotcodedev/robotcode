@@ -24,7 +24,7 @@ class WindowProtocolPart(LanguageServerProtocolPart):
     async def show_message_request(
         self, message: str, actions: List[str] = [], type: MessageType = MessageType.Info
     ) -> MessageActionItem:
-        return await self.parent.send_request(
+        return await self.parent.send_request_async(
             "window/showMessageRequest",
             ShowMessageRequestParams(type=type, message=message, actions=[MessageActionItem(title=a) for a in actions]),
             MessageActionItem,
@@ -38,7 +38,7 @@ class WindowProtocolPart(LanguageServerProtocolPart):
         selection: Optional[Range] = None,
     ) -> bool:
         return (
-            await self.parent.send_request(
+            await self.parent.send_request_async(
                 "window/showDocument",
                 ShowDocumentParams(uri=uri, external=external, take_focus=take_focus, selection=selection),
                 ShowDocumentResult,

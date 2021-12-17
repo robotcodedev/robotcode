@@ -130,7 +130,10 @@ class KeywordMatcher:
         from robot.utils.normalizing import normalize
 
         if isinstance(o, KeywordMatcher):
-            o = o.name
+            if not self.embedded_arguments:
+                return self.normalized_name == o.normalized_name
+            else:
+                o = o.name
 
         if not isinstance(o, str):
             return False

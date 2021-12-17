@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import uuid
 import weakref
 from dataclasses import dataclass
@@ -24,7 +23,12 @@ from typing import (
 )
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_tools import async_event
+from ....utils.async_tools import (
+    Lock,
+    async_event,
+    async_tasking_event,
+    create_sub_task,
+)
 from ....utils.dataclasses import from_dict
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
@@ -85,7 +89,7 @@ class FileWatcherEntry:
         self.parent: Optional[FileWatcherEntry] = None
         self.finalizer: Any = None
 
-    @async_event
+    @async_tasking_event
     async def child_callbacks(sender, changes: List[FileEvent]) -> None:  # NOSONAR
         ...
 
@@ -143,7 +147,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         self.root_uri = root_uri
 
         self.root_path = root_path
-        self.workspace_folders_lock = asyncio.Lock()
+        self.workspace_folders_lock = Lock()
         self.workspace_folders: List[WorkspaceFolder] = (
             [WorkspaceFolder(w.name, Uri(w.uri), w.uri) for w in workspace_folders]
             if workspace_folders is not None
@@ -152,7 +156,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         self._settings: Dict[str, Any] = {}
 
         self._file_watchers: weakref.WeakSet[FileWatcherEntry] = weakref.WeakSet()
-        self._loop = asyncio.get_event_loop()
+        self._file_watchers_lock = Lock()
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         capabilities.workspace = ServerCapabilitiesWorkspace(
@@ -189,7 +193,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
     def settings(self, value: Dict[str, Any]) -> None:
         self._settings = value
 
-    @async_event
+    @async_tasking_event
     async def did_change_configuration(sender, settings: Dict[str, Any]) -> None:  # NOSONAR
         ...
 
@@ -199,27 +203,27 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         self.settings = settings
         await self.did_change_configuration(self, settings)
 
-    @async_event
+    @async_tasking_event
     async def will_create_files(sender, files: List[str]) -> Optional[Mapping[str, List[TextEdit]]]:  # NOSONAR
         ...
 
-    @async_event
+    @async_tasking_event
     async def did_create_files(sender, files: List[str]) -> None:  # NOSONAR
         ...
 
-    @async_event
+    @async_tasking_event
     async def will_rename_files(sender, files: List[Tuple[str, str]]) -> None:  # NOSONAR
         ...
 
-    @async_event
+    @async_tasking_event
     async def did_rename_files(sender, files: List[Tuple[str, str]]) -> None:  # NOSONAR
         ...
 
-    @async_event
+    @async_tasking_event
     async def will_delete_files(sender, files: List[str]) -> None:  # NOSONAR
         ...
 
-    @async_event
+    @async_tasking_event
     async def did_delete_files(sender, files: List[str]) -> None:  # NOSONAR
         ...
 
@@ -292,7 +296,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
             and self.parent.client_capabilities.workspace.configuration
         ):
             return (
-                await self.parent.send_request(
+                await self.parent.send_request_async(
                     "workspace/configuration",
                     ConfigurationParams(
                         items=[
@@ -374,67 +378,71 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         watchers: List[Union[FileWatcher, str, Tuple[str, Optional[WatchKind]]]],
     ) -> FileWatcherEntry:
 
-        _watchers = [
-            e if isinstance(e, FileWatcher) else FileWatcher(*e) if isinstance(e, tuple) else FileWatcher(e)
-            for e in watchers
-        ]
+        async with self._file_watchers_lock:
+            _watchers = [
+                e if isinstance(e, FileWatcher) else FileWatcher(*e) if isinstance(e, tuple) else FileWatcher(e)
+                for e in watchers
+            ]
 
-        entry = FileWatcherEntry(id=str(uuid.uuid4()), callback=callback, watchers=_watchers)
+            entry = FileWatcherEntry(id=str(uuid.uuid4()), callback=callback, watchers=_watchers)
 
-        current_entry = next((e for e in self._file_watchers if e.watchers == _watchers), None)
+            current_entry = next((e for e in self._file_watchers if e.watchers == _watchers), None)
 
-        if current_entry is not None:
-            if callback not in self.did_change_watched_files:
-                current_entry.child_callbacks.add(callback)  # type: ignore
+            if current_entry is not None:
+                if callback not in self.did_change_watched_files:
+                    current_entry.child_callbacks.add(callback)  # type: ignore
 
-            entry.parent = current_entry
+                entry.parent = current_entry
 
-            if len(current_entry.child_callbacks) > 0:
-                self.did_change_watched_files.add(current_entry.call_childrens)
-        else:
-            self.did_change_watched_files.add(callback)  # type: ignore
-
-            if (
-                self.parent.client_capabilities
-                and self.parent.client_capabilities.workspace
-                and self.parent.client_capabilities.workspace.did_change_watched_files
-                and self.parent.client_capabilities.workspace.did_change_watched_files.dynamic_registration
-            ):
-                await self.parent.register_capability(
-                    entry.id,
-                    "workspace/didChangeWatchedFiles",
-                    DidChangeWatchedFilesRegistrationOptions(
-                        watchers=[FileSystemWatcher(glob_pattern=w.glob_pattern, kind=w.kind) for w in _watchers]
-                    ),
-                )
+                if len(current_entry.child_callbacks) > 0:
+                    self.did_change_watched_files.add(current_entry.call_childrens)
             else:
-                # TODO: implement own filewatcher if not supported by language server client
-                self._logger.warning("client did not support workspace/didChangeWatchedFiles.")
+                self.did_change_watched_files.add(callback)  # type: ignore
 
-        def remove() -> None:
-            if self._loop.is_running():
-                asyncio.run_coroutine_threadsafe(self.remove_file_watcher_entry(entry), self._loop)
+                if (
+                    self.parent.client_capabilities
+                    and self.parent.client_capabilities.workspace
+                    and self.parent.client_capabilities.workspace.did_change_watched_files
+                    and self.parent.client_capabilities.workspace.did_change_watched_files.dynamic_registration
+                ):
+                    await self.parent.register_capability(
+                        entry.id,
+                        "workspace/didChangeWatchedFiles",
+                        DidChangeWatchedFilesRegistrationOptions(
+                            watchers=[FileSystemWatcher(glob_pattern=w.glob_pattern, kind=w.kind) for w in _watchers]
+                        ),
+                    )
+                else:
+                    # TODO: implement own filewatcher if not supported by language server client
+                    self._logger.warning("client did not support workspace/didChangeWatchedFiles.")
 
-        weakref.finalize(entry, remove)
+            def remove() -> None:
+                try:
+                    create_sub_task(self.remove_file_watcher_entry(entry))
+                except RuntimeError:
+                    pass
 
-        self._file_watchers.add(entry)
+            weakref.finalize(entry, remove)
 
-        return entry
+            self._file_watchers.add(entry)
+
+            return entry
 
     async def remove_file_watcher_entry(self, entry: FileWatcherEntry) -> None:
-        self._file_watchers.remove(entry)
+        async with self._file_watchers_lock:
+            self._file_watchers.remove(entry)
 
-        if entry.parent is not None:
-            entry.parent.child_callbacks.remove(entry.callback)  # type: ignore
-            if len(entry.child_callbacks) == 0:
-                self.did_change_watched_files.remove(entry.call_childrens)
-        elif len(entry.child_callbacks) == 0:
-            self.did_change_watched_files.remove(entry.callback)  # type: ignore
-            if (
-                self.parent.client_capabilities
-                and self.parent.client_capabilities.workspace
-                and self.parent.client_capabilities.workspace.did_change_watched_files
-                and self.parent.client_capabilities.workspace.did_change_watched_files.dynamic_registration
-            ):
-                await self.parent.unregister_capability(entry.id, "workspace/didChangeWatchedFiles")
-            # TODO: implement own filewatcher if not supported by language server client
+            if entry.parent is not None:
+                entry.parent.child_callbacks.remove(entry.callback)  # type: ignore
+                if len(entry.child_callbacks) == 0:
+                    self.did_change_watched_files.remove(entry.call_childrens)
+            elif len(entry.child_callbacks) == 0:
+                self.did_change_watched_files.remove(entry.callback)  # type: ignore
+                if (
+                    self.parent.client_capabilities
+                    and self.parent.client_capabilities.workspace
+                    and self.parent.client_capabilities.workspace.did_change_watched_files
+                    and self.parent.client_capabilities.workspace.did_change_watched_files.dynamic_registration
+                ):
+                    await self.parent.unregister_capability(entry.id, "workspace/didChangeWatchedFiles")
+                # TODO: implement own filewatcher if not supported by language server client

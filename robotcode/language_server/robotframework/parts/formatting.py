@@ -50,6 +50,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         return await self.parent.workspace.get_configuration(RoboTidyConfig, folder.uri)
 
     @language_id("robotframework")
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def format(
         self, sender: Any, document: TextDocument, options: FormattingOptions, **further_options: Any
     ) -> Optional[List[TextEdit]]:
@@ -79,7 +80,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             new_lines = new.text.splitlines()
 
             result: List[TextEdit] = []
-            matcher = SequenceMatcher(a=document.lines, b=new_lines, autojunk=False)
+            matcher = SequenceMatcher(a=await document.get_lines(), b=new_lines, autojunk=False)
             for code, old_start, old_end, new_start, new_end in matcher.get_opcodes():
                 if code == "insert" or code == "replace":
                     result.append(
@@ -138,7 +139,9 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 TextEdit(
                     range=Range(
                         start=Position(line=0, character=0),
-                        end=Position(line=len(document.lines), character=len(document.lines[-1])),
+                        end=Position(
+                            line=len(await document.get_lines()), character=len((await document.get_lines())[-1])
+                        ),
                     ),
                     new_text=s.getvalue(),
                 )

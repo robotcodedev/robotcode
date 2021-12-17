@@ -43,7 +43,10 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities
     ) -> Optional[List[FoldingRange]]:
 
         results: List[FoldingRange] = []
-        document = self.parent.documents[text_document.uri]
+        document = await self.parent.documents.get(text_document.uri)
+        if document is None:
+            return None
+
         for result in await self.collect(self, document, callback_filter=language_id_filter(document)):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):

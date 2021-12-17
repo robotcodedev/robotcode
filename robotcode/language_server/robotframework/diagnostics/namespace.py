@@ -23,7 +23,7 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_chain
-from ....utils.async_tools import CancelationToken, run_coroutine_in_thread
+from ....utils.async_tools import CancelationToken, Lock, check_canceled
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.lsp_types import (
@@ -328,6 +328,8 @@ class BlockVariableVisitor(AsyncVisitor):
         from robot.parsing.model.statements import KeywordCall
         from robot.variables.search import contains_variable
 
+        # TODO  analyse "Set Local/Global/Suite Variable"
+
         try:
             n = cast(KeywordCall, node)
             assign_token = n.get_token(RobotToken.ASSIGN)
@@ -521,15 +523,17 @@ class Namespace:
         self._resources_matchers: Optional[Dict[KeywordMatcher, ResourceEntry]] = None
         self._variables: OrderedDict[str, VariablesEntry] = OrderedDict()
         self._initialized = False
-        self._initialize_lock = asyncio.Lock()
+        self._initialize_lock = Lock()
         self._analyzed = False
-        self._analyze_lock = asyncio.Lock()
+        self._analyze_lock = Lock()
         self._library_doc: Optional[LibraryDoc] = None
-        self._library_doc_lock = asyncio.Lock()
+        self._library_doc_lock = Lock()
         self._imports: Optional[List[Import]] = None
         self._own_variables: Optional[List[VariableDefinition]] = None
+        self._own_variables_lock = Lock()
         self._diagnostics: List[Diagnostic] = []
         self._keywords: Optional[List[KeywordDoc]] = None
+        self._keywords_lock = Lock()
 
         # TODO: how to get the search order from model
         self.search_order: Tuple[str, ...] = ()
@@ -679,11 +683,11 @@ class Namespace:
 
                     self._initialized = True
 
-                    await self.get_library_doc()
-                    await self.get_libraries_matchers()
-                    await self.get_resources_matchers()
-                    await self.get_keywords()
-                    await self.get_finder()
+                    # await self.get_library_doc()
+                    # await self.get_libraries_matchers()
+                    # await self.get_resources_matchers()
+                    # await self.get_keywords()
+                    # await self.get_finder()
 
         return self._initialized
 
@@ -701,7 +705,9 @@ class Namespace:
     @_logger.call
     async def get_own_variables(self) -> List[VariableDefinition]:
         if self._own_variables is None:
-            self._own_variables = await VariablesVisitor().get(self.source, self.model)
+            async with self._own_variables_lock:
+                if self._own_variables is None:
+                    self._own_variables = await VariablesVisitor().get(self.source, self.model)
 
         return self._own_variables
 
@@ -816,13 +822,14 @@ class Namespace:
                 elif isinstance(value, VariablesImport):
                     # TODO: variables
 
-                    # if value.name is None:
-                    #     raise NameSpaceError("Variables setting requires value.")
-                    # result = await self._get_variables_entry(value.name, value.args, base_dir)
+                    if value.name is None:
+                        raise NameSpaceError("Variables setting requires value.")
 
-                    # result.import_range = value.range()
-                    # result.import_source = value.source
-                    pass
+                    result = await self._get_variables_entry(value.name, value.args, base_dir)
+
+                    result.import_range = value.range()
+                    result.import_source = value.source
+                    # TODO variables
                 else:
                     raise DiagnosticsError("Unknown import type.")
 
@@ -968,7 +975,7 @@ class Namespace:
                                     )
                                 )
 
-                else:
+                elif isinstance(entry, LibraryEntry):
                     if top_level and entry.name == BUILTIN_LIBRARY_NAME and entry.alias is None:
                         self._diagnostics.append(
                             Diagnostic(
@@ -1018,7 +1025,9 @@ class Namespace:
 
                     if (entry.alias or entry.name or entry.import_name) not in self._libraries:
                         self._libraries[entry.alias or entry.name or entry.import_name] = entry
-                # TODO Variables
+                elif isinstance(entry, VariablesEntry):
+                    # TODO
+                    pass
 
     async def _import_default_libraries(self) -> None:
         async def _import_lib(library: str) -> Optional[LibraryEntry]:
@@ -1074,24 +1083,41 @@ class Namespace:
             variables=await namespace.get_own_variables(),
         )
 
-    # TODO get_variables
+    @_logger.call
+    async def _get_variables_entry(
+        self,
+        name: str,
+        args: Tuple[Any, ...],
+        base_dir: str,
+        sentinel: Any = None,
+    ) -> LibraryEntry:
+        # library = await self.imports_manager.get_variables_for_variables_import(
+        #     name, args, base_dir=base_dir, sentinel=sentinel
+        # )
+
+        # return VariablesEntry(name=library.name, import_name=name, library_doc=library, args=args)
+        raise NotImplementedError("_get_variables_entry")
 
     @_logger.call
     async def get_keywords(self) -> List[KeywordDoc]:
-        await self.ensure_initialized()
-
         if self._keywords is None:
-            result: Dict[KeywordMatcher, KeywordDoc] = {}
+            async with self._keywords_lock:
+                if self._keywords is None:
+                    await self.ensure_initialized()
 
-            async for name, doc in async_chain(
-                (await self.get_library_doc()).keywords.items() if (await self.get_library_doc()) is not None else [],
-                *(e.library_doc.keywords.items() for e in self._resources.values()),
-                *(e.library_doc.keywords.items() for e in self._libraries.values()),
-            ):
-                if KeywordMatcher(name) not in result.keys():
-                    result[KeywordMatcher(name)] = doc
+                    result: Dict[KeywordMatcher, KeywordDoc] = {}
 
-            self._keywords = list(result.values())
+                    async for name, doc in async_chain(
+                        (await self.get_library_doc()).keywords.items()
+                        if (await self.get_library_doc()) is not None
+                        else [],
+                        *(e.library_doc.keywords.items() for e in self._resources.values()),
+                        *(e.library_doc.keywords.items() for e in self._libraries.values()),
+                    ):
+                        if KeywordMatcher(name) not in result.keys():
+                            result[KeywordMatcher(name)] = doc
+
+                    self._keywords = list(result.values())
 
         return self._keywords
 
@@ -1104,10 +1130,9 @@ class Namespace:
                 if not self._analyzed:
                     canceled = False
                     try:
-                        result = await run_coroutine_in_thread(Analyzer().get, self.model, self, cancelation_token)
+                        result = await Analyzer().get(self.model, self, cancelation_token)
 
-                        if cancelation_token is not None:
-                            cancelation_token.raise_if_canceled()
+                        await check_canceled()
 
                         self._diagnostics += result
 
@@ -1151,6 +1176,9 @@ class Namespace:
 
     @_logger.call(condition=lambda self, name: self._finder is not None and name not in self._finder._cache)
     async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
+        if self._finder is not None:
+            return await self._finder.find_keyword(name)
+
         return await (await self.get_finder()).find_keyword(name)
 
 

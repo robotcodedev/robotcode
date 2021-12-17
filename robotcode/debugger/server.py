@@ -1,5 +1,6 @@
 import asyncio
 import os
+from asyncio import Lock
 from typing import Any, Literal, Optional, Union
 
 from ..jsonrpc2.protocol import rpc_method
@@ -49,17 +50,16 @@ class LauncherServerProtocol(DebugAdapterProtocol):
 
     def __init__(self) -> None:
         super().__init__()
-        self._loop = asyncio.get_event_loop()
 
         self._initialized = False
         self._connected_event = asyncio.Event()
         self._connected = False
         self._sigint_signaled = False
 
-        self._exited_lock = asyncio.Lock()
+        self._exited_lock = Lock()
         self._exited = False
 
-        self._terminated_lock = asyncio.Lock()
+        self._terminated_lock = Lock()
         self._terminated = False
 
         self._received_configuration_done_event = asyncio.Event()
@@ -68,7 +68,8 @@ class LauncherServerProtocol(DebugAdapterProtocol):
         Debugger.instance().send_event.add(self.on_debugger_send_event)
 
     def on_debugger_send_event(self, sender: Any, event: Event) -> None:
-        self._loop.call_soon_threadsafe(self.send_event, event)
+        if self._loop is not None:
+            self._loop.call_soon_threadsafe(self.send_event, event)
 
     @property
     def connected(self) -> bool:

@@ -5,7 +5,14 @@ import itertools
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 
-from ....utils.async_tools import CancelationToken, async_tasking_event_iterator
+from ....utils.async_tools import (
+    CancelationToken,
+    Lock,
+    async_tasking_event_iterator,
+    check_canceled,
+    create_sub_task,
+    run_coroutine_in_thread,
+)
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ..language import language_id, language_id_filter
@@ -28,78 +35,83 @@ class PublishDiagnosticsEntry:
     def __init__(
         self,
         uri: Uri,
+        version: Optional[int],
         cancelation_token: CancelationToken,
-        task_factory: Callable[..., asyncio.Task[Any]],
+        factory: Callable[..., asyncio.Future[Any]],
         done_callback: Callable[[PublishDiagnosticsEntry], Any],
     ) -> None:
 
         self.uri = uri
+        self.version = version
 
-        self._task_factory = task_factory
+        self._factory = factory
         self.done_callback = done_callback
 
-        self._task: Optional[asyncio.Task[Any]] = None
+        self._future: Optional[asyncio.Future[Any]] = None
 
         self.cancel_token = cancelation_token
         self.done = False
 
         @PublishDiagnosticsEntry._logger.call
         def create_task() -> None:
-            self._task = self._task_factory()
+            self._future = self._factory()
 
-            if self._task is not None:
-                self._task.set_name(f"Diagnostics for {self.uri}")
+            if self._future is not None:
 
-                def _done(t: asyncio.Task[Any]) -> None:
-                    self._task = None
+                def _done(t: asyncio.Future[Any]) -> None:
+                    self._future = None
                     self.done = True
                     self.done_callback(self)
 
-                self._task.add_done_callback(_done)
+                self._future.add_done_callback(_done)
 
         self._timer_handle: asyncio.TimerHandle = asyncio.get_running_loop().call_later(
             DIAGNOSTICS_DEBOUNCE, create_task
         )
 
+    @_logger.call
     def __del__(self) -> None:
-        if self.task is not None:
-            self.cancel(_from_del=True)
+        if not self.done:
+            self.cancel()
 
     @property
-    def task(self) -> Optional[asyncio.Task[Any]]:
-        return self._task
+    def future(self) -> Optional[asyncio.Future[Any]]:
+        return self._future
 
     def __str__(self) -> str:
         return self.__repr__()
 
     def __repr__(self) -> str:
-        return f"{type(self)}(document={repr(self.uri)}, task={repr(self.task)}, done={self.done})"
+        return f"{type(self)}(document={repr(self.uri)}, task={repr(self.future)}, done={self.done})"
 
-    @_logger.call(condition=lambda self, _from_del=False: not _from_del)
-    def cancel(self, *, _from_del: Optional[bool] = False) -> Optional[asyncio.Task[None]]:
-        self._timer_handle.cancel()
-
-        if self.task is None:
-            return None
-
-        self.cancel_token.cancel()
-
-        async def cancel() -> None:
-            if self.task is None:
+    @_logger.call
+    def cancel(self) -> asyncio.Future[None]:
+        async def cancel(t: Optional[asyncio.Future[Any]]) -> None:
+            if t is None:
                 return
 
-            t = self.task
-            self._task = None
-            if not t.done():
+            if not t.done() and not t.cancelled():
                 t.cancel()
                 try:
                     await t
-                except (SystemExit, KeyboardInterrupt):
+                except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                     raise
-                except BaseException:
-                    pass
 
-        return asyncio.create_task(cancel())
+                except BaseException as ex:
+                    self._logger.exception(ex)
+                    raise
+
+        if not self.done:
+            self._timer_handle.cancel()
+
+            self.cancel_token.cancel()
+
+        self.done = True
+
+        try:
+            return create_sub_task(cancel(self.future))
+        finally:
+            self._future = None
 
 
 @dataclass
@@ -115,7 +127,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         super().__init__(protocol)
 
         self._running_diagnostics: Dict[Uri, PublishDiagnosticsEntry] = {}
-        self._task_lock = asyncio.Lock()
+        self._tasks_lock = Lock()
 
         self.parent.on_connection_lost.add(self.on_connection_lost)
         self.parent.on_shutdown.add(self.on_shutdown)
@@ -145,19 +157,19 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     @_logger.call
     async def _cancel_all_tasks(self) -> None:
         tasks_copy = None
-        async with self._task_lock:
+        async with self._tasks_lock:
             tasks_copy = self._running_diagnostics.copy()
             self._running_diagnostics = {}
         if tasks_copy is not None:
             for v in tasks_copy.values():
-                self._cancel_entry(v)
+                await self._cancel_entry(v)
 
     @_logger.call(condition=lambda self, entry: entry is not None)
     async def _cancel_entry(self, entry: Optional[PublishDiagnosticsEntry]) -> None:
         if entry is None:
             return
         if not entry.done:
-            entry.cancel()
+            await entry.cancel()
 
     @language_id("robotframework")
     @_logger.call
@@ -172,8 +184,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     async def on_did_close(self, sender: Any, document: TextDocument) -> None:
-        async with self._task_lock:
-            self._cancel_entry(self._running_diagnostics.get(document.uri, None))
+        await self._cancel_entry(self._running_diagnostics.get(document.uri, None))
 
     @_logger.call
     async def on_did_change(self, sender: Any, document: TextDocument) -> None:
@@ -186,60 +197,74 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
     @_logger.call
     async def start_publish_diagnostics_task(self, document: TextDocument) -> None:
-        await self._cancel_entry(self._running_diagnostics.get(document.uri, None))
+        async with self._tasks_lock:
+            entry = self._running_diagnostics.get(document.uri, None)
 
-        async with self._task_lock:
+            if entry is not None and entry.version == document.version:
+                return
+
+            await self._cancel_entry(entry)
+
             cancelation_token = CancelationToken()
             self._running_diagnostics[document.uri] = PublishDiagnosticsEntry(
                 document.uri,
+                document.version,
                 cancelation_token,
-                lambda: asyncio.create_task(
-                    self.publish_diagnostics(document.document_uri, cancelation_token),
-                ),
+                # lambda: create_sub_task(self.publish_diagnostics(document.document_uri, cancelation_token)),
+                lambda: run_coroutine_in_thread(self.publish_diagnostics, document.document_uri, cancelation_token),
                 self._delete_entry,
             )
 
-    @_logger.call
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def publish_diagnostics(self, document_uri: DocumentUri, cancelation_token: CancelationToken) -> None:
-        document = self.parent.documents.get(document_uri, None)
-        if document is None:
-            return
+        self._logger.debug("start publish_diagnostics")
+        try:
+            document = await self.parent.documents.get(document_uri)
+            if document is None:
+                return
 
-        diagnostics: Dict[Any, List[Diagnostic]] = document.get_data(self, {})
+            diagnostics: Dict[Any, List[Diagnostic]] = document.get_data(self, {})
 
-        collected_keys: List[Any] = []
+            collected_keys: List[Any] = []
 
-        async for result_any in self.collect(
-            self,
-            document,
-            cancelation_token,
-            callback_filter=language_id_filter(document),
-            return_exceptions=True,
-        ):
-            if cancelation_token.canceled:
-                break
+            async for result_any in self.collect(
+                self,
+                document,
+                cancelation_token,
+                callback_filter=language_id_filter(document),
+                return_exceptions=True,
+            ):
+                await check_canceled()
 
-            result = cast(DiagnosticsResult, result_any)
+                result = cast(DiagnosticsResult, result_any)
 
-            if isinstance(result, BaseException):
-                # if not isinstance(result, asyncio.CancelledError):
-                self._logger.exception(result, exc_info=result)
-            else:
+                if isinstance(result, BaseException):
+                    if not isinstance(result, asyncio.CancelledError):
+                        self._logger.exception(result, exc_info=result)
+                else:
 
-                diagnostics[result.key] = result.diagnostics if result.diagnostics else []
-                collected_keys.append(result.key)
+                    diagnostics[result.key] = result.diagnostics if result.diagnostics else []
+                    collected_keys.append(result.key)
 
-                asyncio.get_event_loop().call_soon(
-                    self.parent.send_notification,
-                    "textDocument/publishDiagnostics",
-                    PublishDiagnosticsParams(
-                        uri=document.document_uri,
-                        version=document.version,
-                        diagnostics=[e for e in itertools.chain(*diagnostics.values())],
-                    ),
-                )
+                    asyncio.get_event_loop().call_soon(
+                        self.parent.send_notification,
+                        "textDocument/publishDiagnostics",
+                        PublishDiagnosticsParams(
+                            uri=document.document_uri,
+                            version=document._version,
+                            diagnostics=[e for e in itertools.chain(*diagnostics.values())],
+                        ),
+                    )
 
-        for k in set(diagnostics.keys()) - set(collected_keys):
-            diagnostics.pop(k)
+            for k in set(diagnostics.keys()) - set(collected_keys):
+                diagnostics.pop(k)
 
-        document.set_data(self, diagnostics)
+            document.set_data(self, diagnostics)
+        except asyncio.CancelledError:
+            self._logger.debug("canceled publish_diagnostics")
+            raise
+        except BaseException as e:
+            self._logger.exception(e)
+            raise
+        finally:
+            self._logger.debug("end publish_diagnostics")

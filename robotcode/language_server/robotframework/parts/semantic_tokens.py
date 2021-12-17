@@ -22,7 +22,11 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_dropwhile, async_takewhile
-from ....utils.async_tools import CancelationToken, run_coroutine_in_thread
+from ....utils.async_tools import (
+    CancelationToken,
+    check_canceled,
+    run_coroutine_in_thread,
+)
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import (
@@ -284,7 +288,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         col_offset,
                         len(kw_namespace),
                         RobotSemTokenTypes.NAMESPACE,
-                        {RobotSemTokenModifiers.BUILTIN} if kw_namespace == cls.BUILTIN_MATCHER else None,
+                        {RobotSemTokenModifiers.BUILTIN}
+                        if KeywordMatcher(kw_namespace) == cls.BUILTIN_MATCHER
+                        else None,
                     )
                     yield SemTokenInfo(
                         token.lineno,
@@ -292,16 +298,16 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         1,
                         SemanticTokenTypes.OPERATOR,
                     )
-                if builtin_library_doc is not None and kw in builtin_library_doc.keywords:
-                    doc = await namespace.find_keyword(token.value)
-                    if (
-                        doc is not None
-                        and doc.libname == cls.BUILTIN_MATCHER
-                        and KeywordMatcher(doc.name) == KeywordMatcher(kw)
-                    ):
-                        if not sem_mod:
-                            sem_mod = set()
-                        sem_mod.add(RobotSemTokenModifiers.BUILTIN)
+                # if builtin_library_doc is not None and KeywordMatcher(kw) in builtin_library_doc.keywords:
+                #     doc = await namespace.find_keyword(token.value)
+                #     if (
+                #         doc is not None
+                #         and doc.libname == cls.BUILTIN_MATCHER
+                #         and KeywordMatcher(doc.name) == KeywordMatcher(kw)
+                #     ):
+                #         if not sem_mod:
+                #             sem_mod = set()
+                #         sem_mod.add(RobotSemTokenModifiers.BUILTIN)
 
                 yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset + kw_index, len(kw))
             elif token.type == RobotToken.NAME and isinstance(node, (LibraryImport, ResourceImport, VariablesImport)):
@@ -525,7 +531,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             for a in arguments:
                 yield a, node
 
-    @_logger.call
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def collect(
         self,
         model: ast.AST,
@@ -554,6 +560,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                             if isinstance(node, KeywordCall)
                             else node.get_token(RobotToken.NAME),
                         )
+                        if kw_token is None:
+                            continue
+
                         kw: Optional[str] = None
 
                         for _, name in iter_over_keyword_names_and_owners(kw_token.value):
@@ -581,15 +590,13 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         yield token, node
 
         async for robot_token, robot_node in async_takewhile(
-            lambda t: not cancel_token.raise_if_canceled() and (range is None or token_in_range(t[0], range)),
+            lambda t: range is None or token_in_range(t[0], range),
             async_dropwhile(
-                lambda t: not cancel_token.raise_if_canceled()
-                and range is not None
-                and not token_in_range(t[0], range),
+                lambda t: range is not None and not token_in_range(t[0], range),
                 get_tokens(),
             ),
         ):
-            cancel_token.raise_if_canceled()
+            await check_canceled()
 
             async for token in self.generate_sem_tokens(
                 robot_token, robot_node, namespace, builtin_library_doc, libraries_matchers, resources_matchers
@@ -623,7 +630,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
         return SemanticTokens(data=data)
 
-    @_logger.call
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def collect_threading(
         self, document: TextDocument, range: Optional[Range]
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
@@ -631,7 +638,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         try:
             model = await self.parent.documents_cache.get_model(document)
             namespace = await self.parent.documents_cache.get_namespace(document)
-            await namespace.ensure_initialized()
 
             builtin_library_doc = next(
                 (
@@ -643,10 +649,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 ),
                 None,
             )
-            await namespace.get_library_doc()
 
-            return await run_coroutine_in_thread(
-                self.collect,
+            return await self.collect(
                 model,
                 range,
                 namespace,
@@ -660,29 +664,21 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             raise
 
     @language_id("robotframework")
-    @_logger.call
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def collect_full(
         self, sender: Any, document: TextDocument, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        self._logger.debug("collect_full started")
-        try:
-            return await document.get_cache(self.collect_threading, None)
-        finally:
-            self._logger.debug("collect_full ended")
+        return await run_coroutine_in_thread(self.collect_threading, document, None)
 
     @language_id("robotframework")
-    @_logger.call
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def collect_range(
         self, sender: Any, document: TextDocument, range: Range, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        self._logger.debug("collect_range started")
-        try:
-            return await self.collect_threading(document, range)
-        finally:
-            self._logger.debug("collect_range ended")
+        return await run_coroutine_in_thread(self.collect_threading, document, range)
 
     @language_id("robotframework")
-    @_logger.call
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def collect_full_delta(
         self, sender: Any, document: TextDocument, previous_result_id: str, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None]:

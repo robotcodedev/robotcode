@@ -57,7 +57,10 @@ class ImplementationProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
         locations: List[Location] = []
         location_links: List[LocationLink] = []
 
-        document = self.parent.documents[text_document.uri]
+        document = await self.parent.documents.get(text_document.uri)
+        if document is None:
+            return None
+
         for result in await self.collect(
             self,
             document,

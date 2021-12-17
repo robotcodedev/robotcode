@@ -83,7 +83,11 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
 
         results: List[Union[SemanticTokens, SemanticTokensPartialResult]] = []
-        document = self.parent.documents[text_document.uri]
+
+        document = await self.parent.documents.get(text_document.uri)
+        if document is None:
+            return None
+
         for result in await self.collect_full(
             self,
             document,
@@ -109,7 +113,11 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
     ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None]:
 
         results: List[Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult]] = []
-        document = self.parent.documents[text_document.uri]
+
+        document = await self.parent.documents.get(text_document.uri)
+        if document is None:
+            return None
+
         for result in await self.collect_full_delta(
             self,
             document,
@@ -136,7 +144,11 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
 
         results: List[Union[SemanticTokens, SemanticTokensPartialResult]] = []
-        document = self.parent.documents[text_document.uri]
+
+        document = await self.parent.documents.get(text_document.uri)
+        if document is None:
+            return None
+
         for result in await self.collect_range(
             self,
             document,
@@ -158,4 +170,4 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
         return None
 
     async def workspace_refresh(self) -> None:
-        await self.parent.send_request("workspace/semanticTokens/refresh")
+        await self.parent.send_request_async("workspace/semanticTokens/refresh")

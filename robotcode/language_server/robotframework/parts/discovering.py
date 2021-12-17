@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterator, List, Optional
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_tools import run_in_thread
+from ....utils.async_tools import run_coroutine_in_thread, run_in_thread
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.lsp_types import Model, Position, Range, TextDocumentIdentifier
@@ -182,13 +182,15 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
     async def get_tests_from_document(
         self, text_document: TextDocumentIdentifier, id: Optional[str], *args: Any, **kwargs: Any
     ) -> List[TestItem]:
-        return await run_in_thread(
-            self.get_tests_from_document_threading,
-            text_document,
-            id,
-            await self.parent.documents_cache.get_model(
-                self.parent.robot_workspace.get_or_open_document(
-                    Uri(text_document.uri).to_path(), language_id="robotframework"
-                )
-            ),
-        )
+        async def run() -> List[TestItem]:
+            return self.get_tests_from_document_threading(
+                text_document,
+                id,
+                await self.parent.documents_cache.get_model(
+                    await self.parent.robot_workspace.get_or_open_document(
+                        Uri(text_document.uri).to_path(), language_id="robotframework"
+                    )
+                ),
+            )
+
+        return await run_coroutine_in_thread(run)

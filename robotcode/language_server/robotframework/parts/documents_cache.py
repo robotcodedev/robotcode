@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-import asyncio
 import enum
 import io
 import weakref
@@ -16,7 +15,12 @@ from typing import (
     cast,
 )
 
-from ....utils.async_tools import CancelationToken, async_tasking_event, run_in_thread
+from ....utils.async_tools import (
+    CancelationToken,
+    Lock,
+    async_tasking_event,
+    create_sub_task,
+)
 from ....utils.uri import Uri
 from ...common.language import language_id_filter
 from ...common.parts.workspace import WorkspaceFolder
@@ -46,9 +50,8 @@ class DocumentType(enum.Enum):
 class DocumentsCache(RobotLanguageServerProtocolPart):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
-        self._loop = asyncio.get_event_loop()
 
-        self._imports_managers_lock = asyncio.Lock()
+        self._imports_managers_lock = Lock()
         self._imports_managers: weakref.WeakKeyDictionary[WorkspaceFolder, ImportsManager] = weakref.WeakKeyDictionary()
         self._default_imports_manager: Optional[ImportsManager] = None
 
@@ -96,26 +99,24 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     ) -> List[Token]:
         import robot.api
 
-        def get(text: str, cancelation_token: CancelationToken) -> List[Token]:
+        def get(text: str, cancelation_token: Optional[CancelationToken]) -> List[Token]:
             with io.StringIO(text) as content:
-                return [e for e in robot.api.get_tokens(content) if not cancelation_token.raise_if_canceled()]
+                return [
+                    e
+                    for e in robot.api.get_tokens(content)
+                    if cancelation_token is None or not cancelation_token.raise_if_canceled()
+                ]
 
         return await self.__get_tokens_internal(document, get, cancelation_token)
 
     async def __get_tokens_internal(
         self,
         document: TextDocument,
-        get: Callable[[str, CancelationToken], List[Token]],
+        get: Callable[[str, Optional[CancelationToken]], List[Token]],
         cancelation_token: Optional[CancelationToken] = None,
     ) -> List[Token]:
-        try:
-            if cancelation_token is None:
-                cancelation_token = CancelationToken()
-            return await run_in_thread(get, document.text, cancelation_token)
-        except asyncio.CancelledError:
-            if cancelation_token is not None:
-                cancelation_token.cancel()
-            raise
+
+        return get(await document.text(), cancelation_token)
 
     async def get_resource_tokens(
         self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
@@ -127,9 +128,13 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     ) -> List[Token]:
         import robot.api
 
-        def get(text: str, cancelation_token: CancelationToken) -> List[Token]:
+        def get(text: str, cancelation_token: Optional[CancelationToken]) -> List[Token]:
             with io.StringIO(text) as content:
-                return [e for e in robot.api.get_resource_tokens(content) if not cancelation_token.raise_if_canceled()]
+                return [
+                    e
+                    for e in robot.api.get_resource_tokens(content)
+                    if cancelation_token is None or not cancelation_token.raise_if_canceled()
+                ]
 
         return await self.__get_tokens_internal(document, get, cancelation_token)
 
@@ -143,9 +148,13 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     ) -> List[Token]:
         import robot.api
 
-        def get(text: str, cancelation_token: CancelationToken) -> List[Token]:
+        def get(text: str, cancelation_token: Optional[CancelationToken]) -> List[Token]:
             with io.StringIO(text) as content:
-                return [e for e in robot.api.get_init_tokens(content) if not cancelation_token.raise_if_canceled()]
+                return [
+                    e
+                    for e in robot.api.get_init_tokens(content)
+                    if cancelation_token is None or not cancelation_token.raise_if_canceled()
+                ]
 
         return await self.__get_tokens_internal(document, get, cancelation_token)
 
@@ -161,7 +170,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         else:
             raise UnknownFileTypeError(f"Unknown file type '{document.uri}'.")
 
-    async def __get_model(
+    def __get_model(
         self,
         document: TextDocument,
         tokens: Iterable[Any],
@@ -171,21 +180,14 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         from robot.parsing.lexer import Token
         from robot.parsing.parser.parser import _get_model
 
-        if cancelation_token is not None:
-            cancelation_token = CancelationToken()
-
         def get_tokens(_source: str, _data_only: bool = False) -> Generator[Token, None, None]:
             for t in tokens:
                 if cancelation_token is not None:
                     cancelation_token.raise_if_canceled()
+
                 yield t
 
-        try:
-            model = await run_in_thread(_get_model, get_tokens, document.uri.to_path())
-        except asyncio.CancelledError:
-            if cancelation_token is not None:
-                cancelation_token.cancel()
-            raise
+        model = _get_model(get_tokens, document.uri.to_path())
 
         setattr(model, "source", str(document.uri.to_path()))
         setattr(model, "model_type", document_type)
@@ -200,7 +202,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     async def __get_general_model(
         self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
     ) -> ast.AST:
-        return await self.__get_model(
+        return self.__get_model(
             document, await self.get_general_tokens(document), DocumentType.GENERAL, cancelation_token
         )
 
@@ -212,7 +214,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     async def __get_resource_model(
         self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
     ) -> ast.AST:
-        return await self.__get_model(
+        return self.__get_model(
             document, await self.get_resource_tokens(document), DocumentType.RESOURCE, cancelation_token
         )
 
@@ -224,9 +226,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     async def __get_init_model(
         self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
     ) -> ast.AST:
-        return await self.__get_model(
-            document, await self.get_init_tokens(document), DocumentType.INIT, cancelation_token
-        )
+        return self.__get_model(document, await self.get_init_tokens(document), DocumentType.INIT, cancelation_token)
 
     async def get_namespace(
         self, document: TextDocument, cancelation_token: Optional[CancelationToken] = None
@@ -300,29 +300,31 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         imports_manager = await self.get_imports_manager(document)
 
         def invalidate(namespace: Namespace) -> None:
-            if self._loop.is_running():
-                asyncio.create_task(self.__invalidate_namespace(namespace))
+            create_sub_task(self.__invalidate_namespace(namespace))
 
         return Namespace(imports_manager, model, str(document.uri.to_path()), invalidate, document)
 
     @property
-    def default_imports_manager(self) -> ImportsManager:
+    async def default_imports_manager(self) -> ImportsManager:
         if self._default_imports_manager is None:
-            self._default_imports_manager = ImportsManager(
-                self.parent,
-                Uri(self.parent.workspace.root_uri or "."),
-                RobotConfig(args=(), python_path=[], env={}, variables={}),
-            )
+            async with self._imports_managers_lock:
+                if self._default_imports_manager is None:
+                    self._default_imports_manager = ImportsManager(
+                        self.parent,
+                        Uri(self.parent.workspace.root_uri or "."),
+                        RobotConfig(args=(), python_path=[], env={}, variables={}),
+                    )
         return self._default_imports_manager
 
     async def get_imports_manager(self, document: TextDocument) -> ImportsManager:
         folder = self.parent.workspace.get_workspace_folder(document.uri)
         if folder is None:
-            return self.default_imports_manager
+            return await self.default_imports_manager
 
-        async with self._imports_managers_lock:
-            if folder not in self._imports_managers:
-                config = await self.parent.workspace.get_configuration(RobotConfig, folder.uri)
+        if folder not in self._imports_managers:
+            async with self._imports_managers_lock:
+                if folder not in self._imports_managers:
+                    config = await self.parent.workspace.get_configuration(RobotConfig, folder.uri)
 
-                self._imports_managers[folder] = ImportsManager(self.parent, folder.uri, config)
-            return self._imports_managers[folder]
+                    self._imports_managers[folder] = ImportsManager(self.parent, folder.uri, config)
+        return self._imports_managers[folder]

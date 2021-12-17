@@ -94,7 +94,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         if initialization_options is not None:
             self.options = from_dict(initialization_options, Options)
 
-        self._logger.info(f"initialized with {repr(self.options)}")
+        self._logger.debug(f"initialized with {repr(self.options)}")
 
     @_logger.call
     async def _on_initialized(self, sender: Any) -> None:

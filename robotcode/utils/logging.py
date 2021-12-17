@@ -13,8 +13,20 @@ from typing import Any, Callable, List, Optional, Type, TypeVar, Union, cast, ov
 __all__ = ["LoggingDescriptor"]
 
 
+_my_repr: Optional[reprlib.Repr] = None
+
+
+def get_repr() -> reprlib.Repr:
+    global _my_repr
+    if _my_repr is None:
+        _my_repr = reprlib.Repr()
+        _my_repr.maxother = 100
+    return _my_repr
+
+
 def _repr(o: Any) -> str:
-    return reprlib.repr(o)
+    return get_repr().repr(o)
+    # return repr(o)
 
 
 def get_class_that_defined_method(meth: Callable[..., Any]) -> Optional[Type[Any]]:
@@ -152,46 +164,56 @@ class LoggingDescriptor:
         return self
 
     def log(
-        self, level: int, msg: Any, condition: Optional[Callable[[], bool]] = None, *args: Any, **kwargs: Any
+        self,
+        level: int,
+        msg: Any,
+        condition: Optional[Callable[[], bool]] = None,
+        *args: Any,
+        stacklevel: int = 2,
+        **kwargs: Any,
     ) -> None:
         if self.is_enabled_for(level) and (condition is not None and condition() or condition is None):
-            self.logger.log(level, msg() if callable(msg) else msg, *args, **kwargs)
+            self.logger.log(level, msg() if callable(msg) else msg, *args, stacklevel=stacklevel, **kwargs)
 
     def debug(
         self,
         msg: Union[str, Callable[[], str]],
         condition: Optional[Callable[[], bool]] = None,
         *args: Any,
+        stacklevel: int = 3,
         **kwargs: Any,
     ) -> None:
-        self.log(logging.DEBUG, msg, condition, *args, **kwargs)
+        self.log(logging.DEBUG, msg, condition, *args, stacklevel=stacklevel, **kwargs)
 
     def info(
         self,
         msg: Union[str, Callable[[], str]],
         condition: Optional[Callable[[], bool]] = None,
         *args: Any,
+        stacklevel: int = 3,
         **kwargs: Any,
     ) -> None:
-        self.log(logging.INFO, msg, condition, *args, **kwargs)
+        self.log(logging.INFO, msg, condition, *args, stacklevel=stacklevel, **kwargs)
 
     def warning(
         self,
         msg: Union[str, Callable[[], str]],
         condition: Optional[Callable[[], bool]] = None,
         *args: Any,
+        stacklevel: int = 3,
         **kwargs: Any,
     ) -> None:
-        self.log(logging.WARNING, msg, condition, *args, **kwargs)
+        self.log(logging.WARNING, msg, condition, *args, stacklevel=stacklevel, **kwargs)
 
     def error(
         self,
         msg: Union[str, Callable[[], str]],
         condition: Optional[Callable[[], bool]] = None,
         *args: Any,
+        stacklevel: int = 3,
         **kwargs: Any,
     ) -> None:
-        self.log(logging.ERROR, msg, condition, *args, **kwargs)
+        self.log(logging.ERROR, msg, condition, *args, stacklevel=stacklevel, **kwargs)
 
     def exception(
         self,
@@ -199,6 +221,7 @@ class LoggingDescriptor:
         condition: Optional[Callable[[], bool]] = None,
         exc_info: Any = True,
         *args: Any,
+        stacklevel: int = 3,
         level: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
@@ -207,18 +230,35 @@ class LoggingDescriptor:
             s = type(msg).__qualname__
             if sm:
                 s += ": " + sm
-            self.log(logging.ERROR if level is None else level, s, condition, *args, exc_info=exc_info, **kwargs)
+            self.log(
+                logging.ERROR if level is None else level,
+                s,
+                condition,
+                *args,
+                exc_info=exc_info,
+                stacklevel=stacklevel,
+                **kwargs,
+            )
         else:
-            self.log(logging.ERROR if level is None else level, msg, condition, *args, exc_info=exc_info, **kwargs)
+            self.log(
+                logging.ERROR if level is None else level,
+                msg,
+                condition,
+                *args,
+                exc_info=exc_info,
+                stacklevel=stacklevel,
+                **kwargs,
+            )
 
     def critical(
         self,
         msg: Union[str, Callable[[], str]],
         condition: Optional[Callable[[], bool]] = None,
         *args: Any,
+        stacklevel: int = 3,
         **kwargs: Any,
     ) -> None:
-        self.log(logging.CRITICAL, msg, condition, *args, **kwargs)
+        self.log(logging.CRITICAL, msg, condition, *args, stacklevel=stacklevel, **kwargs)
 
     def is_enabled_for(self, level: int) -> bool:
         return self.logger.isEnabledFor(level)
@@ -331,11 +371,12 @@ class LoggingDescriptor:
                             else str(unwrapped_func.__name__)
                         )
 
-                def log(
+                def _log(
                     message: Callable[[], str],
                     *,
                     state: CallState,
                     log_level: Optional[int] = None,
+                    stacklevel: int = 4,
                     **log_kwargs: Any,
                 ) -> None:
                     if has_logging_entries():
@@ -353,6 +394,7 @@ class LoggingDescriptor:
                                     log_level if log_level is not None else c.level,
                                     lambda: f"{state_msg()}{prefix}{message()}",
                                     condition=lambda: c.condition is None or c.condition(*real_args, **wrapper_kwargs),
+                                    stacklevel=stacklevel,
                                     **{**kwargs, **log_kwargs},
                                 )
 
@@ -376,9 +418,9 @@ class LoggingDescriptor:
                     )
 
                 def build_exception_message(exception: BaseException) -> str:
-                    return "{0}(...)->{1}".format(func_name(), exception)
+                    return "{0}(...) -> {1}: {2}".format(func_name(), type(exception).__qualname__, exception)
 
-                log(build_enter_message, state=CallState.ENTERING)
+                _log(build_enter_message, state=CallState.ENTERING)
 
                 result = None
                 try:
@@ -394,7 +436,7 @@ class LoggingDescriptor:
 
                 except BaseException as e:
                     ex = e
-                    log(
+                    _log(
                         lambda: build_exception_message(ex),
                         log_level=logging.ERROR,
                         state=CallState.EXCEPTION,
@@ -402,7 +444,7 @@ class LoggingDescriptor:
                     )
                     raise
                 else:
-                    log(
+                    _log(
                         lambda: build_exit_message(result, end_time - start_time if timed else None),
                         state=CallState.EXITING,
                     )

@@ -93,6 +93,7 @@ export class TestControllerManager {
       }),
       vscode.workspace.onDidChangeTextDocument(async (event) => {
         if (event.document.languageId !== "robotframework") return;
+        // TODO: refresh only once if several short changes are made
 
         await this.refresh(this.findTestItemForDocument(event.document));
       }),

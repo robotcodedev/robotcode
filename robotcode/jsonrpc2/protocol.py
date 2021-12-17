@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
-import logging
 import re
 import threading
 import weakref
@@ -31,7 +30,12 @@ from typing import (
     runtime_checkable,
 )
 
-from ..utils.async_tools import CancelationToken, async_event
+from ..utils.async_tools import (
+    CancelationToken,
+    async_event,
+    create_sub_future,
+    create_sub_task,
+)
 from ..utils.dataclasses import as_json, from_dict
 from ..utils.inspect import ensure_coroutine, iter_methods
 from ..utils.logging import LoggingDescriptor
@@ -165,7 +169,7 @@ def rpc_method(
     def _decorator(func: _F) -> Callable[[_F], _F]:
 
         if inspect.isclass(_func):
-            raise Exception(f"Not supported type {type(func)}.")
+            raise TypeError(f"Not supported type {type(func)}.")
 
         if isinstance(func, classmethod):
             f = cast(classmethod, func).__func__
@@ -176,7 +180,7 @@ def rpc_method(
 
         real_name = name if name is not None else f.__name__ if f is not None else None
         if real_name is None or not real_name:
-            raise Exception("name is empty.")
+            raise ValueError("name is empty.")
 
         cast(RpcMethod, f).__rpc_method__ = RpcMethodEntry(real_name, f, param_type)
         return func
@@ -324,13 +328,13 @@ class ReceivedRequestEntry(NamedTuple):
 class JsonRPCProtocolBase(asyncio.Protocol, ABC):
 
     _logger = LoggingDescriptor()
-    _message_logger = LoggingDescriptor(postfix=".message")
     registry = RpcRegistry()
 
     def __init__(self) -> None:
         self.read_transport: Optional[asyncio.ReadTransport] = None
         self.write_transport: Optional[asyncio.WriteTransport] = None
         self._message_buf = bytes()
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
 
     @async_event
     async def on_connection_made(sender, transport: asyncio.BaseTransport) -> None:
@@ -343,16 +347,18 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
     @_logger.call
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         super().connection_made(transport)
+        self._loop = asyncio.get_running_loop()
         if isinstance(transport, asyncio.ReadTransport):
             self.read_transport = transport
         if isinstance(transport, asyncio.WriteTransport):
             self.write_transport = transport
 
-        asyncio.create_task(self.on_connection_made(self, transport))
+        create_sub_task(self.on_connection_made(self, transport))
 
     @_logger.call
     def connection_lost(self, exc: Optional[BaseException]) -> None:
-        asyncio.create_task(self.on_connection_lost(self, exc))
+        create_sub_task(self.on_connection_lost(self, exc))
+        self._loop = None
 
     @_logger.call
     def eof_received(self) -> Optional[bool]:
@@ -388,10 +394,6 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
             if len(body) < length:
                 return
 
-            self._message_logger.debug(
-                lambda: "received ->\n" + self._message_buf.decode(charset).replace("\r\n", "\n")
-            )
-
             body, data = body[:length], body[length:]
             self._message_buf = bytes()
 
@@ -410,8 +412,8 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         self._sended_request_lock = threading.RLock()
         self._sended_request: OrderedDict[Union[str, int], SendedRequestEntry] = OrderedDict()
         self._sended_request_count = 0
-        self._received_request_lock = threading.RLock()
         self._received_request: OrderedDict[Union[str, int, None], ReceivedRequestEntry] = OrderedDict()
+        self._received_request_lock = threading.RLock()
 
     @staticmethod
     def _generate_json_rpc_messages_from_dict(
@@ -457,19 +459,18 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 self._logger.exception(ex, exc_info=ex)
 
         for m in iterator:
-            task = asyncio.create_task(self.handle_message(m))
-            task.add_done_callback(done)
+            create_sub_task(self.handle_message(m)).add_done_callback(done)
 
     @_logger.call
     async def handle_message(self, message: JsonRPCMessage) -> None:
         if isinstance(message, JsonRPCRequest):
-            await self.handle_request(message)
+            self.handle_request(message)
         elif isinstance(message, JsonRPCNotification):
-            await self.handle_notification(message)
+            self.handle_notification(message)
         elif isinstance(message, JsonRPCError):
-            await self.handle_error(message)
+            self.handle_error(message)
         elif isinstance(message, JsonRPCResponse):
-            await self.handle_response(message)
+            self.handle_response(message)
 
     @_logger.call
     def send_response(self, id: Optional[Union[str, int, None]], result: Optional[Any] = None) -> None:
@@ -494,26 +495,20 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             )
         )
 
-    @_logger.call
     def send_message(self, message: JsonRPCMessage) -> None:
         message.jsonrpc = PROTOCOL_VERSION
 
-        body = as_json(
-            message,
-            indent=self._message_logger.is_enabled_for(logging.DEBUG) or None,
-        ).encode(self.CHARSET)
+        body = as_json(message, compact=True).encode(self.CHARSET)
 
         header = (
             f"Content-Length: {len(body)}\r\nContent-Type: {self.CONTENT_TYPE}; charset={self.CHARSET}\r\n\r\n"
         ).encode("ascii")
 
-        self._message_logger.debug(
-            lambda: "write ->\n" + (header.decode("ascii") + body.decode(self.CHARSET)).replace("\r\n", "\n")
-        )
-
         if self.write_transport is not None:
-            self.write_transport.write(header + body)
+            msg = header + body
+            self.write_transport.write(msg)
 
+    @_logger.call
     def send_request(
         self,
         method: str,
@@ -521,15 +516,15 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         return_type_or_converter: Optional[Type[_TResult]] = None,
     ) -> asyncio.Future[_TResult]:
 
-        result: asyncio.Future[_TResult] = asyncio.get_event_loop().create_future()
-
         with self._sended_request_lock:
+            result: asyncio.Future[_TResult] = create_sub_future()
             self._sended_request_count += 1
             id = self._sended_request_count
 
             self._sended_request[id] = SendedRequestEntry(result, return_type_or_converter)
 
-        self.send_message(JsonRPCRequest(id=id, method=method, params=params))
+        request = JsonRPCRequest(id=id, method=method, params=params)
+        self.send_message(request)
 
         return result
 
@@ -539,13 +534,15 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         params: Optional[Any] = None,
         return_type: Optional[Type[_TResult]] = None,
     ) -> _TResult:
+
         return await self.send_request(method, params, return_type)
 
+    @_logger.call
     def send_notification(self, method: str, params: Any) -> None:
         self.send_message(JsonRPCNotification(method=method, params=params))
 
     @_logger.call(exception=True)
-    async def handle_response(self, message: JsonRPCResponse) -> None:
+    def handle_response(self, message: JsonRPCResponse) -> None:
         if message.id is None:
             error = "Invalid response. Response id is null."
             self._logger.warning(error)
@@ -556,22 +553,29 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             entry = self._sended_request.pop(message.id, None)
 
         if entry is None:
-            error = f"Invalid response. Could not find id '{message.id}' in our request list."
+            error = f"Invalid response. Could not find id '{message.id}' in request list."
             self._logger.warning(error)
             self.send_error(JsonRPCErrors.INTERNAL_ERROR, error)
             return
 
         try:
             if not entry.future.done():
-                entry.future.set_result(from_dict(message.result, entry.result_type))
+                res = from_dict(message.result, entry.result_type)
+                if entry.future._loop == asyncio.get_running_loop():
+                    entry.future.set_result(res)
+                else:
+                    entry.future._loop.call_soon_threadsafe(entry.future.set_result, res)
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             if not entry.future.done():
-                entry.future.set_exception(e)
+                if entry.future._loop == asyncio.get_running_loop():
+                    entry.future.set_exception(e)
+                else:
+                    entry.future._loop.call_soon_threadsafe(entry.future.set_exception, e)
 
     @_logger.call
-    async def handle_error(self, message: JsonRPCError) -> None:
+    def handle_error(self, message: JsonRPCError) -> None:
         raise JsonRPCErrorException(message.error.code, message.error.message, message.error.data)
 
     @staticmethod
@@ -630,7 +634,8 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 kw_args["params"] = converted_params
         return args, kw_args
 
-    async def handle_request(self, message: JsonRPCRequest) -> Optional[asyncio.Task[_T]]:
+    @_logger.call
+    def handle_request(self, message: JsonRPCRequest) -> Optional[asyncio.Task[_T]]:
         e = self.registry.get_entry(message.method)
 
         if e is None or not callable(e.method):
@@ -644,10 +649,9 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         params = self._convert_params(e.method, e.param_type, message.params)
         cancel_token = CancelationToken()
 
-        task = asyncio.create_task(
+        task = create_sub_task(
             ensure_coroutine(e.method)(*params[0], cancel_token=cancel_token, **params[1]), name=message.method
         )
-
         with self._received_request_lock:
             self._received_request[message.id] = ReceivedRequestEntry(task, message, cancel_token)
 
@@ -655,7 +659,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             try:
                 self.send_response(message.id, t.result())
             except asyncio.CancelledError:
-                self._logger.info(f"request message {repr(message)} canceled")
+                self._logger.debug(f"request message {repr(message)} canceled")
             except (SystemExit, KeyboardInterrupt):
                 raise
             except JsonRPCErrorException as ex:
@@ -672,21 +676,25 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
         return task
 
-    async def cancel_request(self, id: Union[int, str, None]) -> None:
+    @_logger.call
+    def cancel_request(self, id: Union[int, str, None]) -> None:
         with self._received_request_lock:
             entry = self._received_request.get(id, None)
+
         if entry is not None and entry.future is not None and not entry.future.cancelled():
             self._logger.debug(f"try to cancel request {entry.request}")
             entry.cancel_token.cancel()
             entry.future.cancel()
 
+    @_logger.call
     async def cancel_all_received_request(self) -> None:
         for entry in self._received_request.values():
             if entry is not None and entry.future is not None and not entry.future.cancelled():
                 entry.cancel_token.cancel()
                 entry.future.cancel()
 
-    async def handle_notification(self, message: JsonRPCNotification) -> None:
+    @_logger.call
+    def handle_notification(self, message: JsonRPCNotification) -> None:
         e = self.registry.get_entry(message.method)
 
         if e is None or not callable(e.method):
@@ -696,7 +704,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             params = self._convert_params(e.method, e.param_type, message.params)
             result = e.method(*params[0], **params[1])
             if inspect.isawaitable(result):
-                asyncio.create_task(result)
+                create_sub_task(result)
 
         except asyncio.CancelledError:
             pass

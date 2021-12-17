@@ -1,34 +1,15 @@
 from __future__ import annotations
 
-import asyncio
 import inspect
 import io
 import weakref
 from types import MethodType
 from typing import Any, Awaitable, Callable, Dict, List, Optional, TypeVar, Union, cast
 
+from ...utils.async_tools import Lock, check_canceled, create_sub_task
+from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
-from .lsp_types import DocumentUri, Position, Range
-
-
-def _utf16_unit_offset(chars: str) -> int:
-    return sum(ord(ch) > 0xFFFF for ch in chars)
-
-
-def _position_from_utf16(lines: List[str], position: Position) -> Position:
-    # see: https://github.com/microsoft/language-server-protocol/issues/376
-
-    try:
-        return Position(
-            line=position.line,
-            character=position.character - _utf16_unit_offset(lines[position.line][: position.character]),
-        )
-    except IndexError:  # pragma: no cover
-        return Position(line=len(lines), character=0)
-
-
-def _range_from_utf16(lines: List[str], range: Range) -> Range:
-    return Range(start=_position_from_utf16(lines, range.start), end=_position_from_utf16(lines, range.end))
+from .lsp_types import DocumentUri, Range
 
 
 class InvalidRangeError(Exception):
@@ -41,10 +22,12 @@ _T = TypeVar("_T")
 class CacheEntry:
     def __init__(self, data: Any = None) -> None:
         self.data = data
-        self.lock: asyncio.Lock = asyncio.Lock()
+        self.lock = Lock()
 
 
 class TextDocument:
+    _logger = LoggingDescriptor()
+
     def __init__(
         self,
         document_uri: DocumentUri,
@@ -54,7 +37,7 @@ class TextDocument:
     ) -> None:
         super().__init__()
 
-        self._lock = asyncio.Lock()
+        self._lock = Lock()
 
         self._references: weakref.WeakSet[Any] = weakref.WeakSet()
 
@@ -64,7 +47,7 @@ class TextDocument:
 
         self.language_id = language_id
 
-        self.version = version
+        self._version = version
         self._text = text
 
         self._lines: Optional[List[str]] = None
@@ -79,8 +62,9 @@ class TextDocument:
     def references(self) -> weakref.WeakSet[Any]:  # pragma: no cover
         return self._references
 
-    def __del__(self) -> None:
-        self._clear()
+    @property
+    def version(self) -> Optional[int]:
+        return self._version
 
     def __str__(self) -> str:  # pragma: no cover
         return self.__repr__()
@@ -89,75 +73,79 @@ class TextDocument:
         return (
             f"TextDocument(uri={repr(self.uri)}, "
             f"language_id={repr(self.language_id)}, "
-            f"version={repr(self.version)}"
+            f"version={repr(self._version)}"
             f")"
         )
 
-    @property
-    def text(self) -> str:
-        return self._text
+    async def text(self) -> str:
+        async with self._lock:
+            return self._text
 
+    @_logger.call
     async def apply_none_change(self) -> None:
         async with self._lock:
             self._lines = None
             self._invalidate_cache()
 
+    @_logger.call
     async def apply_full_change(self, version: Optional[int], text: str) -> None:
         async with self._lock:
             if version is not None:
-                self.version = version
+                self._version = version
             self._text = text
             self._lines = None
             self._invalidate_cache()
 
+    @_logger.call
     async def apply_incremental_change(self, version: Optional[int], range: Range, text: str) -> None:
         async with self._lock:
             try:
                 if version is not None:
-                    self.version = version
+                    self._version = version
 
                 if range.start > range.end:
                     raise InvalidRangeError(f"Start position is greater then end position {range}.")
 
-                lines = self._text.splitlines(True)
-                (start_line, start_col), (end_line, end_col) = _range_from_utf16(lines, range)
+                lines = self.__get_lines()
+
+                (start_line, start_col), (end_line, end_col) = range
 
                 if start_line == len(lines):
                     self._text = self._text + text
                     return
 
-                with io.StringIO() as new:
+                with io.StringIO() as new_text:
                     for i, line in enumerate(lines):
-                        if i < start_line:
-                            new.write(line)
-                            continue
-
-                        if i > end_line:
-                            new.write(line)
+                        if i < start_line or i > end_line:
+                            new_text.write(line)
                             continue
 
                         if i == start_line:
-                            new.write(line[:start_col])
-                            new.write(text)
+                            new_text.write(line[:start_col])
+                            new_text.write(text)
 
                         if i == end_line:
-                            new.write(line[end_col:])
+                            new_text.write(line[end_col:])
 
-                    self._text = new.getvalue()
+                    self._text = new_text.getvalue()
             finally:
                 self._lines = None
                 self._invalidate_cache()
 
-    @property
-    def lines(self) -> List[str]:
+    def __get_lines(self) -> List[str]:
         if self._lines is None:
             self._lines = self._text.splitlines(True)
 
         return self._lines
 
+    async def get_lines(self) -> List[str]:
+        async with self._lock:
+            return self.__get_lines()
+
     def _invalidate_cache(self) -> None:
         self._cache.clear()
 
+    @_logger.call
     async def invalidate_cache(self) -> None:
         async with self._lock:
             self._invalidate_cache()
@@ -165,19 +153,20 @@ class TextDocument:
     def _invalidate_data(self) -> None:
         self._data.clear()
 
+    @_logger.call
     async def invalidate_data(self) -> None:
         async with self._lock:
             self._invalidate_data()
 
-    def __remove_cache_entry(self, ref: Any) -> None:
-        async def __remove_cache_entry_safe(_ref: Any) -> None:
+    async def __remove_cache_entry_safe(self, _ref: Any) -> None:
+        if _ref in self._cache:
             async with self._lock:
-                self._cache.pop(_ref)
+                if _ref in self._cache:
+                    self._cache.pop(_ref)
 
-        if self._lock.locked():
-            asyncio.create_task(__remove_cache_entry_safe(ref))
-        else:
-            self._cache.pop(ref)
+    def __remove_cache_entry(self, ref: Any) -> None:
+
+        create_sub_task(self.__remove_cache_entry_safe(ref))
 
     def __get_cache_reference(self, entry: Callable[..., Any], /, *, add_remove: bool = True) -> weakref.ref[Any]:
 
@@ -198,28 +187,31 @@ class TextDocument:
     ) -> _T:
 
         reference = self.__get_cache_reference(entry)
+        e = self._cache.get(reference, None)
 
-        if reference not in self._cache:
+        if e is None:
             async with self._lock:
-                self._cache[reference] = CacheEntry()
+                await check_canceled()
+                e = self._cache.get(reference, None)
+                if e is None:
 
-        e = self._cache[reference]
+                    e = CacheEntry()
 
-        async with e.lock:
-            if e.data is None:
-                result = entry(self, *args, **kwargs)  # type: ignore
+                    self._cache[reference] = e
 
-                e.data = await result
+        if e.data is None:
+            async with e.lock:
+                await check_canceled()
+                if e.data is None:
+                    e.data = await entry(self, *args, **kwargs)  # type: ignore
 
         return cast("_T", e.data)
 
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def remove_cache_entry(
         self, entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]]
     ) -> None:
-        async with self._lock:
-            self.__remove_cache_entry(self.__get_cache_reference(entry, add_remove=False))
-
-        await asyncio.sleep(0)
+        await self.__remove_cache_entry_safe(self.__get_cache_reference(entry, add_remove=False))
 
     def set_data(self, key: Any, data: Any) -> None:
         self._data[key] = data
@@ -232,6 +224,7 @@ class TextDocument:
         self._invalidate_cache()
         self._invalidate_data()
 
+    @_logger.call
     async def clear(self) -> None:
         async with self._lock:
             self._clear()

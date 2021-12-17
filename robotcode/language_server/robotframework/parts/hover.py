@@ -14,7 +14,7 @@ from typing import (
     cast,
 )
 
-from ....utils.async_tools import CancelationToken
+from ....utils.async_tools import CancelationToken, run_coroutine_in_thread
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import Hover, MarkupContent, MarkupKind, Position
@@ -62,23 +62,27 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     @language_id("robotframework")
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, cancel_token: Optional[CancelationToken] = None
     ) -> Optional[Hover]:
-        result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
+        async def run() -> Optional[Hover]:
+            result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
-        if not result_nodes:
-            return None
+            if not result_nodes:
+                return None
 
-        result_node = result_nodes[-1]
+            result_node = result_nodes[-1]
 
-        method = self._find_method(type(result_node))
-        if method is not None:
-            result = await method(result_node, document, position)
-            if result is not None:
-                return result
+            method = self._find_method(type(result_node))
+            if method is not None:
+                result = await method(result_node, document, position)
+                if result is not None:
+                    return result
 
-        return await self._hover_default(result_nodes, document, position)
+            return await self._hover_default(result_nodes, document, position)
+
+        return await run_coroutine_in_thread(run)
 
     async def _hover_default(self, nodes: List[ast.AST], document: TextDocument, position: Position) -> Optional[Hover]:
         from robot.api.parsing import Token as RobotToken
@@ -253,14 +257,14 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     libdoc = await namespace.imports_manager.get_libdoc_for_library_import(
                         library_node.name, library_node.args, str(document.uri.to_path().parent)
                     )
-
-                    return Hover(
-                        contents=MarkupContent(
-                            kind=MarkupKind.MARKDOWN,
-                            value=libdoc.to_markdown(),
-                        ),
-                        range=range_from_token_or_node(library_node, name_token),
-                    )
+                    if not libdoc.errors:
+                        return Hover(
+                            contents=MarkupContent(
+                                kind=MarkupKind.MARKDOWN,
+                                value=libdoc.to_markdown(),
+                            ),
+                            range=range_from_token_or_node(library_node, name_token),
+                        )
                 except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                     raise
                 except BaseException:
@@ -289,13 +293,14 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     libdoc = await namespace.imports_manager.get_libdoc_for_resource_import(
                         resource_node.name, str(document.uri.to_path().parent)
                     )
-                    return Hover(
-                        contents=MarkupContent(
-                            kind=MarkupKind.MARKDOWN,
-                            value=libdoc.to_markdown(),
-                        ),
-                        range=range_from_token_or_node(resource_node, name_token),
-                    )
+                    if not libdoc.errors:
+                        return Hover(
+                            contents=MarkupContent(
+                                kind=MarkupKind.MARKDOWN,
+                                value=libdoc.to_markdown(),
+                            ),
+                            range=range_from_token_or_node(resource_node, name_token),
+                        )
                 except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                     raise
                 except BaseException:

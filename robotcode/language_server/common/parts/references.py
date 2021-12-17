@@ -54,7 +54,10 @@ class ReferencesProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
         locations: List[Location] = []
 
-        document = self.parent.documents[text_document.uri]
+        document = await self.parent.documents.get(text_document.uri)
+        if document is None:
+            return None
+
         for result in await self.collect(
             self, document, position, context, callback_filter=language_id_filter(document)
         ):

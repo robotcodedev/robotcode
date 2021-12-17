@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-import ast
-import asyncio
 import io
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from ....utils.async_tools import CancelationToken, run_in_thread
+from ....utils.async_tools import (
+    CancelationToken,
+    check_canceled,
+    run_coroutine_in_thread,
+)
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
@@ -47,46 +49,31 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         return await self.parent.workspace.get_configuration(RoboCopConfig, folder.uri)
 
     @language_id("robotframework")
-    @_logger.call
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def collect_diagnostics(
         self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
     ) -> DiagnosticsResult:
 
-        try:
-            workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
-            if workspace_folder is not None:
-                extension_config = await self.get_config(document)
+        workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
+        if workspace_folder is not None:
+            extension_config = await self.get_config(document)
 
-                if extension_config is not None and extension_config.enabled:
-
-                    model = await self.parent.documents_cache.get_model(document)
-                    result = await self.collect_threading(
-                        document, workspace_folder, extension_config, model, cancelation_token
-                    )
-                    return DiagnosticsResult(self.collect_diagnostics, result)
-        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-            raise
-        except BaseException as e:
-            self._logger.exception(e)
+            if extension_config is not None and extension_config.enabled:
+                return DiagnosticsResult(
+                    self.collect_diagnostics,
+                    await run_coroutine_in_thread(
+                        self.collect, document, workspace_folder, extension_config, cancelation_token
+                    ),
+                )
 
         return DiagnosticsResult(self.collect_diagnostics, [])
 
-    async def collect_threading(
+    @_logger.call(entering=True, exiting=True, exception=True)
+    async def collect(
         self,
         document: TextDocument,
         workspace_folder: WorkspaceFolder,
         extension_config: RoboCopConfig,
-        model: ast.AST,
-        cancelation_token: CancelationToken,
-    ) -> List[Diagnostic]:
-        return await run_in_thread(self.collect, document, workspace_folder, extension_config, model, cancelation_token)
-
-    def collect(
-        self,
-        document: TextDocument,
-        workspace_folder: WorkspaceFolder,
-        extension_config: RoboCopConfig,
-        model: ast.AST,
         cancelation_token: CancelationToken,
     ) -> List[Diagnostic]:
         from robocop.config import Config
@@ -95,6 +82,8 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         from robocop.utils.misc import is_suite_templated
 
         result: List[Diagnostic] = []
+
+        await check_canceled()
 
         with io.StringIO("") as output:
             config = Config(str(workspace_folder.uri.to_path()))
@@ -111,14 +100,18 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 config.configure = set(extension_config.configurations)
 
             class MyRobocop(Robocop):  # type: ignore
-                def run_check(self, ast_model, filename, source=None):  # type: ignore
+                async def run_check(self, ast_model, filename, source=None):  # type: ignore
+                    await check_canceled()
+
                     found_issues = []
+
                     self.register_disablers(filename, source)
                     if self.disabler.file_disabled:
                         return []
                     templated = is_suite_templated(ast_model)
+
                     for checker in self.checkers:
-                        cancelation_token.raise_if_canceled()
+                        await check_canceled()
 
                         if checker.disabled:
                             continue
@@ -127,15 +120,22 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                             for issue in checker.scan_file(ast_model, filename, source, templated)
                             if not self.disabler.is_rule_disabled(issue)
                         ]
+
                     return found_issues
 
             analyser = MyRobocop(from_cli=False, config=config)
             analyser.reload_config()
 
             # TODO find a way to cancel the run_check
-            issues = analyser.run_check(model, str(document.uri.to_path()), document.text)  # type: ignore
+            issues = await analyser.run_check(  # type: ignore
+                await self.parent.documents_cache.get_model(document),
+                str(document.uri.to_path()),
+                await document.text(),
+            )
 
             for issue in issues:
+                await check_canceled()
+
                 d = Diagnostic(
                     range=Range(
                         start=Position(line=max(0, issue.line - 1), character=max(0, issue.col - 1)),
@@ -152,7 +152,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                     source=self.source_name,
                     code=f"{issue.severity.value}{issue.rule_id}",
                 )
-                cancelation_token.raise_if_canceled()
+
                 result.append(d)
 
         return result

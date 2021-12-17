@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import gc
 import re
-from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Union
 
 from ....jsonrpc2.protocol import JsonRPCException, rpc_method
-from ....utils.async_tools import async_event
+from ....utils.async_tools import Lock, async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ..language import language_id_filter
@@ -43,7 +43,7 @@ class LanguageServerDocumentException(JsonRPCException):
     pass
 
 
-class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, TextDocument]):
+class TextDocumentProtocolPart(LanguageServerProtocolPart):
 
     _logger = LoggingDescriptor()
 
@@ -51,6 +51,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         super().__init__(parent)
         self._documents: Dict[DocumentUri, TextDocument] = {}
         self.parent.on_initialized.add(self._protocol_initialized)
+        self._lock = Lock()
 
     async def _protocol_initialized(self, sender: Any) -> None:
         await self._update_filewatchers()
@@ -69,24 +70,25 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
                 await self.did_close(self, document, callback_filter=language_id_filter(document))
                 await self.close_document(document, True)
 
-    @async_event
+    @async_tasking_event
     async def did_open(sender, document: TextDocument) -> None:  # NOSONAR
         ...
 
-    @async_event
+    @async_tasking_event
     async def did_close(sender, document: TextDocument) -> None:  # NOSONAR
         ...
 
-    @async_event
+    @async_tasking_event
     async def did_change(sender, document: TextDocument) -> None:  # NOSONAR
         ...
 
-    @async_event
+    @async_tasking_event
     async def did_save(sender, document: TextDocument) -> None:  # NOSONAR
         ...
 
-    def __getitem__(self, k: str) -> Any:
-        return self._documents.__getitem__(str(Uri(k).normalized()))
+    async def get(self, __uri: Union[DocumentUri, Uri]) -> Optional[TextDocument]:
+        async with self._lock:
+            return self._documents.get(str(Uri(__uri).normalized() if not isinstance(__uri, Uri) else __uri), None)
 
     def __len__(self) -> int:
         return self._documents.__len__()
@@ -97,13 +99,14 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
     def __hash__(self) -> int:
         return id(self)
 
-    def _create_document(
+    async def _create_document(
         self,
         document_uri: DocumentUri,
         text: str,
         language_id: Optional[str] = None,
         version: Optional[int] = None,
     ) -> TextDocument:
+
         return TextDocument(
             document_uri=document_uri,
             language_id=language_id,
@@ -111,17 +114,22 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
             version=version,
         )
 
-    def append_document(
+    async def append_document(
         self,
         document_uri: DocumentUri,
         language_id: str,
         text: str,
         version: Optional[int] = None,
     ) -> TextDocument:
-        document = self._create_document(document_uri=document_uri, language_id=language_id, text=text, version=version)
 
-        self._documents[document_uri] = document
-        return document
+        async with self._lock:
+            document = await self._create_document(
+                document_uri=document_uri, language_id=language_id, text=text, version=version
+            )
+
+            self._documents[document_uri] = document
+
+            return document
 
     __NORMALIZE_LINE_ENDINGS = re.compile(r"(\r?\n)")
 
@@ -132,25 +140,26 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
     @rpc_method(name="textDocument/didOpen", param_type=DidOpenTextDocumentParams)
     @_logger.call
     async def _text_document_did_open(self, text_document: TextDocumentItem, *args: Any, **kwargs: Any) -> None:
-        uri = str(Uri(text_document.uri).normalized())
-        document = self.get(uri, None)
+        async with self._lock:
+            uri = str(Uri(text_document.uri).normalized())
+            document = self._documents.get(uri, None)
 
-        text_changed = True
-        normalized_text = self._normalize_line_endings(text_document.text)
+            text_changed = True
+            normalized_text = self._normalize_line_endings(text_document.text)
 
-        if document is None:
-            document = self._create_document(
-                text_document.uri, normalized_text, text_document.language_id, text_document.version
-            )
+            if document is None:
+                document = await self._create_document(
+                    text_document.uri, normalized_text, text_document.language_id, text_document.version
+                )
 
-            self._documents[uri] = document
-        else:
-            text_changed = document.text != normalized_text
-            if text_changed:
-                await document.apply_full_change(text_document.version, normalized_text)
+                self._documents[uri] = document
+            else:
+                text_changed = await document.text() != normalized_text
+                if text_changed:
+                    await document.apply_full_change(text_document.version, normalized_text)
 
-        document.opened_in_editor = True
-        document.references.add(self)
+            document.opened_in_editor = True
+            document.references.add(self)
 
         await self.did_open(self, document, callback_filter=language_id_filter(document))
 
@@ -161,25 +170,27 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
     @_logger.call
     async def _text_document_did_close(self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any) -> None:
         uri = str(Uri(text_document.uri).normalized())
-        document = self._documents.get(uri, None)
+        document = await self.get(uri)
 
         if document is not None:
             document.references.remove(self)
             document.opened_in_editor = False
+
             await self.did_close(self, document, callback_filter=language_id_filter(document))
             await self.close_document(document)
 
     @_logger.call
     async def close_document(self, document: TextDocument, ignore_references: bool = False) -> None:
-        if len(document.references) == 0 or ignore_references:
-            self._documents.pop(str(document.uri), None)
+        async with self._lock:
+            if len(document.references) == 0 or ignore_references:
+                self._documents.pop(str(document.uri), None)
 
-            await document.clear()
-            del document
-        else:
-            document.version = None
+                await document.clear()
+                del document
+            else:
+                document._version = None
 
-        gc.collect()
+            gc.collect()
 
     @rpc_method(name="textDocument/willSave", param_type=WillSaveTextDocumentParams)
     @_logger.call
@@ -194,14 +205,14 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
     async def _text_document_did_save(
         self, text_document: TextDocumentIdentifier, text: Optional[str] = None, *args: Any, **kwargs: Any
     ) -> None:
-        document = self._documents.get(str(Uri(text_document.uri).normalized()), None)
+        document = await self.get(str(Uri(text_document.uri).normalized()))
         self._logger.warning(lambda: f"Document {text_document.uri} is not opened.", condition=lambda: document is None)
 
         if document is not None:
             if text is not None:
                 normalized_text = self._normalize_line_endings(text)
 
-                text_changed = document.text != normalized_text
+                text_changed = await document.text() != normalized_text
                 if text_changed:
                     await document.apply_full_change(None, text)
 
@@ -225,7 +236,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, Mapping[DocumentUri, 
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        document = self._documents.get(str(Uri(text_document.uri).normalized()), None)
+        document = await self.get(str(Uri(text_document.uri).normalized()))
         if document is None:
             raise LanguageServerDocumentException(f"Document {text_document.uri} is not opened.")
 
