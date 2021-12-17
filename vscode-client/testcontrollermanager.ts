@@ -418,13 +418,13 @@ export class TestControllerManager {
     let includedItems: vscode.TestItem[] = [];
 
     if (request.include) {
-      includedItems = request.include;
+      includedItems = Array.from(request.include);
     } else {
       this.testController.items.forEach((test) => includedItems.push(test));
     }
 
     const included = this.mapTestItemsToWorkspace(includedItems);
-    const excluded = this.mapTestItemsToWorkspace(request.exclude ?? []);
+    const excluded = this.mapTestItemsToWorkspace(request.exclude ? Array.from(request.exclude) : []);
 
     const run = this.testController.createTestRun(request);
 

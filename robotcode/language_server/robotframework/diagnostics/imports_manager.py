@@ -85,7 +85,7 @@ class _LibrariesEntry:
 
     def __del__(self) -> None:
         try:
-            if self.file_watchers is not None and asyncio.get_running_loop():                
+            if self.file_watchers is not None and asyncio.get_running_loop():
                 for watcher in self.file_watchers:
                     create_sub_task(
                         _LibrariesEntry.__remove_filewatcher(self.parent.parent_protocol.workspace, watcher)
