@@ -24,10 +24,12 @@ from ..utils.ast import (
     Token,
     get_nodes_at_position,
     get_tokens_at_position,
+    range_from_node,
     range_from_token,
     range_from_token_or_node,
     tokenize_variables,
 )
+from ..utils.markdownformatter import MarkDownFormatter
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -72,13 +74,16 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             if not result_nodes:
                 return None
 
-            result_node = result_nodes[-1]
+            while result_nodes:
+                result_node = result_nodes[-1]
 
-            method = self._find_method(type(result_node))
-            if method is not None:
-                result = await method(result_node, document, position)
-                if result is not None:
-                    return result
+                method = self._find_method(type(result_node))
+                if method is not None:
+                    result = await method(result_node, document, position)
+                    if result is not None:
+                        return result
+
+                result_nodes = result_nodes[:-1]
 
             return await self._hover_default(result_nodes, document, position)
 
@@ -306,3 +311,40 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 except BaseException:
                     pass
         return None
+
+    async def hover_TestCase(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[Hover]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.blocks import TestCase
+        from robot.parsing.model.statements import Documentation, Tags
+
+        test_case = cast(TestCase, node)
+
+        if not position.is_in_range(range_from_node(test_case.header)):
+            return None
+
+        name_token = cast(RobotToken, test_case.header.get_token(RobotToken.TESTCASE_NAME))
+        if name_token is None:
+            return None
+
+        doc = next((e for e in test_case.body if isinstance(e, Documentation)), None)
+        tags = next((e for e in test_case.body if isinstance(e, Tags)), None)
+
+        txt = f"= Test Case *{test_case.name}* =\n"
+
+        if doc is not None:
+            txt += "\n== Documentation ==\n"
+            txt += f"\n{doc.value}\n"
+
+        if tags is not None:
+            txt += "\n*Tags*: "
+            txt += f"{', '.join(tags.values)}\n"
+
+        return Hover(
+            contents=MarkupContent(
+                kind=MarkupKind.MARKDOWN,
+                value=MarkDownFormatter().format(txt),
+            ),
+            range=range_from_token_or_node(test_case, name_token),
+        )
