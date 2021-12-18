@@ -4,13 +4,20 @@ import ast
 from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator, List, Optional
+from typing import TYPE_CHECKING, Any, Iterator, List, Optional, cast
 
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_tools import run_coroutine_in_thread, run_in_thread
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
-from ...common.lsp_types import Model, Position, Range, TextDocumentIdentifier
+from ...common.lsp_types import (
+    DocumentUri,
+    Model,
+    Position,
+    Range,
+    TextDocumentIdentifier,
+)
+from ..utils.async_ast import AsyncVisitor
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -39,12 +46,49 @@ class TestItem(Model):
     type: str
     id: str
     label: str
-    uri: Optional[str] = None
+    uri: Optional[DocumentUri] = None
     children: Optional[List[TestItem]] = None
     description: Optional[str] = None
     range: Optional[Range] = None
     tags: Optional[List[str]] = None
     error: Optional[str] = None
+
+
+class FindTestCasesVisitor(AsyncVisitor):
+    async def get(self, source: DocumentUri, model: ast.AST, id: Optional[str]) -> List[TestItem]:
+        self._results: List[TestItem] = []
+        self.source = source
+        self.id = id
+        await self.visit(model)
+        return self._results
+
+    async def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.model.blocks import TestCaseSection
+
+        if isinstance(node, TestCaseSection):
+            await self.generic_visit(node)
+
+    async def visit_TestCase(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.model.blocks import TestCase
+        from robot.parsing.model.statements import Tags
+
+        test_case = cast(TestCase, node)
+        self._results.append(
+            TestItem(
+                type="test",
+                id=f"{self.id}.{test_case.name}" if self.id else test_case.name,
+                label=test_case.name,
+                uri=self.source,
+                range=Range(
+                    start=Position(line=test_case.lineno - 1, character=test_case.col_offset),
+                    end=Position(
+                        line=(test_case.end_lineno if test_case.end_lineno != -1 else test_case.lineno) - 1,
+                        character=test_case.end_col_offset if test_case.end_col_offset != -1 else test_case.col_offset,
+                    ),
+                ),
+                tags=[str(tag) for tag in chain(*[tags.values for tags in test_case.body if isinstance(tags, Tags)])],
+            )
+        )
 
 
 class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
@@ -53,7 +97,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
-    def get_tests_from_workspace_threading(self, workspace_folder: Path, paths: Optional[List[str]]) -> List[TestItem]:
+    def _get_tests_from_workspace(self, workspace_folder: Path, paths: Optional[List[str]]) -> List[TestItem]:
         from robot.output.logger import LOGGER
         from robot.running import TestCase, TestSuite
 
@@ -152,6 +196,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 return [TestItem(type="error", id=Path.cwd().name, label=Path.cwd().name, error=str(e))]
 
     @rpc_method(name="robot/discovering/getTestsFromWorkspace", param_type=GetAllTestsParams)
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def get_tests_from_workspace(
         self,
         workspace_folder: str,
@@ -159,48 +204,22 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         *args: Any,
         **kwargs: Any,
     ) -> List[TestItem]:
-        return await run_in_thread(self.get_tests_from_workspace_threading, Uri(workspace_folder).to_path(), paths)
-
-    def get_tests_from_document_threading(
-        self, text_document: TextDocumentIdentifier, id: Optional[str], model: ast.AST
-    ) -> List[TestItem]:
-        from robot.parsing.model.blocks import TestCase
-        from robot.parsing.model.statements import Tags
-
-        return [
-            TestItem(
-                type="test",
-                id=f"{id}.{test_case.name}" if id else test_case.name,
-                label=test_case.name,
-                uri=text_document.uri,
-                range=Range(
-                    start=Position(line=test_case.lineno - 1, character=test_case.col_offset),
-                    end=Position(
-                        line=(test_case.end_lineno if test_case.end_lineno != -1 else test_case.lineno) - 1,
-                        character=test_case.end_col_offset if test_case.end_col_offset != -1 else test_case.col_offset,
-                    ),
-                ),
-                tags=[
-                    str(tag) for tag in chain(*[tags.values for tags in ast.walk(test_case) if isinstance(tags, Tags)])
-                ],
-            )
-            for test_case in ast.walk(model)
-            if isinstance(test_case, TestCase)
-        ]
+        return await run_in_thread(self._get_tests_from_workspace, Uri(workspace_folder).to_path(), paths)
 
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
+    @_logger.call(entering=True, exiting=True, exception=True)
     async def get_tests_from_document(
         self, text_document: TextDocumentIdentifier, id: Optional[str], *args: Any, **kwargs: Any
     ) -> List[TestItem]:
         async def run() -> List[TestItem]:
-            return self.get_tests_from_document_threading(
-                text_document,
-                id,
+            return await FindTestCasesVisitor().get(
+                text_document.uri,
                 await self.parent.documents_cache.get_model(
                     await self.parent.robot_workspace.get_or_open_document(
                         Uri(text_document.uri).to_path(), language_id="robotframework"
                     )
                 ),
+                id,
             )
 
         return await run_coroutine_in_thread(run)
