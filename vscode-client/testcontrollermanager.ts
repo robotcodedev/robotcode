@@ -51,7 +51,7 @@ export class TestControllerManager {
   public readonly debugProfile: vscode.TestRunProfile;
   private readonly refreshMutex = new Mutex();
   private readonly debugSessions = new Set<vscode.DebugSession>();
-
+  private readonly didChangedTimer = new Map<vscode.TextDocument, number>();
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
     public readonly languageClientsManager: LanguageClientsManager,
@@ -81,8 +81,20 @@ export class TestControllerManager {
 
     this._disposables = vscode.Disposable.from(
       fileWatcher,
+      vscode.workspace.onDidCloseTextDocument((document) => {
+        if (document.languageId !== "robotframework") return;
+
+        if (this.didChangedTimer.has(document)) {
+          clearTimeout(this.didChangedTimer.get(document));
+          this.didChangedTimer.delete(document);
+        }
+      }),
       vscode.workspace.onDidSaveTextDocument(async (document) => {
         if (document.languageId !== "robotframework") return;
+
+        if (this.didChangedTimer.has(document)) {
+          clearTimeout(this.didChangedTimer.get(document));
+        }
 
         await this.refresh(this.findTestItemForDocument(document));
       }),
@@ -91,11 +103,21 @@ export class TestControllerManager {
 
         await this.refresh(this.findTestItemForDocument(document));
       }),
-      vscode.workspace.onDidChangeTextDocument(async (event) => {
+      vscode.workspace.onDidChangeTextDocument((event) => {
         if (event.document.languageId !== "robotframework") return;
-        // TODO: refresh only once if several short changes are made
 
-        await this.refresh(this.findTestItemForDocument(event.document));
+        if (this.didChangedTimer.has(event.document)) {
+          clearTimeout(this.didChangedTimer.get(event.document));
+        }
+        this.didChangedTimer.set(
+          event.document,
+          setTimeout((_) => {
+            this.refresh(this.findTestItemForDocument(event.document)).then(
+              () => undefined,
+              () => undefined
+            );
+          }, 1000)
+        );
       }),
       vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
         for (const r of event.removed) {
