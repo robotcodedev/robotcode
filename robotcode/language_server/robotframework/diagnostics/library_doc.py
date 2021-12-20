@@ -384,7 +384,10 @@ class KeywordStore(Model):
             self.__matchers = {KeywordMatcher(k): v for k, v in self.keywords.items()}
         return self.__matchers
 
-    def __getitem__(self, key: str) -> "KeywordDoc":
+    def __getitem__(self, key: Union[KeywordMatcher, str]) -> "KeywordDoc":
+        if isinstance(key, str):
+            key = KeywordMatcher(key)
+
         items = [(k, v) for k, v in self._matchers.items() if k == key]
 
         if not items:
@@ -426,7 +429,7 @@ class KeywordStore(Model):
     def values(self) -> ValuesView[KeywordDoc]:
         return self.keywords.values()
 
-    def get(self, key: str, default: Optional[KeywordDoc] = None) -> Optional[KeywordDoc]:
+    def get(self, key: Union[KeywordMatcher, str], default: Optional[KeywordDoc] = None) -> Optional[KeywordDoc]:
         try:
             return self.__getitem__(key)
         except KeyError:
