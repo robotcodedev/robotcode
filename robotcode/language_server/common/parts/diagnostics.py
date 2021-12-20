@@ -218,54 +218,44 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
     @_logger.call(entering=True, exiting=True, exception=True)
     async def publish_diagnostics(self, document_uri: DocumentUri, cancelation_token: CancelationToken) -> None:
-        self._logger.debug("start publish_diagnostics")
-        try:
-            document = await self.parent.documents.get(document_uri)
-            if document is None:
-                return
+        document = await self.parent.documents.get(document_uri)
+        if document is None:
+            return
 
-            diagnostics: Dict[Any, List[Diagnostic]] = document.get_data(self, {})
+        diagnostics: Dict[Any, List[Diagnostic]] = document.get_data(self, {})
 
-            collected_keys: List[Any] = []
+        collected_keys: List[Any] = []
 
-            async for result_any in self.collect(
-                self,
-                document,
-                cancelation_token,
-                callback_filter=language_id_filter(document),
-                return_exceptions=True,
-            ):
-                await check_canceled()
+        async for result_any in self.collect(
+            self,
+            document,
+            cancelation_token,
+            callback_filter=language_id_filter(document),
+            return_exceptions=True,
+        ):
+            await check_canceled()
 
-                result = cast(DiagnosticsResult, result_any)
+            result = cast(DiagnosticsResult, result_any)
 
-                if isinstance(result, BaseException):
-                    if not isinstance(result, asyncio.CancelledError):
-                        self._logger.exception(result, exc_info=result)
-                else:
+            if isinstance(result, BaseException):
+                if not isinstance(result, asyncio.CancelledError):
+                    self._logger.exception(result, exc_info=result)
+            else:
 
-                    diagnostics[result.key] = result.diagnostics if result.diagnostics else []
-                    collected_keys.append(result.key)
+                diagnostics[result.key] = result.diagnostics if result.diagnostics else []
+                collected_keys.append(result.key)
 
-                    asyncio.get_event_loop().call_soon(
-                        self.parent.send_notification,
-                        "textDocument/publishDiagnostics",
-                        PublishDiagnosticsParams(
-                            uri=document.document_uri,
-                            version=document._version,
-                            diagnostics=[e for e in itertools.chain(*diagnostics.values())],
-                        ),
-                    )
+                asyncio.get_event_loop().call_soon(
+                    self.parent.send_notification,
+                    "textDocument/publishDiagnostics",
+                    PublishDiagnosticsParams(
+                        uri=document.document_uri,
+                        version=document._version,
+                        diagnostics=[e for e in itertools.chain(*diagnostics.values())],
+                    ),
+                )
 
-            for k in set(diagnostics.keys()) - set(collected_keys):
-                diagnostics.pop(k)
+        for k in set(diagnostics.keys()) - set(collected_keys):
+            diagnostics.pop(k)
 
-            document.set_data(self, diagnostics)
-        except asyncio.CancelledError:
-            self._logger.debug("canceled publish_diagnostics")
-            raise
-        except BaseException as e:
-            self._logger.exception(e)
-            raise
-        finally:
-            self._logger.debug("end publish_diagnostics")
+        document.set_data(self, diagnostics)

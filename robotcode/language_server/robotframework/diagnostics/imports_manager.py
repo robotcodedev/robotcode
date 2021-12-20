@@ -363,7 +363,10 @@ class _ResourcesEntry:
 
 
 def _shutdown_process_pool(pool: ProcessPoolExecutor) -> None:
-    pool.shutdown(True)
+    try:
+        pool.shutdown(True)
+    except BaseException:  # NOSONAR
+        pass
 
 
 # we need this, because ProcessPoolExecutor is not correctly initialized if asyncio is reading from stdin

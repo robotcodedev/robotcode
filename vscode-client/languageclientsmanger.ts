@@ -229,30 +229,53 @@ export class LanguageClientsManager {
 
   public async getTestsFromWorkspace(
     workspaceFolder: vscode.WorkspaceFolder,
-    paths?: Array<string>
+    paths?: Array<string>,
+    token?: vscode.CancellationToken
   ): Promise<RobotTestItem[] | undefined> {
     const client = await this.getLanguageClientForResource(workspaceFolder.uri);
 
     if (!client) return;
 
     return (
-      (await client.sendRequest<RobotTestItem[]>("robot/discovering/getTestsFromWorkspace", {
-        workspaceFolder: workspaceFolder.uri.toString(),
-        paths: paths ?? ["."],
-      })) ?? undefined
+      (token
+        ? await client.sendRequest<RobotTestItem[]>(
+            "robot/discovering/getTestsFromWorkspace",
+            {
+              workspaceFolder: workspaceFolder.uri.toString(),
+              paths: paths ?? ["."],
+            },
+            token
+          )
+        : await client.sendRequest<RobotTestItem[]>("robot/discovering/getTestsFromWorkspace", {
+            workspaceFolder: workspaceFolder.uri.toString(),
+            paths: paths ?? ["."],
+          })) ?? undefined
     );
   }
 
-  public async getTestsFromDocument(document: vscode.TextDocument, id?: string): Promise<RobotTestItem[] | undefined> {
+  public async getTestsFromDocument(
+    document: vscode.TextDocument,
+    id?: string,
+    token?: vscode.CancellationToken
+  ): Promise<RobotTestItem[] | undefined> {
     const client = await this.getLanguageClientForResource(document.uri);
 
     if (!client) return;
 
     return (
-      (await client.sendRequest<RobotTestItem[]>("robot/discovering/getTestsFromDocument", {
-        textDocument: { uri: document.uri.toString() },
-        id: id,
-      })) ?? undefined
+      (token
+        ? await client.sendRequest<RobotTestItem[]>(
+            "robot/discovering/getTestsFromDocument",
+            {
+              textDocument: { uri: document.uri.toString() },
+              id: id,
+            },
+            token
+          )
+        : await client.sendRequest<RobotTestItem[]>("robot/discovering/getTestsFromDocument", {
+            textDocument: { uri: document.uri.toString() },
+            id: id,
+          })) ?? undefined
     );
   }
 }

@@ -44,6 +44,20 @@ interface RobotLogMessageEvent {
   html: string;
 }
 
+class DidChangeEntry {
+  constructor(timer: number, tokenSource: vscode.CancellationTokenSource) {
+    this.timer = timer;
+    this.tokenSource = tokenSource;
+  }
+  public readonly timer: number;
+  public readonly tokenSource: vscode.CancellationTokenSource;
+
+  public cancel() {
+    clearTimeout(this.timer);
+    this.tokenSource.cancel();
+  }
+}
+
 export class TestControllerManager {
   private _disposables: vscode.Disposable;
   public readonly testController: vscode.TestController;
@@ -51,7 +65,7 @@ export class TestControllerManager {
   public readonly debugProfile: vscode.TestRunProfile;
   private readonly refreshMutex = new Mutex();
   private readonly debugSessions = new Set<vscode.DebugSession>();
-  private readonly didChangedTimer = new Map<vscode.TextDocument, number>();
+  private readonly didChangedTimer = new Map<vscode.TextDocument, DidChangeEntry>();
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
     public readonly languageClientsManager: LanguageClientsManager,
@@ -85,7 +99,7 @@ export class TestControllerManager {
         if (document.languageId !== "robotframework") return;
 
         if (this.didChangedTimer.has(document)) {
-          clearTimeout(this.didChangedTimer.get(document));
+          this.didChangedTimer.get(document)?.cancel();
           this.didChangedTimer.delete(document);
         }
       }),
@@ -93,7 +107,8 @@ export class TestControllerManager {
         if (document.languageId !== "robotframework") return;
 
         if (this.didChangedTimer.has(document)) {
-          clearTimeout(this.didChangedTimer.get(document));
+          this.didChangedTimer.get(document)?.cancel();
+          this.didChangedTimer.delete(document);
         }
 
         await this.refresh(this.findTestItemForDocument(document));
@@ -107,16 +122,22 @@ export class TestControllerManager {
         if (event.document.languageId !== "robotframework") return;
 
         if (this.didChangedTimer.has(event.document)) {
-          clearTimeout(this.didChangedTimer.get(event.document));
+          this.didChangedTimer.get(event.document)?.cancel();
+          this.didChangedTimer.delete(event.document);
         }
+        const token = new vscode.CancellationTokenSource();
+
         this.didChangedTimer.set(
           event.document,
-          setTimeout((_) => {
-            this.refresh(this.findTestItemForDocument(event.document)).then(
-              () => undefined,
-              () => undefined
-            );
-          }, 1000)
+          new DidChangeEntry(
+            setTimeout((_) => {
+              this.refresh(this.findTestItemForDocument(event.document)).then(
+                () => undefined,
+                () => undefined
+              );
+            }, 1000),
+            token
+          )
         );
       }),
       vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
@@ -250,66 +271,34 @@ export class TestControllerManager {
 
   private testItems = new WeakValueMap<string, vscode.TestItem>();
 
-  private async refreshItem(item?: vscode.TestItem): Promise<void> {
+  private async refreshItem(item?: vscode.TestItem, token?: vscode.CancellationToken): Promise<void> {
+    if (token?.isCancellationRequested) return;
+
     if (item) {
       item.busy = true;
       try {
         const robotItem = this.findRobotItem(item);
 
-        let children = robotItem?.children;
+        let tests = robotItem?.children;
 
         if (robotItem?.type === "suite" && item.uri !== undefined) {
           const openDoc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === item.uri?.toString());
 
           if (openDoc !== undefined) {
-            children = await this.languageClientsManager.getTestsFromDocument(openDoc, robotItem.id);
+            tests = await this.languageClientsManager.getTestsFromDocument(openDoc, robotItem.id, token);
           }
         }
+        if (token?.isCancellationRequested) return;
 
         if (robotItem) {
           const addedIds = new Set<string>();
-          for (const ri of children ?? []) {
-            addedIds.add(ri.id);
+          for (const test of tests ?? []) {
+            addedIds.add(test.id);
 
-            let testItem = item.children.get(ri.id);
-            if (testItem === undefined) {
-              testItem = this.testController.createTestItem(
-                ri.id,
-                ri.label,
-                ri.uri ? vscode.Uri.parse(ri.uri) : undefined
-              );
-              this.testItems.set(ri.id, testItem);
-
-              item.children.add(testItem);
-            }
-
-            testItem.canResolveChildren = ri.children !== undefined && ri.children.length > 0;
-            if (ri.range !== undefined) {
-              testItem.range = new vscode.Range(
-                new vscode.Position(ri.range.start.line, ri.range.start.character),
-                new vscode.Position(ri.range.end.line, ri.range.end.character)
-              );
-            }
-            testItem.label = ri.label;
-            testItem.error = ri.error;
-
-            const tags = this.convertTags(ri.tags);
-            if (tags) testItem.tags = tags;
-
-            await this.refreshItem(testItem);
+            await this.refreshItem(this.addOrUpdateTestItem(item, test), token);
           }
-          const itemsToRemove = new Set<string>();
 
-          item.children.forEach((i) => {
-            if (!addedIds.has(i.id)) {
-              itemsToRemove.add(i.id);
-            }
-          });
-
-          itemsToRemove.forEach((i) => {
-            item.children.delete(i);
-            this.testItems.delete(i);
-          });
+          this.removeNotAddedTestItems(item, addedIds);
         }
       } finally {
         item.busy = false;
@@ -319,49 +308,76 @@ export class TestControllerManager {
 
       for (const workspace of vscode.workspace.workspaceFolders ?? []) {
         if (!this.robotTestItems.has(workspace) && this.robotTestItems.get(workspace) === undefined) {
-          this.robotTestItems.set(workspace, await this.languageClientsManager.getTestsFromWorkspace(workspace, []));
+          this.robotTestItems.set(
+            workspace,
+            await this.languageClientsManager.getTestsFromWorkspace(workspace, [], token)
+          );
         }
+
+        if (token?.isCancellationRequested) return;
 
         const tests = this.robotTestItems.get(workspace);
 
         if (tests) {
-          for (const ri of tests) {
-            addedIds.add(ri.id);
-            let testItem = this.testController.items.get(ri.id);
-            if (testItem === undefined) {
-              testItem = this.testController.createTestItem(
-                ri.id,
-                ri.label,
-                ri.uri ? vscode.Uri.parse(ri.uri) : undefined
-              );
-              this.testItems.set(ri.id, testItem);
-
-              this.testController.items.add(testItem);
-            }
-            testItem.canResolveChildren = ri.children !== undefined && ri.children.length > 0;
-            testItem.label = ri.label;
-            testItem.error = ri.error;
-
-            const tags = this.convertTags(ri.tags);
-            if (tags) testItem.tags = tags;
-
-            await this.refreshItem(testItem);
+          for (const test of tests) {
+            addedIds.add(test.id);
+            await this.refreshItem(this.addOrUpdateTestItem(item, test), token);
           }
         }
       }
 
-      const itemsToRemove = new Set<string>();
-
-      this.testController.items.forEach((i) => {
-        if (!addedIds.has(i.id)) {
-          itemsToRemove.add(i.id);
-        }
-      });
-      itemsToRemove.forEach((i) => {
-        this.testController.items.delete(i);
-        this.testItems.delete(i);
-      });
+      this.removeNotAddedTestItems(undefined, addedIds);
     }
+  }
+
+  private addOrUpdateTestItem(parentTestItem: vscode.TestItem | undefined, robotTestItem: RobotTestItem) {
+    let testItem = parentTestItem
+      ? parentTestItem.children.get(robotTestItem.id)
+      : this.testController.items.get(robotTestItem.id);
+    if (testItem === undefined) {
+      testItem = this.testController.createTestItem(
+        robotTestItem.id,
+        robotTestItem.label,
+        robotTestItem.uri ? vscode.Uri.parse(robotTestItem.uri) : undefined
+      );
+      this.testItems.set(robotTestItem.id, testItem);
+
+      if (parentTestItem) {
+        parentTestItem.children.add(testItem);
+      } else {
+        this.testController.items.add(testItem);
+      }
+    }
+
+    testItem.canResolveChildren = robotTestItem.children !== undefined && robotTestItem.children.length > 0;
+    if (robotTestItem.range !== undefined) {
+      testItem.range = new vscode.Range(
+        new vscode.Position(robotTestItem.range.start.line, robotTestItem.range.start.character),
+        new vscode.Position(robotTestItem.range.end.line, robotTestItem.range.end.character)
+      );
+    }
+    testItem.label = robotTestItem.label;
+    testItem.error = robotTestItem.error;
+
+    const tags = this.convertTags(robotTestItem.tags);
+    if (tags) testItem.tags = tags;
+    return testItem;
+  }
+
+  private removeNotAddedTestItems(parentTestItem: vscode.TestItem | undefined, addedIds: Set<string>) {
+    const itemsToRemove = new Set<string>();
+
+    const items = parentTestItem?.children ?? this.testController.items;
+
+    items.forEach((i) => {
+      if (!addedIds.has(i.id)) {
+        itemsToRemove.add(i.id);
+      }
+    });
+    itemsToRemove.forEach((i) => {
+      items.delete(i);
+      this.testItems.delete(i);
+    });
   }
 
   private testTags = new WeakValueMap<string, vscode.TestTag>();
