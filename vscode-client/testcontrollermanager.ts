@@ -5,7 +5,7 @@ import { red, yellow } from "ansi-colors";
 import * as vscode from "vscode";
 import { DebugManager } from "./debugmanager";
 import { LanguageClientsManager, RobotTestItem } from "./languageclientsmanger";
-import { Mutex, WeakValueMap } from "./utils";
+import { Mutex, sleep, WeakValueMap } from "./utils";
 
 interface RobotExecutionAttributes {
   id: string | undefined;
@@ -292,13 +292,17 @@ export class TestControllerManager {
 
         if (robotItem) {
           const addedIds = new Set<string>();
+
           for (const test of tests ?? []) {
             addedIds.add(test.id);
-
-            await this.refreshItem(this.addOrUpdateTestItem(item, test), token);
           }
 
-          this.removeNotAddedTestItems(item, addedIds);
+          // TODO: we need a sleep after deletion here, it seem's there is a bug in vscode
+          if (this.removeNotAddedTestItems(item, addedIds)) await sleep(1000);
+
+          for (const test of tests ?? []) {
+            await this.refreshItem(this.addOrUpdateTestItem(item, test), token);
+          }
         }
       } finally {
         item.busy = false;
@@ -307,14 +311,14 @@ export class TestControllerManager {
       const addedIds = new Set<string>();
 
       for (const workspace of vscode.workspace.workspaceFolders ?? []) {
+        if (token?.isCancellationRequested) return;
+
         if (!this.robotTestItems.has(workspace) && this.robotTestItems.get(workspace) === undefined) {
           this.robotTestItems.set(
             workspace,
             await this.languageClientsManager.getTestsFromWorkspace(workspace, [], token)
           );
         }
-
-        if (token?.isCancellationRequested) return;
 
         const tests = this.robotTestItems.get(workspace);
 
@@ -326,7 +330,8 @@ export class TestControllerManager {
         }
       }
 
-      this.removeNotAddedTestItems(undefined, addedIds);
+      // TODO: we need a sleep after deletion here, it seem's there is a bug in vscode
+      if (this.removeNotAddedTestItems(undefined, addedIds)) await sleep(1000);
     }
   }
 
@@ -334,12 +339,14 @@ export class TestControllerManager {
     let testItem = parentTestItem
       ? parentTestItem.children.get(robotTestItem.id)
       : this.testController.items.get(robotTestItem.id);
+
     if (testItem === undefined) {
       testItem = this.testController.createTestItem(
         robotTestItem.id,
         robotTestItem.label,
         robotTestItem.uri ? vscode.Uri.parse(robotTestItem.uri) : undefined
       );
+
       this.testItems.set(robotTestItem.id, testItem);
 
       if (parentTestItem) {
@@ -364,10 +371,10 @@ export class TestControllerManager {
     return testItem;
   }
 
-  private removeNotAddedTestItems(parentTestItem: vscode.TestItem | undefined, addedIds: Set<string>) {
+  private removeNotAddedTestItems(parentTestItem: vscode.TestItem | undefined, addedIds: Set<string>): boolean {
     const itemsToRemove = new Set<string>();
 
-    const items = parentTestItem?.children ?? this.testController.items;
+    const items = parentTestItem ? parentTestItem.children : this.testController.items;
 
     items.forEach((i) => {
       if (!addedIds.has(i.id)) {
@@ -378,6 +385,8 @@ export class TestControllerManager {
       items.delete(i);
       this.testItems.delete(i);
     });
+
+    return itemsToRemove.size > 0;
   }
 
   private testTags = new WeakValueMap<string, vscode.TestTag>();
