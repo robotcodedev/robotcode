@@ -298,7 +298,7 @@ export class TestControllerManager {
           }
 
           // TODO: we need a sleep after deletion here, it seem's there is a bug in vscode
-          if (this.removeNotAddedTestItems(item, addedIds)) await sleep(1000);
+          if (this.removeNotAddedTestItems(item, addedIds)) await sleep(500);
 
           for (const test of tests ?? []) {
             await this.refreshItem(this.addOrUpdateTestItem(item, test), token);
@@ -331,7 +331,7 @@ export class TestControllerManager {
       }
 
       // TODO: we need a sleep after deletion here, it seem's there is a bug in vscode
-      if (this.removeNotAddedTestItems(undefined, addedIds)) await sleep(1000);
+      if (this.removeNotAddedTestItems(undefined, addedIds)) await sleep(500);
     }
   }
 
