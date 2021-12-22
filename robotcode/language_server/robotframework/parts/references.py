@@ -165,16 +165,16 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         if not name_token:
             return None
 
-        result = await namespace.find_keyword(name_token.value)
+        keyword = await namespace.find_keyword(name_token.value)
 
-        if result is not None and result.source and not result.is_error_handler:
+        if keyword is not None and keyword.source and not keyword.is_error_handler:
             return [
                 *(
-                    [Location(uri=str(Uri.from_path(result.source)), range=range_from_token_or_node(node, name_token))]
+                    [Location(uri=str(Uri.from_path(keyword.source)), range=range_from_token_or_node(node, name_token))]
                     if context.include_declaration
                     else []
                 ),
-                *await self._find_keyword_references(document, result),
+                *await self._find_keyword_references(document, keyword),
             ]
 
         return None
@@ -190,7 +190,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             return None
 
         kw_node = cast(KeywordCall, node)
-        result = await self.get_keyworddoc_and_token_from_position(
+        keyword = await self.get_keyworddoc_and_token_from_position(
             kw_node.keyword,
             cast(Token, kw_node.get_token(RobotToken.KEYWORD)),
             [cast(Token, t) for t in kw_node.get_tokens(RobotToken.ARGUMENT)],
@@ -198,16 +198,16 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             position,
         )
 
-        if result is not None and result[0] is not None:
-            source = result[0].source
+        if keyword is not None and keyword[0] is not None:
+            source = keyword[0].source
             if source is not None:
                 return [
                     *(
-                        [Location(uri=str(Uri.from_path(source)), range=result[0].range)]
+                        [Location(uri=str(Uri.from_path(source)), range=keyword[0].range)]
                         if context.include_declaration
                         else []
                     ),
-                    *await self._find_keyword_references(document, result[0]),
+                    *await self._find_keyword_references(document, keyword[0]),
                 ]
 
         return None
@@ -223,7 +223,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             return None
 
         fixture_node = cast(Fixture, node)
-        result = await self.get_keyworddoc_and_token_from_position(
+        keyword = await self.get_keyworddoc_and_token_from_position(
             fixture_node.name,
             cast(Token, fixture_node.get_token(RobotToken.NAME)),
             [cast(Token, t) for t in fixture_node.get_tokens(RobotToken.ARGUMENT)],
@@ -231,16 +231,16 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             position,
         )
 
-        if result is not None and result[0] is not None:
-            source = result[0].source
+        if keyword is not None and keyword[0] is not None:
+            source = keyword[0].source
             if source is not None:
                 return [
                     *(
-                        [Location(uri=str(Uri.from_path(source)), range=result[0].range)]
+                        [Location(uri=str(Uri.from_path(source)), range=keyword[0].range)]
                         if context.include_declaration
                         else []
                     ),
-                    *await self._find_keyword_references(document, result[0]),
+                    *await self._find_keyword_references(document, keyword[0]),
                 ]
 
         return None
@@ -254,7 +254,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         node = cast(Union[Template, TestTemplate], node)
         if node.value:
 
-            name_token = cast(RobotToken, node.get_token(RobotToken.NAME))
+            name_token = cast(RobotToken, node.get_token(RobotToken.NAME, RobotToken.ARGUMENT))
             if name_token is None:
                 return None
 
@@ -263,20 +263,20 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 if namespace is None:
                     return None
 
-                result = await namespace.find_keyword(node.value)
-                if result is not None and result.source is not None:
+                keyword = await namespace.find_keyword(node.value)
+                if keyword is not None and keyword.source is not None:
                     return [
                         *(
                             [
                                 Location(
-                                    uri=str(Uri.from_path(result.source)),
-                                    range=range_from_token_or_node(node, name_token),
+                                    uri=str(Uri.from_path(keyword.source)),
+                                    range=keyword.range,
                                 )
                             ]
                             if context.include_declaration
                             else []
                         ),
-                        *await self._find_keyword_references(document, result),
+                        *await self._find_keyword_references(document, keyword),
                     ]
 
         return None
@@ -318,7 +318,12 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self, namespace: Namespace, kw_doc: KeywordDoc, cancel_token: CancelationToken
     ) -> List[Location]:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Fixture, KeywordCall
+        from robot.parsing.model.statements import (
+            Fixture,
+            KeywordCall,
+            Template,
+            TestTemplate,
+        )
 
         result: List[Location] = []
 
@@ -343,6 +348,11 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 async for location in self.get_keyword_references_from_tokens(
                     namespace, kw_doc, node, kw_token, arguments
                 ):
+                    result.append(location)
+            elif isinstance(node, (Template, TestTemplate)):
+                kw_token = node.get_token(RobotToken.NAME, RobotToken.ARGUMENT)
+
+                async for location in self.get_keyword_references_from_tokens(namespace, kw_doc, node, kw_token, []):
                     result.append(location)
 
         return result

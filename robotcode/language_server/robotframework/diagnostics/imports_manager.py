@@ -248,7 +248,7 @@ class _ResourcesEntry:
 
     def __del__(self) -> None:
         try:
-            if self.file_watchers is not None:
+            if asyncio.get_running_loop() and self.file_watchers is not None:
                 for watcher in self.file_watchers:
                     create_sub_task(
                         _ResourcesEntry.__remove_filewatcher(self.parent.parent_protocol.workspace, watcher)
