@@ -126,7 +126,7 @@ jobs:
 
       - name: Build VSCode pacakge
         run: |
-          npm install --dev          
+          npm install --also=dev          
           npx vsce package -o dist
 
       - name: Upload VSCode package
