@@ -45,11 +45,11 @@ interface RobotLogMessageEvent {
 }
 
 class DidChangeEntry {
-  constructor(timer: number, tokenSource: vscode.CancellationTokenSource) {
-    this.timer = timer;
+  constructor(timerHandle: NodeJS.Timeout, tokenSource: vscode.CancellationTokenSource) {
+    this.timer = timerHandle;
     this.tokenSource = tokenSource;
   }
-  public readonly timer: number;
+  public readonly timer: NodeJS.Timeout;
   public readonly tokenSource: vscode.CancellationTokenSource;
 
   public cancel() {
