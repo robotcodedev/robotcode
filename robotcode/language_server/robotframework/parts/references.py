@@ -83,6 +83,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         return None
 
     @language_id("robotframework")
+    @_logger.call
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: ReferenceContext
     ) -> Optional[List[Location]]:

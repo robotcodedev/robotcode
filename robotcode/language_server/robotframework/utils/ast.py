@@ -238,8 +238,6 @@ def iter_over_keyword_names_and_owners(full_name: str) -> Iterator[Tuple[Optiona
     yield None, full_name
 
     tokens = full_name.split(".")
-    if len(tokens) == 1:
-        yield None, tokens[0]
-    else:
+    if len(tokens) > 1:
         for i in range(1, len(tokens)):
             yield ".".join(tokens[:i]), ".".join(tokens[i:])
