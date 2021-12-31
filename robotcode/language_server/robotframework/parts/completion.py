@@ -1139,71 +1139,64 @@ class CompletionCollector(ModelHelperMixin):
             if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
                 return None
 
+            if (
+                token_at_position.type == RobotToken.EOL
+                and len(tokens_at_position) > 1
+                and tokens_at_position[-2].type == RobotToken.KEYWORD
+            ):
+                return None
+
             token_at_position_index = kw_node.tokens.index(token_at_position)
 
             argument_token_index = token_at_position_index
             while argument_token_index >= 0 and kw_node.tokens[argument_token_index].type != RobotToken.ARGUMENT:
                 argument_token_index -= 1
 
-            arguments = kw_node.get_tokens(RobotToken.ARGUMENT)
-
+            argument_token: Optional[RobotToken] = None
             if argument_token_index >= 0:
                 argument_token = kw_node.tokens[argument_token_index]
-                if argument_token.type == RobotToken.ARGUMENT:
-                    argument_index = arguments.index(argument_token)
-                else:
-                    argument_index = 0
-            else:
-                argument_index = -1
 
-            if whitespace_at_begin_of_token(token_at_position) > 1:
-                completion_range = range_from_token(token_at_position)
-
-                ws_b = whitespace_from_begin_of_token(token_at_position)
-                completion_range.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
-
-                if position.is_in_range(completion_range) or completion_range.end == position:
-                    argument_index += 1
-
-            if argument_index < 0:
-                return None
-
-            completion_range = range_from_token(token_at_position)
+            completion_range = range_from_token(argument_token or token_at_position)
+            completion_range.end = range_from_token(token_at_position).end
             if (w := whitespace_at_begin_of_token(token_at_position)) > 0:
-                if w > 1 and completion_range.start.character + 1 < position.character:
+                if w > 1 and range_from_token(token_at_position).start.character + 1 < position.character:
                     completion_range.start = position
-                elif completion_range.start == position:
-                    pass
-                else:
+                elif completion_range.start != position:
                     return None
             else:
-                if token_at_position.type != RobotToken.ARGUMENT:
-                    return None
-
-                if "=" in token_at_position.value:
-                    equal_index = token_at_position.value.index("=")
+                if "=" in (argument_token or token_at_position).value:
+                    equal_index = (argument_token or token_at_position).value.index("=")
                     if completion_range.start.character + equal_index < position.character:
                         return None
                     else:
                         completion_range.end.character = completion_range.start.character + equal_index + 1
+                else:
+                    completion_range.end = position
 
-            libdocs = [
-                entry.library_doc
-                for entry in (await self.namespace.get_libraries()).values()
-                if entry.import_name == import_node.name
-                and entry.args == import_node.args
-                and entry.alias == import_node.alias
-            ]
+            imports_manger = await self.parent.documents_cache.get_imports_manager(self.document)
 
-            if len(libdocs) == 1:
-                init = next((v for v in libdocs[0].inits.values()), None)
+            try:
+                libdoc = await imports_manger.get_libdoc_for_library_import(
+                    import_node.name, (), str(self.document.uri.to_path().parent)
+                )
+                if not list:
+                    return None
+            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                raise
+            except BaseException as e:
+                self._logger.exception(e)
+                return None
+
+            if libdoc is not None:
+                init = next((v for v in libdoc.inits.values()), None)
 
                 if init:
                     return [
                         CompletionItem(
                             label=f"{e.name}=",
                             kind=CompletionItemKind.VARIABLE,
-                            sort_text=f"010{i}_{e.name}=",
+                            sort_text=f"010{i}_{e.name}",
+                            filter_text=e.name,
                             insert_text_format=InsertTextFormat.PLAINTEXT,
                             text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
                             data={
@@ -1237,7 +1230,7 @@ class CompletionCollector(ModelHelperMixin):
                     return [
                         CompletionItem(
                             label="WITH NAME",
-                            kind=CompletionItemKind.TEXT,
+                            kind=CompletionItemKind.KEYWORD,
                             # detail=e.detail,
                             sort_text="03_WITH NAME",
                             insert_text_format=InsertTextFormat.PLAINTEXT,
@@ -1258,6 +1251,7 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
+
         from robot.parsing.lexer.tokens import Token
         from robot.parsing.model.statements import ResourceImport
 
@@ -1285,6 +1279,8 @@ class CompletionCollector(ModelHelperMixin):
 
                     if not position.is_in_range(r) and r.end != position:
                         return None
+                else:
+                    return None
         else:
             return None
 
@@ -1368,6 +1364,10 @@ class CompletionCollector(ModelHelperMixin):
 
         kw_node = cast(Statement, node)
 
+        keyword_token = kw_node.get_token(keyword_name_token_type)
+        if keyword_token is None:
+            return None
+
         tokens_at_position = get_tokens_at_position(kw_node, position)
 
         if not tokens_at_position:
@@ -1378,59 +1378,41 @@ class CompletionCollector(ModelHelperMixin):
         if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
             return None
 
+        if (
+            token_at_position.type == RobotToken.EOL
+            and len(tokens_at_position) > 1
+            and tokens_at_position[-2].type == RobotToken.KEYWORD
+        ):
+            return None
+
         token_at_position_index = kw_node.tokens.index(token_at_position)
 
         argument_token_index = token_at_position_index
         while argument_token_index >= 0 and kw_node.tokens[argument_token_index].type != RobotToken.ARGUMENT:
             argument_token_index -= 1
 
-        arguments = kw_node.get_tokens(RobotToken.ARGUMENT)
-
+        argument_token: Optional[RobotToken] = None
         if argument_token_index >= 0:
             argument_token = kw_node.tokens[argument_token_index]
-            if argument_token.type == RobotToken.ARGUMENT:
-                argument_index = arguments.index(argument_token)
-            else:
-                argument_index = 0
-        else:
-            argument_index = -1
-
-        if whitespace_at_begin_of_token(token_at_position) > 1:
-            completion_range = range_from_token(token_at_position)
-
-            ws_b = whitespace_from_begin_of_token(token_at_position)
-            completion_range.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
-
-            if position.is_in_range(completion_range) or completion_range.end == position:
-                argument_index += 1
-
-        if argument_index < 0:
-            return None
 
         result: Optional[Tuple[Optional[KeywordDoc], Token]]
 
-        keyword_token = kw_node.get_token(keyword_name_token_type)
-        if keyword_token is None:
-            return None
-
-        completion_range = range_from_token(token_at_position)
+        completion_range = range_from_token(argument_token or token_at_position)
+        completion_range.end = range_from_token(token_at_position).end
         if (w := whitespace_at_begin_of_token(token_at_position)) > 0:
-            if w > 1 and completion_range.start.character + 1 < position.character:
+            if w > 1 and range_from_token(token_at_position).start.character + 1 < position.character:
                 completion_range.start = position
-            elif completion_range.start == position:
-                pass
-            else:
+            elif completion_range.start != position:
                 return None
         else:
-            if token_at_position.type != RobotToken.ARGUMENT:
-                return None
-
-            if "=" in token_at_position.value:
-                equal_index = token_at_position.value.index("=")
+            if "=" in (argument_token or token_at_position).value:
+                equal_index = (argument_token or token_at_position).value.index("=")
                 if completion_range.start.character + equal_index < position.character:
                     return None
                 else:
                     completion_range.end.character = completion_range.start.character + equal_index + 1
+            else:
+                completion_range.end = position
 
         result = await self.get_keyworddoc_and_token_from_position(
             keyword_token.value,
@@ -1460,15 +1442,11 @@ class CompletionCollector(ModelHelperMixin):
             CompletionItem(
                 label=f"{e.name}=",
                 kind=CompletionItemKind.VARIABLE,
-                # detail=e.detail,
+                detail="Argument",
+                filter_text=e.name,
                 sort_text=f"02{i}_{e.name}=",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
-                data={
-                    "document_uri": str(self.document.uri),
-                    "type": "Argument",
-                    "name": e,
-                },
             )
             for i, e in enumerate(result[0].args)
             if e.kind
