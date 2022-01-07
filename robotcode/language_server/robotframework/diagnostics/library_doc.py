@@ -1400,14 +1400,3 @@ def complete_resource_import(
             ]
 
     return list(set(result))
-
-
-def init_pool() -> None:
-    import signal
-
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-
-def dummy_first_run_pool() -> None:
-    """Dummy function to initialize the ProcessPoolExecutor"""
-    pass

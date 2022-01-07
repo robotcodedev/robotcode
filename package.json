@@ -71,7 +71,7 @@
         "id": "builtin",
         "description": "built in library, keyword or variable"
       }
-    ],        
+    ],
     "semanticTokenScopes": [
       {
         "language": "robotframework",
@@ -118,20 +118,19 @@
           "variable": [
             "variable.other.readwrite.robotframework"
           ],
-          "keywordCall": [            
+          "keywordCall": [
             "variable.function.keyword-call.robotframework"
           ],
-          "keywordCallInner": [            
+          "keywordCallInner": [
             "variable.function.keyword-call.inner.robotframework"
           ],
-          "nameCall": [            
+          "nameCall": [
             "variable.function.keyword-call.robotframework"
           ],
           "continuation": [
             "punctuation.separator.continuation.robotframework"
           ],
-          "separator": [            
-          ],
+          "separator": [],
           "terminator": [
             "punctuation.terminator.robotframework"
           ],
@@ -199,10 +198,12 @@
           },
           "robotcode.languageServer.mode": {
             "type": "string",
-            "default": "stdio",
+            "default": "pipe",
             "description": "Specifies the mode the language server is started. Requires a VSCode restart to take effect.",
             "enum": [
               "stdio",
+              "pipe",
+              "socket",
               "tcp"
             ],
             "scope": "resource"
@@ -628,18 +629,18 @@
   "dependencies": {
     "ansi-colors": "^4.1.1",
     "vscode-debugadapter": "^1.51.0",
-    "vscode-languageclient": "^7.0.0"
+    "vscode-languageclient": "^8.0.0-next"
   },
   "devDependencies": {
     "@types/glob": "^7.2.0",
     "@types/mocha": "^9.0.0",
     "@types/node": "^14.16.0",
     "@types/vscode": "^1.61.0",
-    "@typescript-eslint/eslint-plugin": "^5.8.0",
-    "@typescript-eslint/parser": "^5.8.0",
-    "eslint": "^8.5.0",
+    "@typescript-eslint/eslint-plugin": "^5.9.0",
+    "@typescript-eslint/parser": "^5.9.0",
+    "eslint": "^8.6.0",
     "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-import": "^2.25.3",
+    "eslint-plugin-import": "^2.25.4",
     "eslint-plugin-jsx-a11y": "^6.5.1",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^4.0.0",
@@ -650,10 +651,10 @@
     "replace-in-file": "^6.3.2",
     "ts-loader": "^9.2.6",
     "typescript": "^4.5.4",
-    "vsce": "^2.5.3",
+    "vsce": "^2.6.3",
     "vscode-debugadapter-testsupport": "^1.51.0",
     "vscode-dts": "^0.3.3",
-    "@vscode/test-electron": "^2.0.0",
+    "@vscode/test-electron": "^2.0.1",
     "webpack": "^5.65.0",
     "webpack-cli": "^4.9.1"
   }

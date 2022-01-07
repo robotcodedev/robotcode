@@ -63,14 +63,12 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
       ]) {
         if (event.affectsConfiguration(s)) {
           await languageClientManger.refresh();
-          await testControllerManger.refresh();
         }
       }
     })
   );
 
   await languageClientManger.refresh();
-  await testControllerManger.refresh();
 }
 
 function displayProgress<R>(promise: Promise<R>): Thenable<R> {
@@ -86,5 +84,5 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 }
 
 export async function deactivate(): Promise<void> {
-  return languageClientManger.stopAllClients();
+  await languageClientManger.stopAllClients();
 }

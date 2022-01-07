@@ -3,11 +3,16 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional
 
 from ..._version import __version__
-from ...jsonrpc2.protocol import ProtocolPartDescriptor
+from ...jsonrpc2.protocol import (
+    JsonRPCErrorException,
+    JsonRPCErrors,
+    ProtocolPartDescriptor,
+)
 from ...utils.dataclasses import from_dict
 from ...utils.logging import LoggingDescriptor
 from ..common.lsp_types import (
     DocumentFilter,
+    InitializeError,
     Model,
     TextDocumentChangeRegistrationOptions,
     TextDocumentRegistrationOptions,
@@ -29,17 +34,22 @@ from .parts.robocop_diagnostics import RobotRoboCopDiagnosticsProtocolPart
 from .parts.robot_workspace import RobotWorkspaceProtocolPart
 from .parts.semantic_tokens import RobotSemanticTokenProtocolPart
 from .parts.signature_help import RobotSignatureHelpProtocolPart
+from .utils.process_pool import shutdown_process_pool
 from .utils.version import get_robot_version
 
 if TYPE_CHECKING:
     from .server import RobotLanguageServer
 
 
-class RobotModuleNotFoundError(Exception):
+class RobotCodeException(Exception):
     pass
 
 
-class RobotVersionDontMatchError(Exception):
+class RobotModuleNotFoundError(RobotCodeException):
+    pass
+
+
+class RobotVersionDontMatchError(RobotCodeException):
     pass
 
 
@@ -47,7 +57,9 @@ def check_robotframework() -> None:
     try:
         __import__("robot")
     except ImportError as e:
-        raise RobotModuleNotFoundError("'robot' module not found, please install RobotFramework.") from e
+        raise RobotModuleNotFoundError(
+            "RobotFramework not installed in current Python environment, please install it."
+        ) from e
 
     if get_robot_version() < (4, 0):
         raise RobotVersionDontMatchError("Wrong RobotFramework version. Expect version >= 4.0")
@@ -84,12 +96,22 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     def __init__(self, server: "RobotLanguageServer"):
         super().__init__(server)
         self.options = Options()
-        super().on_initialize.add(self._on_initialize)
-        super().on_initialized.add(self._on_initialized)
+        self.on_initialize.add(self._on_initialize)
+        self.on_initialized.add(self._on_initialized)
+        self.on_shutdown.add(self._on_shutdown)
+
+    @_logger.call
+    async def _on_shutdown(self, sender: Any) -> None:
+        shutdown_process_pool()
 
     @_logger.call
     async def _on_initialize(self, sender: Any, initialization_options: Optional[Any] = None) -> None:
-        check_robotframework()
+        try:
+            check_robotframework()
+        except RobotCodeException as e:
+            raise JsonRPCErrorException(
+                JsonRPCErrors.INTERNAL_ERROR, f"Can't start language server: {e}", InitializeError(retry=False)
+            ) from e
 
         if initialization_options is not None:
             self.options = from_dict(initialization_options, Options)

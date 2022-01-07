@@ -1,7 +1,21 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 import * as net from "net";
 import * as vscode from "vscode";
-import { LanguageClient, LanguageClientOptions, ServerOptions } from "vscode-languageclient/node";
+import {
+  CloseHandlerResult,
+  ErrorAction,
+  CloseAction,
+  ErrorHandlerResult,
+  LanguageClient,
+  LanguageClientOptions,
+  Message,
+  ServerOptions,
+  TransportKind,
+  ResponseError,
+  InitializeError,
+  RevealOutputChannelOn,
+  State,
+} from "vscode-languageclient/node";
 import { sleep, Mutex } from "./utils";
 import { CONFIG_SECTION } from "./config";
 import { PythonManager } from "./pythonmanger";
@@ -31,12 +45,30 @@ export interface RobotTestItem {
   tags?: string[];
 }
 
+export enum ClientState {
+  Stopped,
+  Starting,
+  Running,
+}
+
+export interface ClientStateChangedEvent {
+  uri: vscode.Uri;
+  state: ClientState;
+}
+
 export class LanguageClientsManager {
   private clientsMutex = new Mutex();
 
   public readonly clients: Map<string, LanguageClient> = new Map();
+  public readonly outputChannels: Map<string, vscode.OutputChannel> = new Map();
 
   private _disposables: vscode.Disposable;
+
+  private readonly _onClientStateChangedEmitter = new vscode.EventEmitter<ClientStateChangedEvent>();
+
+  public get onClientStateChanged(): vscode.Event<ClientStateChangedEvent> {
+    return this._onClientStateChangedEmitter.event;
+  }
 
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
@@ -44,8 +76,8 @@ export class LanguageClientsManager {
     public readonly outputChannel: vscode.OutputChannel
   ) {
     this._disposables = vscode.Disposable.from(
-      this.pythonManager.pythonExtension?.exports.settings.onDidChangeExecutionDetails(async (_event) =>
-        this.refresh()
+      this.pythonManager.pythonExtension?.exports.settings.onDidChangeExecutionDetails(async (uri) =>
+        this.refresh(uri)
       ) ?? {
         dispose() {
           //empty
@@ -56,17 +88,23 @@ export class LanguageClientsManager {
     );
   }
 
-  public async stopAllClients(): Promise<void> {
-    await this.clientsMutex.dispatch(async () => {
-      const promises: Promise<void>[] = [];
+  public async stopAllClients(): Promise<boolean> {
+    const promises: Promise<void>[] = [];
 
-      for (const client of this.clients.values()) {
-        promises.push(client.stop());
+    const clients = [...this.clients.values()];
+    this.clients.clear();
+
+    for (const client of clients) {
+      promises.push(client.stop());
+    }
+
+    return Promise.all(promises).then(
+      (r) => r.length > 0,
+      (reason) => {
+        this.outputChannel.appendLine(`can't stop client ${reason}`);
+        return true;
       }
-      this.clients.clear();
-
-      await Promise.all(promises);
-    });
+    );
   }
 
   dispose(): void {
@@ -103,7 +141,7 @@ export class LanguageClientsManager {
     return serverOptions;
   }
 
-  private getServerOptionsStdIo(folder: vscode.WorkspaceFolder) {
+  private getServerOptions(folder: vscode.WorkspaceFolder, mode: string) {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
     const pythonCommand = this.pythonManager.getPythonCommand(folder);
@@ -114,14 +152,39 @@ export class LanguageClientsManager {
 
     const serverArgs = config.get<Array<string>>("languageServer.args", []);
 
-    const args: Array<string> = ["-u", this.pythonManager.pythonLanguageServerMain, "--mode", "stdio"];
+    const args: Array<string> = [
+      "-u",
+
+      // "-m",
+      // "debugpy",
+      // "--listen",
+      // "5678",
+      // "--wait-for-client",
+
+      this.pythonManager.pythonLanguageServerMain,
+    ];
+
+    const debug_args: Array<string> = ["--log"];
+
+    const transport = { stdio: TransportKind.stdio, pipe: TransportKind.pipe, socket: TransportKind.socket }[mode];
 
     const serverOptions: ServerOptions = {
-      command: pythonCommand,
-      args: args.concat(serverArgs),
-      options: {
-        cwd: folder.uri.fsPath,
-        // detached: true
+      run: {
+        command: pythonCommand,
+        args: [...args, ...serverArgs],
+        options: {
+          cwd: folder.uri.fsPath,
+        },
+
+        transport: transport !== TransportKind.socket ? transport : { kind: TransportKind.socket, port: 6610 },
+      },
+      debug: {
+        command: pythonCommand,
+        args: [...args, ...debug_args, ...serverArgs],
+        options: {
+          cwd: folder.uri.fsPath,
+        },
+        transport: transport !== TransportKind.socket ? transport : { kind: TransportKind.socket, port: 6610 },
       },
     };
     return serverOptions;
@@ -133,14 +196,15 @@ export class LanguageClientsManager {
     return this.getLanguageClientForResource(document.uri);
   }
 
-  public async getLanguageClientForResource(resource: string | vscode.Uri): Promise<LanguageClient | undefined> {
+  public async getLanguageClientForResource(
+    resource: string | vscode.Uri,
+    create = true
+  ): Promise<LanguageClient | undefined> {
     return this.clientsMutex.dispatch(async () => {
       const uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
       const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
 
-      if (!workspaceFolder) {
-        return undefined;
-      }
+      if (!workspaceFolder || !create) return undefined;
 
       let result = this.clients.get(workspaceFolder.uri.toString());
 
@@ -151,10 +215,14 @@ export class LanguageClientsManager {
       const mode = config.get<string>("languageServer.mode", "stdio");
 
       const serverOptions: ServerOptions =
-        mode === "tcp" ? this.getServerOptionsTCP(workspaceFolder) : this.getServerOptionsStdIo(workspaceFolder);
+        mode === "tcp" ? this.getServerOptionsTCP(workspaceFolder) : this.getServerOptions(workspaceFolder, mode);
+
       const name = `RobotCode Language Server mode=${mode} for folder "${workspaceFolder.name}"`;
 
-      const outputChannel = mode === "stdio" ? vscode.window.createOutputChannel(name) : undefined;
+      const outputChannel = this.outputChannels.get(name) ?? vscode.window.createOutputChannel(name);
+      this.outputChannels.set(name, outputChannel);
+
+      let closeHandlerAction = CloseAction.DoNotRestart;
 
       const clientOptions: LanguageClientOptions = {
         documentSelector: [
@@ -167,20 +235,65 @@ export class LanguageClientsManager {
           storageUri: this.extensionContext?.storageUri?.toString(),
           globalStorageUri: this.extensionContext?.globalStorageUri?.toString(),
         },
+        revealOutputChannelOn: RevealOutputChannelOn.Info,
+        initializationFailedHandler: (error: ResponseError<InitializeError> | Error | undefined) => {
+          if (error)
+            void vscode.window // NOSONAR
+              .showErrorMessage(error.message, { title: "Retry", id: "retry" })
+              .then(async (item) => {
+                if (item && item.id === "retry") {
+                  await this.refresh();
+                }
+              });
+
+          return false;
+        },
+        errorHandler: {
+          error(_error: Error, _message: Message | undefined, _count: number | undefined): ErrorHandlerResult {
+            return {
+              action: ErrorAction.Continue,
+
+              message: `har ein error ${_error.message}`,
+            };
+          },
+
+          closed(): CloseHandlerResult {
+            return {
+              action: closeHandlerAction,
+            };
+          },
+        },
         diagnosticCollectionName: "robotcode",
         workspaceFolder,
         outputChannel,
         markdown: {
           isTrusted: true,
+          supportHtml: true,
         },
         progressOnInitialization: true,
       };
 
       this.outputChannel.appendLine(`create Language client: ${name}`);
-      result = new LanguageClient(name, serverOptions, clientOptions);
+      result = new LanguageClient(`$robotCode:${workspaceFolder.uri.toString()}`, name, serverOptions, clientOptions);
 
       this.outputChannel.appendLine(`trying to start Language client: ${name}`);
       result.start();
+
+      result.onDidChangeState((e) => {
+        if (e.newState == State.Running) {
+          closeHandlerAction = CloseAction.Restart;
+        }
+
+        this._onClientStateChangedEmitter.fire({
+          uri: uri,
+          state:
+            e.newState === State.Starting
+              ? ClientState.Starting
+              : e.newState === State.Stopped
+              ? ClientState.Stopped
+              : ClientState.Running,
+        });
+      });
 
       result = await result.onReady().then(
         async (_) => {
@@ -192,6 +305,10 @@ export class LanguageClientsManager {
               counter++;
             }
           } catch {
+            // do nothing
+            this.outputChannel.appendLine(
+              `client  ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} did not initialize correctly`
+            );
             return undefined;
           }
           return result;
@@ -210,19 +327,39 @@ export class LanguageClientsManager {
     });
   }
 
-  public async refresh(_uri?: vscode.Uri | undefined): Promise<void> {
+  public async refresh(uri?: vscode.Uri): Promise<void> {
     await this.clientsMutex.dispatch(async () => {
-      for (const client of this.clients.values()) {
-        await client.stop().catch();
+      if (uri) {
+        const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+
+        if (!workspaceFolder) return;
+
+        const client = this.clients.get(workspaceFolder.uri.toString());
+        this.clients.delete(workspaceFolder.uri.toString());
+
+        if (client) {
+          await client.stop();
+          await sleep(500);
+        }
+      } else {
+        if (await this.stopAllClients()) {
+          await sleep(500);
+        }
       }
-      this.clients.clear();
     });
 
+    const folders = new Set<vscode.WorkspaceFolder>();
+
     for (const document of vscode.workspace.textDocuments) {
+      const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+      if (workspaceFolder) folders.add(workspaceFolder);
+    }
+
+    for (const folder of folders) {
       try {
-        await this.getLanguageClientForDocument(document).catch();
+        await this.getLanguageClientForResource(folder.uri.toString()).catch((_) => undefined);
       } catch {
-        // do nothing
+        // do noting
       }
     }
   }

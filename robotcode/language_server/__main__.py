@@ -6,7 +6,7 @@ import pathlib
 import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 __file__ = os.path.abspath(__file__)
 if __file__.endswith((".pyc", ".pyo")):
@@ -54,19 +54,24 @@ def get_log_handler(logfile: str) -> logging.FileHandler:
     return handler
 
 
-def run_server(mode: str, port: int) -> None:
+def run_server(mode: str, port: int, pipe_name: Optional[str]) -> int:
     from ..jsonrpc2.server import JsonRpcServerMode, TcpParams
     from .robotframework.server import RobotLanguageServer
 
-    with RobotLanguageServer(mode=JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port)) as server:
+    with RobotLanguageServer(
+        mode=JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port), pipe_name=pipe_name
+    ) as server:
         try:
             server.run()
         except SystemExit:
             raise
         except KeyboardInterrupt:
-            pass
+            return 1
         except BaseException as e:
             _logger.exception(e)
+            return 1
+
+        return 0
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -77,14 +82,23 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     result.add_argument("--version", action="store_true", help="shows the version and exits")
+
     result.add_argument(
         "-m",
         "--mode",
         default="stdio",
-        choices=["stdio", "tcp"],
+        choices=["stdio", "pipe", "socket", "tcp"],
         help="communication mode",
     )
-    result.add_argument("-p", "--port", default=6610, help="server listen port (tcp)", type=int)
+
+    result.add_argument("--stdio", action="store_true", help="run in stdio mode")
+    result.add_argument("--socket", default=None, help="run in socket mode", type=int)
+    result.add_argument("--pipe", default=None, help="run in named pipe mode", type=str)
+
+    result.add_argument("-p", "--port", default=6610, help="server listen port (mode socket and tcp)", type=int)
+
+    result.add_argument("-pn", "--pipe-name", default=None, help="pipe name for pipe mode", type=str)
+
     result.add_argument("--log", action="store_true", help="enable logging")
     result.add_argument("--log-json-rpc", action="store_true", help="show json-rpc log messages")
     result.add_argument("--log-json-rpc-data", action="store_true", help="show json-rpc messages log messages")
@@ -191,7 +205,23 @@ def main() -> None:
     if args.debugpy:
         start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)
 
-    run_server(args.mode, args.port)
+    mode = args.mode
+
+    if args.stdio:
+        mode = "stdio"
+
+    port = args.port
+
+    if args.socket is not None:
+        port = args.socket
+        mode = "socket"
+
+    pipe_name = args.pipe_name
+    if args.pipe is not None:
+        mode = "pipe"
+        pipe_name = args.pipe
+
+    sys.exit(run_server(mode, port, pipe_name))
 
 
 if __name__ == "__main__":

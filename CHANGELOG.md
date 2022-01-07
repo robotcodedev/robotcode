@@ -7,6 +7,9 @@ All notable changes to the "robotcode" extension will be documented in this file
 ### added
   - Big speed improvements
     - introduce some classes for threadsafe asyncio
+  - Implement pipe/socket transport for language server
+    - default is now pipe transport
+  - Improve starting, stopping, restarting language server client, if ie. python environment changed, arguments changed or server crashed  
 
 ### added
 

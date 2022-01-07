@@ -143,6 +143,7 @@ class RpcMethodEntry(NamedTuple):
     name: str
     method: Callable[..., Any]
     param_type: Optional[Type[Any]]
+    cancelable: bool
 
 
 @runtime_checkable
@@ -159,12 +160,18 @@ def rpc_method(_func: _F) -> _F:
 
 
 @overload
-def rpc_method(*, name: Optional[str] = None, param_type: Optional[Type[Any]] = None) -> Callable[[_F], _F]:
+def rpc_method(
+    *, name: Optional[str] = None, param_type: Optional[Type[Any]] = None, cancelable: bool = True
+) -> Callable[[_F], _F]:
     ...
 
 
 def rpc_method(
-    _func: Optional[_F] = None, *, name: Optional[str] = None, param_type: Optional[Type[Any]] = None
+    _func: Optional[_F] = None,
+    *,
+    name: Optional[str] = None,
+    param_type: Optional[Type[Any]] = None,
+    cancelable: bool = True,
 ) -> Callable[[_F], _F]:
     def _decorator(func: _F) -> Callable[[_F], _F]:
 
@@ -182,7 +189,7 @@ def rpc_method(
         if real_name is None or not real_name:
             raise ValueError("name is empty.")
 
-        cast(RpcMethod, f).__rpc_method__ = RpcMethodEntry(real_name, f, param_type)
+        cast(RpcMethod, f).__rpc_method__ = RpcMethodEntry(real_name, f, param_type, cancelable)
         return func
 
     if _func is None:
@@ -248,6 +255,7 @@ class RpcRegistry:
                     rpc_method.__rpc_method__.name,
                     method,
                     rpc_method.__rpc_method__.param_type,
+                    rpc_method.__rpc_method__.cancelable,
                 )
                 for method, rpc_method in map(
                     lambda m1: (m1, cast(RpcMethod, m1)),
@@ -288,10 +296,12 @@ class RpcRegistry:
 
         return self.__methods
 
-    def add_method(self, name: str, func: Callable[..., Any], param_type: Optional[Type[Any]] = None) -> None:
+    def add_method(
+        self, name: str, func: Callable[..., Any], param_type: Optional[Type[Any]] = None, cancelable: bool = True
+    ) -> None:
         self.__ensure_initialized()
 
-        self.__methods[name] = RpcMethodEntry(name, func, param_type)
+        self.__methods[name] = RpcMethodEntry(name, func, param_type, cancelable)
 
     def remove_method(self, name: str) -> Optional[RpcMethodEntry]:
         self.__ensure_initialized()
@@ -323,6 +333,7 @@ class ReceivedRequestEntry(NamedTuple):
     future: asyncio.Future[Any]
     request: Optional[Any]
     cancel_token: CancelationToken
+    cancelable: bool
 
 
 class JsonRPCProtocolBase(asyncio.Protocol, ABC):
@@ -650,10 +661,13 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         cancel_token = CancelationToken()
 
         task = create_sub_task(
-            ensure_coroutine(e.method)(*params[0], cancel_token=cancel_token, **params[1]), name=message.method
+            ensure_coroutine(e.method)(
+                *params[0], **({"cancel_token": cancel_token} if e.cancelable else {}), **params[1]
+            ),
+            name=message.method,
         )
         with self._received_request_lock:
-            self._received_request[message.id] = ReceivedRequestEntry(task, message, cancel_token)
+            self._received_request[message.id] = ReceivedRequestEntry(task, message, cancel_token, e.cancelable)
 
         def done(t: asyncio.Task[Any]) -> None:
             try:
@@ -663,7 +677,6 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             except (SystemExit, KeyboardInterrupt):
                 raise
             except JsonRPCErrorException as ex:
-                self._logger.exception(ex)
                 self.send_error(ex.code, ex.message, id=message.id, data=ex.data)
             except BaseException as e:
                 self._logger.exception(e)
@@ -689,8 +702,9 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
     @_logger.call
     async def cancel_all_received_request(self) -> None:
         for entry in self._received_request.values():
-            if entry is not None and entry.future is not None and not entry.future.cancelled():
-                entry.cancel_token.cancel()
+            if entry is not None and entry.cancelable and entry.future is not None and not entry.future.cancelled():
+                if entry.cancel_token:
+                    entry.cancel_token.cancel()
                 entry.future.cancel()
 
     @_logger.call

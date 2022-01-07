@@ -28,7 +28,9 @@
 				"host": "localhost",
 				"port": 5678
 			},
-			"justMyCode": false
+			"justMyCode": false,
+			"subProcess": true,
+			"showReturnValue": true,
 		},
 		{
 			"name": "Python: Attach Prompt",

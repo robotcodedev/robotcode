@@ -109,6 +109,10 @@ class LanguageServerProtocol(JsonRPCProtocol):
     async def on_shutdown(sender) -> None:  # pragma: no cover, NOSONAR
         ...
 
+    @async_event
+    async def on_exit(sender) -> None:  # pragma: no cover, NOSONAR
+        ...
+
     @property
     def trace(self) -> TraceValue:
         return self._trace
@@ -196,7 +200,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     async def on_initialized(sender) -> None:  # pragma: no cover, NOSONAR
         ...
 
-    @rpc_method(name="shutdown")
+    @rpc_method(name="shutdown", cancelable=False)
     @_logger.call
     async def shutdown(self, *args: Any, **kwargs: Any) -> None:
         self.shutdown_received = True
@@ -207,12 +211,12 @@ class LanguageServerProtocol(JsonRPCProtocol):
             pass
 
         await self.on_shutdown(self)
-        if self.server is not None:
-            self.server.shutdown_protocol(self)
 
     @rpc_method(name="exit")
     @_logger.call
     async def _exit(self, *args: Any, **kwargs: Any) -> None:
+        await self.on_exit(self)
+
         raise SystemExit(0 if self.shutdown_received else 1)
 
     @rpc_method(name="$/setTrace", param_type=SetTraceParams)

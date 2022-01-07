@@ -4,7 +4,7 @@
 import { red, yellow } from "ansi-colors";
 import * as vscode from "vscode";
 import { DebugManager } from "./debugmanager";
-import { LanguageClientsManager, RobotTestItem } from "./languageclientsmanger";
+import { ClientState, LanguageClientsManager, RobotTestItem } from "./languageclientsmanger";
 import { Mutex, sleep, WeakValueMap } from "./utils";
 
 interface RobotExecutionAttributes {
@@ -65,7 +65,9 @@ export class TestControllerManager {
   public readonly debugProfile: vscode.TestRunProfile;
   private readonly refreshMutex = new Mutex();
   private readonly debugSessions = new Set<vscode.DebugSession>();
-  private readonly didChangedTimer = new Map<vscode.TextDocument, DidChangeEntry>();
+  private readonly didChangedTimer = new Map<string, DidChangeEntry>();
+  private fileChangeTimer: DidChangeEntry | undefined;
+
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
     public readonly languageClientsManager: LanguageClientsManager,
@@ -88,27 +90,53 @@ export class TestControllerManager {
 
     this.testController.resolveHandler = async (item) => this.refresh(item);
 
-    const fileWatcher = vscode.workspace.createFileSystemWatcher("**/*");
-    fileWatcher.onDidCreate(async (uri) => this.refreshFromUri(uri, "create"));
-    fileWatcher.onDidDelete(async (uri) => this.refreshFromUri(uri, "delete"));
-    fileWatcher.onDidChange(async (uri) => this.refreshFromUri(uri, "change"));
+    const fileWatcher = vscode.workspace.createFileSystemWatcher("**/*.{robot,resource}");
+    fileWatcher.onDidCreate((uri) => this.refreshUri(uri, "create"));
+    fileWatcher.onDidDelete((uri) => this.refreshUri(uri, "delete"));
+    fileWatcher.onDidChange((uri) => this.refreshUri(uri, "change"));
 
     this._disposables = vscode.Disposable.from(
       fileWatcher,
+      // this.languageClientsManager.pythonManager.pythonExtension?.exports.settings.onDidChangeExecutionDetails(
+      //   async (uri) => {
+      //     if (uri) this.refreshUri(uri);
+      //     else await this.refresh();
+      //   }
+      // ) ?? {
+      //   dispose() {
+      //     //empty
+      //   },
+      // },
+      this.languageClientsManager.onClientStateChanged((event) => {
+        switch (event.state) {
+          case ClientState.Running: {
+            this.refresh().catch((_) => undefined);
+            break;
+          }
+          case ClientState.Stopped: {
+            const folder = vscode.workspace.getWorkspaceFolder(event.uri);
+            if (folder) this.removeWorkspaceFolderItems(folder);
+
+            break;
+          }
+        }
+      }),
       vscode.workspace.onDidCloseTextDocument((document) => {
         if (document.languageId !== "robotframework") return;
 
-        if (this.didChangedTimer.has(document)) {
-          this.didChangedTimer.get(document)?.cancel();
-          this.didChangedTimer.delete(document);
+        const uri_str = document.uri.toString();
+        if (this.didChangedTimer.has(uri_str)) {
+          this.didChangedTimer.get(uri_str)?.cancel();
+          this.didChangedTimer.delete(uri_str);
         }
       }),
       vscode.workspace.onDidSaveTextDocument(async (document) => {
         if (document.languageId !== "robotframework") return;
 
-        if (this.didChangedTimer.has(document)) {
-          this.didChangedTimer.get(document)?.cancel();
-          this.didChangedTimer.delete(document);
+        const uri_str = document.uri.toString();
+        if (this.didChangedTimer.has(uri_str)) {
+          this.didChangedTimer.get(uri_str)?.cancel();
+          this.didChangedTimer.delete(uri_str);
         }
 
         await this.refresh(this.findTestItemForDocument(document));
@@ -121,14 +149,16 @@ export class TestControllerManager {
       vscode.workspace.onDidChangeTextDocument((event) => {
         if (event.document.languageId !== "robotframework") return;
 
-        if (this.didChangedTimer.has(event.document)) {
-          this.didChangedTimer.get(event.document)?.cancel();
-          this.didChangedTimer.delete(event.document);
+        const uri_str = event.document.uri.toString();
+        if (this.didChangedTimer.has(uri_str)) {
+          this.didChangedTimer.get(uri_str)?.cancel();
+          this.didChangedTimer.delete(uri_str);
         }
+
         const token = new vscode.CancellationTokenSource();
 
         this.didChangedTimer.set(
-          event.document,
+          uri_str,
           new DidChangeEntry(
             setTimeout((_) => {
               this.refresh(this.findTestItemForDocument(event.document)).then(
@@ -142,10 +172,9 @@ export class TestControllerManager {
       }),
       vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
         for (const r of event.removed) {
-          this.removeWorkspaceFolderItems(r, true);
+          this.removeWorkspaceFolderItems(r);
         }
-
-        await this.refresh();
+        if (event.added.length > 0) await this.refresh();
       }),
 
       vscode.debug.onDidStartDebugSession((session) => {
@@ -201,22 +230,24 @@ export class TestControllerManager {
     );
   }
 
-  private removeWorkspaceFolderItems(folder: vscode.WorkspaceFolder, deleteTestItems: boolean) {
+  private removeWorkspaceFolderItems(folder: vscode.WorkspaceFolder) {
     if (this.robotTestItems.has(folder)) {
       const robotItems = this.robotTestItems.get(folder);
 
       this.robotTestItems.delete(folder);
 
-      if (deleteTestItems) {
-        for (const id of robotItems?.map((i) => i.id) ?? []) {
-          const deleteItem = (itemId: string) => {
-            const item = this.testItems.get(itemId);
-            this.testItems.delete(itemId);
-            item?.children.forEach((v) => deleteItem(v.id));
-          };
+      for (const id of robotItems?.map((i) => i.id) ?? []) {
+        const deleteItem = (itemId: string) => {
+          const item = this.testItems.get(itemId);
+          this.testItems.delete(itemId);
+          item?.children.forEach((v) => deleteItem(v.id));
+        };
 
-          deleteItem(id);
-        }
+        deleteItem(id);
+      }
+
+      for (const item of robotItems || []) {
+        this.testController.items.delete(item.id);
       }
     }
   }
@@ -409,15 +440,56 @@ export class TestControllerManager {
 
   private readonly refreshFromUriMutex = new Mutex();
 
-  private async refreshFromUri(uri: vscode.Uri, _reason?: string): Promise<void> {
-    await this.refreshFromUriMutex.dispatch(async () => {
-      const workspace = vscode.workspace.getWorkspaceFolder(uri);
-      if (workspace !== undefined) {
-        this.removeWorkspaceFolderItems(workspace, false);
-
-        await this.refresh();
+  private async refreshWorkspace(workspace?: vscode.WorkspaceFolder, _reason?: string): Promise<void> {
+    return this.refreshFromUriMutex.dispatch(async () => {
+      if (workspace) {
+        this.removeWorkspaceFolderItems(workspace);
+      } else {
+        for (const w of vscode.workspace.workspaceFolders ?? []) {
+          this.removeWorkspaceFolderItems(w);
+        }
       }
+
+      await this.refresh();
     });
+  }
+
+  private refreshUri(uri?: vscode.Uri, reason?: string) {
+    if (uri) {
+      this.outputChannel.appendLine(`refresh uri ${uri.toString()}`);
+
+      const workspace = vscode.workspace.getWorkspaceFolder(uri);
+      if (workspace === undefined) return;
+
+      if (this.didChangedTimer.has(uri.toString())) return;
+
+      if (this.fileChangeTimer) {
+        this.fileChangeTimer.cancel();
+        this.fileChangeTimer = undefined;
+      }
+
+      const token = new vscode.CancellationTokenSource();
+
+      this.fileChangeTimer = new DidChangeEntry(
+        setTimeout((_) => {
+          this.refreshWorkspace(workspace, reason).then(
+            () => undefined,
+            () => undefined
+          );
+        }, 1000),
+        token
+      );
+    } else {
+      if (this.fileChangeTimer) {
+        this.fileChangeTimer.cancel();
+        this.fileChangeTimer = undefined;
+      }
+
+      this.refresh().then(
+        (_) => undefined,
+        (_) => undefined
+      );
+    }
   }
 
   private findWorkspaceForItem(item: vscode.TestItem): vscode.WorkspaceFolder | undefined {

@@ -20,9 +20,13 @@ from typing import (
 from ..utils.logging import LoggingDescriptor
 from .protocol import JsonRPCException
 
-__all__ = ["StdOutTransportAdapter", "JsonRpcServerMode", "TcpParams", "JsonRPCServer"]
+__all__ = ["JsonRpcServerMode", "TcpParams", "JsonRPCServer"]
 
 TProtocol = TypeVar("TProtocol", bound=asyncio.Protocol)
+
+
+class NotSupportedError(Exception):
+    pass
 
 
 class StdOutTransportAdapter(asyncio.Transport):
@@ -43,6 +47,8 @@ class StdOutTransportAdapter(asyncio.Transport):
 class JsonRpcServerMode(Enum):
     STDIO = "stdio"
     TCP = "tcp"
+    SOCKET = "socket"
+    PIPE = "pipe"
 
 
 class TcpParams(NamedTuple):
@@ -57,9 +63,11 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         self,
         mode: JsonRpcServerMode = JsonRpcServerMode.STDIO,
         tcp_params: TcpParams = TcpParams(None, 0),
+        pipe_name: Optional[str] = None,
     ):
         self.mode = mode
         self.tcp_params = tcp_params
+        self.pipe_name = pipe_name
 
         self._run_func: Optional[Callable[[], None]] = None
         self._server: Optional[asyncio.AbstractServer] = None
@@ -77,6 +85,10 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
             self.start_stdio()
         elif self.mode == JsonRpcServerMode.TCP:
             self.start_tcp(self.tcp_params.host, self.tcp_params.port)
+        elif self.mode == JsonRpcServerMode.PIPE:
+            self.start_pipe(self.pipe_name)
+        elif self.mode == JsonRpcServerMode.SOCKET:
+            self.start_socket(self.tcp_params.port)
         else:
             raise JsonRPCException(f"Unknown server mode {self.mode}")
 
@@ -105,11 +117,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
     def create_protocol(self) -> TProtocol:
         ...
 
-    @_logger.call
-    def shutdown_protocol(self, protocol: TProtocol) -> None:
-        if self.mode == JsonRpcServerMode.STDIO and self._stdio_stop_event is not None:
-            self._stdio_stop_event.set()
-
     stdio_executor: Optional[ThreadPoolExecutor] = None
 
     @_logger.call
@@ -135,11 +142,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
                         )
                         protocol.data_received(data)
 
-            self._logger.debug("starting run_io_nonblocking")
-            try:
-                self.loop.run_until_complete(aio_readline(sys.__stdin__.buffer, protocol))
-            finally:
-                self._logger.debug("exiting run_io_nonblocking")
+            self.loop.run_until_complete(aio_readline(transport.rfile, protocol))
 
         self._run_func = run_io_nonblocking
 
@@ -148,8 +151,35 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         self.mode = JsonRpcServerMode.TCP
 
         self._server = self.loop.run_until_complete(
-            self.loop.create_server(lambda: self.create_protocol(), host, port, reuse_address=True)
+            self.loop.create_server(self.create_protocol, host, port, reuse_address=True)
         )
+
+        self._run_func = self.loop.run_forever
+
+    @_logger.call
+    def start_pipe(self, pipe_name: Optional[str]) -> None:
+        if pipe_name is None:
+            raise ValueError("pipe name missing.")
+
+        self.mode = JsonRpcServerMode.PIPE
+
+        try:
+            if sys.platform == "win32" and getattr(self.loop, "create_pipe_connection", None):
+                self.loop.run_until_complete(
+                    self.loop.create_pipe_connection(self.create_protocol, pipe_name)  # type: ignore
+                )
+            else:
+                self.loop.run_until_complete(self.loop.create_unix_connection(self.create_protocol, pipe_name))
+        except NotImplementedError:
+            raise NotSupportedError("Pipe transport is not supported on this platform.")
+
+        self._run_func = self.loop.run_forever
+
+    @_logger.call
+    def start_socket(self, port: int) -> None:
+        self.mode = JsonRpcServerMode.SOCKET
+
+        self.loop.run_until_complete(self.loop.create_connection(self.create_protocol, port=port))
 
         self._run_func = self.loop.run_forever
 

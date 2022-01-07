@@ -3,11 +3,21 @@ from __future__ import annotations
 import ast
 import asyncio
 import weakref
+from abc import ABC, abstractmethod
 from collections import OrderedDict
-from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, List, Optional, Tuple, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Coroutine,
+    List,
+    Optional,
+    Tuple,
+    cast,
+    final,
+)
 
 from ....utils.async_tools import Lock, async_tasking_event, create_sub_task
 from ....utils.logging import LoggingDescriptor
@@ -24,6 +34,7 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
     from .namespace import Namespace
 
+from ..utils.process_pool import get_process_pool
 from .library_doc import (
     CompleteResult,
     Error,
@@ -33,17 +44,15 @@ from .library_doc import (
     LibraryDoc,
     complete_library_import,
     complete_resource_import,
-    dummy_first_run_pool,
     find_file,
     find_library,
     get_library_doc,
-    init_pool,
     is_embedded_keyword,
 )
 
 RESOURCE_EXTENSIONS = (".resource", ".robot", ".txt", ".tsv", ".rst", ".rest")
 REST_EXTENSIONS = (".rst", ".rest")
-PROCESS_POOL_MAX_WORKERS = None
+
 
 LOAD_LIBRARY_TIME_OUT = 30
 FIND_FILE_TIME_OUT = 10
@@ -59,25 +68,15 @@ class _LibrariesEntryKey:
         return hash((self.name, self.args))
 
 
-class _LibrariesEntry:
+class _ImportEntry(ABC):
     def __init__(
         self,
-        name: str,
-        args: Tuple[Any, ...],
         parent: ImportsManager,
-        get_libdoc_coroutine: Callable[[], Coroutine[Any, Any, LibraryDoc]],
-        ignore_reference: bool = False,
     ) -> None:
-        super().__init__()
-        self.name = name
-        self.args = args
         self.parent = parent
-        self._get_libdoc_coroutine = get_libdoc_coroutine
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
         self.file_watchers: List[FileWatcherEntry] = []
-        self._lib_doc: Optional[LibraryDoc] = None
         self._lock = Lock()
-        self.ignore_reference = ignore_reference
 
     @staticmethod
     async def __remove_filewatcher(workspace: Workspace, entry: FileWatcherEntry) -> None:
@@ -87,11 +86,53 @@ class _LibrariesEntry:
         try:
             if self.file_watchers is not None and asyncio.get_running_loop():
                 for watcher in self.file_watchers:
-                    create_sub_task(
-                        _LibrariesEntry.__remove_filewatcher(self.parent.parent_protocol.workspace, watcher)
-                    )
+                    create_sub_task(_ImportEntry.__remove_filewatcher(self.parent.parent_protocol.workspace, watcher))
         except RuntimeError:
             pass
+
+    async def _remove_file_watcher(self) -> None:
+        if self.file_watchers is not None:
+            for watcher in self.file_watchers:
+                await self.parent.parent_protocol.workspace.remove_file_watcher_entry(watcher)
+        self.file_watchers = []
+
+    @abstractmethod
+    async def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
+        ...
+
+    @final
+    async def invalidate(self) -> None:
+        async with self._lock:
+            await self._invalidate()
+
+    @abstractmethod
+    async def _invalidate(self) -> None:
+        ...
+
+    @abstractmethod
+    async def _update(self) -> None:
+        ...
+
+    @abstractmethod
+    async def is_valid(self) -> bool:
+        ...
+
+
+class _LibrariesEntry(_ImportEntry):
+    def __init__(
+        self,
+        name: str,
+        args: Tuple[Any, ...],
+        parent: ImportsManager,
+        get_libdoc_coroutine: Callable[[], Coroutine[Any, Any, LibraryDoc]],
+        ignore_reference: bool = False,
+    ) -> None:
+        super().__init__(parent)
+        self.name = name
+        self.args = args
+        self._get_libdoc_coroutine = get_libdoc_coroutine
+        self._lib_doc: Optional[LibraryDoc] = None
+        self.ignore_reference = ignore_reference
 
     def __repr__(self) -> str:
         return (
@@ -185,22 +226,12 @@ class _LibrariesEntry:
                 )
             )
 
-    async def invalidate(self) -> None:
-        async with self._lock:
-            await self._invalidate()
-
     async def _invalidate(self) -> None:
         if self._lib_doc is None and len(self.file_watchers) == 0:
             return
 
         await self._remove_file_watcher()
         self._lib_doc = None
-
-    async def _remove_file_watcher(self) -> None:
-        if self.file_watchers is not None:
-            for watcher in self.file_watchers:
-                await self.parent.parent_protocol.workspace.remove_file_watcher_entry(watcher)
-        self.file_watchers = []
 
     async def is_valid(self) -> bool:
         async with self._lock:
@@ -225,36 +256,18 @@ class _ResourcesEntryKey:
         return hash(self.name)
 
 
-class _ResourcesEntry:
+class _ResourcesEntry(_ImportEntry):
     def __init__(
         self,
         name: str,
         parent: ImportsManager,
         get_document_coroutine: Callable[[], Coroutine[Any, Any, TextDocument]],
     ) -> None:
-        super().__init__()
+        super().__init__(parent)
         self.name = name
-        self.parent = parent
         self._get_document_coroutine = get_document_coroutine
-        self.references: weakref.WeakSet[Any] = weakref.WeakSet()
-        self.file_watchers: List[FileWatcherEntry] = []
         self._document: Optional[TextDocument] = None
-        self._lock = Lock()
         self._lib_doc: Optional[LibraryDoc] = None
-
-    @staticmethod
-    async def __remove_filewatcher(workspace: Workspace, entry: FileWatcherEntry) -> None:
-        await workspace.remove_file_watcher_entry(entry)
-
-    def __del__(self) -> None:
-        try:
-            if asyncio.get_running_loop() and self.file_watchers is not None:
-                for watcher in self.file_watchers:
-                    create_sub_task(
-                        _ResourcesEntry.__remove_filewatcher(self.parent.parent_protocol.workspace, watcher)
-                    )
-        except RuntimeError:
-            pass
 
     def __repr__(self) -> str:
         return (
@@ -307,10 +320,6 @@ class _ResourcesEntry:
                 )
             )
 
-    async def invalidate(self) -> None:
-        async with self._lock:
-            await self._invalidate()
-
     async def _invalidate(self) -> None:
         if self._document is None and len(self.file_watchers) == 0:
             return
@@ -319,12 +328,6 @@ class _ResourcesEntry:
 
         self._document = None
         self._lib_doc = None
-
-    async def _remove_file_watcher(self) -> None:
-        if self.file_watchers is not None:
-            for watcher in self.file_watchers:
-                await self.parent.parent_protocol.workspace.remove_file_watcher_entry(watcher)
-        self.file_watchers = []
 
     async def is_valid(self) -> bool:
         async with self._lock:
@@ -362,34 +365,10 @@ class _ResourcesEntry:
         return self._lib_doc
 
 
-def _shutdown_process_pool(pool: ProcessPoolExecutor) -> None:
-    try:
-        pool.shutdown(True)
-    except BaseException:  # NOSONAR
-        pass
-
-
-# we need this, because ProcessPoolExecutor is not correctly initialized if asyncio is reading from stdin
-def _init_process_pool() -> ProcessPoolExecutor:
-    import atexit
-
-    result = ProcessPoolExecutor(max_workers=PROCESS_POOL_MAX_WORKERS, initializer=init_pool)
-
-    try:
-        result.submit(dummy_first_run_pool).result(5)
-    except (SystemExit, KeyboardInterrupt):
-        raise
-    except BaseException:
-        pass
-
-    atexit.register(_shutdown_process_pool, result)
-    return result
-
-
 class ImportsManager:
     _logger = LoggingDescriptor()
 
-    process_pool = _init_process_pool()
+    process_pool = get_process_pool()
 
     def __init__(
         self, parent_protocol: RobotLanguageServerProtocol, folder: Uri, config: Optional[RobotConfig]
@@ -495,8 +474,9 @@ class ImportsManager:
                 async with self._resources_lock:
                     e1 = self._resources.get(k, None)
                     if e1 == e:
-                        await e.invalidate()
                         self._resources.pop(k, None)
+
+                        await e.invalidate()
 
         try:
             if asyncio.get_running_loop():
