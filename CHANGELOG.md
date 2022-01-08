@@ -4,17 +4,18 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+### added
+- for socket connections now a free port is used
+
 ##  0.4.0
 
 ### added
-  - Big speed improvements
-    - introduce some classes for threadsafe asyncio
-  - Implement pipe/socket transport for language server
-    - default is now pipe transport
-  - Improve starting, stopping, restarting language server client, if ie. python environment changed, arguments changed or server crashed  
 
-### added
-
+- Big speed improvements
+  - introduce some classes for threadsafe asyncio
+- Implement pipe/socket transport for language server
+  - default is now pipe transport
+- Improve starting, stopping, restarting language server client, if ie. python environment changed, arguments changed or server crashed  
 - some refactoring to speedup loading and parsing documents
 - semantic tokens now highlight 
   - builtin keywords

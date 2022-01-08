@@ -164,9 +164,10 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         self.mode = JsonRpcServerMode.PIPE
 
         try:
-            if sys.platform == "win32" and getattr(self.loop, "create_pipe_connection", None):
+            if sys.platform == "win32" and hasattr(self.loop, "create_pipe_connection"):
+                # this is a proactor event loop and we can use the not documented method create_pipe_connection
                 self.loop.run_until_complete(
-                    self.loop.create_pipe_connection(self.create_protocol, pipe_name)  # type: ignore
+                    self.loop.create_pipe_connection(self.create_protocol, pipe_name),  # type: ignore
                 )
             else:
                 self.loop.run_until_complete(self.loop.create_unix_connection(self.create_protocol, pipe_name))

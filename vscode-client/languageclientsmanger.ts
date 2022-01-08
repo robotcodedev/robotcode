@@ -19,6 +19,7 @@ import {
 import { sleep, Mutex } from "./utils";
 import { CONFIG_SECTION } from "./config";
 import { PythonManager } from "./pythonmanger";
+import { getAvailablePort } from "./net_utils";
 
 const LANGUAGE_SERVER_DEFAULT_TCP_PORT = 6610;
 const LANGUAGE_SERVER_DEFAULT_HOST = "127.0.0.1";
@@ -141,7 +142,7 @@ export class LanguageClientsManager {
     return serverOptions;
   }
 
-  private getServerOptions(folder: vscode.WorkspaceFolder, mode: string) {
+  private async getServerOptions(folder: vscode.WorkspaceFolder, mode: string): Promise<ServerOptions> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
     const pythonCommand = this.pythonManager.getPythonCommand(folder);
@@ -168,7 +169,11 @@ export class LanguageClientsManager {
 
     const transport = { stdio: TransportKind.stdio, pipe: TransportKind.pipe, socket: TransportKind.socket }[mode];
 
-    const serverOptions: ServerOptions = {
+    const getPort = async () => {
+      return getAvailablePort(["127.0.0.1"]);
+    };
+
+    return {
       run: {
         command: pythonCommand,
         args: [...args, ...serverArgs],
@@ -176,7 +181,10 @@ export class LanguageClientsManager {
           cwd: folder.uri.fsPath,
         },
 
-        transport: transport !== TransportKind.socket ? transport : { kind: TransportKind.socket, port: 6610 },
+        transport:
+          transport !== TransportKind.socket
+            ? transport
+            : { kind: TransportKind.socket, port: (await getPort()) ?? -1 },
       },
       debug: {
         command: pythonCommand,
@@ -184,10 +192,12 @@ export class LanguageClientsManager {
         options: {
           cwd: folder.uri.fsPath,
         },
-        transport: transport !== TransportKind.socket ? transport : { kind: TransportKind.socket, port: 6610 },
+        transport:
+          transport !== TransportKind.socket
+            ? transport
+            : { kind: TransportKind.socket, port: (await getPort()) ?? -1 },
       },
     };
-    return serverOptions;
   }
 
   public async getLanguageClientForDocument(document: vscode.TextDocument): Promise<LanguageClient | undefined> {
@@ -215,7 +225,7 @@ export class LanguageClientsManager {
       const mode = config.get<string>("languageServer.mode", "stdio");
 
       const serverOptions: ServerOptions =
-        mode === "tcp" ? this.getServerOptionsTCP(workspaceFolder) : this.getServerOptions(workspaceFolder, mode);
+        mode === "tcp" ? this.getServerOptionsTCP(workspaceFolder) : await this.getServerOptions(workspaceFolder, mode);
 
       const name = `RobotCode Language Server mode=${mode} for folder "${workspaceFolder.name}"`;
 
