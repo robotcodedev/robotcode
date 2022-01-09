@@ -93,6 +93,8 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     name = "RobotCode"
     version = __version__
 
+    file_extensions = {"robot", "resource", "py"}
+
     def __init__(self, server: "RobotLanguageServer"):
         super().__init__(server)
         self.options = Options()

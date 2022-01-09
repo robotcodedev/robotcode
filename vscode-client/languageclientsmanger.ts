@@ -96,11 +96,17 @@ export class LanguageClientsManager {
     this.clients.clear();
 
     for (const client of clients) {
-      promises.push(client.stop());
+      promises.push(client.stop().then((_) => global.gc()));
     }
 
     return Promise.all(promises).then(
-      (r) => r.length > 0,
+      (r) => {
+        if (global.gc) {
+          global.gc();
+        }
+
+        return r.length > 0;
+      },
       (reason) => {
         this.outputChannel.appendLine(`can't stop client ${reason}`);
         return true;
@@ -262,8 +268,6 @@ export class LanguageClientsManager {
           error(_error: Error, _message: Message | undefined, _count: number | undefined): ErrorHandlerResult {
             return {
               action: ErrorAction.Continue,
-
-              message: `har ein error ${_error.message}`,
             };
           },
 
@@ -292,6 +296,9 @@ export class LanguageClientsManager {
       result.onDidChangeState((e) => {
         if (e.newState == State.Running) {
           closeHandlerAction = CloseAction.Restart;
+        } else if (e.newState == State.Stopped) {
+          if (this.clients.get(workspaceFolder.uri.toString()) !== result)
+            closeHandlerAction = CloseAction.DoNotRestart;
         }
 
         this._onClientStateChangedEmitter.fire({

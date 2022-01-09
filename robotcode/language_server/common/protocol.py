@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, List, Optional, Union, cast
+from typing import Any, List, Optional, Set, Union, cast
 
 from ...jsonrpc2.protocol import (
     JsonRPCErrorException,
@@ -82,6 +82,8 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     name: Optional[str] = None
     version: Optional[str] = None
+
+    file_extensions: Set[str] = set()
 
     def __init__(self, server: JsonRPCServer[Any]):
         super().__init__()

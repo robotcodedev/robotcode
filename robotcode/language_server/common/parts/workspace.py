@@ -159,6 +159,13 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         self._file_watchers: weakref.WeakSet[FileWatcherEntry] = weakref.WeakSet()
         self._file_watchers_lock = Lock()
 
+        self.parent.on_shutdown.add(self._on_shutdown)
+
+    @_logger.call
+    async def _on_shutdown(self, sender: Any) -> None:
+        for e in self._file_watchers.copy():
+            await self.remove_file_watcher_entry(e)
+
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         capabilities.workspace = ServerCapabilitiesWorkspace(
             workspace_folders=WorkspaceFoldersServerCapabilities(
@@ -373,6 +380,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
     ) -> FileWatcherEntry:
         return await self.add_file_watchers(callback, [(glob_pattern, kind)])
 
+    @_logger.call
     async def add_file_watchers(
         self,
         callback: Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
@@ -430,6 +438,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
 
             return entry
 
+    @_logger.call
     async def remove_file_watcher_entry(self, entry: FileWatcherEntry) -> None:
         async with self._file_watchers_lock:
             self._file_watchers.remove(entry)

@@ -57,7 +57,12 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
         await self._update_filewatchers()
 
     async def _update_filewatchers(self) -> None:
-        await self.parent.workspace.add_file_watcher(self._file_watcher, "**/*", WatchKind.CHANGE | WatchKind.DELETE)
+        if self.parent.file_extensions:
+            await self.parent.workspace.add_file_watcher(
+                self._file_watcher,
+                f"**/*.{{{','.join(self.parent.file_extensions)}}}",
+                WatchKind.CHANGE | WatchKind.DELETE,
+            )
 
     async def _file_watcher(self, sender: Any, changes: List[FileEvent]) -> None:
         to_change: Dict[str, FileEvent] = {}
