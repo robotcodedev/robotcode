@@ -100,7 +100,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             if extension_config.configurations:
                 config.configure = set(extension_config.configurations)
 
-            class MyRobocop(Robocop):  # type: ignore
+            class MyRobocop(Robocop):
                 async def run_check(self, ast_model, filename, source=None):  # type: ignore
                     await check_canceled()
 

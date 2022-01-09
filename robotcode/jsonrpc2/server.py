@@ -158,16 +158,25 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
     @_logger.call
     def start_pipe(self, pipe_name: Optional[str]) -> None:
+        from typing import TYPE_CHECKING
+
+        if TYPE_CHECKING:
+            from asyncio.streams import StreamReaderProtocol
+            from asyncio.windows_events import ProactorEventLoop
+
         if pipe_name is None:
             raise ValueError("pipe name missing.")
 
         self.mode = JsonRpcServerMode.PIPE
 
         try:
+            #  check if we are on windows and using the ProactorEventLoop, to use the undocumented
+            #  create_pipe_connection method
             if sys.platform == "win32" and hasattr(self.loop, "create_pipe_connection"):
-                # this is a proactor event loop and we can use the not documented method create_pipe_connection
                 self.loop.run_until_complete(
-                    self.loop.create_pipe_connection(self.create_protocol, pipe_name),  # type: ignore
+                    cast("ProactorEventLoop", self.loop).create_pipe_connection(
+                        lambda: cast("StreamReaderProtocol", self.create_protocol()), pipe_name
+                    ),
                 )
             else:
                 self.loop.run_until_complete(self.loop.create_unix_connection(self.create_protocol, pipe_name))

@@ -124,3 +124,15 @@ exclude_lines = [
   "raise NotImplementedError",
 ]
 fail_under = 40
+
+[tool.mypy]
+# MyPy config
+# File reference here - http://mypy.readthedocs.io/en/latest/config_file.html#config-file
+python_version = 3.8
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unused_configs = true
+strict = true
+disallow_subclassing_any = false
+ignore_missing_imports = true

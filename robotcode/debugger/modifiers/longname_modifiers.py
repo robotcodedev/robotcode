@@ -4,7 +4,7 @@ from robot.api import SuiteVisitor
 from robot.running import TestCase, TestSuite
 
 
-class ByLongName(SuiteVisitor):  # type: ignore
+class ByLongName(SuiteVisitor):
     def __init__(self, *included: str) -> None:
         super().__init__()
         self.included = included
@@ -26,7 +26,7 @@ class ByLongName(SuiteVisitor):  # type: ignore
         suite.suites = [s for s in suite.suites if s.test_count > 0]
 
 
-class ExcludedByLongName(SuiteVisitor):  # type: ignore
+class ExcludedByLongName(SuiteVisitor):
     def __init__(self, *included: str) -> None:
         super().__init__()
         self.included = included

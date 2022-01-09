@@ -575,7 +575,7 @@ class ImportsManager:
 
         ResourceBuilder(res).visit(model)
 
-        class MyUserLibrary(UserLibrary):  # type: ignore
+        class MyUserLibrary(UserLibrary):
             current_kw: Any = None
 
             def _log_creating_failed(self, handler: UserErrorHandler, error: BaseException) -> None:

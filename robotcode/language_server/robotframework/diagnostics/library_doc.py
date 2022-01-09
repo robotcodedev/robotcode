@@ -981,7 +981,7 @@ def get_library_doc(
     from robot.running.testlibraries import _get_lib_class
     from robot.utils import Importer
 
-    class Logger(AbstractLogger):  # type: ignore
+    class Logger(AbstractLogger):
         def __init__(self) -> None:
             super().__init__()
             self.messages: List[Tuple[str, str, bool]] = []
