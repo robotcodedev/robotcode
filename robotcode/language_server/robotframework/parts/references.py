@@ -421,9 +421,13 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 namespace, kw_doc, node, arguments[0], arguments[1:]
             ):
                 yield e
-        elif kw.is_run_keyword_with_condition() and len(arguments) > 1 and is_not_variable_token(arguments[1]):
+        elif (
+            kw.is_run_keyword_with_condition()
+            and len(arguments) > (cond_count := kw.run_keyword_condition_count())
+            and is_not_variable_token(arguments[1])
+        ):
             async for e in self.get_keyword_references_from_tokens(
-                namespace, kw_doc, node, arguments[1], arguments[2:], True
+                namespace, kw_doc, node, arguments[cond_count], arguments[cond_count + 1 :], True
             ):
                 yield e
         elif kw.is_run_keywords():

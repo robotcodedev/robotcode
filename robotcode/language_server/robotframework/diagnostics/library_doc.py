@@ -60,15 +60,27 @@ RUN_KEYWORD_NAMES = [
     "Run Keyword If Test Failed",
     "Run Keyword If Test Passed",
     "Run Keyword If Timeout Occurred",
+    "Run Keyword And Warn On Failure",
 ]
 
-RUN_KEYWORD_WITH_CONDITION_NAMES = ["Run Keyword And Expect Error", "Run Keyword And Return If", "Run Keyword Unless"]
+RUN_KEYWORD_WITH_CONDITION_NAMES: Dict[str, int] = {
+    "Run Keyword And Expect Error": 1,
+    "Run Keyword And Return If": 1,
+    "Run Keyword Unless": 1,
+    "Repeat Keyword": 1,
+    "Wait Until Keyword Succeeds": 2,
+}
 
 RUN_KEYWORD_IF_NAME = "Run Keyword If"
 
 RUN_KEYWORDS_NAME = "Run Keywords"
 
-ALL_RUN_KEYWORDS = [*RUN_KEYWORD_NAMES, *RUN_KEYWORD_WITH_CONDITION_NAMES, RUN_KEYWORDS_NAME, RUN_KEYWORD_IF_NAME]
+ALL_RUN_KEYWORDS = [
+    *RUN_KEYWORD_NAMES,
+    *RUN_KEYWORD_WITH_CONDITION_NAMES.keys(),
+    RUN_KEYWORDS_NAME,
+    RUN_KEYWORD_IF_NAME,
+]
 
 BUILTIN_LIBRARY_NAME = "BuiltIn"
 RESERVED_LIBRARY_NAME = "Reserved"
@@ -153,7 +165,7 @@ class KeywordMatcher:
         return f"{type(self).__name__}(name={repr(self.name)})"
 
 
-RUN_KEYWORD_WITH_CONDITION_MATCHERS = [KeywordMatcher(e) for e in RUN_KEYWORD_WITH_CONDITION_NAMES]
+RUN_KEYWORD_WITH_CONDITION_MATCHERS = [KeywordMatcher(e) for e in RUN_KEYWORD_WITH_CONDITION_NAMES.keys()]
 
 RUN_KEYWORD_IF_MATCHER = KeywordMatcher(RUN_KEYWORD_IF_NAME)
 
@@ -357,7 +369,14 @@ class KeywordDoc(Model):
         return self.libname == BUILTIN_LIBRARY_NAME and self.name in RUN_KEYWORD_NAMES
 
     def is_run_keyword_with_condition(self) -> bool:
-        return self.libname == BUILTIN_LIBRARY_NAME and self.name in RUN_KEYWORD_WITH_CONDITION_NAMES
+        return self.libname == BUILTIN_LIBRARY_NAME and self.name in RUN_KEYWORD_WITH_CONDITION_NAMES.keys()
+
+    def run_keyword_condition_count(self) -> int:
+        return (
+            RUN_KEYWORD_WITH_CONDITION_NAMES[self.name]
+            if self.libname == BUILTIN_LIBRARY_NAME and self.name in RUN_KEYWORD_WITH_CONDITION_NAMES.keys()
+            else 0
+        )
 
     def is_run_keyword_if(self) -> bool:
         return self.libname == BUILTIN_LIBRARY_NAME and self.name == RUN_KEYWORD_IF_NAME

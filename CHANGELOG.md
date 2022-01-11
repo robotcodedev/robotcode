@@ -5,8 +5,11 @@ All notable changes to the "robotcode" extension will be documented in this file
 ## [Unreleased]
 
 ### added
-- for socket connections now a free port is used
 
+- for socket connections now a free port is used
+- collect variables and arguments to document symbols
+- analysing, highlighting of "Wait Until Keyword Succeeds" and "Repeat Keyword"
+  
 ##  0.4.0
 
 ### added

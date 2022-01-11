@@ -29,14 +29,18 @@ class ModelHelperMixin:
             return result, argument_tokens[1:]
         elif (
             keyword_doc.is_run_keyword_with_condition()
-            and len(argument_tokens) > 1
+            and len(argument_tokens) > (cond_count := keyword_doc.run_keyword_condition_count())
             and is_not_variable_token(argument_tokens[1])
         ):
             result = await self.get_keyworddoc_and_token_from_position(
-                unescape(argument_tokens[1].value), argument_tokens[1], argument_tokens[2:], namespace, position
+                unescape(argument_tokens[cond_count].value),
+                argument_tokens[cond_count],
+                argument_tokens[cond_count + 1 :],
+                namespace,
+                position,
             )
 
-            return result, argument_tokens[2:]
+            return result, argument_tokens[cond_count + 1 :]
 
         elif keyword_doc.is_run_keywords():
             has_and = False

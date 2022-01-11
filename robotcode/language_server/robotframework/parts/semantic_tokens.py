@@ -384,11 +384,13 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 ):
                     yield b
             elif kw_doc.is_run_keyword_with_condition() and len(arguments) > 0:
-                yield arguments[0], node,
-                arguments = arguments[1:]
+                cond_count = kw_doc.run_keyword_condition_count()
+                for _ in range(cond_count):
+                    yield arguments[0], node,
+                    arguments = arguments[1:]
 
-                async for b in skip_non_data_tokens():
-                    yield b
+                    async for b in skip_non_data_tokens():
+                        yield b
 
                 if len(arguments) > 0:
                     token = arguments[0]

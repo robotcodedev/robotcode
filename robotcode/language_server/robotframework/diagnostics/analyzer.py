@@ -171,13 +171,16 @@ class Analyzer(AsyncVisitor):
             return argument_tokens[1:]
         elif (
             keyword_doc.is_run_keyword_with_condition()
-            and len(argument_tokens) > 1
-            and is_not_variable_token(argument_tokens[1])
+            and len(argument_tokens) > (cond_count := keyword_doc.run_keyword_condition_count())
+            and is_not_variable_token(argument_tokens[cond_count])
         ):
             await self._analyze_keyword_call(
-                unescape(argument_tokens[1].value), node, argument_tokens[1], argument_tokens[2:]
+                unescape(argument_tokens[cond_count].value),
+                node,
+                argument_tokens[cond_count],
+                argument_tokens[cond_count + 1 :],
             )
-            return argument_tokens[2:]
+            return argument_tokens[cond_count + 1 :]
         elif keyword_doc.is_run_keywords():
             has_and = False
             while argument_tokens:
