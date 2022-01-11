@@ -1633,6 +1633,7 @@ class _CodeLensParams(Model):
     text_document: TextDocumentIdentifier
 
 
+@dataclass(repr=False)
 class CodeLensParams(WorkDoneProgressParams, PartialResultParams, _CodeLensParams):
     pass
 

@@ -20,6 +20,7 @@ from ..common.lsp_types import (
 )
 from ..common.parts.document_symbols import symbol_information_label
 from ..common.protocol import LanguageServerProtocol
+from .parts.codelens import RobotCodeLensProtocolPart
 from .parts.completion import RobotCompletionProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
 from .parts.discovering import DiscoveringProtocolPart
@@ -88,6 +89,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     robot_discovering = ProtocolPartDescriptor(DiscoveringProtocolPart)
     robot_semantic_tokens = ProtocolPartDescriptor(RobotSemanticTokenProtocolPart)
     robot_references = ProtocolPartDescriptor(RobotReferencesProtocolPart)
+    robot_codelens = ProtocolPartDescriptor(RobotCodeLensProtocolPart)
     robot_workspace = ProtocolPartDescriptor(RobotWorkspaceProtocolPart)
 
     name = "RobotCode"

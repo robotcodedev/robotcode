@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
-from ....utils.async_tools import check_canceled, run_coroutine_in_thread
+from ....utils.async_tools import run_coroutine_in_thread
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import FoldingRange
@@ -47,7 +47,6 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
                 self.result: List[FoldingRange] = []
 
             async def visit(self, node: ast.AST) -> None:
-                await check_canceled()
                 await super().visit(node)
 
             @classmethod
