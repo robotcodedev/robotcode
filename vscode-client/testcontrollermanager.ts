@@ -97,16 +97,6 @@ export class TestControllerManager {
 
     this._disposables = vscode.Disposable.from(
       fileWatcher,
-      // this.languageClientsManager.pythonManager.pythonExtension?.exports.settings.onDidChangeExecutionDetails(
-      //   async (uri) => {
-      //     if (uri) this.refreshUri(uri);
-      //     else await this.refresh();
-      //   }
-      // ) ?? {
-      //   dispose() {
-      //     //empty
-      //   },
-      // },
       this.languageClientsManager.onClientStateChanged((event) => {
         switch (event.state) {
           case ClientState.Running: {
