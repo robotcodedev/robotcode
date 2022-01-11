@@ -207,15 +207,15 @@ class VariablesVisitor(AsyncVisitor):
 
         n = cast(Variable, node)
         name = n.get_token(Token.VARIABLE)
-        if n.name:
+        if name is not None:
             self._results.append(
                 VariableDefinition(
                     name=n.name,
-                    name_token=name if name is not None else None,
-                    line_no=node.lineno,
-                    col_offset=node.col_offset,
-                    end_line_no=node.end_lineno if node.end_lineno is not None else -1,
-                    end_col_offset=node.end_col_offset if node.end_col_offset is not None else -1,
+                    name_token=name,
+                    line_no=name.lineno,
+                    col_offset=name.col_offset,
+                    end_line_no=name.lineno,
+                    end_col_offset=name.end_col_offset,
                     source=self.source,
                 )
             )
@@ -226,11 +226,11 @@ class BlockVariableVisitor(AsyncVisitor):
         self.source = source
         self.position = position
 
-        self._results: List[VariableDefinition] = []
+        self._results: Dict[str, VariableDefinition] = {}
 
         await self.visit(model)
 
-        return self._results
+        return list(self._results.values())
 
     async def visit(self, node: ast.AST) -> None:
         if self.position is None or self.position >= range_from_node(node).start:
@@ -245,36 +245,41 @@ class BlockVariableVisitor(AsyncVisitor):
         name_token = cast(Token, n.get_token(RobotToken.KEYWORD_NAME))
 
         if name_token is not None and name_token.value:
-            for a in filter(
+            for variable_token in filter(
                 lambda e: e.type == RobotToken.VARIABLE,
                 tokenize_variables(name_token, identifiers="$", ignore_errors=True),
             ):
-                if a.value:
+                if variable_token.value:
                     searcher = VariableSearcher("$", ignore_errors=True)
-                    match = searcher.search(a.value)
+                    match = searcher.search(variable_token.value)
                     if match.base is None:
                         continue
                     name = f"{match.identifier}{{{match.base.split(':', 1)[0]}}}"
 
-                    self._results.append(
-                        ArgumentDefinition(
-                            name=name,
-                            name_token=a,
-                            line_no=a.lineno,
-                            col_offset=node.col_offset,
-                            end_line_no=node.end_lineno
-                            if node.end_lineno is not None
-                            else a.lineno
-                            if a.lineno is not None
-                            else -1,
-                            end_col_offset=node.end_col_offset
-                            if node.end_col_offset is not None
-                            else a.end_col_offset
-                            if name_token.end_col_offset is not None
-                            else -1,
-                            source=self.source,
-                        )
+                    self._results[name] = ArgumentDefinition(
+                        name=name,
+                        name_token=variable_token,
+                        line_no=variable_token.lineno,
+                        col_offset=variable_token.col_offset,
+                        end_line_no=variable_token.lineno,
+                        end_col_offset=variable_token.end_col_offset,
+                        source=self.source,
                     )
+
+    def get_variable_token(self, token: Token) -> Optional[Token]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+
+        return next(
+            (
+                v
+                for v in itertools.dropwhile(
+                    lambda t: t.type in RobotToken.NON_DATA_TOKENS,
+                    tokenize_variables(token, ignore_errors=True),
+                )
+                if v.type == RobotToken.VARIABLE
+            ),
+            None,
+        )
 
     async def visit_Arguments(self, node: ast.AST) -> None:  # noqa: N802
         from robot.errors import VariableError
@@ -283,42 +288,21 @@ class BlockVariableVisitor(AsyncVisitor):
 
         n = cast(Arguments, node)
         arguments = n.get_tokens(RobotToken.ARGUMENT)
-        for argument1 in (cast(RobotToken, e) for e in arguments):
+        for argument_token in (cast(RobotToken, e) for e in arguments):
             try:
-                argument = None
-                try:
-                    argument = next(
-                        (
-                            v
-                            for v in itertools.dropwhile(
-                                lambda t: t.type in RobotToken.NON_DATA_TOKENS, argument1.tokenize_variables()
-                            )
-                            if v.type == RobotToken.VARIABLE
-                        ),
-                        None,
-                    )
-                except VariableError:
-                    pass
+                argument = self.get_variable_token(argument_token)
+
                 if argument is not None:
-                    self._results.append(
-                        ArgumentDefinition(
-                            name=argument.value,
-                            name_token=argument,
-                            line_no=node.lineno,
-                            col_offset=node.col_offset,
-                            end_line_no=node.end_lineno
-                            if node.end_lineno is not None
-                            else argument.lineno
-                            if argument.lineno is not None
-                            else -1,
-                            end_col_offset=node.end_col_offset
-                            if node.end_col_offset is not None
-                            else argument.end_col_offset
-                            if argument.end_col_offset is not None
-                            else -1,
-                            source=self.source,
-                        )
+                    self._results[argument.value] = ArgumentDefinition(
+                        name=argument.value,
+                        name_token=argument,
+                        line_no=argument.lineno,
+                        col_offset=argument.col_offset,
+                        end_line_no=argument.lineno,
+                        end_col_offset=argument.end_col_offset,
+                        source=self.source,
                     )
+
             except VariableError:
                 pass
 
@@ -326,68 +310,45 @@ class BlockVariableVisitor(AsyncVisitor):
         from robot.errors import VariableError
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordCall
-        from robot.variables.search import contains_variable
 
         # TODO  analyse "Set Local/Global/Suite Variable"
 
-        try:
-            n = cast(KeywordCall, node)
-            assign_token = n.get_token(RobotToken.ASSIGN)
-            if assign_token is not None and assign_token.value and contains_variable(assign_token.value):
-                self._results.append(
-                    VariableDefinition(
-                        name=assign_token.value,
-                        name_token=assign_token,
-                        line_no=node.lineno,
-                        col_offset=node.col_offset,
-                        end_line_no=node.end_lineno
-                        if node.end_lineno is not None
-                        else assign_token.lineno
-                        if assign_token.lineno is not None
-                        else -1,
-                        end_col_offset=node.end_col_offset
-                        if node.end_col_offset is not None
-                        else assign_token.end_col_offset
-                        if assign_token.end_col_offset is not None
-                        else -1,
+        n = cast(KeywordCall, node)
+        for assign_token in n.get_tokens(RobotToken.ASSIGN):
+            variable_token = self.get_variable_token(assign_token)
+            try:
+                if variable_token is not None and variable_token.value not in self._results:
+                    self._results[variable_token.value] = VariableDefinition(
+                        name=variable_token.value,
+                        name_token=variable_token,
+                        line_no=variable_token.lineno,
+                        col_offset=variable_token.col_offset,
+                        end_line_no=variable_token.lineno,
+                        end_col_offset=variable_token.end_col_offset,
                         source=self.source,
                     )
-                )
-        except VariableError:
-            pass
+
+            except VariableError:
+                pass
 
     async def visit_ForHeader(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.errors import VariableError
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import ForHeader
-        from robot.variables.search import contains_variable
 
-        try:
-            n = cast(ForHeader, node)
-            variables = n.get_tokens(RobotToken.VARIABLE)
-            for variable in variables:
-                if variable is not None and variable.value and contains_variable(variable.value):
-                    self._results.append(
-                        VariableDefinition(
-                            name=variable.value,
-                            name_token=variable,
-                            line_no=node.lineno,
-                            col_offset=node.col_offset,
-                            end_line_no=node.end_lineno
-                            if node.end_lineno is not None
-                            else variable.lineno
-                            if variable.lineno is not None
-                            else -1,
-                            end_col_offset=node.end_col_offset
-                            if node.end_col_offset is not None
-                            else variable.end_col_offset
-                            if variable.end_col_offset is not None
-                            else -1,
-                            source=self.source,
-                        )
-                    )
-        except VariableError:
-            pass
+        n = cast(ForHeader, node)
+        variables = n.get_tokens(RobotToken.VARIABLE)
+        for variable in variables:
+            variable_token = self.get_variable_token(variable)
+            if variable_token is not None and variable_token.value and variable_token.value not in self._results:
+                self._results[variable_token.value] = VariableDefinition(
+                    name=variable_token.value,
+                    name_token=variable_token,
+                    line_no=node.lineno,
+                    col_offset=node.col_offset,
+                    end_line_no=variable_token.lineno,
+                    end_col_offset=variable_token.end_col_offset,
+                    source=self.source,
+                )
 
 
 class ImportVisitor(AsyncVisitor):
