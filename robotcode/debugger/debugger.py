@@ -632,11 +632,10 @@ class Debugger:
 
         entry = self.add_stackframe_entry(kwname, type, source, line_no)
 
-        if self.debug:
-            if entry.source:
-                self.process_start_state(entry.source, entry.line, entry.type, status)
+        if self.debug and entry.source:
+            self.process_start_state(entry.source, entry.line, entry.type, status)
 
-                self.wait_for_running()
+            self.wait_for_running()
 
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         if self.debug:
@@ -644,7 +643,10 @@ class Debugger:
 
             if status != "NOT RUN":
                 self.process_end_state(
-                    status, "failed_keyword", "Keyword failed.", f"Keyword failed: {self.last_fail_message}"
+                    status,
+                    "failed_keyword",
+                    "Keyword failed.",
+                    f"Keyword failed: {self.last_fail_message}" if self.last_fail_message else "Keyword failed.",
                 )
 
         if self.stack_frames:
