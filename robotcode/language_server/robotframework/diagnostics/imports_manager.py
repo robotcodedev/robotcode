@@ -42,11 +42,14 @@ from .library_doc import (
     KeywordDoc,
     KeywordStore,
     LibraryDoc,
+    VariablesDoc,
     complete_library_import,
     complete_resource_import,
+    complete_variables_import,
     find_file,
     find_library,
     get_library_doc,
+    get_variables_doc,
     is_embedded_keyword,
 )
 
@@ -56,7 +59,7 @@ REST_EXTENSIONS = (".rst", ".rest")
 
 LOAD_LIBRARY_TIME_OUT = 30
 FIND_FILE_TIME_OUT = 10
-COMPLETE_LIBRARY_IMPORT_TIME_OUT = COMPLETE_RESOURCE_IMPORT_TIME_OUT = 10
+COMPLETE_LIBRARY_IMPORT_TIME_OUT = COMPLETE_RESOURCE_IMPORT_TIME_OUT = COMPLETE_VARIABLES_IMPORT_TIME_OUT = 10
 
 
 @dataclass()
@@ -357,11 +360,88 @@ class _ResourcesEntry(_ImportEntry):
         if self._lib_doc is None:
             async with self._lock:
                 if self._lib_doc is None:
-                    self._lib_doc = await (
-                        await self.parent.parent_protocol.documents_cache.get_resource_namespace(
-                            await self._get_document()
-                        )
-                    ).get_library_doc()
+                    self._lib_doc = await (await self.get_namespace()).get_library_doc()
+        return self._lib_doc
+
+
+@dataclass()
+class _VariablesEntryKey:
+    name: str
+    args: Tuple[Any, ...]
+
+    def __hash__(self) -> int:
+        return hash((self.name, self.args))
+
+
+class _VariablesEntry(_ImportEntry):
+    def __init__(
+        self,
+        name: str,
+        args: Tuple[Any, ...],
+        parent: ImportsManager,
+        get_variables_doc_coroutine: Callable[[], Coroutine[Any, Any, VariablesDoc]],
+    ) -> None:
+        super().__init__(parent)
+        self.name = name
+        self.args = args
+        self._get_variables_doc_coroutine = get_variables_doc_coroutine
+        self._lib_doc: Optional[VariablesDoc] = None
+
+    def __repr__(self) -> str:
+        return (
+            f"{type(self).__qualname__}(name={repr(self.name)}, "
+            f"args={repr(self.args)}, file_watchers={repr(self.file_watchers)}, id={repr(id(self))}"
+        )
+
+    async def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
+        async with self._lock:
+            if self._lib_doc is None:
+                return None
+
+            for change in changes:
+                uri = Uri(change.uri)
+                if uri.scheme != "file":
+                    continue
+
+                path = uri.to_path()
+                if self._lib_doc.source and path.resolve().samefile(Path(self._lib_doc.source).resolve()):
+                    await self._invalidate()
+
+                    return change.type
+
+            return None
+
+    async def _update(self) -> None:
+        self._lib_doc = await self._get_variables_doc_coroutine()
+
+        if self._lib_doc is not None:
+            self.file_watchers.append(
+                await self.parent.parent_protocol.workspace.add_file_watchers(
+                    self.parent.did_change_watched_files,
+                    [str(self._lib_doc.source)],
+                )
+            )
+
+    async def _invalidate(self) -> None:
+        if self._lib_doc is None and len(self.file_watchers) == 0:
+            return
+
+        await self._remove_file_watcher()
+
+        self._lib_doc = None
+
+    async def is_valid(self) -> bool:
+        async with self._lock:
+            return self._lib_doc is not None
+
+    async def get_libdoc(self) -> VariablesDoc:
+        if self._lib_doc is None:
+            async with self._lock:
+                if self._lib_doc is None:
+                    await self._update()
+
+                assert self._lib_doc is not None
+
         return self._lib_doc
 
 
@@ -381,6 +461,8 @@ class ImportsManager:
         self._libaries: OrderedDict[_LibrariesEntryKey, _LibrariesEntry] = OrderedDict()
         self._resources_lock = Lock()
         self._resources: OrderedDict[_ResourcesEntryKey, _ResourcesEntry] = OrderedDict()
+        self._variables_lock = Lock()
+        self._variables: OrderedDict[_VariablesEntryKey, _VariablesEntry] = OrderedDict()
         self.file_watchers: List[FileWatcherEntry] = []
         self.parent_protocol.documents.did_change.add(self.resource_document_changed)
 
@@ -390,6 +472,10 @@ class ImportsManager:
 
     @async_tasking_event
     async def resources_changed(sender, resources: List[LibraryDoc]) -> None:  # NOSONAR
+        ...
+
+    @async_tasking_event
+    async def variables_changed(sender, variables: List[LibraryDoc]) -> None:  # NOSONAR
         ...
 
     @language_id("robotframework")
@@ -423,6 +509,7 @@ class ImportsManager:
     async def did_change_watched_files(self, sender: Any, changes: List[FileEvent]) -> None:
         libraries_changed: List[LibraryDoc] = []
         resource_changed: List[LibraryDoc] = []
+        variables_changed: List[LibraryDoc] = []
 
         lib_doc: Optional[LibraryDoc]
 
@@ -444,11 +531,23 @@ class ImportsManager:
                 if result is not None and lib_doc is not None:
                     resource_changed.append(await r_entry.get_libdoc())
 
+        async with self._variables_lock:
+            for v_entry in self._variables.values():
+                lib_doc = None
+                if await v_entry.is_valid():
+                    lib_doc = await v_entry.get_libdoc()
+                result = await v_entry.check_file_changed(changes)
+                if result is not None and lib_doc is not None:
+                    variables_changed.append(await v_entry.get_libdoc())
+
         if libraries_changed:
             await self.libraries_changed(self, libraries_changed)
 
         if resource_changed:
             await self.resources_changed(self, resource_changed)
+
+        if variables_changed:
+            await self.variables_changed(self, variables_changed)
 
     def __remove_library_entry(self, entry_key: _LibrariesEntryKey, entry: _LibrariesEntry) -> None:
         async def remove(k: _LibrariesEntryKey, e: _LibrariesEntry) -> None:
@@ -475,6 +574,23 @@ class ImportsManager:
                     e1 = self._resources.get(k, None)
                     if e1 == e:
                         self._resources.pop(k, None)
+
+                        await e.invalidate()
+
+        try:
+            if asyncio.get_running_loop():
+                create_sub_task(remove(entry_key, entry))
+        except RuntimeError:
+            pass
+
+    def __remove_variables_entry(self, entry_key: _VariablesEntryKey, entry: _VariablesEntry) -> None:
+        async def remove(k: _VariablesEntryKey, e: _VariablesEntry) -> None:
+            if len(e.references) == 0:
+                self._logger.debug(lambda: f"Remove Variables Entry {k}")
+                async with self._variables_lock:
+                    e1 = self._variables.get(k, None)
+                    if e1 == e:
+                        self._variables.pop(k, None)
 
                         await e.invalidate()
 
@@ -647,6 +763,51 @@ class ImportsManager:
         return libdoc
 
     @_logger.call
+    async def get_libdoc_for_variables_import(
+        self, name: str, args: Tuple[Any, ...], base_dir: str, sentinel: Any = None
+    ) -> VariablesDoc:
+        source = await self.find_file(name, base_dir, "Variables")
+
+        async def _get_libdoc() -> VariablesDoc:
+            self._logger.debug(lambda: f"Load variables {source}{repr(args)}")
+
+            result = await asyncio.wait_for(
+                asyncio.get_running_loop().run_in_executor(
+                    self.process_pool,
+                    get_variables_doc,
+                    name,
+                    args,
+                    str(self.folder.to_path()),
+                    base_dir,
+                    self.config.python_path if self.config is not None else None,
+                    self.config.env if self.config is not None else None,
+                    self.config.variables if self.config is not None else None,
+                ),
+                LOAD_LIBRARY_TIME_OUT,
+            )
+
+            if result.stdout:
+                self._logger.warning(
+                    lambda: f"stdout captured at loading variables {name}{repr(args)}:\n{result.stdout}"
+                )
+            return result
+
+        entry_key = _VariablesEntryKey(source, args)
+
+        if entry_key not in self._variables:
+            async with self._variables_lock:
+                if entry_key not in self._variables:
+                    self._variables[entry_key] = _VariablesEntry(name, args, self, _get_libdoc)
+
+        entry = self._variables[entry_key]
+
+        if sentinel is not None and sentinel not in entry.references:
+            entry.references.add(sentinel)
+            weakref.finalize(sentinel, self.__remove_variables_entry, entry_key, entry)
+
+        return await entry.get_libdoc()
+
+    @_logger.call
     async def find_file(self, name: str, base_dir: str, file_type: str = "Resource") -> str:
         return await asyncio.wait_for(
             asyncio.get_running_loop().run_in_executor(
@@ -744,6 +905,25 @@ class ImportsManager:
                 self.config.variables if self.config is not None else None,
             ),
             COMPLETE_RESOURCE_IMPORT_TIME_OUT,
+        )
+
+        return result
+
+    async def complete_variables_import(
+        self, name: Optional[str], base_dir: str = "."
+    ) -> Optional[List[CompleteResult]]:
+        result = await asyncio.wait_for(
+            asyncio.get_running_loop().run_in_executor(
+                self.process_pool,
+                complete_variables_import,
+                name,
+                str(self.folder.to_path()),
+                base_dir,
+                self.config.python_path if self.config is not None else None,
+                self.config.env if self.config is not None else None,
+                self.config.variables if self.config is not None else None,
+            ),
+            COMPLETE_VARIABLES_IMPORT_TIME_OUT,
         )
 
         return result

@@ -347,3 +347,42 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 except BaseException:
                     pass
         return None
+
+    async def definition_VariablesImport(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Union[Location, List[Location], List[LocationLink], None]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import VariablesImport
+
+        variables_node = cast(VariablesImport, node)
+        if variables_node.name:
+
+            name_token = cast(RobotToken, variables_node.get_token(RobotToken.NAME))
+            if name_token is None:
+                return None
+
+            if position.is_in_range(range_from_token(name_token)):
+                namespace = await self.parent.documents_cache.get_namespace(document)
+                if namespace is None:
+                    return None
+
+                try:
+                    libdoc = await namespace.imports_manager.get_libdoc_for_variables_import(
+                        variables_node.name, variables_node.args, str(document.uri.to_path().parent)
+                    )
+
+                    python_source = libdoc.source_or_origin
+                    if python_source is not None:
+                        return [
+                            LocationLink(
+                                origin_selection_range=range_from_token_or_node(variables_node, name_token),
+                                target_uri=str(Uri.from_path(python_source)),
+                                target_range=libdoc.range,
+                                target_selection_range=libdoc.range,
+                            )
+                        ]
+                except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                    raise
+                except BaseException:
+                    pass
+        return None

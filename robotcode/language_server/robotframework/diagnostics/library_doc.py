@@ -31,21 +31,7 @@ from typing import (
 from ....utils.path import path_is_relative_to
 from ...common.lsp_types import Position, Range
 from ..utils.markdownformatter import MarkDownFormatter
-
-__all__ = [
-    "KeywordDoc",
-    "LibraryDoc",
-    "KeywordStore",
-    "is_library_by_path",
-    "get_library_doc",
-    "find_file",
-    "is_embedded_keyword",
-    "complete_library_import",
-    "CompleteResultKind",
-    "KeywordArgumentKind",
-    "KeywordError",
-]
-
+from .entities import ImportedVariableDefinition, VariableDefinition
 
 RUN_KEYWORD_NAMES = [
     "Run Keyword",
@@ -93,7 +79,7 @@ ROBOT_FILE_EXTENSION = ".robot"
 RESOURCE_FILE_EXTENSION = ".resource"
 
 ALLOWED_RESOURCE_FILE_EXTENSIONS = [ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION]
-
+ALLOWED_VARIABLES_FILE_EXTENSIONS = [".py", ".yml", ".yaml"]
 DEFAULT_DOC_FORMAT = "ROBOT"
 
 
@@ -622,6 +608,14 @@ class LibraryDoc(Model):
             #    entries.append("Data types")
 
         return "\n".join(f"- `{entry}`" for entry in entries)
+
+
+@dataclass
+class VariablesDoc(LibraryDoc):
+    type: str = "VARIABLES"
+    scope: str = "GLOBAL"
+
+    variables: List[VariableDefinition] = field(default_factory=list)
 
 
 def is_library_by_path(path: str) -> bool:
@@ -1215,6 +1209,50 @@ def get_library_doc(
     return libdoc
 
 
+def get_variables_doc(
+    name: str,
+    args: Optional[Tuple[Any, ...]] = None,
+    working_dir: str = ".",
+    base_dir: str = ".",
+    pythonpath: Optional[List[str]] = None,
+    environment: Optional[Dict[str, str]] = None,
+    variables: Optional[Dict[str, Optional[Any]]] = None,
+) -> VariablesDoc:
+    from robot.variables.filesetter import PythonImporter, YamlImporter
+
+    source: Optional[str] = None
+    try:
+        source = find_file(name, working_dir, base_dir, pythonpath, environment, variables)
+
+        if source.lower().endswith((".yaml", ".yml")):
+            importer = YamlImporter()
+        else:
+            importer = PythonImporter()
+        vars: List[VariableDefinition] = [
+            ImportedVariableDefinition(1, 0, 1, 0, source, var[0], None)
+            for var in importer.import_variables(source, args)
+        ]
+
+        return VariablesDoc(
+            name,
+            source=source,
+            variables=vars,
+        )
+    except BaseException as e:
+        return VariablesDoc(
+            name=name,
+            source=source,
+            errors=[
+                error_from_exception(
+                    e,
+                    source,
+                    1 if source is not None else None,
+                )
+            ],
+            python_path=sys.path,
+        )
+
+
 def find_file(
     name: str,
     working_dir: str = ".",
@@ -1243,6 +1281,7 @@ class CompleteResultKind(Enum):
     MODULE = "Module"
     FILE = "File"
     RESOURCE = "Resource"
+    VARIABLES = "Variables"
     FOLDER = "Directory"
     KEYWORD = "Keyword"
 
@@ -1310,26 +1349,6 @@ def iter_modules_from_python_path(path: Optional[str] = None) -> Iterator[Comple
                             yield CompleteResult(f.name, CompleteResultKind.FILE)
 
 
-def iter_resources_from_python_path(path: Optional[str] = None) -> Iterator[CompleteResult]:
-    if path is None:
-        paths = sys.path
-    else:
-        paths = [str(Path(s, path)) for s in sys.path]
-
-    for e in [Path(p) for p in set(paths)]:
-        if e.is_dir():
-            for f in e.iterdir():
-                if not f.name.startswith(("_", ".")) and (
-                    f.is_file()
-                    and f.suffix in ALLOWED_RESOURCE_FILE_EXTENSIONS
-                    or f.is_dir()
-                    and f.suffix not in [".dist-info"]
-                ):
-                    yield CompleteResult(
-                        f.name, CompleteResultKind.RESOURCE if f.is_file() else CompleteResultKind.FOLDER
-                    )
-
-
 def complete_library_import(
     name: Optional[str],
     working_dir: str = ".",
@@ -1379,6 +1398,26 @@ def complete_library_import(
     return list(set(result))
 
 
+def iter_resources_from_python_path(path: Optional[str] = None) -> Iterator[CompleteResult]:
+    if path is None:
+        paths = sys.path
+    else:
+        paths = [str(Path(s, path)) for s in sys.path]
+
+    for e in [Path(p) for p in set(paths)]:
+        if e.is_dir():
+            for f in e.iterdir():
+                if not f.name.startswith(("_", ".")) and (
+                    f.is_file()
+                    and f.suffix in ALLOWED_RESOURCE_FILE_EXTENSIONS
+                    or f.is_dir()
+                    and f.suffix not in [".dist-info"]
+                ):
+                    yield CompleteResult(
+                        f.name, CompleteResultKind.RESOURCE if f.is_file() else CompleteResultKind.FOLDER
+                    )
+
+
 def complete_resource_import(
     name: Optional[str],
     working_dir: str = ".",
@@ -1416,6 +1455,68 @@ def complete_resource_import(
                 for f in path.iterdir()
                 if not f.name.startswith(("_", "."))
                 and (f.is_dir() or (f.is_file and f.suffix in ALLOWED_RESOURCE_FILE_EXTENSIONS))
+            ]
+
+    return list(set(result))
+
+
+def iter_variables_from_python_path(path: Optional[str] = None) -> Iterator[CompleteResult]:
+    if path is None:
+        paths = sys.path
+    else:
+        paths = [str(Path(s, path)) for s in sys.path]
+
+    for e in [Path(p) for p in set(paths)]:
+        if e.is_dir():
+            for f in e.iterdir():
+                if not f.name.startswith(("_", ".")) and (
+                    f.is_file()
+                    and f.suffix in ALLOWED_VARIABLES_FILE_EXTENSIONS
+                    or f.is_dir()
+                    and f.suffix not in [".dist-info"]
+                ):
+                    yield CompleteResult(
+                        f.name, CompleteResultKind.RESOURCE if f.is_file() else CompleteResultKind.FOLDER
+                    )
+
+
+def complete_variables_import(
+    name: Optional[str],
+    working_dir: str = ".",
+    base_dir: str = ".",
+    pythonpath: Optional[List[str]] = None,
+    environment: Optional[Dict[str, str]] = None,
+    variables: Optional[Dict[str, Optional[Any]]] = None,
+) -> Optional[List[CompleteResult]]:
+    from robot.variables import Variables
+
+    _update_env(working_dir, pythonpath, environment)
+
+    result: List[CompleteResult] = []
+
+    if name is not None:
+        robot_variables = Variables()
+        for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
+            robot_variables[k] = v
+
+        name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
+
+    if name is None or not name.startswith(".") and not name.startswith("/") and not name.startswith(os.sep):
+        result += [e for e in iter_variables_from_python_path(name)]
+
+    if name is None or name.startswith(".") or name.startswith("/") or name.startswith(os.sep):
+        name_path = Path(name if name else base_dir)
+        if name_path.is_absolute():
+            path = name_path.resolve()
+        else:
+            path = Path(base_dir, name if name else base_dir).resolve()
+
+        if path.exists() and (path.is_dir()):
+            result += [
+                CompleteResult(str(f.name), CompleteResultKind.VARIABLES if f.is_file() else CompleteResultKind.FOLDER)
+                for f in path.iterdir()
+                if not f.name.startswith(("_", "."))
+                and (f.is_dir() or (f.is_file and f.suffix in ALLOWED_VARIABLES_FILE_EXTENSIONS))
             ]
 
     return list(set(result))

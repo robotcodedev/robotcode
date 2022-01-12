@@ -284,6 +284,42 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     pass
         return None
 
+    async def hover_VariablesImport(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[Hover]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import VariablesImport
+
+        variables_node = cast(VariablesImport, node)
+        if variables_node.name:
+
+            name_token = cast(RobotToken, variables_node.get_token(RobotToken.NAME))
+            if name_token is None:
+                return None
+
+            if position.is_in_range(range_from_token(name_token)):
+                namespace = await self.parent.documents_cache.get_namespace(document)
+                if namespace is None:
+                    return None
+
+                try:
+                    libdoc = await namespace.imports_manager.get_libdoc_for_variables_import(
+                        variables_node.name, variables_node.args, str(document.uri.to_path().parent)
+                    )
+                    if not libdoc.errors:
+                        return Hover(
+                            contents=MarkupContent(
+                                kind=MarkupKind.MARKDOWN,
+                                value=libdoc.to_markdown(),
+                            ),
+                            range=range_from_token_or_node(variables_node, name_token),
+                        )
+                except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                    raise
+                except BaseException:
+                    pass
+        return None
+
     async def hover_KeywordName(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position
     ) -> Optional[Hover]:

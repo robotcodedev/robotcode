@@ -39,13 +39,14 @@ from ...common.lsp_types import (
 )
 from ...common.text_document import TextDocument
 from ..configuration import SyntaxConfig
+from ..diagnostics.entities import VariableDefinitionType
 from ..diagnostics.library_doc import (
     CompleteResultKind,
     KeywordArgumentKind,
     KeywordDoc,
     KeywordMatcher,
 )
-from ..diagnostics.namespace import Namespace, VariableDefinitionType
+from ..diagnostics.namespace import Namespace
 from ..utils.ast import (
     HasTokens,
     Token,
@@ -1327,6 +1328,107 @@ class CompletionCollector(ModelHelperMixin):
                 label=e.label,
                 kind=CompletionItemKind.FILE
                 if e.kind in [CompleteResultKind.RESOURCE]
+                else CompletionItemKind.FILE
+                if e.kind in [CompleteResultKind.FILE]
+                else CompletionItemKind.FOLDER
+                if e.kind in [CompleteResultKind.FOLDER]
+                else None,
+                detail=e.kind.value,
+                sort_text=f"030_{e}",
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
+                data={
+                    "document_uri": str(self.document.uri),
+                    "type": e.kind.name,
+                    "name": ((first_part) if first_part is not None else "") + e.label,
+                },
+            )
+            for e in list
+        ]
+
+    async def complete_VariablesImport(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+
+        from robot.parsing.lexer.tokens import Token
+        from robot.parsing.model.statements import VariablesImport
+
+        if self.document is None:
+            return []
+
+        import_node = cast(VariablesImport, node)
+        import_token = import_node.get_token(Token.VARIABLES)
+        if import_token is None:
+            return []
+        import_token_index = import_node.tokens.index(import_token)
+
+        if len(import_node.tokens) > import_token_index + 2:
+            name_token = import_node.tokens[import_token_index + 2]
+            if not position.is_in_range(r := range_from_token(name_token)) and r.end != position:
+                return None
+
+        elif len(import_node.tokens) > import_token_index + 1:
+            name_token = import_node.tokens[import_token_index + 1]
+            if position.is_in_range(r := range_from_token(name_token)) or r.end == position:
+                if whitespace_at_begin_of_token(name_token) > 1:
+
+                    ws_b = whitespace_from_begin_of_token(name_token)
+                    r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
+
+                    if not position.is_in_range(r) and r.end != position:
+                        return None
+                else:
+                    return None
+        else:
+            return None
+
+        pos = position.character - r.start.character
+        text_before_position = str(name_token.value)[:pos].lstrip()
+
+        if text_before_position != "" and all(c == "." for c in text_before_position):
+            return None
+
+        last_separator_index = (
+            len(text_before_position)
+            - next((i for i, c in enumerate(reversed(text_before_position)) if c in ["/", os.sep]), -1)
+            - 1
+        )
+
+        first_part = (
+            text_before_position[
+                : last_separator_index + (1 if text_before_position[last_separator_index] in ["/", os.sep] else 0)
+            ]
+            if last_separator_index < len(text_before_position)
+            else None
+        )
+
+        imports_manger = await self.parent.documents_cache.get_imports_manager(self.document)
+
+        try:
+            list = await imports_manger.complete_variables_import(
+                first_part if first_part else None, str(self.document.uri.to_path().parent)
+            )
+            if not list:
+                return None
+        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+            raise
+        except BaseException:
+            return None
+
+        if text_before_position == "":
+            r.start.character = position.character
+        else:
+            r.start.character += last_separator_index + 1 if last_separator_index < len(text_before_position) else 0
+
+        return [
+            CompletionItem(
+                label=e.label,
+                kind=CompletionItemKind.FILE
+                if e.kind in [CompleteResultKind.VARIABLES]
                 else CompletionItemKind.FILE
                 if e.kind in [CompleteResultKind.FILE]
                 else CompletionItemKind.FOLDER

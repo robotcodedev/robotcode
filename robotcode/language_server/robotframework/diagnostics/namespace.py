@@ -6,7 +6,6 @@ import itertools
 import weakref
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from enum import Enum
 from pathlib import Path
 from typing import (
     Any,
@@ -37,6 +36,16 @@ from ...common.lsp_types import (
 from ...common.text_document import TextDocument
 from ..utils.ast import Token, range_from_node, tokenize_variables
 from ..utils.async_ast import AsyncVisitor
+from .entities import (
+    ArgumentDefinition,
+    BuiltInVariableDefinition,
+    CommandLineVariableDefinition,
+    Import,
+    LibraryImport,
+    ResourceImport,
+    VariableDefinition,
+    VariablesImport,
+)
 from .imports_manager import ImportsManager
 from .library_doc import (
     BUILTIN_LIBRARY_NAME,
@@ -61,127 +70,6 @@ class DiagnosticsWarningError(DiagnosticsError):
 
 class ImportError(DiagnosticsError):
     pass
-
-
-@dataclass
-class SourceEntity:
-    line_no: int
-    col_offset: int
-    end_line_no: int
-    end_col_offset: int
-    source: str
-
-
-@dataclass
-class Import(SourceEntity):
-    name: Optional[str]
-    name_token: Optional[Token]
-
-    def range(self) -> Range:
-        return Range(
-            start=Position(
-                line=self.name_token.lineno - 1 if self.name_token is not None else self.line_no - 1,
-                character=self.name_token.col_offset if self.name_token is not None else self.col_offset,
-            ),
-            end=Position(
-                line=self.name_token.lineno - 1 if self.name_token is not None else self.end_line_no - 1,
-                character=self.name_token.end_col_offset if self.name_token is not None else self.end_col_offset,
-            ),
-        )
-
-
-@dataclass
-class LibraryImport(Import):
-    args: Tuple[str, ...] = ()
-    alias: Optional[str] = None
-
-    def __hash__(self) -> int:
-        return hash(
-            (
-                type(self),
-                self.name,
-                self.args,
-                self.alias,
-            )
-        )
-
-
-@dataclass
-class ResourceImport(Import):
-    def __hash__(self) -> int:
-        return hash(
-            (
-                type(self),
-                self.name,
-            )
-        )
-
-
-@dataclass
-class VariablesImport(Import):
-    args: Tuple[str, ...] = ()
-
-    def __hash__(self) -> int:
-        return hash(
-            (
-                type(self),
-                self.name,
-                self.args,
-            )
-        )
-
-
-class VariableDefinitionType(Enum):
-    VARIABLE = "variable"
-    ARGUMENT = "argument"
-    COMMAND_LINE_VARIABLE = "command line variable"
-    BUILTIN_VARIABLE = "builtin variable"
-
-
-@dataclass
-class VariableDefinition(SourceEntity):
-    name: Optional[str]
-    name_token: Optional[Token]
-    type: VariableDefinitionType = VariableDefinitionType.VARIABLE
-
-    def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type))
-
-    def range(self) -> Range:
-        return Range(
-            start=Position(
-                line=self.line_no - 1,
-                character=self.col_offset,
-            ),
-            end=Position(
-                line=self.end_line_no - 1,
-                character=self.end_col_offset,
-            ),
-        )
-
-
-@dataclass
-class BuiltInVariableDefinition(VariableDefinition):
-    type: VariableDefinitionType = VariableDefinitionType.BUILTIN_VARIABLE
-
-    def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type))
-
-
-@dataclass
-class CommandLineVariableDefinition(VariableDefinition):
-    type: VariableDefinitionType = VariableDefinitionType.COMMAND_LINE_VARIABLE
-
-    def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type))
-
-
-@dataclass
-class ArgumentDefinition(VariableDefinition):
-    type: VariableDefinitionType = VariableDefinitionType.ARGUMENT
-
-    def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type))
 
 
 class NameSpaceError(Exception):
@@ -454,7 +342,7 @@ class ResourceEntry(LibraryEntry):
 
 @dataclass
 class VariablesEntry(LibraryEntry):
-    pass
+    variables: List[VariableDefinition] = field(default_factory=lambda: [])
 
 
 class Namespace:
@@ -474,6 +362,7 @@ class Namespace:
         self.imports_manager = imports_manager
         self.imports_manager.libraries_changed.add(self.libraries_changed)
         self.imports_manager.resources_changed.add(self.resources_changed)
+        self.imports_manager.variables_changed.add(self.variables_changed)
         self.model = model
         self.source = source
         self.invalidated_callback = invalidated_callback
@@ -518,6 +407,15 @@ class Namespace:
     async def resources_changed(self, sender: Any, resources: List[LibraryDoc]) -> None:
         for p in resources:
             if any(e for e in self._resources.values() if e.library_doc.source == p.source):
+                if self.document is not None:
+                    self.document.set_data(Namespace.DataEntry, None)
+                await self.invalidate()
+                break
+
+    @_logger.call
+    async def variables_changed(self, sender: Any, variables: List[LibraryDoc]) -> None:
+        for p in variables:
+            if any(e for e in self._variables.values() if e.library_doc.source == p.source):
                 if self.document is not None:
                     self.document.set_data(Namespace.DataEntry, None)
                 await self.invalidate()
@@ -644,12 +542,6 @@ class Namespace:
 
                     self._initialized = True
 
-                    # await self.get_library_doc()
-                    # await self.get_libraries_matchers()
-                    # await self.get_resources_matchers()
-                    # await self.get_keywords()
-                    # await self.get_finder()
-
         return self._initialized
 
     @property
@@ -710,6 +602,7 @@ class Namespace:
             (e for e in await self.get_own_variables()),
             *(e.variables for e in self._resources.values()),
             (e for e in self.get_command_line_variables()),
+            *(e.variables for e in self._variables.values()),
             (e for e in self.get_builtin_variables()),
         ):
             if var.name is not None and VariableMatcher(var.name) not in result.keys():
@@ -790,7 +683,6 @@ class Namespace:
 
                     result.import_range = value.range()
                     result.import_source = value.source
-                    # TODO variables
                 else:
                     raise DiagnosticsError("Unknown import type.")
 
@@ -936,6 +828,36 @@ class Namespace:
                                     )
                                 )
 
+                elif isinstance(entry, VariablesEntry):
+                    allready_imported_variables = [
+                        e
+                        for e in self._variables.values()
+                        if e.library_doc.source == entry.library_doc.source
+                        and e.alias == entry.alias
+                        and e.args == entry.args
+                    ]
+                    if top_level and allready_imported_variables and allready_imported_variables[0].library_doc.source:
+                        self._diagnostics.append(
+                            Diagnostic(
+                                range=entry.import_range,
+                                message=f'Variables "{entry}" already imported.',
+                                severity=DiagnosticSeverity.INFORMATION,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                                related_information=[
+                                    DiagnosticRelatedInformation(
+                                        location=Location(
+                                            uri=str(Uri.from_path(allready_imported_variables[0].import_source)),
+                                            range=allready_imported_variables[0].import_range,
+                                        ),
+                                        message="",
+                                    )
+                                ],
+                            )
+                        )
+
+                    if (entry.alias or entry.name or entry.import_name) not in self._variables:
+                        self._variables[entry.alias or entry.name or entry.import_name] = entry
+
                 elif isinstance(entry, LibraryEntry):
                     if top_level and entry.name == BUILTIN_LIBRARY_NAME and entry.alias is None:
                         self._diagnostics.append(
@@ -986,9 +908,6 @@ class Namespace:
 
                     if (entry.alias or entry.name or entry.import_name) not in self._libraries:
                         self._libraries[entry.alias or entry.name or entry.import_name] = entry
-                elif isinstance(entry, VariablesEntry):
-                    # TODO
-                    pass
 
     async def _import_default_libraries(self) -> None:
         async def _import_lib(library: str) -> Optional[LibraryEntry]:
@@ -1025,11 +944,11 @@ class Namespace:
         is_default_library: bool = False,
         sentinel: Any = None,
     ) -> LibraryEntry:
-        library = await self.imports_manager.get_libdoc_for_library_import(
+        library_doc = await self.imports_manager.get_libdoc_for_library_import(
             name, args, base_dir=base_dir, sentinel=None if is_default_library else sentinel
         )
 
-        return LibraryEntry(name=library.name, import_name=name, library_doc=library, args=args, alias=alias)
+        return LibraryEntry(name=library_doc.name, import_name=name, library_doc=library_doc, args=args, alias=alias)
 
     @_logger.call
     async def _get_resource_entry(self, name: str, base_dir: str, sentinel: Any = None) -> ResourceEntry:
@@ -1051,13 +970,14 @@ class Namespace:
         args: Tuple[Any, ...],
         base_dir: str,
         sentinel: Any = None,
-    ) -> LibraryEntry:
-        # library = await self.imports_manager.get_variables_for_variables_import(
-        #     name, args, base_dir=base_dir, sentinel=sentinel
-        # )
+    ) -> VariablesEntry:
+        library_doc = await self.imports_manager.get_libdoc_for_variables_import(
+            name, args, base_dir=base_dir, sentinel=sentinel
+        )
 
-        # return VariablesEntry(name=library.name, import_name=name, library_doc=library, args=args)
-        raise NotImplementedError("_get_variables_entry")
+        return VariablesEntry(
+            name=library_doc.name, import_name=name, library_doc=library_doc, args=args, variables=library_doc.variables
+        )
 
     @_logger.call
     async def get_keywords(self) -> List[KeywordDoc]:
