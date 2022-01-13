@@ -79,6 +79,10 @@ class CallState(Enum):
     EXCEPTION = "exception"
 
 
+TRACE = logging.DEBUG - 6
+logging.addLevelName(TRACE, "TRACE")
+
+
 class LoggingDescriptor:
     __func: _FUNC_TYPE = None
     __name: Optional[str] = None
@@ -282,7 +286,7 @@ class LoggingDescriptor:
         return f"{self.__class__.__name__}(name={repr(logger.name)}, level={repr(level)})"
 
     _call_tracing_enabled = False
-    _call_tracing_default_level = logging.DEBUG
+    _call_tracing_default_level = TRACE
 
     @classmethod
     def set_call_tracing(cls, value: bool) -> None:

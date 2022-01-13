@@ -31,10 +31,6 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
 from .._version import __version__
 from ..utils.logging import LoggingDescriptor
 
-TRACE = logging.DEBUG - 6
-logging.addLevelName(TRACE, "TRACE")
-LoggingDescriptor.set_call_tracing_default_level(TRACE)
-
 _logger = LoggingDescriptor(name=__package__)
 
 if TYPE_CHECKING:

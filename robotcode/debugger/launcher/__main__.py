@@ -30,10 +30,6 @@ from ..._version import __version__
 from ...utils.debugpy import start_debugpy
 from ...utils.logging import LoggingDescriptor
 
-TRACE = logging.DEBUG - 6
-logging.addLevelName(TRACE, "TRACE")
-LoggingDescriptor.set_call_tracing_default_level(TRACE)
-
 _logger = LoggingDescriptor(name=__package__)
 
 
