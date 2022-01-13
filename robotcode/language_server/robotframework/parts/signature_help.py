@@ -27,7 +27,7 @@ from ...common.lsp_types import (
     SignatureInformation,
 )
 from ...common.text_document import TextDocument
-from ..diagnostics.library_doc import KeywordDoc
+from ..diagnostics.library_doc import KeywordDoc, LibraryDoc
 from ..utils.ast import (
     Token,
     get_node_at_position,
@@ -217,6 +217,10 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         # TODO from robot.utils.escaping import split_from_equals
 
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
+
         library_node = cast(LibraryImport, node)
 
         if (
@@ -225,20 +229,26 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         ):
             return None
 
-        with_name_token = next((v for v in library_node.tokens if v.value == "WITH NAME"), None)
-        if with_name_token is not None and position >= range_from_token(with_name_token).start:
-            return None
-
-        imports_manager = await self.parent.documents_cache.get_imports_manager(document)
+        lib_doc: Optional[LibraryDoc] = None
         try:
-            lib_doc = await imports_manager.get_libdoc_for_library_import(
-                str(library_node.name), library_node.args, str(document.uri.to_path().parent)
+            lib_doc = await namespace.get_imported_library_libdoc(
+                library_node.name, library_node.args, library_node.alias
             )
+
+            if lib_doc is None or lib_doc.errors:
+                lib_doc = await namespace.imports_manager.get_libdoc_for_library_import(
+                    str(library_node.name), (), str(document.uri.to_path().parent)
+                )
+
             if lib_doc is None:
                 return None
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException:
+            return None
+
+        with_name_token = next((v for v in library_node.tokens if v.value == "WITH NAME"), None)
+        if with_name_token is not None and position >= range_from_token(with_name_token).start:
             return None
 
         tokens_at_position = tokens_at_position = get_tokens_at_position(library_node, position)

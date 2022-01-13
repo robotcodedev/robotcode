@@ -379,6 +379,7 @@ class Namespace:
         self._library_doc: Optional[LibraryDoc] = None
         self._library_doc_lock = Lock()
         self._imports: Optional[List[Import]] = None
+        self._import_entries: OrderedDict[Import, LibraryEntry] = OrderedDict()
         self._own_variables: Optional[List[VariableDefinition]] = None
         self._own_variables_lock = Lock()
         self._diagnostics: List[Diagnostic] = []
@@ -431,6 +432,7 @@ class Namespace:
             self._resources_matchers = None
             self._variables = OrderedDict()
             self._imports = None
+            self._import_entries = OrderedDict()
             self._own_variables = None
             self._keywords = None
             self._library_doc = None
@@ -489,6 +491,7 @@ class Namespace:
         resources: OrderedDict[str, ResourceEntry] = OrderedDict()
         variables: OrderedDict[str, VariablesEntry] = OrderedDict()
         diagnostics: List[Diagnostic] = []
+        import_entries: OrderedDict[Import, LibraryEntry] = OrderedDict()
 
     @_logger.call
     async def ensure_initialized(self) -> bool:
@@ -525,6 +528,7 @@ class Namespace:
                         self._resources = data_entry.resources.copy()
                         self._variables = data_entry.variables.copy()
                         self._diagnostics = data_entry.diagnostics.copy()
+                        self._import_entries = data_entry.import_entries.copy()
                     else:
                         await self._import_default_libraries()
                         await self._import_imports(imports, str(Path(self.source).parent), top_level=True)
@@ -537,6 +541,7 @@ class Namespace:
                                     self._resources.copy(),
                                     self._variables.copy(),
                                     self._diagnostics.copy(),
+                                    self._import_entries.copy(),
                                 ),
                             )
 
@@ -631,6 +636,8 @@ class Namespace:
                     result.import_range = value.range()
                     result.import_source = value.source
 
+                    self._import_entries[value] = result
+
                     if (
                         top_level
                         and result.library_doc.errors is None
@@ -657,6 +664,8 @@ class Namespace:
                     result.import_range = value.range()
                     result.import_source = value.source
 
+                    self._import_entries[value] = result
+
                     if top_level and (
                         not result.library_doc.errors
                         and top_level
@@ -674,7 +683,6 @@ class Namespace:
                         )
 
                 elif isinstance(value, VariablesImport):
-                    # TODO: variables
 
                     if value.name is None:
                         raise NameSpaceError("Variables setting requires value.")
@@ -683,6 +691,8 @@ class Namespace:
 
                     result.import_range = value.range()
                     result.import_source = value.source
+
+                    self._import_entries[value] = result
                 else:
                     raise DiagnosticsError("Unknown import type.")
 
@@ -951,6 +961,21 @@ class Namespace:
         return LibraryEntry(name=library_doc.name, import_name=name, library_doc=library_doc, args=args, alias=alias)
 
     @_logger.call
+    async def get_imported_library_libdoc(
+        self, name: str, args: Tuple[str, ...] = (), alias: Optional[str] = None
+    ) -> Optional[LibraryDoc]:
+        await self.ensure_initialized()
+
+        return next(
+            (
+                v.library_doc
+                for e, v in self._import_entries.items()
+                if isinstance(e, LibraryImport) and v.import_name == name and v.args == args and v.alias == alias
+            ),
+            None,
+        )
+
+    @_logger.call
     async def _get_resource_entry(self, name: str, base_dir: str, sentinel: Any = None) -> ResourceEntry:
         namespace = await self.imports_manager.get_namespace_for_resource_import(name, base_dir, sentinel=sentinel)
         library_doc = await self.imports_manager.get_libdoc_for_resource_import(name, base_dir, sentinel=sentinel)
@@ -961,6 +986,19 @@ class Namespace:
             library_doc=library_doc,
             imports=await namespace.get_imports(),
             variables=await namespace.get_own_variables(),
+        )
+
+    @_logger.call
+    async def get_imported_resource_libdoc(self, name: str) -> Optional[LibraryDoc]:
+        await self.ensure_initialized()
+
+        return next(
+            (
+                v.library_doc
+                for e, v in self._import_entries.items()
+                if isinstance(e, ResourceImport) and v.import_name == name
+            ),
+            None,
         )
 
     @_logger.call
@@ -977,6 +1015,19 @@ class Namespace:
 
         return VariablesEntry(
             name=library_doc.name, import_name=name, library_doc=library_doc, args=args, variables=library_doc.variables
+        )
+
+    @_logger.call
+    async def get_imported_variables_libdoc(self, name: str, args: Tuple[str, ...] = ()) -> Optional[LibraryDoc]:
+        await self.ensure_initialized()
+
+        return next(
+            (
+                v.library_doc
+                for e, v in self._import_entries.items()
+                if isinstance(e, VariablesImport) and v.import_name == name and v.args == args
+            ),
+            None,
         )
 
     @_logger.call

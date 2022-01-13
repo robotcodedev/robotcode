@@ -231,17 +231,25 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     return None
 
                 try:
-                    libdoc = await namespace.imports_manager.get_libdoc_for_library_import(
-                        library_node.name, library_node.args, str(document.uri.to_path().parent)
+                    libdoc = await namespace.get_imported_library_libdoc(
+                        library_node.name, library_node.args, library_node.alias
                     )
-                    if not libdoc.errors:
-                        return Hover(
-                            contents=MarkupContent(
-                                kind=MarkupKind.MARKDOWN,
-                                value=libdoc.to_markdown(),
-                            ),
-                            range=range_from_token_or_node(library_node, name_token),
+
+                    if libdoc is None or libdoc.errors:
+                        libdoc = await namespace.imports_manager.get_libdoc_for_library_import(
+                            str(library_node.name), (), str(document.uri.to_path().parent)
                         )
+
+                    if libdoc is None or libdoc.errors:
+                        return None
+
+                    return Hover(
+                        contents=MarkupContent(
+                            kind=MarkupKind.MARKDOWN,
+                            value=libdoc.to_markdown(),
+                        ),
+                        range=range_from_token_or_node(library_node, name_token),
+                    )
                 except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                     raise
                 except BaseException:
@@ -267,17 +275,23 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     return None
 
                 try:
-                    libdoc = await namespace.imports_manager.get_libdoc_for_resource_import(
-                        resource_node.name, str(document.uri.to_path().parent)
-                    )
-                    if not libdoc.errors:
-                        return Hover(
-                            contents=MarkupContent(
-                                kind=MarkupKind.MARKDOWN,
-                                value=libdoc.to_markdown(),
-                            ),
-                            range=range_from_token_or_node(resource_node, name_token),
+                    libdoc = await namespace.get_imported_resource_libdoc(resource_node.name)
+
+                    if libdoc is None or libdoc.errors:
+                        libdoc = await namespace.imports_manager.get_libdoc_for_resource_import(
+                            str(resource_node.name), str(document.uri.to_path().parent)
                         )
+
+                    if libdoc is None or libdoc.errors:
+                        return None
+
+                    return Hover(
+                        contents=MarkupContent(
+                            kind=MarkupKind.MARKDOWN,
+                            value=libdoc.to_markdown(),
+                        ),
+                        range=range_from_token_or_node(resource_node, name_token),
+                    )
                 except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                     raise
                 except BaseException:
@@ -303,17 +317,23 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     return None
 
                 try:
-                    libdoc = await namespace.imports_manager.get_libdoc_for_variables_import(
-                        variables_node.name, variables_node.args, str(document.uri.to_path().parent)
-                    )
-                    if not libdoc.errors:
-                        return Hover(
-                            contents=MarkupContent(
-                                kind=MarkupKind.MARKDOWN,
-                                value=libdoc.to_markdown(),
-                            ),
-                            range=range_from_token_or_node(variables_node, name_token),
+                    libdoc = await namespace.get_imported_variables_libdoc(variables_node.name, variables_node.args)
+                    
+                    if libdoc is None or libdoc.errors:
+                        libdoc = await namespace.imports_manager.get_libdoc_for_variables_import(
+                            str(variables_node.name), (), str(document.uri.to_path().parent)
                         )
+
+                    if libdoc is None or libdoc.errors:
+                        return None
+
+                    return Hover(
+                        contents=MarkupContent(
+                            kind=MarkupKind.MARKDOWN,
+                            value=libdoc.to_markdown(),
+                        ),
+                        range=range_from_token_or_node(variables_node, name_token),
+                    )
                 except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                     raise
                 except BaseException:

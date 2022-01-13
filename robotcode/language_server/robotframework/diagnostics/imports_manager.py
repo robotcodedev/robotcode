@@ -809,7 +809,7 @@ class ImportsManager:
 
     @_logger.call
     async def find_file(self, name: str, base_dir: str, file_type: str = "Resource") -> str:
-        return await asyncio.wait_for(
+        result = await asyncio.wait_for(
             asyncio.get_running_loop().run_in_executor(
                 self.process_pool,
                 find_file,
@@ -823,6 +823,8 @@ class ImportsManager:
             ),
             FIND_FILE_TIME_OUT,
         )
+
+        return result
 
     @_logger.call
     async def _get_entry_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> _ResourcesEntry:
