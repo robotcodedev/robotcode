@@ -60,6 +60,10 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         "robotcode.languageServer.mode",
         "robotcode.languageServer.tcpPort",
         "robotcode.languageServer.args",
+        "robotcode.robot.args",
+        "robotcode.robot.pythonPath",
+        "robotcode.robot.env",
+        "robotcode.robot.variables",
       ]) {
         if (event.affectsConfiguration(s)) {
           await languageClientManger.refresh();
