@@ -107,6 +107,7 @@ class ListenerV2:
 
         if message["level"] == "FAIL":
             self.last_fail_message = message["message"]
+            Debugger.instance().last_fail_message = self.last_fail_message
             return
 
         source = current_frame.source if current_frame else None

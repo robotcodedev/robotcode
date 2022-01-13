@@ -840,7 +840,7 @@ class Debugger:
         if evaluate_context is None:
             evaluate_context = EXECUTION_CONTEXTS.current
 
-        if context in [EvaluateArgumentContext.HOVER]:
+        if EvaluateArgumentContext(context) in [EvaluateArgumentContext.HOVER]:
             expression = f"${expression}"
 
         result: Optional[str] = None
@@ -860,7 +860,7 @@ class Debugger:
                 result = evaluate_expression(vars.replace_string(expression), vars.store)
 
         except BaseException as e:
-            if context in [EvaluateArgumentContext.HOVER]:
+            if EvaluateArgumentContext(context) in [EvaluateArgumentContext.HOVER]:
                 return EvaluateResult("")
             else:
                 result = str(e)

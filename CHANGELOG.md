@@ -8,6 +8,7 @@ All notable changes to the "robotcode" extension will be documented in this file
   - hover
   - goto
   - static and dynamic variables
+- correct debugger hover on variables and last fail message
 
 
 ##  0.4.1
