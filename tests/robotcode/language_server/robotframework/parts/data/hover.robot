@@ -24,7 +24,7 @@ first
 #               ^^^^^^^^^^^^^^ Keyword with namespace: re.match(r'.*Log Dictionary.*', value)
 # TODO  ^^^^^^^^^^^ namespace before keyword: re.match(r'.*Collections.*', value)
     FOR    ${key}    ${value}    IN    &{A DICT}
-#          ^^^^^^ FOR loop variable declaration: value == '(variable) ${key}'
+#          ^^^^^^ FOR loop variable declaration: value == '(local variable) ${key}'
         Log    ${key}=${value}
 #       ^^^ Keyword in FOR loop: re.match(r'.*Log.*', value)
     END
