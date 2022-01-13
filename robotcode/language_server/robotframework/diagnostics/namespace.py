@@ -39,9 +39,9 @@ from ..utils.async_ast import AsyncVisitor
 from .entities import (
     ArgumentDefinition,
     BuiltInVariableDefinition,
-    CommandLineVariableDefinition,
     Import,
     LibraryImport,
+    LocalVariableDefinition,
     ResourceImport,
     VariableDefinition,
     VariablesImport,
@@ -206,7 +206,7 @@ class BlockVariableVisitor(AsyncVisitor):
             variable_token = self.get_variable_token(assign_token)
             try:
                 if variable_token is not None and variable_token.value not in self._results:
-                    self._results[variable_token.value] = VariableDefinition(
+                    self._results[variable_token.value] = LocalVariableDefinition(
                         name=variable_token.value,
                         name_token=variable_token,
                         line_no=variable_token.lineno,
@@ -228,7 +228,7 @@ class BlockVariableVisitor(AsyncVisitor):
         for variable in variables:
             variable_token = self.get_variable_token(variable)
             if variable_token is not None and variable_token.value and variable_token.value not in self._results:
-                self._results[variable_token.value] = VariableDefinition(
+                self._results[variable_token.value] = LocalVariableDefinition(
                     name=variable_token.value,
                     name_token=variable_token,
                     line_no=node.lineno,
@@ -580,13 +580,7 @@ class Namespace:
 
     @_logger.call
     def get_command_line_variables(self) -> List[VariableDefinition]:
-        if self.imports_manager.config is None:
-            return []
-
-        return [
-            CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None)
-            for k in self.imports_manager.config.variables.keys()
-        ]
+        return self.imports_manager.get_command_line_variables()
 
     @_logger.call
     async def get_variables(
@@ -619,7 +613,7 @@ class Namespace:
     async def find_variable(
         self, name: str, nodes: Optional[List[ast.AST]], position: Optional[Position] = None
     ) -> Optional[VariableDefinition]:
-        return (await self.get_variables(nodes, position)).get(VariableMatcher(name), None)
+        return (await self.get_variables(nodes, position)).get(VariableMatcher(name, True), None)
 
     @_logger.call
     async def _import_imports(self, imports: Iterable[Import], base_dir: str, *, top_level: bool = False) -> None:

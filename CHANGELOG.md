@@ -9,6 +9,7 @@ All notable changes to the "robotcode" extension will be documented in this file
   - goto
   - static and dynamic variables
 - correct debugger hover on variables and last fail message
+- implement find references for variables
 
 
 ##  0.4.1

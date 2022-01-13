@@ -338,10 +338,12 @@ class CompletionCollector(ModelHelperMixin):
         ]
 
     _VARIABLE_COMPLETION_SORT_TEXT_PREFIX = {
-        VariableDefinitionType.VARIABLE: "035",
+        VariableDefinitionType.LOCAL_VARIABLE: "033",
         VariableDefinitionType.ARGUMENT: "034",
-        VariableDefinitionType.COMMAND_LINE_VARIABLE: "036",
-        VariableDefinitionType.BUILTIN_VARIABLE: "037",
+        VariableDefinitionType.VARIABLE: "035",
+        VariableDefinitionType.IMPORTED_VARIABLE: "036",
+        VariableDefinitionType.COMMAND_LINE_VARIABLE: "037",
+        VariableDefinitionType.BUILTIN_VARIABLE: "038",
     }
 
     async def create_variables_completion_items(
@@ -532,7 +534,6 @@ class CompletionCollector(ModelHelperMixin):
                 detail="Library",
                 sort_text=f"030_{k}",
                 deprecated=v.library_doc.is_deprecated,
-                # documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=v.library_doc.to_markdown()),
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
                 data={
@@ -550,7 +551,6 @@ class CompletionCollector(ModelHelperMixin):
                 detail="Resource",
                 deprecated=v.library_doc.is_deprecated,
                 sort_text=f"030_{k}",
-                # documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=v.library_doc.to_markdown()),
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
                 data={

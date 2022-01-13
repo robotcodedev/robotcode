@@ -165,7 +165,15 @@ class InvalidVariableError(Exception):
 
 
 class VariableMatcher:
-    def __init__(self, name: str) -> None:
+    _match_extended = re.compile(
+        r"""
+        (.+?)          # base name (group 1)
+        ([^\s\w].+)    # extended part (group 2)
+        """,
+        re.UNICODE | re.VERBOSE,
+    )
+
+    def __init__(self, name: str, extended: bool = False) -> None:
         from robot.utils.normalizing import normalize
         from robot.variables.search import VariableSearcher
 
@@ -176,7 +184,13 @@ class VariableMatcher:
             raise InvalidVariableError(f"Invalid variable '{name}'")
 
         self.base = match.base
-        self.normalized_name = str(normalize(match.base, "_"))
+
+        if extended:
+            ext_match = self._match_extended.match(self.name[2:-1])
+            if ext_match is not None:
+                self.base, _ = ext_match.groups()
+
+        self.normalized_name = str(normalize(self.base, "_"))
 
     def __eq__(self, o: object) -> bool:
         from robot.utils.normalizing import normalize
@@ -1224,21 +1238,18 @@ def get_variables_doc(
     stem = Path(name).stem
     try:
         source = find_file(name, working_dir, base_dir, pythonpath, environment, variables)
+        with _std_capture() as std_capturer:
 
-        if source.lower().endswith((".yaml", ".yml")):
-            importer = YamlImporter()
-        else:
-            importer = PythonImporter()
-        vars: List[VariableDefinition] = [
-            ImportedVariableDefinition(1, 0, 1, 0, source, var[0], None)
-            for var in importer.import_variables(source, args)
-        ]
+            if source.lower().endswith((".yaml", ".yml")):
+                importer = YamlImporter()
+            else:
+                importer = PythonImporter()
+            vars: List[VariableDefinition] = [
+                ImportedVariableDefinition(1, 0, 1, 0, source, var[0], None)
+                for var in importer.import_variables(source, args)
+            ]
 
-        return VariablesDoc(
-            name=stem,
-            source=source,
-            variables=vars,
-        )
+            return VariablesDoc(name=stem, source=source, variables=vars, stdout=std_capturer.getvalue())
     except BaseException as e:
         return VariablesDoc(
             name=stem,

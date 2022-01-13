@@ -29,6 +29,7 @@ from ...common.parts.workspace import FileWatcherEntry, Workspace
 from ...common.text_document import TextDocument
 from ..configuration import RobotConfig
 from ..utils.async_ast import walk
+from .entities import CommandLineVariableDefinition, VariableDefinition
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -465,6 +466,20 @@ class ImportsManager:
         self._variables: OrderedDict[_VariablesEntryKey, _VariablesEntry] = OrderedDict()
         self.file_watchers: List[FileWatcherEntry] = []
         self.parent_protocol.documents.did_change.add(self.resource_document_changed)
+        self._command_line_variables: Optional[List[VariableDefinition]] = None
+
+    @_logger.call
+    def get_command_line_variables(self) -> List[VariableDefinition]:
+        if self._command_line_variables is None:
+            if self.config is None:
+                self._command_line_variables = []
+            else:
+                self._command_line_variables = [
+                    CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None)
+                    for k in self.config.variables.keys()
+                ]
+
+        return self._command_line_variables
 
     @async_tasking_event
     async def libraries_changed(sender, libraries: List[LibraryDoc]) -> None:  # NOSONAR

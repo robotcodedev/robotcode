@@ -76,6 +76,7 @@ class VariablesImport(Import):
 
 class VariableDefinitionType(Enum):
     VARIABLE = "variable"
+    LOCAL_VARIABLE = "local variable"
     ARGUMENT = "argument"
     COMMAND_LINE_VARIABLE = "command line variable"
     BUILTIN_VARIABLE = "builtin variable"
@@ -102,6 +103,14 @@ class VariableDefinition(SourceEntity):
                 character=self.end_col_offset,
             ),
         )
+
+
+@dataclass
+class LocalVariableDefinition(VariableDefinition):
+    type: VariableDefinitionType = VariableDefinitionType.LOCAL_VARIABLE
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.name, self.type))
 
 
 @dataclass

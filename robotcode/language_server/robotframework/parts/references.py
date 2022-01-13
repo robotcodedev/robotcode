@@ -17,7 +17,6 @@ from typing import (
 )
 
 from ....utils.async_tools import (
-    CancelationToken,
     check_canceled,
     create_sub_task,
     run_coroutine_in_thread,
@@ -29,6 +28,11 @@ from ...common.language import language_id
 from ...common.lsp_types import Location, Position, ReferenceContext
 from ...common.text_document import TextDocument
 from ..configuration import WorkspaceConfig
+from ..diagnostics.entities import (
+    ArgumentDefinition,
+    LocalVariableDefinition,
+    VariableDefinition,
+)
 from ..diagnostics.library_doc import (
     ALL_RUN_KEYWORDS_MATCHERS,
     RESOURCE_FILE_EXTENSION,
@@ -136,12 +140,19 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
                     if position.is_in_range(range):
                         variable = await namespace.find_variable(sub_token.value, nodes, position)
-                        if variable is not None and variable.source:
+                        if variable is not None:
                             return [
-                                Location(
-                                    uri=str(Uri.from_path(variable.source)),
-                                    range=variable.range(),
-                                )
+                                *(
+                                    [
+                                        Location(
+                                            uri=str(Uri.from_path(variable.source)),
+                                            range=variable.range(),
+                                        ),
+                                    ]
+                                    if context.include_declaration and variable.source
+                                    else []
+                                ),
+                                *await self._find_variable_references(document, variable),
                             ]
             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                 raise
@@ -298,11 +309,10 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         kw_doc: KeywordDoc,
         lib_doc: Optional[LibraryDoc],
         file: Path,
-        cancel_token: CancelationToken,
     ) -> List[Location]:
 
         doc = await self.parent.robot_workspace.get_or_open_document(file, "robotframework")
-        namespace = await self.parent.documents_cache.get_namespace(doc, cancelation_token=cancel_token)
+        namespace = await self.parent.documents_cache.get_namespace(doc)
 
         if (
             lib_doc is not None
@@ -313,11 +323,9 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         ):
             return []
 
-        return await self._find_keyword_references_in_namespace(namespace, kw_doc, cancel_token)
+        return await self._find_keyword_references_in_namespace(namespace, kw_doc)
 
-    async def _find_keyword_references_in_namespace(
-        self, namespace: Namespace, kw_doc: KeywordDoc, cancel_token: CancelationToken
-    ) -> List[Location]:
+    async def _find_keyword_references_in_namespace(self, namespace: Namespace, kw_doc: KeywordDoc) -> List[Location]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import (
             Fixture,
@@ -503,8 +511,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             or await namespace.get_library_doc()
         )
 
-        cancel_token = CancelationToken()
-
         futures: List[Awaitable[List[Location]]] = []
         result: List[Location] = []
 
@@ -516,7 +522,77 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             ignore_patterns=config.exclude_patterns or [],  # type: ignore
             absolute=True,
         ):
-            futures.append(create_sub_task(self._find_keyword_references_in_file(kw_doc, lib_doc, f, cancel_token)))
+            futures.append(create_sub_task(self._find_keyword_references_in_file(kw_doc, lib_doc, f)))
+
+        for e in await asyncio.gather(*futures, return_exceptions=True):
+            if isinstance(e, BaseException):
+                self._logger.exception(e)
+                continue
+            result.extend(e)
+
+        return result
+
+    @_logger.call
+    async def _find_variable_references_in_file(
+        self,
+        variable: VariableDefinition,
+        file: Path,
+    ) -> List[Location]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.blocks import Block, Keyword, Section, TestCase
+
+        doc = await self.parent.robot_workspace.get_or_open_document(file, "robotframework")
+        namespace = await self.parent.documents_cache.get_namespace(doc)
+        model = await self.parent.documents_cache.get_model(doc)
+
+        result: List[Location] = []
+        current_block: Optional[Block] = None
+
+        async for node in iter_nodes(model):
+            if isinstance(node, Section):
+                current_block = None
+            elif isinstance(node, (TestCase, Keyword)):
+                current_block = node
+
+            if isinstance(node, HasTokens):
+                for token in node.tokens:
+                    for sub_token in tokenize_variables(token):
+                        if sub_token.type == RobotToken.VARIABLE:
+                            found_variable = await namespace.find_variable(
+                                sub_token.value,
+                                [*([current_block] if current_block is not None else []), node],
+                                range_from_token(token).start,
+                            )
+
+                            if found_variable == variable:
+                                result.append(Location(str(doc.uri), range_from_token(sub_token)))
+
+        return result
+
+    async def _find_variable_references(self, document: TextDocument, variable: VariableDefinition) -> List[Location]:
+        folder = self.parent.workspace.get_workspace_folder(document.uri)
+        if folder is None:
+            return []
+
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
+
+        futures: List[Awaitable[List[Location]]] = []
+        result: List[Location] = []
+
+        config = await self.parent.workspace.get_configuration(WorkspaceConfig, folder.uri) or WorkspaceConfig()
+
+        if isinstance(variable, (ArgumentDefinition, LocalVariableDefinition)):
+            futures.append(create_sub_task(self._find_variable_references_in_file(variable, document.uri.to_path())))
+        else:
+            async for f in iter_files(
+                folder.uri.to_path(),
+                (f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}"),
+                ignore_patterns=config.exclude_patterns or [],  # type: ignore
+                absolute=True,
+            ):
+                futures.append(create_sub_task(self._find_variable_references_in_file(variable, f)))
 
         for e in await asyncio.gather(*futures, return_exceptions=True):
             if isinstance(e, BaseException):
