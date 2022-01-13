@@ -3,6 +3,8 @@
 All notable changes to the "robotcode" extension will be documented in this file.
 
 ## [Unreleased]
+
+##  0.4.2
 - added support for variables import
   - completion
   - hover
