@@ -6,8 +6,9 @@ Library           ${CURDIR}/libs/myvariables.py
 # TODO            ^^^^^^^^^  variable in library import: value == '(builtin variable) ${CURDIR}'
 Variables         ${CURDIR}/libs/myvariables.py
 # TODO            ^^^^^^^^^  variable in variables import: value == '(builtin variable) ${CURDIR}'
+#                                ^^^^^^^^^^^^^^ variable import by path name: re.match(r'## Variables \*myvariables.*', value)
 Resource          ${CURDIR}/resources/firstresource.resource
-#                                     ^^^^^^^^^^^^^^ library import by path name: re.match(r'## Resource \*firstresource.*', value)
+#                                     ^^^^^^^^^^^^^^ resource import by path name: re.match(r'## Resource \*firstresource.*', value)
 # TODO            ^^^^^^^^^  variable in resource import: value == '(builtin variable) ${CURDIR}'
 
 *** Variables ***
@@ -34,7 +35,7 @@ first
 #          ^^^^^^^^^    BuiltIn variable: value == '(builtin variable) ${CURDIR}'
 #^^^    Spaces: result is None
     Log    ${A_VAR_FROM_LIB}
-# TODO         ^^^^^^^^^^^^^^^^^    variable from lib: value == '(imported variable) ${A_VAR_FROM_LIB}'
+#          ^^^^^^^^^^^^^^^^^    variable from lib: value == '(imported variable) ${A_VAR_FROM_LIB}'
 
 
 *** Keywords ***

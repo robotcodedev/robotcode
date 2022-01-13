@@ -1221,6 +1221,7 @@ def get_variables_doc(
     from robot.variables.filesetter import PythonImporter, YamlImporter
 
     source: Optional[str] = None
+    stem = Path(name).stem
     try:
         source = find_file(name, working_dir, base_dir, pythonpath, environment, variables)
 
@@ -1234,13 +1235,13 @@ def get_variables_doc(
         ]
 
         return VariablesDoc(
-            name,
+            name=stem,
             source=source,
             variables=vars,
         )
     except BaseException as e:
         return VariablesDoc(
-            name=name,
+            name=stem,
             source=source,
             errors=[
                 error_from_exception(

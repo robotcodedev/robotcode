@@ -318,7 +318,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
                 try:
                     libdoc = await namespace.get_imported_variables_libdoc(variables_node.name, variables_node.args)
-                    
+
                     if libdoc is None or libdoc.errors:
                         libdoc = await namespace.imports_manager.get_libdoc_for_variables_import(
                             str(variables_node.name), (), str(document.uri.to_path().parent)

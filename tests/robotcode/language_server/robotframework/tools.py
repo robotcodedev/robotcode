@@ -54,7 +54,7 @@ def generate_tests_from_source_document(
 
 def generate_test_id(params: Any) -> Any:
     if isinstance(params, GeneratedTestData):
-        return f"{params.line}-{params.character}-{params.name}"
+        return f"{params.line:03}-{params.character:03}-{params.name}"
     if dataclasses.is_dataclass(params):
         return repr(params)
     if isinstance(params, Path):
