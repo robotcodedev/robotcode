@@ -16,11 +16,7 @@ from typing import (
     cast,
 )
 
-from ....utils.async_tools import (
-    check_canceled,
-    create_sub_task,
-    run_coroutine_in_thread,
-)
+from ....utils.async_tools import create_sub_task, run_coroutine_in_thread
 from ....utils.glob_path import iter_files
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
@@ -400,11 +396,11 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         return await self._references_Template_or_TestTemplate(node, document, position, context)
 
     @_logger.call
-    async def _find_keyword_references_in_file(
+    async def find_keyword_references_in_file(
         self,
         doc: TextDocument,
         kw_doc: KeywordDoc,
-        lib_doc: Optional[LibraryDoc],
+        lib_doc: Optional[LibraryDoc] = None,
     ) -> List[Location]:
 
         namespace = await self.parent.documents_cache.get_namespace(doc)
@@ -432,7 +428,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         result: List[Location] = []
 
         async for node in iter_nodes(namespace.model):
-            await check_canceled()
 
             kw_token: Optional[Token] = None
             arguments: Optional[List[Token]] = None
@@ -606,7 +601,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             or await namespace.get_library_doc()
         )
 
-        return await self._find_references(document, self._find_keyword_references_in_file, kw_doc, lib_doc)
+        return await self._find_references(document, self.find_keyword_references_in_file, kw_doc, lib_doc)
 
     @_logger.call
     async def _find_library_import_references_in_file(

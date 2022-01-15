@@ -932,6 +932,16 @@ class ReferenceRegistrationOptions(TextDocumentRegistrationOptions, ReferenceOpt
 
 
 @dataclass(repr=False)
+class DocumentHighlightOptions(WorkDoneProgressOptions):
+    pass
+
+
+@dataclass(repr=False)
+class DocumentHighlightRegistrationOptions(TextDocumentRegistrationOptions, DocumentHighlightOptions):
+    pass
+
+
+@dataclass(repr=False)
 class ServerCapabilities(Model):
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None] = None
     completion_provider: Optional[CompletionOptions] = None
@@ -941,7 +951,7 @@ class ServerCapabilities(Model):
     definition_provider: Union[bool, DefinitionOptions, None] = None
     implementation_provider: Union[bool, ImplementationOptions, ImplementationRegistrationOptions, None] = None
     references_provider: Union[bool, ReferenceOptions, None] = None
-    # TODO document_highlight_provider: Union[bool, DocumentHighlightOptions, None] = None
+    document_highlight_provider: Union[bool, DocumentHighlightOptions, None] = None
     document_symbol_provider: Union[bool, DocumentSymbolOptions, None] = None
     # TODO code_action_provider: Union[bool, CodeActionOptions] = None
     code_lens_provider: Optional[CodeLensOptions] = None
@@ -1837,3 +1847,27 @@ class _ReferenceParams(Model):
 @dataclass(repr=False)
 class ReferenceParams(WorkDoneProgressParams, PartialResultParams, TextDocumentPositionParams, _ReferenceParams):
     pass
+
+
+@dataclass(repr=False)
+class _DocumentHighlightParams(Model):
+    pass
+
+
+@dataclass(repr=False)
+class DocumentHighlightParams(
+    WorkDoneProgressParams, PartialResultParams, TextDocumentPositionParams, _DocumentHighlightParams
+):
+    pass
+
+
+class DocumentHighlightKind(Enum):
+    TEXT = 1
+    READ = 2
+    WRITE = 3
+
+
+@dataclass(repr=False)
+class DocumentHighlight(Model):
+    range: Range
+    kind: Optional[DocumentHighlightKind] = None

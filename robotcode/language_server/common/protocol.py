@@ -41,6 +41,7 @@ from .parts.completion import CompletionProtocolPart
 from .parts.declaration import DeclarationProtocolPart
 from .parts.definition import DefinitionProtocolPart
 from .parts.diagnostics import DiagnosticsProtocolPart
+from .parts.document_highlight import DocumentHighlightProtocolPart
 from .parts.document_symbols import DocumentSymbolsProtocolPart
 from .parts.documents import TextDocumentProtocolPart
 from .parts.folding_range import FoldingRangeProtocolPart
@@ -79,6 +80,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     formatting = ProtocolPartDescriptor(FormattingProtocolPart)
     semantic_tokens = ProtocolPartDescriptor(SemanticTokensProtocolPart)
     references = ProtocolPartDescriptor(ReferencesProtocolPart)
+    document_highlight = ProtocolPartDescriptor(DocumentHighlightProtocolPart)
 
     name: Optional[str] = None
     version: Optional[str] = None

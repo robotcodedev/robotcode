@@ -165,20 +165,11 @@ class InvalidVariableError(Exception):
 
 
 class VariableMatcher:
-    _match_extended = re.compile(
-        r"""
-        (.+?)          # base name (group 1)
-        ([^\s\w].+)    # extended part (group 2)
-        """,
-        re.UNICODE | re.VERBOSE,
-    )
-
-    def __init__(self, name: str, extended: bool = False) -> None:
+    def __init__(self, name: str) -> None:
         from robot.utils.normalizing import normalize
         from robot.variables.search import VariableSearcher
 
         self.name = name
-        self.extended = extended
 
         searcher = VariableSearcher("$@&%", ignore_errors=True)
         match = searcher.search(name)
@@ -188,14 +179,6 @@ class VariableMatcher:
 
         self.base = match.base
 
-        self.extended_base: Optional[str] = None
-        self.normalize_extended: Optional[str] = None
-        if extended:
-            ext_match = self._match_extended.match(self.name[2:-1])
-            if ext_match is not None:
-                self.extended_base, _ = ext_match.groups()
-                self.normalize_extended = str(normalize(self.extended_base, "_"))
-
         self.normalized_name = str(normalize(self.base, "_"))
 
     def __eq__(self, o: object) -> bool:
@@ -203,13 +186,13 @@ class VariableMatcher:
         from robot.variables.search import VariableSearcher
 
         if isinstance(o, VariableMatcher):
-            return o.normalized_name == self.normalized_name or (o.extended and self.normalized_name == o.extended_base)
+            return o.normalized_name == self.normalized_name
         elif isinstance(o, str):
             searcher = VariableSearcher("$@&%", ignore_errors=True)
             match = searcher.search(o)
             base = match.base
             normalized = str(normalize(base, "_"))
-            return self.normalized_name == normalized or (self.extended and self.normalize_extended == normalized)
+            return self.normalized_name == normalized
         else:
             return False
 

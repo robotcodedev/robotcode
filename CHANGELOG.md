@@ -7,6 +7,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 ### added
 
 - implement find references for libraries, resources, variables import
+- implement document highlight for variables and keywords
   
 ##  0.4.2
 

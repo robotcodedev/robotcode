@@ -24,6 +24,7 @@ from .parts.codelens import RobotCodeLensProtocolPart
 from .parts.completion import RobotCompletionProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
 from .parts.discovering import DiscoveringProtocolPart
+from .parts.document_highlight import RobotDocumentHighlightProtocolPart
 from .parts.document_symbols import RobotDocumentSymbolsProtocolPart
 from .parts.documents_cache import DocumentsCache
 from .parts.folding_range import RobotFoldingRangeProtocolPart
@@ -89,6 +90,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     robot_discovering = ProtocolPartDescriptor(DiscoveringProtocolPart)
     robot_semantic_tokens = ProtocolPartDescriptor(RobotSemanticTokenProtocolPart)
     robot_references = ProtocolPartDescriptor(RobotReferencesProtocolPart)
+    robot_document_highlight = ProtocolPartDescriptor(RobotDocumentHighlightProtocolPart)
     robot_codelens = ProtocolPartDescriptor(RobotCodeLensProtocolPart)
     robot_workspace = ProtocolPartDescriptor(RobotWorkspaceProtocolPart)
 

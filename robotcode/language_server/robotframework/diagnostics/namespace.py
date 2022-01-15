@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import itertools
+import re
 import weakref
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -588,14 +589,12 @@ class Namespace:
         return self.imports_manager.get_command_line_variables()
 
     @_logger.call
-    async def get_variables(
+    async def yield_variables(
         self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
-    ) -> Dict[VariableMatcher, VariableDefinition]:
+    ) -> AsyncGenerator[Tuple[VariableMatcher, VariableDefinition], None]:
         from robot.parsing.model.blocks import Keyword, TestCase
 
-        await self.ensure_initialized()
-
-        result: Dict[VariableMatcher, VariableDefinition] = {}
+        yielded: Dict[VariableMatcher, VariableDefinition] = {}
 
         async for var in async_chain(
             *[
@@ -609,16 +608,46 @@ class Namespace:
             *(e.variables for e in self._variables.values()),
             (e for e in self.get_builtin_variables()),
         ):
-            if var.name is not None and VariableMatcher(var.name) not in result.keys():
-                result[VariableMatcher(var.name)] = var
+            if var.name is not None:
+                matcher = VariableMatcher(var.name)
+                if matcher not in yielded.keys():
+                    yielded[matcher] = var
+                    yield matcher, var
 
-        return result
+    @_logger.call
+    async def get_variables(
+        self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
+    ) -> Dict[VariableMatcher, VariableDefinition]:
+        return {m: v async for m, v in self.yield_variables(nodes, position)}
+
+    _match_extended = re.compile(
+        r"""
+        (.+?)          # base name (group 1)
+        ([^\s\w].+)    # extended part (group 2)
+        """,
+        re.UNICODE | re.VERBOSE,
+    )
 
     @_logger.call
     async def find_variable(
         self, name: str, nodes: Optional[List[ast.AST]], position: Optional[Position] = None
     ) -> Optional[VariableDefinition]:
-        return (await self.get_variables(nodes, position)).get(VariableMatcher(name, True), None)
+
+        matcher = VariableMatcher(name)
+        async for m, v in self.yield_variables(nodes, position):
+            if matcher == m:
+                return v
+
+        match = self._match_extended.match(name[2:-1])
+        if match is not None:
+            base_name, extended = match.groups()
+            name = f"{name[0]}{{{base_name}}}"
+
+            matcher = VariableMatcher(name)
+            async for m, v in self.yield_variables(nodes, position):
+                if matcher == m:
+                    return v
+        return None
 
     @_logger.call
     async def _import_imports(self, imports: Iterable[Import], base_dir: str, *, top_level: bool = False) -> None:
