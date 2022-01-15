@@ -475,6 +475,11 @@ class Namespace:
             }
         return self._resources_matchers
 
+    async def get_imported_variables(self) -> OrderedDict[str, VariablesEntry]:
+        await self.ensure_initialized()
+
+        return self._variables
+
     @_logger.call
     async def get_library_doc(self) -> LibraryDoc:
         if self._library_doc is None:

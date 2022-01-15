@@ -75,6 +75,10 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             if not result_nodes:
                 return None
 
+            result = await self._hover_default(result_nodes, document, position)
+            if result:
+                return result
+
             for result_node in reversed(result_nodes):
                 method = self._find_method(type(result_node))
                 if method is not None:
@@ -82,7 +86,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     if result is not None:
                         return result
 
-            return await self._hover_default(result_nodes, document, position)
+            return None
 
         return await run_coroutine_in_thread(run)
 
@@ -118,6 +122,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                                 ),
                                 range=range,
                             )
+
             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                 raise
             except BaseException:

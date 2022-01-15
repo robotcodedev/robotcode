@@ -1073,6 +1073,11 @@ class Range(Model):
             end=Position(line=self.end.line + end_line, character=self.end.character + end_character),
         )
 
+    def __contains__(self, x: object) -> bool:
+        if isinstance(x, Position):
+            return x.is_in_range(self)
+        return False
+
 
 @dataclass(repr=False)
 class TextDocumentItem(Model):

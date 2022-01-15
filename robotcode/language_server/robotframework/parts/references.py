@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import ast
 import asyncio
-from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
     AsyncGenerator,
     Awaitable,
     Callable,
+    Coroutine,
     List,
     Optional,
     Type,
@@ -102,15 +102,53 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             if result_node is None:
                 return None
 
+            result = await self._references_default(result_nodes, document, position, context)
+            if result:
+                return result
+
             method = self._find_method(type(result_node))
             if method is not None:
                 result = await method(result_node, document, position, context)
                 if result is not None:
                     return result
 
-            return await self._references_default(result_nodes, document, position, context)
+            return None
 
         return await run_coroutine_in_thread(run)
+
+    async def _find_references(
+        self,
+        document: TextDocument,
+        func: Callable[..., Coroutine[None, None, List[Location]]],
+        *args: Any,
+        **kwargs: Any,
+    ) -> List[Location]:
+        folder = self.parent.workspace.get_workspace_folder(document.uri)
+        if folder is None:
+            return []
+
+        futures: List[Awaitable[List[Location]]] = []
+        result: List[Location] = []
+
+        config = await self.parent.workspace.get_configuration(WorkspaceConfig, folder.uri) or WorkspaceConfig()
+
+        async for f in iter_files(
+            folder.uri.to_path(),
+            (f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}"),
+            ignore_patterns=config.exclude_patterns or [],  # type: ignore
+            absolute=True,
+        ):
+            doc = await self.parent.robot_workspace.get_or_open_document(f, "robotframework")
+
+            # futures.append(create_sub_task(func(f, *args, **kwargs)))
+            futures.append(run_coroutine_in_thread(func, doc, *args, **kwargs))
+
+        for e in await asyncio.gather(*futures, return_exceptions=True):
+            if isinstance(e, BaseException):
+                self._logger.exception(e)
+                continue
+            result.extend(e)
+        return result
 
     async def _references_default(
         self, nodes: List[ast.AST], document: TextDocument, position: Position, context: ReferenceContext
@@ -152,13 +190,71 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                                     if context.include_declaration and variable.source
                                     else []
                                 ),
-                                *await self._find_variable_references(document, variable),
+                                *(await self.find_variable_references(document, variable)),
                             ]
             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                 raise
             except BaseException:
                 pass
         return None
+
+    async def find_variable_references(self, document: TextDocument, variable: VariableDefinition) -> List[Location]:
+        return (
+            await create_sub_task(self.find_variable_references_in_file(document, variable))
+            if isinstance(variable, (ArgumentDefinition, LocalVariableDefinition))
+            else await self._find_references(document, self.find_variable_references_in_file, variable)
+        )
+
+    @_logger.call
+    async def find_variable_references_in_file(
+        self,
+        doc: TextDocument,
+        variable: VariableDefinition,
+    ) -> List[Location]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.blocks import Block, Keyword, Section, TestCase
+
+        namespace = await self.parent.documents_cache.get_namespace(doc)
+        model = await self.parent.documents_cache.get_model(doc)
+
+        result: List[Location] = []
+        current_block: Optional[Block] = None
+
+        if (
+            variable.source
+            and variable.source != str(doc.uri.to_path())
+            and not any(
+                e for e in (await namespace.get_resources()).values() if e.library_doc.source == variable.source
+            )
+            and not any(
+                e
+                for e in (await namespace.get_imported_variables()).values()
+                if e.library_doc.source == variable.source
+            )
+        ):
+
+            return []
+
+        async for node in iter_nodes(model):
+            if isinstance(node, Section):
+                current_block = None
+            elif isinstance(node, (TestCase, Keyword)):
+                current_block = node
+
+            if isinstance(node, HasTokens):
+                for token in node.tokens:
+                    for sub_token in tokenize_variables(token):
+                        if sub_token.type == RobotToken.VARIABLE:
+                            found_variable = await namespace.find_variable(
+                                sub_token.value,
+                                [*([current_block] if current_block is not None else []), node],
+                                range_from_token(token).start,
+                            )
+
+                            if found_variable == variable:
+                                result.append(Location(str(doc.uri), range_from_token(sub_token)))
+
+        return result
 
     async def references_KeywordName(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position, context: ReferenceContext
@@ -186,7 +282,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     if context.include_declaration
                     else []
                 ),
-                *await self._find_keyword_references(document, keyword),
+                *await self.find_keyword_references(document, keyword),
             ]
 
         return None
@@ -219,7 +315,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                         if context.include_declaration
                         else []
                     ),
-                    *await self._find_keyword_references(document, keyword[0]),
+                    *await self.find_keyword_references(document, keyword[0]),
                 ]
 
         return None
@@ -252,7 +348,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                         if context.include_declaration
                         else []
                     ),
-                    *await self._find_keyword_references(document, keyword[0]),
+                    *await self.find_keyword_references(document, keyword[0]),
                 ]
 
         return None
@@ -288,7 +384,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                             if context.include_declaration
                             else []
                         ),
-                        *await self._find_keyword_references(document, keyword),
+                        *await self.find_keyword_references(document, keyword),
                     ]
 
         return None
@@ -306,18 +402,17 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     @_logger.call
     async def _find_keyword_references_in_file(
         self,
+        doc: TextDocument,
         kw_doc: KeywordDoc,
         lib_doc: Optional[LibraryDoc],
-        file: Path,
     ) -> List[Location]:
 
-        doc = await self.parent.robot_workspace.get_or_open_document(file, "robotframework")
         namespace = await self.parent.documents_cache.get_namespace(doc)
 
         if (
             lib_doc is not None
             and lib_doc.source is not None
-            and not Path.samefile(file, lib_doc.source)
+            and lib_doc.source != str(doc.uri.to_path())
             and lib_doc not in (e.library_doc for e in (await namespace.get_libraries()).values())
             and lib_doc not in (e.library_doc for e in (await namespace.get_resources()).values())
         ):
@@ -482,7 +577,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     async for e in self.get_keyword_references_from_tokens(namespace, kw_doc, node, t, args, True):
                         yield e
 
-    async def _find_keyword_references(self, document: TextDocument, kw_doc: KeywordDoc) -> List[Location]:
+    async def find_keyword_references(self, document: TextDocument, kw_doc: KeywordDoc) -> List[Location]:
         folder = self.parent.workspace.get_workspace_folder(document.uri)
         if folder is None:
             return []
@@ -511,93 +606,135 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             or await namespace.get_library_doc()
         )
 
-        futures: List[Awaitable[List[Location]]] = []
-        result: List[Location] = []
-
-        config = await self.parent.workspace.get_configuration(WorkspaceConfig, folder.uri) or WorkspaceConfig()
-
-        async for f in iter_files(
-            folder.uri.to_path(),
-            (f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}"),
-            ignore_patterns=config.exclude_patterns or [],  # type: ignore
-            absolute=True,
-        ):
-            futures.append(create_sub_task(self._find_keyword_references_in_file(kw_doc, lib_doc, f)))
-
-        for e in await asyncio.gather(*futures, return_exceptions=True):
-            if isinstance(e, BaseException):
-                self._logger.exception(e)
-                continue
-            result.extend(e)
-
-        return result
+        return await self._find_references(document, self._find_keyword_references_in_file, kw_doc, lib_doc)
 
     @_logger.call
-    async def _find_variable_references_in_file(
+    async def _find_library_import_references_in_file(
         self,
-        variable: VariableDefinition,
-        file: Path,
+        doc: TextDocument,
+        library_doc: LibraryDoc,
     ) -> List[Location]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.blocks import Block, Keyword, Section, TestCase
 
-        doc = await self.parent.robot_workspace.get_or_open_document(file, "robotframework")
         namespace = await self.parent.documents_cache.get_namespace(doc)
-        model = await self.parent.documents_cache.get_model(doc)
 
         result: List[Location] = []
-        current_block: Optional[Block] = None
-
-        async for node in iter_nodes(model):
-            if isinstance(node, Section):
-                current_block = None
-            elif isinstance(node, (TestCase, Keyword)):
-                current_block = node
-
-            if isinstance(node, HasTokens):
-                for token in node.tokens:
-                    for sub_token in tokenize_variables(token):
-                        if sub_token.type == RobotToken.VARIABLE:
-                            found_variable = await namespace.find_variable(
-                                sub_token.value,
-                                [*([current_block] if current_block is not None else []), node],
-                                range_from_token(token).start,
-                            )
-
-                            if found_variable == variable:
-                                result.append(Location(str(doc.uri), range_from_token(sub_token)))
+        for lib_entry in (await namespace.get_libraries()).values():
+            if (
+                lib_entry.import_source == str(doc.uri.to_path())
+                and lib_entry.library_doc.source_or_origin == library_doc.source_or_origin
+            ):
+                result.append(Location(str(doc.uri), lib_entry.import_range))
 
         return result
 
-    async def _find_variable_references(self, document: TextDocument, variable: VariableDefinition) -> List[Location]:
-        folder = self.parent.workspace.get_workspace_folder(document.uri)
-        if folder is None:
-            return []
+    async def references_LibraryImport(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, context: ReferenceContext
+    ) -> Optional[List[Location]]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import LibraryImport
 
         namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
             return None
 
-        futures: List[Awaitable[List[Location]]] = []
+        import_node = cast(LibraryImport, node)
+
+        name_token = cast(RobotToken, import_node.get_token(RobotToken.NAME))
+
+        if not name_token:
+            return None
+
+        if position in range_from_token(name_token):
+            library_doc = await namespace.get_imported_library_libdoc(import_node.name, import_node.args)
+
+            if library_doc is None:
+                return None
+
+            return await self._find_references(document, self._find_library_import_references_in_file, library_doc)
+
+        return None
+
+    @_logger.call
+    async def _find_resource_import_references_in_file(
+        self,
+        doc: TextDocument,
+        library_doc: LibraryDoc,
+    ) -> List[Location]:
+
+        namespace = await self.parent.documents_cache.get_namespace(doc)
+
         result: List[Location] = []
-
-        config = await self.parent.workspace.get_configuration(WorkspaceConfig, folder.uri) or WorkspaceConfig()
-
-        if isinstance(variable, (ArgumentDefinition, LocalVariableDefinition)):
-            futures.append(create_sub_task(self._find_variable_references_in_file(variable, document.uri.to_path())))
-        else:
-            async for f in iter_files(
-                folder.uri.to_path(),
-                (f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}"),
-                ignore_patterns=config.exclude_patterns or [],  # type: ignore
-                absolute=True,
-            ):
-                futures.append(create_sub_task(self._find_variable_references_in_file(variable, f)))
-
-        for e in await asyncio.gather(*futures, return_exceptions=True):
-            if isinstance(e, BaseException):
-                self._logger.exception(e)
-                continue
-            result.extend(e)
+        for lib_entry in (await namespace.get_resources()).values():
+            if lib_entry.import_source == str(doc.uri.to_path()) and lib_entry.library_doc.source == library_doc.source:
+                result.append(Location(str(doc.uri), lib_entry.import_range))
 
         return result
+
+    async def references_ResourceImport(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, context: ReferenceContext
+    ) -> Optional[List[Location]]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import ResourceImport
+
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
+
+        import_node = cast(ResourceImport, node)
+
+        name_token = cast(RobotToken, import_node.get_token(RobotToken.NAME))
+
+        if not name_token:
+            return None
+
+        if position in range_from_token(name_token):
+            library_doc = await namespace.get_imported_resource_libdoc(import_node.name)
+
+            if library_doc is None:
+                return None
+
+            return await self._find_references(document, self._find_resource_import_references_in_file, library_doc)
+
+        return None
+
+    async def _find_variables_import_references_in_file(
+        self,
+        doc: TextDocument,
+        library_doc: LibraryDoc,
+    ) -> List[Location]:
+
+        namespace = await self.parent.documents_cache.get_namespace(doc)
+
+        result: List[Location] = []
+        for lib_entry in (await namespace.get_imported_variables()).values():
+            if lib_entry.import_source == str(doc.uri.to_path()) and lib_entry.library_doc.source == library_doc.source:
+                result.append(Location(str(doc.uri), lib_entry.import_range))
+
+        return result
+
+    async def references_VariablesImport(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, context: ReferenceContext
+    ) -> Optional[List[Location]]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import VariablesImport
+
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
+
+        import_node = cast(VariablesImport, node)
+
+        name_token = cast(RobotToken, import_node.get_token(RobotToken.NAME))
+
+        if not name_token:
+            return None
+
+        if position in range_from_token(name_token):
+            library_doc = await namespace.get_imported_variables_libdoc(import_node.name, import_node.args)
+
+            if library_doc is None:
+                return None
+
+            return await self._find_references(document, self._find_variables_import_references_in_file, library_doc)
+
+        return None

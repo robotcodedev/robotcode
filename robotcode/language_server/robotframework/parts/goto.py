@@ -81,13 +81,17 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             if result_node is None:
                 return None
 
+            result = await self._definition_default(result_nodes, document, position)
+            if result:
+                return result
+
             method = self._find_method(type(result_node))
             if method is not None:
                 result = await method(result_node, document, position)
                 if result is not None:
                     return result
 
-            return await self._definition_default(result_nodes, document, position)
+            return None
 
         return await run_coroutine_in_thread(run)
 

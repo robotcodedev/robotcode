@@ -177,18 +177,24 @@ class VariableMatcher:
         from robot.utils.normalizing import normalize
         from robot.variables.search import VariableSearcher
 
+        self.name = name
+        self.extended = extended
+
         searcher = VariableSearcher("$@&%", ignore_errors=True)
         match = searcher.search(name)
-        self.name = name
+
         if match.base is None:
             raise InvalidVariableError(f"Invalid variable '{name}'")
 
         self.base = match.base
 
+        self.extended_base: Optional[str] = None
+        self.normalize_extended: Optional[str] = None
         if extended:
             ext_match = self._match_extended.match(self.name[2:-1])
             if ext_match is not None:
-                self.base, _ = ext_match.groups()
+                self.extended_base, _ = ext_match.groups()
+                self.normalize_extended = str(normalize(self.extended_base, "_"))
 
         self.normalized_name = str(normalize(self.base, "_"))
 
@@ -197,15 +203,15 @@ class VariableMatcher:
         from robot.variables.search import VariableSearcher
 
         if isinstance(o, VariableMatcher):
-            base = o.base
+            return o.normalized_name == self.normalized_name or (o.extended and self.normalized_name == o.extended_base)
         elif isinstance(o, str):
             searcher = VariableSearcher("$@&%", ignore_errors=True)
             match = searcher.search(o)
             base = match.base
+            normalized = str(normalize(base, "_"))
+            return self.normalized_name == normalized or (self.extended and self.normalize_extended == normalized)
         else:
             return False
-
-        return self.normalized_name == str(normalize(base, "_"))
 
     def __hash__(self) -> int:
         return hash(self.normalized_name)
@@ -475,11 +481,11 @@ class LibraryDoc(Model):
     line_no: int = -1
     end_line_no: int = -1
     inits: KeywordStore = KeywordStore()
-    keywords: KeywordStore = KeywordStore()
+    keywords: KeywordStore = field(default_factory=KeywordStore, compare=False)
     module_spec: Optional[ModuleSpec] = None
-    errors: Optional[List[Error]] = None
+    errors: Optional[List[Error]] = field(default=None, compare=False)
     python_path: Optional[List[str]] = None
-    stdout: Optional[str] = None
+    stdout: Optional[str] = field(default=None, compare=False)
     has_listener: Optional[bool] = None
 
     @property
@@ -1123,10 +1129,15 @@ def get_library_doc(
                 except BaseException:
                     pass
 
+        real_source = lib.source if lib is not None else source
         libdoc = LibraryDoc(
             name=library_name,
-            source=lib.source if lib is not None else source,
-            module_spec=module_spec,
+            source=real_source,
+            module_spec=module_spec
+            if module_spec is not None
+            and module_spec.origin != real_source
+            and module_spec.submodule_search_locations is None
+            else None,
             python_path=sys.path,
             type="LIBRARY",
         )
@@ -1151,8 +1162,10 @@ def get_library_doc(
                             source=kw[0].source,
                             line_no=kw[0].lineno,
                             type="library",
-                            libname=kw[1].libname,
-                            longname=kw[1].longname,
+                            # libname=kw[1].libname,
+                            # longname=kw[1].longname,
+                            libname=libdoc.name,
+                            longname=f"{libdoc.name}.{kw[0].name}",
                             doc_format=str(lib.doc_format) or DEFAULT_DOC_FORMAT,
                             is_initializer=True,
                         )
@@ -1187,8 +1200,8 @@ def get_library_doc(
                             tags=tuple(kw[0].tags),
                             source=kw[0].source,
                             line_no=kw[0].lineno,
-                            libname=kw[1].libname,
-                            longname=kw[1].longname,
+                            libname=libdoc.name,
+                            longname=f"{libdoc.name}.{kw[0].name}",
                             is_embedded=is_embedded_keyword(kw[0].name),
                             doc_format=str(lib.doc_format) or DEFAULT_DOC_FORMAT,
                             is_error_handler=kw[1].is_error_handler,
