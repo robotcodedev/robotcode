@@ -594,6 +594,8 @@ class Namespace:
     ) -> AsyncGenerator[Tuple[VariableMatcher, VariableDefinition], None]:
         from robot.parsing.model.blocks import Keyword, TestCase
 
+        await self.ensure_initialized()
+
         yielded: Dict[VariableMatcher, VariableDefinition] = {}
 
         async for var in async_chain(
