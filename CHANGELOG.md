@@ -4,6 +4,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+##  0.4.4
+
 ### added
 
 - implement InlineValuesProvider and EvaluatableExpressionProvider in language server
