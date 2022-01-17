@@ -24,24 +24,24 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 
-@dataclass
+@dataclass(repr=False)
 class GetAllTestsParams(Model):
     workspace_folder: str
     paths: Optional[List[str]]
 
 
-@dataclass
+@dataclass(repr=False)
 class GetTestsParams(Model):
     text_document: TextDocumentIdentifier
     id: Optional[str]
 
 
-@dataclass
+@dataclass(repr=False)
 class GetTestsFromDocumentParams(Model):
     text_document: TextDocumentIdentifier
 
 
-@dataclass
+@dataclass(repr=False)
 class TestItem(Model):
     type: str
     id: str
@@ -196,7 +196,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 return [TestItem(type="error", id=Path.cwd().name, label=Path.cwd().name, error=str(e))]
 
     @rpc_method(name="robot/discovering/getTestsFromWorkspace", param_type=GetAllTestsParams)
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def get_tests_from_workspace(
         self,
         workspace_folder: str,
@@ -207,7 +207,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         return await run_in_thread(self._get_tests_from_workspace, Uri(workspace_folder).to_path(), paths)
 
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def get_tests_from_document(
         self, text_document: TextDocumentIdentifier, id: Optional[str], *args: Any, **kwargs: Any
     ) -> List[TestItem]:

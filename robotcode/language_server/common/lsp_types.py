@@ -1006,7 +1006,7 @@ class Position(Model):
         line_gt = self.line > other.line
 
         if line_gt:
-            return line_gt
+            return True
 
         if self.line == other.line:
             return self.character >= other.character
@@ -1017,7 +1017,7 @@ class Position(Model):
         line_gt = self.line > other.line
 
         if line_gt:
-            return line_gt
+            return True
 
         if self.line == other.line:
             return self.character > other.character
@@ -1028,7 +1028,7 @@ class Position(Model):
         line_lt = self.line < other.line
 
         if line_lt:
-            return line_lt
+            return True
 
         if self.line == other.line:
             return self.character <= other.character
@@ -1039,7 +1039,7 @@ class Position(Model):
         line_lt = self.line < other.line
 
         if line_lt:
-            return line_lt
+            return True
 
         if self.line == other.line:
             return self.character < other.character
@@ -1084,9 +1084,12 @@ class Range(Model):
         )
 
     def __contains__(self, x: object) -> bool:
-        if isinstance(x, Position):
+        if isinstance(x, (Position, Range)):
             return x.is_in_range(self)
         return False
+
+    def is_in_range(self, range: Range) -> bool:
+        return range.start.is_in_range(self) and range.end.is_in_range(self)
 
 
 @dataclass(repr=False)

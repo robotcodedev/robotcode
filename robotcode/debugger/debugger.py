@@ -840,10 +840,7 @@ class Debugger:
         if evaluate_context is None:
             evaluate_context = EXECUTION_CONTEXTS.current
 
-        if EvaluateArgumentContext(context) in [EvaluateArgumentContext.HOVER]:
-            expression = f"${expression}"
-
-        result: Optional[str] = None
+        result: Any = None
         try:
 
             vars = evaluate_context.variables.current if frame_id is not None else evaluate_context.variables._global
@@ -859,11 +856,8 @@ class Debugger:
             else:
                 result = evaluate_expression(vars.replace_string(expression), vars.store)
 
-        except BaseException as e:
-            if EvaluateArgumentContext(context) in [EvaluateArgumentContext.HOVER]:
-                return EvaluateResult("")
-            else:
-                result = str(e)
+        except BaseException as e:  # NOSONAR
+            result = e
 
         if result is not None:
             return EvaluateResult(repr(result), repr(type(result)))

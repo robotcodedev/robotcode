@@ -15,6 +15,8 @@ import {
   InitializeError,
   RevealOutputChannelOn,
   State,
+  Position,
+  Range,
 } from "vscode-languageclient/node";
 import { sleep, Mutex } from "./utils";
 import { CONFIG_SECTION } from "./config";
@@ -24,14 +26,11 @@ import { getAvailablePort } from "./net_utils";
 const LANGUAGE_SERVER_DEFAULT_TCP_PORT = 6610;
 const LANGUAGE_SERVER_DEFAULT_HOST = "127.0.0.1";
 
-export interface RobotPosition {
-  line: number;
-  character: number;
-}
-
-export interface RobotRange {
-  start: RobotPosition;
-  end: RobotPosition;
+export function toVsCodeRange(range: Range): vscode.Range {
+  return new vscode.Range(
+    new vscode.Position(range.start.line, range.start.character),
+    new vscode.Position(range.end.line, range.end.character)
+  );
 }
 
 export interface RobotTestItem {
@@ -41,10 +40,37 @@ export interface RobotTestItem {
   children: RobotTestItem[] | undefined;
   label: string;
   description?: string;
-  range?: RobotRange;
+  range?: Range;
   error?: string;
   tags?: string[];
 }
+
+export interface EvaluatableExpression {
+  range: Range;
+
+  expression?: string;
+}
+
+export interface InlineValueText {
+  type: "text";
+  readonly range: Range;
+  readonly text: string;
+}
+
+export interface InlineValueVariableLookup {
+  type: "variable";
+  readonly range: Range;
+  readonly variableName?: string;
+  readonly caseSensitiveLookup: boolean;
+}
+
+export interface InlineValueEvaluatableExpression {
+  type: "expression";
+  readonly range: Range;
+  readonly expression?: string;
+}
+
+export type InlineValue = InlineValueText | InlineValueVariableLookup | InlineValueEvaluatableExpression;
 
 export enum ClientState {
   Stopped,
@@ -430,6 +456,67 @@ export class LanguageClientsManager {
             textDocument: { uri: document.uri.toString() },
             id: id,
           })) ?? undefined
+    );
+  }
+
+  public async getEvaluatableExpression(
+    document: vscode.TextDocument,
+    position: Position,
+    token?: vscode.CancellationToken
+  ): Promise<EvaluatableExpression | undefined> {
+    const client = await this.getLanguageClientForResource(document.uri);
+
+    if (!client) return;
+
+    return (
+      (token
+        ? await client.sendRequest<EvaluatableExpression | undefined>(
+            "robot/debugging/getEvaluatableExpression",
+            {
+              textDocument: { uri: document.uri.toString() },
+              position,
+            },
+            token
+          )
+        : await client.sendRequest<EvaluatableExpression | undefined>("robot/debugging/getEvaluatableExpression", {
+            textDocument: { uri: document.uri.toString() },
+            position,
+          })) ?? undefined
+    );
+  }
+
+  public async getInlineValues(
+    document: vscode.TextDocument,
+    viewPort: vscode.Range,
+    context: vscode.InlineValueContext,
+    token?: vscode.CancellationToken
+  ): Promise<InlineValue[]> {
+    const client = await this.getLanguageClientForResource(document.uri);
+
+    if (!client) return [];
+
+    return (
+      (token
+        ? await client.sendRequest<InlineValue[]>(
+            "robot/debugging/getInlineValues",
+            {
+              textDocument: { uri: document.uri.toString() },
+              viewPort: { start: viewPort.start, end: viewPort.end },
+              context: {
+                frameId: context.frameId,
+                stoppedLocation: { start: context.stoppedLocation.start, end: context.stoppedLocation.end },
+              },
+            },
+            token
+          )
+        : await client.sendRequest<InlineValue[]>("robot/debugging/getInlineValues", {
+            textDocument: { uri: document.uri.toString() },
+            viewPort: { start: viewPort.start, end: viewPort.end },
+            context: {
+              frameId: context.frameId,
+              stoppedLocation: { start: context.stoppedLocation.start, end: context.stoppedLocation.end },
+            },
+          })) ?? []
     );
   }
 }

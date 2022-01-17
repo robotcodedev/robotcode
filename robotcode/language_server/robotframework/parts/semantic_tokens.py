@@ -22,11 +22,7 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_dropwhile, async_takewhile
-from ....utils.async_tools import (
-    CancelationToken,
-    check_canceled,
-    run_coroutine_in_thread,
-)
+from ....utils.async_tools import run_coroutine_in_thread
 from ....utils.logging import LoggingDescriptor
 from ...common.language import language_id
 from ...common.lsp_types import (
@@ -47,11 +43,11 @@ from ..diagnostics.library_doc import (
     LibraryDoc,
 )
 from ..diagnostics.namespace import Namespace
+from ..utils import async_ast
 from ..utils.ast import (
     HasTokens,
     Token,
     is_not_variable_token,
-    iter_nodes,
     iter_over_keyword_names_and_owners,
     token_in_range,
     tokenize_variables,
@@ -540,7 +536,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         builtin_library_doc: Optional[LibraryDoc],
         libraries_matchers: Container[KeywordMatcher],
         resources_matchers: Container[KeywordMatcher],
-        cancel_token: CancelationToken,
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
 
         from robot.parsing.lexer.tokens import Token as RobotToken
@@ -551,7 +546,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         last_col = 0
 
         async def get_tokens() -> AsyncGenerator[Tuple[Token, ast.AST], None]:
-            for node in iter_nodes(model):
+            async for node in async_ast.iter_nodes(model):
                 if isinstance(node, HasTokens):
                     if isinstance(node, (KeywordCall, Fixture)):
                         kw_token = cast(
@@ -596,8 +591,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 get_tokens(),
             ),
         ):
-            await check_canceled()
-
             async for token in self.generate_sem_tokens(
                 robot_token, robot_node, namespace, builtin_library_doc, libraries_matchers, resources_matchers
             ):
@@ -634,34 +627,29 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
     async def collect_threading(
         self, document: TextDocument, range: Optional[Range]
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        cancel_token = CancelationToken()
-        try:
-            model = await self.parent.documents_cache.get_model(document)
-            namespace = await self.parent.documents_cache.get_namespace(document)
 
-            builtin_library_doc = next(
-                (
-                    library.library_doc
-                    for library in (await namespace.get_libraries()).values()
-                    if library.name == BUILTIN_LIBRARY_NAME
-                    and library.import_name == BUILTIN_LIBRARY_NAME
-                    and library.import_range == Range.zero()
-                ),
-                None,
-            )
+        model = await self.parent.documents_cache.get_model(document)
+        namespace = await self.parent.documents_cache.get_namespace(document)
 
-            return await self.collect(
-                model,
-                range,
-                namespace,
-                builtin_library_doc,
-                await namespace.get_libraries_matchers(),
-                await namespace.get_resources_matchers(),
-                cancel_token,
-            )
-        except BaseException:
-            cancel_token.cancel()
-            raise
+        builtin_library_doc = next(
+            (
+                library.library_doc
+                for library in (await namespace.get_libraries()).values()
+                if library.name == BUILTIN_LIBRARY_NAME
+                and library.import_name == BUILTIN_LIBRARY_NAME
+                and library.import_range == Range.zero()
+            ),
+            None,
+        )
+
+        return await self.collect(
+            model,
+            range,
+            namespace,
+            builtin_library_doc,
+            await namespace.get_libraries_matchers(),
+            await namespace.get_resources_matchers(),
+        )
 
     @language_id("robotframework")
     @_logger.call(entering=True, exiting=True, exception=True)

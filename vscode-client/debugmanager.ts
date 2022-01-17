@@ -5,7 +5,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { PythonManager } from "./pythonmanger";
 import { CONFIG_SECTION } from "./config";
-import { LanguageClientsManager } from "./languageclientsmanger";
+import { LanguageClientsManager, toVsCodeRange } from "./languageclientsmanger";
 import { WeakValueSet } from "./utils";
 
 const DEBUG_ADAPTER_DEFAULT_TCP_PORT = 6611;
@@ -214,26 +214,51 @@ export class DebugManager {
           document: vscode.TextDocument,
           viewPort: vscode.Range,
           context: vscode.InlineValueContext,
-          _token: vscode.CancellationToken
+          token: vscode.CancellationToken
         ): vscode.ProviderResult<vscode.InlineValue[]> {
-          const allValues: vscode.InlineValue[] = [];
+          return languageClientsManager.getInlineValues(document, viewPort, context, token).then(
+            (r) => {
+              const result: vscode.InlineValue[] = [];
 
-          for (let l = viewPort.start.line; l <= Math.min(viewPort.end.line, context.stoppedLocation.end.line); l++) {
-            const line = document.lineAt(l);
-            const text = line.text.split("#")[0];
+              for (const c of r) {
+                switch (c.type) {
+                  case "text":
+                    result.push(new vscode.InlineValueText(toVsCodeRange(c.range), c.text));
 
-            const variableMatches =
-              /([$@&%]\{)(?:((?:\d+\.?\d*)|(?:0x[/da-f]+)|(?:0o[0-7]+)|(?:0b[01]+))|(true|false|none|null|empty|space|\/|:|\\n)|((.+?}*)))(\})(?:(\[)(?:(\d+)|(.*?))?(\]))?/gi;
-
-            let match;
-            while ((match = variableMatches.exec(text))) {
-              const varName = match[0];
-
-              const rng = new vscode.Range(l, match.index, l, match.index + varName.length);
-              allValues.push(new vscode.InlineValueVariableLookup(rng, varName, false));
-            }
-          }
-          return allValues;
+                    break;
+                  case "variable":
+                    result.push(
+                      new vscode.InlineValueVariableLookup(
+                        toVsCodeRange(c.range),
+                        c.variableName,
+                        c.caseSensitiveLookup
+                      )
+                    );
+                    break;
+                  case "expression":
+                    result.push(new vscode.InlineValueEvaluatableExpression(toVsCodeRange(c.range), c.expression));
+                }
+              }
+              if (r) return result;
+              else return [];
+            },
+            (_) => []
+          );
+        },
+      }),
+      vscode.languages.registerEvaluatableExpressionProvider("robotframework", {
+        provideEvaluatableExpression(
+          document: vscode.TextDocument,
+          position: vscode.Position,
+          token: vscode.CancellationToken
+        ): vscode.ProviderResult<vscode.EvaluatableExpression> {
+          return languageClientsManager.getEvaluatableExpression(document, position, token).then(
+            (r) => {
+              if (r) return new vscode.EvaluatableExpression(toVsCodeRange(r.range), r.expression);
+              else return undefined;
+            },
+            (_) => undefined
+          );
         },
       })
     );

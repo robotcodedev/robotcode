@@ -642,13 +642,14 @@ class Namespace:
 
         match = self._match_extended.match(name[2:-1])
         if match is not None:
-            base_name, extended = match.groups()
+            base_name, _ = match.groups()
             name = f"{name[0]}{{{base_name}}}"
 
             matcher = VariableMatcher(name)
             async for m, v in self.yield_variables(nodes, position):
                 if matcher == m:
                     return v
+
         return None
 
     @_logger.call

@@ -4,7 +4,7 @@
 import { red, yellow } from "ansi-colors";
 import * as vscode from "vscode";
 import { DebugManager } from "./debugmanager";
-import { ClientState, LanguageClientsManager, RobotTestItem } from "./languageclientsmanger";
+import { ClientState, LanguageClientsManager, RobotTestItem, toVsCodeRange } from "./languageclientsmanger";
 import { Mutex, sleep, WeakValueMap } from "./utils";
 
 interface RobotExecutionAttributes {
@@ -379,10 +379,7 @@ export class TestControllerManager {
 
     testItem.canResolveChildren = robotTestItem.children !== undefined && robotTestItem.children.length > 0;
     if (robotTestItem.range !== undefined) {
-      testItem.range = new vscode.Range(
-        new vscode.Position(robotTestItem.range.start.line, robotTestItem.range.start.character),
-        new vscode.Position(robotTestItem.range.end.line, robotTestItem.range.end.character)
-      );
+      testItem.range = toVsCodeRange(robotTestItem.range);
     }
     testItem.label = robotTestItem.label;
     testItem.error = robotTestItem.error;
