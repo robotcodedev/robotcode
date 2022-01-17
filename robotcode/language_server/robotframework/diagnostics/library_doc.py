@@ -834,6 +834,7 @@ def error_from_exception(ex: BaseException, default_source: Optional[str], defau
 
 BUILTIN_VARIABLES = [
     "${CURDIR}",
+    "${EMPTY}",
     "${TEMPDIR}",
     "${EXECDIR}",
     "${/}",
