@@ -648,7 +648,7 @@
           "name": "keyword.operator.robotframework"
         },
         "2": {
-          "name": "storage.type.method.robotframework"
+          "name": "keyword.control.settings.robotframework"
         }
       },
       "contentName": "entity.name.tag.robotframework",
@@ -679,7 +679,7 @@
           "name": "keyword.operator.robotframework"
         },
         "2": {
-          "name": "storage.type.method.robotframework"
+          "name": "keyword.control.settings.robotframework"
         }
       },
       "contentName": "string.unquoted.argument.robotframework",
@@ -709,7 +709,7 @@
           "name": "keyword.operator.robotframework"
         },
         "2": {
-          "name": "storage.type.method.robotframework"
+          "name": "keyword.control.settings.robotframework"
         },
         "3": {
           "name": "keyword.operator.robotframework"
@@ -743,7 +743,7 @@
           "name": "keyword.operator.robotframework"
         },
         "2": {
-          "name": "storage.type.method.robotframework"
+          "name": "keyword.control.settings.robotframework"
         }
       },
       "contentName": "string.unquoted.argument.robotframework",
@@ -772,7 +772,7 @@
           "name": "keyword.operator.robotframework"
         },
         "2": {
-          "name": "storage.type.method.robotframework"
+          "name": "keyword.control.settings.robotframework"
         }
       },
       "contentName": "string.unquoted.argument.robotframework",
@@ -849,7 +849,7 @@
           "name": "keyword.operator.robotframework"
         },
         "2": {
-          "name": "storage.type.method.robotframework"
+          "name": "keyword.control.settings.robotframework"
         }
       },
       "contentName": "meta.keyword.arguments.robotframework",

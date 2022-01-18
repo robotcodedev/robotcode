@@ -4,6 +4,9 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+### added
+- correct semantic highlight of variables and settings
+
 ##  0.4.4
 
 ### added

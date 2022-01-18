@@ -236,11 +236,23 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                     if length is None:
                         length = token.end_col_offset - token.col_offset
 
-                    yield SemTokenInfo(token.lineno, col_offset, 2, RobotSemTokenTypes.VARIABLE_BEGIN, sem_mod)
-                    yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset + 2, length - 3)
-                    yield SemTokenInfo(
-                        token.lineno, col_offset + length - 1, 1, RobotSemTokenTypes.VARIABLE_END, sem_mod
-                    )
+                    last_index = token.value.rfind("}")
+                    if last_index >= 0:
+                        yield SemTokenInfo(token.lineno, col_offset, 2, RobotSemTokenTypes.VARIABLE_BEGIN, sem_mod)
+
+                        yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset + 2, last_index - 2)
+
+                        yield SemTokenInfo(
+                            token.lineno, col_offset + last_index, 1, RobotSemTokenTypes.VARIABLE_END, sem_mod
+                        )
+
+                        if length - last_index > 0:
+                            yield SemTokenInfo.from_token(
+                                token, sem_type, sem_mod, col_offset + last_index + 1, length - last_index - 1
+                            )
+                    else:
+                        yield SemTokenInfo.from_token(token, sem_type, sem_mod)
+
                 else:
                     yield SemTokenInfo.from_token(token, sem_type, sem_mod)
 
@@ -306,6 +318,20 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset + kw_index, len(kw))
             elif token.type == RobotToken.NAME and isinstance(node, (LibraryImport, ResourceImport, VariablesImport)):
                 yield SemTokenInfo.from_token(token, RobotSemTokenTypes.NAMESPACE, sem_mod, col_offset, length)
+            elif (
+                token.type in RobotToken.SETTING_TOKENS
+                and token.value
+                and token.value[0] == "["
+                and token.value[-1] == "]"
+            ):
+                if col_offset is None:
+                    col_offset = token.col_offset
+                if length is None:
+                    length = token.end_col_offset - token.col_offset
+
+                yield SemTokenInfo.from_token(token, SemanticTokenTypes.OPERATOR, sem_mod, col_offset, 1)
+                yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset + 1, length - 2)
+                yield SemTokenInfo.from_token(token, SemanticTokenTypes.OPERATOR, sem_mod, col_offset + length - 1, 1)
             else:
                 yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset, length)
 
