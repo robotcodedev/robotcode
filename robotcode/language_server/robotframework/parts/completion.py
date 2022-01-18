@@ -423,9 +423,7 @@ class CompletionCollector(ModelHelperMixin):
         ]
 
     async def create_keyword_completion_items(
-        self,
-        token: Optional[Token],
-        position: Position,
+        self, token: Optional[Token], position: Position, add_reserverd: bool = True
     ) -> List[CompletionItem]:
         result: List[CompletionItem] = []
         if self.document is None:
@@ -561,15 +559,16 @@ class CompletionCollector(ModelHelperMixin):
             )
             result.append(c)
 
-        for k in RESERVERD_KEYWORDS:
-            c = CompletionItem(
-                label=k,
-                kind=CompletionItemKind.KEYWORD,
-                sort_text=f"040_{k}",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
-                text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
-            )
-            result.append(c)
+        if add_reserverd:
+            for k in RESERVERD_KEYWORDS:
+                c = CompletionItem(
+                    label=k,
+                    kind=CompletionItemKind.KEYWORD,
+                    sort_text=f"999_{k}",
+                    insert_text_format=InsertTextFormat.PLAINTEXT,
+                    text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
+                )
+                result.append(c)
 
         return result
 
@@ -700,6 +699,14 @@ class CompletionCollector(ModelHelperMixin):
     ) -> Union[List[CompletionItem], CompletionList, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordName, Statement, TestCaseName
+
+        # TODO should this be configurable?
+        if (
+            context is not None
+            and context.trigger_kind == CompletionTriggerKind.TRIGGERCHARACTER
+            and context.trigger_character in [" ", "\t"]
+        ):
+            return None
 
         index = 0
         in_assign = False
@@ -854,6 +861,14 @@ class CompletionCollector(ModelHelperMixin):
     ) -> Union[List[CompletionItem], CompletionList, None]:
         from robot.parsing.model.statements import Statement
 
+        # TODO should this be configurable?
+        if (
+            context is not None
+            and context.trigger_kind == CompletionTriggerKind.TRIGGERCHARACTER
+            and context.trigger_character in [" ", "\t"]
+        ):
+            return None
+
         statement_node = cast(Statement, node)
         if len(statement_node.tokens) > 1:
             token = cast(Token, statement_node.tokens[1])
@@ -867,14 +882,16 @@ class CompletionCollector(ModelHelperMixin):
 
             if position.is_in_range(r) or r.end == position:
                 return await self.create_keyword_completion_items(
-                    statement_node.tokens[2] if r.end == position and len(statement_node.tokens) > 2 else None, position
+                    statement_node.tokens[2] if r.end == position and len(statement_node.tokens) > 2 else None,
+                    position,
+                    add_reserverd=False,
                 )
 
         if len(statement_node.tokens) > 2:
             token = cast(Token, statement_node.tokens[2])
             r = range_from_token(token)
             if position.is_in_range(r) or r.end == position:
-                return await self.create_keyword_completion_items(token, position)
+                return await self.create_keyword_completion_items(token, position, add_reserverd=False)
 
         return None
 
@@ -947,6 +964,14 @@ class CompletionCollector(ModelHelperMixin):
     ) -> Union[List[CompletionItem], CompletionList, None]:
         from robot.parsing.model.statements import Statement
 
+        # TODO should this be configurable?
+        if (
+            context is not None
+            and context.trigger_kind == CompletionTriggerKind.TRIGGERCHARACTER
+            and context.trigger_character in [" ", "\t"]
+        ):
+            return None
+
         statement_node = cast(Statement, node)
         if len(statement_node.tokens) > 2:
             token = cast(Token, statement_node.tokens[2])
@@ -960,14 +985,16 @@ class CompletionCollector(ModelHelperMixin):
 
             if position.is_in_range(r) or r.end == position:
                 return await self.create_keyword_completion_items(
-                    statement_node.tokens[3] if r.end == position and len(statement_node.tokens) > 3 else None, position
+                    statement_node.tokens[3] if r.end == position and len(statement_node.tokens) > 3 else None,
+                    position,
+                    add_reserverd=False,
                 )
 
         if len(statement_node.tokens) > 3:
             token = cast(Token, statement_node.tokens[3])
             r = range_from_token(token)
             if position.is_in_range(r) or r.end == position:
-                return await self.create_keyword_completion_items(token, position)
+                return await self.create_keyword_completion_items(token, position, add_reserverd=False)
 
         return None
 

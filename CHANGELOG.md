@@ -5,7 +5,9 @@ All notable changes to the "robotcode" extension will be documented in this file
 ## [Unreleased]
 
 ### added
+
 - correct semantic highlight of variables and settings
+- completion window for keywords is now opened only after triggering Ctrl+Space or input of the first character
 
 ##  0.4.4
 
