@@ -35,7 +35,7 @@ from ...common.lsp_types import (
     Range,
 )
 from ...common.text_document import TextDocument
-from ..utils.ast import Token, range_from_node, tokenize_variables
+from ..utils.ast import Token, range_from_node, range_from_token, tokenize_variables
 from ..utils.async_ast import AsyncVisitor
 from .entities import (
     ArgumentDefinition,
@@ -203,19 +203,29 @@ class BlockVariableVisitor(AsyncVisitor):
         # TODO  analyse "Set Local/Global/Suite Variable"
 
         n = cast(KeywordCall, node)
+
         for assign_token in n.get_tokens(RobotToken.ASSIGN):
             variable_token = self.get_variable_token(assign_token)
+
             try:
-                if variable_token is not None and variable_token.value not in self._results:
-                    self._results[variable_token.value] = LocalVariableDefinition(
-                        name=variable_token.value,
-                        name_token=variable_token,
-                        line_no=variable_token.lineno,
-                        col_offset=variable_token.col_offset,
-                        end_line_no=variable_token.lineno,
-                        end_col_offset=variable_token.end_col_offset,
-                        source=self.source,
-                    )
+                if variable_token is not None:
+                    if (
+                        self.position is not None
+                        and self.position in range_from_node(n)
+                        and self.position > range_from_token(variable_token).end
+                    ):
+                        continue
+
+                    if variable_token.value not in self._results:
+                        self._results[variable_token.value] = LocalVariableDefinition(
+                            name=variable_token.value,
+                            name_token=variable_token,
+                            line_no=variable_token.lineno,
+                            col_offset=variable_token.col_offset,
+                            end_line_no=variable_token.lineno,
+                            end_col_offset=variable_token.end_col_offset,
+                            source=self.source,
+                        )
 
             except VariableError:
                 pass

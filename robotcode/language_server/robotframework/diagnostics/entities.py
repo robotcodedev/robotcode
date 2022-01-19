@@ -90,7 +90,7 @@ class VariableDefinition(SourceEntity):
     type: VariableDefinitionType = VariableDefinitionType.VARIABLE
 
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type))
+        return hash((type(self), self.name, self.type, self.range, self.source))
 
     def range(self) -> Range:
         return Range(
