@@ -97,7 +97,6 @@ def create_parser() -> argparse.ArgumentParser:
 
     result.add_argument("--log", action="store_true", help="enable logging")
     result.add_argument("--log-json-rpc", action="store_true", help="show json-rpc log messages")
-    result.add_argument("--log-json-rpc-data", action="store_true", help="show json-rpc messages log messages")
     result.add_argument("--log-language-server", action="store_true", help="show language server log messages")
     result.add_argument(
         "--log-language-server-parts", action="store_true", help="show language server parts log messages"
@@ -152,9 +151,6 @@ def init_logging(args: argparse.Namespace) -> None:
 
     if not args.log_json_rpc:
         logging.getLogger("robotcode.jsonrpc2").propagate = False
-
-    if not args.log_json_rpc_data:
-        logging.getLogger("robotcode.jsonrpc2.protocol.JsonRPCProtocol.message").propagate = False
 
     if not args.log_language_server:
         logging.getLogger("robotcode.language_server.common").propagate = False
