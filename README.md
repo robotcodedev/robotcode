@@ -2,8 +2,6 @@
 
 An [extension](https://marketplace.visualstudio.com/VSCode) which brings support for [RobotFramework](https://robotframework.org/) to [Visual Studio Code](https://code.visualstudio.com/), including features like IntelliSense, linting, debugging, code navigation, code formatting, test explorer, find references for keywords and variables, and more!
 
-⚠️⚠️⚠️ THIS EXTENSION IS IN PREVIEW STATE, THERE ARE GOING TO BE BUGS ⚠️⚠️⚠️
-
 ## Requirements
 
 * Python 3.8 or above
@@ -16,6 +14,13 @@ RobotCode will automatically install [Python extension](https://marketplace.visu
 
 Extensions installed through the marketplace are subject to the [Marketplace Terms of Use](https://cdn.vsassets.io/v/M146_20190123.39/_content/Microsoft-Visual-Studio-Marketplace-Terms-of-Use.pdf).
 
+## Features
+
+### Autocomplete and IntelliSense
+
+
+
+
 ## Quick start
 
 1. [Install a supported version of Python on your system](https://code.visualstudio.com/docs/python/python-tutorial#_prerequisites) 
@@ -26,9 +31,10 @@ Extensions installed through the marketplace are subject to the [Marketplace Ter
 3. [Install the # RobotCode extension for Visual Studio Code](https://code.visualstudio.com/docs/editor/extension-gallery).
 4. Open or create a robot file and start coding! 😉
 
+
 ## Setting up your environment
 
-TODO
+You can alway use your local python environment, just select the correct python interpreter in Visual Studio Code.
 
 ### With pipenv
 
@@ -51,6 +57,6 @@ This is the simpliest way to create an running environment.
     python -m pipenv install robotframework
     ```
 - Open project in VSCode
+- Set the python interpreter to the created virtual environment 
 
-TODO
 

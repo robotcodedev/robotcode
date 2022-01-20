@@ -248,11 +248,13 @@ class CompletionCollector(ModelHelperMixin):
                         name = completion_item.data.get("name", None)
                         if name is not None:
                             try:
-                                entry = (await self.namespace.get_libraries_matchers()).get(KeywordMatcher(name), None)
+                                lib_doc = await self.namespace.imports_manager.get_libdoc_for_library_import(
+                                    name, (), str(document.uri.to_path().parent), sentinel=self
+                                )
 
-                                if entry is not None:
+                                if lib_doc is not None:
                                     completion_item.documentation = MarkupContent(
-                                        kind=MarkupKind.MARKDOWN, value=entry.library_doc.to_markdown(False)
+                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown(False)
                                     )
 
                             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
@@ -265,11 +267,13 @@ class CompletionCollector(ModelHelperMixin):
                         name = completion_item.data.get("name", None)
                         if name is not None:
                             try:
-                                entry = (await self.namespace.get_resources_matchers()).get(KeywordMatcher(name), None)
+                                lib_doc = await self.namespace.imports_manager.get_libdoc_for_resource_import(
+                                    name, str(document.uri.to_path().parent), sentinel=self
+                                )
 
-                                if entry is not None:
+                                if lib_doc is not None:
                                     completion_item.documentation = MarkupContent(
-                                        kind=MarkupKind.MARKDOWN, value=entry.library_doc.to_markdown()
+                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown()
                                     )
 
                             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
