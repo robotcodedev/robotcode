@@ -18,9 +18,17 @@ Extensions installed through the marketplace are subject to the [Marketplace Ter
 
 ### Autocomplete and IntelliSense
 
+- Library and Resources 
 ![Complete Libray](./doc/images/complete_library.png)
 
+- Library Parameters
+![Libray Parameters](./doc/images/complete_library_parameters.png)
 
+- Keywords
+![Complete Keyword](./doc/images/complete_keywords.png)
+
+- Keyword Parameters
+![Complete Keyword](./doc/images/complete_keyword_parameters.png)
 
 ## Quick start
 
