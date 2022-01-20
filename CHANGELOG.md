@@ -3,6 +3,9 @@
 All notable changes to the "robotcode" extension will be documented in this file.
 
 ## [Unreleased]
+### added
+
+- some small fixes in completion, command line parameters and variable references
 
 ##  0.4.5
 
