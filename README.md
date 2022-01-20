@@ -18,7 +18,7 @@ Extensions installed through the marketplace are subject to the [Marketplace Ter
 
 ### Autocomplete and IntelliSense
 
-![Complete Libray](doc\images\complete_library.png)
+![Complete Libray](./doc/images/complete_library.png)
 
 
 
