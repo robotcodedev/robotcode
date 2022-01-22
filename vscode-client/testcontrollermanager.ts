@@ -120,16 +120,8 @@ export class TestControllerManager {
           this.didChangedTimer.delete(uri_str);
         }
       }),
-      vscode.workspace.onDidSaveTextDocument(async (document) => {
-        if (document.languageId !== "robotframework") return;
-
-        const uri_str = document.uri.toString();
-        if (this.didChangedTimer.has(uri_str)) {
-          this.didChangedTimer.get(uri_str)?.cancel();
-          this.didChangedTimer.delete(uri_str);
-        }
-
-        await this.refresh(this.findTestItemForDocument(document));
+      vscode.workspace.onDidSaveTextDocument((document) => {
+        this.addRefreshDocumentTimer(document);
       }),
       vscode.workspace.onDidOpenTextDocument(async (document) => {
         if (document.languageId !== "robotframework") return;
@@ -137,28 +129,7 @@ export class TestControllerManager {
         await this.refresh(this.findTestItemForDocument(document));
       }),
       vscode.workspace.onDidChangeTextDocument((event) => {
-        if (event.document.languageId !== "robotframework") return;
-
-        const uri_str = event.document.uri.toString();
-        if (this.didChangedTimer.has(uri_str)) {
-          this.didChangedTimer.get(uri_str)?.cancel();
-          this.didChangedTimer.delete(uri_str);
-        }
-
-        const token = new vscode.CancellationTokenSource();
-
-        this.didChangedTimer.set(
-          uri_str,
-          new DidChangeEntry(
-            setTimeout((_) => {
-              this.refresh(this.findTestItemForDocument(event.document)).then(
-                () => undefined,
-                () => undefined
-              );
-            }, 1000),
-            token
-          )
-        );
+        this.addRefreshDocumentTimer(event.document);
       }),
       vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
         for (const r of event.removed) {
@@ -267,6 +238,31 @@ export class TestControllerManager {
       }
       return undefined;
     }
+  }
+
+  public addRefreshDocumentTimer(document: vscode.TextDocument): void {
+    if (document.languageId !== "robotframework") return;
+
+    const uri_str = document.uri.toString();
+    if (this.didChangedTimer.has(uri_str)) {
+      this.didChangedTimer.get(uri_str)?.cancel();
+      this.didChangedTimer.delete(uri_str);
+    }
+
+    const token = new vscode.CancellationTokenSource();
+
+    this.didChangedTimer.set(
+      uri_str,
+      new DidChangeEntry(
+        setTimeout((_) => {
+          this.refresh(this.findTestItemForDocument(document)).then(
+            () => undefined,
+            () => undefined
+          );
+        }, 1000),
+        token
+      )
+    );
   }
 
   public findTestItemForDocument(document: vscode.TextDocument): vscode.TestItem | undefined {
