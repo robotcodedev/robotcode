@@ -646,16 +646,16 @@
     "eslint-plugin-prettier": "^4.0.0",
     "glob": "^7.2.0",
     "mocha": "^9.1.4",
-    "ovsx": "^0.2.1",
+    "ovsx": "^0.3.0",
     "prettier": "^2.5.1",
     "replace-in-file": "^6.3.2",
     "ts-loader": "^9.2.6",
-    "typescript": "^4.5.4",
+    "typescript": "^4.5.5",
     "vsce": "^2.6.3",
     "vscode-debugadapter-testsupport": "^1.51.0",
     "vscode-dts": "^0.3.3",
-    "@vscode/test-electron": "^2.1.0",
-    "webpack": "^5.66.0",
+    "@vscode/test-electron": "^2.1.1",
+    "webpack": "^5.67.0",
     "webpack-cli": "^4.9.1"
   }
 }
