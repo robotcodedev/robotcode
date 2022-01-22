@@ -122,15 +122,11 @@ export class LanguageClientsManager {
     this.clients.clear();
 
     for (const client of clients) {
-      promises.push(client.stop().then((_) => global.gc()));
+      promises.push(client.stop());
     }
 
     return Promise.all(promises).then(
       (r) => {
-        if (global.gc) {
-          global.gc();
-        }
-
         return r.length > 0;
       },
       (reason) => {
