@@ -52,8 +52,12 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
           () => undefined
         );
       },
-    }),
+    })
+  );
 
+  await languageClientManger.refresh();
+
+  context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(async (event) => {
       for (const s of [
         "robotcode.python",
@@ -71,8 +75,6 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
       }
     })
   );
-
-  await languageClientManger.refresh();
 }
 
 function displayProgress<R>(promise: Promise<R>): Thenable<R> {

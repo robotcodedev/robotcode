@@ -154,7 +154,6 @@ export class TestControllerManager {
           }
         }
       }),
-
       vscode.debug.onDidReceiveDebugSessionCustomEvent((event) => {
         if (event.session.configuration.type === "robotcode") {
           switch (event.event) {
