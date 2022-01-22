@@ -6,7 +6,7 @@ import os
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from ....utils.logging import LoggingDescriptor
-from ...common.language import language_id
+from ...common.decorators import language_id
 from ...common.lsp_types import FormattingOptions, Position, Range, TextEdit
 from ...common.text_document import TextDocument
 

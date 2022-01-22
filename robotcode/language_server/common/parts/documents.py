@@ -8,7 +8,7 @@ from ....jsonrpc2.protocol import JsonRPCException, rpc_method
 from ....utils.async_tools import Lock, async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
-from ..language import language_id_filter
+from ..decorators import language_id_filter
 from ..lsp_types import (
     DidChangeTextDocumentParams,
     DidCloseTextDocumentParams,

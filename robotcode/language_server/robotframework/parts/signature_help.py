@@ -14,9 +14,9 @@ from typing import (
     cast,
 )
 
-from ....utils.async_tools import run_coroutine_in_thread
+from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
-from ...common.language import language_id, retrigger_characters, trigger_characters
+from ...common.decorators import language_id, retrigger_characters, trigger_characters
 from ...common.lsp_types import (
     MarkupContent,
     MarkupKind,
@@ -71,27 +71,26 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         return None
 
     @language_id("robotframework")
+    @threaded()
     @trigger_characters([" ", "\t"])
     @retrigger_characters([" ", "\t"])
     @_logger.call(entering=True, exiting=True, exception=True)
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
     ) -> Optional[SignatureHelp]:
-        async def run() -> Optional[SignatureHelp]:
-            result_node = await get_node_at_position(await self.parent.documents_cache.get_model(document), position)
-            if result_node is None:
-                return None
 
-            if result_node is None:
-                return None
+        result_node = await get_node_at_position(await self.parent.documents_cache.get_model(document), position)
+        if result_node is None:
+            return None
 
-            method = self._find_method(type(result_node))
-            if method is None:
-                return None
+        if result_node is None:
+            return None
 
-            return await method(result_node, document, position, context)
+        method = self._find_method(type(result_node))
+        if method is None:
+            return None
 
-        return await run_coroutine_in_thread(run)
+        return await method(result_node, document, position, context)
 
     async def _signature_help_KeywordCall_or_Fixture(  # noqa: N802
         self,

@@ -23,10 +23,12 @@ from typing import (
     List,
     MutableSet,
     Optional,
+    Protocol,
     Type,
     TypeVar,
     Union,
     cast,
+    runtime_checkable,
 )
 
 from ..utils.inspect import ensure_coroutine
@@ -171,6 +173,22 @@ class async_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncEvent[_TCallabl
         super().__init__(_func, AsyncEvent[_TCallable, _TResult])
 
 
+_F = TypeVar("_F", bound=Callable[..., Any])
+
+
+def threaded(enabled: bool = True) -> Callable[[_F], _F]:
+    def decorator(func: _F) -> _F:
+        setattr(func, "__threaded__", enabled)
+        return func
+
+    return decorator
+
+
+@runtime_checkable
+class HasThreaded(Protocol):
+    __threaded__: bool
+
+
 class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallable, _TResult]):
     def __init__(self, *, task_name_prefix: Optional[str] = None) -> None:
         super().__init__()
@@ -199,7 +217,10 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
             set(self),
         ):
             if method is not None:
-                future = create_sub_task(ensure_coroutine(method)(*args, **kwargs))
+                if isinstance(method, HasThreaded) and cast(HasThreaded, method).__threaded__:
+                    future = run_coroutine_in_thread(ensure_coroutine(method), *args, **kwargs)
+                else:
+                    future = create_sub_task(ensure_coroutine(method)(*args, **kwargs))
 
                 awaitables.append(future)
 

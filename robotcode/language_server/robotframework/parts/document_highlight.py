@@ -4,9 +4,9 @@ import ast
 import asyncio
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Type, cast
 
-from ....utils.async_tools import run_coroutine_in_thread
+from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
-from ...common.language import language_id
+from ...common.decorators import language_id
 from ...common.lsp_types import DocumentHighlight, DocumentHighlightKind, Position
 from ...common.text_document import TextDocument
 from ..utils.ast import (
@@ -50,6 +50,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
         return None
 
     @language_id("robotframework")
+    @threaded()
     @_logger.call
     async def collect(
         self,
@@ -57,30 +58,28 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
         document: TextDocument,
         position: Position,
     ) -> Optional[List[DocumentHighlight]]:
-        async def run() -> Optional[List[DocumentHighlight]]:
-            result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
-            if not result_nodes:
-                return None
+        result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
-            result_node = result_nodes[-1]
-
-            if result_node is None:
-                return None
-
-            result = await self._highlight_default(result_nodes, document, position)
-            if result:
-                return result
-
-            method = self._find_method(type(result_node))
-            if method is not None:
-                result = await method(result_node, document, position)
-                if result is not None:
-                    return result
-
+        if not result_nodes:
             return None
 
-        return await run_coroutine_in_thread(run)
+        result_node = result_nodes[-1]
+
+        if result_node is None:
+            return None
+
+        result = await self._highlight_default(result_nodes, document, position)
+        if result:
+            return result
+
+        method = self._find_method(type(result_node))
+        if method is not None:
+            result = await method(result_node, document, position)
+            if result is not None:
+                return result
+
+        return None
 
     async def _highlight_default(
         self, nodes: List[ast.AST], document: TextDocument, position: Position

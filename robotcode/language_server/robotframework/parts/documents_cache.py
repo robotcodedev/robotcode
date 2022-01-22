@@ -22,7 +22,7 @@ from ....utils.async_tools import (
     create_sub_task,
 )
 from ....utils.uri import Uri
-from ...common.language import language_id_filter
+from ...common.decorators import language_id_filter
 from ...common.parts.workspace import WorkspaceFolder
 from ...common.text_document import TextDocument
 from ..configuration import RobotConfig

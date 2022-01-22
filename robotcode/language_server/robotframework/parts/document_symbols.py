@@ -4,9 +4,9 @@ import ast
 import itertools
 from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 
-from ....utils.async_tools import run_coroutine_in_thread
+from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
-from ...common.language import language_id
+from ...common.decorators import language_id
 from ...common.lsp_types import DocumentSymbol, SymbolInformation, SymbolKind
 from ...common.text_document import TextDocument
 from ..utils.ast import Token, range_from_node, range_from_token, tokenize_variables
@@ -26,6 +26,7 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
         parent.document_symbols.collect.add(self.collect)
 
     @language_id("robotframework")
+    @threaded()
     @_logger.call(entering=True, exiting=True, exception=True)
     async def collect(
         self, sender: Any, document: TextDocument
@@ -232,7 +233,4 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
                     symbol = DocumentSymbol(name=variable.name, kind=SymbolKind.VARIABLE, range=r, selection_range=r)
                     self.current_symbol.children.append(symbol)
 
-        async def run() -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
-            return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)
-
-        return await run_coroutine_in_thread(run)
+        return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)

@@ -22,9 +22,9 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_dropwhile, async_takewhile
-from ....utils.async_tools import run_coroutine_in_thread
+from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
-from ...common.language import language_id
+from ...common.decorators import language_id
 from ...common.lsp_types import (
     Range,
     SemanticTokenModifiers,
@@ -676,20 +676,23 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         )
 
     @language_id("robotframework")
+    @threaded()
     @_logger.call(entering=True, exiting=True, exception=True)
     async def collect_full(
         self, sender: Any, document: TextDocument, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        return await run_coroutine_in_thread(self.collect_threading, document, None)
+        return await self.collect_threading(document, None)
 
     @language_id("robotframework")
+    @threaded()
     @_logger.call(entering=True, exiting=True, exception=True)
     async def collect_range(
         self, sender: Any, document: TextDocument, range: Range, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        return await run_coroutine_in_thread(self.collect_threading, document, range)
+        return await self.collect_threading(document, range)
 
     @language_id("robotframework")
+    @threaded()
     @_logger.call(entering=True, exiting=True, exception=True)
     async def collect_full_delta(
         self, sender: Any, document: TextDocument, previous_result_id: str, **kwargs: Any

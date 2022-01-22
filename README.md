@@ -30,6 +30,8 @@ Extensions installed through the marketplace are subject to the [Marketplace Ter
 - Keyword Parameters
 ![Complete Keyword](./doc/images/complete_keyword_parameters.png)
 
+TODO
+
 ## Quick start
 
 1. [Install a supported version of Python on your system](https://code.visualstudio.com/docs/python/python-tutorial#_prerequisites) 

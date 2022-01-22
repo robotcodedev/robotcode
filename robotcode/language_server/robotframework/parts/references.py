@@ -16,11 +16,11 @@ from typing import (
     cast,
 )
 
-from ....utils.async_tools import create_sub_task, run_coroutine_in_thread
+from ....utils.async_tools import create_sub_task, run_coroutine_in_thread, threaded
 from ....utils.glob_path import iter_files
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
-from ...common.language import language_id
+from ...common.decorators import language_id
 from ...common.lsp_types import Location, Position, ReferenceContext
 from ...common.text_document import TextDocument
 from ..configuration import WorkspaceConfig
@@ -83,34 +83,33 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         return None
 
     @language_id("robotframework")
+    @threaded()
     @_logger.call
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: ReferenceContext
     ) -> Optional[List[Location]]:
-        async def run() -> Optional[List[Location]]:
-            result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
-            if not result_nodes:
-                return None
+        result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
-            result_node = result_nodes[-1]
-
-            if result_node is None:
-                return None
-
-            result = await self._references_default(result_nodes, document, position, context)
-            if result:
-                return result
-
-            method = self._find_method(type(result_node))
-            if method is not None:
-                result = await method(result_node, document, position, context)
-                if result is not None:
-                    return result
-
+        if not result_nodes:
             return None
 
-        return await run_coroutine_in_thread(run)
+        result_node = result_nodes[-1]
+
+        if result_node is None:
+            return None
+
+        result = await self._references_default(result_nodes, document, position, context)
+        if result:
+            return result
+
+        method = self._find_method(type(result_node))
+        if method is not None:
+            result = await method(result_node, document, position, context)
+            if result is not None:
+                return result
+
+        return None
 
     async def _find_references(
         self,

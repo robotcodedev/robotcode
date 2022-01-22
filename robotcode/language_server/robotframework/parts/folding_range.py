@@ -3,9 +3,9 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
-from ....utils.async_tools import run_coroutine_in_thread
+from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
-from ...common.language import language_id
+from ...common.decorators import language_id
 from ...common.lsp_types import FoldingRange
 from ...common.text_document import TextDocument
 
@@ -24,6 +24,7 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
         parent.folding_ranges.collect.add(self.collect)
 
     @language_id("robotframework")
+    @threaded()
     @_logger.call(entering=True, exiting=True, exception=True)
     async def collect(self, sender: Any, document: TextDocument) -> Optional[List[FoldingRange]]:
 
@@ -115,7 +116,4 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
                 self.__append(node, kind="if")
                 await self.generic_visit(node)
 
-        async def run() -> Optional[List[FoldingRange]]:
-            return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)
-
-        return await run_coroutine_in_thread(run)
+        return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)

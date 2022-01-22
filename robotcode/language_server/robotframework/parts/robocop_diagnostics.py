@@ -3,13 +3,9 @@ from __future__ import annotations
 import io
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from ....utils.async_tools import (
-    CancelationToken,
-    check_canceled,
-    run_coroutine_in_thread,
-)
+from ....utils.async_tools import CancelationToken, check_canceled, threaded
 from ....utils.logging import LoggingDescriptor
-from ...common.language import language_id
+from ...common.decorators import language_id
 from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
 from ...common.parts.diagnostics import DiagnosticsResult
 from ...common.parts.workspace import WorkspaceFolder
@@ -49,25 +45,23 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         return await self.parent.workspace.get_configuration(RoboCopConfig, folder.uri)
 
     @language_id("robotframework")
+    @threaded()
     @_logger.call(entering=True, exiting=True, exception=True)
     async def collect_diagnostics(
         self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
     ) -> DiagnosticsResult:
-        async def run() -> DiagnosticsResult:
 
-            workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
-            if workspace_folder is not None:
-                extension_config = await self.get_config(document)
+        workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
+        if workspace_folder is not None:
+            extension_config = await self.get_config(document)
 
-                if extension_config is not None and extension_config.enabled:
-                    return DiagnosticsResult(
-                        self.collect_diagnostics,
-                        await self.collect(document, workspace_folder, extension_config, cancelation_token),
-                    )
+            if extension_config is not None and extension_config.enabled:
+                return DiagnosticsResult(
+                    self.collect_diagnostics,
+                    await self.collect(document, workspace_folder, extension_config, cancelation_token),
+                )
 
-            return DiagnosticsResult(self.collect_diagnostics, [])
-
-        return await run_coroutine_in_thread(run)
+        return DiagnosticsResult(self.collect_diagnostics, [])
 
     @_logger.call(entering=True, exiting=True, exception=True)
     async def collect(

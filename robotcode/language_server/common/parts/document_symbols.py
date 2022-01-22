@@ -17,8 +17,8 @@ from typing import (
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_tools import async_tasking_event
 from ....utils.logging import LoggingDescriptor
+from ..decorators import language_id_filter
 from ..has_extend_capabilities import HasExtendCapabilities
-from ..language import language_id_filter
 from ..lsp_types import (
     DocumentSymbol,
     DocumentSymbolClientCapabilitiesSymbolKind,

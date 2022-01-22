@@ -14,9 +14,9 @@ from typing import (
     cast,
 )
 
-from ....utils.async_tools import CancelationToken, run_coroutine_in_thread
+from ....utils.async_tools import CancelationToken, threaded
 from ....utils.logging import LoggingDescriptor
-from ...common.language import language_id
+from ...common.decorators import language_id
 from ...common.lsp_types import Hover, MarkupContent, MarkupKind, Position
 from ...common.text_document import TextDocument
 from ..diagnostics.library_doc import KeywordMatcher
@@ -64,31 +64,30 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         return None
 
+    @threaded()
     @language_id("robotframework")
     @_logger.call(entering=True, exiting=True, exception=True)
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, cancel_token: Optional[CancelationToken] = None
     ) -> Optional[Hover]:
-        async def run() -> Optional[Hover]:
-            result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
-            if not result_nodes:
-                return None
+        result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
-            result = await self._hover_default(result_nodes, document, position)
-            if result:
-                return result
-
-            for result_node in reversed(result_nodes):
-                method = self._find_method(type(result_node))
-                if method is not None:
-                    result = await method(result_node, document, position)
-                    if result is not None:
-                        return result
-
+        if not result_nodes:
             return None
 
-        return await run_coroutine_in_thread(run)
+        result = await self._hover_default(result_nodes, document, position)
+        if result:
+            return result
+
+        for result_node in reversed(result_nodes):
+            method = self._find_method(type(result_node))
+            if method is not None:
+                result = await method(result_node, document, position)
+                if result is not None:
+                    return result
+
+        return None
 
     async def _hover_default(self, nodes: List[ast.AST], document: TextDocument, position: Position) -> Optional[Hover]:
         from robot.api.parsing import Token as RobotToken

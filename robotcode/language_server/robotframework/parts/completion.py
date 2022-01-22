@@ -21,9 +21,9 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_chain, async_chain_iterator
-from ....utils.async_tools import run_coroutine_in_thread
+from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
-from ...common.language import language_id, trigger_characters
+from ...common.decorators import language_id, trigger_characters
 from ...common.lsp_types import (
     CompletionContext,
     CompletionItem,
@@ -95,41 +95,40 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         ],
     )
     # @all_commit_characters(['\n'])
+    @language_id("robotframework")
+    @threaded()
     @_logger.call(entering=True, exiting=True, exception=True)
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        async def run() -> Union[List[CompletionItem], CompletionList, None]:
-            namespace = await self.parent.documents_cache.get_namespace(document)
-            if namespace is None:
-                return None
 
-            return await CompletionCollector(
-                self.parent, document, namespace, await self.get_section_style(document)
-            ).collect(
-                position,
-                context,
-            )
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
 
-        return await run_coroutine_in_thread(run)
+        return await CompletionCollector(
+            self.parent, document, namespace, await self.get_section_style(document)
+        ).collect(
+            position,
+            context,
+        )
 
     @language_id("robotframework")
+    @threaded()
     async def resolve(self, sender: Any, completion_item: CompletionItem) -> CompletionItem:
-        async def run() -> CompletionItem:
-            if completion_item.data is not None:
-                document_uri = completion_item.data.get("document_uri", None)
-                if document_uri is not None:
-                    document = await self.parent.documents.get(document_uri)
-                    if document is not None:
-                        namespace = await self.parent.documents_cache.get_namespace(document)
-                        if namespace is not None:
-                            return await CompletionCollector(
-                                self.parent, document, namespace, await self.get_section_style(document)
-                            ).resolve(completion_item)
 
-            return completion_item
+        if completion_item.data is not None:
+            document_uri = completion_item.data.get("document_uri", None)
+            if document_uri is not None:
+                document = await self.parent.documents.get(document_uri)
+                if document is not None:
+                    namespace = await self.parent.documents_cache.get_namespace(document)
+                    if namespace is not None:
+                        return await CompletionCollector(
+                            self.parent, document, namespace, await self.get_section_style(document)
+                        ).resolve(completion_item)
 
-        return await run_coroutine_in_thread(run)
+        return completion_item
 
 
 _CompleteMethod = Callable[

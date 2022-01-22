@@ -7,8 +7,12 @@ from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_tools import async_tasking_event
 from ....utils.logging import LoggingDescriptor
+from ..decorators import (
+    HasAllCommitCharacters,
+    HasTriggerCharacters,
+    language_id_filter,
+)
 from ..has_extend_capabilities import HasExtendCapabilities
-from ..language import HasAllCommitCharacters, HasTriggerCharacters, language_id_filter
 from ..lsp_types import (
     CompletionContext,
     CompletionItem,

@@ -15,7 +15,7 @@ from ....utils.async_tools import (
 )
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
-from ..language import language_id, language_id_filter
+from ..decorators import language_id, language_id_filter
 from ..lsp_types import Diagnostic, DocumentUri, PublishDiagnosticsParams
 from ..text_document import TextDocument
 
@@ -130,8 +130,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
     @async_tasking_event_iterator
     async def collect(
-        sender, document: TextDocument, cancelation_token: CancelationToken
-    ) -> DiagnosticsResult:  # NOSONAR
+        sender, document: TextDocument, cancelation_token: CancelationToken  # NOSONAR
+    ) -> DiagnosticsResult:
         ...
 
     @_logger.call
@@ -211,7 +211,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 document.uri,
                 document.version,
                 cancelation_token,
-                # lambda: create_sub_task(self.publish_diagnostics(document.document_uri, cancelation_token)),
                 lambda: run_coroutine_in_thread(self.publish_diagnostics, document.document_uri, cancelation_token),
                 self._delete_entry,
             )

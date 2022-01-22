@@ -3,9 +3,9 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
-from ....utils.async_tools import run_coroutine_in_thread
+from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
-from ...common.language import language_id
+from ...common.decorators import language_id
 from ...common.lsp_types import CodeLens, Command
 from ...common.text_document import TextDocument
 from ..utils.ast import range_from_token
@@ -25,6 +25,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart):
         # parent.code_lens.collect.add(self.collect)
 
     @language_id("robotframework")
+    @threaded()
     async def collect(self, sender: Any, document: TextDocument) -> Optional[List[CodeLens]]:
 
         from ..utils.async_ast import AsyncVisitor
@@ -77,7 +78,4 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     )
 
-        async def run() -> Optional[List[CodeLens]]:
-            return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)
-
-        return await run_coroutine_in_thread(run)
+        return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)

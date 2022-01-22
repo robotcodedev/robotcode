@@ -23,7 +23,7 @@ from ....utils.async_tools import Lock, async_tasking_event, create_sub_task
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
 from ....utils.uri import Uri
-from ...common.language import language_id
+from ...common.decorators import language_id
 from ...common.lsp_types import FileChangeType, FileEvent
 from ...common.parts.workspace import FileWatcherEntry, Workspace
 from ...common.text_document import TextDocument

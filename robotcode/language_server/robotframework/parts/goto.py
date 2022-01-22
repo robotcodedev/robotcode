@@ -14,10 +14,10 @@ from typing import (
     cast,
 )
 
-from ....utils.async_tools import run_coroutine_in_thread
+from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
-from ...common.language import language_id
+from ...common.decorators import language_id
 from ...common.lsp_types import Location, LocationLink, Position
 from ...common.text_document import TextDocument
 from ..utils.ast import (
@@ -66,34 +66,33 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     @language_id("robotframework")
+    @threaded()
     @_logger.call(entering=True, exiting=True, exception=True)
     async def collect(
         self, sender: Any, document: TextDocument, position: Position
     ) -> Union[Location, List[Location], List[LocationLink], None]:
-        async def run() -> Union[Location, List[Location], List[LocationLink], None]:
-            result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
-            if not result_nodes:
-                return None
+        result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
-            result_node = result_nodes[-1]
-
-            if result_node is None:
-                return None
-
-            result = await self._definition_default(result_nodes, document, position)
-            if result:
-                return result
-
-            method = self._find_method(type(result_node))
-            if method is not None:
-                result = await method(result_node, document, position)
-                if result is not None:
-                    return result
-
+        if not result_nodes:
             return None
 
-        return await run_coroutine_in_thread(run)
+        result_node = result_nodes[-1]
+
+        if result_node is None:
+            return None
+
+        result = await self._definition_default(result_nodes, document, position)
+        if result:
+            return result
+
+        method = self._find_method(type(result_node))
+        if method is not None:
+            result = await method(result_node, document, position)
+            if result is not None:
+                return result
+
+        return None
 
     async def _definition_default(
         self, nodes: List[ast.AST], document: TextDocument, position: Position
