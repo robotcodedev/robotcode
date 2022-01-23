@@ -40,11 +40,11 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
     if (!debugConfiguration.python) debugConfiguration.python = this.pythonManager.getPythonCommand(folder);
 
     debugConfiguration.robotPythonPath = [
-      ...config.get<Array<string>>("robot.pythonPath", []),
+      ...config.get<string[]>("robot.pythonPath", []),
       ...(debugConfiguration.robotPythonPath ?? []),
     ];
 
-    debugConfiguration.args = [...config.get<Array<string>>("robot.args", []), ...(debugConfiguration.args ?? [])];
+    debugConfiguration.args = [...config.get<string[]>("robot.args", []), ...(debugConfiguration.args ?? [])];
 
     debugConfiguration.variables = {
       ...config.get<{ [Key: string]: unknown }>("robot.variables", {}),
@@ -112,9 +112,9 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
           throw new Error("Can't get a valid python command.");
         }
 
-        const debugAdapterArgs = config.get<Array<string>>("debugAdapter.args", []);
+        const debugAdapterArgs = config.get<string[]>("debugAdapter.args", []);
 
-        const args: Array<string> = ["-u", this.pythonManager.pythonDebugAdapterMain, "--mode", "stdio"].concat(
+        const args: string[] = ["-u", this.pythonManager.pythonDebugAdapterMain, "--mode", "stdio"].concat(
           debugAdapterArgs
         );
 
@@ -270,44 +270,51 @@ export class DebugManager {
 
   static async runTests(
     folder: vscode.WorkspaceFolder,
+    suites: string[],
     included: string[],
     excluded: string[],
     runId?: string,
     options?: vscode.DebugSessionOptions
   ): Promise<void> {
-    if (included.length) {
-      const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
-      const args = [];
+    const args = [];
+
+    for (const s of suites) {
+      args.push("--suite");
+      args.push(s);
+    }
+
+    if (included.length > 0) {
       args.push("--prerunmodifier");
 
       args.push(`robotcode.debugger.modifiers.ByLongName:${included.join(":")}`);
-
-      if (excluded.length > 0) {
-        args.push("--prerunmodifier");
-
-        args.push(`robotcode.debugger.modifiers.ExcludedByLongName:${excluded.join(":")}`);
-      }
-      const template = config.get("debug.defaultConfiguration", {});
-
-      await vscode.debug.startDebugging(
-        folder,
-        {
-          ...template,
-          ...{
-            type: "robotcode",
-            name: "robotcode: Run Tests",
-            request: "launch",
-            cwd: folder?.uri.fsPath,
-            target: ".",
-            args: args,
-            console: config.get("debug.defaultConsole", "integratedTerminal"),
-            runId: runId,
-          },
-        },
-        options
-      );
     }
+
+    if (excluded.length > 0) {
+      args.push("--prerunmodifier");
+
+      args.push(`robotcode.debugger.modifiers.ExcludedByLongName:${excluded.join(":")}`);
+    }
+    const template = config.get("debug.defaultConfiguration", {});
+
+    await vscode.debug.startDebugging(
+      folder,
+      {
+        ...template,
+        ...{
+          type: "robotcode",
+          name: "robotcode: Run Tests",
+          request: "launch",
+          cwd: folder?.uri.fsPath,
+          target: ".",
+          args: args,
+          console: config.get("debug.defaultConsole", "integratedTerminal"),
+          runId: runId,
+        },
+      },
+      options
+    );
   }
 
   static async OnDebugpyStarted(

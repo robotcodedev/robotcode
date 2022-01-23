@@ -332,7 +332,7 @@ export class TestControllerManager {
         if (!this.robotTestItems.has(workspace) && this.robotTestItems.get(workspace) === undefined) {
           this.robotTestItems.set(
             workspace,
-            await this.languageClientsManager.getTestsFromWorkspace(workspace, [], token)
+            await this.languageClientsManager.getTestsFromWorkspace(workspace, [], undefined, token)
           );
         }
 
@@ -550,13 +550,27 @@ export class TestControllerManager {
         };
       }
 
-      await DebugManager.runTests(
-        workspace,
-        id.map((i) => i.id),
-        excluded.get(workspace)?.map((i) => i.id) ?? [],
-        runId,
-        options
-      );
+      const workspaceItem = this.findTestItemByUri(workspace.uri.toString());
+
+      if (includedItems.length === 1 && includedItems[0] === workspaceItem && excluded.size === 0) {
+        await DebugManager.runTests(workspace, [], [], [], runId, options);
+      } else {
+        const includedInWs = id.map((i) => i.id);
+        const excludedInWs = excluded.get(workspace)?.map((i) => i.id) ?? [];
+        const suites = new Set<string>();
+
+        for (const t of [...includedInWs, ...excludedInWs]) {
+          const testItem = this.findTestItemById(t);
+          if (!testItem?.canResolveChildren) {
+            if (testItem?.parent) {
+              suites.add(testItem.parent.id);
+            }
+          } else {
+            suites.add(t);
+          }
+        }
+        await DebugManager.runTests(workspace, Array.from(suites), includedInWs, excludedInWs, runId, options);
+      }
     }
   }
 

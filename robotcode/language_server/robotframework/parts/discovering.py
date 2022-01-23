@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 class GetAllTestsParams(Model):
     workspace_folder: str
     paths: Optional[List[str]]
+    suites: Optional[List[str]] = None
 
 
 @dataclass(repr=False)
@@ -97,7 +98,9 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
-    def _get_tests_from_workspace(self, workspace_folder: Path, paths: Optional[List[str]]) -> List[TestItem]:
+    def _get_tests_from_workspace(
+        self, workspace_folder: Path, paths: Optional[List[str]], suites: Optional[List[str]]
+    ) -> List[TestItem]:
         from robot.output.logger import LOGGER
         from robot.running import TestCase, TestSuite
 
@@ -166,7 +169,11 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                                 yield str(p)
 
                     valid_paths = [i for i in normalize_paths(paths)]
-                    suite: Optional[TestSuite] = TestSuite.from_file_system(*valid_paths) if valid_paths else None
+                    suite: Optional[TestSuite] = (
+                        TestSuite.from_file_system(*valid_paths, included_suites=suites if suites else None)
+                        if valid_paths
+                        else None
+                    )
                     suite_item = [generate(suite)] if suite else []
 
                     return [
@@ -201,10 +208,11 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         self,
         workspace_folder: str,
         paths: Optional[List[str]],
+        suites: Optional[List[str]],
         *args: Any,
         **kwargs: Any,
     ) -> List[TestItem]:
-        return await run_in_thread(self._get_tests_from_workspace, Uri(workspace_folder).to_path(), paths)
+        return await run_in_thread(self._get_tests_from_workspace, Uri(workspace_folder).to_path(), paths, suites)
 
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
     @_logger.call

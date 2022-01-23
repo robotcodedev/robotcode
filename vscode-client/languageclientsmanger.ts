@@ -179,9 +179,9 @@ export class LanguageClientsManager {
       throw new Error("Can't find a valid python executable.");
     }
 
-    const serverArgs = config.get<Array<string>>("languageServer.args", []);
+    const serverArgs = config.get<string[]>("languageServer.args", []);
 
-    const args: Array<string> = [
+    const args: string[] = [
       "-u",
 
       // "-m",
@@ -193,7 +193,7 @@ export class LanguageClientsManager {
       this.pythonManager.pythonLanguageServerMain,
     ];
 
-    const debug_args: Array<string> = ["--log"];
+    const debug_args: string[] = ["--log"];
 
     const transport = { stdio: TransportKind.stdio, pipe: TransportKind.pipe, socket: TransportKind.socket }[mode];
 
@@ -405,7 +405,8 @@ export class LanguageClientsManager {
 
   public async getTestsFromWorkspace(
     workspaceFolder: vscode.WorkspaceFolder,
-    paths?: Array<string>,
+    paths?: string[],
+    suites?: string[],
     token?: vscode.CancellationToken
   ): Promise<RobotTestItem[] | undefined> {
     const client = await this.getLanguageClientForResource(workspaceFolder.uri);
@@ -419,6 +420,7 @@ export class LanguageClientsManager {
             {
               workspaceFolder: workspaceFolder.uri.toString(),
               paths: paths ?? ["."],
+              suites,
             },
             token
           )
