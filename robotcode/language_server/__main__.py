@@ -87,9 +87,13 @@ def create_parser() -> argparse.ArgumentParser:
         help="communication mode",
     )
 
-    result.add_argument("--stdio", action="store_true", help="run in stdio mode")
-    result.add_argument("--socket", default=None, help="run in socket mode", type=int)
-    result.add_argument("--pipe", default=None, help="run in named pipe mode", type=str)
+    result.add_argument("--stdio", action="store_true", help="run in stdio mode (Shortcut for --mode=stdio)")
+    result.add_argument(
+        "--socket", default=None, help="run in socket mode (Shortcut for --mode=socket --port ...)", type=int
+    )
+    result.add_argument(
+        "--pipe", default=None, help="run in named pipe mode (Shortcut for --mode=pipe --pipe-name ...)", type=str
+    )
 
     result.add_argument("-p", "--port", default=6610, help="server listen port (mode socket and tcp)", type=int)
 
