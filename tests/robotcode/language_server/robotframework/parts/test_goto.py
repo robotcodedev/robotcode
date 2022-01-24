@@ -30,8 +30,10 @@ async def test_goto(
     data: GeneratedTestData,
 ) -> None:
 
-    result = await protocol.robot_goto.collect(
-        protocol.robot_goto, test_document, Position(line=data.line, character=data.character)
+    result = await protocol.robot_goto.collect_definition(
+        protocol.robot_goto,
+        test_document,
+        Position(line=data.line, character=data.character),
     )
 
     assert bool(

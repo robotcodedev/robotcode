@@ -218,6 +218,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             LibraryImport,
             Metadata,
             ResourceImport,
+            Template,
+            TestTemplate,
             VariablesImport,
         )
         from robot.variables.search import is_variable
@@ -269,7 +271,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         g.end() - g.start(),
                     )
             elif token.type in [RobotToken.KEYWORD, ROBOT_KEYWORD_INNER] or (
-                token.type == RobotToken.NAME and isinstance(node, Fixture)
+                token.type == RobotToken.NAME and isinstance(node, (Fixture, Template, TestTemplate))
             ):
                 if col_offset is None:
                     col_offset = token.col_offset

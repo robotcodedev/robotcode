@@ -27,7 +27,6 @@ from ..utils.ast import (
     get_tokens_at_position,
     range_from_node,
     range_from_token,
-    range_from_token_or_node,
     tokenize_variables,
 )
 from ..utils.markdownformatter import MarkDownFormatter
@@ -66,7 +65,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
     @threaded()
     @language_id("robotframework")
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, cancel_token: Optional[CancelationToken] = None
     ) -> Optional[Hover]:
@@ -147,11 +146,28 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             position,
         )
 
-        if result is not None and result[0] is not None and not result[0].is_error_handler:
-            return Hover(
-                contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=result[0].to_markdown()),
-                range=range_from_token_or_node(node, result[1]),
-            )
+        if result is not None:
+            keyword_doc, keyword_token = result
+
+            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+
+            kw_range = range_from_token(keyword_token)
+
+            if lib_entry and kw_namespace:
+                r = range_from_token(keyword_token)
+                r.end.character = r.start.character + len(kw_namespace)
+                kw_range.start.character = r.end.character + 1
+                if position in r:
+                    return Hover(
+                        contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=lib_entry.library_doc.to_markdown()),
+                        range=r,
+                    )
+
+            if keyword_doc is not None and not keyword_doc.is_error_handler:
+                return Hover(
+                    contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
+                    range=kw_range,
+                )
         return None
 
     async def hover_Fixture(  # noqa: N802
@@ -173,11 +189,27 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             position,
         )
 
-        if result is not None and result[0] is not None and not result[0].is_error_handler:
-            return Hover(
-                contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=result[0].to_markdown()),
-                range=range_from_token_or_node(node, result[1]),
-            )
+        if result is not None:
+            keyword_doc, keyword_token = result
+            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+
+            kw_range = range_from_token(keyword_token)
+
+            if lib_entry and kw_namespace:
+                r = range_from_token(keyword_token)
+                r.end.character = r.start.character + len(kw_namespace)
+                kw_range.start.character = r.end.character + 1
+                if position in r:
+                    return Hover(
+                        contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=lib_entry.library_doc.to_markdown()),
+                        range=r,
+                    )
+
+            if keyword_doc is not None and not keyword_doc.is_error_handler:
+                return Hover(
+                    contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
+                    range=kw_range,
+                )
         return None
 
     async def _hover_Template_or_TestTemplate(  # noqa: N802
@@ -199,11 +231,28 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     return None
 
                 keyword_doc = await namespace.find_keyword(template_node.value)
-                if keyword_doc is not None and not keyword_doc.is_error_handler:
-                    return Hover(
-                        contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
-                        range=range_from_token_or_node(template_node, keyword_token),
-                    )
+                if keyword_doc is not None:
+
+                    lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+
+                    kw_range = range_from_token(keyword_token)
+
+                    if lib_entry and kw_namespace:
+                        r = range_from_token(keyword_token)
+                        r.end.character = r.start.character + len(kw_namespace)
+                        kw_range.start.character = r.end.character + 1
+                        if position in r:
+                            return Hover(
+                                contents=MarkupContent(
+                                    kind=MarkupKind.MARKDOWN, value=lib_entry.library_doc.to_markdown()
+                                ),
+                                range=r,
+                            )
+                    if not keyword_doc.is_error_handler:
+                        return Hover(
+                            contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
+                            range=kw_range,
+                        )
         return None
 
     async def hover_TestTemplate(  # noqa: N802
@@ -229,7 +278,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             if name_token is None:
                 return None
 
-            if position.is_in_range(range_from_token(name_token)):
+            token_range = range_from_token(name_token)
+            if position.is_in_range(token_range):
                 namespace = await self.parent.documents_cache.get_namespace(document)
                 if namespace is None:
                     return None
@@ -252,7 +302,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                             kind=MarkupKind.MARKDOWN,
                             value=libdoc.to_markdown(),
                         ),
-                        range=range_from_token_or_node(library_node, name_token),
+                        range=token_range,
                     )
                 except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                     raise
@@ -273,7 +323,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             if name_token is None:
                 return None
 
-            if position.is_in_range(range_from_token(name_token)):
+            token_range = range_from_token(name_token)
+            if position.is_in_range(token_range):
                 namespace = await self.parent.documents_cache.get_namespace(document)
                 if namespace is None:
                     return None
@@ -294,7 +345,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                             kind=MarkupKind.MARKDOWN,
                             value=libdoc.to_markdown(),
                         ),
-                        range=range_from_token_or_node(resource_node, name_token),
+                        range=token_range,
                     )
                 except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                     raise
@@ -315,7 +366,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             if name_token is None:
                 return None
 
-            if position.is_in_range(range_from_token(name_token)):
+            token_range = range_from_token(name_token)
+            if position.is_in_range(token_range):
                 namespace = await self.parent.documents_cache.get_namespace(document)
                 if namespace is None:
                     return None
@@ -336,7 +388,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                             kind=MarkupKind.MARKDOWN,
                             value=libdoc.to_markdown(),
                         ),
-                        range=range_from_token_or_node(variables_node, name_token),
+                        range=token_range,
                     )
                 except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                     raise
@@ -364,7 +416,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         if result is not None and not result.is_error_handler:
             return Hover(
                 contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=result.to_markdown()),
-                range=range_from_token_or_node(node, name_token),
+                range=range_from_token(name_token),
             )
 
         return None
@@ -403,5 +455,5 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 kind=MarkupKind.MARKDOWN,
                 value=MarkDownFormatter().format(txt),
             ),
-            range=range_from_token_or_node(test_case, name_token),
+            range=range_from_token(name_token),
         )

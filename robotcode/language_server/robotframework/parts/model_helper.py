@@ -3,9 +3,14 @@ from __future__ import annotations
 from typing import List, Optional, Tuple
 
 from ...common.lsp_types import Position
-from ..diagnostics.library_doc import KeywordDoc, KeywordError
-from ..diagnostics.namespace import Namespace
-from ..utils.ast import Token, is_not_variable_token, range_from_token
+from ..diagnostics.library_doc import KeywordDoc, KeywordError, KeywordMatcher
+from ..diagnostics.namespace import LibraryEntry, Namespace
+from ..utils.ast import (
+    Token,
+    is_not_variable_token,
+    iter_over_keyword_names_and_owners,
+    range_from_token,
+)
 
 
 class ModelHelperMixin:
@@ -175,3 +180,26 @@ class ModelHelperMixin:
             pass
 
         return None
+
+    async def get_namespace_info_from_keyword(
+        self, namespace: Namespace, keyword_token: Token
+    ) -> Tuple[Optional[LibraryEntry], Optional[str]]:
+        lib_entry: Optional[LibraryEntry] = None
+
+        kw_namespace: Optional[str] = None
+
+        libraries_matchers = await namespace.get_libraries_matchers()
+        resources_matchers = await namespace.get_resources_matchers()
+
+        for lib, _ in iter_over_keyword_names_and_owners(keyword_token.value):
+            if lib is not None:
+                lib_matcher = KeywordMatcher(lib)
+                if lib_matcher in libraries_matchers:
+                    kw_namespace = lib
+                    lib_entry = libraries_matchers.get(lib_matcher, None)
+                    break
+                if lib_matcher in resources_matchers:
+                    kw_namespace = lib
+                    lib_entry = resources_matchers.get(lib_matcher, None)
+                    break
+        return lib_entry, kw_namespace

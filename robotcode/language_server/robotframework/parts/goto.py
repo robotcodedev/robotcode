@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -26,7 +27,6 @@ from ..utils.ast import (
     get_nodes_at_position,
     get_tokens_at_position,
     range_from_token,
-    range_from_token_or_node,
     tokenize_variables,
 )
 
@@ -36,8 +36,14 @@ if TYPE_CHECKING:
 from .model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
-_DefinitionMethod = Callable[
-    [ast.AST, TextDocument, Position],
+
+class CollectType(Enum):
+    DEFINITION = 1
+    IMPLEMENTATION = 2
+
+
+_CollectMethod = Callable[
+    [ast.AST, TextDocument, Position, CollectType],
     Awaitable[Union[Location, List[Location], List[LocationLink], None]],
 ]
 
@@ -48,30 +54,43 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
-        parent.definition.collect.add(self.collect)
-        parent.implementation.collect.add(self.collect)
+        parent.definition.collect.add(self.collect_definition)
+        parent.implementation.collect.add(self.collect_implementation)
 
-    def _find_method(self, cls: Type[Any]) -> Optional[_DefinitionMethod]:
+    def _find_method(self, cls: Type[Any]) -> Optional[_CollectMethod]:
         if cls is ast.AST:
             return None
         method_name = "definition_" + cls.__name__
         if hasattr(self, method_name):
             method = getattr(self, method_name)
             if callable(method):
-                return cast(_DefinitionMethod, method)
+                return cast(_CollectMethod, method)
         for base in cls.__bases__:
             method = self._find_method(base)
             if method:
-                return cast(_DefinitionMethod, method)
+                return cast(_CollectMethod, method)
         return None
 
     @language_id("robotframework")
     @threaded()
-    @_logger.call(entering=True, exiting=True, exception=True)
-    async def collect(
+    @_logger.call
+    async def collect_definition(
         self, sender: Any, document: TextDocument, position: Position
     ) -> Union[Location, List[Location], List[LocationLink], None]:
+        return await self.collect(document, position, CollectType.DEFINITION)
 
+    @language_id("robotframework")
+    @threaded()
+    @_logger.call
+    async def collect_implementation(
+        self, sender: Any, document: TextDocument, position: Position
+    ) -> Union[Location, List[Location], List[LocationLink], None]:
+        return await self.collect(document, position, CollectType.IMPLEMENTATION)
+
+    @_logger.call
+    async def collect(
+        self, document: TextDocument, position: Position, collect_type: CollectType
+    ) -> Union[Location, List[Location], List[LocationLink], None]:
         result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
         if not result_nodes:
@@ -82,20 +101,20 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         if result_node is None:
             return None
 
-        result = await self._definition_default(result_nodes, document, position)
+        result = await self._definition_default(result_nodes, document, position, collect_type)
         if result:
             return result
 
         method = self._find_method(type(result_node))
         if method is not None:
-            result = await method(result_node, document, position)
+            result = await method(result_node, document, position, collect_type)
             if result is not None:
                 return result
 
         return None
 
     async def _definition_default(
-        self, nodes: List[ast.AST], document: TextDocument, position: Position
+        self, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.api.parsing import Token as RobotToken
 
@@ -125,7 +144,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         if variable is not None and variable.source:
                             return [
                                 LocationLink(
-                                    origin_selection_range=range_from_token_or_node(node, sub_token),
+                                    origin_selection_range=range_from_token(sub_token),
                                     target_uri=str(Uri.from_path(variable.source)),
                                     target_range=variable.range(),
                                     target_selection_range=range_from_token(variable.name_token)
@@ -138,7 +157,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def definition_KeywordName(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordName
@@ -156,19 +175,20 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         result = await namespace.find_keyword(name_token.value)
 
         if result is not None and not result.is_error_handler and result.source:
+            token_range = range_from_token(name_token)
             return [
                 LocationLink(
-                    origin_selection_range=range_from_token_or_node(node, name_token),
+                    origin_selection_range=token_range,
                     target_uri=str(Uri.from_path(result.source)),
-                    target_range=range_from_token_or_node(node, name_token),
-                    target_selection_range=range_from_token_or_node(node, name_token),
+                    target_range=token_range,
+                    target_selection_range=token_range,
                 )
             ]
 
         return None
 
     async def definition_KeywordCall(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordCall
@@ -186,22 +206,53 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             position,
         )
 
-        if result is not None and result[0] is not None:
-            source = result[0].source
-            if source is not None:
+        if result is not None:
+            keyword_doc, keyword_token = result
+
+            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+
+            kw_range = range_from_token(keyword_token)
+
+            if lib_entry and kw_namespace:
+                r = range_from_token(keyword_token)
+                r.end.character = r.start.character + len(kw_namespace)
+                kw_range.start.character = r.end.character + 1
+                if position in r:
+                    if collect_type == CollectType.DEFINITION and lib_entry.import_source:
+                        return [
+                            LocationLink(
+                                origin_selection_range=r,
+                                target_uri=str(Uri.from_path(lib_entry.import_source)),
+                                target_range=lib_entry.import_range,
+                                target_selection_range=lib_entry.import_range,
+                            )
+                        ]
+                    if lib_entry.library_doc and lib_entry.library_doc.source_or_origin:
+                        return [
+                            LocationLink(
+                                origin_selection_range=r,
+                                target_uri=str(Uri.from_path(lib_entry.library_doc.source_or_origin)),
+                                target_range=lib_entry.import_range,
+                                target_selection_range=lib_entry.import_range,
+                            )
+                        ]
+                    else:
+                        return None
+
+            if keyword_doc is not None and keyword_doc.source:
                 return [
                     LocationLink(
-                        origin_selection_range=range_from_token_or_node(node, result[1]),
-                        target_uri=str(Uri.from_path(source)),
-                        target_range=result[0].range,
-                        target_selection_range=result[0].range,
+                        origin_selection_range=kw_range,
+                        target_uri=str(Uri.from_path(keyword_doc.source)),
+                        target_range=keyword_doc.range,
+                        target_selection_range=keyword_doc.range,
                     )
                 ]
 
         return None
 
     async def definition_Fixture(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Fixture
@@ -219,30 +270,61 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             position,
         )
 
-        if result is not None and result[0] is not None:
-            source = result[0].source
-            if source is not None:
+        if result is not None:
+            keyword_doc, keyword_token = result
+
+            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+
+            kw_range = range_from_token(keyword_token)
+
+            if lib_entry and kw_namespace:
+                r = range_from_token(keyword_token)
+                r.end.character = r.start.character + len(kw_namespace)
+                kw_range.start.character = r.end.character + 1
+                if position in r:
+                    if collect_type == CollectType.DEFINITION and lib_entry.import_source:
+                        return [
+                            LocationLink(
+                                origin_selection_range=r,
+                                target_uri=str(Uri.from_path(lib_entry.import_source)),
+                                target_range=lib_entry.import_range,
+                                target_selection_range=lib_entry.import_range,
+                            )
+                        ]
+                    if lib_entry.library_doc and lib_entry.library_doc.source_or_origin:
+                        return [
+                            LocationLink(
+                                origin_selection_range=r,
+                                target_uri=str(Uri.from_path(lib_entry.library_doc.source_or_origin)),
+                                target_range=lib_entry.import_range,
+                                target_selection_range=lib_entry.import_range,
+                            )
+                        ]
+                    else:
+                        return None
+
+            if keyword_doc is not None and keyword_doc.source:
                 return [
                     LocationLink(
-                        origin_selection_range=range_from_token_or_node(node, result[1]),
-                        target_uri=str(Uri.from_path(source)),
-                        target_range=result[0].range,
-                        target_selection_range=result[0].range,
+                        origin_selection_range=kw_range,
+                        target_uri=str(Uri.from_path(keyword_doc.source)),
+                        target_range=keyword_doc.range,
+                        target_selection_range=keyword_doc.range,
                     )
                 ]
 
         return None
 
     async def _definition_Template_or_TestTemplate(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, template_node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Template, TestTemplate
 
-        node = cast(Union[Template, TestTemplate], node)
-        if node.value:
+        template_node = cast(Union[Template, TestTemplate], template_node)
+        if template_node.value:
 
-            keyword_token = cast(RobotToken, node.get_token(RobotToken.NAME))
+            keyword_token = cast(RobotToken, template_node.get_token(RobotToken.NAME))
             if keyword_token is None:
                 return None
 
@@ -251,30 +333,62 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 if namespace is None:
                     return None
 
-                result = await namespace.find_keyword(node.value)
-                if result is not None and result.source is not None:
-                    return [
-                        LocationLink(
-                            origin_selection_range=range_from_token_or_node(node, keyword_token),
-                            target_uri=str(Uri.from_path(result.source)),
-                            target_range=result.range,
-                            target_selection_range=result.range,
-                        )
-                    ]
+                keyword_doc = await namespace.find_keyword(template_node.value)
+                if keyword_doc is not None:
+
+                    lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+
+                    kw_range = range_from_token(keyword_token)
+
+                    if lib_entry and kw_namespace:
+                        r = range_from_token(keyword_token)
+                        r.end.character = r.start.character + len(kw_namespace)
+                        kw_range.start.character = r.end.character + 1
+                        if position in r:
+                            if collect_type == CollectType.DEFINITION and lib_entry.import_source:
+                                return [
+                                    LocationLink(
+                                        origin_selection_range=r,
+                                        target_uri=str(Uri.from_path(lib_entry.import_source)),
+                                        target_range=lib_entry.import_range,
+                                        target_selection_range=lib_entry.import_range,
+                                    )
+                                ]
+                            if lib_entry.library_doc and lib_entry.library_doc.source_or_origin:
+                                return [
+                                    LocationLink(
+                                        origin_selection_range=r,
+                                        target_uri=str(Uri.from_path(lib_entry.library_doc.source_or_origin)),
+                                        target_range=lib_entry.import_range,
+                                        target_selection_range=lib_entry.import_range,
+                                    )
+                                ]
+                            else:
+                                return None
+
+                    if keyword_doc.source and not keyword_doc.is_error_handler:
+                        return [
+                            LocationLink(
+                                origin_selection_range=kw_range,
+                                target_uri=str(Uri.from_path(keyword_doc.source)),
+                                target_range=keyword_doc.range,
+                                target_selection_range=keyword_doc.range,
+                            )
+                        ]
         return None
 
     async def definition_TestTemplate(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
-        return await self._definition_Template_or_TestTemplate(node, document, position)
+        return await self._definition_Template_or_TestTemplate(node, document, position, collect_type)
 
     async def definition_Template(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
-        return await self._definition_Template_or_TestTemplate(node, document, position)
+        return await self._definition_Template_or_TestTemplate(node, document, position, collect_type)
 
     async def definition_LibraryImport(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import LibraryImport
@@ -308,7 +422,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     if python_source is not None:
                         return [
                             LocationLink(
-                                origin_selection_range=range_from_token_or_node(library_node, name_token),
+                                origin_selection_range=range_from_token(name_token),
                                 target_uri=str(Uri.from_path(python_source)),
                                 target_range=libdoc.range,
                                 target_selection_range=libdoc.range,
@@ -321,7 +435,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def definition_ResourceImport(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import ResourceImport
@@ -353,7 +467,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     if python_source is not None:
                         return [
                             LocationLink(
-                                origin_selection_range=range_from_token_or_node(resource_node, name_token),
+                                origin_selection_range=range_from_token(name_token),
                                 target_uri=str(Uri.from_path(python_source)),
                                 target_range=libdoc.range,
                                 target_selection_range=libdoc.range,
@@ -366,7 +480,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def definition_VariablesImport(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import VariablesImport
@@ -398,7 +512,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     if python_source is not None:
                         return [
                             LocationLink(
-                                origin_selection_range=range_from_token_or_node(variables_node, name_token),
+                                origin_selection_range=range_from_token(name_token),
                                 target_uri=str(Uri.from_path(python_source)),
                                 target_range=libdoc.range,
                                 target_selection_range=libdoc.range,
