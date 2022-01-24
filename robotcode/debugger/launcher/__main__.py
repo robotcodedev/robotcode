@@ -134,16 +134,16 @@ def main() -> None:
                 pass
 
         if not log_initialized:
-            logging.basicConfig(level=log_level)
+            logging.basicConfig(level=log_level, format="%(name)s:%(levelname)s: %(message)s")
 
         if args.log_file is not None:
             _logger.logger.addHandler(get_log_handler(args.log_file))
 
         if not args.log_asyncio:
-            logging.getLogger("asyncio").propagate = False
+            logging.getLogger("asyncio").level = logging.CRITICAL
 
         if not args.log_debugger_launcher:
-            logging.getLogger("robotcode.debugger.launcher").propagate = False
+            logging.getLogger("robotcode.debugger.launcher").level = logging.CRITICAL
 
     _logger.info(f"starting debugger launcher server version={__version__}")
     _logger.debug(f"args={args}")

@@ -114,9 +114,15 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                     is_incomplete=any(e for e in results if isinstance(e, CompletionList) and e.is_incomplete),
                     items=[e for e in chain(*[r.items if isinstance(r, CompletionList) else r for r in results])],
                 )
+                if len(result.items) == 0:
+                    return None
                 return result
             else:
-                return [e for e in chain(*[k for k in results if isinstance(k, list)])]
+                result = [e for e in chain(*[k for k in results if isinstance(k, list)])]
+                if len(result) == 0:
+                    return None
+
+                return result
 
         return None
 

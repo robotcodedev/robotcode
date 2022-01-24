@@ -157,7 +157,7 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
         args = get_args(t)
         origin = get_origin(t)
 
-        if origin is Union:  # TODO pylance shows an error here, but it's ok for mypy?
+        if origin is Union:
             return cast(_T, from_dict(value, args))
 
         if origin is Literal:

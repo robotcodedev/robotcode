@@ -417,6 +417,7 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
 
 class JsonRPCProtocol(JsonRPCProtocolBase):
     _logger = LoggingDescriptor()
+    _data_logger = LoggingDescriptor(postfix="_data")
 
     def __init__(self) -> None:
         super().__init__()
@@ -506,6 +507,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             )
         )
 
+    @_logger.call
     def send_message(self, message: JsonRPCMessage) -> None:
         message.jsonrpc = PROTOCOL_VERSION
 
@@ -517,7 +519,11 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
         if self.write_transport is not None:
             msg = header + body
-            self.write_transport.write(msg)
+
+            self._data_logger.trace(lambda: f"JSON Message: {msg.decode()}")
+
+            if self._loop:
+                self._loop.call_soon_threadsafe(self.write_transport.write, msg)
 
     @_logger.call
     def send_request(

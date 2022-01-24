@@ -136,9 +136,19 @@
 			"args": [
 				"--mode",
 				"tcp",
+				"--log",
+				"--log-colored",
+				"--log-level",
+				"TRACE",
+				//"--log-json-rpc-data",
+				"--log-json-rpc",
+				//"--log-language-server",
+				//"--log-robotframework",
+				//"--debug-asyncio",
+				//"--log-asyncio"
 				//"--call-tracing",
-				"--log-config",
-				"log.ini"
+				// "--log-config",
+				// "log.ini"
 			]
 		},
 		{

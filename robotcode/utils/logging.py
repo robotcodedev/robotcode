@@ -73,6 +73,10 @@ _FUNC_TYPE = Union[Callable[[], logging.Logger], Callable[[], None], staticmetho
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 
+class LoggerException(Exception):
+    pass
+
+
 class CallState(Enum):
     ENTERING = "entering"
     EXITING = "exiting"
@@ -150,7 +154,7 @@ class LoggingDescriptor:
             self.__init_logger()
 
         if self.__logger is None:
-            raise Exception("Logger not initialized")
+            raise LoggerException("Logger not initialized")
 
         return self.__logger
 
@@ -176,7 +180,7 @@ class LoggingDescriptor:
         stacklevel: int = 2,
         **kwargs: Any,
     ) -> None:
-        if self.is_enabled_for(level) and (condition is not None and condition() or condition is None):
+        if self.is_enabled_for(level) and condition is not None and condition() or condition is None:
             self.logger.log(level, msg() if callable(msg) else msg, *args, stacklevel=stacklevel, **kwargs)
 
     def debug(
