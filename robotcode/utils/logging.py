@@ -219,6 +219,16 @@ class LoggingDescriptor:
     ) -> None:
         self.log(logging.ERROR, msg, condition, *args, stacklevel=stacklevel, **kwargs)
 
+    def trace(
+        self,
+        msg: Union[str, Callable[[], str]],
+        condition: Optional[Callable[[], bool]] = None,
+        *args: Any,
+        stacklevel: int = 3,
+        **kwargs: Any,
+    ) -> None:
+        self.log(TRACE, msg, condition, *args, stacklevel=stacklevel, **kwargs)
+
     def exception(
         self,
         msg: Union[BaseException, str, Callable[[], Union[BaseException, str]]],
