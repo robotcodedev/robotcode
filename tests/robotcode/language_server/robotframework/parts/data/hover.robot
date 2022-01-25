@@ -1,79 +1,79 @@
 *** Settings ***
 Library           Collections
-#                 ^^^^^^^^^^^ library import by module name: re.match(r'## Library \*Collections\*.*', value)
+#                 ^^^^^^^^^^^ library import by module name
 Library           ${CURDIR}/libs/myvariables.py
-#                               ^^^^^^^^^^^^^^ library import by path name: re.match(r'## Library \*myvariables.*', value)
-#                 ^^^^^^^^^  variable in library import: value == '(builtin variable) ${CURDIR}'
+#                               ^^^^^^^^^^^^^^ library import by path name
+#                 ^^^^^^^^^  variable in library import
 Variables         ${CURDIR}/libs/myvariables.py
-#                 ^^^^^^^^^  variable in variables import: value == '(builtin variable) ${CURDIR}'
-#                                ^^^^^^^^^^^^^^ variable import by path name: re.match(r'## Variables \*myvariables.*', value)
+#                 ^^^^^^^^^  variable in variables import
+#                                ^^^^^^^^^^^^^^ variable import by path name
 Resource          ${CURDIR}/resources/firstresource.resource
-#                                     ^^^^^^^^^^^^^^ resource import by path name: re.match(r'## Resource \*firstresource.*', value)
-#                 ^^^^^^^^^  variable in resource import: value == '(builtin variable) ${CURDIR}'
+#                                     ^^^^^^^^^^^^^^ resource import by path name
+#                 ^^^^^^^^^  variable in resource import
 
 *** Variables ***
 ${A VAR}          i'm a var
-#^^^^^^^          variable declaration: value == '(variable) ${A VAR}'
+#^^^^^^^          variable declaration
 &{A DICT}         a=1    b=2    c=3
-#^^^^^^^          variable declaration: value == '(variable) &{A DICT}'
+#^^^^^^^          variable declaration
 
 *** Test Cases ***
 first
     [Setup]  Log    Hello ${A VAR}
-#            ^^^ Keyword in Setup: re.match(r'.*Log.*', value)
+#            ^^^ Keyword in Setup
     [Teardown]  Log    Hello ${A VAR}
-#               ^^^ Keyword in Teardown: re.match(r'.*Log.*', value)
+#               ^^^ Keyword in Teardown
 
     Log    Hello ${A VAR}
-#   ^^^ Keyword from Library: re.match(r'.*Log.*', value)
+#   ^^^ Keyword from Library
 
     Collections.Log Dictionary    ${A DICT}
-#               ^^^^^^^^^^^^^^ Keyword with namespace: re.match(r'.*Log Dictionary.*', value)
-#   ^^^^^^^^^^^ namespace before keyword: re.match(r'.*Collections.*', value)
+#               ^^^^^^^^^^^^^^ Keyword with namespace
+#   ^^^^^^^^^^^ namespace before keyword
     FOR    ${key}    ${value}    IN    &{A DICT}
-#          ^^^^^^ FOR loop variable declaration: value == '(local variable) ${key}'
+#          ^^^^^^ FOR loop variable declaration
         Log    ${key}=${value}
-#       ^^^ Keyword in FOR loop: re.match(r'.*Log.*', value)
+#       ^^^ Keyword in FOR loop
     END
     Log    ${CMD_VAR}
-#          ^^^^^^^^^^    BuiltIn variable: value == '(command line variable) ${CMD_VAR}'
-#   ^^^ BuiltIn Keyword: re.match(r'.*Log.*', value)
+#          ^^^^^^^^^^    BuiltIn variable
+#   ^^^ BuiltIn Keyword
     Log    ${CURDIR}
-#          ^^^^^^^^^    BuiltIn variable: value == '(builtin variable) ${CURDIR}'
-#^^^    Spaces: result is None
+#          ^^^^^^^^^    BuiltIn variable
+#^^^    Spaces
     Log    ${A_VAR_FROM_LIB}
-#          ^^^^^^^^^^^^^^^^^    variable from lib: value == '(imported variable) ${A_VAR_FROM_LIB}'
+#          ^^^^^^^^^^^^^^^^^    variable from lib
 
     do something in a resource
-#   ^^^^^^^^^^^^^^^^^^^^^^^^^^  Keyword from resource: re.match(r'.*do something in a resource.*', value)
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^  Keyword from resource
 
     firstresource.do something in a resource
-#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^  KeywordCall from resource with Namespace: re.match(r'.*do something in a resource.*', value)
-#   ^^^^^^^^^^^^^  Namespace from resource: re.match(r'## Resource \*firstresource.*', value)
+#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^  KeywordCall from resource with Namespace
+#   ^^^^^^^^^^^^^  Namespace from resource
 
 
 *** Keywords ***
 a keyword
     Run Keyword    log    hi
-#   ^^^^^^^^^^^  run keyword: re.match(r'.*Run Keyword.*', value)
-#                  ^^^  run keyword argument: re.match(r'.*Log.*', value)
+#   ^^^^^^^^^^^  run keyword
+#                  ^^^  run keyword argument
 
     Run Keywords    a simple keyword    s l e e p a w h i le
-#   ^^^^^^^^^^^^  run keywords: re.match(r'.*Run Keywords.*', value)
-#                   ^^^^^^^^^^^^^^^^  run keywords simple keyword: re.match(r'.*a simple keyword.*', value)
-#                                       ^^^^^^^^^^^^^^^^^^^^  run keywords second parameter with spaces: re.match(r'.*sleep a while.*', value)
+#   ^^^^^^^^^^^^  run keywords
+#                   ^^^^^^^^^^^^^^^^  run keywords simple keyword
+#                                       ^^^^^^^^^^^^^^^^^^^^  run keywords second parameter with spaces
 
     Run Keywords    log  hi  AND  a simple keyword  AND  s l e e p a w h i le
-#   ^^^^^^^^^^^^  run keywords: re.match(r'.*Run Keywords.*', value)
-#                   ^^^  run keywords simple keyword, parameter and AND: re.match(r'.*Log.*', value)
-#                                 ^^^^^^^^^^^^^^^^  run keywords simple keyword and AND: re.match(r'.*a simple keyword.*', value)
-#                                                        ^^^^^^^^^^^^^^^^^^^^  run keywords second parameter with spaces and no AND: re.match(r'.*sleep a while.*', value)
-#                            ^^^    AND: result is None
+#   ^^^^^^^^^^^^  run keywords
+#                   ^^^  run keywords simple keyword, parameter and AND
+#                                 ^^^^^^^^^^^^^^^^  run keywords simple keyword and AND
+#                                                        ^^^^^^^^^^^^^^^^^^^^  run keywords second parameter with spaces and no AND
+#                            ^^^    AND
 
 a simple keyword
-#^^^^^^^^^^^^^^^  simple keyword with extra spaces and parameter: re.match(r'.*a simple keyword.*', value)
+#^^^^^^^^^^^^^^^  simple keyword with extra spaces and parameter
     Pass Execution
 
 sleep a while
     S l e e p    1s
-#   ^^^^^^^^^  simple keyword with extra spaces and parameter: re.match(r'.*Sleep.*', value)
+#   ^^^^^^^^^  simple keyword with extra spaces and parameter

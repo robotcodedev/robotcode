@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 15
+  line: 72
+  name: simple keyword with extra spaces and parameter
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Keyword *a simple keyword*'
+  range:
+    end:
+      character: 16
+      line: 72
+    start:
+      character: 0
+      line: 72

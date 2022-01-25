@@ -1,20 +1,24 @@
 import dataclasses
 import re
+from enum import Enum
 from pathlib import Path
-from typing import Any, Generator, NamedTuple, Tuple, Union
+from typing import Any, Generator, Tuple, Union
 
 import pytest
+import pytest_regressions
+import yaml
 
-TEST_EXPRESSION_LINE = re.compile(
-    r"^\#\s*(?P<todo>TODO)?\s*(?P<position>\^+)\s*(?P<name>[^:]+)\s*:\s*(?P<expression>.+)"
-)
+from robotcode.language_server.common.lsp_types import Model
+from robotcode.utils.dataclasses import as_dict
+
+TEST_EXPRESSION_LINE = re.compile(r"^\#\s*(?P<todo>TODO)?\s*(?P<position>\^+)\s+(?P<name>.*)")
 
 
-class GeneratedTestData(NamedTuple):
+@dataclasses.dataclass()
+class GeneratedTestData:
     name: str
     line: int
     character: int
-    expression: str
 
 
 def generate_tests_from_source_document(
@@ -28,26 +32,23 @@ def generate_tests_from_source_document(
         if match:
             name = match.group("name").strip()
             start, end = match.span("position")
-            expression = match.group("expression").strip()
             skip = match.group("todo")
-            if name and expression:
+            if name:
                 if skip:
                     yield pytest.param(
                         path,
-                        GeneratedTestData(name, current_line, start, expression),
+                        GeneratedTestData(name, current_line, start),
                         marks=pytest.mark.skip(reason="TODO"),
                     )
                 else:
                     if end - start == 1:
-                        yield path, GeneratedTestData(name, current_line, start, expression)
+                        yield path, GeneratedTestData(name, current_line, start)
                     else:
-                        yield path, GeneratedTestData(name, current_line, start, expression)
+                        yield path, GeneratedTestData(name, current_line, start)
                         if end - start > 2:
-                            yield path, GeneratedTestData(
-                                name, current_line, int(start + (end - start) / 2), expression
-                            )
+                            yield path, GeneratedTestData(name, current_line, int(start + (end - start) / 2))
 
-                        yield path, GeneratedTestData(name, current_line, end - 1, expression)
+                        yield path, GeneratedTestData(name, current_line, end - 1)
         else:
             current_line = line
 
@@ -61,3 +62,16 @@ def generate_test_id(params: Any) -> Any:
         return params.name
 
     return params
+
+
+def dump_enum(dumper: yaml.BaseDumper, data: Enum) -> Any:
+    return dumper.represent_scalar(f"!{type(data).__qualname__}", str(data.name))
+
+
+def dump_model(dumper: yaml.BaseDumper, data: Any) -> Any:
+    return dumper.represent_mapping(f"!{type(data).__qualname__}", as_dict(data))
+
+
+pytest_regressions.add_custom_yaml_representer(Enum, dump_enum)
+pytest_regressions.add_custom_yaml_representer(Model, dump_model)
+pytest_regressions.add_custom_yaml_representer(GeneratedTestData, dump_model)

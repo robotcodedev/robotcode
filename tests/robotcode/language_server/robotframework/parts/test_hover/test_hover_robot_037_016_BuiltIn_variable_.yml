@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 16
+  line: 37
+  name: BuiltIn variable
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: (command line variable) ${CMD_VAR}
+  range:
+    end:
+      character: 21
+      line: 37
+    start:
+      character: 11
+      line: 37

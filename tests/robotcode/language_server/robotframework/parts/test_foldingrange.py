@@ -1,12 +1,12 @@
-import re
+import dataclasses
 from pathlib import Path
 from typing import Any, Generator, Iterable, Tuple, Union
 
 import pytest
+from pytest_regressions.data_regression import DataRegressionFixture
 
 from robotcode.language_server.common.lsp_types import (
     ClientCapabilities,
-    FoldingRange,
     FoldingRangeClientCapabilities,
     TextDocumentClientCapabilities,
 )
@@ -30,6 +30,17 @@ def prepend_protocol_data(
             yield (p, *d)
 
 
+def generate_foldingrange_test_id(params: Any) -> Any:
+    if (
+        isinstance(params, ClientCapabilities)
+        and params.text_document is not None
+        and params.text_document.folding_range is not None
+    ):
+        return params.text_document.folding_range.line_folding_only
+
+    return generate_test_id(params)
+
+
 @pytest.mark.parametrize(
     ("protocol", "test_document", "data"),
     prepend_protocol_data(
@@ -48,10 +59,11 @@ def prepend_protocol_data(
         list(generate_tests_from_source_document(Path(Path(__file__).parent, "data/foldingrange.robot"))),
     ),
     indirect=["protocol", "test_document"],
-    ids=generate_test_id,
+    ids=generate_foldingrange_test_id,
 )
 @pytest.mark.asyncio
-async def test_foldingrange(
+async def test(
+    data_regression: DataRegressionFixture,
     protocol: RobotLanguageServerProtocol,
     test_document: TextDocument,
     data: GeneratedTestData,
@@ -59,15 +71,4 @@ async def test_foldingrange(
 
     result = await protocol.robot_folding_ranges.collect(protocol.robot_goto, test_document)
 
-    assert bool(
-        eval(
-            data.expression,
-            {
-                "re": re,
-                "FoldingRange": FoldingRange,
-                "result": result,
-                "line": data.line,
-                "character": data.character,
-            },
-        )
-    ), f"{data.expression} -> {repr(result)}"
+    data_regression.check({"data": data, "result": result})

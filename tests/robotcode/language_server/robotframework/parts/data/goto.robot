@@ -1,13 +1,13 @@
 *** Settings ***
 Library           Collections
-#                 ^^^^^^^^^^^  Robot Library Import: len(result) == 1 and result[0].target_uri.endswith("robot/libraries/Collections.py")
-#      ^^^^^^^^^^^  Separator: result is None or len(result) == 0
+#                 ^^^^^^^^^^^  Robot Library Import
+#      ^^^^^^^^^^^  Separator
 Library           ${CURDIR}/libs/myvariables.py
-#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Library Import by Path: len(result) == 1 and result[0].target_uri.endswith("/libs/myvariables.py")
+#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Library Import by Path
 Variables         ${CURDIR}/libs/myvariables.py
-#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Variables Import: len(result) == 1 and result[0].target_uri.endswith("libs/myvariables.py")
+#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Variables Import
 Resource          ${CURDIR}/resources/firstresource.resource
-#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Resource Import: len(result) == 1 and result[0].target_uri.endswith("/resources/firstresource.resource")
+#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Resource Import
 
 *** Variables ***
 ${A VAR}          i'm a var
@@ -16,29 +16,29 @@ ${A VAR}          i'm a var
 *** Test Cases ***
 first
     Log    Hello ${A VAR}
-#                 ^^^^^^^  Variable: len(result) == 1 and result[0].target_uri.endswith("/data/goto.robot")
-#   ^^^  BuiltIn Keyword: len(result) == 1 and result[0].target_uri.endswith("robot/libraries/BuiltIn.py")
+#                 ^^^^^^^  Variable
+#   ^^^  BuiltIn Keyword
 
     Collections.Log Dictionary    ${A DICT}
-#                                 ^^^^^^^^^  Variable: len(result) == 1 and result[0].target_uri.endswith("/data/goto.robot")
-#               ^^^^^^^^^^^^^^  Robot Library Keyword: len(result) == 1 and result[0].target_uri.endswith("robot/libraries/Collections.py")
-#   ^^^^^^^^^^^ Robot Namespace from Library: len(result) == 1 and result[0].target_uri.endswith("data/goto.robot")
+#                                 ^^^^^^^^^  Variable
+#               ^^^^^^^^^^^^^^  Robot Library Keyword
+#   ^^^^^^^^^^^ Robot Namespace from Library
 
     BuiltIn.Log    Hello ${A VAR}
-#           ^^^  BuiltIn Keyword with Namespace: len(result) == 1 and result[0].target_uri.endswith("robot/libraries/BuiltIn.py")    
-#   ^^^^^^^ Robot BuilIn Namespace: len(result) == 1 and result[0].target_uri.endswith("robot/libraries/BuiltIn.py")
+#           ^^^  BuiltIn Keyword with Namespace
+#   ^^^^^^^ Robot BuilIn Namespace
 
     FOR    ${key}    ${value}    IN    &{A DICT}
         Log    ${key}=${value}
-#              ^^^^^^  For Variable: len(result) == 1 and result[0].target_uri.endswith("/data/goto.robot")
-#                     ^^^^^^^^  For Variable: len(result) == 1 and result[0].target_uri.endswith("/data/goto.robot")
+#              ^^^^^^  For Variable
+#                     ^^^^^^^^  For Variable
     END
     Log    ${A_VAR_FROM_LIB}
-#          ^^^^^^^^^^^^^^^^^  Imported Variable: len(result) == 1 and result[0].target_uri.endswith("libs/myvariables.py")
+#          ^^^^^^^^^^^^^^^^^  Imported Variable
 
     do something in a resource
-#   ^^^^^^^^^^^^^^^^^^^^^^^^^^  Keyword from resource: len(result) == 1 and result[0].target_uri.endswith("/data/resources/firstresource.resource")
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^  Keyword from resource
 
     firstresource.do something in a resource
-#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^  Keyword from resource: len(result) == 1 and result[0].target_uri.endswith("/data/resources/firstresource.resource")
-#   ^^^^^^^^^^^^^  Namespace from resource: len(result) == 1 and result[0].target_uri.endswith("/data/goto.robot")
+#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^  Keyword from resource
+#   ^^^^^^^^^^^^^  Namespace from resource

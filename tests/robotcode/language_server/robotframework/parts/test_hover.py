@@ -1,9 +1,10 @@
-import re
 from pathlib import Path
+from typing import Optional
 
 import pytest
+from pytest_regressions.data_regression import DataRegressionFixture
 
-from robotcode.language_server.common.lsp_types import MarkupContent, Position
+from robotcode.language_server.common.lsp_types import Hover, MarkupContent, Position
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
@@ -24,7 +25,8 @@ from ..tools import (
 )
 @pytest.mark.usefixtures("protocol")
 @pytest.mark.asyncio
-async def test_hover(
+async def test(
+    data_regression: DataRegressionFixture,
     protocol: RobotLanguageServerProtocol,
     test_document: TextDocument,
     data: GeneratedTestData,
@@ -33,17 +35,14 @@ async def test_hover(
         protocol.hover, test_document, Position(line=data.line, character=data.character)
     )
 
-    assert bool(
-        eval(
-            data.expression,
-            {"re": re},
-            {
-                "result": result,
-                "value": result.contents.value
-                if result is not None and isinstance(result.contents, MarkupContent)
-                else None,
-                "line": data.line,
-                "character": data.character,
-            },
-        )
-    ), f"{data.expression} == {repr(result)}"
+    def split(hover: Optional[Hover]) -> Optional[Hover]:
+        if hover is None:
+            return None
+        if isinstance(hover.contents, MarkupContent):
+            return Hover(
+                MarkupContent(hover.contents.kind, hover.contents.value.splitlines()[0]),
+                hover.range,
+            )
+        return hover
+
+    data_regression.check({"data": data, "result": split(result)})

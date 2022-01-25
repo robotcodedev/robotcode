@@ -346,6 +346,36 @@ toml = "*"
 testing = ["fields", "hunter", "process-tests", "six", "pytest-xdist", "virtualenv"]
 
 [[package]]
+name = "pytest-datadir"
+version = "1.3.1"
+description = "pytest plugin for test data directories and files"
+category = "dev"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+
+[package.dependencies]
+pytest = ">=2.7.0"
+
+[[package]]
+name = "pytest-regressions"
+version = "2.3.1"
+description = "Easy to use fixtures to write regression tests."
+category = "dev"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+pytest = ">=3.5.0"
+pytest-datadir = ">=1.2.0"
+pyyaml = "*"
+
+[package.extras]
+dataframe = ["numpy", "pandas"]
+dev = ["matplotlib", "numpy", "pandas", "pillow", "pre-commit", "restructuredtext-lint", "tox"]
+image = ["pillow", "numpy"]
+num = ["numpy", "pandas"]
+
+[[package]]
 name = "pyyaml"
 version = "6.0"
 description = "YAML parser and emitter for Python"
@@ -450,7 +480,7 @@ python-versions = ">=3.6"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "3ec7d14bb3af484a1b4d65da71cb11775a64c84963670f69e41aa47fc31e2c03"
+content-hash = "539c1375a14ac70588e6ba53c56fe4fa37dddd789327076ab9d1d8d29d63bc20"
 
 [metadata.files]
 atomicwrites = [
@@ -706,6 +736,14 @@ pytest-asyncio = [
 pytest-cov = [
     {file = "pytest-cov-2.12.1.tar.gz", hash = "sha256:261ceeb8c227b726249b376b8526b600f38667ee314f910353fa318caa01f4d7"},
     {file = "pytest_cov-2.12.1-py2.py3-none-any.whl", hash = "sha256:261bb9e47e65bd099c89c3edf92972865210c36813f80ede5277dceb77a4a62a"},
+]
+pytest-datadir = [
+    {file = "pytest-datadir-1.3.1.tar.gz", hash = "sha256:d3af1e738df87515ee509d6135780f25a15959766d9c2b2dbe02bf4fb979cb18"},
+    {file = "pytest_datadir-1.3.1-py2.py3-none-any.whl", hash = "sha256:1847ed0efe0bc54cac40ab3fba6d651c2f03d18dd01f2a582979604d32e7621e"},
+]
+pytest-regressions = [
+    {file = "pytest-regressions-2.3.1.tar.gz", hash = "sha256:b3ec4cdb34e8f627606275d8b834c65e60e1a3073e326bb3727a427273d0221d"},
+    {file = "pytest_regressions-2.3.1-py3-none-any.whl", hash = "sha256:ebd350a942fb2de1b541ac750d6c2422854e54762256956ad6ed769a71477d35"},
 ]
 pyyaml = [
     {file = "PyYAML-6.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:d4db7c7aef085872ef65a8fd7d6d09a14ae91f691dec3e87ee5ee0539d516f53"},

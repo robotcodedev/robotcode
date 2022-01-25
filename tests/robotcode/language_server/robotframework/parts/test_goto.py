@@ -1,13 +1,15 @@
-import re
 from pathlib import Path
+from typing import List, Union, cast
 
 import pytest
+from pytest_regressions.data_regression import DataRegressionFixture
 
-from robotcode.language_server.common.lsp_types import Position
+from robotcode.language_server.common.lsp_types import Location, LocationLink, Position
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
+from robotcode.utils.uri import Uri
 
 from ..tools import (
     GeneratedTestData,
@@ -24,7 +26,8 @@ from ..tools import (
 )
 @pytest.mark.usefixtures("protocol")
 @pytest.mark.asyncio
-async def test_goto(
+async def test(
+    data_regression: DataRegressionFixture,
     protocol: RobotLanguageServerProtocol,
     test_document: TextDocument,
     data: GeneratedTestData,
@@ -36,14 +39,26 @@ async def test_goto(
         Position(line=data.line, character=data.character),
     )
 
-    assert bool(
-        eval(
-            data.expression,
-            {"re": re},
-            {
-                "result": result,
-                "line": data.line,
-                "character": data.character,
-            },
-        )
-    ), f"{data.expression} == {repr(result)}"
+    def split(
+        result: Union[Location, LocationLink, List[Location], List[LocationLink], None]
+    ) -> Union[Location, LocationLink, List[Location], List[LocationLink], None]:
+        if result is None:
+            return None
+        if isinstance(result, Location):
+            return Location((Uri(result.uri).to_path().name), result.range)
+        if isinstance(result, LocationLink):
+            return LocationLink(
+                result.origin_selection_range,
+                (Uri(result.target_uri).to_path().name),
+                result.target_range,
+                result.target_selection_range,
+            )
+        if isinstance(result, list) and len(result) > 0 and isinstance(result[0], LocationLink):
+            return cast("List[LocationLink]", [split(v) for v in result])
+
+        if isinstance(result, list) and len(result) > 0 and isinstance(result[0], Location):
+            return cast("List[Location]", [split(v) for v in result])
+
+        return result
+
+    data_regression.check({"data": data, "result": split(result)})

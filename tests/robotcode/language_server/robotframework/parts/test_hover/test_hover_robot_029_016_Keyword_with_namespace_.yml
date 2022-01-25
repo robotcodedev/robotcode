@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 16
+  line: 29
+  name: Keyword with namespace
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Keyword *Log Dictionary*'
+  range:
+    end:
+      character: 30
+      line: 29
+    start:
+      character: 16
+      line: 29

@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 43
+  line: 49
+  name: KeywordCall from resource with Namespace
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Keyword *do something in a resource*'
+  range:
+    end:
+      character: 44
+      line: 49
+    start:
+      character: 18
+      line: 49

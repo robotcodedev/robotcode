@@ -59,6 +59,7 @@ robotframework-tidy = "^1.5.1"
 PyYAML = "^6.0"
 types-PyYAML = "^6.0"
 snakeviz = "^2.1.1"
+pytest-regressions = "^2.3.1"
 
 
 [tool.poetry-dynamic-versioning]

@@ -1,46 +1,46 @@
 *** Settings ***
-#^ Settings Start: any(e for e in result if e.start_line == line and (e.start_character is None or e.start_character==0) and e.kind=='section')
+#^ Settings Start
 Documentation       Hallo Welt
 ...                 was geht
 
 *** Test Cases ***
-#^ Settings End: any(e for e in result if e.end_line == line - 1 and (e.end_character is None or e.end_character>0) and e.kind=='section')
-#^ Test Cases Start: any(e for e in result if e.start_line == line and e.kind=='section')
+#^ Settings End
+#^ Test Cases Start
 First
-#^ Testcase Start: any(e for e in result if e.start_line == line and e.kind=='testcase')
+#^ Testcase Start
     Log    Hello from testcase
     a keyword
     FOR    ${i}    IN    1    2    3
-#^ For Start: any(e for e in result if e.start_line == line and e.kind=='for')
+#^ For Start
         IF    ${i}==1
-#^ If Start: any(e for e in result if e.start_line == line and e.kind=='if')
+#^ If Start
             Log    "one"
         ELSE IF    ${i}==2
-#^ If Start: any(e for e in result if e.start_line == line and e.kind=='if')
+#^ If Start
             Log    "two"
         ELSE
-#^ If Start: any(e for e in result if e.start_line == line and e.kind=='if')
+#^ If Start
             Log    "more then two"
         END
-#^ If End: any(e for e in result if e.end_line == line and e.kind=='if')
+#^ If End
 
         Log    ${i}
 
     END
-#^ For End: any(e for e in result if e.end_line == line and e.kind=='for')
+#^ For End
 
 *** Keywords ***
-#^ Test Cases End: any(e for e in result if e.end_line == line - 1 and e.kind=='section')
-#^ Testcase End: any(e for e in result if e.end_line == line - 1 and e.kind=='testcase')
+#^ Test Cases End
+#^ Testcase End
 a keyword
-#^ Keyword Start: any(e for e in result if e.start_line == line and e.kind=='keyword')
+#^ Keyword Start
     Log    Hello from keyword
 
 *** Comments ***
-#^ Keyword End: any(e for e in result if e.end_line == line - 1 and e.kind=='keyword')
-#^ Comment Start: any(e for e in result if e.start_line == line and e.kind=='comment')
+#^ Keyword End
+#^ Comment Start
 this is a long long
 long long long
 long long comment section
 
-#^ Comment End: any(e for e in result if e.end_line == line + 1 and e.kind=='comment')
+#^ Comment End

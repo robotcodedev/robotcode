@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 4
+  line: 41
+  name: Namespace from resource
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 17
+      line: 41
+    start:
+      character: 4
+      line: 41
+  target_range:
+    end:
+      character: 60
+      line: 8
+    start:
+      character: 18
+      line: 8
+  target_selection_range:
+    end:
+      character: 60
+      line: 8
+    start:
+      character: 18
+      line: 8
+  target_uri: goto.robot

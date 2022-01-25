@@ -1,0 +1,59 @@
+data: !GeneratedTestData
+  character: 37
+  line: 18
+  name: multiple variables
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 8
+      line: 7
+    start:
+      character: 0
+      line: 7
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 44
+      line: 11
+    start:
+      character: 36
+      line: 11
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 55
+      line: 12
+    start:
+      character: 47
+      line: 12
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 22
+      line: 14
+    start:
+      character: 14
+      line: 14
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 33
+      line: 16
+    start:
+      character: 25
+      line: 16
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 41
+      line: 18
+    start:
+      character: 33
+      line: 18

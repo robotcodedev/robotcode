@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 4
+  line: 46
+  name: Keyword from resource
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Keyword *do something in a resource*'
+  range:
+    end:
+      character: 30
+      line: 46
+    start:
+      character: 4
+      line: 46
