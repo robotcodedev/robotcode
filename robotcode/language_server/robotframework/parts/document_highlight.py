@@ -133,7 +133,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
             return None
 
         kw_node = cast(KeywordCall, node)
-        keyword = await self.get_keyworddoc_and_token_from_position(
+        result = await self.get_keyworddoc_and_token_from_position(
             kw_node.keyword,
             cast(Token, kw_node.get_token(RobotToken.KEYWORD)),
             [cast(Token, t) for t in kw_node.get_tokens(RobotToken.ARGUMENT)],
@@ -141,19 +141,31 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
             position,
         )
 
-        if keyword is not None and keyword[0] is not None:
-            source = keyword[0].source
-            if source is not None:
+        if result is not None:
+            keyword_doc, keyword_token = result
+
+            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+
+            kw_range = range_from_token(keyword_token)
+
+            if lib_entry and kw_namespace:
+                r = range_from_token(keyword_token)
+                r.end.character = r.start.character + len(kw_namespace)
+                kw_range.start.character = r.end.character + 1
+                if position in r:
+                    # TODO highlight namespaces
+                    return None
+            if keyword_doc is not None and not keyword_doc.is_error_handler and keyword_doc.source:
                 return [
                     *(
-                        [DocumentHighlight(keyword[0].range, DocumentHighlightKind.TEXT)]
-                        if keyword[0].source == str(document.uri.to_path())
+                        [DocumentHighlight(keyword_doc.range, DocumentHighlightKind.TEXT)]
+                        if keyword_doc.source == str(document.uri.to_path())
                         else []
                     ),
                     *(
                         DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
                         for e in await self.parent.robot_references.find_keyword_references_in_file(
-                            document, keyword[0]
+                            document, keyword_doc
                         )
                     ),
                 ]

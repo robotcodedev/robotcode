@@ -3,13 +3,13 @@ Library           Collections
 #                 ^^^^^^^^^^^ library import by module name: re.match(r'## Library \*Collections\*.*', value)
 Library           ${CURDIR}/libs/myvariables.py
 #                               ^^^^^^^^^^^^^^ library import by path name: re.match(r'## Library \*myvariables.*', value)
-# TODO            ^^^^^^^^^  variable in library import: value == '(builtin variable) ${CURDIR}'
+#                 ^^^^^^^^^  variable in library import: value == '(builtin variable) ${CURDIR}'
 Variables         ${CURDIR}/libs/myvariables.py
-# TODO            ^^^^^^^^^  variable in variables import: value == '(builtin variable) ${CURDIR}'
+#                 ^^^^^^^^^  variable in variables import: value == '(builtin variable) ${CURDIR}'
 #                                ^^^^^^^^^^^^^^ variable import by path name: re.match(r'## Variables \*myvariables.*', value)
 Resource          ${CURDIR}/resources/firstresource.resource
 #                                     ^^^^^^^^^^^^^^ resource import by path name: re.match(r'## Resource \*firstresource.*', value)
-# TODO            ^^^^^^^^^  variable in resource import: value == '(builtin variable) ${CURDIR}'
+#                 ^^^^^^^^^  variable in resource import: value == '(builtin variable) ${CURDIR}'
 
 *** Variables ***
 ${A VAR}          i'm a var
@@ -19,10 +19,17 @@ ${A VAR}          i'm a var
 
 *** Test Cases ***
 first
+    [Setup]  Log    Hello ${A VAR}
+#            ^^^ Keyword in Setup: re.match(r'.*Log.*', value)
+    [Teardown]  Log    Hello ${A VAR}
+#               ^^^ Keyword in Teardown: re.match(r'.*Log.*', value)
+
     Log    Hello ${A VAR}
+#   ^^^ Keyword from Library: re.match(r'.*Log.*', value)
+
     Collections.Log Dictionary    ${A DICT}
 #               ^^^^^^^^^^^^^^ Keyword with namespace: re.match(r'.*Log Dictionary.*', value)
-# TODO  ^^^^^^^^^^^ namespace before keyword: re.match(r'.*Collections.*', value)
+#   ^^^^^^^^^^^ namespace before keyword: re.match(r'.*Collections.*', value)
     FOR    ${key}    ${value}    IN    &{A DICT}
 #          ^^^^^^ FOR loop variable declaration: value == '(local variable) ${key}'
         Log    ${key}=${value}
@@ -36,6 +43,13 @@ first
 #^^^    Spaces: result is None
     Log    ${A_VAR_FROM_LIB}
 #          ^^^^^^^^^^^^^^^^^    variable from lib: value == '(imported variable) ${A_VAR_FROM_LIB}'
+
+    do something in a resource
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^  Keyword from resource: re.match(r'.*do something in a resource.*', value)
+
+    firstresource.do something in a resource
+#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^  KeywordCall from resource with Namespace: re.match(r'.*do something in a resource.*', value)
+#   ^^^^^^^^^^^^^  Namespace from resource: re.match(r'## Resource \*firstresource.*', value)
 
 
 *** Keywords ***
@@ -57,6 +71,7 @@ a keyword
 #                            ^^^    AND: result is None
 
 a simple keyword
+#^^^^^^^^^^^^^^^  simple keyword with extra spaces and parameter: re.match(r'.*a simple keyword.*', value)
     Pass Execution
 
 sleep a while

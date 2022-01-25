@@ -293,7 +293,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             return None
 
         kw_node = cast(KeywordCall, node)
-        keyword = await self.get_keyworddoc_and_token_from_position(
+        result = await self.get_keyworddoc_and_token_from_position(
             kw_node.keyword,
             cast(Token, kw_node.get_token(RobotToken.KEYWORD)),
             [cast(Token, t) for t in kw_node.get_tokens(RobotToken.ARGUMENT)],
@@ -301,17 +301,32 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             position,
         )
 
-        if keyword is not None and keyword[0] is not None:
-            source = keyword[0].source
-            if source is not None:
-                return [
-                    *(
-                        [Location(uri=str(Uri.from_path(source)), range=keyword[0].range)]
-                        if context.include_declaration
-                        else []
-                    ),
-                    *await self.find_keyword_references(document, keyword[0]),
-                ]
+        if result is not None:
+            keyword_doc, keyword_token = result
+
+            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+
+            kw_range = range_from_token(keyword_token)
+
+            if lib_entry and kw_namespace:
+                r = range_from_token(keyword_token)
+                r.end.character = r.start.character + len(kw_namespace)
+                kw_range.start.character = r.end.character + 1
+                if position in r:
+                    # TODO: find references for Library Namespace
+                    return None
+
+            if keyword_doc is not None:
+                source = keyword_doc.source
+                if source is not None:
+                    return [
+                        *(
+                            [Location(uri=str(Uri.from_path(source)), range=kw_range)]
+                            if context.include_declaration
+                            else []
+                        ),
+                        *await self.find_keyword_references(document, keyword_doc),
+                    ]
 
         return None
 
@@ -326,7 +341,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             return None
 
         fixture_node = cast(Fixture, node)
-        keyword = await self.get_keyworddoc_and_token_from_position(
+        result = await self.get_keyworddoc_and_token_from_position(
             fixture_node.name,
             cast(Token, fixture_node.get_token(RobotToken.NAME)),
             [cast(Token, t) for t in fixture_node.get_tokens(RobotToken.ARGUMENT)],
@@ -334,17 +349,31 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             position,
         )
 
-        if keyword is not None and keyword[0] is not None:
-            source = keyword[0].source
-            if source is not None:
-                return [
-                    *(
-                        [Location(uri=str(Uri.from_path(source)), range=keyword[0].range)]
-                        if context.include_declaration
-                        else []
-                    ),
-                    *await self.find_keyword_references(document, keyword[0]),
-                ]
+        if result is not None:
+            keyword_doc, keyword_token = result
+            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+
+            kw_range = range_from_token(keyword_token)
+
+            if lib_entry and kw_namespace:
+                r = range_from_token(keyword_token)
+                r.end.character = r.start.character + len(kw_namespace)
+                kw_range.start.character = r.end.character + 1
+                if position in r:
+                    # TODO: find references for Library Namespace
+                    return None
+
+            if keyword_doc is not None and not keyword_doc.is_error_handler:
+                source = keyword_doc.source
+                if source is not None:
+                    return [
+                        *(
+                            [Location(uri=str(Uri.from_path(source)), range=kw_range)]
+                            if context.include_declaration
+                            else []
+                        ),
+                        *await self.find_keyword_references(document, keyword_doc),
+                    ]
 
         return None
 
@@ -357,30 +386,44 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         node = cast(Union[Template, TestTemplate], node)
         if node.value:
 
-            name_token = cast(RobotToken, node.get_token(RobotToken.NAME, RobotToken.ARGUMENT))
-            if name_token is None:
+            keyword_token = cast(RobotToken, node.get_token(RobotToken.NAME, RobotToken.ARGUMENT))
+            if keyword_token is None:
                 return None
 
-            if position.is_in_range(range_from_token(name_token)):
+            if position.is_in_range(range_from_token(keyword_token)):
                 namespace = await self.parent.documents_cache.get_namespace(document)
                 if namespace is None:
                     return None
 
-                keyword = await namespace.find_keyword(node.value)
-                if keyword is not None and keyword.source is not None:
-                    return [
-                        *(
-                            [
-                                Location(
-                                    uri=str(Uri.from_path(keyword.source)),
-                                    range=keyword.range,
-                                )
-                            ]
-                            if context.include_declaration
-                            else []
-                        ),
-                        *await self.find_keyword_references(document, keyword),
-                    ]
+                keyword_doc = await namespace.find_keyword(node.value)
+
+                if keyword_doc is not None:
+
+                    lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+
+                    kw_range = range_from_token(keyword_token)
+
+                    if lib_entry and kw_namespace:
+                        r = range_from_token(keyword_token)
+                        r.end.character = r.start.character + len(kw_namespace)
+                        kw_range.start.character = r.end.character + 1
+                        if position in r:
+                            # TODO: find references for Library Namespace
+                            return None
+                    if keyword_doc and keyword_doc.source:
+                        return [
+                            *(
+                                [
+                                    Location(
+                                        uri=str(Uri.from_path(keyword_doc.source)),
+                                        range=kw_range,
+                                    )
+                                ]
+                                if context.include_declaration
+                                else []
+                            ),
+                            *await self.find_keyword_references(document, keyword_doc),
+                        ]
 
         return None
 
@@ -471,14 +514,22 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             kw_matcher = KeywordMatcher(kw_doc.name)
             kw_name = unescape(kw_token.value) if unescape_kw_token else kw_token.value
 
+            libraries_matchers = await namespace.get_libraries_matchers()
+            resources_matchers = await namespace.get_resources_matchers()
+
             for lib, name in iter_over_keyword_names_and_owners(kw_name):
                 if lib is not None:
                     lib_matcher = KeywordMatcher(lib)
-                    if (
-                        lib_matcher not in (await namespace.get_libraries_matchers()).keys()
-                        and lib_matcher not in (await namespace.get_resources_matchers()).keys()
-                    ):
+                    if lib_matcher not in libraries_matchers and lib_matcher not in resources_matchers:
                         continue
+
+                lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, kw_token)
+                kw_range = range_from_token(kw_token)
+
+                if lib_entry and kw_namespace:
+                    r = range_from_token(kw_token)
+                    r.end.character = r.start.character + len(kw_namespace)
+                    kw_range.start.character = r.end.character + 1
 
                 if name is not None:
                     name_matcher = KeywordMatcher(name)
@@ -488,7 +539,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                         if kw is not None and kw == kw_doc:
                             yield Location(
                                 str(Uri.from_path(namespace.source).normalized()),
-                                range=range_from_token_or_node(node, kw_token),
+                                range=kw_range,
                             )
 
                     if name_matcher in ALL_RUN_KEYWORDS_MATCHERS and arguments:

@@ -231,6 +231,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     return None
 
                 keyword_doc = await namespace.find_keyword(template_node.value)
+
                 if keyword_doc is not None:
 
                     lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)

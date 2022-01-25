@@ -18,9 +18,16 @@ first
     Log    Hello ${A VAR}
 #                 ^^^^^^^  Variable: len(result) == 1 and result[0].target_uri.endswith("/data/goto.robot")
 #   ^^^  BuiltIn Keyword: len(result) == 1 and result[0].target_uri.endswith("robot/libraries/BuiltIn.py")
+
     Collections.Log Dictionary    ${A DICT}
 #                                 ^^^^^^^^^  Variable: len(result) == 1 and result[0].target_uri.endswith("/data/goto.robot")
 #               ^^^^^^^^^^^^^^  Robot Library Keyword: len(result) == 1 and result[0].target_uri.endswith("robot/libraries/Collections.py")
+#   ^^^^^^^^^^^ Robot Namespace from Library: len(result) == 1 and result[0].target_uri.endswith("data/goto.robot")
+
+    BuiltIn.Log    Hello ${A VAR}
+#           ^^^  BuiltIn Keyword with Namespace: len(result) == 1 and result[0].target_uri.endswith("robot/libraries/BuiltIn.py")    
+#   ^^^^^^^ Robot BuilIn Namespace: len(result) == 1 and result[0].target_uri.endswith("robot/libraries/BuiltIn.py")
+
     FOR    ${key}    ${value}    IN    &{A DICT}
         Log    ${key}=${value}
 #              ^^^^^^  For Variable: len(result) == 1 and result[0].target_uri.endswith("/data/goto.robot")
@@ -28,3 +35,10 @@ first
     END
     Log    ${A_VAR_FROM_LIB}
 #          ^^^^^^^^^^^^^^^^^  Imported Variable: len(result) == 1 and result[0].target_uri.endswith("libs/myvariables.py")
+
+    do something in a resource
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^  Keyword from resource: len(result) == 1 and result[0].target_uri.endswith("/data/resources/firstresource.resource")
+
+    firstresource.do something in a resource
+#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^  Keyword from resource: len(result) == 1 and result[0].target_uri.endswith("/data/resources/firstresource.resource")
+#   ^^^^^^^^^^^^^  Namespace from resource: len(result) == 1 and result[0].target_uri.endswith("/data/goto.robot")
