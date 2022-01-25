@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 14
+  line: 33
+  name: FOR loop variable declaration
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: (local variable) ${key}
+  range:
+    end:
+      character: 17
+      line: 33
+    start:
+      character: 11
+      line: 33

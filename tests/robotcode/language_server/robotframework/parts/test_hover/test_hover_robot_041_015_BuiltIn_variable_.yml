@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 15
+  line: 41
+  name: BuiltIn variable
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: (builtin variable) ${CURDIR}
+  range:
+    end:
+      character: 20
+      line: 41
+    start:
+      character: 11
+      line: 41

@@ -21,8 +21,9 @@ ${A VAR}          i'm a var
 first
     [Setup]  Log    Hello ${A VAR}
 #            ^^^ Keyword in Setup
-    [Teardown]  Log    Hello ${A VAR}
-#               ^^^ Keyword in Teardown
+    [Teardown]  BuiltIn.Log    Hello ${A VAR}
+#                       ^^^ Keyword in Teardown
+#               ^^^^^^^ Namespace in Teardown
 
     Log    Hello ${A VAR}
 #   ^^^ Keyword from Library
@@ -51,6 +52,13 @@ first
 #                 ^^^^^^^^^^^^^^^^^^^^^^^^^^  KeywordCall from resource with Namespace
 #   ^^^^^^^^^^^^^  Namespace from resource
 
+second
+#^^^^^ Test Case
+    [Template]    BuiltIn.Log
+#                         ^^^ Keyword in Template
+#                 ^^^^^^^ Namespace in Template
+    hello
+    world
 
 *** Keywords ***
 a keyword

@@ -42,3 +42,27 @@ first
     firstresource.do something in a resource
 #                 ^^^^^^^^^^^^^^^^^^^^^^^^^^  Keyword from resource
 #   ^^^^^^^^^^^^^  Namespace from resource
+    a simple keyword
+#   ^^^^^^^^^^^^^^^^  call a simple keyword
+    an unknown keyword
+#   ^^^^^^^^^^^^^^^^^^  unknown keyword
+
+second
+    [Setup]    Log  hello setup
+#              ^^^ a keyword in setup
+    [Teardown]    BuiltIn.Log  hello teardown
+#                         ^^^ a keyword in teardown
+#                 ^^^^^^^ a namespace in teardown
+
+a templated Test
+    [Template]    BuiltIn.Log
+#                         ^^^ a keyword in template
+#                 ^^^^^^^ a namespace in template
+    hello
+    world
+
+
+*** Keywords ***
+a simple keyword
+#^^^^^^^^^^^^^^^ a simple keyword
+    Log    hello
