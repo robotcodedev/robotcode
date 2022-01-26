@@ -80,7 +80,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         await check_canceled()
 
-        with io.StringIO("") as output:
+        with io.StringIO() as output:
             config = Config(str(workspace_folder.uri.to_path()))
 
             config.exec_dir = str(workspace_folder.uri.to_path())

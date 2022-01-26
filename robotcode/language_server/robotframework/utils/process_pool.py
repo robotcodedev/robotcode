@@ -32,7 +32,6 @@ def get_process_pool() -> ProcessPoolExecutor:
     if _process_pool is None:
         _process_pool = ProcessPoolExecutor(max_workers=PROCESS_POOL_MAX_WORKERS, initializer=_init_pool)
         atexit.register(_terminate)
-        signal.signal(signal.SIGTERM, _terminate)
 
         try:
             _process_pool.submit(_dummy_first_run_pool).result(5)

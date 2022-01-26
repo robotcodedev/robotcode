@@ -145,8 +145,6 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         result: List[Diagnostic] = []
         async for node in iter_nodes(model):
-            await check_canceled()
-
             error = node.error if isinstance(node, HasError) else None
             if error is not None:
                 result.append(self._create_error_from_node(node, error))

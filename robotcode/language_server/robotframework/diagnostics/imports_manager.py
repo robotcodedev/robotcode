@@ -449,8 +449,6 @@ class _VariablesEntry(_ImportEntry):
 class ImportsManager:
     _logger = LoggingDescriptor()
 
-    process_pool = get_process_pool()
-
     def __init__(
         self, parent_protocol: RobotLanguageServerProtocol, folder: Uri, config: Optional[RobotConfig]
     ) -> None:
@@ -467,6 +465,8 @@ class ImportsManager:
         self.file_watchers: List[FileWatcherEntry] = []
         self.parent_protocol.documents.did_change.add(self.resource_document_changed)
         self._command_line_variables: Optional[List[VariableDefinition]] = None
+
+        self.process_pool = get_process_pool()
 
     @_logger.call
     def get_command_line_variables(self) -> List[VariableDefinition]:

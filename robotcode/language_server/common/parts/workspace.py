@@ -441,7 +441,8 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
     @_logger.call
     async def remove_file_watcher_entry(self, entry: FileWatcherEntry) -> None:
         async with self._file_watchers_lock:
-            self._file_watchers.remove(entry)
+            if entry in self._file_watchers:
+                self._file_watchers.remove(entry)
 
             if entry.parent is not None:
                 entry.parent.child_callbacks.remove(entry.callback)  # type: ignore

@@ -6,7 +6,7 @@ import weakref
 from types import MethodType
 from typing import Any, Awaitable, Callable, Dict, List, Optional, TypeVar, Union, cast
 
-from ...utils.async_tools import Lock, check_canceled, create_sub_task
+from ...utils.async_tools import Lock, create_sub_task
 from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
 from .lsp_types import DocumentUri, Range
@@ -191,7 +191,6 @@ class TextDocument:
 
         if e is None:
             async with self._lock:
-                await check_canceled()
                 e = self._cache.get(reference, None)
                 if e is None:
 
@@ -201,7 +200,6 @@ class TextDocument:
 
         if e.data is None:
             async with e.lock:
-                await check_canceled()
                 if e.data is None:
                     e.data = await entry(self, *args, **kwargs)  # type: ignore
 

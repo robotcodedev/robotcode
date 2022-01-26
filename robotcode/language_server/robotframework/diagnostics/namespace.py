@@ -23,7 +23,7 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_chain
-from ....utils.async_tools import CancelationToken, Lock, check_canceled
+from ....utils.async_tools import CancelationToken, Lock
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.lsp_types import (
@@ -1104,8 +1104,6 @@ class Namespace:
                     canceled = False
                     try:
                         result = await Analyzer().get(self.model, self, cancelation_token)
-
-                        await check_canceled()
 
                         self._diagnostics += result
 

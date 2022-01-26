@@ -4,7 +4,7 @@ import ast
 import asyncio
 from typing import List, Optional, cast
 
-from ....utils.async_tools import CancelationToken, check_canceled
+from ....utils.async_tools import CancelationToken
 from ....utils.uri import Uri
 from ...common.lsp_types import (
     Diagnostic,
@@ -40,8 +40,6 @@ class Analyzer(AsyncVisitor):
         return self._results
 
     async def visit(self, node: ast.AST) -> None:
-        await check_canceled()
-
         await super().visit(node)
 
     async def _analyze_keyword_call(

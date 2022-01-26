@@ -206,13 +206,16 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     @rpc_method(name="shutdown", cancelable=False)
     @_logger.call
-    async def shutdown(self, *args: Any, **kwargs: Any) -> None:
+    async def _shutdown(self, *args: Any, **kwargs: Any) -> None:
+        if self.shutdown_received:
+            return
+
         self.shutdown_received = True
 
         try:
             await asyncio.wait_for(self.cancel_all_received_request(), 1)
-        except BaseException:  # NOSONAR
-            pass
+        except BaseException as e:  # NOSONAR
+            self._logger.exception(e)
 
         await self.on_shutdown(self)
 
