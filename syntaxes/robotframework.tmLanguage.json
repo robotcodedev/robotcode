@@ -89,7 +89,7 @@
       "name": "meta.setting.tags.robotframework"
     },    
     "settings_table_setting_imports": {
-      "begin": "(?i)^(Library|Resource|Variables)(?: {2,}| ?\\t)+((.*?)(?= {2}| ?\\t| ?$))?",
+      "begin": "(?i)^(Library|Resource|Variables)((?: {2,}| ?\\t)+(.*?)(?= {2}| ?\\t| ?$))?",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.import.robotframework"
