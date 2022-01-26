@@ -91,9 +91,9 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
     async def did_save(sender, document: TextDocument) -> None:  # NOSONAR
         ...
 
-    async def get(self, __uri: Union[DocumentUri, Uri]) -> Optional[TextDocument]:
+    async def get(self, _uri: Union[DocumentUri, Uri]) -> Optional[TextDocument]:
         async with self._lock:
-            return self._documents.get(str(Uri(__uri).normalized() if not isinstance(__uri, Uri) else __uri), None)
+            return self._documents.get(str(Uri(_uri).normalized() if not isinstance(_uri, Uri) else _uri), None)
 
     def __len__(self) -> int:
         return self._documents.__len__()
@@ -194,6 +194,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
                 del document
             else:
                 document._version = None
+                document.revert(None)
 
             gc.collect()
 
@@ -219,8 +220,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
 
                 text_changed = await document.text() != normalized_text
                 if text_changed:
-                    await document.apply_full_change(None, text)
-
+                    await document.save(None, text)
                     await self.did_change(self, document, callback_filter=language_id_filter(document))
 
             await self.did_save(self, document, callback_filter=language_id_filter(document))

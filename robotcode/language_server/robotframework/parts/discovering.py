@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import ast
+import asyncio
 from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterator, List, Optional, cast
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_tools import run_coroutine_in_thread, run_in_thread
+from ....utils.async_tools import run_coroutine_in_thread
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.lsp_types import (
@@ -98,11 +99,69 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
-    def _get_tests_from_workspace(
+    async def _get_tests_from_workspace(
         self, workspace_folder: Path, paths: Optional[List[str]], suites: Optional[List[str]]
     ) -> List[TestItem]:
+
         from robot.output.logger import LOGGER
+        from robot.parsing.suitestructure import SuiteStructureBuilder
         from robot.running import TestCase, TestSuite
+        from robot.running.builder.builders import (
+            NoInitFileDirectoryParser,
+            RobotParser,
+            SuiteStructureParser,
+            TestSuiteBuilder,
+        )
+
+        def get_document_text(source: str) -> str:
+            if self.parent._loop:
+                doc = asyncio.run_coroutine_threadsafe(
+                    self.parent.documents.get(Uri.from_path(source).normalized()), self.parent._loop
+                ).result()
+                if doc is not None and doc.version is not None:
+                    return asyncio.run_coroutine_threadsafe(doc.text(), self.parent._loop).result()
+
+            return source
+
+        class MyRobotParser(RobotParser):
+            def _get_source(self, source: str) -> Any:
+                return get_document_text(source)
+
+        class MyRestParser(MyRobotParser):
+            def _get_source(self, source: str) -> Any:
+                from robot.utils import read_rest_data
+                from robot.utils.filereader import FileReader
+
+                with FileReader(source) as reader:
+                    return read_rest_data(reader)
+
+        class MySuiteStructureParser(SuiteStructureParser):
+            def _get_parsers(self, extensions: List[str], process_curdir: bool) -> RobotParser:
+                robot_parser = MyRobotParser(process_curdir)
+                rest_parser = MyRestParser(process_curdir)
+                parsers = {
+                    None: NoInitFileDirectoryParser(),
+                    "robot": robot_parser,
+                    "rst": rest_parser,
+                    "rest": rest_parser,
+                }
+                for ext in extensions:
+                    if ext not in parsers:
+                        parsers[ext] = robot_parser
+                return parsers
+
+        class MyTestSuiteBuilder(TestSuiteBuilder):
+            def _validate_test_counts(self, suite: TestSuite, multisource: bool = False) -> None:
+                pass
+
+            def build(self, *paths: str) -> TestSuite:
+                structure = SuiteStructureBuilder(self.included_extensions, self.included_suites).build(paths)
+                parser = MySuiteStructureParser(self.included_extensions, self.rpa, self.process_curdir)
+                suite = parser.parse(structure)
+                if not self.included_suites and not self.allow_empty_suite:
+                    self._validate_test_counts(suite, multisource=len(paths) > 1)
+                suite.remove_empty_suites(preserve_direct_children=len(paths) > 1)
+                return suite
 
         def generate(suite: TestSuite) -> TestItem:
             children: List[TestItem] = []
@@ -170,7 +229,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
                     valid_paths = [i for i in normalize_paths(paths)]
                     suite: Optional[TestSuite] = (
-                        TestSuite.from_file_system(*valid_paths, included_suites=suites if suites else None)
+                        MyTestSuiteBuilder(included_suites=suites if suites else None).build(*valid_paths)
                         if valid_paths
                         else None
                     )
@@ -196,7 +255,11 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     ]
                 else:
-                    return [generate(TestSuite.from_file_system(str(workspace_folder)))]
+                    return [
+                        generate(
+                            MyTestSuiteBuilder(included_suites=suites if suites else None).build(str(workspace_folder))
+                        )
+                    ]
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
@@ -212,7 +275,9 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         *args: Any,
         **kwargs: Any,
     ) -> List[TestItem]:
-        return await run_in_thread(self._get_tests_from_workspace, Uri(workspace_folder).to_path(), paths, suites)
+        return await run_coroutine_in_thread(
+            self._get_tests_from_workspace, Uri(workspace_folder).to_path(), paths, suites
+        )
 
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
     @_logger.call

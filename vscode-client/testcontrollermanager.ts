@@ -111,17 +111,11 @@ export class TestControllerManager {
           }
         }
       }),
-      vscode.workspace.onDidCloseTextDocument((document) => {
-        if (document.languageId !== "robotframework") return;
-
-        const uri_str = document.uri.toString();
-        if (this.didChangedTimer.has(uri_str)) {
-          this.didChangedTimer.get(uri_str)?.cancel();
-          this.didChangedTimer.delete(uri_str);
-        }
+      vscode.workspace.onDidCloseTextDocument(async (document) => {
+        await this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(document.uri));
       }),
       vscode.workspace.onDidSaveTextDocument((document) => {
-        this.addRefreshDocumentTimer(document);
+        this.refreshDocument(document);
       }),
       vscode.workspace.onDidOpenTextDocument(async (document) => {
         if (document.languageId !== "robotframework") return;
@@ -129,7 +123,7 @@ export class TestControllerManager {
         await this.refresh(this.findTestItemForDocument(document));
       }),
       vscode.workspace.onDidChangeTextDocument((event) => {
-        this.addRefreshDocumentTimer(event.document);
+        this.refreshDocument(event.document);
       }),
       vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
         for (const r of event.removed) {
@@ -239,7 +233,7 @@ export class TestControllerManager {
     }
   }
 
-  public addRefreshDocumentTimer(document: vscode.TextDocument): void {
+  public refreshDocument(document: vscode.TextDocument): void {
     if (document.languageId !== "robotframework") return;
 
     const uri_str = document.uri.toString();
@@ -254,11 +248,26 @@ export class TestControllerManager {
       uri_str,
       new DidChangeEntry(
         setTimeout((_) => {
-          this.refresh(this.findTestItemForDocument(document)).then(
-            () => undefined,
-            () => undefined
-          );
-        }, 1000),
+          const item = this.findTestItemForDocument(document);
+          if (item)
+            this.refresh(item).then(
+              () => {
+                if (item?.canResolveChildren && item.children.size === 0) {
+                  this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(document.uri)).then(
+                    () => undefined,
+                    () => undefined
+                  );
+                }
+              },
+              () => undefined
+            );
+          else {
+            this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(document.uri)).then(
+              () => undefined,
+              () => undefined
+            );
+          }
+        }, 500),
         token
       )
     );
@@ -313,12 +322,16 @@ export class TestControllerManager {
             addedIds.add(test.id);
           }
 
+          for (const test of tests ?? []) {
+            const newItem = this.addOrUpdateTestItem(item, test);
+            await this.refreshItem(newItem, token);
+            if (newItem.canResolveChildren && newItem.children.size === 0) {
+              addedIds.delete(newItem.id);
+            }
+          }
+
           // TODO: we need a sleep after deletion here, it seem's there is a bug in vscode
           if (this.removeNotAddedTestItems(item, addedIds)) await sleep(500);
-
-          for (const test of tests ?? []) {
-            await this.refreshItem(this.addOrUpdateTestItem(item, test), token);
-          }
         }
       } finally {
         item.busy = false;
@@ -341,7 +354,11 @@ export class TestControllerManager {
         if (tests) {
           for (const test of tests) {
             addedIds.add(test.id);
-            await this.refreshItem(this.addOrUpdateTestItem(item, test), token);
+            const newItem = this.addOrUpdateTestItem(undefined, test);
+            await this.refreshItem(newItem, token);
+            if (newItem.canResolveChildren && newItem.children.size === 0) {
+              addedIds.delete(newItem.id);
+            }
           }
         }
       }
@@ -372,7 +389,8 @@ export class TestControllerManager {
       }
     }
 
-    testItem.canResolveChildren = robotTestItem.children !== undefined && robotTestItem.children.length > 0;
+    testItem.canResolveChildren = robotTestItem.type === "suite" || robotTestItem.type === "workspace";
+
     if (robotTestItem.range !== undefined) {
       testItem.range = toVsCodeRange(robotTestItem.range);
     }
@@ -431,7 +449,7 @@ export class TestControllerManager {
           this.removeWorkspaceFolderItems(w);
         }
       }
-
+      await sleep(500);
       await this.refresh();
     });
   }
@@ -458,7 +476,7 @@ export class TestControllerManager {
             () => undefined,
             () => undefined
           );
-        }, 1000),
+        }, 500),
         token
       );
     } else {
