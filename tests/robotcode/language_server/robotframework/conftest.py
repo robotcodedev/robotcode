@@ -29,16 +29,17 @@ from robotcode.utils.dataclasses import as_dict
 from tests.robotcode.language_server.robotframework.tools import generate_test_id
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     loop = asyncio.new_event_loop()
+    loop.set_debug(True)
     try:
         yield loop
     finally:
         loop.close()
 
 
-@pytest.fixture(scope="function", ids=generate_test_id)
+@pytest.fixture(scope="module", ids=generate_test_id)
 @pytest.mark.usefixtures("event_loop")
 async def protocol(request: Any) -> AsyncGenerator[RobotLanguageServerProtocol, None]:
     root_path = Path().resolve()
@@ -81,6 +82,7 @@ async def protocol(request: Any) -> AsyncGenerator[RobotLanguageServerProtocol, 
         )
         yield protocol
     finally:
+        await protocol._shutdown()
         server.close()
 
 
@@ -96,5 +98,5 @@ async def test_document(request: Any) -> AsyncGenerator[TextDocument, None]:
     try:
         yield document
     finally:
-        # del document
+        del document
         pass
