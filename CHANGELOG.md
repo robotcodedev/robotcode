@@ -7,6 +7,11 @@ All notable changes to the "robotcode" extension will be documented in this file
 ##  0.4.7
 
 ### added
+
+-
+
+### added
+
 - hover/goto/references/highlight... differentiate between namespace and keyword in keyword calls like "BuiltIn.Log"
 - increase test coverage
 
