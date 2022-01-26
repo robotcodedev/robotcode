@@ -270,6 +270,10 @@ class ImportVisitor(AsyncVisitor):
         n = cast(RobotLibraryImport, node)
         name = cast(RobotToken, n.get_token(RobotToken.NAME))
 
+        last_data_token = cast(
+            RobotToken, next(v for v in reversed(n.tokens) if v.type not in RobotToken.NON_DATA_TOKENS)
+        )
+
         self._results.append(
             LibraryImport(
                 name=n.name,
@@ -278,8 +282,16 @@ class ImportVisitor(AsyncVisitor):
                 alias=n.alias,
                 line_no=node.lineno,
                 col_offset=node.col_offset,
-                end_line_no=node.end_lineno if node.end_lineno is not None else -1,
-                end_col_offset=node.end_col_offset if node.end_col_offset is not None else -1,
+                end_line_no=last_data_token.lineno
+                if last_data_token is not None
+                else node.end_lineno
+                if node.end_lineno is not None
+                else -1,
+                end_col_offset=last_data_token.end_col_offset
+                if last_data_token is not None
+                else node.end_col_offset
+                if node.end_col_offset is not None
+                else -1,
                 source=self.source,
             )
         )
@@ -291,14 +303,25 @@ class ImportVisitor(AsyncVisitor):
         n = cast(RobotResourceImport, node)
         name = cast(RobotToken, n.get_token(RobotToken.NAME))
 
+        last_data_token = cast(
+            RobotToken, next(v for v in reversed(n.tokens) if v.type not in RobotToken.NON_DATA_TOKENS)
+        )
         self._results.append(
             ResourceImport(
                 name=n.name,
                 name_token=name if name is not None else None,
                 line_no=node.lineno,
                 col_offset=node.col_offset,
-                end_line_no=node.end_lineno if node.end_lineno is not None else -1,
-                end_col_offset=node.end_col_offset if node.end_col_offset is not None else -1,
+                end_line_no=last_data_token.lineno
+                if last_data_token is not None
+                else node.end_lineno
+                if node.end_lineno is not None
+                else -1,
+                end_col_offset=last_data_token.end_col_offset
+                if last_data_token is not None
+                else node.end_col_offset
+                if node.end_col_offset is not None
+                else -1,
                 source=self.source,
             )
         )
@@ -312,6 +335,9 @@ class ImportVisitor(AsyncVisitor):
         n = cast(RobotVariablesImport, node)
         name = cast(RobotToken, n.get_token(RobotToken.NAME))
 
+        last_data_token = cast(
+            RobotToken, next(v for v in reversed(n.tokens) if v.type not in RobotToken.NON_DATA_TOKENS)
+        )
         self._results.append(
             VariablesImport(
                 name=n.name,
@@ -319,8 +345,16 @@ class ImportVisitor(AsyncVisitor):
                 args=n.args,
                 line_no=node.lineno,
                 col_offset=node.col_offset,
-                end_line_no=node.end_lineno if node.end_lineno is not None else -1,
-                end_col_offset=node.end_col_offset if node.end_col_offset is not None else -1,
+                end_line_no=last_data_token.lineno
+                if last_data_token is not None
+                else node.end_lineno
+                if node.end_lineno is not None
+                else -1,
+                end_col_offset=last_data_token.end_col_offset
+                if last_data_token is not None
+                else node.end_col_offset
+                if node.end_col_offset is not None
+                else -1,
                 source=self.source,
             )
         )
@@ -695,6 +729,7 @@ class Namespace:
                 elif isinstance(value, ResourceImport):
                     if value.name is None:
                         raise NameSpaceError("Resource setting requires value.")
+
                     source = await self.imports_manager.find_file(value.name, base_dir)
 
                     # allready imported
