@@ -2,7 +2,17 @@ from __future__ import annotations
 
 import ast
 import asyncio
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Type, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    List,
+    Optional,
+    Type,
+    Union,
+    cast,
+)
 
 from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
@@ -201,3 +211,113 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
             ]
 
         return None
+
+    async def highlight_Fixture(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[List[DocumentHighlight]]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Fixture
+
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
+
+        fixture_node = cast(Fixture, node)
+        result = await self.get_keyworddoc_and_token_from_position(
+            fixture_node.name,
+            cast(Token, fixture_node.get_token(RobotToken.NAME)),
+            [cast(Token, t) for t in fixture_node.get_tokens(RobotToken.ARGUMENT)],
+            namespace,
+            position,
+        )
+
+        if result is not None:
+            keyword_doc, keyword_token = result
+            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+
+            kw_range = range_from_token(keyword_token)
+
+            if lib_entry and kw_namespace:
+                r = range_from_token(keyword_token)
+                r.end.character = r.start.character + len(kw_namespace)
+                kw_range.start.character = r.end.character + 1
+                if position in r:
+                    # TODO highlight namespaces
+                    return None
+
+            if keyword_doc is not None and not keyword_doc.is_error_handler:
+                return [
+                    *(
+                        [DocumentHighlight(keyword_doc.range, DocumentHighlightKind.TEXT)]
+                        if keyword_doc.source == str(document.uri.to_path())
+                        else []
+                    ),
+                    *(
+                        DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
+                        for e in await self.parent.robot_references.find_keyword_references_in_file(
+                            document, keyword_doc
+                        )
+                    ),
+                ]
+
+        return None
+
+    async def _highlight_Template_or_TestTemplate(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[List[DocumentHighlight]]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Template, TestTemplate
+
+        template_node = cast(Union[Template, TestTemplate], node)
+        if template_node.value:
+
+            keyword_token = cast(RobotToken, template_node.get_token(RobotToken.NAME))
+            if keyword_token is None:
+                return None
+
+            if position.is_in_range(range_from_token(keyword_token)):
+                namespace = await self.parent.documents_cache.get_namespace(document)
+                if namespace is None:
+                    return None
+
+                keyword_doc = await namespace.find_keyword(template_node.value)
+
+                if keyword_doc is not None:
+
+                    lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+
+                    kw_range = range_from_token(keyword_token)
+
+                    if lib_entry and kw_namespace:
+                        r = range_from_token(keyword_token)
+                        r.end.character = r.start.character + len(kw_namespace)
+                        kw_range.start.character = r.end.character + 1
+                        if position in r:
+                            # TODO highlight namespaces
+                            return None
+
+                    if not keyword_doc.is_error_handler:
+                        return [
+                            *(
+                                [DocumentHighlight(keyword_doc.range, DocumentHighlightKind.TEXT)]
+                                if keyword_doc.source == str(document.uri.to_path())
+                                else []
+                            ),
+                            *(
+                                DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
+                                for e in await self.parent.robot_references.find_keyword_references_in_file(
+                                    document, keyword_doc
+                                )
+                            ),
+                        ]
+        return None
+
+    async def highlight_TestTemplate(  # noqa: N802
+        self, result_node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[List[DocumentHighlight]]:
+        return await self._highlight_Template_or_TestTemplate(result_node, document, position)
+
+    async def highlight_Template(  # noqa: N802
+        self, result_node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[List[DocumentHighlight]]:
+        return await self._highlight_Template_or_TestTemplate(result_node, document, position)
