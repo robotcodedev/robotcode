@@ -4,9 +4,11 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
-##  0.4.8
+### added
 
-##  0.4.7
+- correct CHANGELOG
+
+##  0.4.8
 
 ### added
 
@@ -14,6 +16,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 - extend highlight of references in fixtures and templates
 - correct updating test explorer if files are deleted or reverted
 - some cosmetic changes
+ 
+##  0.4.7
 
 ### added
 
