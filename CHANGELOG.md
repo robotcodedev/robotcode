@@ -4,6 +4,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+##  0.4.10
+
 ### added 
 
 - fix correct reverting documents on document close
