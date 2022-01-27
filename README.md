@@ -27,10 +27,22 @@ With RobotCode you can edit your code with auto-completion, code navigation, syn
 ![Autocomplete Libraries and Keywords](./doc/images/autocomplete1.gif)
 
 - Variables
+  - local variables
+  - variables from resource files
+  - variables from variables file (.py and .yaml)
+  - command line variables
+  - builtin variables
 
 ![Autocomplete Variables](./doc/images/autocomplete2.gif)
 
-TODO
+### Linting
+
+RobotCode analyse your code for missing libraries, keywords, duplicate imports and many more.
+Get addition code analysis with [Robocop](https://robocop.readthedocs.io/). Just install it in your python environment.
+
+### Code Formatting
+
+RobotCode can format your code with the internal RobotFramework robot.tidy tool (deprecated), but also with [Robotidy](https://robotidy.readthedocs.io/). Just install it.
 
 ### Running and Debugging
 
