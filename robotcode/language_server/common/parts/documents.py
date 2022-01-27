@@ -181,8 +181,8 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
             document.references.remove(self)
             document.opened_in_editor = False
 
-            await self.did_close(self, document, callback_filter=language_id_filter(document))
             await self.close_document(document)
+            await self.did_close(self, document, callback_filter=language_id_filter(document))
 
     @_logger.call
     async def close_document(self, document: TextDocument, ignore_references: bool = False) -> None:
@@ -194,7 +194,8 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
                 del document
             else:
                 document._version = None
-                await document.revert(None)
+                if await document.revert(None):
+                    await self.did_change(self, document, callback_filter=language_id_filter(document))
 
             gc.collect()
 

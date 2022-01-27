@@ -76,9 +76,11 @@ class TextDocument:
     async def save(self, version: Optional[int], text: str) -> None:
         await self.apply_full_change(version, text, save=True)
 
-    async def revert(self, version: Optional[int]) -> None:
+    async def revert(self, version: Optional[int]) -> bool:
         if self._orig_text != self._text:
             await self.apply_full_change(version, self._orig_text)
+            return True
+        return False
 
     @_logger.call
     async def apply_none_change(self) -> None:
