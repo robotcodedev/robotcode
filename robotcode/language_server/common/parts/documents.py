@@ -194,7 +194,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
                 del document
             else:
                 document._version = None
-                document.revert(None)
+                await document.revert(None)
 
             gc.collect()
 
