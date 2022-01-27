@@ -112,7 +112,7 @@ export class TestControllerManager {
         }
       }),
       vscode.workspace.onDidCloseTextDocument(async (document) => {
-        await this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(document.uri));
+        this.refreshDocument(document);
       }),
       vscode.workspace.onDidSaveTextDocument((document) => {
         this.refreshDocument(document);
