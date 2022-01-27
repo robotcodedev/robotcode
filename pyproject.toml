@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "robotcode"
-version = "0.4.7"
+version = "0.4.8"
 description = "Language server,debugger and tools for RobotFramework"
 authors = ["Daniel Biehl <daniel.biehl@imbus.de>"]
 homepage = 'https://github.com/d-biehl/robotcode'
