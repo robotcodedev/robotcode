@@ -16,19 +16,29 @@ Extensions installed through the marketplace are subject to the [Marketplace Ter
 
 ## Features
 
+With RobotCode you can edit your code with auto-completion, code navigation, syntax checking and more.
+
 ### Autocomplete and IntelliSense
 
-- Library and Resources 
-![Complete Libray](./doc/images/complete_library.png)
+- Library with parameters
+- Resources, Variables
+- Keywords with parameters
 
-- Library Parameters
-![Libray Parameters](./doc/images/complete_library_parameters.png)
+![Autocomplete Libraries and Keywords](./doc/images/autocomplete1.gif)
 
-- Keywords
-![Complete Keyword](./doc/images/complete_keywords.png)
+- Variables
 
-- Keyword Parameters
-![Complete Keyword](./doc/images/complete_keyword_parameters.png)
+![Autocomplete Variables](./doc/images/autocomplete2.gif)
+
+TODO
+
+### Running and Debugging
+
+RobotCode supports running and debugging of RobotFramework testcases and tasks out of the box, directly from the definition of the test or suite.
+
+![Running Tests](./doc/images/running_tests.gif)
+
+In the debug console you can see all log messages of the current run and navigate to the keyword the message was written by.
 
 TODO
 
