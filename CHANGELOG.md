@@ -8,7 +8,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ### added
 
--
+- extend [README](./README.md)
+- extend highlight of references in fixtures and templates
+- correct updating test explorer if files are deleted or reverted
+- some cosmetic changes
 
 ### added
 
