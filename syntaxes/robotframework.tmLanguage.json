@@ -429,7 +429,7 @@
     },
     "FOR": {
       "end": "^(?!\\s*\\.\\.\\.)",
-      "begin": "^(?i)(?:\\s)+(FOR)",
+      "begin": "^(?i)(?:\\s)+(FOR)(?:\\s)+",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.flow.robotframework"
@@ -456,7 +456,7 @@
       "name": "meta.for.robotframework"
     },
     "for_operator": {
-      "begin": "(?<=\\s)(IN ENUMERATE|IN RANGE|IN ZIP|IN)",
+      "begin": "(?<=\\s)(IN ENUMERATE|IN RANGE|IN ZIP|IN)(?:\\s)+",
       "beginCaptures": {
         "1": {
           "name": "keyword.operator.for.robotframework"
@@ -485,7 +485,7 @@
     },
     "IF": {
       "end": "^(?!\\s*\\.\\.\\.)",
-      "begin": "^(?i)(?:\\s)+(IF)",
+      "begin": "^(?i)(?:\\s)+(IF)(?:\\s)+",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.flow.robotframework"
@@ -510,7 +510,7 @@
     },
     "ELSE": {
       "end": "^(?!\\s*\\.\\.\\.)",
-      "begin": "^(?i)(?:\\s)+(ELSE)",
+      "begin": "^(?i)(?:\\s)+(ELSE)(?:\\s)+",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.flow.robotframework"
@@ -532,7 +532,7 @@
     },
     "ELSE_IF": {
       "end": "^(?!\\s*\\.\\.\\.)",
-      "begin": "^(?i)(?:\\s)+(ELSE IF)",
+      "begin": "^(?i)(?:\\s)+(ELSE IF)(?:\\s)+",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.flow.robotframework"
@@ -557,7 +557,7 @@
     },
     "END": {
       "end": "^(?!\\s*\\.\\.\\.)",
-      "begin": "^(?i)(?:\\s)+(END)",
+      "begin": "^(?i)(?:\\s)+(END)(?:\\s)+",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.flow.robotframework"
@@ -577,6 +577,138 @@
       ],
       "name": "meta.end.robotframework"
     },
+    "WHILE": {
+      "end": "^(?!\\s*\\.\\.\\.)",
+      "begin": "^(?i)(?:\\s)+(WHILE)(?:\\s)+",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.flow.robotframework"
+        }
+      },
+      "contentName": "string.unquoted.argument.robotframework",
+      "patterns": [
+        {
+          "include": "#escape"
+        },
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#variables"
+        },
+        {
+          "include": "#line_continuation"
+        }
+      ],
+      "name": "meta.if.robotframework"
+    },
+    "TRY_FINALLY": {
+      "end": "^(?!\\s*\\.\\.\\.)",
+      "begin": "^(?i)(?:\\s)+(TRY|FINALLY)(?:\\s)+",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.flow.robotframework"
+        }
+      },
+      "contentName": "string.unquoted.argument.robotframework",
+      "patterns": [
+        {
+          "include": "#escape"
+        },
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#variables"
+        },
+        {
+          "include": "#line_continuation"
+        }
+      ],
+      "name": "meta.if.robotframework"
+    },
+    "EXCEPT": {
+      "end": "^(?!\\s*\\.\\.\\.)",
+      "begin": "^(?i)(?:\\s)+(EXCEPT)(?:\\s)+",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.flow.robotframework"
+        }
+      },
+      "contentName": "string.unquoted.argument.robotframework",
+      "patterns": [
+        {
+          "include": "#escape"
+        },
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#variables"
+        },
+        {
+          "include": "#except_as_operator"
+        },
+        {
+          "include": "#line_continuation"
+        }
+      ],
+      "name": "meta.for.robotframework"
+    },
+    "except_as_operator": {
+      "begin": "(?<=\\s)(AS)(?:\\s)+",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.operator.for.robotframework"
+        }
+      },
+      "contentName": "string.unquoted.argument.robotframework",
+      "end": "^(?!\\s*\\.\\.\\.)",
+      "patterns": [
+        {
+          "include": "#variables"
+        },
+        {
+          "include": "#named_argument"
+        },
+        {
+          "include": "#line_continuation"
+        },
+        {
+          "include": "#escape"
+        },
+        {
+          "include": "#comment"
+        }
+      ],
+      "name": "meta.for.operator.robotframework"
+    },
+    "BREAK_CONTINUE": {
+      "end": "^(?!\\s*\\.\\.\\.)",
+      "begin": "^(?i)(?:\\s)+(BREAK|CONTINUE)(?:\\s)+",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.flow.robotframework"
+        }
+      },
+      "contentName": "string.unquoted.argument.robotframework",
+      "patterns": [
+        {
+          "include": "#escape"
+        },
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#variables"
+        },
+        {
+          "include": "#line_continuation"
+        }
+      ],
+      "name": "meta.if.robotframework"
+    },
+
     "control_keywords": {
       "patterns": [
         {
@@ -591,6 +723,18 @@
         {
           "include": "#FOR"
         },
+        {
+          "include": "#WHILE"
+        },
+        {
+          "include": "#TRY_FINALLY"
+        },
+        {
+          "include": "#EXCEPT"
+        },
+        {
+          "include": "#BREAK_CONTINUE"
+        },        
         {
           "include": "#END"
         }

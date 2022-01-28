@@ -21,6 +21,8 @@ from typing import (
     cast,
 )
 
+from robotcode.language_server.robotframework.utils.version import get_robot_version
+
 from ....utils.async_itertools import async_dropwhile, async_takewhile
 from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
@@ -177,6 +179,25 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             frozenset({RobotToken.SEPARATOR}): (RobotSemTokenTypes.SEPARATOR, None),
             frozenset({RobotToken.EOL, RobotToken.EOS}): (RobotSemTokenTypes.TERMINATOR, None),
         }
+
+        if get_robot_version() >= (5, 0):
+            definition.update(
+                {
+                    frozenset(
+                        {
+                            RobotToken.INLINE_IF,
+                            RobotToken.TRY,
+                            RobotToken.EXCEPT,
+                            RobotToken.FINALLY,
+                            RobotToken.AS,
+                            RobotToken.WHILE,
+                            RobotToken.RETURN_STATEMENT,
+                            RobotToken.CONTINUE,
+                            RobotToken.BREAK,
+                        }
+                    ): (RobotSemTokenTypes.CONTROL_FLOW, None),
+                }
+            )
 
         result: Dict[str, Tuple[Enum, Optional[Set[Enum]]]] = {}
         for k, v in definition.items():
