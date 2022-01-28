@@ -50,6 +50,39 @@ async def test_apply_apply_incremental_change_at_end_should_work() -> None:
 
 
 @pytest.mark.asyncio
+async def test_save_and_revert_should_work() -> None:
+    text = """first"""
+    new_text = """changed"""
+
+    document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
+    assert await document.text() == text
+
+    assert not await document.revert(None)
+
+    await document.apply_incremental_change(
+        2, Range(start=Position(line=0, character=len(text)), end=Position(line=0, character=len(text))), new_text
+    )
+
+    assert await document.text() == text + new_text
+    assert document.version == 2
+
+    assert await document.revert(None)
+    assert not await document.revert(None)
+
+    assert await document.text() == text
+    assert document.version == 1
+
+    await document.apply_incremental_change(
+        2, Range(start=Position(line=0, character=len(text)), end=Position(line=0, character=len(text))), new_text
+    )
+
+    await document.save(None, None)
+
+    assert await document.text() == text + new_text
+    assert document.version == 2
+
+
+@pytest.mark.asyncio
 async def test_apply_apply_incremental_change_in_the_middle_should_work() -> None:
     text = """\
 first line

@@ -45,6 +45,7 @@ class TextDocument:
         self._version = version
         self._text = text
         self._orig_text = text
+        self._orig_version = version
         self._lines: Optional[List[str]] = None
         self._cache: Dict[weakref.ref[Any], CacheEntry] = {}
         self._data: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
@@ -73,12 +74,12 @@ class TextDocument:
         async with self._lock:
             return self._text
 
-    async def save(self, version: Optional[int], text: str) -> None:
+    async def save(self, version: Optional[int], text: Optional[str]) -> None:
         await self.apply_full_change(version, text, save=True)
 
     async def revert(self, version: Optional[int]) -> bool:
-        if self._orig_text != self._text:
-            await self.apply_full_change(version, self._orig_text)
+        if self._orig_text != self._text or self._orig_version != self._version:
+            await self.apply_full_change(version or self._orig_version, self._orig_text)
             return True
         return False
 
@@ -89,12 +90,13 @@ class TextDocument:
             self._invalidate_cache()
 
     @_logger.call
-    async def apply_full_change(self, version: Optional[int], text: str, *, save: bool = False) -> None:
+    async def apply_full_change(self, version: Optional[int], text: Optional[str], *, save: bool = False) -> None:
         async with self._lock:
             if version is not None:
                 self._version = version
-            self._text = text
-            self._lines = None
+            if text is not None:
+                self._text = text
+                self._lines = None
             if save:
                 self._orig_text = self._text
             self._invalidate_cache()

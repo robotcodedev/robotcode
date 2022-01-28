@@ -255,7 +255,6 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
         )
         for content_change in content_changes:
             if sync_kind is None or sync_kind == TextDocumentSyncKind.NONE:
-                # do nothing
                 await document.apply_none_change()
             elif sync_kind == TextDocumentSyncKind.FULL and isinstance(
                 content_change, TextDocumentContentTextChangeEvent
