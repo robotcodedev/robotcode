@@ -1,0 +1,77 @@
+data: !GeneratedTestData
+  character: 31
+  line: 28
+  name: template keyword
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 37
+      line: 5
+    start:
+      character: 23
+      line: 5
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 28
+      line: 7
+    start:
+      character: 14
+      line: 7
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 29
+      line: 15
+    start:
+      character: 15
+      line: 15
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 40
+      line: 17
+    start:
+      character: 26
+      line: 17
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 18
+      line: 21
+    start:
+      character: 4
+      line: 21
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 26
+      line: 23
+    start:
+      character: 12
+      line: 23
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 32
+      line: 28
+    start:
+      character: 18
+      line: 28
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 40
+      line: 34
+    start:
+      character: 26
+      line: 34

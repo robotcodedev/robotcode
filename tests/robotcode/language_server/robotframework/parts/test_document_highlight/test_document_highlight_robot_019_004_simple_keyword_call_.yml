@@ -1,6 +1,6 @@
 data: !GeneratedTestData
-  character: 6
-  line: 14
+  character: 4
+  line: 19
   name: simple keyword call
 result:
 - !DocumentHighlight
@@ -8,7 +8,7 @@ result:
   range:
     end:
       character: 7
-      line: 14
+      line: 19
     start:
       character: 4
-      line: 14
+      line: 19
