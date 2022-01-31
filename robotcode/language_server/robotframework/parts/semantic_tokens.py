@@ -89,6 +89,7 @@ class RobotSemTokenTypes(Enum):
     VARIABLE_END = "variableEnd"
     ESCAPE = "escape"
     NAMESPACE = "namespace"
+    ERROR = "error"
 
 
 class RobotSemTokenModifiers(Enum):
@@ -178,6 +179,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             frozenset({RobotToken.CONTINUATION}): (RobotSemTokenTypes.CONTINUATION, None),
             frozenset({RobotToken.SEPARATOR}): (RobotSemTokenTypes.SEPARATOR, None),
             frozenset({RobotToken.EOL, RobotToken.EOS}): (RobotSemTokenTypes.TERMINATOR, None),
+            frozenset({RobotToken.ERROR, RobotToken.FATAL_ERROR}): (RobotSemTokenTypes.ERROR, None),
         }
 
         if get_robot_version() >= (5, 0):
