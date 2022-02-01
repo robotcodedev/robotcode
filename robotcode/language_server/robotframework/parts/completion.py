@@ -20,6 +20,8 @@ from typing import (
     cast,
 )
 
+from ..utils.version import get_robot_version
+
 from ....utils.async_itertools import async_chain, async_chain_iterator
 from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
@@ -167,18 +169,33 @@ SNIPPETS = {
     "IF": [r"IF  \${${1}}", "$0", "END", ""],
 }
 
-RESERVERD_KEYWORDS = [
-    "FOR",
-    # "WHILE",
-    # "BREAK",
-    # "CONTINUE",
-    "END",
-    "IF",
-    "ELSE",
-    "ELIF",
-    "ELSE IF",
-    # "RETURN",
-]
+__reserved_keywords: Optional[List[str]] = None
+
+
+def get_reserved_keywords() -> List[str]:
+    global __reserved_keywords
+
+    if __reserved_keywords is None:
+        __reserved_keywords = [
+            "FOR",
+            "END",
+            "IF",
+            "ELSE",
+            "ELIF",
+            "ELSE IF",
+        ]
+        if get_robot_version() >= (5, 0):
+            __reserved_keywords += [
+                "TRY",
+                "EXCEPT",
+                "WHILE",
+                "BREAK",
+                "CONTINUE",
+                "RETURN",
+            ]
+
+        __reserved_keywords = sorted(__reserved_keywords)
+    return __reserved_keywords
 
 
 class CompletionCollector(ModelHelperMixin):
@@ -563,7 +580,7 @@ class CompletionCollector(ModelHelperMixin):
             result.append(c)
 
         if add_reserverd:
-            for k in RESERVERD_KEYWORDS:
+            for k in get_reserved_keywords():
                 c = CompletionItem(
                     label=k,
                     kind=CompletionItemKind.KEYWORD,
