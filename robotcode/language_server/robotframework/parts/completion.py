@@ -11,6 +11,7 @@ from typing import (
     AsyncGenerator,
     Awaitable,
     Callable,
+    Dict,
     Iterator,
     List,
     Optional,
@@ -19,8 +20,6 @@ from typing import (
     Union,
     cast,
 )
-
-from ..utils.version import get_robot_version
 
 from ....utils.async_itertools import async_chain, async_chain_iterator
 from ....utils.async_tools import threaded
@@ -58,6 +57,7 @@ from ..utils.ast import (
     whitespace_at_begin_of_token,
     whitespace_from_begin_of_token,
 )
+from ..utils.version import get_robot_version
 from .model_helper import ModelHelperMixin
 
 if TYPE_CHECKING:
@@ -164,10 +164,28 @@ SETTINGS = [
 TESTCASE_SETTINGS = ["Documentation", "Tags", "Setup", "Teardown", "Template", "Timeout"]
 KEYWORD_SETTINGS = ["Documentation", "Tags", "Arguments", "Return", "Teardown", "Timeout"]
 
-SNIPPETS = {
-    "FOR": [r"FOR  \${${1}}  ${2|IN,IN ENUMERATE,IN RANGE,IN ZIP|}  ${3:arg}", "$0", "END", ""],
-    "IF": [r"IF  \${${1}}", "$0", "END", ""],
-}
+
+__snippets: Optional[Dict[str, List[str]]] = None
+
+
+def get_snippets() -> Dict[str, List[str]]:
+    global __snippets
+    if __snippets is None:
+        __snippets = {
+            "FOR": [r"FOR  \${${1}}  ${2|IN,IN ENUMERATE,IN RANGE,IN ZIP|}  ${3:arg}", "$0", "END", ""],
+            "IF": [r"IF  \${${1}}", "    $0", "END", ""],
+        }
+
+        if get_robot_version() >= (5, 0):
+            __snippets.update(
+                {
+                    "TRYEX": ["TRY", "    $0", r"EXCEPT  message", "    ", "END", ""],
+                    "TRYEXAS": ["TRY", "    $0", r"EXCEPT  message    AS    \${ex}", "    ", "END", ""],
+                    "WHILE": [r"WHILE  $1:expression", "    $0", "END", ""],
+                }
+            )
+    return __snippets
+
 
 __reserved_keywords: Optional[List[str]] = None
 
@@ -413,7 +431,7 @@ class CompletionCollector(ModelHelperMixin):
                 insert_text_format=InsertTextFormat.SNIPPET,
                 text_edit=TextEdit(range=range, new_text=line_end.join(snippet_value)) if range is not None else None,
             )
-            for snippet_name, snippet_value in SNIPPETS.items()
+            for snippet_name, snippet_value in get_snippets().items()
         ]
 
     async def create_testcase_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
