@@ -5,7 +5,7 @@ import asyncio
 from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Callable, Iterator, List, Optional, cast
 
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_tools import run_coroutine_in_thread
@@ -104,6 +104,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
     ) -> List[TestItem]:
 
         from robot.output.logger import LOGGER
+        from robot.parsing import get_model
         from robot.parsing.suitestructure import SuiteStructureBuilder
         from robot.running import TestCase, TestSuite
         from robot.running.builder.builders import (
@@ -112,6 +113,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             SuiteStructureParser,
             TestSuiteBuilder,
         )
+        from robot.running.builder.testsettings import TestDefaults
 
         def get_document_text(source: str) -> str:
             if self.parent._loop:
@@ -126,6 +128,30 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         class MyRobotParser(RobotParser):
             def _get_source(self, source: str) -> Any:
                 return get_document_text(source)
+
+            def _build(
+                self,
+                suite: TestSuite,
+                source: str,
+                defaults: TestDefaults,
+                model: Optional[ast.AST] = None,
+                get_model: Callable[..., Any] = get_model,
+            ) -> TestSuite:
+
+                from robot.running.builder.transformers import (
+                    SettingsBuilder,
+                    SuiteBuilder,
+                )
+
+                if defaults is None:
+                    defaults = TestDefaults()
+                if model is None:
+                    model = get_model(self._get_source(source), data_only=True, curdir=self._get_curdir(source))
+
+                SettingsBuilder(suite, defaults).visit(model)
+                SuiteBuilder(suite, defaults).visit(model)
+                suite.rpa = self._get_rpa_mode(model)
+                return suite
 
         class MyRestParser(MyRobotParser):
             def _get_source(self, source: str) -> Any:
@@ -152,6 +178,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
         class MyTestSuiteBuilder(TestSuiteBuilder):
             def _validate_test_counts(self, suite: TestSuite, multisource: bool = False) -> None:
+                # we don't need this
                 pass
 
             def build(self, *paths: str) -> TestSuite:
