@@ -3,7 +3,6 @@ from __future__ import annotations
 import inspect
 import threading
 import weakref
-from types import MethodType
 from typing import (
     Any,
     Callable,
@@ -36,7 +35,7 @@ class EventResultIteratorBase(Generic[_TCallable, _TResult]):
 
         with self._lock:
             if inspect.ismethod(callback):
-                self._listeners.add(weakref.WeakMethod(cast(MethodType, callback), remove_listener))
+                self._listeners.add(weakref.WeakMethod(callback, remove_listener))
             else:
                 self._listeners.add(weakref.ref(callback, remove_listener))
 
@@ -44,7 +43,7 @@ class EventResultIteratorBase(Generic[_TCallable, _TResult]):
         with self._lock:
             try:
                 if inspect.ismethod(callback):
-                    self._listeners.remove(weakref.WeakMethod(cast(MethodType, callback)))
+                    self._listeners.remove(weakref.WeakMethod(callback))
                 else:
                     self._listeners.remove(weakref.ref(callback))
             except KeyError:
@@ -52,7 +51,7 @@ class EventResultIteratorBase(Generic[_TCallable, _TResult]):
 
     def __contains__(self, obj: Any) -> bool:
         if inspect.ismethod(obj):
-            return weakref.WeakMethod(cast(MethodType, obj)) in self._listeners
+            return weakref.WeakMethod(obj) in self._listeners
         else:
             return weakref.ref(obj) in self._listeners
 

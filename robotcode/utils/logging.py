@@ -7,7 +7,6 @@ import logging
 import reprlib
 import time
 from enum import Enum
-from types import FunctionType, MethodType
 from typing import Any, Callable, List, Optional, Type, TypeVar, Union, cast, overload
 
 __all__ = ["LoggingDescriptor"]
@@ -31,16 +30,16 @@ def _repr(o: Any) -> str:
 
 def get_class_that_defined_method(meth: Callable[..., Any]) -> Optional[Type[Any]]:
     if inspect.ismethod(meth):
-        for c in inspect.getmro(cast(MethodType, meth).__self__.__class__):
+        for c in inspect.getmro(meth.__self__.__class__):
             if c.__dict__.get(meth.__name__) is meth:
                 return c
-        meth = cast(MethodType, meth).__func__  # fallback to __qualname__ parsing
+        meth = meth.__func__  # fallback to __qualname__ parsing
     if inspect.isfunction(meth):
         class_name = meth.__qualname__.split(".<locals>", 1)[0].rsplit(".", 1)[0]
         try:
             cls = getattr(inspect.getmodule(meth), class_name)
         except AttributeError:
-            cls = cast(FunctionType, meth).__globals__.get(class_name)
+            cls = meth.__globals__.get(class_name)
         if isinstance(cls, type):
             return cls
     return None
@@ -120,7 +119,7 @@ class LoggingDescriptor:
             if self.__func is not None:
 
                 if isinstance(self.__func, staticmethod):
-                    returned_logger = cast(staticmethod, self.__func).__func__()
+                    returned_logger = self.__func.__func__()
                 else:
                     returned_logger = self.__func()
 

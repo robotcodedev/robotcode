@@ -179,9 +179,9 @@ def rpc_method(
             raise TypeError(f"Not supported type {type(func)}.")
 
         if isinstance(func, classmethod):
-            f = cast(classmethod, func).__func__
+            f = func.__func__
         elif isinstance(func, staticmethod):
-            f = cast(staticmethod, func).__func__
+            f = func.__func__
         else:
             f = func
 

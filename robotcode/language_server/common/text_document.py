@@ -3,7 +3,6 @@ from __future__ import annotations
 import inspect
 import io
 import weakref
-from types import MethodType
 from typing import Any, Awaitable, Callable, Dict, List, Optional, TypeVar, Union, cast
 
 from ...utils.async_tools import Lock, create_sub_task
@@ -176,9 +175,7 @@ class TextDocument:
     def __get_cache_reference(self, entry: Callable[..., Any], /, *, add_remove: bool = True) -> weakref.ref[Any]:
 
         if inspect.ismethod(entry):
-            reference: weakref.ref[Any] = weakref.WeakMethod(
-                cast(MethodType, entry), self.__remove_cache_entry if add_remove else None
-            )
+            reference: weakref.ref[Any] = weakref.WeakMethod(entry, self.__remove_cache_entry if add_remove else None)
         else:
             reference = weakref.ref(entry, self.__remove_cache_entry if add_remove else None)
 
@@ -206,7 +203,7 @@ class TextDocument:
         if e.data is None:
             async with e.lock:
                 if e.data is None:
-                    e.data = await entry(self, *args, **kwargs)  # type: ignore
+                    e.data = await entry(self, *args, **kwargs)
 
         return cast("_T", e.data)
 

@@ -34,7 +34,7 @@ class Model:
                 or (f.default != dataclasses.MISSING and f.default != getattr(self, f.name))
                 or (
                     f.default_factory != dataclasses.MISSING  # type: ignore
-                    and getattr(self, f.name) != f.default_factory()  # type: ignore
+                    and getattr(self, f.name) != f.default_factory()
                 )
             )
         )

@@ -9,7 +9,7 @@ import threading
 import weakref
 from collections import deque
 from concurrent.futures.thread import ThreadPoolExecutor
-from types import MethodType, TracebackType
+from types import TracebackType
 from typing import (
     Any,
     AsyncGenerator,
@@ -74,7 +74,7 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
 
         with self._lock:
             if inspect.ismethod(callback):
-                self._listeners.add(weakref.WeakMethod(cast(MethodType, callback), remove_listener))
+                self._listeners.add(weakref.WeakMethod(callback, remove_listener))
             else:
                 self._listeners.add(weakref.ref(callback, remove_listener))
 
@@ -82,7 +82,7 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
         with self._lock:
             try:
                 if inspect.ismethod(callback):
-                    self._listeners.remove(weakref.WeakMethod(cast(MethodType, callback)))
+                    self._listeners.remove(weakref.WeakMethod(callback))
                 else:
                     self._listeners.remove(weakref.ref(callback))
             except KeyError:
@@ -90,7 +90,7 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
 
     def __contains__(self, obj: Any) -> bool:
         if inspect.ismethod(obj):
-            return weakref.WeakMethod(cast(MethodType, obj)) in self._listeners
+            return weakref.WeakMethod(obj) in self._listeners
         else:
             return weakref.ref(obj) in self._listeners
 
@@ -664,7 +664,7 @@ def get_current_future_info() -> Optional[FutureInfo]:
     return _running_tasks[ct]
 
 
-def create_sub_task(coro: Coroutine[Any, Any, _T], *, name: Optional[str] = None) -> asyncio.Task[_T]:
+def create_sub_task(coro: Awaitable[_T], *, name: Optional[str] = None) -> asyncio.Task[_T]:
 
     ct = get_current_future_info()
 

@@ -233,7 +233,7 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
                 k: from_dict(v, match_type_hints[k]) for k, v in match_value.items() if k in match_type_hints
             }
             try:
-                return match(**params)  # type: ignore
+                return match(**params)
             except TypeError as ex:
                 raise TypeError(f"Can't initialize class {repr(match)} with parameters {repr(params)}.") from ex
 
