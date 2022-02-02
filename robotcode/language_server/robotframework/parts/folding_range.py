@@ -25,7 +25,7 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @threaded()
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def collect(self, sender: Any, document: TextDocument) -> Optional[List[FoldingRange]]:
 
         from ..utils.async_ast import AsyncVisitor

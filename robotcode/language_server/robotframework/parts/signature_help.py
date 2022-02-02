@@ -74,7 +74,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     @threaded()
     @trigger_characters([" ", "\t"])
     @retrigger_characters([" ", "\t"])
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
     ) -> Optional[SignatureHelp]:

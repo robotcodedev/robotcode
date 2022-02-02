@@ -99,7 +99,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
     # @all_commit_characters(['\n'])
     @language_id("robotframework")
     @threaded()
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
@@ -117,6 +117,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @threaded()
+    @_logger.call
     async def resolve(self, sender: Any, completion_item: CompletionItem) -> CompletionItem:
 
         if completion_item.data is not None:

@@ -70,7 +70,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         )
 
     @language_id("robotframework")
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def collect_token_errors(
         self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
     ) -> DiagnosticsResult:
@@ -133,7 +133,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @threaded()
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def collect_walk_model_errors(
         self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
     ) -> DiagnosticsResult:

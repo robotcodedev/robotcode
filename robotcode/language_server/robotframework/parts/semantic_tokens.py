@@ -578,7 +578,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             for a in arguments:
                 yield a, node
 
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def collect(
         self,
         model: ast.AST,
@@ -672,7 +672,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
         return SemanticTokens(data=data)
 
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def collect_threading(
         self, document: TextDocument, range: Optional[Range]
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
@@ -702,7 +702,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @threaded()
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def collect_full(
         self, sender: Any, document: TextDocument, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
@@ -710,7 +710,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @threaded()
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def collect_range(
         self, sender: Any, document: TextDocument, range: Range, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
@@ -718,7 +718,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @threaded()
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def collect_full_delta(
         self, sender: Any, document: TextDocument, previous_result_id: str, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None]:

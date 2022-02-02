@@ -215,7 +215,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 self._delete_entry,
             )
 
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def publish_diagnostics(self, document_uri: DocumentUri, cancelation_token: CancelationToken) -> None:
         document = await self.parent.documents.get(document_uri)
         if document is None:

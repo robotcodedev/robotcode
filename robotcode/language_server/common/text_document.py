@@ -207,7 +207,7 @@ class TextDocument:
 
         return cast("_T", e.data)
 
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def remove_cache_entry(
         self, entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]]
     ) -> None:

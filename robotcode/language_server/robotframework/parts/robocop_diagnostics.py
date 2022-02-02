@@ -46,7 +46,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @threaded()
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def collect_diagnostics(
         self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
     ) -> DiagnosticsResult:
@@ -63,7 +63,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         return DiagnosticsResult(self.collect_diagnostics, [])
 
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def collect(
         self,
         document: TextDocument,

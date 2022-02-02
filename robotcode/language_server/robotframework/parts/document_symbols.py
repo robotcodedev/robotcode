@@ -27,7 +27,7 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @threaded()
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @_logger.call
     async def collect(
         self, sender: Any, document: TextDocument
     ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
