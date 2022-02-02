@@ -17,6 +17,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 - Semantic tokenizing now also detects ERROR and FATAL_ERROR tokens
 - some cosmetic corrections in discoring tests
 
+note: RobotFramework 5.0 Alpha 1 has a bug when parsing the EXCEPT AS statement,
+so the highlighter does not work correctly with this version.
+This bug is fixed in the higher versions.
+
 ##  0.4.10
 
 ### added
