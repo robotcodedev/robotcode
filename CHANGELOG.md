@@ -4,9 +4,22 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+### added
+
+- Added support for RobotFramework 5.0
+  - Debugger supports TRY/EXCEPT, WHILE,... correctly
+  - (Semantic)- highlighter detects new statements
+  - Formatter not uses internal tidy tool
+  - handle EXPECT AS's variables correctly
+  - Complete new statements
+  - Some completion templates for WHILE, EXCEPT, ...
+- Discovering tests is now more error tolerant
+- Semantic tokenizing now also detects ERROR and FATAL_ERROR tokens
+- some cosmetic corrections in discoring tests
+
 ##  0.4.10
 
-### added 
+### added
 
 - fix correct reverting documents on document close
 
@@ -24,7 +37,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 - extend highlight of references in fixtures and templates
 - correct updating test explorer if files are deleted or reverted
 - some cosmetic changes
- 
+
 ##  0.4.7
 
 ### added
@@ -56,7 +69,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 - implement find references for libraries, resources, variables import
 - implement document highlight for variables and keywords
-  
+
 ##  0.4.2
 
 ### added
@@ -77,7 +90,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 - for socket connections now a free port is used
 - collect variables and arguments to document symbols
 - analysing, highlighting of "Wait Until Keyword Succeeds" and "Repeat Keyword"
-  
+
 ##  0.4.0
 
 ### added
@@ -86,9 +99,9 @@ All notable changes to the "robotcode" extension will be documented in this file
   - introduce some classes for threadsafe asyncio
 - Implement pipe/socket transport for language server
   - default is now pipe transport
-- Improve starting, stopping, restarting language server client, if ie. python environment changed, arguments changed or server crashed  
+- Improve starting, stopping, restarting language server client, if ie. python environment changed, arguments changed or server crashed
 - some refactoring to speedup loading and parsing documents
-- semantic tokens now highlight 
+- semantic tokens now highlight
   - builtin keywords
   - run keywords, also nested run keywords
 - analysing run keywords now correctly unescape keywords
@@ -112,10 +125,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ### added
 
-- remove pydantic dependency 
+- remove pydantic dependency
     - closes [#11](https://github.com/d-biehl/robotcode/issues/11)
     - big refactoring of LSP and DAP types
-- fix overlapping semantic tokens    
+- fix overlapping semantic tokens
 
 ##  0.2.11
 
@@ -124,7 +137,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 - fix [#10](https://github.com/d-biehl/robotcode/issues/10)
 - start implementing more unit tests
 - extend hover and goto for variables
-    
+
 ##  0.2.10
 
 ### added
@@ -191,7 +204,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 ### added
 
 - improve test run messages
-- add "Taks" to section completion 
+- add "Taks" to section completion
 - add colors to test output
 
 ## 0.2.0
