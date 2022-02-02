@@ -1158,10 +1158,10 @@ class ConfigurationParams(Model):
 
 
 class MessageType(IntEnum):
-    Error = 1
-    Warning = 2
-    Info = 3
-    Log = 4
+    ERROR = 1
+    WARNING = 2
+    INFO = 3
+    LOG = 4
 
     def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()

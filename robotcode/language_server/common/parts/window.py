@@ -15,14 +15,14 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class WindowProtocolPart(LanguageServerProtocolPart):
-    def show_message(self, message: str, type: MessageType = MessageType.Info) -> None:
+    def show_message(self, message: str, type: MessageType = MessageType.INFO) -> None:
         self.parent.send_notification("window/showMessage", ShowMessageParams(type=type, message=message))
 
-    def show_log_message(self, message: str, type: MessageType = MessageType.Info) -> None:
+    def show_log_message(self, message: str, type: MessageType = MessageType.INFO) -> None:
         self.parent.send_notification("window/logMessage", LogMessageParams(type=type, message=message))
 
     async def show_message_request(
-        self, message: str, actions: List[str] = [], type: MessageType = MessageType.Info
+        self, message: str, actions: List[str] = [], type: MessageType = MessageType.INFO
     ) -> MessageActionItem:
         return await self.parent.send_request_async(
             "window/showMessageRequest",
