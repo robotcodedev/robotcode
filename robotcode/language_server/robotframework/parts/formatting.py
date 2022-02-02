@@ -5,10 +5,18 @@ import io
 import os
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
+from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
-from ...common.lsp_types import FormattingOptions, Position, Range, TextEdit
+from ...common.lsp_types import (
+    FormattingOptions,
+    MessageType,
+    Position,
+    Range,
+    TextEdit,
+)
 from ...common.text_document import TextDocument
+from ..utils.version import get_robot_version
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -33,6 +41,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         super().__init__(parent)
 
         parent.formatting.format.add(self.format)
+
         # TODO implement range formatting
         # parent.formatting.format_range.add(self.format_range)
 
@@ -50,14 +59,24 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         return await self.parent.workspace.get_configuration(RoboTidyConfig, folder.uri)
 
     @language_id("robotframework")
-    @_logger.call(entering=True, exiting=True, exception=True)
+    @threaded()
+    @_logger.call
     async def format(
         self, sender: Any, document: TextDocument, options: FormattingOptions, **further_options: Any
     ) -> Optional[List[TextEdit]]:
         config = await self.get_config(document)
-        if config and config.enabled and robotidy_installed():
+
+        if config and (config.enabled or get_robot_version() >= (5, 0)) and robotidy_installed():
             return await self.format_robot_tidy(document, options, **further_options)
-        return await self.format_internal(document, options, **further_options)
+
+        if get_robot_version() < (5, 0):
+            return await self.format_internal(document, options, **further_options)
+
+        self.parent.window.show_message(
+            "RobotFramework formatter is not available, please install 'robotframework-tidy'.", MessageType.ERROR
+        )
+
+        return None
 
     async def format_robot_tidy(
         self, document: TextDocument, options: FormattingOptions, **further_options: Any
