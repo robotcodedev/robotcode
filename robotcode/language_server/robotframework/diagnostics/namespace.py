@@ -195,6 +195,32 @@ class BlockVariableVisitor(AsyncVisitor):
             except VariableError:
                 pass
 
+    async def visit_ExceptHeader(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.errors import VariableError
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import ExceptHeader
+        from robot.variables import is_scalar_assign
+
+        n = cast(ExceptHeader, node)
+        variables = n.get_tokens(RobotToken.VARIABLE)[:1]
+        if variables and is_scalar_assign(variables[0].value):
+            try:
+                variable = self.get_variable_token(variables[0])
+
+                if variable is not None:
+                    self._results[variable.value] = LocalVariableDefinition(
+                        name=variable.value,
+                        name_token=variable,
+                        line_no=variable.lineno,
+                        col_offset=variable.col_offset,
+                        end_line_no=variable.lineno,
+                        end_col_offset=variable.end_col_offset,
+                        source=self.source,
+                    )
+
+            except VariableError:
+                pass
+
     async def visit_KeywordCall(self, node: ast.AST) -> None:  # noqa: N802
         from robot.errors import VariableError
         from robot.parsing.lexer.tokens import Token as RobotToken
