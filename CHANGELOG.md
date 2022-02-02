@@ -4,6 +4,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+##  0.5.0
+
 ### added
 
 - Added support for RobotFramework 5.0
