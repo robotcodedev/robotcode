@@ -152,17 +152,17 @@ def init_logging(args: argparse.Namespace) -> None:
         _logger.logger.addHandler(get_log_handler(args.log_file))
 
     if not args.log_robotframework:
-        logging.getLogger("robotcode.language_server.robotframework").level = logging.CRITICAL
+        logging.getLogger("robotcode.language_server.robotframework").setLevel(logging.CRITICAL)
     if not args.log_language_server_parts:
-        logging.getLogger("robotcode.language_server.common.parts").level = logging.CRITICAL
+        logging.getLogger("robotcode.language_server.common.parts").setLevel(logging.CRITICAL)
     if not args.log_language_server:
-        logging.getLogger("robotcode.language_server.common").level = logging.CRITICAL
+        logging.getLogger("robotcode.language_server.common").setLevel(logging.CRITICAL)
     if not args.log_json_rpc:
-        logging.getLogger("robotcode.jsonrpc2").level = logging.CRITICAL
+        logging.getLogger("robotcode.jsonrpc2").setLevel(logging.CRITICAL)
     if not args.log_json_rpc_data:
-        logging.getLogger("robotcode.jsonrpc2.protocol.JsonRPCProtocol_data").level = logging.CRITICAL
+        logging.getLogger("robotcode.jsonrpc2.protocol.JsonRPCProtocol_data").setLevel(logging.CRITICAL)
     if not args.log_asyncio:
-        logging.getLogger("asyncio").level = logging.CRITICAL
+        logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
 
 def main() -> None:

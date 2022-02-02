@@ -34,25 +34,25 @@ from ..utils.logging import LoggingDescriptor
 _logger = LoggingDescriptor(name=__package__)
 
 if TYPE_CHECKING:
-    from .server import LaucherServer
+    from .server import DebugAdapterServer
 
 server_lock = threading.RLock()
-_server: Optional["LaucherServer"] = None
+_server: Optional["DebugAdapterServer"] = None
 
 
-def get_server() -> Optional["LaucherServer"]:
+def get_server() -> Optional["DebugAdapterServer"]:
     with server_lock:
         return _server
 
 
-def set_server(value: "LaucherServer") -> None:
+def set_server(value: "DebugAdapterServer") -> None:
     with server_lock:
         global _server
         _server = value
 
 
 @_logger.call
-async def wait_for_server(timeout: float = 5) -> "LaucherServer":
+async def wait_for_server(timeout: float = 5) -> "DebugAdapterServer":
     async def wait() -> None:
         while get_server() is None:
             await asyncio.sleep(0.05)
@@ -67,12 +67,12 @@ async def wait_for_server(timeout: float = 5) -> "LaucherServer":
 @_logger.call
 def run_server(port: int, loop: asyncio.AbstractEventLoop) -> None:
     from ..jsonrpc2.server import TcpParams
-    from .server import LaucherServer
+    from .server import DebugAdapterServer
 
     asyncio.set_event_loop(loop)
 
-    with LaucherServer(tcp_params=TcpParams("127.0.0.1", port)) as server:
-        set_server(cast(LaucherServer, server))
+    with DebugAdapterServer(tcp_params=TcpParams("127.0.0.1", port)) as server:
+        set_server(cast(DebugAdapterServer, server))
         try:
             server.run()
         except asyncio.CancelledError:
@@ -144,7 +144,9 @@ async def run_robot(
                         server.protocol.wait_for_client(wait_for_client_timeout), loop=loop
                     )
                 )
-            except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+            except SystemExit:
+                raise
+            except (asyncio.CancelledError, KeyboardInterrupt):
                 pass
             except asyncio.TimeoutError:
                 raise ConnectionError("No incomming connection from a debugger client.")
@@ -158,7 +160,9 @@ async def run_robot(
                         server.protocol.wait_for_configuration_done(configuration_done_timeout), loop=loop
                     )
                 )
-            except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+            except SystemExit:
+                raise
+            except (asyncio.CancelledError, KeyboardInterrupt):
                 pass
             except asyncio.TimeoutError:
                 raise ConnectionError("Timeout to get configuration from client.")
@@ -362,11 +366,13 @@ def main() -> None:
             _logger.logger.addHandler(get_log_handler(args.log_file))
 
         if not args.log_asyncio:
-            logging.getLogger("asyncio").level = logging.CRITICAL
+            logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
         if not args.log_debugger:
-            logging.getLogger("robotcode.debugger").level = logging.CRITICAL
-            logging.getLogger("robotcode.debugger").level = logging.CRITICAL
+            logging.getLogger("robotcode.debugger").propagate = True
+            logging.getLogger("robotcode.debugger").setLevel(logging.CRITICAL)
+            logging.getLogger("robotcode.jsonrpc2").propagate = True
+            logging.getLogger("robotcode.jsonrpc2").setLevel(logging.CRITICAL)
 
     _logger.info(f"starting {__package__} version={__version__}")
     _logger.debug(f"args={args}")

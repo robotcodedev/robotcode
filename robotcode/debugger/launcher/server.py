@@ -34,7 +34,7 @@ from ..protocol import DebugAdapterProtocol
 
 
 class OutputProtocol(asyncio.SubprocessProtocol):
-    def __init__(self, parent: DAPServerProtocol) -> None:
+    def __init__(self, parent: LauncherDebugAdapterProtocol) -> None:
         super().__init__()
         self.parent = parent
 
@@ -49,7 +49,7 @@ class OutputProtocol(asyncio.SubprocessProtocol):
         self.parent.send_event(OutputEvent(body=OutputEventBody(output=data.decode(), category=category)))
 
 
-class DAPServerProtocol(DebugAdapterProtocol):
+class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
     _logger = LoggingDescriptor()
 
     def __init__(self) -> None:
@@ -268,7 +268,7 @@ class DAPServerProtocol(DebugAdapterProtocol):
 TCP_DEFAULT_PORT = 6611
 
 
-class DebugAdapterServer(JsonRPCServer[DAPServerProtocol]):
+class LauncherServer(JsonRPCServer[LauncherDebugAdapterProtocol]):
     def __init__(
         self,
         mode: JsonRpcServerMode = JsonRpcServerMode.STDIO,
@@ -279,5 +279,5 @@ class DebugAdapterServer(JsonRPCServer[DAPServerProtocol]):
             tcp_params=tcp_params,
         )
 
-    def create_protocol(self) -> DAPServerProtocol:
-        return DAPServerProtocol()
+    def create_protocol(self) -> LauncherDebugAdapterProtocol:
+        return LauncherDebugAdapterProtocol()

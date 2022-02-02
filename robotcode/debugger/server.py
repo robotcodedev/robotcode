@@ -45,7 +45,7 @@ from .protocol import DebugAdapterProtocol
 TCP_DEFAULT_PORT = 6612
 
 
-class LauncherServerProtocol(DebugAdapterProtocol):
+class DebugAdapterServerProtocol(DebugAdapterProtocol):
     _logger = LoggingDescriptor()
 
     def __init__(self) -> None:
@@ -272,7 +272,7 @@ class LauncherServerProtocol(DebugAdapterProtocol):
         return SetExceptionBreakpointsResponseBody(breakpoints=result) if result else None
 
 
-class LaucherServer(JsonRPCServer[LauncherServerProtocol]):
+class DebugAdapterServer(JsonRPCServer[DebugAdapterServerProtocol]):
     def __init__(
         self,
         tcp_params: TcpParams = TcpParams(None, TCP_DEFAULT_PORT),
@@ -281,7 +281,7 @@ class LaucherServer(JsonRPCServer[LauncherServerProtocol]):
             mode=JsonRpcServerMode.TCP,
             tcp_params=tcp_params,
         )
-        self.protocol = LauncherServerProtocol()
+        self.protocol = DebugAdapterServerProtocol()
 
-    def create_protocol(self) -> LauncherServerProtocol:
+    def create_protocol(self) -> DebugAdapterServerProtocol:
         return self.protocol

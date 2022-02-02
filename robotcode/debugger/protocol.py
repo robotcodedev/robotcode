@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
-import logging
 import threading
 import traceback
 from collections import OrderedDict
@@ -78,7 +77,6 @@ TResult = TypeVar("TResult", bound=Any)
 class DebugAdapterProtocol(JsonRPCProtocolBase):
 
     _logger = LoggingDescriptor()
-    _message_logger = LoggingDescriptor(postfix=".message")
 
     def __init__(self) -> None:
         super().__init__()
@@ -90,19 +88,14 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
 
     @_logger.call
     def send_message(self, message: ProtocolMessage) -> None:
-        body = as_json(message, indent=self._message_logger.is_enabled_for(logging.DEBUG) or None).encode(self.CHARSET)
+        body = as_json(message, compact=True).encode(self.CHARSET)
 
         header = (f"Content-Length: {len(body)}\r\n\r\n").encode("ascii")
 
-        self._message_logger.debug(
-            lambda: "write ->\n" + (header.decode("ascii") + body.decode(self.CHARSET)).replace("\r\n", "\n")
-        )
-
         if self.write_transport is not None:
             msg = header + body
-            if self._loop == asyncio.get_running_loop():
-                self.write_transport.write(msg)
-            elif self._loop is not None:
+
+            if self._loop:
                 self._loop.call_soon_threadsafe(self.write_transport.write, msg)
 
     def send_error(

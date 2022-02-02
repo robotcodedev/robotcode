@@ -269,7 +269,17 @@ class Debugger:
                 self.requested_state = RequestedState.Next
 
                 self.stop_stack_len = len(self.stack_frames)
-                if self.stack_frames and self.stack_frames[0].type in ["FOR", "FOR ITERATION", "IF", "ELSE", "ELSE IF"]:
+                if self.stack_frames and self.stack_frames[0].type in [
+                    "FOR",
+                    "FOR ITERATION",
+                    "ITERATION",
+                    "IF",
+                    "ELSE",
+                    "ELSE IF",
+                    "TRY",
+                    "EXCEPT",
+                    "WHILE",
+                ]:
                     self.stop_stack_len += 1
 
             self.condition.notify_all()
@@ -302,9 +312,13 @@ class Debugger:
             while i < len(self.stack_frames) and self.stack_frames[i].type in [
                 "FOR",
                 "FOR ITERATION",
+                "ITERATION",
                 "IF",
                 "ELSE",
                 "ELSE IF",
+                "TRY",
+                "EXCEPT",
+                "WHILE",
             ]:
                 self.stop_stack_len -= 1
                 i += 1
@@ -599,11 +613,10 @@ class Debugger:
 
         entry = self.add_stackframe_entry(longname, type, source, line_no)
 
-        if self.debug:
-            if entry.source:
-                self.process_start_state(entry.source, entry.line, entry.type, status)
+        if self.debug and entry.source:
+            self.process_start_state(entry.source, entry.line, entry.type, status)
 
-                self.wait_for_running()
+            self.wait_for_running()
 
     def end_test(self, name: str, attributes: Dict[str, Any]) -> None:
         if self.debug:
@@ -638,10 +651,11 @@ class Debugger:
             self.wait_for_running()
 
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
+        type = attributes.get("type", None)
         if self.debug:
             status = attributes.get("status", "")
 
-            if status != "NOT RUN":
+            if status != "NOT RUN" and type in ["KEYWORD", "SETUP", "TEARDOWN"]:
                 self.process_end_state(
                     status,
                     "failed_keyword",

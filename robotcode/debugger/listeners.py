@@ -75,32 +75,36 @@ class ListenerV2:
         self.failed_keywords = None
 
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
-        Debugger.instance().send_event(
-            self, Event(event="robotStarted", body=RobotExecutionEventBody(type="keyword", attributes=dict(attributes)))
-        )
+        if attributes["type"] in ["KEYWORD", "SETUP", "TEARDOWN"]:
+            Debugger.instance().send_event(
+                self,
+                Event(event="robotStarted", body=RobotExecutionEventBody(type="keyword", attributes=dict(attributes))),
+            )
 
-        Debugger.instance().start_output_group(
-            f"{name}({', '.join(repr(v) for v in attributes.get('args', []))})",
-            attributes,
-            attributes.get("type", None),
-        )
+            Debugger.instance().start_output_group(
+                f"{name}({', '.join(repr(v) for v in attributes.get('args', []))})",
+                attributes,
+                attributes.get("type", None),
+            )
 
         Debugger.instance().start_keyword(name, attributes)
 
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         Debugger.instance().end_keyword(name, attributes)
 
-        Debugger.instance().end_output_group(name, attributes)
+        if attributes["type"] in ["KEYWORD", "SETUP", "TEARDOWN"]:
+            Debugger.instance().end_output_group(name, attributes)
 
-        if attributes["status"] == "FAIL" and attributes.get("source", None):
-            if self.failed_keywords is None:
-                self.failed_keywords = []
+            if attributes["status"] == "FAIL" and attributes.get("source", None):
+                if self.failed_keywords is None:
+                    self.failed_keywords = []
 
-            self.failed_keywords.insert(0, {"message": self.last_fail_message, **attributes})
+                self.failed_keywords.insert(0, {"message": self.last_fail_message, **attributes})
 
-        Debugger.instance().send_event(
-            self, Event(event="robotEnded", body=RobotExecutionEventBody(type="keyword", attributes=dict(attributes)))
-        )
+            Debugger.instance().send_event(
+                self,
+                Event(event="robotEnded", body=RobotExecutionEventBody(type="keyword", attributes=dict(attributes))),
+            )
 
     def log_message(self, message: Dict[str, Any]) -> None:
         current_frame = Debugger.instance().stack_frames[0] if Debugger.instance().stack_frames else None

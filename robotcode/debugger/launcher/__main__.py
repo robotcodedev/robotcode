@@ -51,9 +51,9 @@ def get_log_handler(logfile: str) -> logging.FileHandler:
 
 def run_server(mode: str, port: int) -> None:
     from ...jsonrpc2.server import JsonRpcServerMode, TcpParams
-    from .server import DebugAdapterServer
+    from .server import LauncherServer
 
-    with DebugAdapterServer(JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port)) as server:
+    with LauncherServer(JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port)) as server:
         try:
             server.run()
         except (SystemExit, KeyboardInterrupt):
@@ -140,10 +140,11 @@ def main() -> None:
             _logger.logger.addHandler(get_log_handler(args.log_file))
 
         if not args.log_asyncio:
-            logging.getLogger("asyncio").level = logging.CRITICAL
+            logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
         if not args.log_debugger_launcher:
-            logging.getLogger("robotcode.debugger.launcher").level = logging.CRITICAL
+            logging.getLogger("robotcode.debugger.launcher").setLevel(logging.CRITICAL)
+            logging.getLogger("robotcode.jsonrpc2").setLevel(logging.CRITICAL)
 
     _logger.info(f"starting debugger launcher server version={__version__}")
     _logger.debug(f"args={args}")
