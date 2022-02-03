@@ -42,11 +42,38 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     async def collect_namespace_diagnostics(
         self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
     ) -> DiagnosticsResult:
-        namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return DiagnosticsResult(self.collect_namespace_diagnostics, None)
+        try:
+            namespace = await self.parent.documents_cache.get_namespace(document)
+            if namespace is None:
+                return DiagnosticsResult(self.collect_namespace_diagnostics, None)
 
-        return DiagnosticsResult(self.collect_namespace_diagnostics, await namespace.get_diagnostisc(cancelation_token))
+            return DiagnosticsResult(
+                self.collect_namespace_diagnostics, await namespace.get_diagnostisc(cancelation_token)
+            )
+        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            return DiagnosticsResult(
+                self.collect_namespace_diagnostics,
+                [
+                    Diagnostic(
+                        range=Range(
+                            start=Position(
+                                line=0,
+                                character=0,
+                            ),
+                            end=Position(
+                                line=len(await document.get_lines()),
+                                character=len((await document.get_lines())[-1] or ""),
+                            ),
+                        ),
+                        message=f"Fatal: can't get namespace diagnostics '{e}' ({type(e).__qualname__})",
+                        severity=DiagnosticSeverity.ERROR,
+                        source=self.source_name,
+                        code=type(e).__qualname__,
+                    )
+                ],
+            )
 
     def _create_error_from_node(self, node: ast.AST, msg: str, source: Optional[str] = None) -> Diagnostic:
         return Diagnostic(
@@ -121,7 +148,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                                 character=len((await document.get_lines())[-1] or ""),
                             ),
                         ),
-                        message=f"Fatal {type(e).__qualname__}: {e}",
+                        message=f"Fatal: can't get token diagnostics '{e}' ({type(e).__qualname__})",
                         severity=DiagnosticSeverity.ERROR,
                         source=self.source_name,
                         code=type(e).__qualname__,
@@ -141,16 +168,42 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         from ..utils.ast import HasError, HasErrors
         from ..utils.async_ast import iter_nodes
 
-        model = await self.parent.documents_cache.get_model(document)
+        try:
+            model = await self.parent.documents_cache.get_model(document)
 
-        result: List[Diagnostic] = []
-        async for node in iter_nodes(model):
-            error = node.error if isinstance(node, HasError) else None
-            if error is not None:
-                result.append(self._create_error_from_node(node, error))
-            errors = node.errors if isinstance(node, HasErrors) else None
-            if errors is not None:
-                for e in errors:
-                    result.append(self._create_error_from_node(node, e))
+            result: List[Diagnostic] = []
+            async for node in iter_nodes(model):
+                error = node.error if isinstance(node, HasError) else None
+                if error is not None:
+                    result.append(self._create_error_from_node(node, error))
+                errors = node.errors if isinstance(node, HasErrors) else None
+                if errors is not None:
+                    for e in errors:
+                        result.append(self._create_error_from_node(node, e))
 
-        return DiagnosticsResult(self.collect_walk_model_errors, result)
+            return DiagnosticsResult(self.collect_walk_model_errors, result)
+
+        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            return DiagnosticsResult(
+                self.collect_walk_model_errors,
+                [
+                    Diagnostic(
+                        range=Range(
+                            start=Position(
+                                line=0,
+                                character=0,
+                            ),
+                            end=Position(
+                                line=len(await document.get_lines()),
+                                character=len((await document.get_lines())[-1] or ""),
+                            ),
+                        ),
+                        message=f"Fatal: can't get model diagnostics '{e}' ({type(e).__qualname__})",
+                        severity=DiagnosticSeverity.ERROR,
+                        source=self.source_name,
+                        code=type(e).__qualname__,
+                    )
+                ],
+            )

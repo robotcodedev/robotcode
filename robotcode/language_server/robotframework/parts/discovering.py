@@ -146,7 +146,15 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 if defaults is None:
                     defaults = TestDefaults()
                 if model is None:
-                    model = get_model(self._get_source(source), data_only=True, curdir=self._get_curdir(source))
+                    try:
+                        model = get_model(self._get_source(source), data_only=True, curdir=self._get_curdir(source))
+                    except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException:
+                        pass
+
+                if model is None:
+                    return suite
 
                 SettingsBuilder(suite, defaults).visit(model)
                 SuiteBuilder(suite, defaults).visit(model)
@@ -312,14 +320,19 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         self, text_document: TextDocumentIdentifier, id: Optional[str], *args: Any, **kwargs: Any
     ) -> List[TestItem]:
         async def run() -> List[TestItem]:
-            return await FindTestCasesVisitor().get(
-                text_document.uri,
-                await self.parent.documents_cache.get_model(
-                    await self.parent.robot_workspace.get_or_open_document(
-                        Uri(text_document.uri).to_path(), language_id="robotframework"
-                    )
-                ),
-                id,
-            )
+            try:
+                return await FindTestCasesVisitor().get(
+                    text_document.uri,
+                    await self.parent.documents_cache.get_model(
+                        await self.parent.robot_workspace.get_or_open_document(
+                            Uri(text_document.uri).to_path(), language_id="robotframework"
+                        )
+                    ),
+                    id,
+                )
+            except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException:
+                return []
 
         return await run_coroutine_in_thread(run)

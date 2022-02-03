@@ -679,7 +679,12 @@ class ImportsManager:
 
     @_logger.call
     async def get_libdoc_from_model(
-        self, model: ast.AST, source: str, model_type: str = "RESOURCE", scope: str = "GLOBAL"
+        self,
+        model: ast.AST,
+        source: str,
+        model_type: str = "RESOURCE",
+        scope: str = "GLOBAL",
+        append_model_errors: bool = True,
     ) -> LibraryDoc:
 
         from robot.errors import DataError
@@ -697,10 +702,11 @@ class ImportsManager:
             error = node.error if isinstance(node, HasError) else None
             if error is not None:
                 errors.append(Error(message=error, type_name="ModelError", source=source, line_no=node.lineno))
-            node_errors = node.errors if isinstance(node, HasErrors) else None
-            if node_errors is not None:
-                for e in node_errors:
-                    errors.append(Error(message=e, type_name="ModelError", source=source, line_no=node.lineno))
+            if append_model_errors:
+                node_errors = node.errors if isinstance(node, HasErrors) else None
+                if node_errors is not None:
+                    for e in node_errors:
+                        errors.append(Error(message=e, type_name="ModelError", source=source, line_no=node.lineno))
 
         res = ResourceFile(source=source)
 

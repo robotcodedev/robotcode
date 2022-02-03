@@ -557,7 +557,7 @@ class Namespace:
             async with self._library_doc_lock:
                 if self._library_doc is None:
                     self._library_doc = await self.imports_manager.get_libdoc_from_model(
-                        self.model, self.source, model_type="RESOURCE"
+                        self.model, self.source, model_type="RESOURCE", append_model_errors=False
                     )
 
         return self._library_doc
