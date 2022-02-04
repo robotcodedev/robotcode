@@ -7,9 +7,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 ### added
 - added section about style customization to README.md
 - added file icons for robot files
-  - in VSCode Version >= 1.64, if the icon theme does not provide an icon for robot files, this icon is used
+  - starting with VSCode Version 1.64, if the icon theme does not provide an icon for robot files, this icon is used
 - add automatic debug configurations
   - you don't need to create a launch.json to run tests in the debugger view
+- correct step-in FINALLY in debugger
 
 ##  0.5.0
 
