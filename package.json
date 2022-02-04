@@ -172,6 +172,10 @@
           "Robot Framework",
           "robotframework"
         ],
+        "icon": {
+          "light": "./icons/robot-light.png",
+          "dark": "./icons/robot-dark.png"
+        },
         "extensions": [
           ".robot",
           ".resource"

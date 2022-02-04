@@ -31,3 +31,5 @@ test-results
 
 playground
 
+# svg files
+**/*.svg
