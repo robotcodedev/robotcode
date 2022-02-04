@@ -201,4 +201,14 @@ put this to the `settings.json`
         }
     ]
 }
+
+"editor.semanticTokenColorCustomizations": {
+    "rules": {
+        "*.documentation:robotframework": {
+            "fontStyle": "italic",
+            //"foreground": "#aaaaaa"
+        }
+    }
+}
+
 ```
