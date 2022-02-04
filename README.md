@@ -16,28 +16,69 @@ Extensions installed through the marketplace are subject to the [Marketplace Ter
 
 ## Features
 
-With RobotCode you can edit your code with auto-completion, code navigation, syntax checking and more.
+With RobotCode you can edit your code with auto-completion, code navigation, syntax checking and many more.
+Here is a list of Features:
+
+- [Autocomplete and IntelliSense](#Autocomplete-and-IntelliSense)
+- [Code Navigation](#code-navigation)
+- [Diagnostics]()
+- [Diagnostics and Linting](#diagnostics-and-linting)
+- [Code Formatting](#code-formatting)
+- [Running and Debugging](#running-and-debugging)
+- [Multi-root Workspace folders](#multi-root-workspace-folders)
+- Test Explorer
+- and many more
 
 ### Autocomplete and IntelliSense
 
+Autocompletion for:
 - Library with parameters
-- Resources, Variables
+- Resources,
+- Variables
 - Keywords with parameters
+- Namespaces
 
 ![Autocomplete Libraries and Keywords](./doc/images/autocomplete1.gif)
 
-- Variables
+Autocompletion supports all supported variables types
   - local variables
   - variables from resource files
   - variables from variables file (.py and .yaml)
+    - static and dynamic
   - command line variables
   - builtin variables
 
 ![Autocomplete Variables](./doc/images/autocomplete2.gif)
 
-### Linting
+### Code Navigation
 
-RobotCode analyse your code for missing libraries, keywords, duplicate imports and many more.
+- Symbols
+- Goto definitions and implementations
+  - Keywords
+  - Variables
+  - Libraries
+  - Resources
+- Find references
+  - Keywords
+  - Variables
+  - Imports
+    - Libraries
+    - Resources
+    - Variables
+- Errors and Warnings
+### Diagnostics and Linting
+
+RobotCode analyse your code and show diagnostics for:
+- Syntax Errors
+- Unknown keywords
+- Duplicate keywords
+- Missing libraries, resource and variable imports
+- Duplicate libraries, resource and variable imports
+- ... and many more
+
+For most things RobotCode uses the installed RobotFramework version to parse and analyse the code, so you get the same errors as when you run it.
+
+
 Get addition code analysis with [Robocop](https://robocop.readthedocs.io/). Just install it in your python environment.
 
 ### Code Formatting
@@ -52,7 +93,10 @@ RobotCode supports running and debugging of RobotFramework testcases and tasks o
 
 In the debug console you can see all log messages of the current run and navigate to the keyword the message was written by.
 
-TODO
+### Multi-root Workspace folders
+
+RobotCodes support for [Multi-root Workspaces](https://code.visualstudio.com/docs/editor/multi-root-workspaces), enables loadin and editing different Robotframework projects/folders with different RobotFramework/Python environments and settings at the same time or use can share the same RobotFramework/Python environment and settings for all folders in the workspace.
+
 
 ## Quick start
 
@@ -97,7 +141,7 @@ This is the simpliest way to create an running environment.
 
 ### Editor Style
 
-You can change some stylings for RobotFramework files in VSCode editor (see [Customizing a Color Theme](https://code.visualstudio.com/docs/getstarted/themes#_customizing-a-color-theme))
+You can change some stylings for RobotFramework files in VSCode editor, independently of the current theme. (see [Customizing a Color Theme](https://code.visualstudio.com/docs/getstarted/themes#_customizing-a-color-theme))
 
 See the difference:
 
