@@ -390,8 +390,10 @@ export class LanguageClientsManager {
     const folders = new Set<vscode.WorkspaceFolder>();
 
     for (const document of vscode.workspace.textDocuments) {
-      const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
-      if (workspaceFolder) folders.add(workspaceFolder);
+      if (document.languageId === "robotframework") {
+        const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+        if (workspaceFolder) folders.add(workspaceFolder);
+      }
     }
 
     for (const folder of folders) {
@@ -409,6 +411,17 @@ export class LanguageClientsManager {
     suites?: string[],
     token?: vscode.CancellationToken
   ): Promise<RobotTestItem[] | undefined> {
+    const robotFiles = await vscode.workspace.findFiles(
+      new vscode.RelativePattern(workspaceFolder, "**/*.robot"),
+      undefined,
+      1,
+      token
+    );
+
+    if (robotFiles.length === 0) {
+      return undefined;
+    }
+
     const client = await this.getLanguageClientForResource(workspaceFolder.uri);
 
     if (!client) return;

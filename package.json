@@ -46,14 +46,26 @@
     "Robotic Process Automation",
     "RPA"
   ],
+  "featureFlags": {
+    "usingNewInterpreterStorage": true
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Only Partial IntelliSense with RobotCode is supported. Cannot execute Python with untrusted files."
+    },
+    "virtualWorkspaces": {
+      "supported": "limited",
+      "description": "Only Partial IntelliSense supported."
+    }
+  },
   "activationEvents": [
-    "workspaceContains:**/*.robot",
+    "onLanguage:robotframework",
+    "workspaceContains:**/*.{robot,resource}",
     "onDebug",
-    "onDebugAdapterProtocolTracker:robotframework",
     "onDebugInitialConfigurations",
     "onDebugDynamicConfigurations",
-    "onDebugResolve:robotframework",
-    "onLanguage:robotframework"
+    "onDebugResolve:robotcode"
   ],
   "galleryBanner": {
     "theme": "dark",
@@ -63,6 +75,7 @@
   "contributes": {
     "configurationDefaults": {
       "[robotframework]": {
+        "editor.wordBasedSuggestions": false,
         "editor.semanticHighlighting.enabled": true
       }
     },
@@ -85,7 +98,7 @@
           "headerKeyword": [
             "keyword.other.header.keyword.robotframework"
           ],
-          "headerSetting": [
+          "headerSettings": [
             "keyword.other.header.setting.robotframework"
           ],
           "headerVariable": [
@@ -467,7 +480,7 @@
     "debuggers": [
       {
         "type": "robotcode",
-        "label": "RobotCode Debug",
+        "label": "RobotCode Debugger",
         "languages": [
           "robotframework"
         ],

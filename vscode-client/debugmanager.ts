@@ -154,25 +154,37 @@ export class DebugManager {
         "robotcode",
         new RobotCodeDebugConfigurationProvider(this.pythonManager)
       ),
+      vscode.debug.registerDebugConfigurationProvider(
+        "robotcode",
+        {
+          provideDebugConfigurations(
+            _folder: vscode.WorkspaceFolder | undefined,
+            _token?: vscode.CancellationToken
+          ): vscode.ProviderResult<vscode.DebugConfiguration[]> {
+            return [
+              {
+                name: "RobotCode: Run .robot file",
+                type: "robotcode",
+                request: "launch",
+                cwd: "${workspaceFolder}",
+                target: "${file}",
+              },
+              {
+                name: "RobotCode: Run all tests",
+                type: "robotcode",
+                request: "launch",
+                cwd: "${workspaceFolder}",
+                target: ".",
+              },
+            ];
+          },
+        },
+        vscode.DebugConfigurationProviderTriggerKind.Dynamic
+      ),
       vscode.debug.registerDebugAdapterDescriptorFactory(
         "robotcode",
         new RobotCodeDebugAdapterDescriptorFactory(this.pythonManager)
       ),
-      // vscode.debug.registerDebugAdapterTrackerFactory("robotcode", {
-      //     createDebugAdapterTracker(session: vscode.DebugSession) {
-      //         return {
-      //             onWillStartSession: () => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER start session`),
-      //             onWillStopSession: () => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER stop session`),
-      //             onWillReceiveMessage: (m) =>
-      //                 OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER > ${JSON.stringify(m, undefined, 2)}`),
-      //             onDidSendMessage: (m) =>
-      //                 OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER < ${JSON.stringify(m, undefined, 2)}`),
-      //             onError: (e) =>
-      //                 OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER ERROR: ${JSON.stringify(e, undefined, 2)}`),
-      //             onExit: (c, s) => OUTPUT_CHANNEL.appendLine(`DEBUG_ADAPTER EXIT code ${c} signal ${s}`),
-      //         };
-      //     },
-      // }),
       vscode.debug.onDidReceiveDebugSessionCustomEvent(async (event) => {
         if (event.session.configuration.type === "robotcode") {
           switch (event.event) {
@@ -209,7 +221,7 @@ export class DebugManager {
           this._attachedSessions.delete(session);
         }
       }),
-      vscode.languages.registerInlineValuesProvider("robotframework", {
+      vscode.languages.registerInlineValuesProvider("robotcode", {
         provideInlineValues(
           document: vscode.TextDocument,
           viewPort: vscode.Range,
@@ -246,7 +258,7 @@ export class DebugManager {
           );
         },
       }),
-      vscode.languages.registerEvaluatableExpressionProvider("robotframework", {
+      vscode.languages.registerEvaluatableExpressionProvider("robotcode", {
         provideEvaluatableExpression(
           document: vscode.TextDocument,
           position: vscode.Position,
@@ -304,7 +316,7 @@ export class DebugManager {
         ...template,
         ...{
           type: "robotcode",
-          name: "robotcode: Run Tests",
+          name: "RobotCode: Run Tests",
           request: "launch",
           cwd: folder?.uri.fsPath,
           target: ".",
