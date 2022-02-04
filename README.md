@@ -101,9 +101,9 @@ You can change some stylings for RobotFramework files in VSCode editor (see [Cus
 
 See the difference:
 
-| before                                                                       | after                                                             |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| ![Without customization](./doc/images/without-token-color-customization.png) | ![With customization](./doc/images/token-color-customization.png) |
+| Before                                                           | After                                                      |
+| ---------------------------------------------------------------- | ---------------------------------------------------------- |
+| ![Without customization](./doc/images/without_customization.gif) | ![With customization](./doc/images/with_customization.gif) |
 
 
 As a template you can put the following code to your user settings of VSCode.
