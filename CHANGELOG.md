@@ -4,6 +4,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+##  0.5.1
+
 ### added
 - extend README.md
   - added section about style customization
