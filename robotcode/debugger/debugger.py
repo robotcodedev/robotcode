@@ -278,6 +278,7 @@ class Debugger:
                     "ELSE IF",
                     "TRY",
                     "EXCEPT",
+                    "FINALLY",
                     "WHILE",
                 ]:
                     self.stop_stack_len += 1
@@ -318,6 +319,7 @@ class Debugger:
                 "ELSE IF",
                 "TRY",
                 "EXCEPT",
+                "FINALLY",
                 "WHILE",
             ]:
                 self.stop_stack_len -= 1
