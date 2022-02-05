@@ -11,8 +11,68 @@ import { WeakValueSet } from "./utils";
 const DEBUG_ADAPTER_DEFAULT_TCP_PORT = 6611;
 const DEBUG_ADAPTER_DEFAULT_HOST = "127.0.0.1";
 
+const DEBUG_CONFIGURATIONS = [
+  {
+    label: "RobotCode: Run Current",
+    description: "Run the current RobotFramework file.",
+    body: {
+      name: "RobotCode: Run Current",
+      type: "robotcode",
+      request: "launch",
+      cwd: "${workspaceFolder}",
+      target: "${file}",
+    },
+  },
+  {
+    label: "RobotCode: Run All",
+    description: "Run all RobotFramework files.",
+    body: {
+      name: "RobotCode: Run All",
+      type: "robotcode",
+      request: "launch",
+      cwd: "${workspaceFolder}",
+      target: ".",
+    },
+  },
+];
+
 class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   constructor(private readonly pythonManager: PythonManager) {}
+
+  resolveDebugConfiguration(
+    folder: vscode.WorkspaceFolder | undefined,
+    debugConfiguration: vscode.DebugConfiguration,
+    token?: vscode.CancellationToken
+  ): vscode.ProviderResult<vscode.DebugConfiguration> {
+    return this._resolveDebugConfiguration(folder, debugConfiguration, token);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  async _resolveDebugConfiguration(
+    _folder: vscode.WorkspaceFolder | undefined,
+    debugConfiguration: vscode.DebugConfiguration,
+    token?: vscode.CancellationToken
+  ): Promise<vscode.DebugConfiguration> {
+    if (!debugConfiguration.type && !debugConfiguration.request && !debugConfiguration.name) {
+      const editor = vscode.window.activeTextEditor;
+      if (editor && editor.document.languageId === "robotframework" && editor.document.fileName.endsWith(".robot")) {
+        const result = await vscode.window.showQuickPick(
+          DEBUG_CONFIGURATIONS.map((v) => v),
+          { canPickMany: false },
+          token
+        );
+
+        if (result !== undefined) {
+          debugConfiguration = {
+            ...result?.body,
+            ...debugConfiguration,
+          };
+        }
+      }
+    }
+
+    return debugConfiguration;
+  }
 
   resolveDebugConfigurationWithSubstitutedVariables(
     folder: vscode.WorkspaceFolder | undefined,
@@ -161,22 +221,7 @@ export class DebugManager {
             _folder: vscode.WorkspaceFolder | undefined,
             _token?: vscode.CancellationToken
           ): vscode.ProviderResult<vscode.DebugConfiguration[]> {
-            return [
-              {
-                name: "RobotCode: Run .robot file",
-                type: "robotcode",
-                request: "launch",
-                cwd: "${workspaceFolder}",
-                target: "${file}",
-              },
-              {
-                name: "RobotCode: Run all tests",
-                type: "robotcode",
-                request: "launch",
-                cwd: "${workspaceFolder}",
-                target: ".",
-              },
-            ];
+            return DEBUG_CONFIGURATIONS.map((v) => v.body);
           },
         },
         vscode.DebugConfigurationProviderTriggerKind.Dynamic

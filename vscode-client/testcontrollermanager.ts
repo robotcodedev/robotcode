@@ -111,7 +111,7 @@ export class TestControllerManager {
           }
         }
       }),
-      vscode.workspace.onDidCloseTextDocument(async (document) => {
+      vscode.workspace.onDidCloseTextDocument((document) => {
         this.refreshDocument(document);
       }),
       vscode.workspace.onDidSaveTextDocument((document) => {

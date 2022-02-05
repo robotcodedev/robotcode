@@ -63,9 +63,10 @@
     "onLanguage:robotframework",
     "workspaceContains:**/*.{robot,resource}",
     "onDebug",
+    "onDebugResolve:robotcode",
     "onDebugInitialConfigurations",
-    "onDebugDynamicConfigurations",
-    "onDebugResolve:robotcode"
+    "onDebugDynamicConfigurations:robotcode"
+
   ],
   "galleryBanner": {
     "theme": "dark",
@@ -586,14 +587,14 @@
         },
         "initialConfigurations": [
           {
-            "name": "RobotCode: Run .robot file",
+            "name": "RobotCode: Run Current",
             "type": "robotcode",
             "request": "launch",
             "cwd": "${workspaceFolder}",
             "target": "${file}"
           },
           {
-            "name": "RobotCode: Run all tests",
+            "name": "RobotCode: Run All",
             "type": "robotcode",
             "request": "launch",
             "cwd": "${workspaceFolder}",
@@ -602,10 +603,10 @@
         ],
         "configurationSnippets": [
           {
-            "label": "RobotCode: Run .robot file",
-            "description": "Add a new configuration for launching a single RobotFramework file.",
+            "label": "RobotCode: Run Current",
+            "description": "Run the current RobotFramework file.",
             "body": {
-              "name": "RobotCode: Launch .robot file",
+              "name": "RobotCode: Run Current",
               "type": "robotcode",
               "request": "launch",
               "cwd": "^\"\\${workspaceFolder}\"",
@@ -613,10 +614,10 @@
             }
           },
           {
-            "label": "RobotCode: Run all tests",
-            "description": "Add a new configuration for launching all RobotFramework tests.",
+            "label": "RobotCode: Run All",
+            "description": "Run all RobotFramework files.",
             "body": {
-              "name": "RobotCode: Run all tests",
+              "name": "RobotCode: Run All",
               "type": "robotcode",
               "request": "launch",
               "cwd": "^\"\\${workspaceFolder}\"",
