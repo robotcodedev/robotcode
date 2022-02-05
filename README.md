@@ -32,7 +32,7 @@ Here is a list of Features:
 ### Autocomplete and IntelliSense
 
 Autocompletion for:
-- Library with parameters
+- Libraries with parameters
 - Resources,
 - Variables
 - Keywords with parameters
@@ -79,7 +79,7 @@ RobotCode analyse your code and show diagnostics for:
 For most things RobotCode uses the installed RobotFramework version to parse and analyse the code, so you get the same errors as when you run it.
 
 
-Get addition code analysis with [Robocop](https://robocop.readthedocs.io/). Just install it in your python environment.
+Get additional code analysis with [Robocop](https://robocop.readthedocs.io/). Just install it in your python environment.
 
 ### Code Formatting
 
@@ -95,7 +95,7 @@ In the debug console you can see all log messages of the current run and navigat
 
 ### Multi-root Workspace folders
 
-RobotCodes support for [Multi-root Workspaces](https://code.visualstudio.com/docs/editor/multi-root-workspaces), enables loadin and editing different Robotframework projects/folders with different RobotFramework/Python environments and settings at the same time or use can share the same RobotFramework/Python environment and settings for all folders in the workspace.
+RobotCodes support for [Multi-root Workspaces](https://code.visualstudio.com/docs/editor/multi-root-workspaces), enables loading and editing different Robotframework projects/folders with different RobotFramework/Python environments and settings at the same time or you can share the same RobotFramework/Python environment and settings for all folders in the workspace.
 
 
 ## Quick start
