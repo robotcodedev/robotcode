@@ -126,13 +126,13 @@ jobs:
       - name: Build VSCode pacakge
         run: |
           npm install --also=dev
-          npx vsce package -o dist/robotcode.vsix
+          npx vsce package -o dist
 
       - name: Upload VSCode package
         uses: actions/upload-artifact@v2
         with:
           name: vscode-package
-          path: dist/robotcode.vsix
+          path: dist/robotcode*.vsix
 
       - name: Upload python package
         uses: actions/upload-artifact@v2
