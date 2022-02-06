@@ -107,7 +107,7 @@ jobs:
       - name: Setup Node.js environment
         uses: actions/setup-node@v2
         with:
-          node-version: "14"
+          node-version: "16"
       - uses: actions/setup-python@v2
         with:
           python-version: "3.8"
@@ -126,13 +126,13 @@ jobs:
       - name: Build VSCode pacakge
         run: |
           npm install --also=dev
-          npx vsce package --pre-release  -o dist
+          npx vsce package -o dist/robotcode.vsix
 
       - name: Upload VSCode package
         uses: actions/upload-artifact@v2
         with:
           name: vscode-package
-          path: dist/*.vsix
+          path: dist/robotcode.vsix
 
       - name: Upload python package
         uses: actions/upload-artifact@v2
