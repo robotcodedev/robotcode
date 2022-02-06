@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - dev
   pull_request:
     branches:
       - main
@@ -126,8 +125,8 @@ jobs:
 
       - name: Build VSCode pacakge
         run: |
-          npm install --also=dev          
-          npx vsce package -o dist
+          npm install --also=dev
+          npx vsce package --pre-release  -o dist
 
       - name: Upload VSCode package
         uses: actions/upload-artifact@v2
