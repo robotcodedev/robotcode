@@ -93,10 +93,12 @@ class VariablesVisitor(AsyncVisitor):
     async def visit_Variable(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token
         from robot.parsing.model.statements import Variable
+        from robot.variables import is_variable
 
         n = cast(Variable, node)
         name = n.get_token(Token.VARIABLE)
-        if name is not None:
+
+        if name is not None and is_variable(name.value):
             self._results.append(
                 VariableDefinition(
                     name=n.name,
