@@ -648,7 +648,7 @@
   ],
   "dependencies": {
     "ansi-colors": "^4.1.1",
-    "vscode-debugadapter": "^1.51.0",
+    "@vscode/debugadapter": "^1.53.0",
     "vscode-languageclient": "^8.0.0-next"
   },
   "devDependencies": {
@@ -659,7 +659,7 @@
     "@typescript-eslint/eslint-plugin": "^5.10.2",
     "@typescript-eslint/parser": "^5.10.2",
     "@vscode/debugadapter-testsupport": "^1.51.0",
-    "@vscode/test-electron": "^2.1.1",
+    "@vscode/test-electron": "^2.1.2",
     "eslint": "^8.8.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-import": "^2.25.4",
