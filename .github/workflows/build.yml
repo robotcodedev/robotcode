@@ -123,7 +123,7 @@ jobs:
       - name: Build Python packages
         run: poetry build
 
-      - name: Build VSCode pacakge
+      - name: Build VSCode package
         run: |
           npm install --also=dev
           npx vsce package -o dist
