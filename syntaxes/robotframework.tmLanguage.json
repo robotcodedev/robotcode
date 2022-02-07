@@ -87,7 +87,7 @@
         }
       ],
       "name": "meta.setting.tags.robotframework"
-    },    
+    },
     "settings_table_setting_imports": {
       "begin": "(?i)^(Library|Resource|Variables)((?: {2,}| ?\\t)+(.*?)(?= {2}| ?\\t| ?$))?",
       "beginCaptures": {
@@ -231,7 +231,7 @@
           "name": "keyword.operator.robotframework"
         },
         "2": {
-          "name": "variable.parameter.robotframework"
+          "name": "variable.other.readwrite.robotframework"
         },
         "3": {
           "name": "keyword.operator.robotframework"
@@ -734,7 +734,7 @@
         },
         {
           "include": "#BREAK_CONTINUE"
-        },        
+        },
         {
           "include": "#END"
         }
@@ -1023,7 +1023,7 @@
           "name": "keyword.operator.robotframework"
         },
         "2": {
-          "name": "variable.parameter.robotframework"
+          "name": "variable.other.readwrite.robotframework"
         },
         "3": {
           "name": "keyword.operator.robotframework"
@@ -1039,13 +1039,13 @@
           "name": "keyword.operator.robotframework"
         },
         "2": {
-          "name": "variable.parameter.robotframework"
+          "name": "variable.other.readwrite.robotframework"
         },
         "3": {
           "name": "keyword.operator.robotframework"
         },
         "4": {
-          "name": "variable.parameter.robotframework"
+          "name": "variable.other.readwrite.robotframework"
         },
         "5": {
           "name": "keyword.operator.robotframework"
@@ -1078,7 +1078,7 @@
       "begin": "(?<=\\s)(?=\\s*(?:(?=[$@&])))((?:\\s)*(?:[$&@]{(?:.*?)}(?:\\[.*?\\])?(?: ?=?\\s*))*)(.*?)(?: {2,}| ?\\t ?|$)",
       "beginCaptures": {
         "1": {
-          "name": "variable.parameter.robotframework",
+          "name": "variable.other.readwrite.robotframework",
           "patterns": [
             {
               "include": "#variable_assignment_from_kw"
