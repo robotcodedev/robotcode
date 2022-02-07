@@ -132,7 +132,8 @@ export class TestControllerManager {
         }
       }),
       vscode.workspace.onDidCloseTextDocument(async (document) => {
-        //this.refreshDocument(document);
+        if (document.languageId !== "robotframework") return;
+
         await this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(document.uri));
       }),
       vscode.workspace.onDidSaveTextDocument((document) => {
