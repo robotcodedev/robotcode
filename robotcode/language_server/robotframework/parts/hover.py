@@ -116,13 +116,11 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         if variable is not None:
                             if variable.has_value or variable.resolvable:
                                 try:
-                                    value = repr(
-                                        await namespace.imports_manager.resolve_variable(
-                                            variable.name,
-                                            str(document.uri.to_path().parent),
-                                            await namespace.get_unresolved_variables(nodes, position),
-                                            False,
-                                        )
+                                    value = await namespace.imports_manager.resolve_variable(
+                                        variable.name,
+                                        str(document.uri.to_path().parent),
+                                        await namespace.get_unresolved_variables(nodes, position),
+                                        False,
                                     )
                                 except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                                     raise
