@@ -58,6 +58,20 @@ class DidChangeEntry {
   }
 }
 
+class WorkspaceFolderEntry {
+  private _valid: boolean;
+  public get valid(): boolean {
+    return this._valid;
+  }
+  public set valid(v: boolean) {
+    this._valid = v;
+  }
+
+  public constructor(valid: boolean, readonly items: RobotTestItem[] | undefined) {
+    this._valid = valid;
+  }
+}
+
 export class TestControllerManager {
   private _disposables: vscode.Disposable;
   public readonly testController: vscode.TestController;
@@ -88,7 +102,13 @@ export class TestControllerManager {
       async (request, token) => this.runTests(request, token)
     );
 
-    this.testController.resolveHandler = async (item) => this.refresh(item);
+    this.testController.resolveHandler = async (item) => {
+      if (item === undefined) {
+        await this.refreshWorkspace();
+      } else {
+        await this.refresh(item);
+      }
+    };
 
     const fileWatcher = vscode.workspace.createFileSystemWatcher("**/*.{robot,resource}");
     fileWatcher.onDidCreate((uri) => this.refreshUri(uri, "create"));
@@ -111,8 +131,9 @@ export class TestControllerManager {
           }
         }
       }),
-      vscode.workspace.onDidCloseTextDocument((document) => {
-        this.refreshDocument(document);
+      vscode.workspace.onDidCloseTextDocument(async (document) => {
+        //this.refreshDocument(document);
+        await this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(document.uri));
       }),
       vscode.workspace.onDidSaveTextDocument((document) => {
         this.refreshDocument(document);
@@ -186,7 +207,7 @@ export class TestControllerManager {
 
   private removeWorkspaceFolderItems(folder: vscode.WorkspaceFolder) {
     if (this.robotTestItems.has(folder)) {
-      const robotItems = this.robotTestItems.get(folder);
+      const robotItems = this.robotTestItems.get(folder)?.items;
 
       this.robotTestItems.delete(folder);
 
@@ -211,7 +232,7 @@ export class TestControllerManager {
     this.testController.dispose();
   }
 
-  public readonly robotTestItems = new WeakMap<vscode.WorkspaceFolder, RobotTestItem[] | undefined>();
+  public readonly robotTestItems = new WeakMap<vscode.WorkspaceFolder, WorkspaceFolderEntry | undefined>();
 
   public findRobotItem(item: vscode.TestItem): RobotTestItem | undefined {
     if (item.parent) {
@@ -219,7 +240,7 @@ export class TestControllerManager {
     } else {
       for (const workspace of vscode.workspace.workspaceFolders ?? []) {
         if (this.robotTestItems.has(workspace)) {
-          const items = this.robotTestItems.get(workspace);
+          const items = this.robotTestItems.get(workspace)?.items;
           if (items) {
             for (const i of items) {
               if (i.id === item.id) {
@@ -339,17 +360,20 @@ export class TestControllerManager {
     } else {
       const addedIds = new Set<string>();
 
-      for (const workspace of vscode.workspace.workspaceFolders ?? []) {
+      for (const folder of vscode.workspace.workspaceFolders ?? []) {
         if (token?.isCancellationRequested) return;
 
-        if (!this.robotTestItems.has(workspace) && this.robotTestItems.get(workspace) === undefined) {
+        if (this.robotTestItems.get(folder) === undefined || !this.robotTestItems.get(folder)?.valid) {
           this.robotTestItems.set(
-            workspace,
-            await this.languageClientsManager.getTestsFromWorkspace(workspace, [], undefined, token)
+            folder,
+            new WorkspaceFolderEntry(
+              true,
+              await this.languageClientsManager.getTestsFromWorkspace(folder, [], undefined, token)
+            )
           );
         }
 
-        const tests = this.robotTestItems.get(workspace);
+        const tests = this.robotTestItems.get(folder)?.items;
 
         if (tests) {
           for (const test of tests) {
@@ -443,7 +467,12 @@ export class TestControllerManager {
   private async refreshWorkspace(workspace?: vscode.WorkspaceFolder, _reason?: string): Promise<void> {
     return this.refreshFromUriMutex.dispatch(async () => {
       if (workspace) {
-        this.removeWorkspaceFolderItems(workspace);
+        const entry = this.robotTestItems.get(workspace);
+        if (entry !== undefined) {
+          entry.valid = false;
+        } else {
+          this.removeWorkspaceFolderItems(workspace);
+        }
       } else {
         for (const w of vscode.workspace.workspaceFolders ?? []) {
           this.removeWorkspaceFolderItems(w);
@@ -499,7 +528,7 @@ export class TestControllerManager {
 
     for (const ws of vscode.workspace.workspaceFolders ?? []) {
       if (this.robotTestItems.has(ws)) {
-        if (this.robotTestItems.get(ws)?.find((w) => w.id === item.id) !== undefined) {
+        if (this.robotTestItems.get(ws)?.items?.find((w) => w.id === item.id) !== undefined) {
           return ws;
         }
       }
