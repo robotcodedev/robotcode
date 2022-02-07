@@ -214,6 +214,7 @@ export class DebugManager {
         "robotcode",
         new RobotCodeDebugConfigurationProvider(this.pythonManager)
       ),
+
       vscode.debug.registerDebugConfigurationProvider(
         "robotcode",
         {
@@ -226,10 +227,12 @@ export class DebugManager {
         },
         vscode.DebugConfigurationProviderTriggerKind.Dynamic
       ),
+
       vscode.debug.registerDebugAdapterDescriptorFactory(
         "robotcode",
         new RobotCodeDebugAdapterDescriptorFactory(this.pythonManager)
       ),
+
       vscode.debug.onDidReceiveDebugSessionCustomEvent(async (event) => {
         if (event.session.configuration.type === "robotcode") {
           switch (event.event) {
@@ -249,11 +252,13 @@ export class DebugManager {
           }
         }
       }),
+
       vscode.debug.onDidStartDebugSession((session) => {
         if (session.parentSession?.type === "robotcode") {
           this._attachedSessions.add(session);
         }
       }),
+
       vscode.debug.onDidTerminateDebugSession(async (session) => {
         if (session.type === "robotcode") {
           for (const s of this._attachedSessions) {
@@ -266,7 +271,8 @@ export class DebugManager {
           this._attachedSessions.delete(session);
         }
       }),
-      vscode.languages.registerInlineValuesProvider("robotcode", {
+
+      vscode.languages.registerInlineValuesProvider("robotframework", {
         provideInlineValues(
           document: vscode.TextDocument,
           viewPort: vscode.Range,
@@ -303,7 +309,8 @@ export class DebugManager {
           );
         },
       }),
-      vscode.languages.registerEvaluatableExpressionProvider("robotcode", {
+
+      vscode.languages.registerEvaluatableExpressionProvider("robotframework", {
         provideEvaluatableExpression(
           document: vscode.TextDocument,
           position: vscode.Position,
