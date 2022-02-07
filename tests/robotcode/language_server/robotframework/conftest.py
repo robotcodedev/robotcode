@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, AsyncGenerator, Generator, cast
 
 import pytest
+import pytest_asyncio
 
 from robotcode.language_server.common.lsp_types import (
     ClientCapabilities,
@@ -39,7 +40,7 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
         loop.close()
 
 
-@pytest.fixture(scope="module", ids=generate_test_id)
+@pytest_asyncio.fixture(scope="module", ids=generate_test_id)
 @pytest.mark.usefixtures("event_loop")
 async def protocol(request: Any) -> AsyncGenerator[RobotLanguageServerProtocol, None]:
     root_path = Path().resolve()
@@ -86,7 +87,7 @@ async def protocol(request: Any) -> AsyncGenerator[RobotLanguageServerProtocol, 
         server.close()
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 @pytest.mark.usefixtures("event_loop")
 async def test_document(request: Any) -> AsyncGenerator[TextDocument, None]:
     data_path = Path(request.param)
@@ -99,4 +100,3 @@ async def test_document(request: Any) -> AsyncGenerator[TextDocument, None]:
         yield document
     finally:
         del document
-        pass
