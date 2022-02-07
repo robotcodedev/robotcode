@@ -40,7 +40,7 @@ async def test(
             return None
         if isinstance(hover.contents, MarkupContent):
             return Hover(
-                MarkupContent(hover.contents.kind, hover.contents.value.splitlines()[0]),
+                MarkupContent(hover.contents.kind, hover.contents.value.splitlines()[0].split("=")[0].strip()),
                 hover.range,
             )
         return hover
