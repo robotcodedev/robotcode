@@ -114,9 +114,26 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     if position.is_in_range(range):
                         variable = await namespace.find_variable(sub_token.value, nodes, position)
                         if variable is not None:
+                            if variable.has_value or variable.resolvable:
+                                try:
+                                    value = repr(
+                                        await namespace.imports_manager.resolve_variable(
+                                            variable.name,
+                                            str(document.uri.to_path().parent),
+                                            await namespace.get_unresolved_variables(nodes, position),
+                                            False,
+                                        )
+                                    )
+                                except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                                    raise
+                                except BaseException:
+                                    value = ""
+                            else:
+                                value = ""
                             return Hover(
                                 contents=MarkupContent(
-                                    kind=MarkupKind.MARKDOWN, value=f"({variable.type.value}) {variable.name}"
+                                    kind=MarkupKind.MARKDOWN,
+                                    value=f"({variable.type.value}) {variable.name} {f' = {value}' if value else ''}",
                                 ),
                                 range=range,
                             )

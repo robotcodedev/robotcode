@@ -12,6 +12,7 @@ from typing import (
     Any,
     Callable,
     Coroutine,
+    Dict,
     List,
     Optional,
     Tuple,
@@ -52,6 +53,7 @@ from .library_doc import (
     get_library_doc,
     get_variables_doc,
     is_embedded_keyword,
+    resolve_variable,
 )
 
 RESOURCE_EXTENSIONS = (".resource", ".robot", ".txt", ".tsv", ".rst", ".rest")
@@ -475,8 +477,8 @@ class ImportsManager:
                 self._command_line_variables = []
             else:
                 self._command_line_variables = [
-                    CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None)
-                    for k in self.config.variables.keys()
+                    CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=(v,))
+                    for k, v in self.config.variables.items()
                 ]
 
         return self._command_line_variables
@@ -616,7 +618,7 @@ class ImportsManager:
             pass
 
     @_logger.call
-    async def find_library(self, name: str, base_dir: str) -> str:
+    async def find_library(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
         return await asyncio.wait_for(
             asyncio.get_running_loop().run_in_executor(
                 self.process_pool,
@@ -626,17 +628,26 @@ class ImportsManager:
                 base_dir,
                 self.config.python_path if self.config is not None else None,
                 self.config.env if self.config is not None else None,
-                self.config.variables if self.config is not None else None,
+                variables if variables is not None else self.config.variables if self.config is not None else None,
             ),
             FIND_FILE_TIME_OUT,
         )
 
     @_logger.call
     async def get_libdoc_for_library_import(
-        self, name: str, args: Tuple[Any, ...], base_dir: str, sentinel: Any = None
+        self,
+        name: str,
+        args: Tuple[Any, ...],
+        base_dir: str,
+        sentinel: Any = None,
+        variables: Optional[Dict[str, Any]] = None,
     ) -> LibraryDoc:
 
-        source = await self.find_library(name, base_dir)
+        source = await self.find_library(
+            name,
+            base_dir,
+            variables,
+        )
 
         async def _get_libdoc() -> LibraryDoc:
             self._logger.debug(lambda: f"Load Library {source}{repr(args)}")
@@ -651,7 +662,7 @@ class ImportsManager:
                     base_dir,
                     self.config.python_path if self.config is not None else None,
                     self.config.env if self.config is not None else None,
-                    self.config.variables if self.config is not None else None,
+                    variables if variables is not None else self.config.variables if self.config is not None else None,
                 ),
                 LOAD_LIBRARY_TIME_OUT,
             )
@@ -785,9 +796,19 @@ class ImportsManager:
 
     @_logger.call
     async def get_libdoc_for_variables_import(
-        self, name: str, args: Tuple[Any, ...], base_dir: str, sentinel: Any = None
+        self,
+        name: str,
+        args: Tuple[Any, ...],
+        base_dir: str,
+        sentinel: Any = None,
+        variables: Optional[Dict[str, Any]] = None,
     ) -> VariablesDoc:
-        source = await self.find_file(name, base_dir, "Variables")
+        source = await self.find_file(
+            name,
+            base_dir,
+            "Variables",
+            variables,
+        )
 
         async def _get_libdoc() -> VariablesDoc:
             self._logger.debug(lambda: f"Load variables {source}{repr(args)}")
@@ -829,7 +850,9 @@ class ImportsManager:
         return await entry.get_libdoc()
 
     @_logger.call
-    async def find_file(self, name: str, base_dir: str, file_type: str = "Resource") -> str:
+    async def find_file(
+        self, name: str, base_dir: str, file_type: str = "Resource", variables: Optional[Dict[str, Any]] = None
+    ) -> str:
         result = await asyncio.wait_for(
             asyncio.get_running_loop().run_in_executor(
                 self.process_pool,
@@ -839,7 +862,7 @@ class ImportsManager:
                 base_dir,
                 self.config.python_path if self.config is not None else None,
                 self.config.env if self.config is not None else None,
-                self.config.variables if self.config is not None else None,
+                variables if variables is not None else self.config.variables if self.config is not None else None,
                 file_type,
             ),
             FIND_FILE_TIME_OUT,
@@ -848,8 +871,10 @@ class ImportsManager:
         return result
 
     @_logger.call
-    async def _get_entry_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> _ResourcesEntry:
-        source = await self.find_file(name, base_dir)
+    async def _get_entry_for_resource_import(
+        self, name: str, base_dir: str, sentinel: Any = None, variables: Optional[Dict[str, Any]] = None
+    ) -> _ResourcesEntry:
+        source = await self.find_file(name, base_dir, variables=variables)
 
         async def _get_document() -> TextDocument:
             self._logger.debug(lambda: f"Load resource {name} from source {source}")
@@ -880,23 +905,38 @@ class ImportsManager:
 
         return entry
 
-    @_logger.call
-    async def get_document_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> TextDocument:
-        entry = await self._get_entry_for_resource_import(name, base_dir, sentinel)
+    async def get_namespace_and_libdoc_for_resource_import(
+        self,
+        name: str,
+        base_dir: str,
+        sentinel: Any = None,
+        variables: Optional[Dict[str, Any]] = None,
+    ) -> Tuple["Namespace", LibraryDoc]:
+        entry = await self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
 
-        return await entry.get_document()
+        return await entry.get_namespace(), await entry.get_libdoc()
 
-    async def get_namespace_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> "Namespace":
-        entry = await self._get_entry_for_resource_import(name, base_dir, sentinel)
+    async def get_namespace_for_resource_import(
+        self,
+        name: str,
+        base_dir: str,
+        sentinel: Any = None,
+        variables: Optional[Dict[str, Any]] = None,
+    ) -> "Namespace":
+        entry = await self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
 
         return await entry.get_namespace()
 
-    async def get_libdoc_for_resource_import(self, name: str, base_dir: str, sentinel: Any = None) -> LibraryDoc:
-        entry = await self._get_entry_for_resource_import(name, base_dir, sentinel)
+    async def get_libdoc_for_resource_import(
+        self, name: str, base_dir: str, sentinel: Any = None, variables: Optional[Dict[str, Any]] = None
+    ) -> LibraryDoc:
+        entry = await self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
 
         return await entry.get_libdoc()
 
-    async def complete_library_import(self, name: Optional[str], base_dir: str = ".") -> Optional[List[CompleteResult]]:
+    async def complete_library_import(
+        self, name: Optional[str], base_dir: str = ".", variables: Optional[Dict[str, Any]] = None
+    ) -> Optional[List[CompleteResult]]:
         result = await asyncio.wait_for(
             asyncio.get_running_loop().run_in_executor(
                 self.process_pool,
@@ -906,7 +946,7 @@ class ImportsManager:
                 base_dir,
                 self.config.python_path if self.config is not None else None,
                 self.config.env if self.config is not None else None,
-                self.config.variables if self.config is not None else None,
+                variables if variables is not None else self.config.variables if self.config is not None else None,
             ),
             COMPLETE_LIBRARY_IMPORT_TIME_OUT,
         )
@@ -914,7 +954,7 @@ class ImportsManager:
         return result
 
     async def complete_resource_import(
-        self, name: Optional[str], base_dir: str = "."
+        self, name: Optional[str], base_dir: str = ".", variables: Optional[Dict[str, Any]] = None
     ) -> Optional[List[CompleteResult]]:
         result = await asyncio.wait_for(
             asyncio.get_running_loop().run_in_executor(
@@ -925,7 +965,7 @@ class ImportsManager:
                 base_dir,
                 self.config.python_path if self.config is not None else None,
                 self.config.env if self.config is not None else None,
-                self.config.variables if self.config is not None else None,
+                variables if variables is not None else self.config.variables if self.config is not None else None,
             ),
             COMPLETE_RESOURCE_IMPORT_TIME_OUT,
         )
@@ -933,7 +973,7 @@ class ImportsManager:
         return result
 
     async def complete_variables_import(
-        self, name: Optional[str], base_dir: str = "."
+        self, name: Optional[str], base_dir: str = ".", variables: Optional[Dict[str, Any]] = None
     ) -> Optional[List[CompleteResult]]:
         result = await asyncio.wait_for(
             asyncio.get_running_loop().run_in_executor(
@@ -944,7 +984,25 @@ class ImportsManager:
                 base_dir,
                 self.config.python_path if self.config is not None else None,
                 self.config.env if self.config is not None else None,
-                self.config.variables if self.config is not None else None,
+                variables if variables is not None else self.config.variables if self.config is not None else None,
+            ),
+            COMPLETE_VARIABLES_IMPORT_TIME_OUT,
+        )
+
+        return result
+
+    async def resolve_variable(
+        self, name: str, base_dir: str = ".", variables: Optional[Dict[str, Any]] = None, ignore_errors: bool = True
+    ) -> Any:
+        result = await asyncio.wait_for(
+            asyncio.get_running_loop().run_in_executor(
+                self.process_pool,
+                resolve_variable,
+                name,
+                str(self.folder.to_path()),
+                base_dir,
+                variables if variables is not None else self.config.variables if self.config is not None else None,
+                ignore_errors,
             ),
             COMPLETE_VARIABLES_IMPORT_TIME_OUT,
         )

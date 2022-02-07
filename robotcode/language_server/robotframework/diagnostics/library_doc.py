@@ -17,6 +17,7 @@ from typing import (
     AbstractSet,
     Any,
     Dict,
+    Iterable,
     Iterator,
     List,
     NamedTuple,
@@ -870,10 +871,27 @@ BUILTIN_VARIABLES = [
 ]
 
 
-def init_builtin_variables(
+@dataclass
+class _Variable(object):
+
+    name: str
+    value: Iterable[str]
+    source: Optional[str] = None
+    lineno: Optional[int] = None
+    error: Optional[str] = None
+
+    def report_invalid_syntax(self, message: str, level: str = "ERROR") -> None:
+        pass
+
+
+def resolve_robot_variables(
     working_dir: str = ".", base_dir: str = ".", variables: Optional[Dict[str, Optional[Any]]] = None
-) -> Dict[str, Optional[Any]]:
-    result = {
+) -> Any:
+    from robot.variables import Variables
+
+    result = Variables()
+
+    for k, v in {
         "${CURDIR}": str(Path(base_dir).absolute()),
         "${TEMPDIR}": str(Path(tempfile.gettempdir()).absolute()),
         "${EXECDIR}": str(Path(working_dir).absolute()),
@@ -907,11 +925,29 @@ def init_builtin_variables(
         "${REPORT FILE}": None,
         "${DEBUG FILE}": None,
         "${OUTPUT DIR}": None,
-    }
+    }.items():
+        result[k] = v
+
     if variables is not None:
-        result.update((f"${{{k}}}", v) for k, v in variables.items())
+
+        vars = [_Variable(k, v) for k, v in variables.items() if v is not None]
+        result.set_from_variable_table(vars)
+
+        result.resolve_delayed()
 
     return result
+
+
+def resolve_variable(
+    name: str,
+    working_dir: str = ".",
+    base_dir: str = ".",
+    variables: Optional[Dict[str, Optional[Any]]] = None,
+    ignore_errors: bool = True,
+) -> Any:
+    robot_variables = resolve_robot_variables(working_dir, base_dir, variables)
+
+    return robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=ignore_errors)
 
 
 @contextmanager
@@ -947,13 +983,10 @@ def _find_library_internal(
 
     from robot.libraries import STDLIBS
     from robot.utils.robotpath import find_file as robot_find_file
-    from robot.variables import Variables
 
     _update_env(working_dir, pythonpath, environment)
 
-    robot_variables = Variables()
-    for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
-        robot_variables[k] = v
+    robot_variables = resolve_robot_variables(working_dir, base_dir, variables)
 
     name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 
@@ -1272,13 +1305,10 @@ def find_file(
     file_type: str = "Resource",
 ) -> str:
     from robot.utils.robotpath import find_file as robot_find_file
-    from robot.variables import Variables
 
     _update_env(working_dir, pythonpath, environment)
 
-    robot_variables = Variables()
-    for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
-        robot_variables[k] = v
+    robot_variables = resolve_robot_variables(working_dir, base_dir, variables)
 
     name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 
@@ -1366,7 +1396,6 @@ def complete_library_import(
     environment: Optional[Dict[str, str]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Optional[List[CompleteResult]]:
-    from robot.variables import Variables
 
     _update_env(working_dir, pythonpath, environment)
 
@@ -1380,9 +1409,7 @@ def complete_library_import(
         ]
 
     if name is not None:
-        robot_variables = Variables()
-        for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
-            robot_variables[k] = v
+        robot_variables = resolve_robot_variables(working_dir, base_dir, variables)
 
         name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 
@@ -1435,16 +1462,13 @@ def complete_resource_import(
     environment: Optional[Dict[str, str]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Optional[List[CompleteResult]]:
-    from robot.variables import Variables
 
     _update_env(working_dir, pythonpath, environment)
 
     result: List[CompleteResult] = []
 
     if name is not None:
-        robot_variables = Variables()
-        for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
-            robot_variables[k] = v
+        robot_variables = resolve_robot_variables(working_dir, base_dir, variables)
 
         name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 
@@ -1497,16 +1521,13 @@ def complete_variables_import(
     environment: Optional[Dict[str, str]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Optional[List[CompleteResult]]:
-    from robot.variables import Variables
 
     _update_env(working_dir, pythonpath, environment)
 
     result: List[CompleteResult] = []
 
     if name is not None:
-        robot_variables = Variables()
-        for k, v in init_builtin_variables(working_dir, base_dir, variables).items():
-            robot_variables[k] = v
+        robot_variables = resolve_robot_variables(working_dir, base_dir, variables)
 
         name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 

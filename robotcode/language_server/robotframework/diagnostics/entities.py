@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from ...common.lsp_types import Position, Range
 from ..utils.ast import Token
@@ -81,13 +81,19 @@ class VariableDefinitionType(Enum):
     COMMAND_LINE_VARIABLE = "command line variable"
     BUILTIN_VARIABLE = "builtin variable"
     IMPORTED_VARIABLE = "imported variable"
+    ENVIRONMENT_VARIABLE = "environment variable"
 
 
 @dataclass
 class VariableDefinition(SourceEntity):
-    name: Optional[str]
+    name: str
     name_token: Optional[Token]
     type: VariableDefinitionType = VariableDefinitionType.VARIABLE
+
+    has_value: bool = False
+    resolvable: bool = False
+
+    value: Any = None
 
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type, self.range, self.source))
@@ -116,6 +122,7 @@ class LocalVariableDefinition(VariableDefinition):
 @dataclass
 class BuiltInVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.BUILTIN_VARIABLE
+    resolvable: bool = True
 
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type))
@@ -124,6 +131,7 @@ class BuiltInVariableDefinition(VariableDefinition):
 @dataclass
 class CommandLineVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.COMMAND_LINE_VARIABLE
+    resolvable: bool = True
 
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type))
@@ -140,6 +148,15 @@ class ArgumentDefinition(VariableDefinition):
 @dataclass
 class ImportedVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.IMPORTED_VARIABLE
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.name, self.type))
+
+
+@dataclass
+class EnvironmentVariableDefinition(VariableDefinition):
+    type: VariableDefinitionType = VariableDefinitionType.ENVIRONMENT_VARIABLE
+    resolvable: bool = True
 
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type))

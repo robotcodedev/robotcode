@@ -383,6 +383,7 @@ class CompletionCollector(ModelHelperMixin):
         VariableDefinitionType.IMPORTED_VARIABLE: "036",
         VariableDefinitionType.COMMAND_LINE_VARIABLE: "037",
         VariableDefinitionType.BUILTIN_VARIABLE: "038",
+        VariableDefinitionType.ENVIRONMENT_VARIABLE: "039",
     }
 
     async def create_variables_completion_items(
@@ -404,7 +405,7 @@ class CompletionCollector(ModelHelperMixin):
                 ),
                 filter_text=s.name[2:-1] if range is not None else None,
             )
-            for s in (await self.namespace.get_variables(nodes, position)).values()
+            for s in (await self.namespace.get_variable_matchers(nodes, position)).values()
             if s.name is not None and (s.name_token is None or not position.is_in_range(range_from_token(s.name_token)))
         ]
 
@@ -1139,7 +1140,9 @@ class CompletionCollector(ModelHelperMixin):
 
             try:
                 list = await imports_manger.complete_library_import(
-                    first_part if first_part else None, str(self.document.uri.to_path().parent)
+                    first_part if first_part else None,
+                    str(self.document.uri.to_path().parent),
+                    await self.namespace.get_unresolved_variables(nodes_at_position, position),
                 )
                 if not list:
                     return None
@@ -1375,7 +1378,9 @@ class CompletionCollector(ModelHelperMixin):
 
         try:
             list = await imports_manger.complete_resource_import(
-                first_part if first_part else None, str(self.document.uri.to_path().parent)
+                first_part if first_part else None,
+                str(self.document.uri.to_path().parent),
+                await self.namespace.get_unresolved_variables(nodes_at_position, position),
             )
             if not list:
                 return None
@@ -1476,7 +1481,9 @@ class CompletionCollector(ModelHelperMixin):
 
         try:
             list = await imports_manger.complete_variables_import(
-                first_part if first_part else None, str(self.document.uri.to_path().parent)
+                first_part if first_part else None,
+                str(self.document.uri.to_path().parent),
+                await self.namespace.get_unresolved_variables(nodes_at_position, position),
             )
             if not list:
                 return None

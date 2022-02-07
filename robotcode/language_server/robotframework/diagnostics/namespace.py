@@ -40,6 +40,7 @@ from ..utils.async_ast import AsyncVisitor
 from .entities import (
     ArgumentDefinition,
     BuiltInVariableDefinition,
+    EnvironmentVariableDefinition,
     Import,
     LibraryImport,
     LocalVariableDefinition,
@@ -108,6 +109,9 @@ class VariablesVisitor(AsyncVisitor):
                     end_line_no=name.lineno,
                     end_col_offset=name.end_col_offset,
                     source=self.source,
+                    has_value=bool(n.value),
+                    resolvable=True,
+                    value=n.value,
                 )
             )
 
@@ -666,7 +670,7 @@ class Namespace:
     ) -> AsyncGenerator[Tuple[VariableMatcher, VariableDefinition], None]:
         from robot.parsing.model.blocks import Keyword, TestCase
 
-        await self.ensure_initialized()
+        # await self.ensure_initialized()
 
         yielded: Dict[VariableMatcher, VariableDefinition] = {}
 
@@ -676,9 +680,9 @@ class Namespace:
                 for n in nodes or []
                 if isinstance(n, (Keyword, TestCase))
             ],
+            (e for e in self.get_command_line_variables()),
             (e for e in await self.get_own_variables()),
             *(e.variables for e in self._resources.values()),
-            (e for e in self.get_command_line_variables()),
             *(e.variables for e in self._variables.values()),
             (e for e in self.get_builtin_variables()),
         ):
@@ -688,10 +692,25 @@ class Namespace:
                     yielded[matcher] = var
                     yield matcher, var
 
+    async def get_unresolved_variables(
+        self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
+    ) -> Dict[str, Any]:
+        return {v.name: v.value async for k, v in self.yield_variables(nodes, position) if v.has_value}
+
     @_logger.call
-    async def get_variables(
+    async def get_variable_definitions(
+        self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
+    ) -> Dict[str, VariableDefinition]:
+        await self.ensure_initialized()
+
+        return {m.name: v async for m, v in self.yield_variables(nodes, position)}
+
+    @_logger.call
+    async def get_variable_matchers(
         self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
     ) -> Dict[VariableMatcher, VariableDefinition]:
+        await self.ensure_initialized()
+
         return {m: v async for m, v in self.yield_variables(nodes, position)}
 
     _match_extended = re.compile(
@@ -707,7 +726,12 @@ class Namespace:
         self, name: str, nodes: Optional[List[ast.AST]], position: Optional[Position] = None
     ) -> Optional[VariableDefinition]:
 
+        await self.ensure_initialized()
+        if name[:2] == "%{" and name[-1] == "}":
+            return EnvironmentVariableDefinition(0, 0, 0, 0, "", name, None)
+
         matcher = VariableMatcher(name)
+
         async for m, v in self.yield_variables(nodes, position):
             if matcher == m:
                 return v
@@ -758,7 +782,11 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Resource setting requires value.")
 
-                    source = await self.imports_manager.find_file(value.name, base_dir)
+                    source = await self.imports_manager.find_file(
+                        value.name,
+                        base_dir,
+                        variables=await self.get_unresolved_variables(),
+                    )
 
                     # allready imported
                     if any(r for r in self._resources.values() if r.library_doc.source == source):
@@ -876,9 +904,8 @@ class Namespace:
                     )
             return result
 
-        for entry in await asyncio.gather(*(_import(v) for v in imports), return_exceptions=True):
-            if isinstance(entry, (asyncio.CancelledError, SystemExit, KeyboardInterrupt)):
-                raise entry
+        for imp in imports:
+            entry = await _import(imp)
 
             if entry is not None:
                 if isinstance(entry, ResourceEntry):
@@ -1058,8 +1085,13 @@ class Namespace:
         is_default_library: bool = False,
         sentinel: Any = None,
     ) -> LibraryEntry:
+
         library_doc = await self.imports_manager.get_libdoc_for_library_import(
-            name, args, base_dir=base_dir, sentinel=None if is_default_library else sentinel
+            name,
+            args,
+            base_dir=base_dir,
+            sentinel=None if is_default_library else sentinel,
+            variables=await self.get_unresolved_variables(),
         )
 
         return LibraryEntry(name=library_doc.name, import_name=name, library_doc=library_doc, args=args, alias=alias)
@@ -1081,8 +1113,12 @@ class Namespace:
 
     @_logger.call
     async def _get_resource_entry(self, name: str, base_dir: str, sentinel: Any = None) -> ResourceEntry:
-        namespace = await self.imports_manager.get_namespace_for_resource_import(name, base_dir, sentinel=sentinel)
-        library_doc = await self.imports_manager.get_libdoc_for_resource_import(name, base_dir, sentinel=sentinel)
+        namespace, library_doc = await self.imports_manager.get_namespace_and_libdoc_for_resource_import(
+            name,
+            base_dir,
+            sentinel=sentinel,
+            variables=await self.get_unresolved_variables(),
+        )
 
         return ResourceEntry(
             name=library_doc.name,
@@ -1114,7 +1150,11 @@ class Namespace:
         sentinel: Any = None,
     ) -> VariablesEntry:
         library_doc = await self.imports_manager.get_libdoc_for_variables_import(
-            name, args, base_dir=base_dir, sentinel=sentinel
+            name,
+            args,
+            base_dir=base_dir,
+            sentinel=sentinel,
+            variables=await self.get_unresolved_variables(),
         )
 
         return VariablesEntry(
