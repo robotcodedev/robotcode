@@ -105,7 +105,7 @@ RobotCodes support for [Multi-root Workspaces](https://code.visualstudio.com/doc
 
 2. [Install a supported version of RobotFramwork on your system](https://github.com/robotframework/robotframework/blob/master/INSTALL.rst) (note: only RobotFramework 4.0 and above are supported)
 
-3. [Install the # RobotCode extension for Visual Studio Code](https://code.visualstudio.com/docs/editor/extension-gallery).
+3. [Install the RobotCode extension for Visual Studio Code](https://code.visualstudio.com/docs/editor/extension-gallery).
 4. Open or create a robot file and start coding! 😉
 
 
