@@ -117,6 +117,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         self, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.api.parsing import Token as RobotToken
+        from robot.parsing.model.statements import Variable
 
         namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
@@ -135,12 +136,20 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         for token in tokens:
             try:
                 for sub_token in filter(
-                    lambda s: s.type == RobotToken.VARIABLE, tokenize_variables(token, ignore_errors=True)
+                    lambda s: s.type == RobotToken.VARIABLE,
+                    tokenize_variables(token, ignore_errors=True, extra_types={RobotToken.VARIABLE}),
                 ):
                     range = range_from_token(sub_token)
 
                     if position.is_in_range(range):
-                        variable = await namespace.find_variable(sub_token.value, nodes, position)
+                        variable = await namespace.find_variable(
+                            sub_token.value,
+                            nodes,
+                            position,
+                            collect_type == CollectType.DEFINITION
+                            or isinstance(node, Variable)
+                            and token.type == RobotToken.VARIABLE,
+                        )
                         if variable is not None and variable.source:
                             return [
                                 LocationLink(

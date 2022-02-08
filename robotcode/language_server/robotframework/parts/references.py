@@ -167,19 +167,27 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         for token in tokens:
             try:
                 for sub_token in filter(
-                    lambda s: s.type == RobotToken.VARIABLE, tokenize_variables(token, ignore_errors=True)
+                    lambda s: s.type == RobotToken.VARIABLE,
+                    tokenize_variables(token, ignore_errors=True, extra_types={RobotToken.VARIABLE}),
                 ):
                     range = range_from_token(sub_token)
 
                     if position.is_in_range(range):
-                        variable = await namespace.find_variable(sub_token.value, nodes, position)
+                        variable = await namespace.find_variable(
+                            sub_token.value,
+                            nodes,
+                            position,
+                            skip_commandline_variables=True,
+                        )
                         if variable is not None:
                             return [
                                 *(
                                     [
                                         Location(
                                             uri=str(Uri.from_path(variable.source)),
-                                            range=variable.range(),
+                                            range=range_from_token(variable.name_token)
+                                            if variable.name_token
+                                            else variable.range(),
                                         ),
                                     ]
                                     if context.include_declaration and variable.source
@@ -238,12 +246,13 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
             if isinstance(node, HasTokens):
                 for token in node.tokens:
-                    for sub_token in tokenize_variables(token):
+                    for sub_token in tokenize_variables(token, extra_types={RobotToken.VARIABLE}):
                         if sub_token.type == RobotToken.VARIABLE:
                             found_variable = await namespace.find_variable(
                                 sub_token.value,
                                 [*([current_block] if current_block is not None else []), node],
                                 range_from_token(token).start,
+                                skip_commandline_variables=True,
                             )
 
                             if found_variable == variable:

@@ -97,17 +97,20 @@ class VariablesVisitor(AsyncVisitor):
         from robot.variables import is_variable
 
         n = cast(Variable, node)
-        name = n.get_token(Token.VARIABLE)
+        name = next(
+            tokenize_variables(n.get_token(Token.VARIABLE), "$@&", ignore_errors=True, extra_types={Token.VARIABLE}),
+            None,
+        )
 
         if name is not None and is_variable(name.value):
             self._results.append(
                 VariableDefinition(
                     name=n.name,
                     name_token=name,
-                    line_no=name.lineno,
-                    col_offset=name.col_offset,
-                    end_line_no=name.lineno,
-                    end_col_offset=name.end_col_offset,
+                    line_no=n.lineno,
+                    col_offset=n.col_offset,
+                    end_line_no=n.lineno,
+                    end_col_offset=n.end_col_offset,
                     source=self.source,
                     has_value=bool(n.value),
                     resolvable=True,
@@ -154,10 +157,10 @@ class BlockVariableVisitor(AsyncVisitor):
                     self._results[name] = ArgumentDefinition(
                         name=name,
                         name_token=variable_token,
-                        line_no=variable_token.lineno,
-                        col_offset=variable_token.col_offset,
-                        end_line_no=variable_token.lineno,
-                        end_col_offset=variable_token.end_col_offset,
+                        line_no=n.lineno,
+                        col_offset=n.col_offset,
+                        end_line_no=n.lineno,
+                        end_col_offset=n.end_col_offset,
                         source=self.source,
                     )
 
@@ -191,10 +194,10 @@ class BlockVariableVisitor(AsyncVisitor):
                     self._results[argument.value] = ArgumentDefinition(
                         name=argument.value,
                         name_token=argument,
-                        line_no=argument.lineno,
-                        col_offset=argument.col_offset,
-                        end_line_no=argument.lineno,
-                        end_col_offset=argument.end_col_offset,
+                        line_no=n.lineno,
+                        col_offset=n.col_offset,
+                        end_line_no=n.lineno,
+                        end_col_offset=n.end_col_offset,
                         source=self.source,
                     )
 
@@ -217,10 +220,10 @@ class BlockVariableVisitor(AsyncVisitor):
                     self._results[variable.value] = LocalVariableDefinition(
                         name=variable.value,
                         name_token=variable,
-                        line_no=variable.lineno,
-                        col_offset=variable.col_offset,
-                        end_line_no=variable.lineno,
-                        end_col_offset=variable.end_col_offset,
+                        line_no=n.lineno,
+                        col_offset=n.col_offset,
+                        end_line_no=n.lineno,
+                        end_col_offset=n.end_col_offset,
                         source=self.source,
                     )
 
@@ -252,10 +255,10 @@ class BlockVariableVisitor(AsyncVisitor):
                         self._results[variable_token.value] = LocalVariableDefinition(
                             name=variable_token.value,
                             name_token=variable_token,
-                            line_no=variable_token.lineno,
-                            col_offset=variable_token.col_offset,
-                            end_line_no=variable_token.lineno,
-                            end_col_offset=variable_token.end_col_offset,
+                            line_no=n.lineno,
+                            col_offset=n.col_offset,
+                            end_line_no=n.lineno,
+                            end_col_offset=n.end_col_offset,
                             source=self.source,
                         )
 
@@ -274,10 +277,10 @@ class BlockVariableVisitor(AsyncVisitor):
                 self._results[variable_token.value] = LocalVariableDefinition(
                     name=variable_token.value,
                     name_token=variable_token,
-                    line_no=node.lineno,
-                    col_offset=node.col_offset,
-                    end_line_no=variable_token.lineno,
-                    end_col_offset=variable_token.end_col_offset,
+                    line_no=n.lineno,
+                    col_offset=n.col_offset,
+                    end_line_no=n.lineno,
+                    end_col_offset=n.end_col_offset,
                     source=self.source,
                 )
 
@@ -666,7 +669,10 @@ class Namespace:
 
     @_logger.call
     async def yield_variables(
-        self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
+        self,
+        nodes: Optional[List[ast.AST]] = None,
+        position: Optional[Position] = None,
+        skip_commandline_variables: bool = False,
     ) -> AsyncGenerator[Tuple[VariableMatcher, VariableDefinition], None]:
         from robot.parsing.model.blocks import Keyword, TestCase
 
@@ -680,7 +686,7 @@ class Namespace:
                 for n in nodes or []
                 if isinstance(n, (Keyword, TestCase))
             ],
-            (e for e in self.get_command_line_variables()),
+            [] if skip_commandline_variables else (e for e in self.get_command_line_variables()),
             (e for e in await self.get_own_variables()),
             *(e.variables for e in self._resources.values()),
             *(e.variables for e in self._variables.values()),
@@ -723,7 +729,11 @@ class Namespace:
 
     @_logger.call
     async def find_variable(
-        self, name: str, nodes: Optional[List[ast.AST]], position: Optional[Position] = None
+        self,
+        name: str,
+        nodes: Optional[List[ast.AST]],
+        position: Optional[Position] = None,
+        skip_commandline_variables: bool = False,
     ) -> Optional[VariableDefinition]:
 
         await self.ensure_initialized()
@@ -732,7 +742,11 @@ class Namespace:
 
         matcher = VariableMatcher(name)
 
-        async for m, v in self.yield_variables(nodes, position):
+        async for m, v in self.yield_variables(
+            nodes,
+            position,
+            skip_commandline_variables=skip_commandline_variables,
+        ):
             if matcher == m:
                 return v
 
@@ -742,7 +756,11 @@ class Namespace:
             name = f"{name[0]}{{{base_name}}}"
 
             matcher = VariableMatcher(name)
-            async for m, v in self.yield_variables(nodes, position):
+            async for m, v in self.yield_variables(
+                nodes,
+                position,
+                skip_commandline_variables=skip_commandline_variables,
+            ):
                 if matcher == m:
                     return v
 

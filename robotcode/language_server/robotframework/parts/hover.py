@@ -90,6 +90,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
     async def _hover_default(self, nodes: List[ast.AST], document: TextDocument, position: Position) -> Optional[Hover]:
         from robot.api.parsing import Token as RobotToken
+        from robot.parsing.model.statements import Variable
 
         namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
@@ -107,12 +108,18 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         for token in tokens:
             try:
                 for sub_token in filter(
-                    lambda s: s.type == RobotToken.VARIABLE, tokenize_variables(token, ignore_errors=True)
+                    lambda s: s.type == RobotToken.VARIABLE,
+                    tokenize_variables(token, ignore_errors=True, extra_types={RobotToken.VARIABLE}),
                 ):
                     range = range_from_token(sub_token)
 
                     if position.is_in_range(range):
-                        variable = await namespace.find_variable(sub_token.value, nodes, position)
+                        variable = await namespace.find_variable(
+                            sub_token.value,
+                            nodes,
+                            position,
+                            skip_commandline_variables=isinstance(node, Variable) and token.type == RobotToken.VARIABLE,
+                        )
                         if variable is not None:
                             if variable.has_value or variable.resolvable:
                                 try:

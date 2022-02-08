@@ -113,12 +113,18 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
         for token in tokens:
             try:
                 for sub_token in filter(
-                    lambda s: s.type == RobotToken.VARIABLE, tokenize_variables(token, ignore_errors=True)
+                    lambda s: s.type == RobotToken.VARIABLE,
+                    tokenize_variables(token, ignore_errors=True, extra_types={RobotToken.VARIABLE}),
                 ):
                     range = range_from_token(sub_token)
 
                     if position.is_in_range(range):
-                        variable = await namespace.find_variable(sub_token.value, nodes, position)
+                        variable = await namespace.find_variable(
+                            sub_token.value,
+                            nodes,
+                            position,
+                            skip_commandline_variables=True,
+                        )
                         if variable is not None:
                             return [
                                 DocumentHighlight(e.range, DocumentHighlightKind.TEXT)

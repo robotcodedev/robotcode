@@ -96,7 +96,7 @@ class VariableDefinition(SourceEntity):
     value: Any = None
 
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type, self.range, self.source))
+        return hash((type(self), self.name, self.type, self.range, self.source, self.name_token))
 
     def range(self) -> Range:
         return Range(
