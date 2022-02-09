@@ -14,14 +14,24 @@ license = "Apache-2.0"
 include = ["robotcode/py.typed", "README.md"]
 exclude = ["robotcode/external"]
 keywords = [
+  "Test",
   "Testing",
   "RobotFramework",
   "Keyword Driven",
+  "Data Driven",
+  "Acceptance Testing",
+  "Acceptance Test Driven Development",
+  "BDD",
+  "Behavior Driven Testing",
+  "BDT",
+  "Robotic Process Automation",
+  "RPA",
   "Language Server Protocol",
+  "Debug Adapter Protocol",
   "Visual Studio Code",
 ]
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 5 - Production/Stable",
   "License :: OSI Approved :: Apache Software License",
   "Framework :: Robot Framework",
   "Framework :: Robot Framework :: Tool",
@@ -36,7 +46,6 @@ classifiers = [
   "Typing :: Typed",
   "Topic :: Software Development :: Debuggers",
   "Topic :: Text Editors :: Integrated Development Environments (IDE)",
-
 ]
 
 [tool.poetry.dependencies]
@@ -107,7 +116,7 @@ junit_suite_name = "robotcode"
 log_cli = true
 log_cli_level = "DEBUG"
 log_cli_format = "%(levelname)s %(name)s: %(message)s"
-asyncio_mode="auto"
+asyncio_mode = "auto"
 
 [tool.isort]
 profile = "black"
