@@ -1,0 +1,23 @@
+data: !GeneratedTestData
+  character: 5
+  line: 30
+  name: simple keyword call
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 30
+    start:
+      character: 4
+      line: 30
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 37
+    start:
+      character: 4
+      line: 37

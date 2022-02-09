@@ -1,0 +1,158 @@
+data: !GeneratedTestData
+  character: 39
+  line: 32
+  name: fixture keyword call with namespace
+result:
+- !Location
+  range:
+    end:
+      character: 40
+      line: 32
+    start:
+      character: 26
+      line: 32
+  uri: libraries/BuiltIn.py
+- !Location
+  range:
+    end:
+      character: 37
+      line: 12
+    start:
+      character: 23
+      line: 12
+  uri: data/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 28
+      line: 14
+    start:
+      character: 14
+      line: 14
+  uri: data/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 29
+      line: 26
+    start:
+      character: 15
+      line: 26
+  uri: data/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 40
+      line: 28
+    start:
+      character: 26
+      line: 28
+  uri: data/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 18
+      line: 32
+    start:
+      character: 4
+      line: 32
+  uri: data/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 26
+      line: 34
+    start:
+      character: 12
+      line: 34
+  uri: data/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 32
+      line: 41
+    start:
+      character: 18
+      line: 41
+  uri: data/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 40
+      line: 47
+    start:
+      character: 26
+      line: 47
+  uri: data/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 37
+      line: 16
+    start:
+      character: 23
+      line: 16
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 28
+      line: 18
+    start:
+      character: 14
+      line: 18
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 29
+      line: 30
+    start:
+      character: 15
+      line: 30
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 40
+      line: 32
+    start:
+      character: 26
+      line: 32
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 18
+      line: 36
+    start:
+      character: 4
+      line: 36
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 26
+      line: 38
+    start:
+      character: 12
+      line: 38
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 32
+      line: 45
+    start:
+      character: 18
+      line: 45
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 40
+      line: 51
+    start:
+      character: 26
+      line: 51
+  uri: data/references.robot

@@ -17,16 +17,16 @@ result:
   range:
     end:
       character: 10
-      line: 19
+      line: 20
     start:
       character: 0
-      line: 19
+      line: 20
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 45
-      line: 54
+      line: 58
     start:
       character: 35
-      line: 54
+      line: 58
