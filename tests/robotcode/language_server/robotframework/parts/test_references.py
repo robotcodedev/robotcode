@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Optional
 
 import pytest
 from pytest_regressions.data_regression import DataRegressionFixture
