@@ -443,12 +443,21 @@ async def check_canceled() -> bool:
 
     return True
 
+THREADPOOL_POOL_MAX_WORKERS = None
+
+__tread_pool_executor: Optional[ThreadPoolExecutor] = None
+
 
 def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyncio.Future[_T]:
+    global __tread_pool_executor
     loop = asyncio.get_running_loop()
     ctx = contextvars.copy_context()
     func_call = functools.partial(ctx.run, func, *args, **kwargs)
-    return cast("asyncio.Future[_T]", loop.run_in_executor(None, cast(Callable[..., _T], func_call)))
+
+    if __tread_pool_executor is None:
+        __tread_pool_executor = ThreadPoolExecutor(THREADPOOL_POOL_MAX_WORKERS)
+
+    return cast("asyncio.Future[_T]", loop.run_in_executor(__tread_pool_executor, cast(Callable[..., _T], func_call)))
 
 
 def run_coroutine_in_thread(

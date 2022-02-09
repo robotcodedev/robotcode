@@ -737,6 +737,7 @@ class Namespace:
     ) -> Optional[VariableDefinition]:
 
         await self.ensure_initialized()
+
         if name[:2] == "%{" and name[-1] == "}":
             return EnvironmentVariableDefinition(0, 0, 0, 0, "", name, None)
 
