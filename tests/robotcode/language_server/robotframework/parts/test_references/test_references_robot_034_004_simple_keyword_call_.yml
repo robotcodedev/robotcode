@@ -7,15 +7,6 @@ result:
   range:
     end:
       character: 7
-      line: 34
-    start:
-      character: 4
-      line: 34
-  uri: libraries/BuiltIn.py
-- !Location
-  range:
-    end:
-      character: 7
       line: 30
     start:
       character: 4
@@ -264,6 +255,15 @@ result:
       character: 4
       line: 41
   uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 34
+    start:
+      character: 4
+      line: 34
+  uri: libraries/BuiltIn.py
 - !Location
   range:
     end:

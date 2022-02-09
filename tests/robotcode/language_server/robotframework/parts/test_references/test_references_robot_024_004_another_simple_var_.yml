@@ -6,20 +6,20 @@ result:
 - !Location
   range:
     end:
-      character: 10
-      line: 24
-    start:
-      character: 0
-      line: 24
-  uri: data/references.robot
-- !Location
-  range:
-    end:
       character: 46
       line: 13
     start:
       character: 36
       line: 13
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 10
+      line: 24
+    start:
+      character: 0
+      line: 24
   uri: data/references.robot
 - !Location
   range:

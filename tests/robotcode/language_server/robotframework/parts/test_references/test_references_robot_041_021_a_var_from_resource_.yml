@@ -6,15 +6,6 @@ result:
 - !Location
   range:
     end:
-      character: 21
-      line: 1
-    start:
-      character: 0
-      line: 1
-  uri: resources/firstresource.resource
-- !Location
-  range:
-    end:
       character: 32
       line: 37
     start:
@@ -30,6 +21,15 @@ result:
       character: 11
       line: 41
   uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 21
+      line: 1
+    start:
+      character: 0
+      line: 1
+  uri: resources/firstresource.resource
 - !Location
   range:
     end:

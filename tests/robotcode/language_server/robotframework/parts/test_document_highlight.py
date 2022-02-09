@@ -33,4 +33,9 @@ async def test(
     result = await protocol.robot_document_highlight.collect(
         protocol.robot_document_highlight, test_document, Position(line=data.line, character=data.character)
     )
-    data_regression.check({"data": data, "result": result})
+    data_regression.check(
+        {
+            "data": data,
+            "result": sorted(result, key=lambda v: (v.range.start, v.range.end, v.kind)) if result else result,
+        }
+    )

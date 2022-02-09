@@ -35,10 +35,7 @@ async def test(
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-    def split(location: Optional[Location]) -> Optional[Location]:
-        if location is None:
-            return None
-
+    def split(location: Location) -> Location:
         return Location("/".join(location.uri.split("/")[-2:]), location.range)
 
     result = await protocol.robot_references.collect(
@@ -47,4 +44,11 @@ async def test(
         Position(line=data.line, character=data.character),
         ReferenceContext(include_declaration=True),
     )
-    data_regression.check({"data": data, "result": [split(v) for v in result] if result else result})
+    data_regression.check(
+        {
+            "data": data,
+            "result": sorted((split(v) for v in result), key=lambda v: (v.uri, v.range.start, v.range.end))
+            if result
+            else result,
+        }
+    )
