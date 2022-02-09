@@ -1,10 +1,13 @@
 *** Settings ***
 Library           Collections
 #                 ^^^^^^^^^^^ library import by module name
-Library           ${CURDIR}/libs/myvariables.py
+Library           alibrary    a_param=from hello    WITH NAME    lib_hello
+Library           alibrary    a_param=${LIB_ARG}    WITH NAME    lib_var
+#                                     ^^^^^^^^^^  Variable in library params
+Library           ${CURDIR}/lib/myvariables.py
 #                               ^^^^^^^^^^^^^^ library import by path name
 #                 ^^^^^^^^^  variable in library import
-Variables         ${CURDIR}/libs/myvariables.py
+Variables         ${CURDIR}/lib/myvariables.py
 #                 ^^^^^^^^^  variable in variables import
 #                                ^^^^^^^^^^^^^^ variable import by path name
 Resource          ${CURDIR}/resources/firstresource.resource
@@ -12,10 +15,14 @@ Resource          ${CURDIR}/resources/firstresource.resource
 #                 ^^^^^^^^^  variable in resource import
 
 *** Variables ***
-${A VAR}          i'm a var
+${A VAR}=          i'm a var
 #^^^^^^^          variable declaration
+#       ^         not the equal sign
 &{A DICT}         a=1    b=2    c=3
 #^^^^^^^          variable declaration
+
+${LIB_ARG}    from lib
+
 
 *** Test Cases ***
 first
@@ -59,6 +66,14 @@ second
 #                 ^^^^^^^ Namespace in Template
     hello
     world
+
+third
+    ${result}    lib_hello.A Library Keyword
+#   ^^^^^^^^^    Keyword assignement
+    Should Be Equal    ${result}   from hello
+    ${result}=    lib_var.A Library Keyword
+#   ^^^^^^^^^    Keyword assignment with equals sign
+    Should Be Equal    ${result}   ${LIB_ARG}
 
 *** Keywords ***
 a keyword

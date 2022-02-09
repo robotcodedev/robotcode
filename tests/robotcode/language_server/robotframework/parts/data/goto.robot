@@ -2,16 +2,23 @@
 Library           Collections
 #                 ^^^^^^^^^^^  Robot Library Import
 #      ^^^^^^^^^^^  Separator
-Library           ${CURDIR}/libs/myvariables.py
-#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Library Import by Path
-Variables         ${CURDIR}/libs/myvariables.py
+Library           ${CURDIR}/lib/myvariables.py
+#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  library import by path
+Variables         ${CURDIR}/lib/myvariables.py
 #                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Variables Import
 Resource          ${CURDIR}/resources/firstresource.resource
-#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Resource Import
+#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  built in var in Resource Import
+
+Library           ${DOT}/lib/alibrary.py    a_param=${LIB_ARG}    WITH NAME    lib_var
+#                 ^^^^^^ var in Libary import path
+#                                                   ^^^^^^^^^^  var in library parameters
 
 *** Variables ***
 ${A VAR}          i'm a var
 &{A DICT}         a=1    b=2    c=3
+${LIB_ARG}    from lib
+${DOT}    .
+
 
 *** Test Cases ***
 first

@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 4
+  line: 51
+  name: call a simple keyword
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 20
+      line: 51
+    start:
+      character: 4
+      line: 51
+  target_range:
+    end:
+      character: 0
+      line: 73
+    start:
+      character: 0
+      line: 72
+  target_selection_range:
+    end:
+      character: 0
+      line: 73
+    start:
+      character: 0
+      line: 72
+  target_uri: goto.robot

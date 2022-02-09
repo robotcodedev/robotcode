@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 23
+  line: 11
+  name: var in Libary import path
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 24
+      line: 11
+    start:
+      character: 18
+      line: 11
+  target_range:
+    end:
+      character: 12
+      line: 19
+    start:
+      character: 0
+      line: 19
+  target_selection_range:
+    end:
+      character: 6
+      line: 19
+    start:
+      character: 0
+      line: 19
+  target_uri: goto.robot

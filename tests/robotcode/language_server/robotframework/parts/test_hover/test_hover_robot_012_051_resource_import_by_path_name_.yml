@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 51
+  line: 12
+  name: resource import by path name
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Resource *firstresource*'
+  range:
+    end:
+      character: 60
+      line: 12
+    start:
+      character: 18
+      line: 12

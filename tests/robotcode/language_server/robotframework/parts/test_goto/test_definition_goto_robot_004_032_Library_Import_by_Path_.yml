@@ -1,12 +1,12 @@
 data: !GeneratedTestData
   character: 32
   line: 4
-  name: Library Import by Path
+  name: library import by path
 result:
 - !LocationLink
   origin_selection_range:
     end:
-      character: 47
+      character: 46
       line: 4
     start:
       character: 18

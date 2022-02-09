@@ -1,0 +1,77 @@
+data: !GeneratedTestData
+  character: 11
+  line: 30
+  name: multiple references
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 37
+      line: 12
+    start:
+      character: 23
+      line: 12
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 28
+      line: 14
+    start:
+      character: 14
+      line: 14
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 29
+      line: 24
+    start:
+      character: 15
+      line: 24
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 40
+      line: 26
+    start:
+      character: 26
+      line: 26
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 18
+      line: 30
+    start:
+      character: 4
+      line: 30
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 26
+      line: 32
+    start:
+      character: 12
+      line: 32
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 32
+      line: 37
+    start:
+      character: 18
+      line: 37
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 40
+      line: 43
+    start:
+      character: 26
+      line: 43

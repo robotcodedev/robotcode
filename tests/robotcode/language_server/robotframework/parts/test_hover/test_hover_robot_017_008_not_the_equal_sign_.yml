@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 8
+  line: 17
+  name: not the equal sign
+result: null
