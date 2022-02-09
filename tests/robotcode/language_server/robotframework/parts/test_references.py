@@ -39,7 +39,7 @@ async def test(
         if location is None:
             return None
 
-        return Location("/".join(location.uri.split('/')[-2:]), location.range)
+        return Location("/".join(location.uri.split("/")[-2:]), location.range)
 
     result = await protocol.robot_references.collect(
         protocol.robot_document_highlight,
