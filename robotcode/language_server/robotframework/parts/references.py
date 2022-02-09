@@ -699,7 +699,9 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             return None
 
         if position in range_from_token(name_token):
-            library_doc = await namespace.get_imported_library_libdoc(import_node.name, import_node.args)
+            library_doc = await namespace.get_imported_library_libdoc(
+                import_node.name, import_node.args, import_node.alias
+            )
 
             if library_doc is None:
                 return None
