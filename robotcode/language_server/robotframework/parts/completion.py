@@ -715,6 +715,14 @@ class CompletionCollector(ModelHelperMixin):
     ) -> Union[List[CompletionItem], CompletionList, None]:
         from robot.parsing.model.statements import SectionHeader, Statement
 
+        # TODO should this be configurable?
+        if (
+            context is not None
+            and context.trigger_kind == CompletionTriggerKind.TRIGGERCHARACTER
+            and context.trigger_character in [" ", "\t"]
+        ):
+            return None
+
         if nodes_at_position.index(node) > 0 and not isinstance(nodes_at_position[0], SectionHeader):
             statement_node = cast(Statement, nodes_at_position[0])
             if len(statement_node.tokens) > 0:
