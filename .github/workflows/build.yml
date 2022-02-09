@@ -14,6 +14,7 @@ jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
         python-version: ["3.8", "3.9", "3.10"]
@@ -37,7 +38,9 @@ jobs:
       - name: "test python packages"
         run: poetry run pytest --junitxml=test-results/python-${{ matrix.python-version }}/test-results.xml --cov=robotcode --cov-report=xml:testresults/python-${{ matrix.python-version }}/coverage.xml --cov-report=html:test-results/python-${{ matrix.python-version }}/htmlcov
 
-      - uses: actions/upload-artifact@v2
+      - name: upload test results
+        if: always()
+        uses: actions/upload-artifact@v2
         with:
           name: test-results-${{ matrix.os }}-${{ matrix.python-version }}
           path: test-results
