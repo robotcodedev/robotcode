@@ -92,7 +92,7 @@
 				"log.ini",
 				//"-w",
 				"--",
-				//"C:\\tmp\\robottest\\tests\\bdd_style.robot"				
+				//"C:\\tmp\\robottest\\tests\\bdd_style.robot"
 			]
 		},
 		{
@@ -184,6 +184,10 @@
 			"name": "Run Extension",
 			"type": "extensionHost",
 			"request": "launch",
+			"env": {
+				"ROBOT_THREADPOOL_POOL_MAX_WORKERS": "6",
+				"ROBOT_PROCESS_POOL_MAX_WORKERS": "4"
+			},
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
 			],

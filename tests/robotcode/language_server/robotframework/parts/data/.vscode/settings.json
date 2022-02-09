@@ -4,5 +4,8 @@
     },
     "robotcode.robot.env": {
         "ENV_VAR": "1"
-    }
+    },
+    "robotcode.languageServer.args": [
+        "--debugpy"
+    ]
 }

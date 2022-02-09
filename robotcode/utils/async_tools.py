@@ -5,6 +5,7 @@ import concurrent.futures
 import contextvars
 import functools
 import inspect
+import os
 import threading
 import weakref
 from collections import deque
@@ -443,6 +444,7 @@ async def check_canceled() -> bool:
 
     return True
 
+
 THREADPOOL_POOL_MAX_WORKERS = None
 
 __tread_pool_executor: Optional[ThreadPoolExecutor] = None
@@ -455,7 +457,13 @@ def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyn
     func_call = functools.partial(ctx.run, func, *args, **kwargs)
 
     if __tread_pool_executor is None:
-        __tread_pool_executor = ThreadPoolExecutor(THREADPOOL_POOL_MAX_WORKERS)
+        __tread_pool_executor = ThreadPoolExecutor(
+            max_workers=(
+                int(s)
+                if (s := os.environ.get("ROBOT_THREADPOOL_POOL_MAX_WORKERS", None)) and s.isnumeric()
+                else THREADPOOL_POOL_MAX_WORKERS
+            )
+        )
 
     return cast("asyncio.Future[_T]", loop.run_in_executor(__tread_pool_executor, cast(Callable[..., _T], func_call)))
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import atexit
+import os
 import signal
 from concurrent.futures.process import ProcessPoolExecutor
 from typing import Any, Optional
@@ -30,7 +31,14 @@ def _terminate(*args: Any, **kwargs: Any) -> None:
 def get_process_pool() -> ProcessPoolExecutor:
     global _process_pool
     if _process_pool is None:
-        _process_pool = ProcessPoolExecutor(max_workers=PROCESS_POOL_MAX_WORKERS, initializer=_init_pool)
+        _process_pool = ProcessPoolExecutor(
+            max_workers=(
+                int(s)
+                if (s := os.environ.get("ROBOT_PROCESS_POOL_MAX_WORKERS", None)) and s.isnumeric()
+                else PROCESS_POOL_MAX_WORKERS
+            ),
+            initializer=_init_pool,
+        )
         atexit.register(_terminate)
 
         try:
