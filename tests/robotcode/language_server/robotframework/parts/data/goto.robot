@@ -3,9 +3,9 @@ Library           Collections
 #                 ^^^^^^^^^^^  Robot Library Import
 #      ^^^^^^^^^^^  Separator
 Library           ${CURDIR}/lib/myvariables.py
-#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  library import by path
+#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^  library import by path
 Variables         ${CURDIR}/lib/myvariables.py
-#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Variables Import
+#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Variables Import
 Resource          ${CURDIR}/resources/firstresource.resource
 #                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  built in var in Resource Import
 

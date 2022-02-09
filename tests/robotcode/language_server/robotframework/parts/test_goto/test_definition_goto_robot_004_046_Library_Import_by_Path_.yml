@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 46
-  line: 4
-  name: library import by path
-result: null
