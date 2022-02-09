@@ -72,6 +72,7 @@ async def protocol(request: Any) -> AsyncGenerator[RobotLanguageServerProtocol, 
                 cast(HasConfigSection, RobotCodeConfig).__config_section__: as_dict(
                     RobotCodeConfig(
                         robot=RobotConfig(
+                            python_path=["./lib", "./resources"],
                             env={"ENV_VAR": "1"},
                             variables={
                                 "CMD_VAR": "1",
