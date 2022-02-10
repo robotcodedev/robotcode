@@ -8,9 +8,6 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ### added
 
-
-##  0.5.1
-
 - Resolving static variables, closes [#18](https://github.com/d-biehl/robotcode/issues/18)
   - RobotCode tries to resolve variables that are definied at variables section, command line variables and builtin variables. This make it possible to import libraries/resources/variables with the correct path and parameters.
   Something like this:
@@ -30,6 +27,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 - correct handling of showing inline values and hover over variables in debugger
 - correct handling of variable assignment with an "equal" sign
 - add more regression tests
+
+##  0.5.1
 
 ### added
 
