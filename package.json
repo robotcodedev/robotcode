@@ -4,7 +4,7 @@
   "description": "Robot Framework support for Visual Studio Code",
   "icon": "images/icon.png",
   "publisher": "d-biehl",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "author": {
     "name": "Daniel Biehl",
     "url": "https://github.com/d-biehl/"
@@ -65,7 +65,6 @@
     "onDebugResolve:robotcode",
     "onDebugInitialConfigurations",
     "onDebugDynamicConfigurations:robotcode"
-
   ],
   "galleryBanner": {
     "theme": "dark",
