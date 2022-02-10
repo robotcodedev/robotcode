@@ -184,10 +184,10 @@
 			"name": "Run Extension",
 			"type": "extensionHost",
 			"request": "launch",
-			"env": {
-				"ROBOT_THREADPOOL_POOL_MAX_WORKERS": "6",
-				"ROBOT_PROCESS_POOL_MAX_WORKERS": "4"
-			},
+			// "env": {
+			// 	"ROBOT_THREADPOOL_POOL_MAX_WORKERS": "8",
+			// 	"ROBOT_PROCESS_POOL_MAX_WORKERS": "4"
+			// },
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
 			],

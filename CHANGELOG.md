@@ -4,9 +4,28 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+### added
+
+
 ##  0.5.1
 
+- Resolving static variables, closes [#18](https://github.com/d-biehl/robotcode/issues/18)
+  - RobotCode tries to resolve variables that are definied at variables section, command line variables and builtin variables. This make it possible to import libraries/resources/variables with the correct path and parameters.
+  Something like this:
+
+  ```robotframework
+  *** Settings ***
+  Resource          ${RESOURCE_DIR}/some_settings.resource
+  Library           alibrary    a_param=${LIB_ARG}
+  Resource          ${RESOURCE_DIR}/some_keywords.resource
+  ```
+
+  - If you hover over a variable, you will see, if the variable can be resolved
+
+- show quick pick for debug configuration
+
 ### added
+
 - extend README.md
   - added section about style customization
   - extend feature description
