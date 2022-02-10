@@ -22,7 +22,12 @@ All notable changes to the "robotcode" extension will be documented in this file
 
   - If you hover over a variable, you will see, if the variable can be resolved
 
-- show quick pick for debug configuration
+- show quick pick for debug/run configuration
+  - if there is no launch configuration selected and you want to run code with "Start Debugging" or "Run without Debugging", robotcode will show you a simple quick pick, where you can select a predefined configuration
+- some cosmetic changes in updating Test Explorer
+- correct handling of showing inline values and hover over variables in debugger
+- correct handling of variable assignment with an "equal" sign
+- add more regression tests
 
 ### added
 
