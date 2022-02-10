@@ -4,6 +4,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+##  0.5.3
+
 ### added
 
 - Resolving static variables, closes [#18](https://github.com/d-biehl/robotcode/issues/18)
