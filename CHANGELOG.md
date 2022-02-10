@@ -4,8 +4,6 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
-##  0.5.2
-
 ### added
 
 - Resolving static variables, closes [#18](https://github.com/d-biehl/robotcode/issues/18)
@@ -27,6 +25,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 - correct handling of showing inline values and hover over variables in debugger
 - correct handling of variable assignment with an "equal" sign
 - add more regression tests
+
+##  0.5.2
+
+- some testing
 
 ##  0.5.1
 
