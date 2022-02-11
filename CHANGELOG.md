@@ -4,6 +4,14 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+### added
+
+- Keyword call analysis
+  - shows if parameters are missing or too much and so on...
+- Highlight of named arguments
+- Improve handling of command line variables when resolving variables
+- Remove handling of python files to reduce the processor load in certain situations
+
 ##  0.5.3
 
 ### added
