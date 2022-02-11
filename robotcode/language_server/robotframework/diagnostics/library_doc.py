@@ -626,6 +626,22 @@ def is_library_by_path(path: str) -> bool:
     return path.lower().endswith((".py", ".java", ".class", "/", os.sep))
 
 
+def update_python_path_and_env(
+    working_dir: str = ".", pythonpath: Optional[List[str]] = None, environment: Optional[Dict[str, str]] = None
+) -> None:
+    os.chdir(Path(working_dir))
+
+    if pythonpath is not None:
+        for p in pythonpath:
+            absolute_path = str(Path(p).absolute())
+            if absolute_path not in sys.path:
+                sys.path.insert(0, absolute_path)
+
+    if environment:
+        for k, v in environment.items():
+            os.environ[k] = v
+
+
 __PRELOADED_MODULES: Optional[Set[ModuleType]] = None
 
 
@@ -640,23 +656,12 @@ def _update_env(
     top = file.parents[3]
     for p in filter(lambda v: path_is_relative_to(v, top), sys.path.copy()):
         sys.path.remove(p)
-    wd = Path(working_dir)
 
     importlib.invalidate_caches()
 
     gc.collect()
 
-    os.chdir(wd)
-
-    if pythonpath is not None:
-        for p in pythonpath:
-            absolute_path = str(Path(p).absolute())
-            if absolute_path not in sys.path:
-                sys.path.insert(0, absolute_path)
-
-    if environment:
-        for k, v in environment.items():
-            os.environ[k] = v
+    update_python_path_and_env(working_dir, pythonpath, environment)
 
 
 def unload_preloaded_modules() -> None:
@@ -885,7 +890,10 @@ class _Variable(object):
 
 
 def resolve_robot_variables(
-    working_dir: str = ".", base_dir: str = ".", variables: Optional[Dict[str, Optional[Any]]] = None
+    working_dir: str = ".",
+    base_dir: str = ".",
+    command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
+    variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Any:
     from robot.variables import Variables
 
@@ -928,6 +936,10 @@ def resolve_robot_variables(
     }.items():
         result[k] = v
 
+    if command_line_variables:
+        for k, v in command_line_variables.items():
+            result[f"${{{k}}}"] = v
+
     if variables is not None:
 
         vars = [_Variable(k, v) for k, v in variables.items() if v is not None]
@@ -942,10 +954,15 @@ def resolve_variable(
     name: str,
     working_dir: str = ".",
     base_dir: str = ".",
+    pythonpath: Optional[List[str]] = None,
+    environment: Optional[Dict[str, str]] = None,
+    command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
     ignore_errors: bool = True,
 ) -> Any:
-    robot_variables = resolve_robot_variables(working_dir, base_dir, variables)
+    update_python_path_and_env(working_dir, pythonpath, environment)
+
+    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
     return robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=ignore_errors)
 
@@ -978,6 +995,7 @@ def _find_library_internal(
     base_dir: str = ".",
     pythonpath: Optional[List[str]] = None,
     environment: Optional[Dict[str, str]] = None,
+    command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Tuple[str, Any]:
 
@@ -986,7 +1004,7 @@ def _find_library_internal(
 
     _update_env(working_dir, pythonpath, environment)
 
-    robot_variables = resolve_robot_variables(working_dir, base_dir, variables)
+    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
     name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 
@@ -1007,10 +1025,13 @@ def find_library(
     base_dir: str = ".",
     pythonpath: Optional[List[str]] = None,
     environment: Optional[Dict[str, str]] = None,
+    command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> str:
 
-    return _find_library_internal(name, working_dir, base_dir, pythonpath, environment, variables)[0]
+    return _find_library_internal(
+        name, working_dir, base_dir, pythonpath, environment, command_line_variables, variables
+    )[0]
 
 
 def get_library_doc(
@@ -1020,6 +1041,7 @@ def get_library_doc(
     base_dir: str = ".",
     pythonpath: Optional[List[str]] = None,
     environment: Optional[Dict[str, str]] = None,
+    command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> LibraryDoc:
 
@@ -1070,6 +1092,7 @@ def get_library_doc(
             base_dir=base_dir,
             pythonpath=pythonpath,
             environment=environment,
+            command_line_variables=command_line_variables,
             variables=variables,
         )
 
@@ -1301,6 +1324,7 @@ def find_file(
     base_dir: str = ".",
     pythonpath: Optional[List[str]] = None,
     environment: Optional[Dict[str, str]] = None,
+    command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
     file_type: str = "Resource",
 ) -> str:
@@ -1308,7 +1332,7 @@ def find_file(
 
     _update_env(working_dir, pythonpath, environment)
 
-    robot_variables = resolve_robot_variables(working_dir, base_dir, variables)
+    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
     name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 
@@ -1394,6 +1418,7 @@ def complete_library_import(
     base_dir: str = ".",
     pythonpath: Optional[List[str]] = None,
     environment: Optional[Dict[str, str]] = None,
+    command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Optional[List[CompleteResult]]:
 
@@ -1409,7 +1434,7 @@ def complete_library_import(
         ]
 
     if name is not None:
-        robot_variables = resolve_robot_variables(working_dir, base_dir, variables)
+        robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
         name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 
@@ -1460,6 +1485,7 @@ def complete_resource_import(
     base_dir: str = ".",
     pythonpath: Optional[List[str]] = None,
     environment: Optional[Dict[str, str]] = None,
+    command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Optional[List[CompleteResult]]:
 
@@ -1468,7 +1494,7 @@ def complete_resource_import(
     result: List[CompleteResult] = []
 
     if name is not None:
-        robot_variables = resolve_robot_variables(working_dir, base_dir, variables)
+        robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
         name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 
@@ -1519,6 +1545,7 @@ def complete_variables_import(
     base_dir: str = ".",
     pythonpath: Optional[List[str]] = None,
     environment: Optional[Dict[str, str]] = None,
+    command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Optional[List[CompleteResult]]:
 
@@ -1527,7 +1554,7 @@ def complete_variables_import(
     result: List[CompleteResult] = []
 
     if name is not None:
-        robot_variables = resolve_robot_variables(working_dir, base_dir, variables)
+        robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
         name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 

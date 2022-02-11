@@ -701,7 +701,11 @@ class Namespace:
     async def get_unresolved_variables(
         self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
     ) -> Dict[str, Any]:
-        return {v.name: v.value async for k, v in self.yield_variables(nodes, position) if v.has_value}
+        return {
+            v.name: v.value
+            async for k, v in self.yield_variables(nodes, position, skip_commandline_variables=True)
+            if v.has_value
+        }
 
     @_logger.call
     async def get_variable_definitions(
