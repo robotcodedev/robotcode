@@ -18,8 +18,9 @@ from ...common.lsp_types import (
 from ..utils.ast import (
     Token,
     is_not_variable_token,
+    range_from_node,
+    range_from_node_or_token,
     range_from_token,
-    range_from_token_or_node,
 )
 from ..utils.async_ast import AsyncVisitor
 from .library_doc import KeywordDoc, is_embedded_keyword
@@ -45,7 +46,7 @@ class Analyzer(AsyncVisitor):
     async def _analyze_keyword_call(
         self,
         keyword: Optional[str],
-        value: ast.AST,
+        node: ast.AST,
         keyword_token: Token,
         argument_tokens: List[Token],
         analyse_run_keywords: bool = True,
@@ -60,7 +61,7 @@ class Analyzer(AsyncVisitor):
             for e in self.finder.diagnostics:
                 self._results.append(
                     Diagnostic(
-                        range=range_from_token_or_node(value, keyword_token),
+                        range=range_from_node_or_token(node, keyword_token),
                         message=e.message,
                         severity=e.severity,
                         source=DIAGNOSTICS_SOURCE_NAME,
@@ -72,7 +73,7 @@ class Analyzer(AsyncVisitor):
                 if result.errors:
                     self._results.append(
                         Diagnostic(
-                            range=range_from_token_or_node(value, keyword_token),
+                            range=range_from_node_or_token(node, keyword_token),
                             message="Keyword definition contains errors.",
                             severity=DiagnosticSeverity.ERROR,
                             source=DIAGNOSTICS_SOURCE_NAME,
@@ -117,7 +118,7 @@ class Analyzer(AsyncVisitor):
                 if result.is_deprecated:
                     self._results.append(
                         Diagnostic(
-                            range=range_from_token_or_node(value, keyword_token),
+                            range=range_from_node_or_token(node, keyword_token),
                             message=f"Keyword '{result.name}' is deprecated"
                             f"{f': {result.deprecated_message}' if result.deprecated_message else ''}.",
                             severity=DiagnosticSeverity.HINT,
@@ -128,10 +129,26 @@ class Analyzer(AsyncVisitor):
                 if result.is_error_handler:
                     self._results.append(
                         Diagnostic(
-                            range=range_from_token_or_node(value, keyword_token),
+                            range=range_from_node_or_token(node, keyword_token),
                             message=f"Keyword definition contains errors: {result.error_handler_message}",
                             severity=DiagnosticSeverity.ERROR,
                             source=DIAGNOSTICS_SOURCE_NAME,
+                        )
+                    )
+
+                try:
+                    if result.arguments is not None:
+                        result.arguments.resolve([v.value for v in argument_tokens], None)
+                except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                    raise
+                except BaseException as e:
+                    self._results.append(
+                        Diagnostic(
+                            range=range_from_node(node, True),
+                            message=str(e),
+                            severity=DiagnosticSeverity.ERROR,
+                            source=DIAGNOSTICS_SOURCE_NAME,
+                            code=type(e).__qualname__,
                         )
                     )
 
@@ -140,7 +157,7 @@ class Analyzer(AsyncVisitor):
         except BaseException as e:
             self._results.append(
                 Diagnostic(
-                    range=range_from_token_or_node(value, keyword_token),
+                    range=range_from_node_or_token(node, keyword_token),
                     message=str(e),
                     severity=DiagnosticSeverity.ERROR,
                     source=DIAGNOSTICS_SOURCE_NAME,
@@ -149,7 +166,7 @@ class Analyzer(AsyncVisitor):
             )
 
         if result is not None and analyse_run_keywords:
-            await self._analyse_run_keyword(result, value, argument_tokens)
+            await self._analyse_run_keyword(result, node, argument_tokens)
 
         return result
 
@@ -336,7 +353,7 @@ class Analyzer(AsyncVisitor):
         if value.assign and not value.keyword:
             self._results.append(
                 Diagnostic(
-                    range=range_from_token_or_node(value, value.get_token(RobotToken.ASSIGN)),
+                    range=range_from_node_or_token(value, value.get_token(RobotToken.ASSIGN)),
                     message="Keyword name cannot be empty.",
                     severity=DiagnosticSeverity.ERROR,
                     source=DIAGNOSTICS_SOURCE_NAME,
@@ -351,7 +368,7 @@ class Analyzer(AsyncVisitor):
         if not self.current_testcase_or_keyword_name:
             self._results.append(
                 Diagnostic(
-                    range=range_from_token_or_node(value, value.get_token(RobotToken.ASSIGN)),
+                    range=range_from_node_or_token(value, value.get_token(RobotToken.ASSIGN)),
                     message="Code is unreachable.",
                     severity=DiagnosticSeverity.HINT,
                     source=DIAGNOSTICS_SOURCE_NAME,
@@ -371,7 +388,7 @@ class Analyzer(AsyncVisitor):
             name_token = cast(TestCaseName, testcase.header).get_token(RobotToken.TESTCASE_NAME)
             self._results.append(
                 Diagnostic(
-                    range=range_from_token_or_node(testcase, name_token),
+                    range=range_from_node_or_token(testcase, name_token),
                     message="Test case name cannot be empty.",
                     severity=DiagnosticSeverity.ERROR,
                     source=DIAGNOSTICS_SOURCE_NAME,
@@ -398,7 +415,7 @@ class Analyzer(AsyncVisitor):
             ):
                 self._results.append(
                     Diagnostic(
-                        range=range_from_token_or_node(keyword, name_token),
+                        range=range_from_node_or_token(keyword, name_token),
                         message="Keyword cannot have both normal and embedded arguments.",
                         severity=DiagnosticSeverity.ERROR,
                         source=DIAGNOSTICS_SOURCE_NAME,
@@ -409,7 +426,7 @@ class Analyzer(AsyncVisitor):
             name_token = cast(KeywordName, keyword.header).get_token(RobotToken.KEYWORD_NAME)
             self._results.append(
                 Diagnostic(
-                    range=range_from_token_or_node(keyword, name_token),
+                    range=range_from_node_or_token(keyword, name_token),
                     message="Keyword name cannot be empty.",
                     severity=DiagnosticSeverity.ERROR,
                     source=DIAGNOSTICS_SOURCE_NAME,

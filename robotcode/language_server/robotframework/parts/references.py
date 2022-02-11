@@ -45,8 +45,8 @@ from ..utils.ast import (
     get_tokens_at_position,
     is_not_variable_token,
     iter_over_keyword_names_and_owners,
+    range_from_node_or_token,
     range_from_token,
-    range_from_token_or_node,
     tokenize_variables,
 )
 from ..utils.async_ast import iter_nodes
@@ -282,7 +282,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         if keyword is not None and keyword.source and not keyword.is_error_handler:
             return [
                 *(
-                    [Location(uri=str(Uri.from_path(keyword.source)), range=range_from_token_or_node(node, name_token))]
+                    [Location(uri=str(Uri.from_path(keyword.source)), range=range_from_node_or_token(node, name_token))]
                     if context.include_declaration
                     else []
                 ),

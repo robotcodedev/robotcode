@@ -262,6 +262,69 @@ DEPRECATED_PATTERN = re.compile(r"^\*DEPRECATED(?P<message>.*)\*(?P<doc>.*)")
 
 
 @dataclass
+class ArgumentSpec:
+    name: str
+    type: Any
+    positional_only: Any
+    positional_or_named: Any
+    var_positional: Any
+    named_only: Any
+    var_named: Any
+    defaults: Any
+    types: Any
+
+    __robot_arguments: Optional[Any] = None
+
+    @staticmethod
+    def from_robot_argument_spec(spec: Any) -> ArgumentSpec:
+        return ArgumentSpec(
+            name=spec.name,
+            type=spec.type,
+            positional_only=spec.positional_only,
+            positional_or_named=spec.positional_or_named,
+            var_positional=spec.var_positional,
+            named_only=spec.named_only,
+            var_named=spec.var_named,
+            defaults={k: str(v) for k, v in spec.defaults.items()} if spec.defaults else {},
+            types=None,
+        )
+
+    def resolve(
+        self,
+        arguments: Any,
+        variables: Any,
+        resolve_named: bool = True,
+        resolve_variables_until: Any = None,
+        dict_to_kwargs: bool = False,
+    ) -> Any:
+        from robot.running.arguments.argumentresolver import ArgumentResolver
+        from robot.running.arguments.argumentspec import (
+            ArgumentSpec as RobotArgumentSpec,
+        )
+
+        if self.__robot_arguments is None:
+            self.__robot_arguments = RobotArgumentSpec(
+                self.name,
+                self.type,
+                self.positional_only,
+                self.positional_or_named,
+                self.var_positional,
+                self.named_only,
+                self.var_named,
+                self.defaults,
+                self.types,
+            )
+
+        resolver = ArgumentResolver(
+            self.__robot_arguments,
+            resolve_named=resolve_named,
+            resolve_variables_until=resolve_variables_until,
+            dict_to_kwargs=dict_to_kwargs,
+        )
+        resolver.resolve(arguments, variables)
+
+
+@dataclass
 class KeywordDoc(Model):
     name: str = ""
     args: Tuple[KeywordArgumentDoc, ...] = ()
@@ -282,6 +345,7 @@ class KeywordDoc(Model):
     is_registered_run_keyword: bool = False
     args_to_process: Optional[int] = None
     deprecated: bool = False
+    arguments: Optional[ArgumentSpec] = None
 
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
@@ -1208,6 +1272,7 @@ def get_library_doc(
                             longname=f"{libdoc.name}.{kw[0].name}",
                             doc_format=str(lib.doc_format) or DEFAULT_DOC_FORMAT,
                             is_initializer=True,
+                            arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
                         )
                         for kw in [
                             (KeywordDocBuilder().build_keyword(k), k) for k in [KeywordWrapper(lib.init, source)]
@@ -1249,6 +1314,7 @@ def get_library_doc(
                             is_registered_run_keyword=RUN_KW_REGISTER.is_run_keyword(libdoc.name, kw[0].name),
                             args_to_process=RUN_KW_REGISTER.get_args_to_process(libdoc.name, kw[0].name),
                             deprecated=kw[0].deprecated,
+                            arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
                         )
                         for kw in [
                             (KeywordDocBuilder().build_keyword(k), k)

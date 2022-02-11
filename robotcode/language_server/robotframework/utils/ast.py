@@ -32,16 +32,6 @@ def iter_nodes(node: ast.AST) -> Generator[ast.AST, None, None]:
             yield from iter_nodes(value)
 
 
-def range_from_node(node: ast.AST) -> Range:
-    return Range(
-        start=Position(line=node.lineno - 1, character=node.col_offset),
-        end=Position(
-            line=node.end_lineno - 1 if node.end_lineno is not None else -1,
-            character=node.end_col_offset if node.end_col_offset is not None else -1,
-        ),
-    )
-
-
 @runtime_checkable
 class Token(Protocol):
     type: Optional[str]
@@ -114,6 +104,24 @@ def range_from_token(token: Token) -> Range:
     )
 
 
+def range_from_node(node: ast.AST, skip_non_data: bool = False) -> Range:
+    from robot.parsing.lexer import Token as RobotToken
+
+    if skip_non_data and isinstance(node, HasTokens) and node.tokens:
+        start_token = next((v for v in node.tokens if v.type not in RobotToken.NON_DATA_TOKENS), None)
+        end_token = next((v for v in reversed(node.tokens) if v.type not in RobotToken.NON_DATA_TOKENS), None)
+        if start_token is not None and end_token is not None:
+            return Range(start=range_from_token(start_token).start, end=range_from_token(end_token).end)
+
+    return Range(
+        start=Position(line=node.lineno - 1, character=node.col_offset),
+        end=Position(
+            line=node.end_lineno - 1 if node.end_lineno is not None else -1,
+            character=node.end_col_offset if node.end_col_offset is not None else -1,
+        ),
+    )
+
+
 def token_in_range(token: Token, range: Range) -> bool:
     token_range = range_from_token(token)
     return token_range.start.is_in_range(range) or token_range.end.is_in_range(range)
@@ -124,11 +132,11 @@ def node_in_range(node: ast.AST, range: Range) -> bool:
     return node_range.start.is_in_range(range) or node_range.end.is_in_range(range)
 
 
-def range_from_token_or_node(node: ast.AST, token: Optional[Token]) -> Range:
+def range_from_node_or_token(node: ast.AST, token: Optional[Token]) -> Range:
     if token is not None:
         return range_from_token(token)
     if node is not None:
-        return range_from_node(node)
+        return range_from_node(node, True)
     return Range.zero()
 
 

@@ -10,7 +10,7 @@ from ...common.decorators import language_id
 from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
 from ...common.parts.diagnostics import DiagnosticsResult
 from ...common.text_document import TextDocument
-from ..utils.ast import Token, range_from_token
+from ..utils.ast import Token, range_from_node, range_from_token
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -77,10 +77,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     def _create_error_from_node(self, node: ast.AST, msg: str, source: Optional[str] = None) -> Diagnostic:
         return Diagnostic(
-            range=Range(
-                start=Position(line=node.lineno - 1, character=node.col_offset),
-                end=Position(line=(node.end_lineno or 1) - 1, character=node.end_col_offset or 0),
-            ),
+            range=range_from_node(node, True),
             message=msg,
             severity=DiagnosticSeverity.ERROR,
             source=source if source is not None else self.source_name,
