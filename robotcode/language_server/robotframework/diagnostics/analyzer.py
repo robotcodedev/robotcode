@@ -18,7 +18,6 @@ from ...common.lsp_types import (
 from ..utils.ast import (
     Token,
     is_not_variable_token,
-    range_from_node,
     range_from_node_or_token,
     range_from_token,
 )
@@ -144,7 +143,12 @@ class Analyzer(AsyncVisitor):
                 except BaseException as e:
                     self._results.append(
                         Diagnostic(
-                            range=range_from_node(node, True),
+                            range=Range(
+                                start=range_from_token(keyword_token).start,
+                                end=range_from_token(argument_tokens[-1]).end
+                                if argument_tokens
+                                else range_from_token(keyword_token).end,
+                            ),
                             message=str(e),
                             severity=DiagnosticSeverity.ERROR,
                             source=DIAGNOSTICS_SOURCE_NAME,
@@ -232,32 +236,38 @@ class Analyzer(AsyncVisitor):
 
         elif keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1:
 
-            def skip_args() -> None:
+            def skip_args() -> List[Token]:
                 nonlocal argument_tokens
-
+                result = []
                 while argument_tokens:
                     if argument_tokens[0].value in ["ELSE", "ELSE IF"]:
                         break
+                    if argument_tokens:
+                        result.append(argument_tokens[0])
                     argument_tokens = argument_tokens[1:]
 
-            result = (
-                await self._analyze_keyword_call(
-                    unescape(argument_tokens[1].value),
-                    node,
-                    argument_tokens[1],
-                    argument_tokens[2:],
-                    analyse_run_keywords=False,
-                )
-                if is_not_variable_token(argument_tokens[1])
-                else None
-            )
+                return result
 
-            argument_tokens = argument_tokens[2:]
+            result = await self.finder.find_keyword(argument_tokens[1].value)
 
             if result is not None and result.is_any_run_keyword():
-                argument_tokens = await self._analyse_run_keyword(result, node, argument_tokens)
+                argument_tokens = argument_tokens[2:]
 
-            skip_args()
+                argument_tokens = await self._analyse_run_keyword(result, node, argument_tokens)
+            else:
+                kwt = argument_tokens[1]
+                argument_tokens = argument_tokens[2:]
+
+                args = skip_args()
+
+                if is_not_variable_token(kwt):
+                    await self._analyze_keyword_call(
+                        unescape(kwt.value),
+                        node,
+                        kwt,
+                        args,
+                        analyse_run_keywords=False,
+                    )
 
             while argument_tokens:
                 if argument_tokens[0].value == "ELSE" and len(argument_tokens) > 1:
