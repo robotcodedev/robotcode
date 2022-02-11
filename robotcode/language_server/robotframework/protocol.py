@@ -1,4 +1,3 @@
-import uuid
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -10,14 +9,7 @@ from ...jsonrpc2.protocol import (
 )
 from ...utils.dataclasses import from_dict
 from ...utils.logging import LoggingDescriptor
-from ..common.lsp_types import (
-    DocumentFilter,
-    InitializeError,
-    Model,
-    TextDocumentChangeRegistrationOptions,
-    TextDocumentRegistrationOptions,
-    TextDocumentSyncKind,
-)
+from ..common.lsp_types import InitializeError, Model
 from ..common.parts.document_symbols import symbol_information_label
 from ..common.protocol import LanguageServerProtocol
 from .parts.codelens import RobotCodeLensProtocolPart
@@ -106,7 +98,6 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         super().__init__(server)
         self.options = Options()
         self.on_initialize.add(self._on_initialize)
-        self.on_initialized.add(self._on_initialized)
         self.on_shutdown.add(self._on_shutdown)
 
     @_logger.call
@@ -126,30 +117,3 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
             self.options = from_dict(initialization_options, Options)
 
         self._logger.debug(f"initialized with {repr(self.options)}")
-
-    @_logger.call
-    async def _on_initialized(self, sender: Any) -> None:
-        if (
-            self.client_capabilities
-            and self.client_capabilities.workspace
-            and self.client_capabilities.workspace.file_operations
-            and self.client_capabilities.workspace.file_operations.dynamic_registration
-        ):
-            document_selector = [DocumentFilter(language="python")]
-            await self.register_capability(
-                str(uuid.uuid4()),
-                "textDocument/didOpen",
-                TextDocumentRegistrationOptions(document_selector=document_selector),
-            )
-            await self.register_capability(
-                str(uuid.uuid4()),
-                "textDocument/didChange",
-                TextDocumentChangeRegistrationOptions(
-                    document_selector=document_selector, sync_kind=TextDocumentSyncKind.INCREMENTAL
-                ),
-            )
-            await self.register_capability(
-                str(uuid.uuid4()),
-                "textDocument/didClose",
-                TextDocumentRegistrationOptions(document_selector=document_selector),
-            )
