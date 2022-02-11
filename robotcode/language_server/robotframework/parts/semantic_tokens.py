@@ -370,6 +370,26 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         resources_matchers: Container[KeywordMatcher],
     ) -> AsyncGenerator[SemTokenInfo, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Fixture, KeywordCall
+        from robot.utils.escaping import split_from_equals
+
+        if token.type in {RobotToken.ARGUMENT} and isinstance(node, (KeywordCall, Fixture)):
+            name, value = split_from_equals(token.value)
+            if value is not None:
+                if isinstance(node, KeywordCall):
+                    doc = await namespace.find_keyword(node.keyword)
+                elif isinstance(node, Fixture):
+                    doc = await namespace.find_keyword(node.name)
+                else:
+                    doc = None
+
+                if doc and any(v for v in doc.args if v.name == name):
+                    length = len(name)
+                    yield SemTokenInfo.from_token(token, RobotSemTokenTypes.VARIABLE, length=length)
+                    yield SemTokenInfo.from_token(
+                        token, SemanticTokenTypes.OPERATOR, col_offset=token.col_offset + length, length=1
+                    )
+                    token = RobotToken(token.type, value, token.lineno, token.col_offset + length + 1, token.error)
 
         if token.type in {*RobotToken.ALLOW_VARIABLES, RobotToken.KEYWORD, ROBOT_KEYWORD_INNER}:
 
@@ -499,7 +519,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
                     yield arguments[0], node,
                     arguments = arguments[1:]
-                    has_separator = False
+
                     while arguments:
                         async for b in skip_non_data_tokens():
                             yield b
@@ -553,11 +573,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         if separator_token is not None:
                             args = arguments[: arguments.index(separator_token)]
                             arguments = arguments[arguments.index(separator_token) :]
-                            has_separator = True
                         else:
-                            if has_separator:
-                                args = arguments
-                                arguments = []
+                            args = arguments
+                            arguments = []
 
                         async for e in self.generate_run_kw_tokens(
                             namespace,
