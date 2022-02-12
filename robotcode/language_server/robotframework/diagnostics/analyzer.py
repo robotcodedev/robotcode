@@ -4,8 +4,6 @@ import ast
 import asyncio
 from typing import List, Optional, cast
 
-from robotcode.language_server.robotframework.diagnostics import namespace
-
 from ....utils.async_tools import CancelationToken
 from ....utils.uri import Uri
 from ...common.lsp_types import (
