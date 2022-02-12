@@ -4,6 +4,13 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+### added
+
+- correct semantic highlightning for "run keywords"
+  - now also named arguments in inner keywords are highlighted
+- correct handling of parameter names in "run keywords" and inner keywords
+- correct handling of resource keywords arguments
+
 ##  0.5.4
 
 ### added
