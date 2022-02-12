@@ -16,7 +16,7 @@ replaceInFile(versionFilesOption, function (error, _results) {
 const changelogOptions = {
   files: ["CHANGELOG.md"],
   from: /^(\#*\s*)(\[Unreleased\])$/gm,
-  to: `\$1\$2${EOL}${EOL}\$1 ${env.npm_package_version || ""}`,
+  to: `\$1\$2${EOL}${EOL}- none so far${EOL}${EOL}\$1 ${env.npm_package_version || ""}`,
 };
 replaceInFile(changelogOptions, function (error, _results) {
   if (error) {
