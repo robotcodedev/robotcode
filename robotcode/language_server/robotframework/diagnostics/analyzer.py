@@ -4,6 +4,8 @@ import ast
 import asyncio
 from typing import List, Optional, cast
 
+from robotcode.language_server.robotframework.diagnostics import namespace
+
 from ....utils.async_tools import CancelationToken
 from ....utils.uri import Uri
 from ...common.lsp_types import (
@@ -16,6 +18,7 @@ from ...common.lsp_types import (
     Range,
 )
 from ..utils.ast import (
+    HasTokens,
     Token,
     is_not_variable_token,
     range_from_node_or_token,
@@ -42,6 +45,18 @@ class Analyzer(AsyncVisitor):
     async def visit(self, node: ast.AST) -> None:
         await super().visit(node)
 
+    def should_ignore(self, node: ast.AST) -> bool:
+        from robot.parsing.lexer import Token as RobotToken
+
+        if isinstance(node, HasTokens):
+            for token in node.tokens:
+                if token.type == RobotToken.COMMENT:
+                    name, value = token.value[1:].split(":", 1)
+                    if name and name.strip() == "robotcode" and value and value.strip() == "ignore":
+                        return True
+
+        return False
+
     async def _analyze_keyword_call(
         self,
         keyword: Optional[str],
@@ -51,6 +66,7 @@ class Analyzer(AsyncVisitor):
         analyse_run_keywords: bool = True,
     ) -> Optional[KeywordDoc]:
         result: Optional[KeywordDoc] = None
+
         try:
             if not is_not_variable_token(keyword_token):
                 return None
@@ -318,6 +334,9 @@ class Analyzer(AsyncVisitor):
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Fixture
 
+        if self.should_ignore(node):
+            return
+
         value = cast(Fixture, node)
         keyword_token = cast(Token, value.get_token(RobotToken.NAME))
 
@@ -334,6 +353,9 @@ class Analyzer(AsyncVisitor):
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import TestTemplate
 
+        if self.should_ignore(node):
+            return
+
         value = cast(TestTemplate, node)
         keyword_token = cast(Token, value.get_token(RobotToken.NAME))
 
@@ -348,6 +370,9 @@ class Analyzer(AsyncVisitor):
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Template
 
+        if self.should_ignore(node):
+            return
+
         value = cast(Template, node)
         keyword_token = cast(Token, value.get_token(RobotToken.NAME))
 
@@ -361,6 +386,9 @@ class Analyzer(AsyncVisitor):
     async def visit_KeywordCall(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordCall
+
+        if self.should_ignore(node):
+            return
 
         value = cast(KeywordCall, node)
         keyword_token = cast(RobotToken, value.get_token(RobotToken.KEYWORD))
@@ -397,6 +425,9 @@ class Analyzer(AsyncVisitor):
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.blocks import TestCase
         from robot.parsing.model.statements import TestCaseName
+
+        if self.should_ignore(node):
+            return
 
         testcase = cast(TestCase, node)
         if not testcase.name:
