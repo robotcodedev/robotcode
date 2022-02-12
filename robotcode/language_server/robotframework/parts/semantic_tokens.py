@@ -576,7 +576,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 async for e in generate_run_kw_if():
                     yield e
         else:
-            async for a in self.generate_keyword_tokens(namespace, kw_token, arguments, node):
+            async for a in self.generate_keyword_tokens(namespace, kw_token, arguments, node, kw_doc):
                 yield a
 
     async def generate_keyword_tokens(
@@ -585,21 +585,21 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         kw_token: Token,
         arguments: List[Token],
         node: ast.AST,
+        kw_doc: Optional[KeywordDoc] = None,
     ) -> AsyncGenerator[Tuple[Token, ast.AST], None]:
         from robot.parsing.lexer import Token as RobotToken
         from robot.utils.escaping import split_from_equals
 
         yield kw_token, node
 
-        doc: Optional[KeywordDoc] = None
         for token in arguments:
             if token.type in [RobotToken.ARGUMENT]:
                 name, value = split_from_equals(token.value)
                 if value is not None:
-                    if doc is None:
-                        doc = await namespace.find_keyword(kw_token.value)
+                    if kw_doc is None:
+                        kw_doc = await namespace.find_keyword(kw_token.value)
 
-                    if doc and any(v for v in doc.args if v.name == name):
+                    if kw_doc and any(v for v in kw_doc.args if v.name == name):
                         length = len(name)
                         yield RobotToken(ROBOT_NAMED_ARGUMENT, name, token.lineno, token.col_offset), node
 
@@ -650,20 +650,19 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                                         kw = name
                             if kw:
                                 kw_doc = await namespace.find_keyword(kw_token.value)
-                                if kw_doc is not None:
-                                    if kw_doc.is_any_run_keyword():
-                                        async for t in self.generate_run_kw_tokens(
-                                            namespace,
-                                            builtin_library_doc,
-                                            libraries_matchers,
-                                            resources_matchers,
-                                            kw_doc,
-                                            kw_token,
-                                            node.tokens[node.tokens.index(kw_token) + 1 :],
-                                            node,
-                                        ):
-                                            yield t
-                                        continue
+                                if kw_doc is not None and kw_doc.is_any_run_keyword():
+                                    async for t in self.generate_run_kw_tokens(
+                                        namespace,
+                                        builtin_library_doc,
+                                        libraries_matchers,
+                                        resources_matchers,
+                                        kw_doc,
+                                        kw_token,
+                                        node.tokens[node.tokens.index(kw_token) + 1 :],
+                                        node,
+                                    ):
+                                        yield t
+                                    continue
                             else:
                                 async for t in self.generate_keyword_tokens(
                                     namespace,
