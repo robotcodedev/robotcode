@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+- none so far
+
+##  0.5.5
+
 ### added
 
 - correct semantic highlightning for "run keywords"
