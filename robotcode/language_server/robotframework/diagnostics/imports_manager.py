@@ -38,6 +38,7 @@ if TYPE_CHECKING:
 
 from ..utils.process_pool import get_process_pool
 from .library_doc import (
+    ArgumentSpec,
     CompleteResult,
     Error,
     KeywordArgumentDoc,
@@ -789,6 +790,7 @@ class ImportsManager:
                     error_handler_message=str(cast(UserErrorHandler, kw[1]).error)
                     if isinstance(kw[1], UserErrorHandler)
                     else None,
+                    arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
                 )
                 for kw in [(KeywordDocBuilder(resource=True).build_keyword(lw), lw) for lw in lib.handlers]
             },
