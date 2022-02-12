@@ -61,6 +61,8 @@ if TYPE_CHECKING:
 from .protocol_part import RobotLanguageServerProtocolPart
 
 ROBOT_KEYWORD_INNER = "KEYWORD_INNER"
+ROBOT_NAMED_ARGUMENT = "NAMED_ARGUMENT"
+ROBOT_OPERATOR = "OPERATOR"
 
 
 class RobotSemTokenTypes(Enum):
@@ -175,6 +177,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             frozenset({RobotToken.VARIABLE, RobotToken.ASSIGN}): (RobotSemTokenTypes.VARIABLE, None),
             frozenset({RobotToken.KEYWORD}): (RobotSemTokenTypes.KEYWORD, None),
             frozenset({ROBOT_KEYWORD_INNER}): (RobotSemTokenTypes.KEYWORD_INNER, None),
+            frozenset({ROBOT_NAMED_ARGUMENT}): (RobotSemTokenTypes.VARIABLE, None),
+            frozenset({ROBOT_OPERATOR}): (SemanticTokenTypes.OPERATOR, None),
             frozenset({RobotToken.NAME}): (RobotSemTokenTypes.NAME, None),
             frozenset({RobotToken.CONTINUATION}): (RobotSemTokenTypes.CONTINUATION, None),
             frozenset({RobotToken.SEPARATOR}): (RobotSemTokenTypes.SEPARATOR, None),
@@ -370,26 +374,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         resources_matchers: Container[KeywordMatcher],
     ) -> AsyncGenerator[SemTokenInfo, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Fixture, KeywordCall
-        from robot.utils.escaping import split_from_equals
-
-        if token.type in {RobotToken.ARGUMENT} and isinstance(node, (KeywordCall, Fixture)):
-            name, value = split_from_equals(token.value)
-            if value is not None:
-                if isinstance(node, KeywordCall):
-                    doc = await namespace.find_keyword(node.keyword)
-                elif isinstance(node, Fixture):
-                    doc = await namespace.find_keyword(node.name)
-                else:
-                    doc = None
-
-                if doc and any(v for v in doc.args if v.name == name):
-                    length = len(name)
-                    yield SemTokenInfo.from_token(token, RobotSemTokenTypes.VARIABLE, length=length)
-                    yield SemTokenInfo.from_token(
-                        token, SemanticTokenTypes.OPERATOR, col_offset=token.col_offset + length, length=1
-                    )
-                    token = RobotToken(token.type, value, token.lineno, token.col_offset + length + 1, token.error)
 
         if token.type in {*RobotToken.ALLOW_VARIABLES, RobotToken.KEYWORD, ROBOT_KEYWORD_INNER}:
 
@@ -431,9 +415,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 yield arguments[0], node,
                 arguments = arguments[1:]
 
-        yield kw_token, node
-
         if kw_doc is not None and kw_doc.is_any_run_keyword():
+            yield kw_token, node
+
             async for b in skip_non_data_tokens():
                 yield b
 
@@ -592,9 +576,41 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 async for e in generate_run_kw_if():
                     yield e
         else:
+            async for a in self.generate_keyword_tokens(namespace, kw_token, arguments, node):
+                yield a
 
-            for a in arguments:
-                yield a, node
+    async def generate_keyword_tokens(
+        self,
+        namespace: Namespace,
+        kw_token: Token,
+        arguments: List[Token],
+        node: ast.AST,
+    ) -> AsyncGenerator[Tuple[Token, ast.AST], None]:
+        from robot.parsing.lexer import Token as RobotToken
+        from robot.utils.escaping import split_from_equals
+
+        yield kw_token, node
+
+        doc: Optional[KeywordDoc] = None
+        for token in arguments:
+            if token.type in [RobotToken.ARGUMENT]:
+                name, value = split_from_equals(token.value)
+                if value is not None:
+                    if doc is None:
+                        doc = await namespace.find_keyword(kw_token.value)
+
+                    if doc and any(v for v in doc.args if v.name == name):
+                        length = len(name)
+                        yield RobotToken(ROBOT_NAMED_ARGUMENT, name, token.lineno, token.col_offset), node
+
+                        yield RobotToken(ROBOT_OPERATOR, "=", token.lineno, token.col_offset + length), node
+                        yield RobotToken(
+                            token.type, value, token.lineno, token.col_offset + length + 1, token.error
+                        ), node
+
+                        continue
+
+            yield token, node
 
     @_logger.call
     async def collect(
@@ -634,19 +650,30 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                                         kw = name
                             if kw:
                                 kw_doc = await namespace.find_keyword(kw_token.value)
-                                if kw_doc is not None and kw_doc.is_any_run_keyword():
-                                    async for t in self.generate_run_kw_tokens(
-                                        namespace,
-                                        builtin_library_doc,
-                                        libraries_matchers,
-                                        resources_matchers,
-                                        kw_doc,
-                                        kw_token,
-                                        node.tokens[node.tokens.index(kw_token) + 1 :],
-                                        node,
-                                    ):
-                                        yield t
-                                    continue
+                                if kw_doc is not None:
+                                    if kw_doc.is_any_run_keyword():
+                                        async for t in self.generate_run_kw_tokens(
+                                            namespace,
+                                            builtin_library_doc,
+                                            libraries_matchers,
+                                            resources_matchers,
+                                            kw_doc,
+                                            kw_token,
+                                            node.tokens[node.tokens.index(kw_token) + 1 :],
+                                            node,
+                                        ):
+                                            yield t
+                                        continue
+                            else:
+                                async for t in self.generate_keyword_tokens(
+                                    namespace,
+                                    kw_token,
+                                    node.tokens[node.tokens.index(kw_token) + 1 :],
+                                    node,
+                                ):
+                                    yield t
+
+                                continue
 
                     for token in node.tokens:
                         yield token, node
