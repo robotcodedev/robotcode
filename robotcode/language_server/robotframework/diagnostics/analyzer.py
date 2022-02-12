@@ -137,7 +137,12 @@ class Analyzer(AsyncVisitor):
 
                 try:
                     if result.arguments is not None:
-                        result.arguments.resolve([v.value for v in argument_tokens], None)
+                        result.arguments.resolve(
+                            [v.value for v in argument_tokens],
+                            None,
+                            resolve_variables_until=result.args_to_process,
+                            resolve_named=not result.is_any_run_keyword(),
+                        )
                 except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException as e:
