@@ -4,7 +4,9 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
-- none so far
+### added
+
+- optimize evaluatable expression (hovering) and inline values in debugging
 
 ##  0.5.5
 

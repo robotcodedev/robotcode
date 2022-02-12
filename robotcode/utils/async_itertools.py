@@ -6,6 +6,7 @@ from typing import (
     Awaitable,
     Callable,
     Iterable,
+    Optional,
     TypeVar,
     Union,
     cast,
@@ -75,3 +76,19 @@ async def async_dropwhile(
 
             if not result:
                 yield e
+
+
+class __NotSet:
+    pass
+
+
+__NOT_SET = __NotSet()
+
+
+async def async_next(__i: AsyncIterator[_T], __default: Union[_T, None, __NotSet] = __NOT_SET) -> Optional[_T]:
+    try:
+        return await __i.__anext__()
+    except StopAsyncIteration:
+        if __default is __NOT_SET:
+            raise
+        return cast(_T, __default)
