@@ -6,10 +6,12 @@ from typing import (
     TYPE_CHECKING,
     Any,
     AsyncGenerator,
+    Dict,
     Generator,
     List,
     Literal,
     Optional,
+    Set,
     Union,
 )
 
@@ -190,6 +192,7 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
         async def run() -> List[InlineValue]:
             from robot.api import Token as RobotToken
             from robot.parsing.model.blocks import Keyword, TestCase
+            from robot.utils.normalizing import normalize
 
             document = await self.parent.documents.get(text_document.uri)
             if document is None:
@@ -220,7 +223,6 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
                     tokens,
                 ),
             ):
-                added: List[str] = []
                 async for t in self._get_all_variable_token_from_token(token):
                     if t.type == RobotToken.VARIABLE:
                         position = range_from_token(token).start
@@ -233,10 +235,7 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
                             position,
                         )
                         if var is not None:
-                            upper_value = t.value.upper()
-                            if upper_value not in added:
-                                result.append(InlineValueEvaluatableExpression(range_from_token(t), t.value))
-                                added.append(upper_value)
+                            result.append(InlineValueEvaluatableExpression(range_from_token(t), var.name))
 
             return result
 
