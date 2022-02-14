@@ -49,9 +49,11 @@ class Analyzer(AsyncVisitor):
         if isinstance(node, HasTokens):
             for token in node.tokens:
                 if token.type == RobotToken.COMMENT:
-                    name, value = token.value[1:].split(":", 1)
-                    if name and name.strip() == "robotcode" and value and value.strip() == "ignore":
-                        return True
+                    splitted = token.value[1:].split(":", 1)
+                    if len(splitted) == 2:
+                        name, value = splitted
+                        if name and name.strip() == "robotcode" and value and value.strip() == "ignore":
+                            return True
 
         return False
 
