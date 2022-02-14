@@ -829,6 +829,7 @@ class Debugger:
 
     IS_VARIABLE_RE = re.compile(r"^[$@&%]\{.*\}$")
     SPLIT_LINE = re.compile(r"(?= {2,}| ?\t)\s*")
+    CURRDIR = re.compile(r"(?i)\$\{CURDIR\}")
 
     def evaluate(
         self,
@@ -844,20 +845,20 @@ class Debugger:
         if not expression:
             return EvaluateResult(result="")
 
-        evaluate_context: Any = None
+        stack_frame = next((v for v in self.stack_frames if v.id == frame_id), None)
 
-        if frame_id is not None:
-            evaluate_context = (
-                next((v.context() for v in self.stack_frames if v.id == frame_id), None)
-                if frame_id is not None
-                else None
-            )
+        evaluate_context = stack_frame.context() if stack_frame else None
 
         if evaluate_context is None:
             evaluate_context = EXECUTION_CONTEXTS.current
 
         result: Any = None
         try:
+            if stack_frame is not None and stack_frame.source is not None:
+                curdir = str(Path(stack_frame.source).parent)
+                expression = self.CURRDIR.sub(curdir.replace("\\", "\\\\"), expression)
+                if expression == curdir:
+                    return EvaluateResult(repr(expression), repr(type(expression)))
 
             vars = evaluate_context.variables.current if frame_id is not None else evaluate_context.variables._global
 

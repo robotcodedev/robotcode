@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-import asyncio
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -14,6 +13,7 @@ from typing import (
     cast,
 )
 
+from ....utils.async_itertools import async_next
 from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
@@ -25,7 +25,6 @@ from ..utils.ast import (
     get_nodes_at_position,
     get_tokens_at_position,
     range_from_token,
-    tokenize_variables,
 )
 
 if TYPE_CHECKING:
@@ -94,7 +93,6 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
     async def _highlight_default(
         self, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Optional[List[DocumentHighlight]]:
-        from robot.api.parsing import Token as RobotToken
 
         namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
@@ -111,31 +109,23 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
         tokens = get_tokens_at_position(node, position)
 
         for token in tokens:
-            try:
-                for sub_token in filter(
-                    lambda s: s.type == RobotToken.VARIABLE,
-                    tokenize_variables(token, ignore_errors=True, extra_types={RobotToken.VARIABLE}),
-                ):
-                    range = range_from_token(sub_token)
+            token_and_var = await async_next(
+                (
+                    (var_token, var)
+                    async for var_token, var in self.iter_all_variables_from_token(token, namespace, nodes, position)
+                    if position in range_from_token(var_token)
+                ),
+                None,
+            )
 
-                    if position.is_in_range(range):
-                        variable = await namespace.find_variable(
-                            sub_token.value,
-                            nodes,
-                            position,
-                            skip_commandline_variables=True,
-                        )
-                        if variable is not None:
-                            return [
-                                DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
-                                for e in await self.parent.robot_references.find_variable_references_in_file(
-                                    document, variable
-                                )
-                            ]
-            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                raise
-            except BaseException:
-                pass
+            if token_and_var is not None:
+                _, variable = token_and_var
+
+                return [
+                    DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
+                    for e in await self.parent.robot_references.find_variable_references_in_file(document, variable)
+                ]
+
         return None
 
     async def highlight_KeywordCall(  # noqa: N802

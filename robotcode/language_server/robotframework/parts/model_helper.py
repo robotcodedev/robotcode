@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+import ast
+import re
+from typing import Any, AsyncGenerator, Generator, List, Optional, Tuple
 
 from ...common.lsp_types import Position
+from ..diagnostics.entities import VariableDefinition
 from ..diagnostics.library_doc import KeywordDoc, KeywordError, KeywordMatcher
 from ..diagnostics.namespace import LibraryEntry, Namespace
 from ..utils.ast import (
@@ -10,6 +13,7 @@ from ..utils.ast import (
     is_not_variable_token,
     iter_over_keyword_names_and_owners,
     range_from_token,
+    tokenize_variables,
 )
 
 
@@ -203,3 +207,52 @@ class ModelHelperMixin:
                     lib_entry = resources_matchers.get(lib_matcher, None)
                     break
         return lib_entry, kw_namespace
+
+    __match_extended = re.compile(
+        r"""
+    (.+?)          # base name (group 1)
+    ([^\s\w].+)    # extended part (group 2)
+    """,
+        re.UNICODE | re.VERBOSE,
+    )
+
+    async def iter_all_variables_from_token(
+        self,
+        token: Token,
+        namespace: Namespace,
+        nodes: Optional[List[ast.AST]],
+        position: Optional[Position] = None,
+    ) -> AsyncGenerator[Tuple[Token, VariableDefinition], Any]:
+        from robot.api.parsing import Token as RobotToken
+        from robot.variables.search import contains_variable
+
+        def iter_token(to: Token, ignore_errors: bool = False) -> Generator[Token, Any, Any]:
+
+            for sub_token in tokenize_variables(to, ignore_errors=ignore_errors):
+                if sub_token.type == RobotToken.VARIABLE:
+                    base = sub_token.value[2:-1]
+                    if base and not (base[0] == "{" and base[-1] == "}"):
+                        yield sub_token
+
+                    if contains_variable(base, "$@&%"):
+                        for j in iter_token(
+                            RobotToken(token.type, base, to.lineno, to.col_offset + 2),
+                            ignore_errors=ignore_errors,
+                        ):
+                            if j.type == RobotToken.VARIABLE:
+                                yield j
+
+        for e in iter_token(token, ignore_errors=True):
+            name = e.value
+            var = await namespace.find_variable(name, nodes, position)
+            if var is not None:
+                yield e, var
+                continue
+
+            match = self.__match_extended.match(name[2:-1])
+            if match is not None:
+                base_name, _ = match.groups()
+                name = f"{name[0]}{{{base_name.strip()}}}"
+                var = await namespace.find_variable(name, nodes, position)
+                if var is not None:
+                    yield RobotToken(e.type, name, e.lineno, e.col_offset), var

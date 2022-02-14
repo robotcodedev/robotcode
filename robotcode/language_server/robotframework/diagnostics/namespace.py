@@ -755,20 +755,6 @@ class Namespace:
             if matcher == m:
                 return v
 
-        match = self._match_extended.match(name[2:-1])
-        if match is not None:
-            base_name, _ = match.groups()
-            name = f"{name[0]}{{{base_name}}}"
-
-            matcher = VariableMatcher(name)
-            async for m, v in self.yield_variables(
-                nodes,
-                position,
-                skip_commandline_variables=skip_commandline_variables,
-            ):
-                if matcher == m:
-                    return v
-
         return None
 
     @_logger.call

@@ -14,6 +14,7 @@ from typing import (
     cast,
 )
 
+from ....utils.async_itertools import async_next
 from ....utils.async_tools import CancelationToken, threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
@@ -27,7 +28,6 @@ from ..utils.ast import (
     get_tokens_at_position,
     range_from_node,
     range_from_token,
-    tokenize_variables,
 )
 from ..utils.markdownformatter import MarkDownFormatter
 
@@ -89,9 +89,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def _hover_default(self, nodes: List[ast.AST], document: TextDocument, position: Position) -> Optional[Hover]:
-        from robot.api.parsing import Token as RobotToken
-        from robot.parsing.model.statements import Variable
-
         namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
             return None
@@ -106,47 +103,40 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         tokens = get_tokens_at_position(node, position)
 
         for token in tokens:
-            try:
-                for sub_token in filter(
-                    lambda s: s.type == RobotToken.VARIABLE,
-                    tokenize_variables(token, ignore_errors=True, extra_types={RobotToken.VARIABLE}),
-                ):
-                    range = range_from_token(sub_token)
+            token_and_var = await async_next(
+                (
+                    (var_token, var)
+                    async for var_token, var in self.iter_all_variables_from_token(token, namespace, nodes, position)
+                    if position in range_from_token(var_token)
+                ),
+                None,
+            )
+            if token_and_var is not None:
+                var_token, variable = token_and_var
 
-                    if position.is_in_range(range):
-                        variable = await namespace.find_variable(
-                            sub_token.value,
-                            nodes,
-                            position,
-                            skip_commandline_variables=isinstance(node, Variable) and token.type == RobotToken.VARIABLE,
+                if variable.has_value or variable.resolvable:
+                    try:
+                        value = await namespace.imports_manager.resolve_variable(
+                            variable.name,
+                            str(document.uri.to_path().parent),
+                            await namespace.get_unresolved_variables(nodes, position),
+                            False,
                         )
-                        if variable is not None:
-                            if variable.has_value or variable.resolvable:
-                                try:
-                                    value = await namespace.imports_manager.resolve_variable(
-                                        variable.name,
-                                        str(document.uri.to_path().parent),
-                                        await namespace.get_unresolved_variables(nodes, position),
-                                        False,
-                                    )
-                                except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
-                                    raise
-                                except BaseException:
-                                    value = ""
-                            else:
-                                value = ""
-                            return Hover(
-                                contents=MarkupContent(
-                                    kind=MarkupKind.MARKDOWN,
-                                    value=f"({variable.type.value}) {variable.name} {f' = {value}' if value else ''}",
-                                ),
-                                range=range,
-                            )
+                    except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException:
+                        value = ""
+                else:
+                    value = ""
 
-            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                raise
-            except BaseException:
-                pass
+                return Hover(
+                    contents=MarkupContent(
+                        kind=MarkupKind.MARKDOWN,
+                        value=f"({variable.type.value}) {variable.name} {f' = {value}' if value else ''}",
+                    ),
+                    range=range_from_token(var_token),
+                )
+
         return None
 
     async def hover_KeywordCall(  # noqa: N802

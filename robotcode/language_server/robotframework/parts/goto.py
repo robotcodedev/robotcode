@@ -15,6 +15,7 @@ from typing import (
     cast,
 )
 
+from ....utils.async_itertools import async_next
 from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
@@ -27,7 +28,6 @@ from ..utils.ast import (
     get_nodes_at_position,
     get_tokens_at_position,
     range_from_token,
-    tokenize_variables,
 )
 
 if TYPE_CHECKING:
@@ -116,9 +116,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     async def _definition_default(
         self, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
-        from robot.api.parsing import Token as RobotToken
-        from robot.parsing.model.statements import Variable
-
         namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
             return None
@@ -134,35 +131,28 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         tokens = get_tokens_at_position(node, position)
 
         for token in tokens:
-            try:
-                for sub_token in filter(
-                    lambda s: s.type == RobotToken.VARIABLE,
-                    tokenize_variables(token, ignore_errors=True, extra_types={RobotToken.VARIABLE}),
-                ):
-                    range = range_from_token(sub_token)
+            token_and_var = await async_next(
+                (
+                    (var_token, var)
+                    async for var_token, var in self.iter_all_variables_from_token(token, namespace, nodes, position)
+                    if position in range_from_token(var_token)
+                ),
+                None,
+            )
 
-                    if position.is_in_range(range):
-                        variable = await namespace.find_variable(
-                            sub_token.value,
-                            nodes,
-                            position,
-                            collect_type == CollectType.DEFINITION
-                            or isinstance(node, Variable)
-                            and token.type == RobotToken.VARIABLE,
+            if token_and_var is not None:
+                var_token, variable = token_and_var
+                if variable.source:
+                    return [
+                        LocationLink(
+                            origin_selection_range=range_from_token(var_token),
+                            target_uri=str(Uri.from_path(variable.source)),
+                            target_range=variable.range(),
+                            target_selection_range=range_from_token(variable.name_token)
+                            if variable.name_token
+                            else variable.range(),
                         )
-                        if variable is not None and variable.source:
-                            return [
-                                LocationLink(
-                                    origin_selection_range=range_from_token(sub_token),
-                                    target_uri=str(Uri.from_path(variable.source)),
-                                    target_range=variable.range(),
-                                    target_selection_range=range_from_token(variable.name_token)
-                                    if variable.name_token
-                                    else variable.range(),
-                                )
-                            ]
-            except BaseException:
-                pass
+                    ]
         return None
 
     async def definition_KeywordName(  # noqa: N802
