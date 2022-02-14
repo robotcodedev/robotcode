@@ -94,19 +94,26 @@ class VariablesVisitor(AsyncVisitor):
     async def visit_Variable(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token
         from robot.parsing.model.statements import Variable
-        from robot.variables import is_variable
+        from robot.variables import search_variable
 
         n = cast(Variable, node)
-        name = next(
-            tokenize_variables(n.get_token(Token.VARIABLE), "$@&", ignore_errors=True, extra_types={Token.VARIABLE}),
-            None,
-        )
 
-        if name is not None and is_variable(name.value):
+        name_token = n.get_token(Token.VARIABLE)
+        name = name_token.value
+
+        if name is not None:
+
+            match = search_variable(name, ignore_errors=True)
+            if not match.is_assign(allow_assign_mark=True):
+                return
+
+            if name.endswith("="):
+                name = name[:-1].rstrip()
+
             self._results.append(
                 VariableDefinition(
                     name=n.name,
-                    name_token=name,
+                    name_token=name_token,
                     line_no=n.lineno,
                     col_offset=n.col_offset,
                     end_line_no=n.lineno,

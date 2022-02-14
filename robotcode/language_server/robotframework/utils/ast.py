@@ -222,8 +222,6 @@ def tokenize_variables(
         return _tokenize_no_variables(token)
 
     value = token.value
-    if token.type == RobotToken.VARIABLE and value.endswith("="):
-        value = value[:-1].rstrip()
 
     variables = VariableIterator(value, identifiers=identifiers, ignore_errors=ignore_errors)
     if not variables:

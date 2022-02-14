@@ -234,13 +234,16 @@ class ModelHelperMixin:
                     if base and not (base[0] == "{" and base[-1] == "}"):
                         yield sub_token
 
-                    if contains_variable(base, "$@&%"):
+                    if to.type != RobotToken.VARIABLE and contains_variable(base, "$@&%"):
                         for j in iter_token(
                             RobotToken(token.type, base, to.lineno, to.col_offset + 2),
                             ignore_errors=ignore_errors,
                         ):
                             if j.type == RobotToken.VARIABLE:
                                 yield j
+
+        if token.type == RobotToken.VARIABLE and token.value.endswith("="):
+            token = RobotToken(token.type, token.value[:-1].strip(), token.lineno, token.col_offset, token.error)
 
         for e in iter_token(token, ignore_errors=True):
             name = e.value
