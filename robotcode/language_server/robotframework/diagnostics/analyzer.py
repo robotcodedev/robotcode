@@ -65,6 +65,8 @@ class Analyzer(AsyncVisitor):
         argument_tokens: List[Token],
         analyse_run_keywords: bool = True,
     ) -> Optional[KeywordDoc]:
+        from robot.parsing.model.statements import Template, TestTemplate
+
         result: Optional[KeywordDoc] = None
 
         try:
@@ -151,31 +153,32 @@ class Analyzer(AsyncVisitor):
                         )
                     )
 
-                try:
-                    if result.arguments is not None:
-                        result.arguments.resolve(
-                            [v.value for v in argument_tokens],
-                            None,
-                            resolve_variables_until=result.args_to_process,
-                            resolve_named=not result.is_any_run_keyword(),
+                if not isinstance(node, (Template, TestTemplate)):
+                    try:
+                        if result.arguments is not None:
+                            result.arguments.resolve(
+                                [v.value for v in argument_tokens],
+                                None,
+                                resolve_variables_until=result.args_to_process,
+                                resolve_named=not result.is_any_run_keyword(),
+                            )
+                    except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException as e:
+                        self._results.append(
+                            Diagnostic(
+                                range=Range(
+                                    start=range_from_token(keyword_token).start,
+                                    end=range_from_token(argument_tokens[-1]).end
+                                    if argument_tokens
+                                    else range_from_token(keyword_token).end,
+                                ),
+                                message=str(e),
+                                severity=DiagnosticSeverity.ERROR,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                                code=type(e).__qualname__,
+                            )
                         )
-                except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
-                    raise
-                except BaseException as e:
-                    self._results.append(
-                        Diagnostic(
-                            range=Range(
-                                start=range_from_token(keyword_token).start,
-                                end=range_from_token(argument_tokens[-1]).end
-                                if argument_tokens
-                                else range_from_token(keyword_token).end,
-                            ),
-                            message=str(e),
-                            severity=DiagnosticSeverity.ERROR,
-                            source=DIAGNOSTICS_SOURCE_NAME,
-                            code=type(e).__qualname__,
-                        )
-                    )
 
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
