@@ -52,7 +52,7 @@ class WorkspaceConfig(ConfigBase):
 @config_section("robotcode")
 @dataclass
 class RobotCodeConfig(ConfigBase):
-    language_server: LanguageServerConfig = LanguageServerConfig()
-    robot: RobotConfig = RobotConfig()
-    syntax: SyntaxConfig = SyntaxConfig()
-    workspace: WorkspaceConfig = WorkspaceConfig()
+    language_server: LanguageServerConfig = field(default_factory=LanguageServerConfig)
+    robot: RobotConfig = field(default_factory=RobotConfig)
+    syntax: SyntaxConfig = field(default_factory=SyntaxConfig)
+    workspace: WorkspaceConfig = field(default_factory=WorkspaceConfig)

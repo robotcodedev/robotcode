@@ -528,7 +528,7 @@ class LibraryDoc(Model):
     source: Optional[str] = None
     line_no: int = -1
     end_line_no: int = -1
-    inits: KeywordStore = KeywordStore()
+    inits: KeywordStore = field(default_factory=KeywordStore)
     keywords: KeywordStore = field(default_factory=KeywordStore, compare=False)
     module_spec: Optional[ModuleSpec] = None
     errors: Optional[List[Error]] = field(default=None, compare=False)
