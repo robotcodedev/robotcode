@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 3
+  line: 87
+  name: Test Case
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Test Case *second*'
+  range:
+    end:
+      character: 6
+      line: 87
+    start:
+      character: 0
+      line: 87

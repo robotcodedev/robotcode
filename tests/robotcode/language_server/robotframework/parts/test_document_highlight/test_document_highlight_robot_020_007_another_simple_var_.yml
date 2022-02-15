@@ -7,26 +7,26 @@ result:
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
-      character: 46
-      line: 9
-    start:
-      character: 36
-      line: 9
-- !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
-  range:
-    end:
-      character: 10
-      line: 20
-    start:
-      character: 0
-      line: 20
-- !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
-  range:
-    end:
       character: 45
+      line: 9
+    start:
+      character: 38
+      line: 9
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 9
+      line: 20
+    start:
+      character: 2
+      line: 20
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 44
       line: 58
     start:
-      character: 35
+      character: 37
       line: 58

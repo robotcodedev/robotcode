@@ -8,8 +8,8 @@ result: !Hover
     value: (variable) &{A DICT}
   range:
     end:
-      character: 9
+      character: 8
       line: 20
     start:
-      character: 0
+      character: 2
       line: 20

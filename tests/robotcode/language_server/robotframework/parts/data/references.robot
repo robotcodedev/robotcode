@@ -2,17 +2,17 @@
 Library         Collections
 #               ^^^^^^^^^^^ a built library
 Library         ${CURDIR}/lib/myvariables.py
-#               ^^^^^^^^^  Variable in library import path
+#                 ^^^^^^  Variable in library import path
 #                             ^^^^^^^^^^^^^^ a custom library with path
 Variables       ${CURDIR}/lib/myvariables.py
-#               ^^^^^^^^^  Variable in variables import path
+#                 ^^^^^^  Variable in variables import path
 #                             ^^^^^^^^^^^^^^ a variable import
 Resource        ${CURDIR}/resources/firstresource.resource
-#               ^^^^^^^^^  Variable in resource import path
+#                 ^^^^^^  Variable in resource import path
 Library         alibrary    a_param=from hello    WITH NAME    lib_hello
 #               ^^^^^^^^ a custom library
 Library         alibrary    a_param=${LIB_ARG}    WITH NAME    lib_var
-#                                   ^^^^^^^^^^  Variable in library params
+#                                     ^^^^^^^  Variable in library params
 #               ^^^^^^^^ a same custom library
 Suite Setup    BuiltIn.Log To Console    hi from suite setup
 #                      ^^^^^^^^^^^^^^  suite fixture keyword call with namespace
@@ -21,9 +21,9 @@ Test Setup    Log To Console    hi from test setup
 
 *** Variables ***
 ${a var}    hello
-#^^^^^^^ simple variable
+# ^^^^^ simple variable
 ${LIB_ARG}    from lib
-#^^^^^^^ another simple var
+# ^^^^^^^ another simple var
 
 
 *** Test Cases ***
@@ -40,7 +40,7 @@ first
 #           ^^^^^^^^^^^^^^  multiple references with namespace
 #                                  ^^^^^  multiple variables
     Log    ${A_VAR_FROM_RESOURE}
-#          ^^^^^^^^^^^^^^^^^^^^^ a var from resource
+#            ^^^^^^^^^^^^^^^^^^ a var from resource
 
 second
     [Template]    Log To Console
@@ -56,8 +56,9 @@ third
 
 forth
     ${result}    lib_hello.A Library Keyword
-#   ^^^^^^^^^    Keyword assignement
+#     ^^^^^^    Keyword assignement
     Should Be Equal    ${result}   from hello
     ${result}=    lib_var.A Library Keyword
-#   ^^^^^^^^^    Keyword assignment with equals sign
+#    ^^^^^^^    Keyword reassignment with equals sign
     Should Be Equal    ${result}   ${LIB_ARG}
+#                        ^^^^^^    Keyword variable reference

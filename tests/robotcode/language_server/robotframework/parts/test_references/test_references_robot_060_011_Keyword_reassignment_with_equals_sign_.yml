@@ -1,0 +1,50 @@
+data: !GeneratedTestData
+  character: 11
+  line: 60
+  name: Keyword reassignment with equals sign
+result:
+- !Location
+  range:
+    end:
+      character: 12
+      line: 57
+    start:
+      character: 6
+      line: 57
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 12
+      line: 57
+    start:
+      character: 6
+      line: 57
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 31
+      line: 59
+    start:
+      character: 25
+      line: 59
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 12
+      line: 60
+    start:
+      character: 6
+      line: 60
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 31
+      line: 62
+    start:
+      character: 25
+      line: 62
+  uri: data/references.robot

@@ -1,11 +1,11 @@
 *** Settings ***
 Library         Collections
 Library         ${CURDIR}/lib/myvariables.py
-#               ^^^^^^^^^  Variable in library import path
+#                 ^^^^^^  Variable in library import path
 Variables       ${CURDIR}/lib/myvariables.py
-#               ^^^^^^^^^  Variable in variables import path
+#                 ^^^^^^  Variable in variables import path
 Resource        ${CURDIR}/resources/firstresource.resource
-#               ^^^^^^^^^  Variable in resource import path
+#                 ^^^^^^  Variable in resource import path
 Library         alibrary    a_param=from hello    WITH NAME    lib_hello
 Library         alibrary    a_param=${LIB_ARG}    WITH NAME    lib_var
 #                                   ^^^^^^^^^^  Variable in library params
@@ -17,9 +17,9 @@ Test Setup    Log To Console    hi from test setup
 
 *** Variables ***
 ${a var}    hello
-#^^^^^^^ simple variable
+# ^^^^^ simple variable
 ${LIB_ARG}    from lib
-#^^^^^^^ another simple var
+# ^^^^^^ another simple var
 
 
 *** Test Cases ***

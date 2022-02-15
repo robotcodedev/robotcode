@@ -1,0 +1,68 @@
+data: !GeneratedTestData
+  character: 2
+  line: 22
+  name: simple variable
+result:
+- !Location
+  range:
+    end:
+      character: 7
+      line: 22
+    start:
+      character: 2
+      line: 22
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 22
+    start:
+      character: 2
+      line: 22
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 43
+      line: 30
+    start:
+      character: 38
+      line: 30
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 54
+      line: 32
+    start:
+      character: 49
+      line: 32
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 21
+      line: 34
+    start:
+      character: 16
+      line: 34
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 32
+      line: 36
+    start:
+      character: 27
+      line: 36
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 40
+      line: 38
+    start:
+      character: 35
+      line: 38
+  uri: data/references.robot

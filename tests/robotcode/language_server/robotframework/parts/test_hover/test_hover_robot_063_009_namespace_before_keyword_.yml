@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 9
+  line: 63
+  name: namespace before keyword
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Library *Collections*'
+  range:
+    end:
+      character: 15
+      line: 63
+    start:
+      character: 4
+      line: 63

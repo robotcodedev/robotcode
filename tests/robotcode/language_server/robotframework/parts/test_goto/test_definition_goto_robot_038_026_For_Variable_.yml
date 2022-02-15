@@ -6,10 +6,10 @@ result:
 - !LocationLink
   origin_selection_range:
     end:
-      character: 30
+      character: 29
       line: 38
     start:
-      character: 22
+      character: 24
       line: 38
   target_range:
     end:
@@ -20,9 +20,9 @@ result:
       line: 37
   target_selection_range:
     end:
-      character: 29
+      character: 28
       line: 37
     start:
-      character: 21
+      character: 23
       line: 37
   target_uri: goto.robot

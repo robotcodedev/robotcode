@@ -1,0 +1,122 @@
+data: !GeneratedTestData
+  character: 23
+  line: 9
+  name: Variable in resource import path
+result:
+- !Location
+  range:
+    end:
+      character: 24
+      line: 2
+    start:
+      character: 18
+      line: 2
+  uri: data/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 4
+    start:
+      character: 18
+      line: 4
+  uri: data/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 6
+    start:
+      character: 18
+      line: 6
+  uri: data/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 26
+      line: 4
+    start:
+      character: 20
+      line: 4
+  uri: data/goto.robot
+- !Location
+  range:
+    end:
+      character: 26
+      line: 6
+    start:
+      character: 20
+      line: 6
+  uri: data/goto.robot
+- !Location
+  range:
+    end:
+      character: 26
+      line: 8
+    start:
+      character: 20
+      line: 8
+  uri: data/goto.robot
+- !Location
+  range:
+    end:
+      character: 26
+      line: 6
+    start:
+      character: 20
+      line: 6
+  uri: data/hover.robot
+- !Location
+  range:
+    end:
+      character: 26
+      line: 9
+    start:
+      character: 20
+      line: 9
+  uri: data/hover.robot
+- !Location
+  range:
+    end:
+      character: 26
+      line: 12
+    start:
+      character: 20
+      line: 12
+  uri: data/hover.robot
+- !Location
+  range:
+    end:
+      character: 19
+      line: 74
+    start:
+      character: 13
+      line: 74
+  uri: data/hover.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 3
+    start:
+      character: 18
+      line: 3
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 6
+    start:
+      character: 18
+      line: 6
+  uri: data/references.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 9
+    start:
+      character: 18
+      line: 9
+  uri: data/references.robot

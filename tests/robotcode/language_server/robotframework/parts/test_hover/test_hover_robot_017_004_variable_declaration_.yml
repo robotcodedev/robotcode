@@ -8,8 +8,8 @@ result: !Hover
     value: (variable) ${A VAR}
   range:
     end:
-      character: 8
+      character: 7
       line: 17
     start:
-      character: 0
+      character: 2
       line: 17

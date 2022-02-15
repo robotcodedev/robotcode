@@ -8,8 +8,8 @@ result: !Hover
     value: (variable) ${LIB_ARG}
   range:
     end:
-      character: 48
+      character: 47
       line: 4
     start:
-      character: 38
+      character: 40
       line: 4

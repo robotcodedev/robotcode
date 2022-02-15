@@ -151,91 +151,127 @@ result:
   range:
     end:
       character: 16
-      line: 28
+      line: 49
     start:
       character: 13
-      line: 28
+      line: 49
   uri: data/hover.robot
 - !Location
   range:
     end:
       character: 27
-      line: 30
+      line: 51
     start:
       character: 24
-      line: 30
+      line: 51
   uri: data/hover.robot
 - !Location
   range:
     end:
       character: 7
-      line: 34
+      line: 54
     start:
       character: 4
-      line: 34
+      line: 54
+  uri: data/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 55
+    start:
+      character: 4
+      line: 55
+  uri: data/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 56
+    start:
+      character: 4
+      line: 56
+  uri: data/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 57
+    start:
+      character: 4
+      line: 57
+  uri: data/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 60
+    start:
+      character: 4
+      line: 60
   uri: data/hover.robot
 - !Location
   range:
     end:
       character: 11
-      line: 42
+      line: 68
     start:
       character: 8
-      line: 42
+      line: 68
   uri: data/hover.robot
 - !Location
   range:
     end:
       character: 7
-      line: 45
+      line: 71
     start:
       character: 4
-      line: 45
+      line: 71
   uri: data/hover.robot
 - !Location
   range:
     end:
       character: 7
-      line: 48
+      line: 74
     start:
       character: 4
-      line: 48
+      line: 74
   uri: data/hover.robot
 - !Location
   range:
     end:
       character: 7
-      line: 51
+      line: 77
     start:
       character: 4
-      line: 51
+      line: 77
   uri: data/hover.robot
 - !Location
   range:
     end:
       character: 29
-      line: 63
+      line: 89
     start:
       character: 26
-      line: 63
+      line: 89
   uri: data/hover.robot
 - !Location
   range:
     end:
       character: 22
-      line: 79
+      line: 105
     start:
       character: 19
-      line: 79
+      line: 105
   uri: data/hover.robot
 - !Location
   range:
     end:
       character: 23
-      line: 88
+      line: 114
     start:
       character: 20
-      line: 88
+      line: 114
   uri: data/hover.robot
 - !Location
   range:

@@ -6,23 +6,23 @@ result:
 - !LocationLink
   origin_selection_range:
     end:
-      character: 24
+      character: 40
       line: 11
     start:
       character: 18
       line: 11
   target_range:
     end:
-      character: 12
-      line: 19
+      character: 0
+      line: 6
     start:
       character: 0
-      line: 19
+      line: 5
   target_selection_range:
     end:
-      character: 6
-      line: 19
+      character: 0
+      line: 6
     start:
       character: 0
-      line: 19
-  target_uri: goto.robot
+      line: 5
+  target_uri: alibrary.py

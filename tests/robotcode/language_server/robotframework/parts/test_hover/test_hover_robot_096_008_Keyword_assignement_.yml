@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 8
+  line: 96
+  name: Keyword assignement
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: (local variable) ${result}
+  range:
+    end:
+      character: 12
+      line: 96
+    start:
+      character: 6
+      line: 96

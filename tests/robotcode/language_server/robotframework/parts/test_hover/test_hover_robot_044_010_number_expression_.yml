@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 10
+  line: 44
+  name: number expression
+result: null

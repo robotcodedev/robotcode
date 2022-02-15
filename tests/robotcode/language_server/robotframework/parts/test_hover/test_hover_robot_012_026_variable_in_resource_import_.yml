@@ -5,10 +5,10 @@ data: !GeneratedTestData
 result: !Hover
   contents:
     kind: !MarkupKind 'MARKDOWN'
-    value: (builtin variable) ${CURDIR}
+    value: '## Resource *firstresource*'
   range:
     end:
-      character: 27
+      character: 60
       line: 12
     start:
       character: 18

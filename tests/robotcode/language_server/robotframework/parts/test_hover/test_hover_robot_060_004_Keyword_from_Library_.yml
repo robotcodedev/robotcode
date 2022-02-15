@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 4
+  line: 60
+  name: Keyword from Library
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Keyword *Log*'
+  range:
+    end:
+      character: 7
+      line: 60
+    start:
+      character: 4
+      line: 60
