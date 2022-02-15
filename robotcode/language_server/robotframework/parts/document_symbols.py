@@ -222,15 +222,27 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
                                 self.current_symbol.children.append(symbol)
 
             async def visit_Variable(self, node: ast.AST) -> None:  # noqa: N802
+                from robot.api.parsing import Token as RobotToken
                 from robot.parsing.model.statements import Variable
+                from robot.variables import search_variable
 
                 variable = cast(Variable, node)
-                if variable.name is None:
-                    return
+
+                name_token = variable.get_token(RobotToken.VARIABLE)
+                name = name_token.value
+
+                if name is not None:
+
+                    match = search_variable(name, ignore_errors=True)
+                    if not match.is_assign(allow_assign_mark=True):
+                        return None
+
+                    if name.endswith("="):
+                        name = name[:-1].rstrip()
 
                 if self.current_symbol is not None and self.current_symbol.children is not None:
                     r = range_from_node(variable)
-                    symbol = DocumentSymbol(name=variable.name, kind=SymbolKind.VARIABLE, range=r, selection_range=r)
+                    symbol = DocumentSymbol(name=name, kind=SymbolKind.VARIABLE, range=r, selection_range=r)
                     self.current_symbol.children.append(symbol)
 
         return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)

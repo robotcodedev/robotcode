@@ -35,7 +35,13 @@ from ...common.lsp_types import (
     Range,
 )
 from ...common.text_document import TextDocument
-from ..utils.ast import Token, range_from_node, range_from_token, tokenize_variables
+from ..utils.ast import (
+    Token,
+    range_from_node,
+    range_from_token,
+    strip_variable_token,
+    tokenize_variables,
+)
 from ..utils.async_ast import AsyncVisitor
 from .entities import (
     ArgumentDefinition,
@@ -92,13 +98,13 @@ class VariablesVisitor(AsyncVisitor):
             await self.generic_visit(node)
 
     async def visit_Variable(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token
+        from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Variable
         from robot.variables import search_variable
 
-        n = cast(Variable, node)
+        variable = cast(Variable, node)
 
-        name_token = n.get_token(Token.VARIABLE)
+        name_token = variable.get_token(RobotToken.VARIABLE)
         name = name_token.value
 
         if name is not None:
@@ -112,16 +118,18 @@ class VariablesVisitor(AsyncVisitor):
 
             self._results.append(
                 VariableDefinition(
-                    name=n.name,
-                    name_token=name_token,
-                    line_no=n.lineno,
-                    col_offset=n.col_offset,
-                    end_line_no=n.lineno,
-                    end_col_offset=n.end_col_offset,
+                    name=variable.name,
+                    name_token=strip_variable_token(
+                        RobotToken(name_token.type, name, name_token.lineno, name_token.col_offset, name_token.error)
+                    ),
+                    line_no=variable.lineno,
+                    col_offset=variable.col_offset,
+                    end_line_no=variable.lineno,
+                    end_col_offset=variable.end_col_offset,
                     source=self.source,
-                    has_value=bool(n.value),
+                    has_value=bool(variable.value),
                     resolvable=True,
-                    value=n.value,
+                    value=variable.value,
                 )
             )
 
@@ -163,7 +171,7 @@ class BlockVariableVisitor(AsyncVisitor):
 
                     self._results[name] = ArgumentDefinition(
                         name=name,
-                        name_token=variable_token,
+                        name_token=strip_variable_token(variable_token),
                         line_no=n.lineno,
                         col_offset=n.col_offset,
                         end_line_no=n.lineno,
@@ -200,7 +208,7 @@ class BlockVariableVisitor(AsyncVisitor):
                 if argument is not None:
                     self._results[argument.value] = ArgumentDefinition(
                         name=argument.value,
-                        name_token=argument,
+                        name_token=strip_variable_token(argument),
                         line_no=n.lineno,
                         col_offset=n.col_offset,
                         end_line_no=n.lineno,
@@ -226,7 +234,7 @@ class BlockVariableVisitor(AsyncVisitor):
                 if variable is not None:
                     self._results[variable.value] = LocalVariableDefinition(
                         name=variable.value,
-                        name_token=variable,
+                        name_token=strip_variable_token(variable),
                         line_no=n.lineno,
                         col_offset=n.col_offset,
                         end_line_no=n.lineno,
@@ -261,7 +269,7 @@ class BlockVariableVisitor(AsyncVisitor):
                     if variable_token.value not in self._results:
                         self._results[variable_token.value] = LocalVariableDefinition(
                             name=variable_token.value,
-                            name_token=variable_token,
+                            name_token=strip_variable_token(variable_token),
                             line_no=n.lineno,
                             col_offset=n.col_offset,
                             end_line_no=n.lineno,
@@ -283,7 +291,7 @@ class BlockVariableVisitor(AsyncVisitor):
             if variable_token is not None and variable_token.value and variable_token.value not in self._results:
                 self._results[variable_token.value] = LocalVariableDefinition(
                     name=variable_token.value,
-                    name_token=variable_token,
+                    name_token=strip_variable_token(variable_token),
                     line_no=n.lineno,
                     col_offset=n.col_offset,
                     end_line_no=n.lineno,

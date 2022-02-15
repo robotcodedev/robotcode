@@ -124,7 +124,7 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
             if var.name == "${CURDIR}":
                 return None
 
-            return EvaluatableExpression(range_from_token(var_token), var_token.value)
+            return EvaluatableExpression(range_from_token(var_token), var.name)
 
         return await run_coroutine_in_thread(run)
 

@@ -135,9 +135,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         ):
             doc = await self.parent.robot_workspace.get_or_open_document(f, "robotframework")
 
-            # futures.append(create_sub_task(func(f, *args, **kwargs)))
             futures.append(run_coroutine_in_thread(func, doc, *args, **kwargs))
-
         for e in await asyncio.gather(*futures, return_exceptions=True):
             if isinstance(e, BaseException):
                 self._logger.exception(e)

@@ -132,7 +132,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 return Hover(
                     contents=MarkupContent(
                         kind=MarkupKind.MARKDOWN,
-                        value=f"({variable.type.value}) {variable.name} {f' = {value}' if value else ''}",
+                        value=f"({variable.type.value}) {variable.name} {f'= `{value}`' if value else ''}",
                     ),
                     range=range_from_token(var_token),
                 )

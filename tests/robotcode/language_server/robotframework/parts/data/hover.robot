@@ -3,27 +3,48 @@ Library           Collections
 #                 ^^^^^^^^^^^ library import by module name
 Library           alibrary    a_param=from hello    WITH NAME    lib_hello
 Library           alibrary    a_param=${LIB_ARG}    WITH NAME    lib_var
-#                                     ^^^^^^^^^^  Variable in library params
+#                                      ^^^^^^^^  Variable in library params
 Library           ${CURDIR}/lib/myvariables.py
 #                               ^^^^^^^^^^^^^^ library import by path name
-#                 ^^^^^^^^^  variable in library import
+#                   ^^^^^^  variable in library import
 Variables         ${CURDIR}/lib/myvariables.py
-#                 ^^^^^^^^^  variable in variables import
+#                   ^^^^^^  variable in variables import
 #                                ^^^^^^^^^^^^^^ variable import by path name
 Resource          ${CURDIR}/resources/firstresource.resource
 #                                     ^^^^^^^^^^^^^^ resource import by path name
-#                 ^^^^^^^^^  variable in resource import
+#                   ^^^^^^^  variable in resource import
 
 *** Variables ***
 ${A VAR}=          i'm a var
-#^^^^^^^          variable declaration
-#       ^         not the equal sign
+# ^^^^^  variable declaration
+#       ^ not the equal sign
 &{A DICT}         a=1    b=2    c=3
-#^^^^^^^          variable declaration
+# ^^^^^^  variable declaration
 
 ${LIB_ARG}    from lib
 
+${INVALID VAR ${}}    2
+# ^^^^^^^^^^^^^^^  no hover for invalid variable
 
+${A}=    1
+${B}    2
+${C}    ${A + '${B+"${D}"}'}
+#         ^  complex var expression
+#                ^  inner var
+#                     ^  inner inner var
+
+${K}    ${A+'${B+"${F}"}'+'${D}'} ${C}
+#         ^  complex var expression
+#             ^  inner var
+#                 ^  inner var
+#                     ^  inner inner var
+#                             ^  outer var
+
+${D}    3
+${E}    SEPARATOR=\n    asd    def    hij
+${F}    ${1+2}
+# ^  number variable
+#         ^^^  number expression
 *** Test Cases ***
 first
     [Setup]  Log    Hello ${A VAR}
@@ -31,6 +52,11 @@ first
     [Teardown]  BuiltIn.Log    Hello ${A VAR}
 #                       ^^^ Keyword in Teardown
 #               ^^^^^^^ Namespace in Teardown
+    Log    ${E}
+    Log    ${EMPTY}
+    Log    ${EMPTY+'1'}
+    Log    ${INVALID VAR ${}}
+#           ^^^^^^^^^^^^^^^^  no hover for invalid variable reference
 
     Log    Hello ${A VAR}
 #   ^^^ Keyword from Library

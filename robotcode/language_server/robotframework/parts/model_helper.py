@@ -13,13 +13,15 @@ from ..utils.ast import (
     is_not_variable_token,
     iter_over_keyword_names_and_owners,
     range_from_token,
+    strip_variable_token,
     tokenize_variables,
 )
 
 
 class ModelHelperMixin:
+    @classmethod
     async def get_run_keyword_keyworddoc_and_token_from_position(
-        self,
+        cls,
         keyword_doc: Optional[KeywordDoc],
         argument_tokens: List[Token],
         namespace: Namespace,
@@ -31,7 +33,7 @@ class ModelHelperMixin:
             return None, argument_tokens
 
         if keyword_doc.is_run_keyword() and len(argument_tokens) > 0 and is_not_variable_token(argument_tokens[0]):
-            result = await self.get_keyworddoc_and_token_from_position(
+            result = await cls.get_keyworddoc_and_token_from_position(
                 unescape(argument_tokens[0].value), argument_tokens[0], argument_tokens[1:], namespace, position
             )
 
@@ -41,7 +43,7 @@ class ModelHelperMixin:
             and len(argument_tokens) > (cond_count := keyword_doc.run_keyword_condition_count())
             and is_not_variable_token(argument_tokens[1])
         ):
-            result = await self.get_keyworddoc_and_token_from_position(
+            result = await cls.get_keyworddoc_and_token_from_position(
                 unescape(argument_tokens[cond_count].value),
                 argument_tokens[cond_count],
                 argument_tokens[cond_count + 1 :],
@@ -69,7 +71,7 @@ class ModelHelperMixin:
                     else:
                         args = []
 
-                result = await self.get_keyworddoc_and_token_from_position(
+                result = await cls.get_keyworddoc_and_token_from_position(
                     unescape(t.value), t, args, namespace, position
                 )
                 if result is not None and result[0] is not None:
@@ -102,7 +104,7 @@ class ModelHelperMixin:
 
             argument_tokens = argument_tokens[2:]
 
-            inner_keyword_doc_and_args = await self.get_run_keyword_keyworddoc_and_token_from_position(
+            inner_keyword_doc_and_args = await cls.get_run_keyword_keyworddoc_and_token_from_position(
                 inner_keyword_doc, argument_tokens, namespace, position
             )
 
@@ -122,7 +124,7 @@ class ModelHelperMixin:
 
                     argument_tokens = argument_tokens[2:]
 
-                    inner_keyword_doc_and_args = await self.get_run_keyword_keyworddoc_and_token_from_position(
+                    inner_keyword_doc_and_args = await cls.get_run_keyword_keyworddoc_and_token_from_position(
                         inner_keyword_doc, argument_tokens, namespace, position
                     )
 
@@ -142,7 +144,7 @@ class ModelHelperMixin:
 
                     argument_tokens = argument_tokens[3:]
 
-                    inner_keyword_doc_and_args = await self.get_run_keyword_keyworddoc_and_token_from_position(
+                    inner_keyword_doc_and_args = await cls.get_run_keyword_keyworddoc_and_token_from_position(
                         inner_keyword_doc, argument_tokens, namespace, position
                     )
 
@@ -157,8 +159,9 @@ class ModelHelperMixin:
 
         return None, argument_tokens
 
+    @classmethod
     async def get_keyworddoc_and_token_from_position(  # noqa: N802
-        self,
+        cls,
         keyword_name: Optional[str],
         keyword_token: Token,
         argument_tokens: List[Token],
@@ -176,7 +179,7 @@ class ModelHelperMixin:
                 return keyword_doc, keyword_token
             elif analyse_run_keywords:
                 return (
-                    await self.get_run_keyword_keyworddoc_and_token_from_position(
+                    await cls.get_run_keyword_keyworddoc_and_token_from_position(
                         keyword_doc, argument_tokens, namespace, position
                     )
                 )[0]
@@ -216,15 +219,16 @@ class ModelHelperMixin:
         re.UNICODE | re.VERBOSE,
     )
 
+    @classmethod
     async def iter_all_variables_from_token(
-        self,
+        cls,
         token: Token,
         namespace: Namespace,
         nodes: Optional[List[ast.AST]],
         position: Optional[Position] = None,
     ) -> AsyncGenerator[Tuple[Token, VariableDefinition], Any]:
         from robot.api.parsing import Token as RobotToken
-        from robot.variables.search import contains_variable
+        from robot.variables.search import contains_variable, search_variable
 
         def iter_token(to: Token, ignore_errors: bool = False) -> Generator[Token, Any, Any]:
 
@@ -234,28 +238,33 @@ class ModelHelperMixin:
                     if base and not (base[0] == "{" and base[-1] == "}"):
                         yield sub_token
 
-                    if to.type != RobotToken.VARIABLE and contains_variable(base, "$@&%"):
+                    if contains_variable(base, "$@&%"):
                         for j in iter_token(
-                            RobotToken(token.type, base, to.lineno, to.col_offset + 2),
+                            RobotToken(to.type, base, sub_token.lineno, sub_token.col_offset + 2),
                             ignore_errors=ignore_errors,
                         ):
                             if j.type == RobotToken.VARIABLE:
                                 yield j
 
         if token.type == RobotToken.VARIABLE and token.value.endswith("="):
+            match = search_variable(token.value, ignore_errors=True)
+            if not match.is_assign(allow_assign_mark=True):
+                return
+
             token = RobotToken(token.type, token.value[:-1].strip(), token.lineno, token.col_offset, token.error)
 
-        for e in iter_token(token, ignore_errors=True):
-            name = e.value
+        for t in iter_token(token, ignore_errors=True):
+            name = t.value
             var = await namespace.find_variable(name, nodes, position)
             if var is not None:
-                yield e, var
+                yield strip_variable_token(t), var
                 continue
 
-            match = self.__match_extended.match(name[2:-1])
-            if match is not None:
-                base_name, _ = match.groups()
-                name = f"{name[0]}{{{base_name.strip()}}}"
-                var = await namespace.find_variable(name, nodes, position)
-                if var is not None:
-                    yield RobotToken(e.type, name, e.lineno, e.col_offset), var
+            if t.type == RobotToken.VARIABLE and t.value[:1] in "$@&%" and t.value[1:2] == "{" and t.value[-1:] == "}":
+                match = cls.__match_extended.match(name[2:-1])
+                if match is not None:
+                    base_name, _ = match.groups()
+                    name = f"{name[0]}{{{base_name.strip()}}}"
+                    var = await namespace.find_variable(name, nodes, position)
+                    if var is not None:
+                        yield strip_variable_token(RobotToken(t.type, name, t.lineno, t.col_offset)), var

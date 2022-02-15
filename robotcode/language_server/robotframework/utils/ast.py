@@ -11,6 +11,7 @@ from typing import (
     Protocol,
     Set,
     Tuple,
+    cast,
     runtime_checkable,
 )
 
@@ -252,3 +253,23 @@ def iter_over_keyword_names_and_owners(full_name: str) -> Iterator[Tuple[Optiona
     if len(tokens) > 1:
         for i in range(1, len(tokens)):
             yield ".".join(tokens[:i]), ".".join(tokens[i:])
+
+
+def strip_variable_token(token: Token) -> Token:
+    from robot.api.parsing import Token as RobotToken
+
+    if (
+        token.type == RobotToken.VARIABLE
+        and token.value[:1] in "$@&%"
+        and token.value[1:2] == "{"
+        and token.value[-1:] == "}"
+    ):
+        value = token.value[2:-1]
+
+        stripped_value = value.lstrip()
+        stripped_offset = len(value) - len(stripped_value)
+        return cast(
+            Token, RobotToken(token.type, stripped_value.rstrip(), token.lineno, token.col_offset + 2 + stripped_offset)
+        )
+
+    return token
