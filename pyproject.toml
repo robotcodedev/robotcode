@@ -50,7 +50,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-robotframework = "^4.0.0"
+robotframework = {version =  ">=4.0.0", allow-prereleases = false}
 
 
 [tool.poetry.dev-dependencies]
