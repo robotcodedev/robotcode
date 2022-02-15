@@ -6,7 +6,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ### added
 
-- optimize evaluatable expression (hovering) and inline values in debugging
+- The variable analysis was extended so that also variables in variables are recognized.
+  - In an expression like `${A+'${B+"${F}"}'+'${D}'} ${C}` for example, every single 'inner' variable will be recognized, you can hover over it, it can be found as reference, you can go to the definition, ...
+  - The debugger shows all variables as inline values and when hovering, it shows the values of the variables.
+  - Only the name of the variable is used, not the surrounding ${}
 
 ##  0.5.5
 
