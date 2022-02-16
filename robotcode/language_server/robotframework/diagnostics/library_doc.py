@@ -32,6 +32,7 @@ from typing import (
 from ....utils.path import path_is_relative_to
 from ...common.lsp_types import Position, Range
 from ..utils.markdownformatter import MarkDownFormatter
+from ..utils.version import get_robot_version
 from .entities import ImportedVariableDefinition, VariableDefinition
 
 RUN_KEYWORD_NAMES = [
@@ -690,6 +691,10 @@ def is_library_by_path(path: str) -> bool:
     return path.lower().endswith((".py", ".java", ".class", "/", os.sep))
 
 
+def is_variables_by_path(path: str) -> bool:
+    return path.lower().endswith((".py", ".yml", ".yaml", "/", os.sep))
+
+
 def update_python_path_and_env(
     working_dir: str = ".", pythonpath: Optional[List[str]] = None, environment: Optional[Dict[str, str]] = None
 ) -> None:
@@ -1184,6 +1189,7 @@ def get_library_doc(
                 else import_name
                 if is_library_by_path(import_name)
                 else None,
+                module_spec=module_spec,
                 errors=[
                     error_from_exception(
                         e,
@@ -1195,7 +1201,6 @@ def get_library_doc(
                         1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
                     )
                 ],
-                module_spec=module_spec,
                 python_path=sys.path,
             )
 
@@ -1243,7 +1248,6 @@ def get_library_doc(
             and module_spec.submodule_search_locations is None
             else None,
             python_path=sys.path,
-            type="LIBRARY",
         )
 
         if lib is not None:
@@ -1342,6 +1346,49 @@ def get_library_doc(
     return libdoc
 
 
+def _find_variables_internal(
+    name: str,
+    working_dir: str = ".",
+    base_dir: str = ".",
+    pythonpath: Optional[List[str]] = None,
+    environment: Optional[Dict[str, str]] = None,
+    command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
+    variables: Optional[Dict[str, Optional[Any]]] = None,
+) -> Tuple[str, Any]:
+
+    from robot.utils.robotpath import find_file as robot_find_file
+
+    _update_env(working_dir, pythonpath, environment)
+
+    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
+
+    name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
+
+    result = name
+
+    if is_variables_by_path(result):
+        result = robot_find_file(result, base_dir or ".", "Variables")
+
+    return (result, robot_variables)
+
+
+def find_variables(
+    name: str,
+    working_dir: str = ".",
+    base_dir: str = ".",
+    pythonpath: Optional[List[str]] = None,
+    environment: Optional[Dict[str, str]] = None,
+    command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
+    variables: Optional[Dict[str, Optional[Any]]] = None,
+) -> str:
+    if get_robot_version() >= (5, 0):
+        return _find_variables_internal(
+            name, working_dir, base_dir, pythonpath, environment, command_line_variables, variables
+        )[0]
+    else:
+        return find_file(name, working_dir, base_dir, pythonpath, environment, command_line_variables, variables)
+
+
 def get_variables_doc(
     name: str,
     args: Optional[Tuple[Any, ...]] = None,
@@ -1349,35 +1396,86 @@ def get_variables_doc(
     base_dir: str = ".",
     pythonpath: Optional[List[str]] = None,
     environment: Optional[Dict[str, str]] = None,
+    command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> VariablesDoc:
+    from robot.output import LOGGER
+    from robot.utils.importer import Importer
     from robot.variables.filesetter import PythonImporter, YamlImporter
 
-    source: Optional[str] = None
+    import_name: Optional[str] = None
     stem = Path(name).stem
+    module_spec: Optional[ModuleSpec] = None
+    source: Optional[str] = None
     try:
-        source = find_file(name, working_dir, base_dir, pythonpath, environment, variables)
         with _std_capture() as std_capturer:
 
-            if source.lower().endswith((".yaml", ".yml")):
+            import_name = find_variables(
+                name, working_dir, base_dir, pythonpath, environment, command_line_variables, variables
+            )
+
+            if import_name.lower().endswith((".yaml", ".yml")):
+                source = import_name
                 importer = YamlImporter()
             else:
-                importer = PythonImporter()
+                if not is_variables_by_path(import_name):
+                    module_spec = get_module_spec(import_name)
+
+                # skip antigravity easter egg
+                # see https://python-history.blogspot.com/2010/06/import-antigravity.html
+                if import_name.lower() in ["antigravity"] or import_name.lower().endswith("antigravity.py"):
+                    raise IgnoreEasterEggLibraryWarning(f"Ignoring import for python easter egg '{import_name}'.")
+
+                class MyPythonImporter(PythonImporter):
+                    def __init__(self, var_file: Any) -> None:
+                        self.var_file = var_file
+
+                    def import_variables(self, path: str, args: Optional[Tuple[Any, ...]] = None) -> Any:
+                        return self._get_variables(self.var_file, args)
+
+                module_importer = Importer("variable file", LOGGER)
+
+                if get_robot_version() >= (5, 0):
+                    libcode, source = module_importer.import_class_or_module(
+                        import_name, instantiate_with_args=(), return_source=True
+                    )
+                else:
+                    source = import_name
+                    libcode = module_importer.import_class_or_module_by_path(import_name, instantiate_with_args=())
+
+                importer = MyPythonImporter(libcode)
+
             vars: List[VariableDefinition] = [
-                ImportedVariableDefinition(1, 0, 1, 0, source, var[0], None)
-                for var in importer.import_variables(source, args)
+                ImportedVariableDefinition(
+                    1, 0, 1, 0, source or (module_spec.origin if module_spec is not None else None) or "", var[0], None
+                )
+                for var in importer.import_variables(import_name, args)
             ]
 
-            return VariablesDoc(name=stem, source=source, variables=vars, stdout=std_capturer.getvalue())
+            return VariablesDoc(
+                name=stem,
+                source=source or module_spec.origin if module_spec is not None else import_name,
+                module_spec=module_spec,
+                variables=vars,
+                stdout=std_capturer.getvalue(),
+                python_path=sys.path,
+            )
+    except (SystemExit, KeyboardInterrupt, IgnoreEasterEggLibraryWarning):
+        raise
     except BaseException as e:
         return VariablesDoc(
             name=stem,
-            source=source,
+            source=source or module_spec.origin if module_spec is not None else import_name,
+            module_spec=module_spec,
             errors=[
                 error_from_exception(
                     e,
-                    source,
-                    1 if source is not None else None,
+                    source or module_spec.origin
+                    if module_spec is not None and module_spec.origin
+                    else import_name
+                    if is_variables_by_path(import_name)
+                    else None,
+                    1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
                 )
             ],
             python_path=sys.path,
@@ -1411,6 +1509,7 @@ class CompleteResultKind(Enum):
     FILE = "File"
     RESOURCE = "Resource"
     VARIABLES = "Variables"
+    VARIABLES_MODULE = "Variables Module"
     FOLDER = "Directory"
     KEYWORD = "Keyword"
 
@@ -1586,23 +1685,52 @@ def complete_resource_import(
 
 
 def iter_variables_from_python_path(path: Optional[str] = None) -> Iterator[CompleteResult]:
-    if path is None:
-        paths = sys.path
-    else:
-        paths = [str(Path(s, path)) for s in sys.path]
+    if get_robot_version() >= (5, 0):
+        allow_modules = True if not path or not ("/" in path or os.sep in path) else False
+        allow_files = True if not path or "/" in path or os.sep in path else False
 
-    for e in [Path(p) for p in set(paths)]:
-        if e.is_dir():
-            for f in e.iterdir():
-                if not f.name.startswith(("_", ".")) and (
-                    f.is_file()
-                    and f.suffix in ALLOWED_VARIABLES_FILE_EXTENSIONS
-                    or f.is_dir()
-                    and f.suffix not in [".dist-info"]
-                ):
-                    yield CompleteResult(
-                        f.name, CompleteResultKind.RESOURCE if f.is_file() else CompleteResultKind.FOLDER
-                    )
+        path = path.replace(".", os.sep) if path is not None and not path.startswith((".", "/", os.sep)) else path
+
+        if path is None:
+            paths = sys.path
+        else:
+            paths = [str(Path(s, path)) for s in sys.path]
+
+        for e in [Path(p) for p in set(paths)]:
+            if e.is_dir():
+                for f in e.iterdir():
+                    if not f.name.startswith(("_", ".")) and (
+                        f.is_file()
+                        and f.suffix in ALLOWED_VARIABLES_FILE_EXTENSIONS
+                        or f.is_dir()
+                        and f.suffix not in [".dist-info"]
+                    ):
+                        if f.is_dir():
+                            yield CompleteResult(f.name, CompleteResultKind.MODULE)
+
+                        if f.is_file():
+                            if allow_modules and f.suffix.lower() not in [".yaml", ".yml"]:
+                                yield CompleteResult(f.stem, CompleteResultKind.VARIABLES_MODULE)
+                            if allow_files:
+                                yield CompleteResult(f.name, CompleteResultKind.VARIABLES)
+    else:
+        if path is None:
+            paths = sys.path
+        else:
+            paths = [str(Path(s, path)) for s in sys.path]
+
+        for e in [Path(p) for p in set(paths)]:
+            if e.is_dir():
+                for f in e.iterdir():
+                    if not f.name.startswith(("_", ".")) and (
+                        f.is_file()
+                        and f.suffix in ALLOWED_VARIABLES_FILE_EXTENSIONS
+                        or f.is_dir()
+                        and f.suffix not in [".dist-info"]
+                    ):
+                        yield CompleteResult(
+                            f.name, CompleteResultKind.VARIABLES if f.is_file() else CompleteResultKind.FOLDER
+                        )
 
 
 def complete_variables_import(

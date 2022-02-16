@@ -1,5 +1,5 @@
 import re
-from typing import Optional, Tuple
+from typing import NamedTuple, Optional, Tuple
 
 __all__ = ["InvalidRobotVersionError", "get_robot_version"]
 
@@ -7,6 +7,15 @@ __all__ = ["InvalidRobotVersionError", "get_robot_version"]
 class InvalidRobotVersionError(Exception):
     def __init__(self) -> None:
         super().__init__("Invalid robot version string.")
+
+
+class RobotVersion(NamedTuple):
+    major: int
+    minor: int
+    patch: Optional[int]
+    pre_id: Optional[str]
+    pre_number: Optional[int]
+    dev: Optional[int]
 
 
 def get_robot_version() -> Tuple[int, int, Optional[int], Optional[str], Optional[int], Optional[int]]:
@@ -24,12 +33,11 @@ def get_robot_version() -> Tuple[int, int, Optional[int], Optional[str], Optiona
             r"((?P<pre_id>a|b|rc)(?P<pre_number>\d+))?"
             r"(\.(dev(?P<dev>\d+)))?"
             r"(?P<rest>.+)?",
-            # robot.get_version(),
             robot_version,
         )
 
         if m is not None and m.group("rest") is None:
-            return (
+            return RobotVersion(
                 int(m.group("major")),
                 int(m.group("minor")),
                 s_to_i(m.group("patch")),

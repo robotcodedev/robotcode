@@ -51,6 +51,7 @@ from .library_doc import (
     complete_variables_import,
     find_file,
     find_library,
+    find_variables,
     get_library_doc,
     get_variables_doc,
     is_embedded_keyword,
@@ -636,6 +637,23 @@ class ImportsManager:
         )
 
     @_logger.call
+    async def find_variables(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
+        return await asyncio.wait_for(
+            asyncio.get_running_loop().run_in_executor(
+                self.process_pool,
+                find_variables,
+                name,
+                str(self.folder.to_path()),
+                base_dir,
+                self.config.python_path if self.config is not None else None,
+                self.config.env if self.config is not None else None,
+                self.config.variables if self.config is not None else None,
+                variables,
+            ),
+            FIND_FILE_TIME_OUT,
+        )
+
+    @_logger.call
     async def get_libdoc_for_library_import(
         self,
         name: str,
@@ -807,10 +825,9 @@ class ImportsManager:
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> VariablesDoc:
-        source = await self.find_file(
+        source = await self.find_variables(
             name,
             base_dir,
-            "Variables",
             variables,
         )
 
@@ -828,6 +845,7 @@ class ImportsManager:
                     self.config.python_path if self.config is not None else None,
                     self.config.env if self.config is not None else None,
                     self.config.variables if self.config is not None else None,
+                    variables,
                 ),
                 LOAD_LIBRARY_TIME_OUT,
             )
