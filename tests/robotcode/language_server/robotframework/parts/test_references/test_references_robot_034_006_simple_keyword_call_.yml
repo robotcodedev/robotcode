@@ -304,8 +304,8 @@ result:
   range:
     end:
       character: 7
-      line: 6
+      line: 5
     start:
       character: 4
-      line: 6
+      line: 5
   uri: resources/firstresource.resource
