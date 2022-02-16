@@ -1403,7 +1403,7 @@ def get_variables_doc(
     from robot.utils.importer import Importer
     from robot.variables.filesetter import PythonImporter, YamlImporter
 
-    import_name: Optional[str] = None
+    import_name: str = name
     stem = Path(name).stem
     module_spec: Optional[ModuleSpec] = None
     source: Optional[str] = None
