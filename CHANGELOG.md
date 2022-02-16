@@ -15,7 +15,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 - Depening on selected testcase names contains a colon, a semicolon is used as separator of prerunmodifier for executing testcases
     - fixes [#20](https://github.com/d-biehl/robotcode/issues/20)
     - note: i think you should not use colons or semicolon in testcase names ;-)
-
+- Fix stepping/halt on breakpoint for IF/ELSE statements if the expression is evaluated as False
 
 ##  0.5.5
 

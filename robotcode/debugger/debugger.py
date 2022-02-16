@@ -637,8 +637,6 @@ class Debugger:
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         status = attributes.get("status", "")
 
-        if status == "NOT RUN":
-            return
 
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
@@ -646,6 +644,9 @@ class Debugger:
         type = attributes.get("type", "KEYWORD")
 
         entry = self.add_stackframe_entry(kwname, type, source, line_no)
+
+        if status == "NOT RUN" and attributes.get("type", None) not in ["IF", "ELSE IF", "ELSE"]:
+            return
 
         if self.debug and entry.source:
             self.process_start_state(entry.source, entry.line, entry.type, status)
@@ -689,7 +690,7 @@ class Debugger:
         frames = [
             StackFrame(
                 id=v.id,
-                name=v.name,
+                name=v.name or v.type,
                 line=v.line,
                 column=v.column,
                 source=Source(path=v.source) if v.source is not None else None,
