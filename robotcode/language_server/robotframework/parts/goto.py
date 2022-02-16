@@ -134,7 +134,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             token_and_var = await async_next(
                 (
                     (var_token, var)
-                    async for var_token, var in self.iter_all_variables_from_token(token, namespace, nodes, position)
+                    async for var_token, var in self.iter_variables_from_token(token, namespace, nodes, position)
                     if position in range_from_token(var_token)
                 ),
                 None,

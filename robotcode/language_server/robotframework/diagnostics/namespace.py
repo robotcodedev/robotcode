@@ -750,7 +750,7 @@ class Namespace:
     async def find_variable(
         self,
         name: str,
-        nodes: Optional[List[ast.AST]],
+        nodes: Optional[List[ast.AST]] = None,
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
     ) -> Optional[VariableDefinition]:

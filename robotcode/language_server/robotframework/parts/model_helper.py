@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 import re
-from typing import Any, AsyncGenerator, Generator, List, Optional, Tuple
+from typing import Any, AsyncGenerator, Generator, List, Optional, Tuple, Union
 
 from ...common.lsp_types import Position
 from ..diagnostics.entities import VariableDefinition
@@ -16,6 +16,10 @@ from ..utils.ast import (
     strip_variable_token,
     tokenize_variables,
 )
+
+from io import StringIO
+from tokenize import generate_tokens
+import token as python_token
 
 
 class ModelHelperMixin:
@@ -219,8 +223,35 @@ class ModelHelperMixin:
         re.UNICODE | re.VERBOSE,
     )
 
+    @staticmethod
+    async def iter_expression_variables_from_token(
+        expression: Token,
+        namespace: Namespace,
+        nodes: Optional[List[ast.AST]],
+        position: Optional[Position] = None,
+    ) -> AsyncGenerator[Tuple[Token, VariableDefinition], Any]:
+        from robot.api.parsing import Token as RobotToken
+
+        variable_started = False
+
+        for toknum, tokval, (_, tokcol), _, _ in generate_tokens(StringIO(expression.value).readline):
+            if variable_started:
+                if toknum == python_token.NAME:
+                    var = await namespace.find_variable(f"${{{tokval}}}", nodes, position)
+                    if var is not None:
+                        yield RobotToken(
+                            expression.type,
+                            tokval,
+                            expression.lineno,
+                            expression.col_offset + tokcol,
+                            expression.error,
+                        ), var
+                variable_started = False
+            if toknum == python_token.ERRORTOKEN and tokval == "$":
+                variable_started = True
+
     @classmethod
-    async def iter_all_variables_from_token(
+    async def iter_variables_from_token(
         cls,
         token: Token,
         namespace: Namespace,
@@ -230,20 +261,34 @@ class ModelHelperMixin:
         from robot.api.parsing import Token as RobotToken
         from robot.variables.search import contains_variable, search_variable
 
-        def iter_token(to: Token, ignore_errors: bool = False) -> Generator[Token, Any, Any]:
-
+        async def iter_token(
+            to: Token, ignore_errors: bool = False
+        ) -> AsyncGenerator[Union[Token, Tuple[Token, VariableDefinition]], Any]:
             for sub_token in tokenize_variables(to, ignore_errors=ignore_errors):
                 if sub_token.type == RobotToken.VARIABLE:
                     base = sub_token.value[2:-1]
                     if base and not (base[0] == "{" and base[-1] == "}"):
                         yield sub_token
+                    elif base:
+                        async for v in cls.iter_expression_variables_from_token(
+                            RobotToken(
+                                sub_token.type, base[1:-1], sub_token.lineno, sub_token.col_offset + 3, sub_token.error
+                            ),
+                            namespace,
+                            nodes,
+                            position,
+                        ):
+                            yield v
 
                     if contains_variable(base, "$@&%"):
-                        for j in iter_token(
+                        async for j in iter_token(
                             RobotToken(to.type, base, sub_token.lineno, sub_token.col_offset + 2),
                             ignore_errors=ignore_errors,
                         ):
-                            if j.type == RobotToken.VARIABLE:
+                            if isinstance(j, Token):
+                                if j.type == RobotToken.VARIABLE:
+                                    yield j
+                            else:
                                 yield j
 
         if token.type == RobotToken.VARIABLE and token.value.endswith("="):
@@ -253,18 +298,29 @@ class ModelHelperMixin:
 
             token = RobotToken(token.type, token.value[:-1].strip(), token.lineno, token.col_offset, token.error)
 
-        for t in iter_token(token, ignore_errors=True):
-            name = t.value
-            var = await namespace.find_variable(name, nodes, position)
-            if var is not None:
-                yield strip_variable_token(t), var
-                continue
+        async for token_or_var in iter_token(token, ignore_errors=True):
+            if isinstance(token_or_var, Token):
+                sub_token = token_or_var
+                name = sub_token.value
+                var = await namespace.find_variable(name, nodes, position)
+                if var is not None:
+                    yield strip_variable_token(sub_token), var
+                    continue
 
-            if t.type == RobotToken.VARIABLE and t.value[:1] in "$@&%" and t.value[1:2] == "{" and t.value[-1:] == "}":
-                match = cls.__match_extended.match(name[2:-1])
-                if match is not None:
-                    base_name, _ = match.groups()
-                    name = f"{name[0]}{{{base_name.strip()}}}"
-                    var = await namespace.find_variable(name, nodes, position)
-                    if var is not None:
-                        yield strip_variable_token(RobotToken(t.type, name, t.lineno, t.col_offset)), var
+                if (
+                    sub_token.type == RobotToken.VARIABLE
+                    and sub_token.value[:1] in "$@&%"
+                    and sub_token.value[1:2] == "{"
+                    and sub_token.value[-1:] == "}"
+                ):
+                    match = cls.__match_extended.match(name[2:-1])
+                    if match is not None:
+                        base_name, _ = match.groups()
+                        name = f"{name[0]}{{{base_name.strip()}}}"
+                        var = await namespace.find_variable(name, nodes, position)
+                        if var is not None:
+                            yield strip_variable_token(
+                                RobotToken(sub_token.type, name, sub_token.lineno, sub_token.col_offset)
+                            ), var
+            else:
+                yield token_or_var

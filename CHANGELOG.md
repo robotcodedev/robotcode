@@ -8,6 +8,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 - Improved variable analysis
   - In an expression like `${A+'${B+"${F}"}'+'${D}'} ${C}`, every single 'inner' variable will be recognized, you can hover over it, it can be found as reference, you can go to the definition, ...
+  - Also in python expressions like `${{$a+$b}}` variables are recognized
   - The debugger shows all variables as inline values and when hovering, it shows the values of the variables.
   - Only the name of the variable is used for hovering, goto and ..., not the surrounding ${}
 - Support importing variable files as module for RobotFramework 5

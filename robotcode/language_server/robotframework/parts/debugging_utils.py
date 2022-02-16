@@ -111,7 +111,7 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
             token_and_var = await async_next(
                 (
                     (t, v)
-                    async for t, v in self.iter_all_variables_from_token(token, namespace, nodes, position)
+                    async for t, v in self.iter_variables_from_token(token, namespace, nodes, position)
                     if position in range_from_token(t)
                 ),
                 None,
@@ -139,39 +139,43 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
         **kwargs: Any,
     ) -> List[InlineValue]:
         async def run() -> List[InlineValue]:
-            document = await self.parent.documents.get(text_document.uri)
-            if document is None:
-                return []
+            try:
+                document = await self.parent.documents.get(text_document.uri)
+                if document is None:
+                    return []
 
-            namespace = await self.parent.documents_cache.get_namespace(document)
-            if namespace is None:
-                return []
+                namespace = await self.parent.documents_cache.get_namespace(document)
+                if namespace is None:
+                    return []
 
-            tokens = await self.parent.documents_cache.get_tokens(document)
+                tokens = await self.parent.documents_cache.get_tokens(document)
 
-            real_range = Range(view_port.start, min(view_port.end, context.stopped_location.end))
+                real_range = Range(view_port.start, min(view_port.end, context.stopped_location.end))
 
-            nodes = await get_nodes_at_position(
-                await self.parent.documents_cache.get_model(document), context.stopped_location.start
-            )
+                nodes = await get_nodes_at_position(
+                    await self.parent.documents_cache.get_model(document), context.stopped_location.start
+                )
 
-            result: List[InlineValue] = []
-            async for token in async_takewhile(
-                lambda t: range_from_token(t).end.line <= real_range.end.line,
-                async_dropwhile(
-                    lambda t: range_from_token(t).start < real_range.start,
-                    tokens,
-                ),
-            ):
-                async for t, var in self.iter_all_variables_from_token(
-                    token,
-                    namespace,
-                    nodes,
-                    context.stopped_location.start,
+                result: List[InlineValue] = []
+                async for token in async_takewhile(
+                    lambda t: range_from_token(t).end.line <= real_range.end.line,
+                    async_dropwhile(
+                        lambda t: range_from_token(t).start < real_range.start,
+                        tokens,
+                    ),
                 ):
-                    if var.name != "${CURDIR}":
-                        result.append(InlineValueEvaluatableExpression(range_from_token(t), var.name))
+                    async for t, var in self.iter_variables_from_token(
+                        token,
+                        namespace,
+                        nodes,
+                        context.stopped_location.start,
+                    ):
+                        if var.name != "${CURDIR}":
+                            result.append(InlineValueEvaluatableExpression(range_from_token(t), var.name))
 
-            return result
+                return result
+            except BaseException as e:
+                self._logger.exception(e)
+                raise
 
         return await run_coroutine_in_thread(run)
