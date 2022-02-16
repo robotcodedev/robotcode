@@ -5,7 +5,16 @@
     "robotcode.robot.env": {
         "ENV_VAR": "1"
     },
+    "robotcode.debug.attachPython": true,
+    "robotcode.debug.defaultConfiguration": {
+        "pythonConfiguration": {
+            "justMyCode": false
+        }
+    },
     "robotcode.languageServer.args": [
-        "--debugpy"
+        "--debugpy",
+        "--log",
+        "--log-level",
+        "TRACE"
     ]
 }

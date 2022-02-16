@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import ast
 import re
-from typing import Any, AsyncGenerator, Generator, List, Optional, Tuple, Union
+import token as python_token
+from io import StringIO
+from tokenize import generate_tokens
+from typing import Any, AsyncGenerator, List, Optional, Tuple, Union
 
 from ...common.lsp_types import Position
 from ..diagnostics.entities import VariableDefinition
@@ -16,10 +19,6 @@ from ..utils.ast import (
     strip_variable_token,
     tokenize_variables,
 )
-
-from io import StringIO
-from tokenize import generate_tokens
-import token as python_token
 
 
 class ModelHelperMixin:
@@ -281,15 +280,15 @@ class ModelHelperMixin:
                             yield v
 
                     if contains_variable(base, "$@&%"):
-                        async for j in iter_token(
+                        async for sub_token_or_var in iter_token(
                             RobotToken(to.type, base, sub_token.lineno, sub_token.col_offset + 2),
                             ignore_errors=ignore_errors,
                         ):
-                            if isinstance(j, Token):
-                                if j.type == RobotToken.VARIABLE:
-                                    yield j
+                            if isinstance(sub_token_or_var, Token):
+                                if sub_token_or_var.type == RobotToken.VARIABLE:
+                                    yield sub_token_or_var
                             else:
-                                yield j
+                                yield sub_token_or_var
 
         if token.type == RobotToken.VARIABLE and token.value.endswith("="):
             match = search_variable(token.value, ignore_errors=True)
