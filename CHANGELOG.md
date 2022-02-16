@@ -12,6 +12,10 @@ All notable changes to the "robotcode" extension will be documented in this file
   - The debugger shows all variables as inline values and when hovering, it shows the values of the variables.
   - Only the name of the variable is used for hovering, goto and ..., not the surrounding ${}
 - Support importing variable files as module for RobotFramework 5
+- Depening on selected testcase names contains a colon, a semicolon is used as separator of prerunmodifier for executing testcases
+    - fixes [#20](https://github.com/d-biehl/robotcode/issues/20)
+    - note: i think you should not use colons or semicolon in testcase names ;-)
+
 
 ##  0.5.5
 

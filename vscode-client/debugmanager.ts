@@ -352,13 +352,17 @@ export class DebugManager {
     if (included.length > 0) {
       args.push("--prerunmodifier");
 
-      args.push(`robotcode.debugger.modifiers.ByLongName:${included.join(":")}`);
+      const separator = included.find((s) => s.indexOf(":") >= 0) === undefined ? ":" : ";";
+
+      args.push(`robotcode.debugger.modifiers.ByLongName${separator}${included.join(separator)}`);
     }
 
     if (excluded.length > 0) {
       args.push("--prerunmodifier");
 
-      args.push(`robotcode.debugger.modifiers.ExcludedByLongName:${excluded.join(":")}`);
+      const separator = included.find((s) => s.indexOf(":") >= 0) === undefined ? ":" : ";";
+
+      args.push(`robotcode.debugger.modifiers.ExcludedByLongName${separator}${excluded.join(separator)}`);
     }
     const template = config.get("debug.defaultConfiguration", {});
 
