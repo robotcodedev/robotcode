@@ -637,7 +637,6 @@ class Debugger:
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         status = attributes.get("status", "")
 
-
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
         kwname = attributes.get("kwname", "")
