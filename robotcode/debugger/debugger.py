@@ -644,7 +644,7 @@ class Debugger:
 
         entry = self.add_stackframe_entry(kwname, type, source, line_no)
 
-        if status == "NOT RUN" and attributes.get("type", None) not in ["IF", "ELSE IF", "ELSE"]:
+        if status == "NOT RUN" and attributes.get("type", None) not in ["IF"]:
             return
 
         if self.debug and entry.source:
