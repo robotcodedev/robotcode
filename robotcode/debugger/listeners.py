@@ -107,7 +107,7 @@ class ListenerV2:
             )
 
     def log_message(self, message: Dict[str, Any]) -> None:
-        current_frame = Debugger.instance().stack_frames[0] if Debugger.instance().stack_frames else None
+        current_frame = Debugger.instance().full_stack_frames[0] if Debugger.instance().full_stack_frames else None
 
         if message["level"] == "FAIL":
             self.last_fail_message = message["message"]
@@ -118,7 +118,7 @@ class ListenerV2:
         line = current_frame.line if current_frame else None
         column = current_frame.column if current_frame else None
 
-        name = next((e.name for e in Debugger.instance().stack_frames if e.type in ["SUITE", "TEST"]), None)
+        name = next((e.name for e in Debugger.instance().full_stack_frames if e.type in ["SUITE", "TEST"]), None)
 
         Debugger.instance().send_event(
             self,

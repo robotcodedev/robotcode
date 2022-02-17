@@ -100,18 +100,42 @@ class StackTraceResult(NamedTuple):
 
 class StackFrameEntry:
     def __init__(
-        self, context: weakref.ref[Any], name: str, type: str, source: Optional[str], line: int, column: int = 1
+        self,
+        parent: Optional[StackFrameEntry],
+        context: Any,
+        name: str,
+        type: str,
+        source: Optional[str],
+        line: int,
+        column: int = 1,
+        handler: Any = None,
     ) -> None:
-        self.context = context
+        self.parent = weakref.ref(parent) if parent is not None else None
+        self.context = weakref.ref(context)
+        self.variables = weakref.ref(context.variables.current)
         self.name = name
         self.type = type
         self.source = source
         self.line = line
         self.column = column
+        self.handler = handler
         self._suite_marker = object()
         self._test_marker = object()
         self._local_marker = object()
         self._global_marker = object()
+        self.stack_frames: Deque[StackFrameEntry] = deque()
+        self.top_hidden = False
+
+    def get_toplevel_parent(self) -> Optional[StackFrameEntry]:
+        if self.parent is None:
+            return None
+
+        p = self.parent()
+
+        while p is not None and (p.type not in ["SUITE", "TEST"] and p.type != "KEYWORD" and p.handler is None):
+            p = p.parent() if p.parent is not None else None
+
+        return p
 
     @property
     def id(self) -> int:
@@ -170,6 +194,7 @@ class Debugger:
         self.exception_breakpoints: Set[ExceptionBreakpointsEntry] = set()
 
         self.main_thread: Optional[threading.Thread] = None
+        self.full_stack_frames: Deque[StackFrameEntry] = deque()
         self.stack_frames: Deque[StackFrameEntry] = deque()
         self.condition = threading.Condition()
         self.state: State = State.Stopped
@@ -263,13 +288,13 @@ class Debugger:
         with self.condition:
             self.state = State.Running
 
-            if self.stack_frames and self.stack_frames[0].type in ["TEST", "SUITE"]:
+            if self.full_stack_frames and self.full_stack_frames[0].type in ["TEST", "SUITE"]:
                 self.requested_state = RequestedState.StepIn
             else:
                 self.requested_state = RequestedState.Next
 
-                self.stop_stack_len = len(self.stack_frames)
-                if self.stack_frames and self.stack_frames[0].type in [
+                self.stop_stack_len = len(self.full_stack_frames)
+                if self.full_stack_frames and self.full_stack_frames[0].type in [
                     "FOR",
                     "FOR ITERATION",
                     "ITERATION",
@@ -306,11 +331,11 @@ class Debugger:
         with self.condition:
             self.requested_state = RequestedState.StepOut
             self.state = State.Running
-            self.stop_stack_len = len(self.stack_frames) - 1
+            self.stop_stack_len = len(self.full_stack_frames) - 1
 
             i = 1
 
-            while i < len(self.stack_frames) and self.stack_frames[i].type in [
+            while i < len(self.full_stack_frames) and self.full_stack_frames[i].type in [
                 "FOR",
                 "FOR ITERATION",
                 "ITERATION",
@@ -374,7 +399,7 @@ class Debugger:
             )
             self.requested_state = RequestedState.Nothing
         elif self.requested_state == RequestedState.Next:
-            if len(self.stack_frames) <= self.stop_stack_len:
+            if len(self.full_stack_frames) <= self.stop_stack_len:
                 self.state = State.Paused
                 self.send_event(
                     self,
@@ -399,7 +424,7 @@ class Debugger:
             )
             self.requested_state = RequestedState.Nothing
         elif self.requested_state == RequestedState.StepOut:
-            if len(self.stack_frames) <= self.stop_stack_len:
+            if len(self.full_stack_frames) <= self.stop_stack_len:
                 self.state = State.Paused
                 self.send_event(
                     self,
@@ -423,6 +448,8 @@ class Debugger:
                             try:
                                 vars = EXECUTION_CONTEXTS.current.variables.current
                                 hit = bool(evaluate_expression(vars.replace_string(point.condition), vars.store))
+                            except (SystemExit, KeyboardInterrupt):
+                                raise
                             except BaseException:
                                 hit = False
 
@@ -436,6 +463,8 @@ class Debugger:
                             self.hit_counts[entry] += 1
                             try:
                                 hit = self.hit_counts[entry] != int(point.hit_condition)
+                            except (SystemExit, KeyboardInterrupt):
+                                raise
                             except BaseException:
                                 hit = False
                             if not hit:
@@ -444,6 +473,8 @@ class Debugger:
                             vars = EXECUTION_CONTEXTS.current.variables.current
                             try:
                                 message = vars.replace_string(point.log_message)
+                            except (SystemExit, KeyboardInterrupt):
+                                raise
                             except BaseException as e:
                                 message = f"{point.log_message}\nError: {e}"
                             self.send_event(
@@ -534,32 +565,74 @@ class Debugger:
             )
 
     def add_stackframe_entry(
-        self, name: str, type: str, source: Optional[str], line: Optional[int], column: Optional[int] = 1
+        self,
+        name: str,
+        type: str,
+        source: Optional[str],
+        line: Optional[int],
+        column: Optional[int] = 1,
+        *,
+        handler: Any = None,
     ) -> StackFrameEntry:
         from robot.running.context import EXECUTION_CONTEXTS
+        from robot.running.userkeyword import UserKeywordHandler
 
-        if source is None or line is None or column is None:
-            for v in self.stack_frames:
-                if source is None:
-                    source = v.source
-                if line is None:
-                    line = v.line
-                if column is None:
-                    column = v.column
-                if source is not None and line is not None and column is not None:
-                    break
+        # if source is None or line is None or column is None:
+        #     for v in self.stack_frames:
+        #         if source is None:
+        #             source = v.source
+        #         if line is None:
+        #             line = v.line
+        #         if column is None:
+        #             column = v.column
+        #         if source is not None and line is not None and column is not None:
+        #             break
 
         result = StackFrameEntry(
-            weakref.ref(EXECUTION_CONTEXTS.current),
+            self.stack_frames[0] if self.stack_frames else None,
+            EXECUTION_CONTEXTS.current,
             name,
             type,
             source,
             line if line is not None else 0,
             column if column is not None else 0,
+            handler=handler,
         )
-        self.stack_frames.appendleft(result)
+
+        if type in ["SUITE", "TEST"]:
+            self.stack_frames.appendleft(result)
+        elif type == "KEYWORD" and isinstance(handler, UserKeywordHandler):
+            result.top_hidden = True
+            self.stack_frames[0].stack_frames.appendleft(result)
+            self.stack_frames.appendleft(result)
+        else:
+            self.stack_frames[0].stack_frames.appendleft(result)
+
+        self.full_stack_frames.appendleft(result)
 
         return result
+
+    def remove_stackframe_entry(
+        self,
+        name: str,
+        type: str,
+        source: Optional[str],
+        line: Optional[int],
+        column: Optional[int] = 1,
+        *,
+        handler: Any = None,
+    ) -> None:
+        from robot.running.userkeyword import UserKeywordHandler
+
+        if type in ["SUITE", "TEST"]:
+            self.stack_frames.popleft()
+        elif type == "KEYWORD" and isinstance(handler, UserKeywordHandler):
+            self.stack_frames.popleft()
+            self.stack_frames[0].stack_frames.popleft()
+        else:
+            self.stack_frames[0].stack_frames.popleft()
+
+        self.full_stack_frames.popleft()
 
     def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
         source = attributes.get("source", None)
@@ -602,8 +675,12 @@ class Debugger:
                 f"Suite failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
             )
 
-        if self.stack_frames:
-            self.stack_frames.popleft()
+        source = attributes.get("source", None)
+        line_no = attributes.get("lineno", 1)
+        longname = attributes.get("longname", "")
+        type = "SUITE"
+
+        self.remove_stackframe_entry(longname, type, source, line_no)
 
     def start_test(self, name: str, attributes: Dict[str, Any]) -> None:
         source = attributes.get("source", None)
@@ -631,10 +708,16 @@ class Debugger:
                 f"Test failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
             )
 
-        if self.stack_frames:
-            self.stack_frames.popleft()
+        source = attributes.get("source", None)
+        line_no = attributes.get("lineno", 1)
+        longname = attributes.get("longname", "")
+        type = "TEST"
+
+        self.remove_stackframe_entry(longname, type, source, line_no)
 
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
+        from robot.running.context import EXECUTION_CONTEXTS
+
         status = attributes.get("status", "")
 
         source = attributes.get("source", None)
@@ -642,9 +725,18 @@ class Debugger:
         kwname = attributes.get("kwname", "")
         type = attributes.get("type", "KEYWORD")
 
-        entry = self.add_stackframe_entry(kwname, type, source, line_no)
+        handler: Any = None
+        if type == "KEYWORD":
+            try:
+                handler = EXECUTION_CONTEXTS.current.namespace.get_runner(name)._handler
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException:
+                pass
 
-        if status == "NOT RUN" and attributes.get("type", None) not in ["IF"]:
+        entry = self.add_stackframe_entry(kwname, type, source, line_no, handler=handler)
+
+        if status == "NOT RUN" and type not in ["IF"]:
             return
 
         if self.debug and entry.source:
@@ -653,6 +745,8 @@ class Debugger:
             self.wait_for_running()
 
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
+        from robot.running.context import EXECUTION_CONTEXTS
+
         type = attributes.get("type", None)
         if self.debug:
             status = attributes.get("status", "")
@@ -665,8 +759,21 @@ class Debugger:
                     f"Keyword failed: {self.last_fail_message}" if self.last_fail_message else "Keyword failed.",
                 )
 
-        if self.stack_frames:
-            self.stack_frames.popleft()
+        source = attributes.get("source", None)
+        line_no = attributes.get("lineno", 1)
+        longname = attributes.get("longname", "")
+        type = attributes.get("type", "KEYWORD")
+
+        handler: Any = None
+        if type == "KEYWORD":
+            try:
+                handler = EXECUTION_CONTEXTS.current.namespace.get_runner(name)._handler
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException:
+                pass
+
+        self.remove_stackframe_entry(longname, type, source, line_no, handler=handler)
 
     def set_main_thread(self, thread: threading.Thread) -> None:
         self.main_thread = thread
@@ -690,11 +797,14 @@ class Debugger:
             StackFrame(
                 id=v.id,
                 name=v.name or v.type,
-                line=v.line,
-                column=v.column,
-                source=Source(path=v.source) if v.source is not None else None,
+                line=v.stack_frames[0].line if v.stack_frames else v.line,
+                column=v.stack_frames[0].column if v.stack_frames else v.column,
+                source=(Source(path=v.stack_frames[0].source) if v.stack_frames[0].source is not None else None)
+                if v.stack_frames
+                else (Source(path=v.source) if v.source is not None else None),
             )
-            for v in itertools.islice(self.stack_frames, start_frame, levels)
+            for i, v in enumerate(itertools.islice(self.stack_frames, start_frame, levels))
+            if i == 0 and not v.top_hidden or v.stack_frames
         ]
 
         return StackTraceResult(frames, len(frames))
@@ -703,7 +813,7 @@ class Debugger:
         if message["level"] == "FAIL":
             self.last_fail_message = message["message"]
 
-        current_frame = self.stack_frames[0] if self.stack_frames else None
+        current_frame = self.full_stack_frames[0] if self.full_stack_frames else None
         source = Source(path=current_frame.source) if current_frame else None
         line = current_frame.line if current_frame else None
 
@@ -747,7 +857,7 @@ class Debugger:
                         variables_reference=entry.local_id(),
                     )
                 )
-                if context.variables._test is not None and context.variables._test != context.variables.current:
+                if context.variables._test is not None and entry.type in ["KEYWORD"]:
                     result.append(
                         Scope(
                             name="Test",
@@ -756,7 +866,7 @@ class Debugger:
                             variables_reference=entry.test_id(),
                         )
                     )
-                if context.variables._suite is not None and context.variables._suite != context.variables.current:
+                if context.variables._suite is not None and entry.type in ["TEST", "KEYWORD"]:
                     result.append(
                         Scope(
                             name="Suite",
@@ -785,12 +895,12 @@ class Debugger:
         count: Optional[int] = None,
         format: Optional[ValueFormat] = None,
     ) -> List[Variable]:
-        result: List[Variable] = []
+        result: Dict[str, Variable] = {}
         entry = next(
             (
                 v
                 for v in self.stack_frames
-                if variables_reference in [v.global_id(), v.local_id(), v.suite_id(), v.test_id()]
+                if variables_reference in [v.global_id(), v.suite_id(), v.test_id(), v.local_id()]
             ),
             None,
         )
@@ -798,34 +908,52 @@ class Debugger:
             context = entry.context()
             if context is not None:
                 if entry.global_id() == variables_reference:
-                    result += [
-                        Variable(name=k, value=repr(v), type=repr(type(v)))
-                        for k, v in context.variables._global.as_dict().items()
-                    ]
+                    result.update(
+                        {
+                            k: Variable(name=k, value=repr(v), type=repr(type(v)))
+                            for k, v in context.variables._global.as_dict().items()
+                        }
+                    )
                 elif entry.suite_id() == variables_reference:
                     globals = context.variables._global.as_dict()
-                    result += [
-                        Variable(name=k, value=repr(v), type=repr(type(v)))
-                        for k, v in context.variables._suite.as_dict().items()
-                        if k not in globals or globals[k] != v
-                    ]
+                    result.update(
+                        {
+                            k: Variable(name=k, value=repr(v), type=repr(type(v)))
+                            for k, v in context.variables._suite.as_dict().items()
+                            if k not in globals or globals[k] != v
+                        }
+                    )
                 elif entry.test_id() == variables_reference:
                     globals = context.variables._suite.as_dict()
-                    result += [
-                        Variable(name=k, value=repr(v), type=repr(type(v)))
-                        for k, v in context.variables._test.as_dict().items()
-                        if k not in globals or globals[k] != v
-                    ]
+                    result.update(
+                        {
+                            k: Variable(name=k, value=repr(v), type=repr(type(v)))
+                            for k, v in context.variables._test.as_dict().items()
+                            if k not in globals or globals[k] != v
+                        }
+                    )
                 elif entry.local_id() == variables_reference:
+                    # current_index = context.variables._scopes.index(vars)
+                    # globals = context.variables._scopes[max(current_index - 1, 0)].as_dict()
+
                     current_index = context.variables._scopes.index(context.variables.current)
                     globals = context.variables._scopes[max(current_index - 1, 0)].as_dict()
-                    result += [
-                        Variable(name=k, value=repr(v), type=repr(type(v)))
-                        for k, v in context.variables.current.as_dict().items()
-                        if k not in globals or globals[k] != v
-                    ]
+                    result.update(
+                        {
+                            k: Variable(name=k, value=repr(v), type=repr(type(v)))
+                            for k, v in context.variables.current.as_dict().items()
+                            if k not in globals or globals[k] != v
+                        }
+                    )
 
-        return result
+                    if entry is not None and entry.handler is not None and entry.handler.arguments:
+                        for argument in entry.handler.arguments.argument_names:
+                            name = f"${{{argument}}}"
+                            value = context.variables.current[name]
+
+                            result[name] = Variable(name=name, value=repr(value), type=repr(type(value)))
+
+        return list(result.values())
 
     IS_VARIABLE_RE = re.compile(r"^[$@&%]\{.*\}$")
     SPLIT_LINE = re.compile(r"(?= {2,}| ?\t)\s*")
@@ -841,11 +969,12 @@ class Debugger:
         from robot.running.context import EXECUTION_CONTEXTS
         from robot.running.model import Keyword
         from robot.variables.evaluation import evaluate_expression
+        from robot.variables.finders import VariableFinder
 
         if not expression:
             return EvaluateResult(result="")
 
-        stack_frame = next((v for v in self.stack_frames if v.id == frame_id), None)
+        stack_frame = next((v for v in self.full_stack_frames if v.id == frame_id), None)
 
         evaluate_context = stack_frame.context() if stack_frame else None
 
@@ -869,7 +998,7 @@ class Debugger:
                     result = kw.run(evaluate_context)
 
             elif self.IS_VARIABLE_RE.match(expression.strip()):
-                result = vars.replace_string(expression)
+                result = VariableFinder(vars.store).find(expression)
             else:
                 result = evaluate_expression(vars.replace_string(expression), vars.store)
 
@@ -889,7 +1018,7 @@ class Debugger:
         entry = next(
             (
                 v
-                for v in self.stack_frames
+                for v in self.full_stack_frames
                 if variables_reference in [v.global_id(), v.local_id(), v.suite_id(), v.test_id()]
             ),
             None,
