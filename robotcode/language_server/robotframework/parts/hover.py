@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 from .model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
-_HoverMethod = Callable[[ast.AST, TextDocument, Position], Awaitable[Optional[Hover]]]
+_HoverMethod = Callable[[ast.AST, List[ast.AST], TextDocument, Position], Awaitable[Optional[Hover]]]
 
 
 class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
@@ -82,7 +82,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         for result_node in reversed(result_nodes):
             method = self._find_method(type(result_node))
             if method is not None:
-                result = await method(result_node, document, position)
+                result = await method(result_node, result_nodes, document, position)
                 if result is not None:
                     return result
 
@@ -139,8 +139,112 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         return None
 
+    async def hover_IfHeader(  # noqa: N802
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
+    ) -> Optional[Hover]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import IfHeader
+
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
+
+        header = cast(IfHeader, node)
+
+        expression_token = header.get_token(RobotToken.ARGUMENT)
+        if expression_token is not None and position in range_from_token(expression_token):
+            token_and_var = await async_next(
+                (
+                    (expression_token, var)
+                    async for var_token, var in self.iter_expression_variables_from_token(
+                        expression_token, namespace, nodes, position
+                    )
+                    if position in range_from_token(var_token)
+                ),
+                None,
+            )
+            if token_and_var is not None:
+                var_token, variable = token_and_var
+
+                if variable.has_value or variable.resolvable:
+                    try:
+                        value = await namespace.imports_manager.resolve_variable(
+                            variable.name,
+                            str(document.uri.to_path().parent),
+                            await namespace.get_unresolved_variables(nodes, position),
+                            False,
+                        )
+                    except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException:
+                        value = ""
+                else:
+                    value = ""
+
+                return Hover(
+                    contents=MarkupContent(
+                        kind=MarkupKind.MARKDOWN,
+                        value=f"({variable.type.value}) {variable.name} {f'= `{value}`' if value else ''}",
+                    ),
+                    range=range_from_token(var_token),
+                )
+
+        return None
+
+    async def hover_WhileHeader(  # noqa: N802
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
+    ) -> Optional[Hover]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import WhileHeader
+
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
+
+        header = cast(WhileHeader, node)
+
+        expression_token = header.get_token(RobotToken.ARGUMENT)
+        if expression_token is not None and position in range_from_token(expression_token):
+            token_and_var = await async_next(
+                (
+                    (expression_token, var)
+                    async for var_token, var in self.iter_expression_variables_from_token(
+                        expression_token, namespace, nodes, position
+                    )
+                    if position in range_from_token(var_token)
+                ),
+                None,
+            )
+            if token_and_var is not None:
+                var_token, variable = token_and_var
+
+                if variable.has_value or variable.resolvable:
+                    try:
+                        value = await namespace.imports_manager.resolve_variable(
+                            variable.name,
+                            str(document.uri.to_path().parent),
+                            await namespace.get_unresolved_variables(nodes, position),
+                            False,
+                        )
+                    except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException:
+                        value = ""
+                else:
+                    value = ""
+
+                return Hover(
+                    contents=MarkupContent(
+                        kind=MarkupKind.MARKDOWN,
+                        value=f"({variable.type.value}) {variable.name} {f'= `{value}`' if value else ''}",
+                    ),
+                    range=range_from_token(var_token),
+                )
+
+        return None
+
     async def hover_KeywordCall(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordCall
@@ -183,7 +287,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def hover_Fixture(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Fixture
@@ -225,7 +329,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def _hover_Template_or_TestTemplate(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Template, TestTemplate
@@ -269,17 +373,17 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def hover_TestTemplate(  # noqa: N802
-        self, result_node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Optional[Hover]:
-        return await self._hover_Template_or_TestTemplate(result_node, document, position)
+        return await self._hover_Template_or_TestTemplate(node, nodes, document, position)
 
     async def hover_Template(  # noqa: N802
-        self, result_node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Optional[Hover]:
-        return await self._hover_Template_or_TestTemplate(result_node, document, position)
+        return await self._hover_Template_or_TestTemplate(node, nodes, document, position)
 
     async def hover_LibraryImport(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import LibraryImport
@@ -324,7 +428,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def hover_ResourceImport(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import ResourceImport
@@ -367,7 +471,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def hover_VariablesImport(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import VariablesImport
@@ -410,7 +514,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def hover_KeywordName(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordName
@@ -435,7 +539,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def hover_TestCase(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.blocks import TestCase
