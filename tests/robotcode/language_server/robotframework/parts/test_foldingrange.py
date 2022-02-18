@@ -55,7 +55,7 @@ def generate_foldingrange_test_id(params: Any) -> Any:
                 )
             ),
         ],
-        list(generate_tests_from_source_document(Path(Path(__file__).parent, "data/foldingrange.robot"))),
+        list(generate_tests_from_source_document(Path(Path(__file__).parent, "data/tests/foldingrange.robot"))),
     ),
     indirect=["protocol", "test_document"],
     ids=generate_foldingrange_test_id,

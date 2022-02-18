@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 42
+  line: 6
+  name: library import by path name
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Library *myvariables*'
+  range:
+    end:
+      character: 49
+      line: 6
+    start:
+      character: 18
+      line: 6

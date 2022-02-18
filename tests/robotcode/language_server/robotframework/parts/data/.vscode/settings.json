@@ -12,7 +12,7 @@
         }
     },
     "robotcode.languageServer.args": [
-        "--debugpy",
+        //"--debugpy",
         "--log",
         "--log-level",
         "TRACE"

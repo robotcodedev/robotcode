@@ -11,7 +11,7 @@ result:
     start:
       character: 38
       line: 13
-  uri: data/references.robot
+  uri: tests/references.robot
 - !Location
   range:
     end:
@@ -20,7 +20,7 @@ result:
     start:
       character: 2
       line: 24
-  uri: data/references.robot
+  uri: tests/references.robot
 - !Location
   range:
     end:
@@ -29,7 +29,7 @@ result:
     start:
       character: 2
       line: 24
-  uri: data/references.robot
+  uri: tests/references.robot
 - !Location
   range:
     end:
@@ -38,4 +38,4 @@ result:
     start:
       character: 37
       line: 62
-  uri: data/references.robot
+  uri: tests/references.robot

@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 40
+  line: 8
+  name: built in var in Resource Import
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 63
+      line: 8
+    start:
+      character: 18
+      line: 8
+  target_range:
+    end:
+      character: 0
+      line: 1
+    start:
+      character: 0
+      line: 0
+  target_selection_range:
+    end:
+      character: 0
+      line: 1
+    start:
+      character: 0
+      line: 0
+  target_uri: firstresource.resource

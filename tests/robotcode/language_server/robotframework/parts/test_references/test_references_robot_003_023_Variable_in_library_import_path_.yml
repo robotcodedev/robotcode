@@ -11,7 +11,7 @@ result:
     start:
       character: 18
       line: 2
-  uri: data/document_highlight.robot
+  uri: tests/document_highlight.robot
 - !Location
   range:
     end:
@@ -20,7 +20,7 @@ result:
     start:
       character: 18
       line: 4
-  uri: data/document_highlight.robot
+  uri: tests/document_highlight.robot
 - !Location
   range:
     end:
@@ -29,7 +29,7 @@ result:
     start:
       character: 18
       line: 6
-  uri: data/document_highlight.robot
+  uri: tests/document_highlight.robot
 - !Location
   range:
     end:
@@ -38,7 +38,7 @@ result:
     start:
       character: 20
       line: 4
-  uri: data/goto.robot
+  uri: tests/goto.robot
 - !Location
   range:
     end:
@@ -47,7 +47,7 @@ result:
     start:
       character: 20
       line: 6
-  uri: data/goto.robot
+  uri: tests/goto.robot
 - !Location
   range:
     end:
@@ -56,7 +56,7 @@ result:
     start:
       character: 20
       line: 8
-  uri: data/goto.robot
+  uri: tests/goto.robot
 - !Location
   range:
     end:
@@ -65,7 +65,7 @@ result:
     start:
       character: 20
       line: 6
-  uri: data/hover.robot
+  uri: tests/hover.robot
 - !Location
   range:
     end:
@@ -74,7 +74,7 @@ result:
     start:
       character: 20
       line: 9
-  uri: data/hover.robot
+  uri: tests/hover.robot
 - !Location
   range:
     end:
@@ -83,7 +83,7 @@ result:
     start:
       character: 20
       line: 12
-  uri: data/hover.robot
+  uri: tests/hover.robot
 - !Location
   range:
     end:
@@ -92,7 +92,7 @@ result:
     start:
       character: 13
       line: 74
-  uri: data/hover.robot
+  uri: tests/hover.robot
 - !Location
   range:
     end:
@@ -101,7 +101,7 @@ result:
     start:
       character: 18
       line: 3
-  uri: data/references.robot
+  uri: tests/references.robot
 - !Location
   range:
     end:
@@ -110,7 +110,7 @@ result:
     start:
       character: 18
       line: 6
-  uri: data/references.robot
+  uri: tests/references.robot
 - !Location
   range:
     end:
@@ -119,4 +119,4 @@ result:
     start:
       character: 18
       line: 9
-  uri: data/references.robot
+  uri: tests/references.robot

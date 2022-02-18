@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 48
+  line: 9
+  name: variable import by path name
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Variables *myvariables*'
+  range:
+    end:
+      character: 49
+      line: 9
+    start:
+      character: 18
+      line: 9

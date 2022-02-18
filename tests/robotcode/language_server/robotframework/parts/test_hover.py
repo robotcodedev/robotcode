@@ -19,7 +19,7 @@ from ..tools import (
 
 @pytest.mark.parametrize(
     ("test_document", "data"),
-    generate_tests_from_source_document(Path(Path(__file__).parent, "data/hover.robot")),
+    generate_tests_from_source_document(Path(Path(__file__).parent, "data/tests/hover.robot")),
     indirect=["test_document"],
     ids=generate_test_id,
 )

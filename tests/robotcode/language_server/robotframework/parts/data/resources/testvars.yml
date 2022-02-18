@@ -1,2 +1,3 @@
 TEST_VAR: 1
 TEST_VAR2: 2
+TEST_VAR3: [1, 2, 3, 4]

@@ -8,7 +8,7 @@ result: !Hover
     value: '## Resource *firstresource*'
   range:
     end:
-      character: 60
+      character: 63
       line: 12
     start:
       character: 18

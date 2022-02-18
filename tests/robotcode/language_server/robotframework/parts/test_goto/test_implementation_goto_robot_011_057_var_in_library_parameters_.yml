@@ -6,10 +6,10 @@ result:
 - !LocationLink
   origin_selection_range:
     end:
-      character: 61
+      character: 64
       line: 11
     start:
-      character: 54
+      character: 57
       line: 11
   target_range:
     end:

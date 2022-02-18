@@ -10,6 +10,10 @@
             "request": "launch",
             "cwd": "${workspaceFolder}",
             "target": "${file}",
+            "attachPython": true,
+            "pythonConfiguration": {
+                "justMyCode": false
+            }
         },
         {
             "name": "RobotCode: Run All",
