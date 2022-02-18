@@ -126,16 +126,10 @@ class StackFrameEntry:
         self.stack_frames: Deque[StackFrameEntry] = deque()
         self.top_hidden = False
 
-    def get_toplevel_parent(self) -> Optional[StackFrameEntry]:
-        if self.parent is None:
-            return None
-
-        p = self.parent()
-
-        while p is not None and (p.type not in ["SUITE", "TEST"] and p.type != "KEYWORD" and p.handler is None):
-            p = p.parent() if p.parent is not None else None
-
-        return p
+    def get_first_or_self(self) -> StackFrameEntry:
+        if self.stack_frames:
+            return self.stack_frames[0]
+        return self
 
     @property
     def id(self) -> int:
@@ -599,7 +593,7 @@ class Debugger:
             handler=handler,
         )
 
-        if type in ["SUITE", "TEST"]:
+        if type in ["SUITE", "TEST", "SETUP", "TEARDOWN"]:
             self.stack_frames.appendleft(result)
         elif type == "KEYWORD" and isinstance(handler, UserKeywordHandler):
             result.top_hidden = True
@@ -624,7 +618,7 @@ class Debugger:
     ) -> None:
         from robot.running.userkeyword import UserKeywordHandler
 
-        if type in ["SUITE", "TEST"]:
+        if type in ["SUITE", "TEST", "SETUP", "TEARDOWN"]:
             self.stack_frames.popleft()
         elif type == "KEYWORD" and isinstance(handler, UserKeywordHandler):
             self.stack_frames.popleft()
@@ -791,7 +785,7 @@ class Debugger:
         format: Optional[StackFrameFormat] = None,
     ) -> StackTraceResult:
         start_frame = start_frame or 0
-        levels = start_frame + 1 + (levels or len(self.stack_frames))
+        levels = start_frame + (levels or len(self.stack_frames))
 
         frames = [
             StackFrame(
@@ -807,7 +801,7 @@ class Debugger:
             if i == 0 and not v.top_hidden or v.stack_frames
         ]
 
-        return StackTraceResult(frames, len(frames))
+        return StackTraceResult(frames, len(self.stack_frames))
 
     def log_message(self, message: Dict[str, Any]) -> None:
         if message["level"] == "FAIL":
@@ -895,7 +889,10 @@ class Debugger:
         count: Optional[int] = None,
         format: Optional[ValueFormat] = None,
     ) -> List[Variable]:
-        result: Dict[str, Variable] = {}
+        from robot.utils.normalizing import NormalizedDict
+
+        result = NormalizedDict(ignore="_")
+
         entry = next(
             (
                 v
@@ -933,25 +930,39 @@ class Debugger:
                         }
                     )
                 elif entry.local_id() == variables_reference:
-                    # current_index = context.variables._scopes.index(vars)
-                    # globals = context.variables._scopes[max(current_index - 1, 0)].as_dict()
+                    vars = entry.get_first_or_self().variables()
+                    if vars is not None:
+                        p = entry.parent() if entry.parent else None
 
-                    current_index = context.variables._scopes.index(context.variables.current)
-                    globals = context.variables._scopes[max(current_index - 1, 0)].as_dict()
-                    result.update(
-                        {
-                            k: Variable(name=k, value=repr(v), type=repr(type(v)))
-                            for k, v in context.variables.current.as_dict().items()
-                            if k not in globals or globals[k] != v
-                        }
-                    )
+                        globals = (
+                            (p.get_first_or_self().variables() if p is not None else None)
+                            or context.variables._test
+                            or context.variables._suite
+                            or context.variables._global
+                        ).as_dict()
 
-                    if entry is not None and entry.handler is not None and entry.handler.arguments:
-                        for argument in entry.handler.arguments.argument_names:
-                            name = f"${{{argument}}}"
-                            value = context.variables.current[name]
+                        suite_vars = (context.variables._suite or context.variables._global).as_dict()
 
-                            result[name] = Variable(name=name, value=repr(value), type=repr(type(value)))
+                        result.update(
+                            {
+                                k: Variable(name=k, value=repr(v), type=repr(type(v)))
+                                for k, v in vars.as_dict().items()
+                                if (k not in globals or globals[k] != v)
+                                and (entry.handler is None or k not in suite_vars or suite_vars[k] != v)
+                            }
+                        )
+
+                        if entry.handler is not None and entry.handler.arguments:
+                            for argument in entry.handler.arguments.argument_names:
+                                name = f"${{{argument}}}"
+                                try:
+                                    value = vars[name]
+                                except (SystemExit, KeyboardInterrupt):
+                                    raise
+                                except BaseException as e:
+                                    value = str(e)
+
+                                result[name] = Variable(name=name, value=repr(value), type=repr(type(value)))
 
         return list(result.values())
 
@@ -989,7 +1000,11 @@ class Debugger:
                 if expression == curdir:
                     return EvaluateResult(repr(expression), repr(type(expression)))
 
-            vars = evaluate_context.variables.current if frame_id is not None else evaluate_context.variables._global
+            vars = (
+                (stack_frame.get_first_or_self().variables() or evaluate_context.variables.current)
+                if stack_frame is not None
+                else evaluate_context.variables._global
+            )
 
             if expression.startswith("! "):
                 splitted = self.SPLIT_LINE.split(expression[2:].strip())
@@ -1002,7 +1017,9 @@ class Debugger:
             else:
                 result = evaluate_expression(vars.replace_string(expression), vars.store)
 
-        except BaseException as e:  # NOSONAR
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
             result = e
 
         if result is not None:

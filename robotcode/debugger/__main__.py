@@ -202,7 +202,6 @@ async def run_robot(
                 )
             )
 
-        if server.protocol.connected:
             await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server.protocol.exit(exit_code), loop=loop))
 
         return exit_code
