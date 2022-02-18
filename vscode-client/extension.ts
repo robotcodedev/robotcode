@@ -33,14 +33,13 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
 
     vscode.window.registerTerminalLinkProvider({
       provideTerminalLinks(terminalContext: vscode.TerminalLinkContext, _token: vscode.CancellationToken) {
-        if (
-          (terminalContext.line.startsWith("Log:") || terminalContext.line.startsWith("Report:")) &&
-          terminalContext.line.endsWith("html")
-        ) {
-          const result = /(Log|Report):\s*(?<link>\S.*)/.exec(terminalContext.line)?.groups?.link;
+        const line = terminalContext.line.trimEnd();
+
+        if ((line.startsWith("Log:") || line.startsWith("Report:")) && line.endsWith("html")) {
+          const result = /(Log|Report):\s*(?<link>\S.*)/.exec(line)?.groups?.link;
 
           if (result) {
-            return [new TerminalLink(result, terminalContext.line.indexOf(result), result.length, "Open report.")];
+            return [new TerminalLink(result, line.indexOf(result), result.length, "Open report.")];
           }
         }
 
