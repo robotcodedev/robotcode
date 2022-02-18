@@ -182,27 +182,29 @@ async def run_robot(
         Debugger.instance().set_main_thread(threading.current_thread())
         Debugger.instance().start()
 
-        exit_code = robot.run_cli(args, False)
-
-        if server.protocol.connected:
-            await asyncio.wrap_future(
-                asyncio.run_coroutine_threadsafe(
-                    server.protocol.send_event_async(
-                        Event(
-                            event="robotExited",
-                            body={
-                                "reportFile": Debugger.instance().robot_report_file,
-                                "logFile": Debugger.instance().robot_log_file,
-                                "outputFile": Debugger.instance().robot_output_file,
-                                "exitCode": exit_code,
-                            },
-                        )
-                    ),
-                    loop=loop,
+        exit_code = -1
+        try:
+            exit_code = robot.run_cli(args, False)
+        finally:
+            if server.protocol.connected:
+                await asyncio.wrap_future(
+                    asyncio.run_coroutine_threadsafe(
+                        server.protocol.send_event_async(
+                            Event(
+                                event="robotExited",
+                                body={
+                                    "reportFile": Debugger.instance().robot_report_file,
+                                    "logFile": Debugger.instance().robot_log_file,
+                                    "outputFile": Debugger.instance().robot_output_file,
+                                    "exitCode": exit_code,
+                                },
+                            )
+                        ),
+                        loop=loop,
+                    )
                 )
-            )
 
-            await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server.protocol.exit(exit_code), loop=loop))
+                await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server.protocol.exit(exit_code), loop=loop))
 
         return exit_code
     except asyncio.CancelledError:
