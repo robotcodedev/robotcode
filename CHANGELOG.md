@@ -18,6 +18,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 - Fix stepping/halt on breakpoint for IF/ELSE statements if the expression is evaluated as False
 - Rework of stepping and stacktrace in the debugger
   - Only the real keyword calls are displayed in the stack trace.
+- Variables in the debugger are now resolved correctly and are sorted into Local/Test/Suite and Global variables
 
 ##  0.5.5
 
