@@ -50,6 +50,17 @@ from .dap_types import (
 )
 
 
+class Undefined:
+    def __str__(self) -> str:
+        return self.__repr__()
+
+    def __repr__(self) -> str:
+        return "<undefined>"
+
+
+UNDEFINED = Undefined()
+
+
 class EvaluateResult(NamedTuple):
     result: str
     type: Optional[str] = None
@@ -593,9 +604,9 @@ class Debugger:
             handler=handler,
         )
 
-        if type in ["SUITE", "TEST", "SETUP", "TEARDOWN"]:
+        if type in ["SUITE", "TEST"]:
             self.stack_frames.appendleft(result)
-        elif type == "KEYWORD" and isinstance(handler, UserKeywordHandler):
+        elif type in ["KEYWORD", "SETUP", "TEARDOWN"] and isinstance(handler, UserKeywordHandler):
             result.top_hidden = True
             self.stack_frames[0].stack_frames.appendleft(result)
             self.stack_frames.appendleft(result)
@@ -620,7 +631,7 @@ class Debugger:
 
         if type in ["SUITE", "TEST", "SETUP", "TEARDOWN"]:
             self.stack_frames.popleft()
-        elif type == "KEYWORD" and isinstance(handler, UserKeywordHandler):
+        elif type in ["KEYWORD", "SETUP", "TEARDOWN"] and isinstance(handler, UserKeywordHandler):
             self.stack_frames.popleft()
             self.stack_frames[0].stack_frames.popleft()
         else:
@@ -720,7 +731,7 @@ class Debugger:
         type = attributes.get("type", "KEYWORD")
 
         handler: Any = None
-        if type == "KEYWORD":
+        if type in ["KEYWORD", "SETUP", "TEARDOWN"]:
             try:
                 handler = EXECUTION_CONTEXTS.current.namespace.get_runner(name)._handler
             except (SystemExit, KeyboardInterrupt):
@@ -977,6 +988,7 @@ class Debugger:
         context: Union[EvaluateArgumentContext, str, None] = None,
         format: Optional[ValueFormat] = None,
     ) -> EvaluateResult:
+        from robot.errors import VariableError
         from robot.running.context import EXECUTION_CONTEXTS
         from robot.running.model import Keyword
         from robot.variables.evaluation import evaluate_expression
@@ -1013,7 +1025,27 @@ class Debugger:
                     result = kw.run(evaluate_context)
 
             elif self.IS_VARIABLE_RE.match(expression.strip()):
-                result = VariableFinder(vars.store).find(expression)
+                try:
+                    result = VariableFinder(vars.store).find(expression)
+                except VariableError:
+                    if context is not None and (
+                        isinstance(context, EvaluateArgumentContext)
+                        and (
+                            context
+                            in [
+                                EvaluateArgumentContext.HOVER,
+                                EvaluateArgumentContext.WATCH,
+                            ]
+                        )
+                        or context
+                        in [
+                            EvaluateArgumentContext.HOVER.value,
+                            EvaluateArgumentContext.WATCH.value,
+                        ]
+                    ):
+                        result = UNDEFINED
+                    else:
+                        raise
             else:
                 result = evaluate_expression(vars.replace_string(expression), vars.store)
 
