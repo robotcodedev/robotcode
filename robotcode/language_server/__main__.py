@@ -187,16 +187,18 @@ def main() -> None:
     else:
         logging.getLogger("asyncio").level = logging.CRITICAL
 
-    if args.log_config is not None:
-        if not os.path.exists(args.log_config):
-            raise FileNotFoundError(f"Log-config file '{args.log_config}' not exists.")
+    if args.log:
+        if args.log_config is not None:
+            if not os.path.exists(args.log_config):
+                raise FileNotFoundError(f"Log-config file '{args.log_config}' not exists.")
 
-        logging.config.fileConfig(args.log_config, disable_existing_loggers=True)
-    else:
-        init_logging(args)
+            logging.config.fileConfig(args.log_config, disable_existing_loggers=True)
+        else:
+            init_logging(args)
 
     _logger.info(f"starting language server version={__version__}")
     _logger.debug(f"args={args}")
+
     if args.debugpy:
         start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)
 

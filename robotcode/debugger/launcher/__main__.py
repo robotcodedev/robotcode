@@ -102,49 +102,50 @@ def main() -> None:
         print(__version__)
         return
 
-    if args.call_tracing:
-        LoggingDescriptor.set_call_tracing(True)
-    if args.call_tracing_default_level:
-        LoggingDescriptor.set_call_tracing_default_level(
-            logging._checkLevel(args.call_tracing_default_level)  # type: ignore
-        )
+    if args.log:
+        if args.call_tracing:
+            LoggingDescriptor.set_call_tracing(True)
+        if args.call_tracing_default_level:
+            LoggingDescriptor.set_call_tracing_default_level(
+                logging._checkLevel(args.call_tracing_default_level)  # type: ignore
+            )
 
-    if args.debug_asyncio:
-        os.environ["PYTHONASYNCIODEBUG"] = "1"
-        logging.getLogger("asyncio").level = logging.DEBUG
-    else:
-        logging.getLogger("asyncio").level = logging.CRITICAL
+        if args.debug_asyncio:
+            os.environ["PYTHONASYNCIODEBUG"] = "1"
+            logging.getLogger("asyncio").level = logging.DEBUG
+        else:
+            logging.getLogger("asyncio").level = logging.CRITICAL
 
-    if args.log_config is not None:
-        if not os.path.exists(args.log_config):
-            raise FileNotFoundError(f"Log-config file '{args.log_config}' not exists.")
+        if args.log_config is not None:
+            if not os.path.exists(args.log_config):
+                raise FileNotFoundError(f"Log-config file '{args.log_config}' not exists.")
 
-        logging.config.fileConfig(args.log_config, disable_existing_loggers=True)
-    else:
-        log_level = logging._checkLevel(args.log_level) if args.log else logging.WARNING  # type: ignore
+            logging.config.fileConfig(args.log_config, disable_existing_loggers=True)
+        else:
+            log_level = logging._checkLevel(args.log_level) if args.log else logging.WARNING  # type: ignore
 
-        log_initialized = False
-        if args.log_colored:
-            try:
-                import coloredlogs
+            log_initialized = False
+            if args.log_colored:
+                try:
+                    import coloredlogs
 
-                coloredlogs.install(level=log_level)
-                log_initialized = True
-            except ImportError:
-                pass
+                    coloredlogs.install(level=log_level)
+                    log_initialized = True
+                except ImportError:
+                    pass
 
-        if not log_initialized:
-            logging.basicConfig(level=log_level, format="%(name)s:%(levelname)s: %(message)s")
+            if not log_initialized:
+                logging.basicConfig(level=log_level, format="%(name)s:%(levelname)s: %(message)s")
 
-        if args.log_file is not None:
-            _logger.logger.addHandler(get_log_handler(args.log_file))
+            if args.log_file is not None:
+                _logger.logger.addHandler(get_log_handler(args.log_file))
 
-        if not args.log_asyncio:
-            logging.getLogger("asyncio").setLevel(logging.CRITICAL)
+            if not args.log_asyncio:
+                logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
-        if not args.log_debugger_launcher:
-            logging.getLogger("robotcode.debugger.launcher").setLevel(logging.CRITICAL)
-            logging.getLogger("robotcode.jsonrpc2").setLevel(logging.CRITICAL)
+            if not args.log_debugger_launcher:
+                logging.getLogger("robotcode.debugger.launcher").setLevel(logging.CRITICAL)
+                logging.getLogger("robotcode.jsonrpc2").setLevel(logging.CRITICAL)
 
     _logger.info(f"starting debugger launcher server version={__version__}")
     _logger.debug(f"args={args}")
