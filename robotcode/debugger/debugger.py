@@ -137,6 +137,12 @@ class StackFrameEntry:
         self.stack_frames: Deque[StackFrameEntry] = deque()
         self.top_hidden = False
 
+    def __repr__(self) -> str:
+        return (
+            f"StackFrameEntry({repr(self.name)}, {repr(self.type)}, "
+            + f"{repr(self.source)}, {repr(self.line)}, {repr(self.column)})"
+        )
+
     def get_first_or_self(self) -> StackFrameEntry:
         if self.stack_frames:
             return self.stack_frames[0]
@@ -582,17 +588,6 @@ class Debugger:
         from robot.running.context import EXECUTION_CONTEXTS
         from robot.running.userkeyword import UserKeywordHandler
 
-        # if source is None or line is None or column is None:
-        #     for v in self.stack_frames:
-        #         if source is None:
-        #             source = v.source
-        #         if line is None:
-        #             line = v.line
-        #         if column is None:
-        #             column = v.column
-        #         if source is not None and line is not None and column is not None:
-        #             break
-
         result = StackFrameEntry(
             self.stack_frames[0] if self.stack_frames else None,
             EXECUTION_CONTEXTS.current,
@@ -608,10 +603,12 @@ class Debugger:
             self.stack_frames.appendleft(result)
         elif type in ["KEYWORD", "SETUP", "TEARDOWN"] and isinstance(handler, UserKeywordHandler):
             result.top_hidden = True
-            self.stack_frames[0].stack_frames.appendleft(result)
+            if self.stack_frames:
+                self.stack_frames[0].stack_frames.appendleft(result)
             self.stack_frames.appendleft(result)
         else:
-            self.stack_frames[0].stack_frames.appendleft(result)
+            if self.stack_frames:
+                self.stack_frames[0].stack_frames.appendleft(result)
 
         self.full_stack_frames.appendleft(result)
 
@@ -633,9 +630,12 @@ class Debugger:
             self.stack_frames.popleft()
         elif type in ["KEYWORD", "SETUP", "TEARDOWN"] and isinstance(handler, UserKeywordHandler):
             self.stack_frames.popleft()
-            self.stack_frames[0].stack_frames.popleft()
+
+            if self.stack_frames:
+                self.stack_frames[0].stack_frames.popleft()
         else:
-            self.stack_frames[0].stack_frames.popleft()
+            if self.stack_frames:
+                self.stack_frames[0].stack_frames.popleft()
 
         self.full_stack_frames.popleft()
 
@@ -724,10 +724,8 @@ class Debugger:
         from robot.running.context import EXECUTION_CONTEXTS
 
         status = attributes.get("status", "")
-
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
-        kwname = attributes.get("kwname", "")
         type = attributes.get("type", "KEYWORD")
 
         handler: Any = None
@@ -739,7 +737,7 @@ class Debugger:
             except BaseException:
                 pass
 
-        entry = self.add_stackframe_entry(kwname, type, source, line_no, handler=handler)
+        entry = self.add_stackframe_entry(name, type, source, line_no, handler=handler)
 
         if status == "NOT RUN" and type not in ["IF"]:
             return
@@ -766,11 +764,10 @@ class Debugger:
 
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
-        longname = attributes.get("longname", "")
         type = attributes.get("type", "KEYWORD")
 
         handler: Any = None
-        if type == "KEYWORD":
+        if type in ["KEYWORD", "SETUP", "TEARDOWN"]:
             try:
                 handler = EXECUTION_CONTEXTS.current.namespace.get_runner(name)._handler
             except (SystemExit, KeyboardInterrupt):
@@ -778,7 +775,7 @@ class Debugger:
             except BaseException:
                 pass
 
-        self.remove_stackframe_entry(longname, type, source, line_no, handler=handler)
+        self.remove_stackframe_entry(name, type, source, line_no, handler=handler)
 
     def set_main_thread(self, thread: threading.Thread) -> None:
         self.main_thread = thread
