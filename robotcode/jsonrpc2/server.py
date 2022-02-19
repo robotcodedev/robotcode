@@ -8,6 +8,7 @@ from types import TracebackType
 from typing import (
     BinaryIO,
     Callable,
+    Coroutine,
     Generic,
     Literal,
     NamedTuple,
@@ -70,9 +71,13 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         self.pipe_name = pipe_name
 
         self._run_func: Optional[Callable[[], None]] = None
+        self._serve_func: Optional[Callable[[], Coroutine[None, None, None]]] = None
         self._server: Optional[asyncio.AbstractServer] = None
 
         self._stdio_stop_event: Optional[asyncio.Event] = None
+
+        self._in_closing = False
+        self._closed = False
 
         self.loop = asyncio.get_event_loop()
 
@@ -84,7 +89,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         if self.mode == JsonRpcServerMode.STDIO:
             self.start_stdio()
         elif self.mode == JsonRpcServerMode.TCP:
-            self.start_tcp(self.tcp_params.host, self.tcp_params.port)
+            self.loop.run_until_complete(self.start_tcp(self.tcp_params.host, self.tcp_params.port))
         elif self.mode == JsonRpcServerMode.PIPE:
             self.start_pipe(self.pipe_name)
         elif self.mode == JsonRpcServerMode.SOCKET:
@@ -93,12 +98,58 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
             raise JsonRPCException(f"Unknown server mode {self.mode}")
 
     @_logger.call
-    def close(self) -> None:
+    async def start_async(self) -> None:
+        if self.mode == JsonRpcServerMode.TCP:
+            await self.start_tcp(self.tcp_params.host, self.tcp_params.port)
+        else:
+            raise JsonRPCException(f"Unsupported server mode {self.mode}")
+
+    @_logger.call
+    def _close(self) -> None:
         if self._stdio_stop_event is not None:
             self._stdio_stop_event.set()
 
-        if self._server and self._server.is_serving:
+        if self._server and self._server.is_serving():
             self._server.close()
+
+    @_logger.call
+    def close(self) -> None:
+        if self._in_closing or self._closed:
+            return
+
+        self._in_closing = True
+        try:
+            self._close()
+        finally:
+            self._in_closing = False
+            self._closed = True
+
+    @_logger.call
+    async def close_async(self) -> None:
+        if self._in_closing or self._closed:
+            return
+
+        self._in_closing = True
+        try:
+            self._close()
+            if self._server is not None:
+                await self._server.wait_closed()
+        finally:
+            self._in_closing = False
+            self._closed = True
+
+    async def __aenter__(self) -> "JsonRPCServer[TProtocol]":
+        await self.start_async()
+        return self
+
+    async def __aexit__(
+        self,
+        exception_type: Optional[Type[BaseException]],
+        exception_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> Literal[False]:
+        await self.close_async()
+        return False
 
     def __enter__(self) -> "JsonRPCServer[TProtocol]":
         self.start()
@@ -147,13 +198,12 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         self._run_func = run_io_nonblocking
 
     @_logger.call
-    def start_tcp(self, host: Optional[str] = None, port: int = 0) -> None:
+    async def start_tcp(self, host: Optional[str] = None, port: int = 0) -> None:
         self.mode = JsonRpcServerMode.TCP
 
-        self._server = self.loop.run_until_complete(
-            self.loop.create_server(self.create_protocol, host, port, reuse_address=True)
-        )
+        self._server = await self.loop.create_server(self.create_protocol, host, port, reuse_address=True)
 
+        self._serve_func = self._server.serve_forever
         self._run_func = self.loop.run_forever
 
     @_logger.call
@@ -199,3 +249,10 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
             self._logger.warning("server is not started.")
             return
         self._run_func()
+
+    @_logger.call
+    async def serve(self) -> None:
+        if self._serve_func is None:
+            self._logger.warning("server is not started.")
+            return
+        await self._serve_func()

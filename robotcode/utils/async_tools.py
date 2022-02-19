@@ -744,6 +744,18 @@ def run_coroutine_from_thread(
     return result.cfuture.result()
 
 
+def run_coroutine_from_thread_as_future_async(
+    func: Callable[..., Coroutine[Any, Any, _T]],
+    *args: Any,
+    loop: Optional[asyncio.AbstractEventLoop] = None,
+    **kwargs: Any,
+) -> asyncio.Future[_T]:
+    if loop is None:
+        loop = asyncio.get_running_loop()
+
+    return wrap_sub_future(asyncio.run_coroutine_threadsafe(func(*args, **kwargs), loop))
+
+
 async def run_coroutine_from_thread_async(
     func: Callable[..., Coroutine[Any, Any, _T]],
     *args: Any,
@@ -753,7 +765,7 @@ async def run_coroutine_from_thread_async(
     if loop is None:
         loop = asyncio.get_running_loop()
 
-    return await wrap_sub_future(asyncio.run_coroutine_threadsafe(func(*args), loop))
+    return await run_coroutine_from_thread_as_future_async(func, *args, loop=loop, **kwargs)
 
 
 def wrap_sub_future(

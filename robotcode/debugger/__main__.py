@@ -65,25 +65,55 @@ async def wait_for_server(timeout: float = 5) -> "DebugAdapterServer":
 
 
 @_logger.call
-def run_server(port: int, loop: asyncio.AbstractEventLoop) -> None:
+async def _run_server(port: int) -> None:
+    import time
+
     from ..jsonrpc2.server import TcpParams
     from .server import DebugAdapterServer
 
-    asyncio.set_event_loop(loop)
-
-    with DebugAdapterServer(tcp_params=TcpParams("127.0.0.1", port)) as server:
+    async with DebugAdapterServer(tcp_params=TcpParams("127.0.0.1", port)) as server:
         set_server(cast(DebugAdapterServer, server))
         try:
-            server.run()
+            await server.serve()
         except asyncio.CancelledError:
-            pass
+            # TODO: this is a dirty hack, because I did not found a solution for printing,
+            # not throwing a runtime error from _ProactorBasePipeTransport.__del__ on windows
+            time.sleep(1)
+            raise
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             _logger.exception(e)
 
 
-DEFAULT_TIMEOUT = 5.0
+DEFAULT_TIMEOUT = 50.0
+
+
+@_logger.call
+async def start_debugpy_async(
+    server: "DebugAdapterServer",
+    debugpy_port: int = 5678,
+    wait_for_debugpy_client: bool = False,
+    wait_for_client_timeout: float = DEFAULT_TIMEOUT,
+) -> None:
+    from ..utils.async_tools import run_coroutine_from_thread_async
+    from ..utils.debugpy import enable_debugpy, wait_for_debugpy_connected
+    from ..utils.net import check_free_port
+    from .dap_types import Event
+
+    port = check_free_port(debugpy_port)
+
+    if enable_debugpy(port) and await run_coroutine_from_thread_async(
+        server.protocol.wait_for_client, wait_for_client_timeout, loop=server.loop
+    ):
+        await asyncio.wrap_future(
+            asyncio.run_coroutine_threadsafe(
+                server.protocol.send_event_async(Event(event="debugpyStarted", body={"port": port})),
+                loop=server.loop,
+            )
+        )
+        if wait_for_debugpy_client:
+            wait_for_debugpy_connected()
 
 
 @_logger.call
@@ -104,67 +134,42 @@ async def run_robot(
 ) -> Any:
     import robot
 
-    from ..utils.debugpy import enable_debugpy, wait_for_debugpy_connected
-    from ..utils.net import check_free_port
+    from ..utils.async_tools import (
+        run_coroutine_from_thread_async,
+        run_coroutine_in_thread,
+    )
     from .dap_types import Event
     from .debugger import Debugger
 
-    @_logger.call
-    async def start_debugpy_async() -> None:
-        if debugpy:
-            port = check_free_port(debugpy_port)
-            if enable_debugpy(port) and await asyncio.wrap_future(
-                asyncio.run_coroutine_threadsafe(server.protocol.wait_for_client(wait_for_client_timeout), loop=loop)
-            ):
-                await asyncio.wrap_future(
-                    asyncio.run_coroutine_threadsafe(
-                        server.protocol.send_event_async(Event(event="debugpyStarted", body={"port": port})),
-                        loop=loop,
-                    )
-                )
-                if wait_for_debugpy_client:
-                    wait_for_debugpy_connected()
-
-    loop = asyncio.new_event_loop()
-
-    thread = threading.Thread(name="RobotCode Debugger", target=run_server, args=(port, loop))
-    thread.daemon = True
-    thread.start()
+    server_future = run_coroutine_in_thread(_run_server, port)
 
     server = await wait_for_server()
 
     try:
         if wait_for_client:
             try:
-                await asyncio.wrap_future(
-                    asyncio.run_coroutine_threadsafe(
-                        server.protocol.wait_for_client(wait_for_client_timeout), loop=loop
-                    )
+                await run_coroutine_from_thread_async(
+                    server.protocol.wait_for_client, wait_for_client_timeout, loop=server.loop
                 )
-            except SystemExit:
-                raise
-            except (asyncio.CancelledError, KeyboardInterrupt):
+            except asyncio.CancelledError:
                 pass
-            except asyncio.TimeoutError:
-                raise ConnectionError("No incomming connection from a debugger client.")
+            except asyncio.TimeoutError as e:
+                raise ConnectionError("No incomming connection from a debugger client.") from e
 
-        await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server.protocol.initialized(), loop=loop))
+        await run_coroutine_from_thread_async(server.protocol.initialized, loop=server.loop)
 
         if wait_for_client:
             try:
-                await asyncio.wrap_future(
-                    asyncio.run_coroutine_threadsafe(
-                        server.protocol.wait_for_configuration_done(configuration_done_timeout), loop=loop
-                    )
+                await run_coroutine_from_thread_async(
+                    server.protocol.wait_for_configuration_done, configuration_done_timeout, loop=server.loop
                 )
-            except SystemExit:
-                raise
-            except (asyncio.CancelledError, KeyboardInterrupt):
+            except asyncio.CancelledError:
                 pass
-            except asyncio.TimeoutError:
-                raise ConnectionError("Timeout to get configuration from client.")
+            except asyncio.TimeoutError as e:
+                raise ConnectionError("Timeout to get configuration from client.") from e
 
-        await start_debugpy_async()
+        if debugpy:
+            await start_debugpy_async(server, debugpy_port, wait_for_debugpy_client, wait_for_client_timeout)
 
         args = [
             "--listener",
@@ -187,48 +192,37 @@ async def run_robot(
             exit_code = robot.run_cli(args, False)
         finally:
             if server.protocol.connected:
-                await asyncio.wrap_future(
-                    asyncio.run_coroutine_threadsafe(
-                        server.protocol.send_event_async(
-                            Event(
-                                event="robotExited",
-                                body={
-                                    "reportFile": Debugger.instance().robot_report_file,
-                                    "logFile": Debugger.instance().robot_log_file,
-                                    "outputFile": Debugger.instance().robot_output_file,
-                                    "exitCode": exit_code,
-                                },
-                            )
-                        ),
-                        loop=loop,
-                    )
+                await run_coroutine_from_thread_async(
+                    server.protocol.send_event_async,
+                    Event(
+                        event="robotExited",
+                        body={
+                            "reportFile": Debugger.instance().robot_report_file,
+                            "logFile": Debugger.instance().robot_log_file,
+                            "outputFile": Debugger.instance().robot_output_file,
+                            "exitCode": exit_code,
+                        },
+                    ),
+                    loop=server.loop,
                 )
 
-                await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server.protocol.exit(exit_code), loop=loop))
+                await run_coroutine_from_thread_async(server.protocol.exit, exit_code, loop=server.loop)
 
         return exit_code
     except asyncio.CancelledError:
         pass
     finally:
         if server.protocol.connected:
-            await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server.protocol.terminate(), loop=loop))
+            await run_coroutine_from_thread_async(server.protocol.terminate, loop=server.loop)
 
-        async def server_close() -> None:
-            server.close()
+        await run_coroutine_from_thread_async(server.protocol.wait_for_all_events_sended)
 
-        await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(server_close(), loop=loop))
-
-        loop.call_soon_threadsafe(loop.stop)
-
-        async def wait_loop_is_not_running() -> None:
-            while loop.is_running():
-                await asyncio.sleep(0.05)
+        server_future.cancel()
 
         try:
-            await asyncio.wait_for(wait_loop_is_not_running(), timeout=5)
-        except asyncio.TimeoutError:
-            _logger.warning("debug loop is running")
-            sys.exit(-1)
+            await server_future
+        except asyncio.CancelledError:
+            pass
 
 
 def get_log_handler(logfile: str) -> logging.FileHandler:

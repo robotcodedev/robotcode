@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Callable, Iterator, List, Optional, TypeVar, cast
+from typing import Any, Callable, Coroutine, Iterator, List, Optional, TypeVar, cast
 
 
 def iter_methods(
@@ -39,7 +39,7 @@ def is_lambda(v: Any) -> bool:
 _TCallable = TypeVar("_TCallable", bound=Callable[..., Any])
 
 
-def ensure_coroutine(func: _TCallable) -> _TCallable:
+def ensure_coroutine(func: _TCallable) -> Callable[..., Coroutine[Any, Any, Any]]:
     async def wrapper(*fargs: Any, **fkwargs: Any) -> Any:
         return func(*fargs, **fkwargs)
 

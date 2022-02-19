@@ -16,5 +16,8 @@
         "--log",
         "--log-level",
         "TRACE"
-    ]
+    ],
+    "robotcode.robot.args": [
+        "--dryrun"
+    ],
 }

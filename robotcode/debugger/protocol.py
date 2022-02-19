@@ -96,7 +96,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
             msg = header + body
 
             if self._loop:
-                self._loop.call_soon_threadsafe(self.write_transport.write, msg)
+                self.write_transport.write(msg)
 
     def send_error(
         self,

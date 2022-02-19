@@ -1,10 +1,10 @@
 import asyncio
 import os
-from asyncio import Lock
-from typing import Any, Literal, Optional, Union
+from typing import Any, List, Literal, Optional, Union
 
 from ..jsonrpc2.protocol import rpc_method
 from ..jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
+from ..utils.async_tools import Lock, run_coroutine_from_thread_as_future_async
 from ..utils.logging import LoggingDescriptor
 from .dap_types import (
     ConfigurationDoneArguments,
@@ -64,12 +64,29 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
 
         self._received_configuration_done_event = asyncio.Event()
         self._received_configuration_done = False
+        self._sended_events: List[asyncio.Future[None]] = []
 
         Debugger.instance().send_event.add(self.on_debugger_send_event)
 
     def on_debugger_send_event(self, sender: Any, event: Event) -> None:
+        def remove_future(future: "asyncio.Future[None]") -> None:
+            self._sended_events.remove(future)
+
         if self._loop is not None:
-            self._loop.call_soon_threadsafe(self.send_event, event)
+            future = run_coroutine_from_thread_as_future_async(self.send_event_async, event, loop=self._loop)
+            self._sended_events.append(future)
+            future.add_done_callback(remove_future)
+
+    async def wait_for_all_events_sended(self, timeout: float = 5) -> bool:
+        async def wait() -> bool:
+            while True:
+                if self._sended_events:
+                    await asyncio.sleep(0.01)
+                else:
+                    return True
+            return False
+
+        return await asyncio.wait_for(asyncio.create_task(wait()), timeout)
 
     @property
     def connected(self) -> bool:

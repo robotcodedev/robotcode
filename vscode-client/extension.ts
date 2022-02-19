@@ -39,7 +39,14 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
           const result = /(Log|Report):\s*(?<link>\S.*)/.exec(line)?.groups?.link;
 
           if (result) {
-            return [new TerminalLink(result, line.indexOf(result), result.length, "Open report.")];
+            return [
+              new TerminalLink(
+                result,
+                line.indexOf(result),
+                result.length,
+                line.startsWith("Log:") ? "Open log." : "Open report."
+              ),
+            ];
           }
         }
 
