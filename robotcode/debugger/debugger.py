@@ -629,7 +629,7 @@ class Debugger:
     ) -> None:
         from robot.running.userkeyword import UserKeywordHandler
 
-        if type in ["SUITE", "TEST", "SETUP", "TEARDOWN"]:
+        if type in ["SUITE", "TEST"]:
             self.stack_frames.popleft()
         elif type in ["KEYWORD", "SETUP", "TEARDOWN"] and isinstance(handler, UserKeywordHandler):
             self.stack_frames.popleft()
