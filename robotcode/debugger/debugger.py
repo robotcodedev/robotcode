@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import pathlib
 import re
 import threading
 import weakref
@@ -11,6 +12,7 @@ from typing import (
     Any,
     Deque,
     Dict,
+    Generator,
     List,
     Literal,
     NamedTuple,
@@ -120,6 +122,10 @@ class StackFrameEntry:
         line: int,
         column: int = 1,
         handler: Any = None,
+        is_file: bool = True,
+        libname: Optional[str] = None,
+        kwname: Optional[str] = None,
+        longname: Optional[str] = None,
     ) -> None:
         self.parent = weakref.ref(parent) if parent is not None else None
         self.context = weakref.ref(context)
@@ -130,12 +136,16 @@ class StackFrameEntry:
         self.line = line
         self.column = column
         self.handler = handler
+        self.is_file = is_file
+        self.top_hidden = False
+        self.libname = libname
+        self.kwname = kwname
+        self.longname = longname
         self._suite_marker = object()
         self._test_marker = object()
         self._local_marker = object()
         self._global_marker = object()
         self.stack_frames: Deque[StackFrameEntry] = deque()
-        self.top_hidden = False
 
     def __repr__(self) -> str:
         return (
@@ -584,9 +594,20 @@ class Debugger:
         column: Optional[int] = 1,
         *,
         handler: Any = None,
+        libname: Optional[str] = None,
+        kwname: Optional[str] = None,
+        longname: Optional[str] = None,
     ) -> StackFrameEntry:
         from robot.running.context import EXECUTION_CONTEXTS
         from robot.running.userkeyword import UserKeywordHandler
+
+        path = pathlib.Path(source) if source is not None else None
+        is_file = path is not None and path.is_file()
+        if path is not None and not is_file and type in ["SETUP", "TEARDOWN"]:
+            init_path = pathlib.Path(path, "__init__.robot")
+            if init_path.exists() and init_path.is_file():
+                is_file = True
+                source = str(init_path)
 
         result = StackFrameEntry(
             self.stack_frames[0] if self.stack_frames else None,
@@ -597,6 +618,10 @@ class Debugger:
             line if line is not None else 0,
             column if column is not None else 0,
             handler=handler,
+            is_file=is_file,
+            libname=libname,
+            kwname=kwname,
+            longname=longname,
         )
 
         if type in ["SUITE", "TEST"]:
@@ -646,7 +671,7 @@ class Debugger:
         status = attributes.get("status", "")
         type = "SUITE"
 
-        entry = self.add_stackframe_entry(longname, type, source, line_no)
+        entry = self.add_stackframe_entry(name, type, source, line_no, longname=longname)
 
         if self.debug:
             if self.stop_on_entry:
@@ -682,10 +707,9 @@ class Debugger:
 
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
-        longname = attributes.get("longname", "")
         type = "SUITE"
 
-        self.remove_stackframe_entry(longname, type, source, line_no)
+        self.remove_stackframe_entry(name, type, source, line_no)
 
     def start_test(self, name: str, attributes: Dict[str, Any]) -> None:
         source = attributes.get("source", None)
@@ -695,7 +719,7 @@ class Debugger:
 
         type = "TEST"
 
-        entry = self.add_stackframe_entry(longname, type, source, line_no)
+        entry = self.add_stackframe_entry(name, type, source, line_no, longname=longname)
 
         if self.debug and entry.source:
             self.process_start_state(entry.source, entry.line, entry.type, status)
@@ -727,6 +751,8 @@ class Debugger:
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
         type = attributes.get("type", "KEYWORD")
+        libname = attributes.get("libname", None)
+        kwname = attributes.get("kwname", None)
 
         handler: Any = None
         if type in ["KEYWORD", "SETUP", "TEARDOWN"]:
@@ -737,7 +763,7 @@ class Debugger:
             except BaseException:
                 pass
 
-        entry = self.add_stackframe_entry(name, type, source, line_no, handler=handler)
+        entry = self.add_stackframe_entry(name, type, source, line_no, handler=handler, libname=libname, kwname=kwname)
 
         if status == "NOT RUN" and type not in ["IF"]:
             return
@@ -795,19 +821,36 @@ class Debugger:
         start_frame = start_frame or 0
         levels = start_frame + (levels or len(self.stack_frames))
 
-        frames = [
-            StackFrame(
-                id=v.id,
-                name=v.name or v.type,
-                line=v.stack_frames[0].line if v.stack_frames else v.line,
-                column=v.stack_frames[0].column if v.stack_frames else v.column,
-                source=(Source(path=v.stack_frames[0].source) if v.stack_frames[0].source is not None else None)
-                if v.stack_frames
-                else (Source(path=v.source) if v.source is not None else None),
-            )
-            for i, v in enumerate(itertools.islice(self.stack_frames, start_frame, levels))
-            if i == 0 and not v.top_hidden or v.stack_frames
-        ]
+        def source_from_entry(entry: StackFrameEntry) -> Optional[Source]:
+            if entry.source is not None and entry.is_file:
+                return Source(path=entry.source)
+            else:
+                return Source(name=entry.type, path=entry.source)
+
+        def yield_stack() -> Generator[StackFrame, None, None]:
+            for i, v in enumerate(itertools.islice(self.stack_frames, start_frame, levels)):
+                if v.stack_frames:
+                    yield StackFrame(
+                        id=v.id,
+                        name=v.longname or v.kwname or v.name or v.type,
+                        line=v.stack_frames[0].line,
+                        column=v.stack_frames[0].column,
+                        source=source_from_entry(v.stack_frames[0]),
+                        presentation_hint="normal" if v.stack_frames[0].is_file else "subtle",
+                        module_id=v.libname,
+                    )
+                if not v.top_hidden:
+                    yield StackFrame(
+                        id=v.id,
+                        name=v.longname or v.kwname or v.name or v.type,
+                        line=v.line,
+                        column=v.column,
+                        source=source_from_entry(v),
+                        presentation_hint="normal" if v.is_file else "subtle",
+                        module_id=v.libname,
+                    )
+
+        frames = list(yield_stack())
 
         return StackTraceResult(frames, len(self.stack_frames))
 
