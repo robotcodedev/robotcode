@@ -43,7 +43,7 @@ class CollectType(Enum):
 
 
 _CollectMethod = Callable[
-    [ast.AST, TextDocument, Position, CollectType],
+    [ast.AST, List[ast.AST], TextDocument, Position, CollectType],
     Awaitable[Union[Location, List[Location], List[LocationLink], None]],
 ]
 
@@ -107,7 +107,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         method = self._find_method(type(result_node))
         if method is not None:
-            result = await method(result_node, document, position, collect_type)
+            result = await method(result_node, result_nodes, document, position, collect_type)
             if result is not None:
                 return result
 
@@ -155,8 +155,89 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     ]
         return None
 
+    async def definition_IfHeader(  # noqa: N802
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
+    ) -> Union[Location, List[Location], List[LocationLink], None]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import IfHeader
+
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
+
+        header = cast(IfHeader, node)
+
+        expression_token = header.get_token(RobotToken.ARGUMENT)
+        if expression_token is not None and position in range_from_token(expression_token):
+            token_and_var = await async_next(
+                (
+                    (var_token, var)
+                    async for var_token, var in self.iter_expression_variables_from_token(
+                        expression_token, namespace, nodes, position
+                    )
+                    if position in range_from_token(var_token)
+                ),
+                None,
+            )
+            if token_and_var is not None:
+                var_token, variable = token_and_var
+
+                if variable.source:
+                    return [
+                        LocationLink(
+                            origin_selection_range=range_from_token(var_token),
+                            target_uri=str(Uri.from_path(variable.source)),
+                            target_range=variable.range(),
+                            target_selection_range=range_from_token(variable.name_token)
+                            if variable.name_token
+                            else variable.range(),
+                        )
+                    ]
+
+        return None
+
+    async def definition_WhileHeader(  # noqa: N802
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
+    ) -> Union[Location, List[Location], List[LocationLink], None]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import WhileHeader
+
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
+
+        header = cast(WhileHeader, node)
+
+        expression_token = header.get_token(RobotToken.ARGUMENT)
+        if expression_token is not None and position in range_from_token(expression_token):
+            token_and_var = await async_next(
+                (
+                    (var_token, var)
+                    async for var_token, var in self.iter_expression_variables_from_token(
+                        expression_token, namespace, nodes, position
+                    )
+                    if position in range_from_token(var_token)
+                ),
+                None,
+            )
+            if token_and_var is not None:
+                var_token, variable = token_and_var
+
+                if variable.source:
+                    return [
+                        LocationLink(
+                            origin_selection_range=range_from_token(var_token),
+                            target_uri=str(Uri.from_path(variable.source)),
+                            target_range=variable.range(),
+                            target_selection_range=range_from_token(variable.name_token)
+                            if variable.name_token
+                            else variable.range(),
+                        )
+                    ]
+        return None
+
     async def definition_KeywordName(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordName
@@ -187,7 +268,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def definition_KeywordCall(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordCall
@@ -251,7 +332,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def definition_Fixture(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Fixture
@@ -315,7 +396,12 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def _definition_Template_or_TestTemplate(  # noqa: N802
-        self, template_node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
+        self,
+        template_node: ast.AST,
+        nodes: List[ast.AST],
+        document: TextDocument,
+        position: Position,
+        collect_type: CollectType,
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Template, TestTemplate
@@ -377,17 +463,17 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def definition_TestTemplate(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
-        return await self._definition_Template_or_TestTemplate(node, document, position, collect_type)
+        return await self._definition_Template_or_TestTemplate(node, nodes, document, position, collect_type)
 
     async def definition_Template(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
-        return await self._definition_Template_or_TestTemplate(node, document, position, collect_type)
+        return await self._definition_Template_or_TestTemplate(node, nodes, document, position, collect_type)
 
     async def definition_LibraryImport(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import LibraryImport
@@ -434,7 +520,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def definition_ResourceImport(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import ResourceImport
@@ -479,7 +565,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def definition_VariablesImport(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, collect_type: CollectType
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import VariablesImport

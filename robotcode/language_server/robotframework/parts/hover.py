@@ -155,7 +155,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         if expression_token is not None and position in range_from_token(expression_token):
             token_and_var = await async_next(
                 (
-                    (expression_token, var)
+                    (var_token, var)
                     async for var_token, var in self.iter_expression_variables_from_token(
                         expression_token, namespace, nodes, position
                     )
@@ -207,7 +207,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         if expression_token is not None and position in range_from_token(expression_token):
             token_and_var = await async_next(
                 (
-                    (expression_token, var)
+                    (var_token, var)
                     async for var_token, var in self.iter_expression_variables_from_token(
                         expression_token, namespace, nodes, position
                     )
