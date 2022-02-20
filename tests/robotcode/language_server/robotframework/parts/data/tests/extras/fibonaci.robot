@@ -1,6 +1,6 @@
 *** Test Cases ***
 first
-    ${a}    fibonaci    ${15}
+    ${a}    fibonaci    ${14}
     Log To Console    ${a}
 
 *** Keywords ***

@@ -83,16 +83,18 @@
 			"name": "Python: robotcode.debugger",
 			"type": "python",
 			"request": "launch",
+			"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data",
 			"module": "robotcode.debugger",
 			"justMyCode": false,
 			"args": [
-				"--debug-asyncio",
-				"--call-tracing",
-				"--log-config",
-				"log.ini",
-				//"-w",
+				"-p", "6612",
+				"-w",
 				"--",
+				"-d", "results",
+				"-P", "./lib",
+				"-P", "./resources",
 				//"C:\\tmp\\robottest\\tests\\bdd_style.robot"
+				"."
 			]
 		},
 		{

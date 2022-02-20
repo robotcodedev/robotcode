@@ -12,12 +12,15 @@
         }
     },
     "robotcode.languageServer.args": [
-        //"--debugpy",
+        "--debugpy",
         "--log",
         "--log-level",
         "TRACE"
     ],
-    "robotcode.robot.args": [
-        "--dryrun"
-    ],
+    // "robotcode.debug.groupOutput": false,
+    // "robotcode.robot.args": [
+    //     "-L", "TRACE"
+    // ],
+    // "robotcode.debug.outputLog": true,
+    // "robotcode.debug.outputMessages": true
 }
