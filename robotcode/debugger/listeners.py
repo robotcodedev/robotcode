@@ -76,11 +76,6 @@ class ListenerV2:
 
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         if attributes["type"] in ["KEYWORD", "SETUP", "TEARDOWN"]:
-            # Debugger.instance().send_event(
-            #     self,
-            #     Event(event="robotStarted", body=RobotExecutionEventBody(type="keyword", attributes=dict(attributes))),
-            # )
-
             Debugger.instance().start_output_group(
                 f"{name}({', '.join(repr(v) for v in attributes.get('args', []))})",
                 attributes,
@@ -100,11 +95,6 @@ class ListenerV2:
                     self.failed_keywords = []
 
                 self.failed_keywords.insert(0, {"message": self.last_fail_message, **attributes})
-
-            # Debugger.instance().send_event(
-            #     self,
-            #     Event(event="robotEnded", body=RobotExecutionEventBody(type="keyword", attributes=dict(attributes))),
-            # )
 
     def log_message(self, message: Dict[str, Any]) -> None:
         current_frame = Debugger.instance().full_stack_frames[0] if Debugger.instance().full_stack_frames else None

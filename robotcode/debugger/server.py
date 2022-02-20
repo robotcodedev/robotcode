@@ -157,9 +157,12 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
 
     @rpc_method(name="disconnect", param_type=DisconnectArguments)
     async def _disconnect(self, arguments: Optional[DisconnectArguments] = None, *args: Any, **kwargs: Any) -> None:
-        if not (await self.exited) or not (await self.terminated):
-            if arguments is None or arguments.terminate_debuggee is None or arguments.terminate_debuggee:
-                os._exit(-1)
+        if (
+            not (await self.exited)
+            or not (await self.terminated)
+            and (arguments is None or arguments.terminate_debuggee is None or arguments.terminate_debuggee)
+        ):
+            os._exit(-1)
 
     @rpc_method(name="setBreakpoints", param_type=SetBreakpointsArguments)
     async def _set_breakpoints(

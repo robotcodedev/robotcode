@@ -65,28 +65,16 @@ async def wait_for_server(timeout: float = 5) -> "DebugAdapterServer":
 
 
 @_logger.call
-async def _run_server(port: int) -> None:
-    import time
-
+async def _debug_adapter_server_(host: str, port: int) -> None:
     from ..jsonrpc2.server import TcpParams
     from .server import DebugAdapterServer
 
-    async with DebugAdapterServer(tcp_params=TcpParams("127.0.0.1", port)) as server:
+    async with DebugAdapterServer(tcp_params=TcpParams(host, port)) as server:
         set_server(cast(DebugAdapterServer, server))
-        try:
-            await server.serve()
-        except asyncio.CancelledError:
-            # TODO: this is a dirty hack, because I did not found a solution for printing,
-            # not throwing a runtime error from _ProactorBasePipeTransport.__del__ on windows
-            time.sleep(1)
-            raise
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except BaseException as e:
-            _logger.exception(e)
+        await server.serve()
 
 
-DEFAULT_TIMEOUT = 50.0
+DEFAULT_TIMEOUT = 5.0
 
 
 @_logger.call
@@ -141,7 +129,7 @@ async def run_robot(
     from .dap_types import Event
     from .debugger import Debugger
 
-    server_future = run_coroutine_in_thread(_run_server, port)
+    server_future = run_coroutine_in_thread(_debug_adapter_server_, "127.0.0.1", port)
 
     server = await wait_for_server()
 
