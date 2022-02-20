@@ -148,12 +148,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         exception_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> Literal[False]:
-        import time
-
-        # TODO: we need this, because of a miss behaviour in proactor eventloop on windows
-        if exception_type is asyncio.CancelledError and self._server is not None and sys.platform == "win32":
-            time.sleep(1)
-
         await self.close_async()
         return False
 

@@ -763,7 +763,9 @@ class Debugger:
             except BaseException:
                 pass
 
-        entry = self.add_stackframe_entry(name, type, source, line_no, handler=handler, libname=libname, kwname=kwname)
+        entry = self.add_stackframe_entry(
+            kwname, type, source, line_no, handler=handler, libname=libname, kwname=kwname, longname=name
+        )
 
         if status == "NOT RUN" and type not in ["IF"]:
             return
@@ -791,6 +793,7 @@ class Debugger:
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
         type = attributes.get("type", "KEYWORD")
+        kwname = attributes.get("kwname", None)
 
         handler: Any = None
         if type in ["KEYWORD", "SETUP", "TEARDOWN"]:
@@ -801,7 +804,7 @@ class Debugger:
             except BaseException:
                 pass
 
-        self.remove_stackframe_entry(name, type, source, line_no, handler=handler)
+        self.remove_stackframe_entry(kwname, type, source, line_no, handler=handler)
 
     def set_main_thread(self, thread: threading.Thread) -> None:
         self.main_thread = thread
@@ -825,7 +828,7 @@ class Debugger:
             if entry.source is not None and entry.is_file:
                 return Source(path=entry.source)
             else:
-                return Source(name=entry.type, path=entry.source)
+                return None
 
         def yield_stack() -> Generator[StackFrame, None, None]:
             for i, v in enumerate(itertools.islice(self.stack_frames, start_frame, levels)):

@@ -4,7 +4,8 @@ from typing import Any, List, Literal, Optional, Union
 
 from ..jsonrpc2.protocol import rpc_method
 from ..jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
-from ..utils.async_tools import Lock, run_coroutine_from_thread_as_future_async
+from ..utils import async_tools
+from ..utils.async_tools import run_coroutine_from_thread_as_future_async
 from ..utils.logging import LoggingDescriptor
 from .dap_types import (
     ConfigurationDoneArguments,
@@ -52,17 +53,18 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         super().__init__()
 
         self._initialized = False
-        self._connected_event = asyncio.Event()
+        self._connected_event = async_tools.Event()
+        self._disconnected_event = async_tools.Event()
         self._connected = False
         self._sigint_signaled = False
 
-        self._exited_lock = Lock()
+        self._exited_lock = async_tools.Lock()
         self._exited = False
 
-        self._terminated_lock = Lock()
+        self._terminated_lock = async_tools.Lock()
         self._terminated = False
 
-        self._received_configuration_done_event = asyncio.Event()
+        self._received_configuration_done_event = async_tools.Event()
         self._received_configuration_done = False
         self._sended_events: List[asyncio.Future[None]] = []
 
@@ -118,10 +120,17 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         super().connection_lost(exc)
 
         self._connected = False
+        self._disconnected_event.set()
 
     @_logger.call
     async def wait_for_client(self, timeout: float = 5) -> bool:
         await asyncio.wait_for(self._connected_event.wait(), timeout)
+
+        return self._connected
+
+    @_logger.call
+    async def wait_for_disconnected(self, timeout: float = 60) -> bool:
+        await asyncio.wait_for(self._disconnected_event.wait(), timeout)
 
         return self._connected
 

@@ -200,10 +200,16 @@ async def run_robot(
     except asyncio.CancelledError:
         pass
     finally:
+        await run_coroutine_from_thread_async(server.protocol.wait_for_all_events_sended)
+
         if server.protocol.connected:
             await run_coroutine_from_thread_async(server.protocol.terminate, loop=server.loop)
+            try:
+                await run_coroutine_from_thread_async(server.protocol.wait_for_disconnected, loop=server.loop)
+            except asyncio.TimeoutError:
+                import warnings
 
-        await run_coroutine_from_thread_async(server.protocol.wait_for_all_events_sended)
+                warnings.warn("Timeout at disconnect client occurred.")
 
         server_future.cancel()
 
