@@ -1029,11 +1029,13 @@ def resolve_variable(
     variables: Optional[Dict[str, Optional[Any]]] = None,
     ignore_errors: bool = True,
 ) -> Any:
+    from robot.variables.finders import VariableFinder
+
     update_python_path_and_env(working_dir, pythonpath, environment)
 
     robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
-    return robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=ignore_errors)
+    return VariableFinder(robot_variables.store).find(name.replace("\\", "\\\\"))
 
 
 @contextmanager

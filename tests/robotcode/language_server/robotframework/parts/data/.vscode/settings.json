@@ -1,6 +1,7 @@
 {
     "robotcode.robot.variables": {
-        "CMD_VAR": "1"
+        "CMD_VAR": "1",
+        "CMD_VAR_LONG": "a test"
     },
     "robotcode.robot.env": {
         "ENV_VAR": "1"

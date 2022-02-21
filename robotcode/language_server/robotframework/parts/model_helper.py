@@ -5,7 +5,7 @@ import re
 import token as python_token
 from io import StringIO
 from tokenize import generate_tokens
-from typing import Any, AsyncGenerator, List, Optional, Tuple, Union
+from typing import Any, AsyncGenerator, Generator, List, Optional, Set, Tuple, Union
 
 from ...common.lsp_types import Position
 from ..diagnostics.entities import VariableDefinition
@@ -228,6 +228,7 @@ class ModelHelperMixin:
         namespace: Namespace,
         nodes: Optional[List[ast.AST]],
         position: Optional[Position] = None,
+        skip_commandline_variables: bool = False,
     ) -> AsyncGenerator[Tuple[Token, VariableDefinition], Any]:
         from robot.api.parsing import Token as RobotToken
 
@@ -236,7 +237,9 @@ class ModelHelperMixin:
         for toknum, tokval, (_, tokcol), _, _ in generate_tokens(StringIO(expression.value).readline):
             if variable_started:
                 if toknum == python_token.NAME:
-                    var = await namespace.find_variable(f"${{{tokval}}}", nodes, position)
+                    var = await namespace.find_variable(
+                        f"${{{tokval}}}", nodes, position, skip_commandline_variables=skip_commandline_variables
+                    )
                     if var is not None:
                         yield RobotToken(
                             expression.type,
@@ -249,6 +252,67 @@ class ModelHelperMixin:
             if toknum == python_token.ERRORTOKEN and tokval == "$":
                 variable_started = True
 
+    @staticmethod
+    def remove_index_from_variable_token(token: Token) -> Tuple[Token, Optional[Token]]:
+        from robot.parsing.lexer import Token as RobotToken
+
+        def escaped(i: int) -> bool:
+            return token.value[-i - 3 : -i - 2] == "\\"
+
+        if token.type != RobotToken.VARIABLE or not token.value.endswith("]"):
+            return (token, None)
+
+        braces = 1
+        curly_braces = 0
+        index = 0
+        for i, c in enumerate(reversed(token.value[:-1])):
+            if c == "}" and not escaped(i):
+                curly_braces += 1
+            elif c == "{" and not escaped(i):
+                curly_braces -= 1
+            elif c == "]" and curly_braces == 0 and not escaped(i):
+                braces += 1
+
+                if braces == 0:
+                    index = i
+            elif c == "[" and curly_braces == 0 and not escaped(i):
+                braces -= 1
+
+                if braces == 0:
+                    index = i
+
+        if braces != 0 or curly_braces != 0:
+            return (token, None)
+
+        value = token.value[: -index - 2]
+        var = RobotToken(token.type, value, token.lineno, token.col_offset, token.error) if len(value) > 0 else None
+        rest = RobotToken(
+            RobotToken.ARGUMENT, token.value[-index - 2 :], token.lineno, token.col_offset + len(value), token.error
+        )
+
+        return (var, rest)
+
+    @classmethod
+    def _tokenize_variables(
+        cls,
+        token: Token,
+        identifiers: str = "$@&%",
+        ignore_errors: bool = False,
+        *,
+        extra_types: Optional[Set[str]] = None,
+    ) -> Generator[Token, Any, Any]:
+        from robot.api.parsing import Token as RobotToken
+
+        for t in tokenize_variables(token, identifiers, ignore_errors, extra_types=extra_types):
+            if t.type == RobotToken.VARIABLE:
+                var, rest = cls.remove_index_from_variable_token(t)
+                if var is not None:
+                    yield var
+                if rest is not None:
+                    yield from cls._tokenize_variables(rest, identifiers, ignore_errors, extra_types=extra_types)
+            else:
+                yield t
+
     @classmethod
     async def iter_variables_from_token(
         cls,
@@ -256,6 +320,7 @@ class ModelHelperMixin:
         namespace: Namespace,
         nodes: Optional[List[ast.AST]],
         position: Optional[Position] = None,
+        skip_commandline_variables: bool = False,
     ) -> AsyncGenerator[Tuple[Token, VariableDefinition], Any]:
         from robot.api.parsing import Token as RobotToken
         from robot.variables.search import contains_variable, search_variable
@@ -263,7 +328,7 @@ class ModelHelperMixin:
         async def iter_token(
             to: Token, ignore_errors: bool = False
         ) -> AsyncGenerator[Union[Token, Tuple[Token, VariableDefinition]], Any]:
-            for sub_token in tokenize_variables(to, ignore_errors=ignore_errors):
+            for sub_token in cls._tokenize_variables(to, ignore_errors=ignore_errors):
                 if sub_token.type == RobotToken.VARIABLE:
                     base = sub_token.value[2:-1]
                     if base and not (base[0] == "{" and base[-1] == "}"):
@@ -276,6 +341,7 @@ class ModelHelperMixin:
                             namespace,
                             nodes,
                             position,
+                            skip_commandline_variables=skip_commandline_variables,
                         ):
                             yield v
 
@@ -301,7 +367,9 @@ class ModelHelperMixin:
             if isinstance(token_or_var, Token):
                 sub_token = token_or_var
                 name = sub_token.value
-                var = await namespace.find_variable(name, nodes, position)
+                var = await namespace.find_variable(
+                    name, nodes, position, skip_commandline_variables=skip_commandline_variables
+                )
                 if var is not None:
                     yield strip_variable_token(sub_token), var
                     continue
@@ -316,7 +384,9 @@ class ModelHelperMixin:
                     if match is not None:
                         base_name, _ = match.groups()
                         name = f"{name[0]}{{{base_name.strip()}}}"
-                        var = await namespace.find_variable(name, nodes, position)
+                        var = await namespace.find_variable(
+                            name, nodes, position, skip_commandline_variables=skip_commandline_variables
+                        )
                         if var is not None:
                             yield strip_variable_token(
                                 RobotToken(sub_token.type, name, sub_token.lineno, sub_token.col_offset)

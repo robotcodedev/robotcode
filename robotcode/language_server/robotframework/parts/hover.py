@@ -111,16 +111,20 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 ),
                 None,
             )
+
+            # TODO if we found a commandline var, should we look if we found a variable definition and show it in hover?
             if token_and_var is not None:
                 var_token, variable = token_and_var
 
                 if variable.has_value or variable.resolvable:
                     try:
-                        value = await namespace.imports_manager.resolve_variable(
-                            variable.name,
-                            str(document.uri.to_path().parent),
-                            await namespace.get_unresolved_variables(nodes, position),
-                            False,
+                        value = repr(
+                            await namespace.imports_manager.resolve_variable(
+                                variable.name,
+                                str(document.uri.to_path().parent),
+                                await namespace.get_unresolved_variables(nodes, position),
+                                False,
+                            )
                         )
                     except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                         raise

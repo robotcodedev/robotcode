@@ -1,7 +1,25 @@
 *** Test Cases ***
-first
+calc fibonaci
     ${a}    fibonaci    ${14}
-    Log To Console    ${a}
+    Log    ${a}
+
+calc fibonaci data
+    [Template]    calc fibonaci kw
+    1
+    2
+    3
+    4
+    5
+    6
+    7
+    20
+    9
+    10
+    11
+    12
+    13
+    14
+
 
 *** Keywords ***
 fibonaci
@@ -16,3 +34,8 @@ fibonaci
     END
 
     [Return]    ${r}
+
+calc fibonaci kw
+    [Arguments]    ${n}
+    ${a}    fibonaci    ${{${n}}}
+    Log    ${a}

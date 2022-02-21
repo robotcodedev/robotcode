@@ -52,8 +52,8 @@ from ..utils.ast import (
     is_not_variable_token,
     iter_over_keyword_names_and_owners,
     token_in_range,
-    tokenize_variables,
 )
+from .model_helper import ModelHelperMixin
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -124,7 +124,7 @@ class SemTokenInfo:
         )
 
 
-class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
+class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
@@ -377,7 +377,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
         if token.type in {*RobotToken.ALLOW_VARIABLES, RobotToken.KEYWORD, ROBOT_KEYWORD_INNER}:
 
-            for sub_token in tokenize_variables(
+            for sub_token in self._tokenize_variables(
                 token,
                 ignore_errors=True,
                 identifiers="$" if token.type == RobotToken.KEYWORD_NAME else "$@&%",
