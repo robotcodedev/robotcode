@@ -52,7 +52,10 @@ first *11*
         Log    ${i}
     END
 
-    WHILE  $b>0
+    ${k}    Evaluate    ${b}+$b
+    Log    ${k}
+
+    WHILE  ${b}+$b
         Log    ${B}
         ${B}    Evaluate  $b-1
 

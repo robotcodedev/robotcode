@@ -8,6 +8,7 @@ from typing import (
     Callable,
     List,
     Optional,
+    Tuple,
     Type,
     Union,
     cast,
@@ -19,8 +20,10 @@ from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import DocumentHighlight, DocumentHighlightKind, Position
 from ...common.text_document import TextDocument
+from ..diagnostics.entities import VariableDefinition
 from ..utils.ast import (
     HasTokens,
+    Statement,
     Token,
     get_nodes_at_position,
     get_tokens_at_position,
@@ -93,6 +96,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
     async def _highlight_default(
         self, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Optional[List[DocumentHighlight]]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
 
         namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
@@ -108,6 +112,8 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
 
         tokens = get_tokens_at_position(node, position)
 
+        token_and_var: Optional[Tuple[Token, VariableDefinition]] = None
+
         for token in tokens:
             token_and_var = await async_next(
                 (
@@ -118,13 +124,31 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
                 None,
             )
 
-            if token_and_var is not None:
-                _, variable = token_and_var
+        if (
+            token_and_var is None
+            and isinstance(node, Statement)
+            and isinstance(node, self.get_expression_statement_types())
+            and (token := node.get_token(RobotToken.ARGUMENT)) is not None
+            and position in range_from_token(token)
+        ):
+            token_and_var = await async_next(
+                (
+                    (var_token, var)
+                    async for var_token, var in self.iter_expression_variables_from_token(
+                        token, namespace, nodes, position
+                    )
+                    if position in range_from_token(var_token)
+                ),
+                None,
+            )
 
-                return [
-                    DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
-                    for e in await self.parent.robot_references.find_variable_references_in_file(document, variable)
-                ]
+        if token_and_var is not None:
+            _, variable = token_and_var
+
+            return [
+                DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
+                for e in await self.parent.robot_references.find_variable_references_in_file(document, variable)
+            ]
 
         return None
 

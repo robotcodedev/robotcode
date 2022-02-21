@@ -5,7 +5,17 @@ import re
 import token as python_token
 from io import StringIO
 from tokenize import generate_tokens
-from typing import Any, AsyncGenerator, Generator, List, Optional, Set, Tuple, Union
+from typing import (
+    Any,
+    AsyncGenerator,
+    Generator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+)
 
 from ...common.lsp_types import Position
 from ..diagnostics.entities import VariableDefinition
@@ -19,6 +29,7 @@ from ..utils.ast import (
     strip_variable_token,
     tokenize_variables,
 )
+from ..utils.version import get_robot_version
 
 
 class ModelHelperMixin:
@@ -393,3 +404,20 @@ class ModelHelperMixin:
                             ), var
             else:
                 yield token_or_var
+
+    __expression_statement_types: Optional[Tuple[Type[Any]]] = None
+
+    @classmethod
+    def get_expression_statement_types(cls) -> Tuple[Type[Any]]:
+        import robot.parsing.model.statements
+
+        if cls.__expression_statement_types is None:
+            cls.__expression_statement_types = (robot.parsing.model.statements.IfHeader,)
+
+            if get_robot_version() >= (5, 0):
+                cls.__expression_statement_types = (  # type: ignore
+                    robot.parsing.model.statements.IfHeader,
+                    robot.parsing.model.statements.WhileHeader,
+                )
+
+        return cls.__expression_statement_types

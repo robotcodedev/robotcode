@@ -465,56 +465,65 @@ result:
 - !Location
   range:
     end:
-      character: 11
+      character: 7
       line: 55
     start:
-      character: 8
+      character: 4
       line: 55
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 58
+    start:
+      character: 8
+      line: 58
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 7
-      line: 61
+      line: 64
     start:
       character: 4
-      line: 61
+      line: 64
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 11
-      line: 69
+      line: 72
     start:
       character: 8
-      line: 69
+      line: 72
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 11
-      line: 71
+      line: 74
     start:
       character: 8
-      line: 71
+      line: 74
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 11
-      line: 73
+      line: 76
     start:
       character: 8
-      line: 73
+      line: 76
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 7
-      line: 80
+      line: 83
     start:
       character: 4
-      line: 80
+      line: 83
   uri: tests/playground.robot
 - !Location
   range:
