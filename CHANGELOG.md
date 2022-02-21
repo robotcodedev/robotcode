@@ -9,16 +9,19 @@ All notable changes to the "robotcode" extension will be documented in this file
 - Improved variable analysis
   - In an expression like `${A+'${B+"${F}"}'+'${D}'} ${C}`, every single 'inner' variable will be recognized, you can hover over it, it can be found as reference, you can go to the definition, ...
   - Also in python expressions like `${{$a+$b}}` variables are recognized
-  - The debugger shows all variables as inline values and when hovering, it shows the values of the variables.
-  - Only the name of the variable is used for hovering, goto and ..., not the surrounding ${}
+  - Support for variables in expression in IF and WHILE statements
+    - in something like `$i<5` the variables are recognized
 - Support importing variable files as module for RobotFramework 5
 - Depending on selected testcase names contains a colon, a semicolon is used as separator of prerunmodifier for executing testcases
     - fixes [#20](https://github.com/d-biehl/robotcode/issues/20)
     - note: i think you should not use colons or semicolon in testcase names ;-)
-- Fix stepping/halt on breakpoint for IF/ELSE statements if the expression is evaluated as False
-- Rework of stepping and stacktrace in the debugger
-  - Only the real keyword calls are displayed in the stack trace.
-- Variables in the debugger are now resolved correctly and are sorted into Local/Test/Suite and Global variables
+- Improve Debugger
+  - The debugger shows variables as inline values and when hovering, it shows the current variable value not the evaluted expression
+  - Only the name of the variable is used for hovering, goto and ..., not the surrounding ${}
+  - Variables in the debugger are now resolved correctly and are sorted into Local/Test/Suite and Global variables
+  - Fix stepping/halt on breakpoint for IF/ELSE statements if the expression is evaluated as False
+  - Rework of stepping and stacktrace in the debugger
+    - Only the real steps are displayed in the stack trace
 
 ##  0.5.5
 
