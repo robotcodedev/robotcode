@@ -6,15 +6,6 @@ result:
 - !Location
   range:
     end:
-      character: 18
-      line: 3
-    start:
-      character: 4
-      line: 3
-  uri: extras/fibonaci.robot
-- !Location
-  range:
-    end:
       character: 28
       line: 18
     start:
