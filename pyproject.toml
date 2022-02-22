@@ -73,6 +73,7 @@ PyYAML = "*"
 types-PyYAML = "*"
 snakeviz = "*"
 pytest-regressions = "*"
+pytest-html = "^3.1.1"
 
 
 [tool.poetry-dynamic-versioning]

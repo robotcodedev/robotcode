@@ -36,7 +36,7 @@ jobs:
       - run: poetry-dynamic-versioning
 
       - name: "test python packages"
-        run: poetry run pytest --junitxml=test-results/python-${{ matrix.python-version }}/test-results.xml --cov=robotcode --cov-report=xml:testresults/python-${{ matrix.python-version }}/coverage.xml --cov-report=html:test-results/python-${{ matrix.python-version }}/htmlcov
+        run: poetry run pytest --junitxml=test-results/python-${{ matrix.python-version }}/test-results.xml --cov=robotcode --cov-report=xml:testresults/python-${{ matrix.python-version }}/coverage.xml --cov-report=html:test-results/python-${{ matrix.python-version }}/htmlcov --html=test-results/python-${{ matrix.python-version }}/report.html --self-contained-html
 
       - name: upload test results
         if: always()
