@@ -22,6 +22,10 @@ All notable changes to the "robotcode" extension will be documented in this file
   - Fix stepping/halt on breakpoint for IF/ELSE statements if the expression is evaluated as False
   - Rework of stepping and stacktrace in the debugger
     - Only the real steps are displayed in the stack trace
+- Optimize keyword matching
+  - all keyword references also with embedded arguments + regex are found
+  - ambigous embedded keywords are recognized correctly, also with regex
+  - speed up finding keyword references
 
 ##  0.5.5
 

@@ -20,7 +20,6 @@ from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import Hover, MarkupContent, MarkupKind, Position
 from ...common.text_document import TextDocument
-from ..diagnostics.library_doc import KeywordMatcher
 from ..utils.ast import (
     HasTokens,
     Token,
@@ -532,7 +531,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         if not name_token:
             return None
 
-        result = (await namespace.get_library_doc()).keywords.get(KeywordMatcher(name_token.value), None)
+        result = (await namespace.get_library_doc()).keywords.get(name_token.value, None)
 
         if result is not None and not result.is_error_handler:
             return Hover(

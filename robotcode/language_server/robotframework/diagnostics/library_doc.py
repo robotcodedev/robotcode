@@ -126,7 +126,7 @@ class KeywordMatcher:
 
         return self._embedded_arguments
 
-    def __eq__(self, o: object) -> bool:
+    def __eq__(self, o: Any) -> bool:
         from robot.utils.normalizing import normalize
 
         if isinstance(o, KeywordMatcher):
@@ -144,7 +144,7 @@ class KeywordMatcher:
         return self.normalized_name == str(normalize(o, "_"))
 
     def __hash__(self) -> int:
-        return hash(self.normalized_name)
+        return id(self)
 
     def __str__(self) -> str:
         return self.name
@@ -199,7 +199,7 @@ class VariableMatcher:
             return False
 
     def __hash__(self) -> int:
-        return hash(self.normalized_name)
+        return hash(self.name)
 
     def __str__(self) -> str:
         return self.name
@@ -458,10 +458,7 @@ class KeywordStore(Model):
             self.__matchers = {KeywordMatcher(k): v for k, v in self.keywords.items()}
         return self.__matchers
 
-    def __getitem__(self, key: Union[KeywordMatcher, str]) -> "KeywordDoc":
-        if isinstance(key, str):
-            key = KeywordMatcher(key)
-
+    def __getitem__(self, key: str) -> "KeywordDoc":
         items = [(k, v) for k, v in self._matchers.items() if k == key]
 
         if not items:
@@ -503,7 +500,7 @@ class KeywordStore(Model):
     def values(self) -> ValuesView[KeywordDoc]:
         return self.keywords.values()
 
-    def get(self, key: Union[KeywordMatcher, str], default: Optional[KeywordDoc] = None) -> Optional[KeywordDoc]:
+    def get(self, key: str, default: Optional[KeywordDoc] = None) -> Optional[KeywordDoc]:
         try:
             return self.__getitem__(key)
         except KeyError:

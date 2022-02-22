@@ -6,11 +6,11 @@ result:
 - !Location
   range:
     end:
-      character: 18
-      line: 36
+      character: 0
+      line: 2962
     start:
-      character: 4
-      line: 36
+      character: 0
+      line: 2961
   uri: libraries/BuiltIn.py
 - !Location
   range:

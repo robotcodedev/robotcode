@@ -24,7 +24,7 @@ ${a var}    hello
 # ^^^^^ simple variable
 ${LIB_ARG}    from lib
 # ^^^^^^^ another simple var
-
+${bananas}    apples
 
 *** Test Cases ***
 first
@@ -62,3 +62,56 @@ forth
 #    ^^^^^^^    Keyword reassignment with equals sign
     Should Be Equal    ${result}   ${LIB_ARG}
 #                        ^^^^^^    Keyword variable reference
+
+
+fifth
+    [Setup]    do something test setup inner
+#              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Embedded keyword in setup
+    [Teardown]    do something test teardown inner
+#                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Embedded keyword in teardown
+    do something    cool
+    do something cool from keyword
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Embedded keyword
+
+    add 2 coins to pocket
+#   ^^^^^^^^^^^^^^^^^^^^^  Embedded keyword with regex only numbers
+
+    add 22134 coins to pocket
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^  Embedded keyword with regex only numbers
+    add milk and coins to my bag
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Embedded keyword with regex a to z an space
+
+    do add ${bananas} and to my bag
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Embedded keyword with variable
+
+    add bananas to pocket
+#   ^^^^^^^^^^^^^^^^^^^^^  Ambiguous Embedded keyword with regex a to z
+    add bananas to pocket    # robotcode: ignore
+#   ^^^^^^^^^^^^^^^^^^^^^  Invalid Embedded keyword with regex a to z ignored
+    add bananas and apples to pocket
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Embedded keyword with regex a to z an space
+    add bananas and apples to pocket
+
+*** Keywords ***
+do something ${type}
+    do something     ${type}
+
+do something
+    [Arguments]    ${type}
+    Log    done ${type}
+
+add ${number:[0-9]+} coins to ${thing}
+    Log    added ${number} coins to ${thing}
+
+add ${what:[a-zA-Z]+} to ${thing}
+    Log    this is duplicated
+    Log    added ${what} to ${thing}
+
+add ${what:[a-zA-Z]+} to ${thing}
+    Log    added ${what} coins to ${thing}
+
+add ${what:[a-zA-Z ]+} to ${thing}
+    Log    added ${what} coins to ${thing}
+
+do add ${bananas} and to my bag
+    Log    ${bananas}

@@ -219,16 +219,21 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
         if not name_token:
             return None
 
-        keyword = await namespace.find_keyword(name_token.value)
+        doc = await namespace.get_library_doc()
+        if doc is not None:
+            keyword = next(
+                (v for k, v in doc.keywords.keywords.items() if k == name_token.value and v.line_no == kw_node.lineno),
+                None,
+            )
 
-        if keyword is not None and keyword.source and not keyword.is_error_handler:
-            return [
-                DocumentHighlight(keyword.range, DocumentHighlightKind.TEXT),
-                *(
-                    DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
-                    for e in await self.parent.robot_references.find_keyword_references_in_file(document, keyword)
-                ),
-            ]
+            if keyword is not None and keyword.source and not keyword.is_error_handler:
+                return [
+                    DocumentHighlight(keyword.range, DocumentHighlightKind.TEXT),
+                    *(
+                        DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
+                        for e in await self.parent.robot_references.find_keyword_references_in_file(document, keyword)
+                    ),
+                ]
 
         return None
 

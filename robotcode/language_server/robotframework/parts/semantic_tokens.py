@@ -10,7 +10,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     AsyncGenerator,
-    Container,
     Dict,
     FrozenSet,
     List,
@@ -44,7 +43,7 @@ from ..diagnostics.library_doc import (
     KeywordMatcher,
     LibraryDoc,
 )
-from ..diagnostics.namespace import Namespace
+from ..diagnostics.namespace import LibraryEntry, Namespace, ResourceEntry
 from ..utils import async_ast
 from ..utils.ast import (
     HasTokens,
@@ -231,8 +230,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         cls,
         namespace: Namespace,
         builtin_library_doc: Optional[LibraryDoc],
-        libraries_matchers: Container[KeywordMatcher],
-        resources_matchers: Container[KeywordMatcher],
+        libraries_matchers: Dict[KeywordMatcher, LibraryEntry],
+        resources_matchers: Dict[KeywordMatcher, ResourceEntry],
         token: Token,
         node: ast.AST,
         col_offset: Optional[int] = None,
@@ -307,13 +306,15 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 kw: str = token.value
 
                 for lib, name in iter_over_keyword_names_and_owners(token.value):
-                    if lib is not None:
-                        lib_matcher = KeywordMatcher(lib)
-                        if lib_matcher in libraries_matchers or lib_matcher in resources_matchers:
-                            kw_namespace = lib
-                            if name:
-                                kw = name
-                            break
+
+                    if lib is not None and (
+                        any(k for k in libraries_matchers.keys() if k == lib)
+                        or any(k for k in resources_matchers.keys() if k == lib)
+                    ):
+                        kw_namespace = lib
+                        if name:
+                            kw = name
+                        break
 
                 kw_index = token.value.index(kw)
 
@@ -323,9 +324,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                         col_offset,
                         len(kw_namespace),
                         RobotSemTokenTypes.NAMESPACE,
-                        {RobotSemTokenModifiers.BUILTIN}
-                        if KeywordMatcher(kw_namespace) == cls.BUILTIN_MATCHER
-                        else None,
+                        {RobotSemTokenModifiers.BUILTIN} if cls.BUILTIN_MATCHER == kw_namespace else None,
                     )
                     yield SemTokenInfo(
                         token.lineno,
@@ -370,8 +369,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         node: ast.AST,
         namespace: Namespace,
         builtin_library_doc: Optional[LibraryDoc],
-        libraries_matchers: Container[KeywordMatcher],
-        resources_matchers: Container[KeywordMatcher],
+        libraries_matchers: Dict[KeywordMatcher, LibraryEntry],
+        resources_matchers: Dict[KeywordMatcher, ResourceEntry],
     ) -> AsyncGenerator[SemTokenInfo, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
@@ -398,8 +397,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         self,
         namespace: Namespace,
         builtin_library_doc: Optional[LibraryDoc],
-        libraries_matchers: Container[KeywordMatcher],
-        resources_matchers: Container[KeywordMatcher],
+        libraries_matchers: Dict[KeywordMatcher, LibraryEntry],
+        resources_matchers: Dict[KeywordMatcher, ResourceEntry],
         kw_doc: Optional[KeywordDoc],
         kw_token: Token,
         arguments: List[Token],
@@ -619,8 +618,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         range: Optional[Range],
         namespace: Namespace,
         builtin_library_doc: Optional[LibraryDoc],
-        libraries_matchers: Container[KeywordMatcher],
-        resources_matchers: Container[KeywordMatcher],
+        libraries_matchers: Dict[KeywordMatcher, LibraryEntry],
+        resources_matchers: Dict[KeywordMatcher, ResourceEntry],
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
 
         from robot.parsing.lexer.tokens import Token as RobotToken

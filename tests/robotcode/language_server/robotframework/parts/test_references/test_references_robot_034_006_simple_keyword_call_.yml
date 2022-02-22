@@ -24,11 +24,11 @@ result:
 - !Location
   range:
     end:
-      character: 7
-      line: 34
+      character: 0
+      line: 2862
     start:
-      character: 4
-      line: 34
+      character: 0
+      line: 2861
   uri: libraries/BuiltIn.py
 - !Location
   range:
@@ -38,24 +38,6 @@ result:
     start:
       character: 4
       line: 5
-  uri: resources/firstresource.resource
-- !Location
-  range:
-    end:
-      character: 11
-      line: 7
-    start:
-      character: 8
-      line: 7
-  uri: resources/firstresource.resource
-- !Location
-  range:
-    end:
-      character: 11
-      line: 9
-    start:
-      character: 8
-      line: 9
   uri: resources/firstresource.resource
 - !Location
   range:
@@ -331,15 +313,6 @@ result:
   range:
     end:
       character: 7
-      line: 16
-    start:
-      character: 4
-      line: 16
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 7
       line: 17
     start:
       character: 4
@@ -358,10 +331,10 @@ result:
   range:
     end:
       character: 7
-      line: 21
+      line: 19
     start:
       character: 4
-      line: 21
+      line: 19
   uri: tests/playground.robot
 - !Location
   range:
@@ -421,109 +394,118 @@ result:
   range:
     end:
       character: 7
-      line: 30
+      line: 28
     start:
       character: 4
-      line: 30
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 11
-      line: 40
-    start:
-      character: 8
-      line: 40
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 11
-      line: 45
-    start:
-      character: 8
-      line: 45
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 11
-      line: 47
-    start:
-      character: 8
-      line: 47
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 11
-      line: 51
-    start:
-      character: 8
-      line: 51
+      line: 28
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 7
-      line: 55
+      line: 31
     start:
       character: 4
-      line: 55
+      line: 31
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 11
-      line: 58
+      line: 41
     start:
       character: 8
-      line: 58
+      line: 41
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 46
+    start:
+      character: 8
+      line: 46
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 48
+    start:
+      character: 8
+      line: 48
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 52
+    start:
+      character: 8
+      line: 52
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 7
-      line: 64
+      line: 56
     start:
       character: 4
-      line: 64
+      line: 56
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 11
-      line: 72
+      line: 59
     start:
       character: 8
-      line: 72
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 11
-      line: 74
-    start:
-      character: 8
-      line: 74
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 11
-      line: 76
-    start:
-      character: 8
-      line: 76
+      line: 59
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 7
-      line: 83
+      line: 65
     start:
       character: 4
-      line: 83
+      line: 65
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 73
+    start:
+      character: 8
+      line: 73
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 75
+    start:
+      character: 8
+      line: 75
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 77
+    start:
+      character: 8
+      line: 77
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 84
+    start:
+      character: 4
+      line: 84
   uri: tests/playground.robot
 - !Location
   range:
@@ -547,6 +529,69 @@ result:
   range:
     end:
       character: 7
+      line: 100
+    start:
+      character: 4
+      line: 100
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 103
+    start:
+      character: 4
+      line: 103
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 106
+    start:
+      character: 4
+      line: 106
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 107
+    start:
+      character: 4
+      line: 107
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 110
+    start:
+      character: 4
+      line: 110
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 113
+    start:
+      character: 4
+      line: 113
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 116
+    start:
+      character: 4
+      line: 116
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
       line: 11
     start:
       character: 4
@@ -556,17 +601,17 @@ result:
   range:
     end:
       character: 7
-      line: 16
+      line: 15
     start:
       character: 4
-      line: 16
+      line: 15
   uri: tests/setup_teardown.robot
 - !Location
   range:
     end:
       character: 7
-      line: 26
+      line: 24
     start:
       character: 4
-      line: 26
+      line: 24
   uri: tests/setup_teardown.robot

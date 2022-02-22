@@ -19,7 +19,7 @@ from typing import (
 
 from ...common.lsp_types import Position
 from ..diagnostics.entities import VariableDefinition
-from ..diagnostics.library_doc import KeywordDoc, KeywordError, KeywordMatcher
+from ..diagnostics.library_doc import KeywordDoc, KeywordError
 from ..diagnostics.namespace import LibraryEntry, Namespace
 from ..utils.ast import (
     Token,
@@ -214,14 +214,13 @@ class ModelHelperMixin:
 
         for lib, _ in iter_over_keyword_names_and_owners(keyword_token.value):
             if lib is not None:
-                lib_matcher = KeywordMatcher(lib)
-                if lib_matcher in libraries_matchers:
+                lib_entry = next((v for k, v in libraries_matchers.items() if k == lib), None)
+                if lib_entry is not None:
                     kw_namespace = lib
-                    lib_entry = libraries_matchers.get(lib_matcher, None)
                     break
-                if lib_matcher in resources_matchers:
+                lib_entry = next((v for k, v in resources_matchers.items() if k == lib), None)
+                if lib_entry is not None:
                     kw_namespace = lib
-                    lib_entry = resources_matchers.get(lib_matcher, None)
                     break
         return lib_entry, kw_namespace
 

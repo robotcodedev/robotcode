@@ -14,6 +14,7 @@ ${CMD_VAR_LONG}    1
 
 *** Test Cases ***
 first *1*
+
     Log    ${{$a+$b}}
     Log    ${CMD_VAR_LONG}
     Log    ${A}[1]
@@ -82,4 +83,5 @@ kw1
     [Arguments]    ${c}=99
     ${B}     Evaluate    1+2
     Log    hello
+
 

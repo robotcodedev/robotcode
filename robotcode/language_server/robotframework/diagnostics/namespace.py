@@ -60,6 +60,7 @@ from .library_doc import (
     BUILTIN_VARIABLES,
     DEFAULT_LIBRARIES,
     KeywordDoc,
+    KeywordError,
     KeywordMatcher,
     LibraryDoc,
     VariableMatcher,
@@ -1215,7 +1216,7 @@ class Namespace:
                         *(e.library_doc.keywords.items() for e in self._resources.values()),
                         *(e.library_doc.keywords.items() for e in self._libraries.values()),
                     ):
-                        if KeywordMatcher(name) not in result.keys():
+                        if not any(k for k in result.keys() if k == name):
                             result[KeywordMatcher(name)] = doc
 
                     self._keywords = list(result.values())
@@ -1352,7 +1353,17 @@ class KeywordFinder:
     async def _get_keyword_from_self(self, name: str) -> Optional[KeywordDoc]:
         if self.self_library_doc is None:
             self.self_library_doc = await self.namespace.get_library_doc()
-        return self.self_library_doc.keywords.get(name, None)
+        try:
+            return self.self_library_doc.keywords.get(name, None)
+        except KeywordError as e:
+            self.diagnostics.append(
+                DiagnosticsEntry(
+                    str(e),
+                    DiagnosticSeverity.ERROR,
+                    "KeywordError",
+                )
+            )
+            raise CancelSearchError() from e
 
     async def _yield_owner_and_kw_names(self, full_name: str) -> AsyncGenerator[Tuple[str, ...], None]:
         tokens = full_name.split(".")
