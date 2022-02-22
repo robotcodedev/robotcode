@@ -24,6 +24,15 @@ result:
 - !Location
   range:
     end:
+      character: 43
+      line: 11
+    start:
+      character: 18
+      line: 11
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
       character: 26
       line: 3
     start:

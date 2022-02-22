@@ -48,7 +48,6 @@ from ..utils.ast import (
     get_tokens_at_position,
     is_not_variable_token,
     iter_over_keyword_names_and_owners,
-    range_from_node_or_token,
     range_from_token,
 )
 from ..utils.async_ast import iter_nodes
