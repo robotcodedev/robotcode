@@ -5,3 +5,5 @@ ${A_VAR_FROM_RESOURE}       hello from resource
 do something in a resource
     Log    done something
 
+do.sell fish
+    Log    message

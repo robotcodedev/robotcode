@@ -107,6 +107,38 @@ forth
     ...  ELSE
     ...    Unknown keyword  No  # robotcode: ignore
 
+sixth
+    IF  ${A}
+        Log    Yeah
+    ELSE IF    ${B}
+        Log    No
+    END
+
+    IF  $a
+        Log    Yeah
+    ELSE IF    $b
+        Log    No
+    END
+
+seventh
+    Given log    hi
+#   ^^^^^^^^^  BDD Given
+    When log  hi
+#   ^^^^^^^^  BDD When
+    And log  hi
+#   ^^^^^^^  BDD and
+    Then log  ho
+#   ^^^^^^^^  BDD Then
+    But log  ho
+#   ^^^^^^^  BDD But
+
+eight
+    do.sell fish
+#   ^^^^^^^^^^^^  keyword with dot
+    firstresource.do.sell fish
+#                 ^^^^^^^^^^^^  keyword with dot after namespace
+#   ^^^^^^^^^^^^^  namespace in keyword with dot
+
 *** Keywords ***
 a keyword
     Run Keyword    log    hi
