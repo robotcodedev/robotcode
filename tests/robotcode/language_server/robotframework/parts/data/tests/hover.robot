@@ -101,6 +101,12 @@ third
 #   ^^^^^^^^^    Keyword assignment with equals sign
     Should Be Equal    ${result}   ${LIB_ARG}
 
+forth
+    Run Keyword If    ${True}
+    ...    Log    ${Invalid var        # robotcode: ignore
+    ...  ELSE
+    ...    Unknown keyword  No  # robotcode: ignore
+
 *** Keywords ***
 a keyword
     Run Keyword    log    hi

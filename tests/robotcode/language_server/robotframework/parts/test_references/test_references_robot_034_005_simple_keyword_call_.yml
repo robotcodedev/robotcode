@@ -294,20 +294,29 @@ result:
 - !Location
   range:
     end:
-      character: 22
+      character: 14
       line: 105
     start:
-      character: 19
+      character: 11
       line: 105
   uri: tests/hover.robot
 - !Location
   range:
     end:
+      character: 22
+      line: 111
+    start:
+      character: 19
+      line: 111
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
       character: 23
-      line: 114
+      line: 120
     start:
       character: 20
-      line: 114
+      line: 120
   uri: tests/hover.robot
 - !Location
   range:

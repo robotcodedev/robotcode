@@ -222,7 +222,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
         doc = await namespace.get_library_doc()
         if doc is not None:
             keyword = next(
-                (v for k, v in doc.keywords.keywords.items() if k == name_token.value and v.line_no == kw_node.lineno),
+                (v for v in doc.keywords.keywords if v.name == name_token.value and v.line_no == kw_node.lineno),
                 None,
             )
 

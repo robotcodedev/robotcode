@@ -793,8 +793,8 @@ class ImportsManager:
         libdoc.keywords = KeywordStore(
             source=libdoc.name,
             source_type=libdoc.type,
-            keywords={
-                kw[0].name: KeywordDoc(
+            keywords=[
+                KeywordDoc(
                     name=kw[0].name,
                     args=tuple(KeywordArgumentDoc.from_robot(a) for a in kw[0].args),
                     doc=kw[0].doc,
@@ -811,7 +811,7 @@ class ImportsManager:
                     arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
                 )
                 for kw in [(KeywordDocBuilder(resource=True).build_keyword(lw), lw) for lw in lib.handlers]
-            },
+            ],
         )
 
         return libdoc

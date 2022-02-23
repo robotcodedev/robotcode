@@ -25,7 +25,6 @@ from typing import (
     Set,
     Tuple,
     Union,
-    ValuesView,
     cast,
 )
 
@@ -209,12 +208,7 @@ class VariableMatcher:
 
 
 @dataclass
-class Model:
-    pass
-
-
-@dataclass
-class Error(Model):
+class Error:
     message: str
     type_name: str
     source: Optional[str] = None
@@ -232,7 +226,7 @@ class KeywordArgumentKind(Enum):
 
 
 @dataclass
-class KeywordArgumentDoc(Model):
+class KeywordArgumentDoc:
     name: str
     str_repr: str
     kind: KeywordArgumentKind
@@ -258,6 +252,9 @@ class KeywordArgumentDoc(Model):
     def __str__(self) -> str:
         return self.str_repr
 
+    def __hash__(self) -> int:
+        return id(self)
+
 
 DEPRECATED_PATTERN = re.compile(r"^\*DEPRECATED(?P<message>.*)\*(?P<doc>.*)")
 
@@ -265,9 +262,9 @@ DEPRECATED_PATTERN = re.compile(r"^\*DEPRECATED(?P<message>.*)\*(?P<doc>.*)")
 @dataclass
 class ArgumentSpec:
     name: str
-    type: Any
-    positional_only: Any
-    positional_or_named: Any
+    type: str
+    positional_only: List[str]
+    positional_or_named: List[str]
     var_positional: Any
     named_only: Any
     var_named: Any
@@ -280,7 +277,7 @@ class ArgumentSpec:
     def from_robot_argument_spec(spec: Any) -> ArgumentSpec:
         return ArgumentSpec(
             name=spec.name,
-            type=spec.type,
+            type=str(spec.type),
             positional_only=spec.positional_only,
             positional_or_named=spec.positional_or_named,
             var_positional=spec.var_positional,
@@ -324,9 +321,12 @@ class ArgumentSpec:
         )
         resolver.resolve(arguments, variables)
 
+    def __hash__(self) -> int:
+        return id(self)
+
 
 @dataclass
-class KeywordDoc(Model):
+class KeywordDoc:
     name: str = ""
     args: Tuple[KeywordArgumentDoc, ...] = ()
     doc: str = ""
@@ -439,23 +439,26 @@ class KeywordDoc(Model):
     def is_run_keywords(self) -> bool:
         return self.libname == BUILTIN_LIBRARY_NAME and self.name == RUN_KEYWORDS_NAME
 
+    def __hash__(self) -> int:
+        return id(self)
+
 
 class KeywordError(Exception):
     pass
 
 
 @dataclass
-class KeywordStore(Model):
+class KeywordStore:
     source: Optional[str] = None
     source_type: Optional[str] = None
-    keywords: Dict[str, KeywordDoc] = field(default_factory=dict)
+    keywords: List[KeywordDoc] = field(default_factory=list)
 
     __matchers: Optional[Dict[KeywordMatcher, KeywordDoc]] = None
 
     @property
     def _matchers(self) -> Dict[KeywordMatcher, KeywordDoc]:
         if self.__matchers is None:
-            self.__matchers = {KeywordMatcher(k): v for k, v in self.keywords.items()}
+            self.__matchers = {KeywordMatcher(v.name): v for v in self.keywords}
         return self.__matchers
 
     def __getitem__(self, key: str) -> "KeywordDoc":
@@ -492,13 +495,13 @@ class KeywordStore(Model):
         return len(self) > 0
 
     def items(self) -> AbstractSet[Tuple[str, KeywordDoc]]:
-        return self.keywords.items()
+        return {(v.name, v) for v in self.keywords}
 
     def keys(self) -> AbstractSet[str]:
-        return self.keywords.keys()
+        return {v.name for v in self.keywords}
 
-    def values(self) -> ValuesView[KeywordDoc]:
-        return self.keywords.values()
+    def values(self) -> AbstractSet[KeywordDoc]:
+        return {v for v in self.keywords}
 
     def get(self, key: str, default: Optional[KeywordDoc] = None) -> Optional[KeywordDoc]:
         try:
@@ -508,14 +511,14 @@ class KeywordStore(Model):
 
 
 @dataclass
-class ModuleSpec(Model):
+class ModuleSpec:
     name: str
     origin: Optional[str]
     submodule_search_locations: Optional[List[str]]
 
 
 @dataclass
-class LibraryDoc(Model):
+class LibraryDoc:
     name: str = ""
     doc: str = ""
     version: str = ""
@@ -1260,8 +1263,8 @@ def get_library_doc(
                 libdoc.has_listener = lib.has_listener
 
                 libdoc.inits = KeywordStore(
-                    keywords={
-                        kw[0].name: KeywordDoc(
+                    keywords=[
+                        KeywordDoc(
                             name=libdoc.name,
                             args=tuple(KeywordArgumentDoc.from_robot(a) for a in kw[0].args),
                             doc=kw[0].doc,
@@ -1280,7 +1283,7 @@ def get_library_doc(
                         for kw in [
                             (KeywordDocBuilder().build_keyword(k), k) for k in [KeywordWrapper(lib.init, source)]
                         ]
-                    }
+                    ]
                 )
 
                 logger = Logger()
@@ -1300,8 +1303,8 @@ def get_library_doc(
                 libdoc.keywords = KeywordStore(
                     source=libdoc.name,
                     source_type=libdoc.type,
-                    keywords={
-                        kw[0].name: KeywordDoc(
+                    keywords=[
+                        KeywordDoc(
                             name=kw[0].name,
                             args=tuple(KeywordArgumentDoc.from_robot(a) for a in kw[0].args),
                             doc=kw[0].doc,
@@ -1323,7 +1326,7 @@ def get_library_doc(
                             (KeywordDocBuilder().build_keyword(k), k)
                             for k in [KeywordWrapper(k, source) for k in lib.handlers]
                         ]
-                    },
+                    ],
                 )
 
             except (SystemExit, KeyboardInterrupt):

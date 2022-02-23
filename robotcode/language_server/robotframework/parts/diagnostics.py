@@ -10,6 +10,7 @@ from ...common.decorators import language_id
 from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
 from ...common.parts.diagnostics import DiagnosticsResult
 from ...common.text_document import TextDocument
+from ..diagnostics.analyzer import Analyzer
 from ..utils.ast import Token, range_from_node, range_from_token
 
 if TYPE_CHECKING:
@@ -106,7 +107,9 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             for token in await self.parent.documents_cache.get_tokens(document):
                 await check_canceled()
 
-                if token.type in [Token.ERROR, Token.FATAL_ERROR]:
+                if token.type in [Token.ERROR, Token.FATAL_ERROR] and not await Analyzer.should_ignore(
+                    document, range_from_token(token)
+                ):
                     result.append(self._create_error_from_token(token))
 
                 try:
@@ -115,19 +118,22 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         if variable_token == token:
                             break
 
-                        if variable_token.type in [Token.ERROR, Token.FATAL_ERROR]:
+                        if variable_token.type in [Token.ERROR, Token.FATAL_ERROR] and not await Analyzer.should_ignore(
+                            document, range_from_token(variable_token)
+                        ):
                             result.append(self._create_error_from_token(variable_token))
 
                 except VariableError as e:
-                    result.append(
-                        Diagnostic(
-                            range=range_from_token(token),
-                            message=str(e),
-                            severity=DiagnosticSeverity.ERROR,
-                            source=self.source_name,
-                            code=type(e).__qualname__,
+                    if not await Analyzer.should_ignore(document, range_from_token(token)):
+                        result.append(
+                            Diagnostic(
+                                range=range_from_token(token),
+                                message=str(e),
+                                severity=DiagnosticSeverity.ERROR,
+                                source=self.source_name,
+                                code=type(e).__qualname__,
+                            )
                         )
-                    )
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -171,12 +177,13 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             result: List[Diagnostic] = []
             async for node in iter_nodes(model):
                 error = node.error if isinstance(node, HasError) else None
-                if error is not None:
+                if error is not None and not await Analyzer.should_ignore(document, range_from_node(node)):
                     result.append(self._create_error_from_node(node, error))
                 errors = node.errors if isinstance(node, HasErrors) else None
                 if errors is not None:
                     for e in errors:
-                        result.append(self._create_error_from_node(node, e))
+                        if not await Analyzer.should_ignore(document, range_from_node(node)):
+                            result.append(self._create_error_from_node(node, e))
 
             return DiagnosticsResult(self.collect_walk_model_errors, result)
 

@@ -11,13 +11,13 @@ All notable changes to the "robotcode" extension will be documented in this file
   - Also in python expressions like `${{$a+$b}}` variables are recognized
   - Support for variables in expression in IF and WHILE statements
     - in something like `$i<5` the variables are recognized
+  - Only the name of the variable is used for hovering, goto and ..., not the surrounding ${}
 - Support importing variable files as module for RobotFramework 5
 - Depending on selected testcase names contains a colon, a semicolon is used as separator of prerunmodifier for executing testcases
     - fixes [#20](https://github.com/d-biehl/robotcode/issues/20)
     - note: i think you should not use colons or semicolon in testcase names ;-)
 - Improve Debugger
   - The debugger shows variables as inline values and when hovering, it shows the current variable value not the evaluted expression
-  - Only the name of the variable is used for hovering, goto and ..., not the surrounding ${}
   - Variables in the debugger are now resolved correctly and are sorted into Local/Test/Suite and Global variables
   - Fix stepping/halt on breakpoint for IF/ELSE statements if the expression is evaluated as False
   - Rework of stepping and stacktrace in the debugger
@@ -26,6 +26,19 @@ All notable changes to the "robotcode" extension will be documented in this file
   - all keyword references also with embedded arguments + regex are found
   - ambigous embedded keywords are recognized correctly, also with regex
   - speed up finding keyword references
+- Ignoring robotcode diagnostics
+  - you can put a line comment to disable robotcode diagnostics (i.e errors or warnings) for a single line, like this:
+
+  ```robotcode
+  *** Test cases ***
+  first
+      unknown keyword  a param   # robotcode: ignore
+      Run Keyword If    ${True}
+      ...    Log    ${Invalid var        # robotcode: ignore
+      ...  ELSE
+      ...    Unknown keyword  No  # robotcode: ignore
+  ```
+  - Note: Robocop has it's own ignore mechanism
 
 ##  0.5.5
 

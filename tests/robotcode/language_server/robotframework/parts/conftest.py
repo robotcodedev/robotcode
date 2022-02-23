@@ -16,6 +16,7 @@ from robotcode.language_server.common.lsp_types import (
     WorkspaceFolder,
 )
 from robotcode.language_server.common.parts.workspace import HasConfigSection
+from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import (
     RobotCodeConfig,
     RobotConfig,
@@ -75,3 +76,18 @@ async def protocol(request: Any) -> AsyncGenerator[RobotLanguageServerProtocol, 
     finally:
         await protocol._shutdown()
         server.close()
+
+
+@pytest_asyncio.fixture(scope="module")
+@pytest.mark.usefixtures("event_loop")
+async def test_document(request: Any) -> AsyncGenerator[TextDocument, None]:
+    data_path = Path(request.param)
+    data = data_path.read_text()
+
+    document = TextDocument(
+        document_uri=data_path.absolute().as_uri(), language_id="robotframework", version=1, text=data
+    )
+    try:
+        yield document
+    finally:
+        del document
