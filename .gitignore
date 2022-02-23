@@ -256,6 +256,9 @@ dist
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
 
+vscode.d.ts
+vscode.proposed.d.ts
+
 # yarn v2
 .yarn/cache
 .yarn/unplugged
@@ -268,10 +271,12 @@ dist
 # playground files
 playground/
 
+# pycharm
 .idea/
 
+# test results
 test-results
-.python-version
+results.html
 
-/vscode.d.ts
-/vscode.proposed.d.ts
+# pyenv
+.python-version
