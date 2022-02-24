@@ -99,7 +99,7 @@ third
     Should Be Equal    ${result}   from hello
     ${result}=    lib_var.A Library Keyword
 #   ^^^^^^^^^    Keyword assignment with equals sign
-    Should Be Equal    ${result}   ${LIB_ARG}
+    Should Be Equal    first=${result}   second=${LIB_ARG}
 
 forth
     Run Keyword If    ${True}
@@ -121,6 +121,7 @@ sixth
     END
 
 seventh
+    [Setup]    Given log    setup
     Given log    hi
 #   ^^^^^^^^^  BDD Given
     When log  hi

@@ -16,10 +16,10 @@ result:
   range:
     end:
       character: 7
-      line: 40
+      line: 37
     start:
       character: 4
-      line: 40
+      line: 37
   uri: extras/fibonaci.robot
 - !Location
   range:
@@ -349,19 +349,19 @@ result:
   range:
     end:
       character: 22
-      line: 143
+      line: 144
     start:
       character: 19
-      line: 143
+      line: 144
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 23
-      line: 152
+      line: 153
     start:
       character: 20
-      line: 152
+      line: 153
   uri: tests/hover.robot
 - !Location
   range:
@@ -669,3 +669,30 @@ result:
       character: 4
       line: 24
   uri: tests/setup_teardown.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 14
+    start:
+      character: 4
+      line: 14
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 15
+    start:
+      character: 4
+      line: 15
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 16
+    start:
+      character: 4
+      line: 16
+  uri: tests/templates.robot

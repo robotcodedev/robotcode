@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 4
+  line: 126
+  name: BDD When
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Keyword *Log*'
+  range:
+    end:
+      character: 12
+      line: 126
+    start:
+      character: 4
+      line: 126

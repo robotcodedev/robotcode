@@ -1,6 +1,6 @@
 *** Test Cases ***
 calc fibonaci
-    ${a}    fibonaci    ${14}
+    ${a}    fibonaci    ${10}
     Log    ${a}
 
 calc fibonaci data
@@ -12,13 +12,10 @@ calc fibonaci data
     5
     6
     7
-    20
+    8
     9
     10
-    11
-    12
-    13
-    14
+
 
 
 *** Keywords ***
