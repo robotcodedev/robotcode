@@ -26,6 +26,7 @@ All notable changes to the "robotcode" extension will be documented in this file
   - all keyword references also with embedded arguments + regex are found
   - ambigous embedded keywords are recognized correctly, also with regex
   - speed up finding keyword references
+  - fixes: [#28](https://github.com/d-biehl/robotcode/issues/28)
 - Ignoring robotcode diagnostics
   - you can put a line comment to disable robotcode diagnostics (i.e errors or warnings) for a single line, like this:
 
