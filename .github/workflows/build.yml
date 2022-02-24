@@ -22,6 +22,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - run: git describe --tag
+
       - name: setup python ${{ matrix.python-version }} environment
         uses: actions/setup-python@v2
         with:
@@ -36,6 +38,7 @@ jobs:
       - run: poetry-dynamic-versioning
 
       - name: "test python packages"
+        timeout-minutes: 15
         run: poetry run pytest --junitxml=test-results/python-${{ matrix.python-version }}/test-results.xml --cov=robotcode --cov-report=xml:testresults/python-${{ matrix.python-version }}/coverage.xml --cov-report=html:test-results/python-${{ matrix.python-version }}/htmlcov --html=test-results/python-${{ matrix.python-version }}/report.html --self-contained-html
 
       - name: upload test results
@@ -49,7 +52,6 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
 
-    # the build-and-test job might be skipped, we don't need to run this job then
     if: success() || failure()
 
     steps:
@@ -70,6 +72,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
+
+      - run: git describe --tag
 
       - name: setup python environment
         uses: actions/setup-python@v2
