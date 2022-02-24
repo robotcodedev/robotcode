@@ -22,8 +22,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - run: git describe --tag
-
       - name: setup python ${{ matrix.python-version }} environment
         uses: actions/setup-python@v2
         with:
@@ -34,8 +32,6 @@ jobs:
       - run: pip install poetry-dynamic-versioning
 
       - run: poetry install
-
-      - run: poetry-dynamic-versioning
 
       - name: "test python packages"
         timeout-minutes: 15
@@ -73,8 +69,6 @@ jobs:
     steps:
       - uses: actions/checkout@v1
 
-      - run: git describe --tag
-
       - name: setup python environment
         uses: actions/setup-python@v2
         with:
@@ -85,8 +79,6 @@ jobs:
       - run: pip install poetry-dynamic-versioning
 
       - run: poetry install
-
-      - run: poetry-dynamic-versioning
 
       - run: poetry run isort --check --diff .
         if: always()
