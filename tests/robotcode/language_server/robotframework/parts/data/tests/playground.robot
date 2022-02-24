@@ -19,6 +19,7 @@ first *1*
     Log    ${CMD_VAR_LONG}
     Log    ${A}[1]
 
+
 first ?11?
     log    hi
     Log    ${A VAR}
