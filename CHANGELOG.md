@@ -40,6 +40,8 @@ All notable changes to the "robotcode" extension will be documented in this file
       ...    Unknown keyword  No  # robotcode: ignore
   ```
   - Note: Robocop has it's own ignore mechanism
+- initialize logging only of "--log" parameter is set from commandline
+  - fixes [#30](https://github.com/d-biehl/robotcode/issues/30)
 
 ##  0.5.5
 
