@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 
 from ....utils.async_tools import (
-    CancelationToken,
     Lock,
     async_tasking_event_iterator,
     check_canceled,
@@ -36,7 +35,6 @@ class PublishDiagnosticsEntry:
         self,
         uri: Uri,
         version: Optional[int],
-        cancelation_token: CancelationToken,
         factory: Callable[..., asyncio.Future[Any]],
         done_callback: Callable[[PublishDiagnosticsEntry], Any],
     ) -> None:
@@ -49,7 +47,6 @@ class PublishDiagnosticsEntry:
 
         self._future: Optional[asyncio.Future[Any]] = None
 
-        self.cancel_token = cancelation_token
         self.done = False
 
         def _done(t: asyncio.Future[Any]) -> None:
@@ -85,9 +82,6 @@ class PublishDiagnosticsEntry:
     async def cancel(self) -> None:
         if self.future is None:
             return
-
-        if not self.done:
-            self.cancel_token.cancel()
 
         self.done = True
 
@@ -129,9 +123,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.parent.documents.did_save.add(self.on_did_save)
 
     @async_tasking_event_iterator
-    async def collect(
-        sender, document: TextDocument, cancelation_token: CancelationToken  # NOSONAR
-    ) -> DiagnosticsResult:
+    async def collect(sender, document: TextDocument) -> DiagnosticsResult:  # NOSONAR
         ...
 
     @_logger.call
@@ -206,17 +198,15 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
             await self._cancel_entry(entry)
 
-            cancelation_token = CancelationToken()
             self._running_diagnostics[document.uri] = PublishDiagnosticsEntry(
                 document.uri,
                 document.version,
-                cancelation_token,
-                lambda: run_coroutine_in_thread(self.publish_diagnostics, document.document_uri, cancelation_token),
+                lambda: run_coroutine_in_thread(self.publish_diagnostics, document.document_uri),
                 self._delete_entry,
             )
 
     @_logger.call
-    async def publish_diagnostics(self, document_uri: DocumentUri, cancelation_token: CancelationToken) -> None:
+    async def publish_diagnostics(self, document_uri: DocumentUri) -> None:
         document = await self.parent.documents.get(document_uri)
         if document is None:
             return
@@ -228,7 +218,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         async for result_any in self.collect(
             self,
             document,
-            cancelation_token,
             callback_filter=language_id_filter(document),
             return_exceptions=True,
         ):

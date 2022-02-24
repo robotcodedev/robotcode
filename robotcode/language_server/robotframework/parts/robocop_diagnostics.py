@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from ....utils.async_tools import CancelationToken, check_canceled, threaded
+from ....utils.async_tools import check_canceled, threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
@@ -47,9 +47,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @threaded()
     @_logger.call
-    async def collect_diagnostics(
-        self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
-    ) -> DiagnosticsResult:
+    async def collect_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
 
         workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
         if workspace_folder is not None:
@@ -58,7 +56,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             if extension_config is not None and extension_config.enabled:
                 return DiagnosticsResult(
                     self.collect_diagnostics,
-                    await self.collect(document, workspace_folder, extension_config, cancelation_token),
+                    await self.collect(document, workspace_folder, extension_config),
                 )
 
         return DiagnosticsResult(self.collect_diagnostics, [])
@@ -69,7 +67,6 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         document: TextDocument,
         workspace_folder: WorkspaceFolder,
         extension_config: RoboCopConfig,
-        cancelation_token: CancelationToken,
     ) -> List[Diagnostic]:
         from robocop.config import Config
         from robocop.rules import RuleSeverity

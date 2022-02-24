@@ -35,7 +35,6 @@ from typing import (
 from ..utils.inspect import ensure_coroutine
 
 __all__ = [
-    "CancelationToken",
     "AsyncEventIterator",
     "AsyncEvent",
     "async_event",
@@ -422,26 +421,16 @@ class async_tasking_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncTasking
         super().__init__(_func, AsyncTaskingEvent[_TCallable, Any], task_name_prefix=lambda: _get_name_prefix(self))
 
 
-class CancelationToken:
-    def __init__(self) -> None:
-        self._canceled = Event()
-
-    @property
-    def canceled(self) -> bool:
-        return self._canceled.is_set()
-
-    def cancel(self) -> None:
-        self._canceled.set()
-
-    def raise_if_canceled(self) -> bool:
-        if self.canceled:
-            raise asyncio.CancelledError()
-        return False
-
-
 async def check_canceled() -> bool:
     await asyncio.sleep(0)
 
+    return True
+
+
+def check_canceled_sync() -> bool:
+    info = get_current_future_info()
+    if info is not None and info.canceled():
+        raise asyncio.CancelledError()
     return True
 
 
@@ -650,7 +639,7 @@ class Lock:
 
 class FutureInfo:
     def __init__(self, future: asyncio.Future[Any]) -> None:
-        self.task: Optional[weakref.ref[asyncio.Future[Any]]] = weakref.ref(future)
+        self.task: weakref.ref[asyncio.Future[Any]] = weakref.ref(future)
         self.children: weakref.WeakSet[asyncio.Future[Any]] = weakref.WeakSet()
 
         future.add_done_callback(self._done)
@@ -664,6 +653,12 @@ class FutureInfo:
                         t.cancel()
                     else:
                         t._loop.call_soon_threadsafe(t.cancel)
+
+    def canceled(self) -> bool:
+        task = self.task()
+        if task is not None and task.cancelled():
+            return True
+        return False
 
 
 _running_tasks: weakref.WeakKeyDictionary[asyncio.Future[Any], FutureInfo] = weakref.WeakKeyDictionary()

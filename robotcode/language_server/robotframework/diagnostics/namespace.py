@@ -24,7 +24,7 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_chain
-from ....utils.async_tools import CancelationToken, Lock
+from ....utils.async_tools import Lock
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.lsp_types import (
@@ -542,10 +542,10 @@ class Namespace:
         self.invalidated_callback(self)
 
     @_logger.call
-    async def get_diagnostisc(self, cancelation_token: Optional[CancelationToken] = None) -> List[Diagnostic]:
+    async def get_diagnostisc(self) -> List[Diagnostic]:
         await self.ensure_initialized()
 
-        await self._analyze(cancelation_token)
+        await self._analyze()
 
         return self._diagnostics
 
@@ -1220,7 +1220,7 @@ class Namespace:
         )
 
     @_logger.call
-    async def _analyze(self, cancelation_token: Optional[CancelationToken] = None) -> None:
+    async def _analyze(self) -> None:
         from .analyzer import Analyzer
 
         if not self._analyzed:
@@ -1228,7 +1228,7 @@ class Namespace:
                 if not self._analyzed:
                     canceled = False
                     try:
-                        result = await Analyzer().get(self.model, self, cancelation_token)
+                        result = await Analyzer().get(self.model, self)
 
                         self._diagnostics += result
 

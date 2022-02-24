@@ -5,7 +5,6 @@ import asyncio
 import re
 from typing import Any, List, Optional, Union, cast
 
-from ....utils.async_tools import CancelationToken
 from ....utils.uri import Uri
 from ...common.lsp_types import (
     CodeDescription,
@@ -33,12 +32,9 @@ ROBOTCODE_PATTERN = re.compile(r"(?P<marker>\brobotcode\b)\s*:\s*(?P<rule>\b\w+\
 
 
 class Analyzer(AsyncVisitor):
-    async def get(
-        self, model: ast.AST, namespace: Namespace, cancelation_token: Optional[CancelationToken] = None
-    ) -> List[Diagnostic]:
+    async def get(self, model: ast.AST, namespace: Namespace) -> List[Diagnostic]:
         self._results: List[Diagnostic] = []
         self._namespace = namespace
-        self.cancelation_token = cancelation_token
         self.current_testcase_or_keyword_name: Optional[str] = None
         self.finder = KeywordFinder(self._namespace)
 
@@ -78,6 +74,7 @@ class Analyzer(AsyncVisitor):
         related_information: Optional[List[DiagnosticRelatedInformation]] = None,
         data: Optional[Any] = None,
     ) -> None:
+
         if await self.should_ignore(self._namespace.document, range):
             return
 

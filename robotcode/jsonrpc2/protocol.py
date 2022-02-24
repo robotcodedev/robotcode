@@ -30,12 +30,7 @@ from typing import (
     runtime_checkable,
 )
 
-from ..utils.async_tools import (
-    CancelationToken,
-    async_event,
-    create_sub_future,
-    create_sub_task,
-)
+from ..utils.async_tools import async_event, create_sub_future, create_sub_task
 from ..utils.dataclasses import as_json, from_dict
 from ..utils.inspect import ensure_coroutine, iter_methods
 from ..utils.logging import LoggingDescriptor
@@ -332,7 +327,6 @@ class SendedRequestEntry(NamedTuple):
 class ReceivedRequestEntry(NamedTuple):
     future: asyncio.Future[Any]
     request: Optional[Any]
-    cancel_token: CancelationToken
     cancelable: bool
 
 
@@ -664,16 +658,13 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             return None
 
         params = self._convert_params(e.method, e.param_type, message.params)
-        cancel_token = CancelationToken()
 
         task = create_sub_task(
-            ensure_coroutine(e.method)(
-                *params[0], **({"cancel_token": cancel_token} if e.cancelable else {}), **params[1]
-            ),
+            ensure_coroutine(e.method)(*params[0], **params[1]),
             name=message.method,
         )
         with self._received_request_lock:
-            self._received_request[message.id] = ReceivedRequestEntry(task, message, cancel_token, e.cancelable)
+            self._received_request[message.id] = ReceivedRequestEntry(task, message, e.cancelable)
 
         def done(t: asyncio.Task[Any]) -> None:
             try:
@@ -702,15 +693,12 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
         if entry is not None and entry.future is not None and not entry.future.cancelled():
             self._logger.debug(f"try to cancel request {entry.request}")
-            entry.cancel_token.cancel()
             entry.future.cancel()
 
     @_logger.call
     async def cancel_all_received_request(self) -> None:
         for entry in self._received_request.values():
             if entry is not None and entry.cancelable and entry.future is not None and not entry.future.cancelled():
-                if entry.cancel_token:
-                    entry.cancel_token.cancel()
                 entry.future.cancel()
 
     @_logger.call

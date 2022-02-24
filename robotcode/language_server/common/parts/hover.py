@@ -4,7 +4,7 @@ from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_tools import CancelationToken, async_tasking_event
+from ....utils.async_tools import async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ..decorators import language_id_filter
 from ..has_extend_capabilities import HasExtendCapabilities
@@ -31,9 +31,7 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         super().__init__(parent)
 
     @async_tasking_event
-    async def collect(
-        sender, document: TextDocument, position: Position, cancel_token: Optional[CancelationToken] = None
-    ) -> Optional[Hover]:  # NOSONAR
+    async def collect(sender, document: TextDocument, position: Position) -> Optional[Hover]:  # NOSONAR
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
@@ -45,7 +43,6 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         self,
         text_document: TextDocumentIdentifier,
         position: Position,
-        cancel_token: Optional[CancelationToken] = None,
         *args: Any,
         **kwargs: Any,
     ) -> Optional[Hover]:
@@ -60,7 +57,6 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             self,
             document,
             position,
-            cancel_token=cancel_token,
             callback_filter=language_id_filter(document),
         ):
             if isinstance(result, BaseException):

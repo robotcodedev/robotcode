@@ -4,7 +4,7 @@ import ast
 import asyncio
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from ....utils.async_tools import CancelationToken, check_canceled, threaded
+from ....utils.async_tools import check_canceled, threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
@@ -40,17 +40,13 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @threaded()
-    async def collect_namespace_diagnostics(
-        self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
-    ) -> DiagnosticsResult:
+    async def collect_namespace_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         try:
             namespace = await self.parent.documents_cache.get_namespace(document)
             if namespace is None:
                 return DiagnosticsResult(self.collect_namespace_diagnostics, None)
 
-            return DiagnosticsResult(
-                self.collect_namespace_diagnostics, await namespace.get_diagnostisc(cancelation_token)
-            )
+            return DiagnosticsResult(self.collect_namespace_diagnostics, await namespace.get_diagnostisc())
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -96,9 +92,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_token_errors(
-        self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
-    ) -> DiagnosticsResult:
+    async def collect_token_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         from robot.errors import VariableError
         from robot.parsing.lexer.tokens import Token
 
@@ -164,9 +158,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @threaded()
     @_logger.call
-    async def collect_walk_model_errors(
-        self, sender: Any, document: TextDocument, cancelation_token: CancelationToken
-    ) -> DiagnosticsResult:
+    async def collect_walk_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
 
         from ..utils.ast import HasError, HasErrors
         from ..utils.async_ast import iter_nodes
