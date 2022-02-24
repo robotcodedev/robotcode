@@ -119,7 +119,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                             await namespace.imports_manager.resolve_variable(
                                 variable.name,
                                 str(document.uri.to_path().parent),
-                                await namespace.get_unresolved_variables(nodes, position),
+                                await namespace.get_resolvable_variables(nodes, position),
                                 False,
                             )
                         )
@@ -172,7 +172,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         value = await namespace.imports_manager.resolve_variable(
                             variable.name,
                             str(document.uri.to_path().parent),
-                            await namespace.get_unresolved_variables(nodes, position),
+                            await namespace.get_resolvable_variables(nodes, position),
                             False,
                         )
                     except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
@@ -224,7 +224,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         value = await namespace.imports_manager.resolve_variable(
                             variable.name,
                             str(document.uri.to_path().parent),
-                            await namespace.get_unresolved_variables(nodes, position),
+                            await namespace.get_resolvable_variables(nodes, position),
                             False,
                         )
                     except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):

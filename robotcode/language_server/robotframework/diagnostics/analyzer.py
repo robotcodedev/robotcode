@@ -32,13 +32,20 @@ ROBOTCODE_PATTERN = re.compile(r"(?P<marker>\brobotcode\b)\s*:\s*(?P<rule>\b\w+\
 
 
 class Analyzer(AsyncVisitor):
-    async def get(self, model: ast.AST, namespace: Namespace) -> List[Diagnostic]:
-        self._results: List[Diagnostic] = []
+    def __init__(self, model: ast.AST, namespace: Namespace) -> None:
+        from robot.parsing.model.statements import TestTemplate, Template
+
+        self.model = model
         self._namespace = namespace
         self.current_testcase_or_keyword_name: Optional[str] = None
         self.finder = KeywordFinder(self._namespace)
+        self.test_template: Optional[TestTemplate] = None
+        self.template: Optional[Template] = None
 
-        await self.visit(model)
+    async def run(self) -> List[Diagnostic]:
+        self._results: List[Diagnostic] = []
+
+        await self.visit(self.model)
         return self._results
 
     async def visit(self, node: ast.AST) -> None:
@@ -372,6 +379,7 @@ class Analyzer(AsyncVisitor):
         if keyword_token is not None and is_not_variable_token(keyword_token):
             await self._analyze_keyword_call(value.value, value, keyword_token, [])
 
+        self.test_template = value
         await self.generic_visit(node)
 
     async def visit_Template(self, node: ast.AST) -> None:  # noqa: N802

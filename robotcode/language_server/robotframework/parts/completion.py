@@ -1150,7 +1150,7 @@ class CompletionCollector(ModelHelperMixin):
                 list = await imports_manger.complete_library_import(
                     first_part if first_part else None,
                     str(self.document.uri.to_path().parent),
-                    await self.namespace.get_unresolved_variables(nodes_at_position, position),
+                    await self.namespace.get_resolvable_variables(nodes_at_position, position),
                 )
                 if not list:
                     return None
@@ -1388,7 +1388,7 @@ class CompletionCollector(ModelHelperMixin):
             list = await imports_manger.complete_resource_import(
                 first_part if first_part else None,
                 str(self.document.uri.to_path().parent),
-                await self.namespace.get_unresolved_variables(nodes_at_position, position),
+                await self.namespace.get_resolvable_variables(nodes_at_position, position),
             )
             if not list:
                 return None
@@ -1491,7 +1491,7 @@ class CompletionCollector(ModelHelperMixin):
             list = await imports_manger.complete_variables_import(
                 first_part if first_part else None,
                 str(self.document.uri.to_path().parent),
-                await self.namespace.get_unresolved_variables(nodes_at_position, position),
+                await self.namespace.get_resolvable_variables(nodes_at_position, position),
             )
             if not list:
                 return None

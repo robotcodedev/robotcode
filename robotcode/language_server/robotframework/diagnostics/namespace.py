@@ -717,7 +717,7 @@ class Namespace:
                     yielded[matcher] = var
                     yield matcher, var
 
-    async def get_unresolved_variables(
+    async def get_resolvable_variables(
         self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
     ) -> Dict[str, Any]:
         return {
@@ -811,7 +811,7 @@ class Namespace:
                     source = await self.imports_manager.find_file(
                         value.name,
                         base_dir,
-                        variables=await self.get_unresolved_variables(),
+                        variables=await self.get_resolvable_variables(),
                     )
 
                     # allready imported
@@ -1071,7 +1071,8 @@ class Namespace:
                 )
                 return None
 
-        for e in await asyncio.gather(*(_import_lib(library) for library in DEFAULT_LIBRARIES)):
+        for library in DEFAULT_LIBRARIES:
+            e = await _import_lib(library)
             if e is not None:
                 self._libraries[e.alias or e.name or e.import_name] = e
 
@@ -1092,7 +1093,7 @@ class Namespace:
             args,
             base_dir=base_dir,
             sentinel=None if is_default_library else sentinel,
-            variables=await self.get_unresolved_variables(),
+            variables=await self.get_resolvable_variables(),
         )
 
         return LibraryEntry(name=library_doc.name, import_name=name, library_doc=library_doc, args=args, alias=alias)
@@ -1118,7 +1119,7 @@ class Namespace:
             name,
             base_dir,
             sentinel=sentinel,
-            variables=await self.get_unresolved_variables(),
+            variables=await self.get_resolvable_variables(),
         )
 
         return ResourceEntry(
@@ -1155,7 +1156,7 @@ class Namespace:
             args,
             base_dir=base_dir,
             sentinel=sentinel,
-            variables=await self.get_unresolved_variables(),
+            variables=await self.get_resolvable_variables(),
         )
 
         return VariablesEntry(
@@ -1228,7 +1229,7 @@ class Namespace:
                 if not self._analyzed:
                     canceled = False
                     try:
-                        result = await Analyzer().get(self.model, self)
+                        result = await Analyzer(self.model, self).run()
 
                         self._diagnostics += result
 
