@@ -140,7 +140,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             futures.append(run_coroutine_in_thread(func, doc, *args, **kwargs))
         for e in await asyncio.gather(*futures, return_exceptions=True):
             if isinstance(e, BaseException):
-                self._logger.exception(e)
+                if not isinstance(result, asyncio.CancelledError):
+                    self._logger.exception(e)
                 continue
             result.extend(e)
         return result

@@ -637,14 +637,11 @@ class Namespace:
                         self._import_entries = data_entry.import_entries.copy()
                     else:
                         variables = await self.get_resolvable_variables()
-                        try:
-                            await self._import_default_libraries(variables)
-                            await self._import_imports(
-                                imports, str(Path(self.source).parent), top_level=True, variables=variables
-                            )
-                        except BaseException as e:
-                            self._logger.exception(e)
-                            raise
+
+                        await self._import_default_libraries(variables)
+                        await self._import_imports(
+                            imports, str(Path(self.source).parent), top_level=True, variables=variables
+                        )
 
                         if self.document is not None:
                             self.document.set_data(
