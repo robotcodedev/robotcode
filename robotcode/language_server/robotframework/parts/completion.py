@@ -280,12 +280,12 @@ class CompletionCollector(ModelHelperMixin):
                         CompleteResultKind.MODULE_INTERNAL.name,
                         CompleteResultKind.FILE.name,
                     ]:
-                        name = completion_item.data.get("name", None)
-                        if name is not None:
+                        import_name = completion_item.data.get("import_name", None)
+                        args = tuple(completion_item.data.get("args", ()))
+                        alias = completion_item.data.get("alias", None)
+                        if import_name is not None:
                             try:
-                                lib_doc = await self.namespace.imports_manager.get_libdoc_for_library_import(
-                                    name, (), str(document.uri.to_path().parent), sentinel=self
-                                )
+                                lib_doc = await self.namespace.get_imported_library_libdoc(import_name, args, alias)
 
                                 if lib_doc is not None:
                                     completion_item.documentation = MarkupContent(
@@ -299,12 +299,10 @@ class CompletionCollector(ModelHelperMixin):
                                     kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
                                 )
                     elif type in [CompleteResultKind.RESOURCE.name]:
-                        name = completion_item.data.get("name", None)
-                        if name is not None:
+                        import_name = completion_item.data.get("import_name", None)
+                        if import_name is not None:
                             try:
-                                lib_doc = await self.namespace.imports_manager.get_libdoc_for_resource_import(
-                                    name, str(document.uri.to_path().parent), sentinel=self
-                                )
+                                lib_doc = await self.namespace.get_imported_resource_libdoc(import_name)
 
                                 if lib_doc is not None:
                                     completion_item.documentation = MarkupContent(
@@ -373,7 +371,7 @@ class CompletionCollector(ModelHelperMixin):
                 if range is not None
                 else None,
             )
-            for s in os.environ.keys()
+            for s in self.namespace.imports_manager.environment.keys()
         ]
 
     _VARIABLE_COMPLETION_SORT_TEXT_PREFIX = {
@@ -578,6 +576,9 @@ class CompletionCollector(ModelHelperMixin):
                     "document_uri": str(self.document.uri),
                     "type": CompleteResultKind.MODULE.name,
                     "name": k,
+                    "import_name": v.import_name,
+                    "args": v.args,
+                    "alias": v.alias,
                 },
             )
             result.append(c)
@@ -595,6 +596,7 @@ class CompletionCollector(ModelHelperMixin):
                     "document_uri": str(self.document.uri),
                     "type": CompleteResultKind.RESOURCE.name,
                     "name": v.name,
+                    "import_name": v.import_name,
                 },
             )
             result.append(c)
@@ -1144,10 +1146,8 @@ class CompletionCollector(ModelHelperMixin):
 
             sep = text_before_position[last_separator_index] if last_separator_index < len(text_before_position) else ""
 
-            imports_manger = await self.parent.documents_cache.get_imports_manager(self.document)
-
             try:
-                list = await imports_manger.complete_library_import(
+                list = await self.namespace.imports_manager.complete_library_import(
                     first_part if first_part else None,
                     str(self.document.uri.to_path().parent),
                     await self.namespace.get_resolvable_variables(nodes_at_position, position),
@@ -1251,10 +1251,8 @@ class CompletionCollector(ModelHelperMixin):
                 else:
                     completion_range.end = position
 
-            imports_manger = await self.parent.documents_cache.get_imports_manager(self.document)
-
             try:
-                libdoc = await imports_manger.get_libdoc_for_library_import(
+                libdoc = await self.namespace.get_imported_library_libdoc(
                     import_node.name, (), str(self.document.uri.to_path().parent)
                 )
                 if not list:
@@ -1382,10 +1380,8 @@ class CompletionCollector(ModelHelperMixin):
             else None
         )
 
-        imports_manger = await self.parent.documents_cache.get_imports_manager(self.document)
-
         try:
-            list = await imports_manger.complete_resource_import(
+            list = await self.namespace.imports_manger.complete_resource_import(
                 first_part if first_part else None,
                 str(self.document.uri.to_path().parent),
                 await self.namespace.get_resolvable_variables(nodes_at_position, position),
@@ -1485,10 +1481,8 @@ class CompletionCollector(ModelHelperMixin):
             else None
         )
 
-        imports_manger = await self.parent.documents_cache.get_imports_manager(self.document)
-
         try:
-            list = await imports_manger.complete_variables_import(
+            list = await self.namespace.imports_manger.complete_variables_import(
                 first_part if first_part else None,
                 str(self.document.uri.to_path().parent),
                 await self.namespace.get_resolvable_variables(nodes_at_position, position),

@@ -143,7 +143,11 @@ class KeywordMatcher:
         return self.normalized_name == str(normalize(o, "_"))
 
     def __hash__(self) -> int:
-        return id(self)
+        return hash(
+            (self.embedded_arguments.name, tuple(self.embedded_arguments.args))
+            if self.embedded_arguments
+            else (self.normalized_name,)
+        )
 
     def __str__(self) -> str:
         return self.name
@@ -958,6 +962,53 @@ class _Variable(object):
         pass
 
 
+__default_variables: Any = None
+
+
+def _get_default_variables() -> Any:
+    from robot.variables import Variables
+
+    global __default_variables
+    if __default_variables is None:
+        __default_variables = Variables()
+        for k, v in {
+            "${TEMPDIR}": str(Path(tempfile.gettempdir()).absolute()),
+            "${/}": os.sep,
+            "${:}": os.pathsep,
+            "${\\n}": os.linesep,
+            "${SPACE}": " ",
+            "${True}": True,
+            "${False}": False,
+            "${None}": None,
+            "${null}": None,
+            "${TEST NAME}": None,
+            "@{TEST TAGS}": [],
+            "${TEST DOCUMENTATION}": None,
+            "${TEST STATUS}": None,
+            "${TEST MESSAGE}": None,
+            "${PREV TEST NAME}": None,
+            "${PREV TEST STATUS}": None,
+            "${PREV TEST MESSAGE}": None,
+            "${SUITE NAME}": None,
+            "${SUITE SOURCE}": None,
+            "${SUITE DOCUMENTATION}": None,
+            "&{SUITE METADATA}": {},
+            "${SUITE STATUS}": None,
+            "${SUITE MESSAGE}": None,
+            "${KEYWORD STATUS}": None,
+            "${KEYWORD MESSAGE}": None,
+            "${LOG LEVEL}": None,
+            "${OUTPUT FILE}": None,
+            "${LOG FILE}": None,
+            "${REPORT FILE}": None,
+            "${DEBUG FILE}": None,
+            "${OUTPUT DIR}": None,
+        }.items():
+            __default_variables[k] = v
+
+    return __default_variables
+
+
 def resolve_robot_variables(
     working_dir: str = ".",
     base_dir: str = ".",
@@ -966,48 +1017,17 @@ def resolve_robot_variables(
 ) -> Any:
     from robot.variables import Variables
 
-    result = Variables()
+    result: Variables = _get_default_variables().copy()
 
     for k, v in {
         "${CURDIR}": str(Path(base_dir).absolute()),
-        "${TEMPDIR}": str(Path(tempfile.gettempdir()).absolute()),
         "${EXECDIR}": str(Path(working_dir).absolute()),
-        "${/}": os.sep,
-        "${:}": os.pathsep,
-        "${\\n}": os.linesep,
-        "${SPACE}": " ",
-        "${True}": True,
-        "${False}": False,
-        "${None}": None,
-        "${null}": None,
-        "${TEST NAME}": None,
-        "@{TEST TAGS}": [],
-        "${TEST DOCUMENTATION}": None,
-        "${TEST STATUS}": None,
-        "${TEST MESSAGE}": None,
-        "${PREV TEST NAME}": None,
-        "${PREV TEST STATUS}": None,
-        "${PREV TEST MESSAGE}": None,
-        "${SUITE NAME}": None,
-        "${SUITE SOURCE}": None,
-        "${SUITE DOCUMENTATION}": None,
-        "&{SUITE METADATA}": {},
-        "${SUITE STATUS}": None,
-        "${SUITE MESSAGE}": None,
-        "${KEYWORD STATUS}": None,
-        "${KEYWORD MESSAGE}": None,
-        "${LOG LEVEL}": None,
-        "${OUTPUT FILE}": None,
-        "${LOG FILE}": None,
-        "${REPORT FILE}": None,
-        "${DEBUG FILE}": None,
-        "${OUTPUT DIR}": None,
     }.items():
         result[k] = v
 
     if command_line_variables:
-        for k, v in command_line_variables.items():
-            result[f"${{{k}}}"] = v
+        for k1, v1 in command_line_variables.items():
+            result[f"${{{k1}}}"] = v1
 
     if variables is not None:
 
@@ -1388,7 +1408,16 @@ def find_variables(
             name, working_dir, base_dir, pythonpath, environment, command_line_variables, variables
         )[0]
     else:
-        return find_file(name, working_dir, base_dir, pythonpath, environment, command_line_variables, variables)
+        return find_file(
+            name,
+            working_dir,
+            base_dir,
+            pythonpath,
+            environment,
+            command_line_variables,
+            variables,
+            file_type="Variables",
+        )
 
 
 def get_variables_doc(

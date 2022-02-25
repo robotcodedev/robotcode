@@ -4,6 +4,7 @@ import ast
 import asyncio
 import itertools
 import re
+import time
 import weakref
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -23,7 +24,7 @@ from typing import (
     cast,
 )
 
-from ....utils.async_itertools import async_chain
+from ....utils.async_itertools import as_async_iterable, async_chain
 from ....utils.async_tools import Lock
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
@@ -521,6 +522,7 @@ class Namespace:
                 await self.invalidate()
                 break
 
+    @_logger.call
     async def invalidate(self) -> None:
         async with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
             self._initialized = False
@@ -634,8 +636,15 @@ class Namespace:
                         self._diagnostics = data_entry.diagnostics.copy()
                         self._import_entries = data_entry.import_entries.copy()
                     else:
-                        await self._import_default_libraries()
-                        await self._import_imports(imports, str(Path(self.source).parent), top_level=True)
+                        variables = await self.get_resolvable_variables()
+                        try:
+                            await self._import_default_libraries(variables)
+                            await self._import_imports(
+                                imports, str(Path(self.source).parent), top_level=True, variables=variables
+                            )
+                        except BaseException as e:
+                            self._logger.exception(e)
+                            raise
 
                         if self.document is not None:
                             self.document.set_data(
@@ -777,8 +786,18 @@ class Namespace:
         return None
 
     @_logger.call
-    async def _import_imports(self, imports: Iterable[Import], base_dir: str, *, top_level: bool = False) -> None:
-        async def _import(value: Import) -> Optional[LibraryEntry]:
+    async def _import_imports(
+        self,
+        imports: Iterable[Import],
+        base_dir: str,
+        *,
+        top_level: bool = False,
+        variables: Optional[Dict[str, Any]] = None,
+        source: Optional[str] = None,
+    ) -> None:
+        async def _import(
+            value: Import, variables: Optional[Dict[str, Any]] = None
+        ) -> Tuple[Optional[LibraryEntry], Optional[Dict[str, Any]]]:
             result: Optional[LibraryEntry] = None
             try:
                 if isinstance(value, LibraryImport):
@@ -786,7 +805,7 @@ class Namespace:
                         raise NameSpaceError("Library setting requires value.")
 
                     result = await self._get_library_entry(
-                        value.name, value.args, value.alias, base_dir, sentinel=value
+                        value.name, value.args, value.alias, base_dir, sentinel=value, variables=variables
                     )
                     result.import_range = value.range()
                     result.import_source = value.source
@@ -808,21 +827,23 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Resource setting requires value.")
 
-                    source = await self.imports_manager.find_file(
+                    source = await self.imports_manager.find_resource(
                         value.name,
                         base_dir,
-                        variables=await self.get_resolvable_variables(),
+                        variables=variables,
                     )
 
                     # allready imported
                     if any(r for r in self._resources.values() if r.library_doc.source == source):
-                        return None
+                        return None, variables
 
-                    result = await self._get_resource_entry(value.name, base_dir, sentinel=value)
+                    result = await self._get_resource_entry(value.name, base_dir, sentinel=value, variables=variables)
                     result.import_range = value.range()
                     result.import_source = value.source
 
                     self._import_entries[value] = result
+                    if result.variables:
+                        variables = None
 
                     if top_level and (
                         not result.library_doc.errors
@@ -843,12 +864,15 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Variables setting requires value.")
 
-                    result = await self._get_variables_entry(value.name, value.args, base_dir)
+                    result = await self._get_variables_entry(
+                        value.name, value.args, base_dir, sentinel=value, variables=variables
+                    )
 
                     result.import_range = value.range()
                     result.import_source = value.source
 
                     self._import_entries[value] = result
+                    variables = None
                 else:
                     raise DiagnosticsError("Unknown import type.")
 
@@ -910,7 +934,6 @@ class Namespace:
             except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
-                self._logger.exception(e)
                 if top_level:
                     await self.append_diagnostics(
                         range=value.range(),
@@ -919,145 +942,168 @@ class Namespace:
                         source=DIAGNOSTICS_SOURCE_NAME,
                         code=type(e).__qualname__,
                     )
-            return result
 
-        for imp in imports:
-            entry = await _import(imp)
+            return result, variables
 
-            if entry is not None:
-                if isinstance(entry, ResourceEntry):
-                    assert entry.library_doc.source is not None
-                    allready_imported_resources = [
-                        e for e in self._resources.values() if e.library_doc.source == entry.library_doc.source
-                    ]
+        current_time = time.time()
+        self._logger.debug(lambda: f"start imports for {self.document if top_level else source}")
+        try:
 
-                    if not allready_imported_resources and entry.library_doc.source != self.source:
-                        self._resources[entry.alias or entry.name or entry.import_name] = entry
-                        try:
-                            await self._import_imports(
-                                entry.imports,
-                                str(Path(entry.library_doc.source).parent),
-                                top_level=False,
-                            )
-                        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
-                            raise
-                        except BaseException as e:
-                            if top_level:
-                                await self.append_diagnostics(
-                                    range=entry.import_range,
-                                    message=str(e) or type(entry).__name__,
-                                    severity=DiagnosticSeverity.ERROR,
-                                    source=DIAGNOSTICS_SOURCE_NAME,
-                                    code=type(e).__qualname__,
-                                )
-                    else:
-                        if top_level:
-                            if entry.library_doc.source == self.source:
-                                await self.append_diagnostics(
-                                    range=entry.import_range,
-                                    message="Recursive resource import.",
-                                    severity=DiagnosticSeverity.INFORMATION,
-                                    source=DIAGNOSTICS_SOURCE_NAME,
-                                )
-                            elif allready_imported_resources and allready_imported_resources[0].library_doc.source:
-                                self._resources[entry.alias or entry.name or entry.import_name] = entry
+            async for imp in as_async_iterable(imports):
+                if variables is None:
+                    variables = await self.get_resolvable_variables()
 
-                                await self.append_diagnostics(
-                                    range=entry.import_range,
-                                    message="Resource already imported.",
-                                    severity=DiagnosticSeverity.INFORMATION,
-                                    source=DIAGNOSTICS_SOURCE_NAME,
-                                    related_information=[
-                                        DiagnosticRelatedInformation(
-                                            location=Location(
-                                                uri=str(Uri.from_path(allready_imported_resources[0].import_source)),
-                                                range=allready_imported_resources[0].import_range,
-                                            ),
-                                            message="",
-                                        )
-                                    ],
-                                )
+                entry, variables = await _import(imp, variables=variables)
 
-                elif isinstance(entry, VariablesEntry):
-                    allready_imported_variables = [
-                        e
-                        for e in self._variables.values()
-                        if e.library_doc.source == entry.library_doc.source
-                        and e.alias == entry.alias
-                        and e.args == entry.args
-                    ]
-                    if top_level and allready_imported_variables and allready_imported_variables[0].library_doc.source:
-                        await self.append_diagnostics(
-                            range=entry.import_range,
-                            message=f'Variables "{entry}" already imported.',
-                            severity=DiagnosticSeverity.INFORMATION,
-                            source=DIAGNOSTICS_SOURCE_NAME,
-                            related_information=[
-                                DiagnosticRelatedInformation(
-                                    location=Location(
-                                        uri=str(Uri.from_path(allready_imported_variables[0].import_source)),
-                                        range=allready_imported_variables[0].import_range,
-                                    ),
-                                    message="",
-                                )
-                            ],
+                if entry is not None:
+                    if isinstance(entry, ResourceEntry):
+                        assert entry.library_doc.source is not None
+                        allready_imported_resources = next(
+                            (e for e in self._resources.values() if e.library_doc.source == entry.library_doc.source),
+                            None,
                         )
 
-                    if (entry.alias or entry.name or entry.import_name) not in self._variables:
-                        self._variables[entry.alias or entry.name or entry.import_name] = entry
-
-                elif isinstance(entry, LibraryEntry):
-                    if top_level and entry.name == BUILTIN_LIBRARY_NAME and entry.alias is None:
-                        await self.append_diagnostics(
-                            range=entry.import_range,
-                            message=f'Library "{entry}" is not imported,'
-                            ' because it would override the "BuiltIn" library.',
-                            severity=DiagnosticSeverity.INFORMATION,
-                            source=DIAGNOSTICS_SOURCE_NAME,
-                            related_information=[
-                                DiagnosticRelatedInformation(
-                                    location=Location(
-                                        uri=str(Uri.from_path(entry.import_source)),
+                        if allready_imported_resources is None and entry.library_doc.source != self.source:
+                            self._resources[entry.alias or entry.name or entry.import_name] = entry
+                            try:
+                                await self._import_imports(
+                                    entry.imports,
+                                    str(Path(entry.library_doc.source).parent),
+                                    top_level=False,
+                                    variables=variables,
+                                    source=entry.library_doc.source,
+                                )
+                            except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                                raise
+                            except BaseException as e:
+                                if top_level:
+                                    await self.append_diagnostics(
                                         range=entry.import_range,
-                                    ),
-                                    message="",
-                                )
-                            ],
-                        )
-                        continue
+                                        message=str(e) or type(entry).__name__,
+                                        severity=DiagnosticSeverity.ERROR,
+                                        source=DIAGNOSTICS_SOURCE_NAME,
+                                        code=type(e).__qualname__,
+                                    )
+                        else:
+                            if top_level:
+                                if entry.library_doc.source == self.source:
+                                    await self.append_diagnostics(
+                                        range=entry.import_range,
+                                        message="Recursive resource import.",
+                                        severity=DiagnosticSeverity.INFORMATION,
+                                        source=DIAGNOSTICS_SOURCE_NAME,
+                                    )
+                                elif (
+                                    allready_imported_resources is not None
+                                    and allready_imported_resources.library_doc.source
+                                ):
+                                    self._resources[entry.alias or entry.name or entry.import_name] = entry
 
-                    allready_imported_library = [
-                        e
-                        for e in self._libraries.values()
-                        if e.library_doc.source == entry.library_doc.source
-                        and e.alias == entry.alias
-                        and e.args == entry.args
-                    ]
-                    if top_level and allready_imported_library and allready_imported_library[0].library_doc.source:
-                        await self.append_diagnostics(
-                            range=entry.import_range,
-                            message=f'Library "{entry}" already imported.',
-                            severity=DiagnosticSeverity.INFORMATION,
-                            source=DIAGNOSTICS_SOURCE_NAME,
-                            related_information=[
-                                DiagnosticRelatedInformation(
-                                    location=Location(
-                                        uri=str(Uri.from_path(allready_imported_library[0].import_source)),
-                                        range=allready_imported_library[0].import_range,
-                                    ),
-                                    message="",
-                                )
-                            ],
-                        )
+                                    await self.append_diagnostics(
+                                        range=entry.import_range,
+                                        message=f"Resource {entry} already imported.",
+                                        severity=DiagnosticSeverity.INFORMATION,
+                                        source=DIAGNOSTICS_SOURCE_NAME,
+                                        related_information=[
+                                            DiagnosticRelatedInformation(
+                                                location=Location(
+                                                    uri=str(Uri.from_path(allready_imported_resources.import_source)),
+                                                    range=allready_imported_resources.import_range,
+                                                ),
+                                                message="",
+                                            )
+                                        ],
+                                    )
 
-                    if (entry.alias or entry.name or entry.import_name) not in self._libraries:
-                        self._libraries[entry.alias or entry.name or entry.import_name] = entry
+                    elif isinstance(entry, VariablesEntry):
+                        allready_imported_variables = [
+                            e
+                            for e in self._variables.values()
+                            if e.library_doc.source == entry.library_doc.source
+                            and e.alias == entry.alias
+                            and e.args == entry.args
+                        ]
+                        if (
+                            top_level
+                            and allready_imported_variables
+                            and allready_imported_variables[0].library_doc.source
+                        ):
+                            await self.append_diagnostics(
+                                range=entry.import_range,
+                                message=f'Variables "{entry}" already imported.',
+                                severity=DiagnosticSeverity.INFORMATION,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                                related_information=[
+                                    DiagnosticRelatedInformation(
+                                        location=Location(
+                                            uri=str(Uri.from_path(allready_imported_variables[0].import_source)),
+                                            range=allready_imported_variables[0].import_range,
+                                        ),
+                                        message="",
+                                    )
+                                ],
+                            )
 
-    async def _import_default_libraries(self) -> None:
-        async def _import_lib(library: str) -> Optional[LibraryEntry]:
+                        if (entry.alias or entry.name or entry.import_name) not in self._variables:
+                            self._variables[entry.alias or entry.name or entry.import_name] = entry
+
+                    elif isinstance(entry, LibraryEntry):
+                        if top_level and entry.name == BUILTIN_LIBRARY_NAME and entry.alias is None:
+                            await self.append_diagnostics(
+                                range=entry.import_range,
+                                message=f'Library "{entry}" is not imported,'
+                                ' because it would override the "BuiltIn" library.',
+                                severity=DiagnosticSeverity.INFORMATION,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                                related_information=[
+                                    DiagnosticRelatedInformation(
+                                        location=Location(
+                                            uri=str(Uri.from_path(entry.import_source)),
+                                            range=entry.import_range,
+                                        ),
+                                        message="",
+                                    )
+                                ],
+                            )
+                            continue
+
+                        allready_imported_library = [
+                            e
+                            for e in self._libraries.values()
+                            if e.library_doc.source == entry.library_doc.source
+                            and e.alias == entry.alias
+                            and e.args == entry.args
+                        ]
+                        if top_level and allready_imported_library and allready_imported_library[0].library_doc.source:
+                            await self.append_diagnostics(
+                                range=entry.import_range,
+                                message=f'Library "{entry}" already imported.',
+                                severity=DiagnosticSeverity.INFORMATION,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                                related_information=[
+                                    DiagnosticRelatedInformation(
+                                        location=Location(
+                                            uri=str(Uri.from_path(allready_imported_library[0].import_source)),
+                                            range=allready_imported_library[0].import_range,
+                                        ),
+                                        message="",
+                                    )
+                                ],
+                            )
+
+                        if (entry.alias or entry.name or entry.import_name) not in self._libraries:
+                            self._libraries[entry.alias or entry.name or entry.import_name] = entry
+        finally:
+            self._logger.debug(
+                lambda: "end import imports for "
+                + f"{self.document if top_level else source} in {time.time() - current_time}s"
+            )
+
+    async def _import_default_libraries(self, variables: Optional[Dict[str, Any]] = None) -> None:
+        async def _import_lib(library: str, variables: Optional[Dict[str, Any]] = None) -> Optional[LibraryEntry]:
             try:
                 return await self._get_library_entry(
-                    library, (), None, str(Path(self.source).parent), is_default_library=True
+                    library, (), None, str(Path(self.source).parent), is_default_library=True, variables=variables
                 )
             except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                 raise
@@ -1071,10 +1117,14 @@ class Namespace:
                 )
                 return None
 
-        for library in DEFAULT_LIBRARIES:
-            e = await _import_lib(library)
-            if e is not None:
-                self._libraries[e.alias or e.name or e.import_name] = e
+        self._logger.debug(lambda: f"start import default libraries for document {self.document}")
+        try:
+            for library in DEFAULT_LIBRARIES:
+                e = await _import_lib(library, variables or await self.get_resolvable_variables())
+                if e is not None:
+                    self._libraries[e.alias or e.name or e.import_name] = e
+        finally:
+            self._logger.debug(lambda: f"end import default libraries for document {self.document}")
 
     @_logger.call
     async def _get_library_entry(
@@ -1086,6 +1136,7 @@ class Namespace:
         *,
         is_default_library: bool = False,
         sentinel: Any = None,
+        variables: Optional[Dict[str, Any]] = None,
     ) -> LibraryEntry:
 
         library_doc = await self.imports_manager.get_libdoc_for_library_import(
@@ -1093,7 +1144,7 @@ class Namespace:
             args,
             base_dir=base_dir,
             sentinel=None if is_default_library else sentinel,
-            variables=await self.get_resolvable_variables(),
+            variables=variables or await self.get_resolvable_variables(),
         )
 
         return LibraryEntry(name=library_doc.name, import_name=name, library_doc=library_doc, args=args, alias=alias)
@@ -1114,12 +1165,14 @@ class Namespace:
         )
 
     @_logger.call
-    async def _get_resource_entry(self, name: str, base_dir: str, sentinel: Any = None) -> ResourceEntry:
+    async def _get_resource_entry(
+        self, name: str, base_dir: str, *, sentinel: Any = None, variables: Optional[Dict[str, Any]] = None
+    ) -> ResourceEntry:
         namespace, library_doc = await self.imports_manager.get_namespace_and_libdoc_for_resource_import(
             name,
             base_dir,
             sentinel=sentinel,
-            variables=await self.get_resolvable_variables(),
+            variables=variables or await self.get_resolvable_variables(),
         )
 
         return ResourceEntry(
@@ -1149,14 +1202,16 @@ class Namespace:
         name: str,
         args: Tuple[Any, ...],
         base_dir: str,
+        *,
         sentinel: Any = None,
+        variables: Optional[Dict[str, Any]] = None,
     ) -> VariablesEntry:
         library_doc = await self.imports_manager.get_libdoc_for_variables_import(
             name,
             args,
             base_dir=base_dir,
             sentinel=sentinel,
-            variables=await self.get_resolvable_variables(),
+            variables=variables or await self.get_resolvable_variables(),
         )
 
         return VariablesEntry(
@@ -1178,24 +1233,35 @@ class Namespace:
 
     @_logger.call
     async def get_keywords(self) -> List[KeywordDoc]:
+        import itertools
+
         if self._keywords is None:
             async with self._keywords_lock:
                 if self._keywords is None:
-                    await self.ensure_initialized()
 
-                    result: Dict[KeywordMatcher, KeywordDoc] = {}
+                    current_time = time.time()
+                    self._logger.debug("start collecting keywords")
+                    try:
+                        await self.ensure_initialized()
 
-                    async for name, doc in async_chain(
-                        (await self.get_library_doc()).keywords.items()
-                        if (await self.get_library_doc()) is not None
-                        else [],
-                        *(e.library_doc.keywords.items() for e in self._resources.values()),
-                        *(e.library_doc.keywords.items() for e in self._libraries.values()),
-                    ):
-                        if not any(k for k in result.keys() if k == name):
+                        result: Dict[KeywordMatcher, KeywordDoc] = {}
+                        libdoc = await self.get_library_doc()
+
+                        i=0
+                        for name, doc in itertools.chain(
+                            *(e.library_doc.keywords.items() for e in self._libraries.values()),
+                            *(e.library_doc.keywords.items() for e in self._resources.values()),
+                            libdoc.keywords.items() if libdoc is not None else [],
+                        ):
+                            i+=1
+                            # if not any(k for k in result.keys() if k == name):
                             result[KeywordMatcher(name)] = doc
 
-                    self._keywords = list(result.values())
+                        self._keywords = list(result.values())
+                    finally:
+                        self._logger.debug(
+                            lambda: f"end collecting {len(self._keywords)} keywords in {time.time()-current_time}s analyse {i} keywords"
+                        )
 
         return self._keywords
 
@@ -1228,7 +1294,11 @@ class Namespace:
             async with self._analyze_lock:
                 if not self._analyzed:
                     canceled = False
+
+                    self._logger.debug(lambda: f"start analyze {self.document}")
+
                     try:
+
                         result = await Analyzer(self.model, self).run()
 
                         self._diagnostics += result
@@ -1260,7 +1330,9 @@ class Namespace:
                     finally:
                         self._analyzed = not canceled
                         self._logger.debug(
-                            lambda: f"analyzed {self.document}" if self._analyzed else f"not analyzed {self.document}"
+                            lambda: f"end analyzed {self.document} succeed"
+                            if self._analyzed
+                            else f"end analyzed {self.document} failed"
                         )
 
     async def get_finder(self) -> KeywordFinder:

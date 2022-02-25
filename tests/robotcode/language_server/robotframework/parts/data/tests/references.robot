@@ -6,7 +6,7 @@ Library         ${CURDIR}/../lib/myvariables.py
 #                             ^^^^^^^^^^^^^^ a custom library with path
 Variables       ${CURDIR}/../lib/myvariables.py
 #                 ^^^^^^  Variable in variables import path
-#                             ^^^^^^^^^^^^^^ a variable import
+#                                ^^^^^^^^^^^^^^ a variable import
 Resource        ${CURDIR}/../resources/firstresource.resource
 #                 ^^^^^^  Variable in resource import path
 Library         alibrary    a_param=from hello    WITH NAME    lib_hello

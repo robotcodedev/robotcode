@@ -33,7 +33,7 @@ ROBOTCODE_PATTERN = re.compile(r"(?P<marker>\brobotcode\b)\s*:\s*(?P<rule>\b\w+\
 
 class Analyzer(AsyncVisitor):
     def __init__(self, model: ast.AST, namespace: Namespace) -> None:
-        from robot.parsing.model.statements import TestTemplate, Template
+        from robot.parsing.model.statements import Template, TestTemplate
 
         self.model = model
         self._namespace = namespace

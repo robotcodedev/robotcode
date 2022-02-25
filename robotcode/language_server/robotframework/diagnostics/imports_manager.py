@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import os
+import sys
 import weakref
 from abc import ABC, abstractmethod
 from collections import OrderedDict
@@ -14,11 +16,16 @@ from typing import (
     Coroutine,
     Dict,
     List,
+    Mapping,
     Optional,
     Tuple,
     cast,
     final,
 )
+
+from robotcode.language_server.robotframework.utils.robot_path import find_file_ex
+
+from ..utils.version import get_robot_version
 
 from ....utils.async_tools import Lock, async_tasking_event, create_sub_task
 from ....utils.logging import LoggingDescriptor
@@ -38,6 +45,7 @@ if TYPE_CHECKING:
 
 from ..utils.process_pool import get_process_pool
 from .library_doc import (
+    ROBOT_LIBRARY_PACKAGE,
     ArgumentSpec,
     CompleteResult,
     Error,
@@ -55,6 +63,8 @@ from .library_doc import (
     get_library_doc,
     get_variables_doc,
     is_embedded_keyword,
+    is_library_by_path,
+    is_variables_by_path,
     resolve_variable,
 )
 
@@ -453,13 +463,11 @@ class _VariablesEntry(_ImportEntry):
 class ImportsManager:
     _logger = LoggingDescriptor()
 
-    def __init__(
-        self, parent_protocol: RobotLanguageServerProtocol, folder: Uri, config: Optional[RobotConfig]
-    ) -> None:
+    def __init__(self, parent_protocol: RobotLanguageServerProtocol, folder: Uri, config: RobotConfig) -> None:
         super().__init__()
         self.parent_protocol = parent_protocol
         self.folder = folder
-        self.config = config
+        self.config: RobotConfig = config
         self._libaries_lock = Lock()
         self._libaries: OrderedDict[_LibrariesEntryKey, _LibrariesEntry] = OrderedDict()
         self._resources_lock = Lock()
@@ -471,6 +479,34 @@ class ImportsManager:
         self._command_line_variables: Optional[List[VariableDefinition]] = None
 
         self.process_pool = get_process_pool()
+        self._python_path: Optional[List[str]] = None
+        self._environment: Optional[Mapping[str, str]] = None
+
+    @property
+    def environment(self) -> Mapping[str, str]:
+        if self._environment is None:
+            self._environment = dict(os.environ)
+
+            self._environment.update(self.config.env)
+
+        return self._environment
+
+    @property
+    def python_path(self) -> List[str]:
+        if self._python_path is None:
+            self._python_path = sys.path
+
+            file = Path(__file__).resolve()
+            top = file.parents[3]
+            for p in filter(lambda v: path_is_relative_to(v, top), sys.path.copy()):
+                self._python_path.remove(p)
+
+        for p in self.config.python_path:
+            absolute_path = str(Path(p).absolute())
+            if absolute_path not in self._python_path:
+                self._python_path.insert(0, absolute_path)
+
+        return self._python_path or []
 
     @_logger.call
     def get_command_line_variables(self) -> List[VariableDefinition]:
@@ -621,37 +657,67 @@ class ImportsManager:
 
     @_logger.call
     async def find_library(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
-        return await asyncio.wait_for(
-            asyncio.get_running_loop().run_in_executor(
-                self.process_pool,
-                find_library,
-                name,
-                str(self.folder.to_path()),
-                base_dir,
-                self.config.python_path if self.config is not None else None,
-                self.config.env if self.config is not None else None,
-                self.config.variables if self.config is not None else None,
-                variables,
-            ),
-            FIND_FILE_TIME_OUT,
-        )
+        from robot.variables.search import contains_variable
+
+        from robot.libraries import STDLIBS
+
+        if contains_variable(name, "$@&%"):
+            return await asyncio.wait_for(
+                asyncio.get_running_loop().run_in_executor(
+                    self.process_pool,
+                    find_library,
+                    name,
+                    str(self.folder.to_path()),
+                    base_dir,
+                    self.config.python_path if self.config is not None else None,
+                    self.config.env if self.config is not None else None,
+                    self.config.variables if self.config is not None else None,
+                    variables,
+                ),
+                FIND_FILE_TIME_OUT,
+            )
+
+        if name in STDLIBS:
+            result = ROBOT_LIBRARY_PACKAGE + "." + name
+        else:
+            result = name
+
+        if is_library_by_path(result):
+            result = find_file_ex(result, base_dir, self.python_path, "Library")
+
+        return result
 
     @_logger.call
     async def find_variables(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
-        return await asyncio.wait_for(
-            asyncio.get_running_loop().run_in_executor(
-                self.process_pool,
-                find_variables,
-                name,
-                str(self.folder.to_path()),
-                base_dir,
-                self.config.python_path if self.config is not None else None,
-                self.config.env if self.config is not None else None,
-                self.config.variables if self.config is not None else None,
-                variables,
-            ),
-            FIND_FILE_TIME_OUT,
-        )
+        from robot.variables.search import contains_variable
+
+        # if contains_variable(name, "$@&%"):
+        #     name = name.replace("%{CI_PROJECT_DIR}", self.environment["CI_PROJECT_DIR"])
+
+        if contains_variable(name, "$@&%"):
+            return await asyncio.wait_for(
+                asyncio.get_running_loop().run_in_executor(
+                    self.process_pool,
+                    find_variables,
+                    name,
+                    str(self.folder.to_path()),
+                    base_dir,
+                    self.config.python_path if self.config is not None else None,
+                    self.config.env if self.config is not None else None,
+                    self.config.variables if self.config is not None else None,
+                    variables,
+                ),
+                FIND_FILE_TIME_OUT,
+            )
+
+        if get_robot_version() >= (5, 0):
+
+            if is_variables_by_path(name):
+                return str(find_file_ex(name, base_dir, self.python_path, "Library"))
+
+            return name
+
+        return str(find_file_ex(name, base_dir, self.python_path, "Library"))
 
     @_logger.call
     async def get_libdoc_for_library_import(
@@ -662,7 +728,6 @@ class ImportsManager:
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> LibraryDoc:
-
         source = await self.find_library(
             name,
             base_dir,
@@ -872,32 +937,38 @@ class ImportsManager:
         return await entry.get_libdoc()
 
     @_logger.call
-    async def find_file(
+    async def find_resource(
         self, name: str, base_dir: str, file_type: str = "Resource", variables: Optional[Dict[str, Any]] = None
     ) -> str:
-        result = await asyncio.wait_for(
-            asyncio.get_running_loop().run_in_executor(
-                self.process_pool,
-                find_file,
-                name,
-                str(self.folder.to_path()),
-                base_dir,
-                self.config.python_path if self.config is not None else None,
-                self.config.env if self.config is not None else None,
-                self.config.variables if self.config is not None else None,
-                variables,
-                file_type,
-            ),
-            FIND_FILE_TIME_OUT,
-        )
+        from robot.variables.search import contains_variable
 
-        return result
+        # if contains_variable(name, "$@&%"):
+        #     name = name.replace("%{CI_PROJECT_DIR}", self.environment["CI_PROJECT_DIR"])
+
+        if contains_variable(name, "$@&%"):
+            return await asyncio.wait_for(
+                asyncio.get_running_loop().run_in_executor(
+                    self.process_pool,
+                    find_file,
+                    name,
+                    str(self.folder.to_path()),
+                    base_dir,
+                    self.config.python_path if self.config is not None else None,
+                    self.config.env if self.config is not None else None,
+                    self.config.variables if self.config is not None else None,
+                    variables,
+                    file_type,
+                ),
+                FIND_FILE_TIME_OUT,
+            )
+
+        return str(find_file_ex(name, base_dir, self.python_path, file_type))
 
     @_logger.call
     async def _get_entry_for_resource_import(
         self, name: str, base_dir: str, sentinel: Any = None, variables: Optional[Dict[str, Any]] = None
     ) -> _ResourcesEntry:
-        source = await self.find_file(name, base_dir, variables=variables)
+        source = await self.find_resource(name, base_dir, variables=variables)
 
         async def _get_document() -> TextDocument:
             self._logger.debug(lambda: f"Load resource {name} from source {source}")
