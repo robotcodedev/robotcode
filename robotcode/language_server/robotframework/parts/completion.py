@@ -1381,7 +1381,7 @@ class CompletionCollector(ModelHelperMixin):
         )
 
         try:
-            list = await self.namespace.imports_manger.complete_resource_import(
+            list = await self.namespace.imports_manager.complete_resource_import(
                 first_part if first_part else None,
                 str(self.document.uri.to_path().parent),
                 await self.namespace.get_resolvable_variables(nodes_at_position, position),
@@ -1482,7 +1482,7 @@ class CompletionCollector(ModelHelperMixin):
         )
 
         try:
-            list = await self.namespace.imports_manger.complete_variables_import(
+            list = await self.namespace.imports_manager.complete_variables_import(
                 first_part if first_part else None,
                 str(self.document.uri.to_path().parent),
                 await self.namespace.get_resolvable_variables(nodes_at_position, position),

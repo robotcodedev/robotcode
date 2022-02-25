@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import sys
 from os import PathLike
 from pathlib import Path
-import sys
 from typing import List, Optional, Union
 
 

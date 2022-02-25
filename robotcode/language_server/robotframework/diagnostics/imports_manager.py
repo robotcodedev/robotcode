@@ -25,8 +25,6 @@ from typing import (
 
 from robotcode.language_server.robotframework.utils.robot_path import find_file_ex
 
-from ..utils.version import get_robot_version
-
 from ....utils.async_tools import Lock, async_tasking_event, create_sub_task
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
@@ -37,6 +35,7 @@ from ...common.parts.workspace import FileWatcherEntry, Workspace
 from ...common.text_document import TextDocument
 from ..configuration import RobotConfig
 from ..utils.async_ast import walk
+from ..utils.version import get_robot_version
 from .entities import CommandLineVariableDefinition, VariableDefinition
 
 if TYPE_CHECKING:
@@ -657,9 +656,8 @@ class ImportsManager:
 
     @_logger.call
     async def find_library(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
-        from robot.variables.search import contains_variable
-
         from robot.libraries import STDLIBS
+        from robot.variables.search import contains_variable
 
         if contains_variable(name, "$@&%"):
             return await asyncio.wait_for(

@@ -1247,20 +1247,21 @@ class Namespace:
                         result: Dict[KeywordMatcher, KeywordDoc] = {}
                         libdoc = await self.get_library_doc()
 
-                        i=0
+                        i = 0
                         for name, doc in itertools.chain(
                             *(e.library_doc.keywords.items() for e in self._libraries.values()),
                             *(e.library_doc.keywords.items() for e in self._resources.values()),
                             libdoc.keywords.items() if libdoc is not None else [],
                         ):
-                            i+=1
+                            i += 1
                             # if not any(k for k in result.keys() if k == name):
                             result[KeywordMatcher(name)] = doc
 
                         self._keywords = list(result.values())
                     finally:
                         self._logger.debug(
-                            lambda: f"end collecting {len(self._keywords)} keywords in {time.time()-current_time}s analyse {i} keywords"
+                            lambda: f"end collecting {len(self._keywords) if self._keywords else 0}"
+                            f" keywords in {time.time()-current_time}s analyse {i} keywords"
                         )
 
         return self._keywords
