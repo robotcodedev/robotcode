@@ -42,6 +42,10 @@ All notable changes to the "robotcode" extension will be documented in this file
   - Note: Robocop has it's own ignore mechanism
 - initialize logging only of "--log" parameter is set from commandline
   - fixes [#30](https://github.com/d-biehl/robotcode/issues/30)
+- optimize loading of imports and collecting keywords
+  - this addresses [#24](https://github.com/d-biehl/robotcode/issues/24)
+  - one of the big points here is, beware of namespace pollution ;-)
+
 
 ##  0.5.5
 
