@@ -1090,6 +1090,7 @@ def _find_library_internal(
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Tuple[str, Any]:
 
+    from robot.errors import DataError
     from robot.libraries import STDLIBS
     from robot.utils.robotpath import find_file as robot_find_file
 
@@ -1097,7 +1098,10 @@ def _find_library_internal(
 
     robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
-    name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
+    try:
+        name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=False)
+    except DataError as error:
+        raise DataError(f"Replacing variables from setting 'Library' failed: {error}")
 
     if name in STDLIBS:
         result = ROBOT_LIBRARY_PACKAGE + "." + name
@@ -1377,14 +1381,17 @@ def _find_variables_internal(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Tuple[str, Any]:
-
+    from robot.errors import DataError
     from robot.utils.robotpath import find_file as robot_find_file
 
     _update_env(working_dir, pythonpath, environment)
 
     robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
-    name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
+    try:
+        name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=False)
+    except DataError as error:
+        raise DataError(f"Replacing variables from setting 'Variables' failed: {error}")
 
     result = name
 
@@ -1523,13 +1530,16 @@ def find_file(
     variables: Optional[Dict[str, Optional[Any]]] = None,
     file_type: str = "Resource",
 ) -> str:
+    from robot.errors import DataError
     from robot.utils.robotpath import find_file as robot_find_file
 
     _update_env(working_dir, pythonpath, environment)
 
     robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
-
-    name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
+    try:
+        name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=False)
+    except DataError as error:
+        raise DataError(f"Replacing variables from setting '{file_type}' failed: {error}")
 
     return cast(str, robot_find_file(name, base_dir or ".", file_type))
 

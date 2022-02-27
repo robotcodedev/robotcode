@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import enum
 import itertools
 import re
 import time
@@ -445,6 +446,13 @@ class VariablesEntry(LibraryEntry):
     variables: List[VariableDefinition] = field(default_factory=lambda: [])
 
 
+class DocumentType(enum.Enum):
+    UNKNOWN = "unknown"
+    GENERAL = "robot"
+    RESOURCE = "resource"
+    INIT = "init"
+
+
 class Namespace:
     _logger = LoggingDescriptor()
 
@@ -456,6 +464,7 @@ class Namespace:
         source: str,
         invalidated_callback: Callable[[Namespace], None],
         document: Optional[TextDocument] = None,
+        document_type: Optional[DocumentType] = None,
     ) -> None:
         super().__init__()
 
@@ -467,6 +476,7 @@ class Namespace:
         self.source = source
         self.invalidated_callback = invalidated_callback
         self._document = weakref.ref(document) if document is not None else None
+        self.document_type: Optional[DocumentType] = document_type
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
         self._libraries_matchers: Optional[Dict[KeywordMatcher, LibraryEntry]] = None
         self._resources: OrderedDict[str, ResourceEntry] = OrderedDict()
@@ -587,7 +597,11 @@ class Namespace:
             async with self._library_doc_lock:
                 if self._library_doc is None:
                     self._library_doc = await self.imports_manager.get_libdoc_from_model(
-                        self.model, self.source, model_type="RESOURCE", append_model_errors=False
+                        self.model,
+                        self.source,
+                        model_type="RESOURCE",
+                        append_model_errors=self.document_type is not None
+                        and self.document_type in [DocumentType.RESOURCE],
                     )
 
         return self._library_doc

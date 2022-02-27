@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-import enum
 import io
 import weakref
 from typing import (
@@ -27,7 +26,7 @@ from ...common.parts.workspace import WorkspaceFolder
 from ...common.text_document import TextDocument
 from ..configuration import RobotConfig
 from ..diagnostics.imports_manager import ImportsManager
-from ..diagnostics.namespace import Namespace
+from ..diagnostics.namespace import DocumentType, Namespace
 from ..utils.ast import Token
 
 if TYPE_CHECKING:
@@ -38,13 +37,6 @@ from .protocol_part import RobotLanguageServerProtocolPart
 
 class UnknownFileTypeError(Exception):
     pass
-
-
-class DocumentType(enum.Enum):
-    UNKNOWN = "unknown"
-    GENERAL = "robot"
-    RESOURCE = "resource"
-    INIT = "init"
 
 
 class DocumentsCache(RobotLanguageServerProtocolPart):
@@ -233,7 +225,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         def invalidate(namespace: Namespace) -> None:
             create_sub_task(self.__invalidate_namespace(namespace))
 
-        return Namespace(imports_manager, model, str(document.uri.to_path()), invalidate, document)
+        return Namespace(imports_manager, model, str(document.uri.to_path()), invalidate, document, document_type)
 
     @property
     async def default_imports_manager(self) -> ImportsManager:

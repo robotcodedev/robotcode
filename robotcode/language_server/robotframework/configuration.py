@@ -20,6 +20,10 @@ class RobotConfig(ConfigBase):
     env: Dict[str, str] = field(default_factory=dict)
     variables: Dict[str, Any] = field(default_factory=dict)
     output_dir: Optional[str] = None
+    output_file: Optional[str] = None
+    log_file: Optional[str] = None
+    debug_file: Optional[str] = None
+    log_level: Optional[str] = None
 
 
 @config_section("robotcode.syntax")
