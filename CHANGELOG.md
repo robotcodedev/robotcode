@@ -26,7 +26,8 @@ All notable changes to the "robotcode" extension will be documented in this file
   - all keyword references also with embedded arguments + regex are found
   - ambigous embedded keywords are recognized correctly, also with regex
   - speed up finding keyword references
-  - fixes: [#28](https://github.com/d-biehl/robotcode/issues/28)
+  - fix [#28](https://github.com/d-biehl/robotcode/issues/28)
+  - addresses [#24](https://github.com/d-biehl/robotcode/issues/24)
 - Ignoring robotcode diagnostics
   - you can put a line comment to disable robotcode diagnostics (i.e errors or warnings) for a single line, like this:
 - Propagate import errors from resources
@@ -42,9 +43,9 @@ All notable changes to the "robotcode" extension will be documented in this file
       ...    Unknown keyword  No  # robotcode: ignore
   ```
   - Note: Robocop has it's own ignore mechanism
-- initialize logging only of "--log" parameter is set from commandline
+- Initialize logging only of "--log" parameter is set from commandline
   - fixes [#30](https://github.com/d-biehl/robotcode/issues/30)
-- optimize loading of imports and collecting keywords
+- Optimize loading of imports and collecting keywords
   - this addresses [#24](https://github.com/d-biehl/robotcode/issues/24)
   - one of the big points here is, beware of namespace pollution ;-)
 - Full Support for BDD Style keywords
