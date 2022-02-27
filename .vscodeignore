@@ -3,7 +3,7 @@
 .vscode
 .vscode-test
 
-.gitignore
+**/.gitignore
 
 # node
 src/
@@ -33,3 +33,14 @@ playground
 
 # svg files
 **/*.svg
+
+.coverage
+coverage.xml
+.prettier*
+.python-version
+.eslintignore
+
+scripts
+doc/templates
+
+.gitignore/
