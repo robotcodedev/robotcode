@@ -34,8 +34,6 @@ All notable changes to the "robotcode" extension will be documented in this file
   - addresses [#24](https://github.com/d-biehl/robotcode/issues/24)
 - Ignoring robotcode diagnostics
   - you can put a line comment to disable robotcode diagnostics (i.e errors or warnings) for a single line, like this:
-- Propagate import errors from resources
-  - errors like: `Resource file with 'Test Cases' section is invalid` are shown at import statement
 
   ```robotcode
   *** Test cases ***
@@ -46,6 +44,9 @@ All notable changes to the "robotcode" extension will be documented in this file
       ...  ELSE
       ...    Unknown keyword  No  # robotcode: ignore
   ```
+
+- Propagate import errors from resources
+  - errors like: `Resource file with 'Test Cases' section is invalid` are shown at import statement
   - Note: Robocop has it's own ignore mechanism
 - Initialize logging only of "--log" parameter is set from commandline
   - fixes [#30](https://github.com/d-biehl/robotcode/issues/30)
