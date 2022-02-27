@@ -47,6 +47,7 @@ ${F}    ${1+2}
 #         ^^^  number expression
 *** Test Cases ***
 first
+    [Tags]
     [Setup]  Log    Hello ${A VAR}
 #            ^^^ Keyword in Setup
     [Teardown]  BuiltIn.Log    Hello ${A VAR}
@@ -70,10 +71,10 @@ first
 #       ^^^ Keyword in FOR loop
     END
     Log    ${CMD_VAR}
-#          ^^^^^^^^^^    BuiltIn variable
+#            ^^^^^^^    Command line variable
 #   ^^^ BuiltIn Keyword
     Log    ${CURDIR}
-#          ^^^^^^^^^    BuiltIn variable
+#            ^^^^^^    BuiltIn variable
 #^^^    Spaces
     Log    ${A_VAR_FROM_LIB}
 #          ^^^^^^^^^^^^^^^^^    variable from lib
@@ -122,16 +123,45 @@ sixth
 
 seventh
     [Setup]    Given log    setup
+#              ^^^^^ BDD Given in setup
+#                    ^^^ BDD Keyword in setup
+    [Teardown]    Then BuiltIn.log    teardown
+#                 ^^^^ BDD Then in Teardown
+#                      ^^^^^^^ BDD Namespace in Teardown
+#                              ^^^ BDD Keyword in Teardown
     Given log    hi
-#   ^^^^^^^^^  BDD Given
+#   ^^^^^ BDD Given
+#         ^^^  BDD Given keyword
     When log  hi
-#   ^^^^^^^^  BDD When
+#   ^^^^ BDD When
+#        ^^^  BDD When keyword
     And log  hi
-#   ^^^^^^^  BDD and
+#   ^^^ BDD And
+#       ^^^  BDD And keyword
     Then log  ho
-#   ^^^^^^^^  BDD Then
+#   ^^^^ BDD Then
+#       ^^^  BDD Then keyword
     But log  ho
-#   ^^^^^^^  BDD But
+#   ^^^ BDD But
+#       ^^^  BDD But keyword
+    given builtin.log    1
+#   ^^^^^  BDD given with namespace
+#         ^^^^^^^  BDD namespace with namespace
+#                 ^^^  BDD keyword with namespace
+
+    Given Run Keyword if  1    given log   hello  ELSE IF  2  log  haha  ELSE  log  huhu
+#                                    ^^^  BDD Given in run keyword
+#                                                             ^^^  BDD Given in run keyword
+#                                                                              ^^^  BDD Given in run keyword
+
+    Given BuiltIn.Run Keyword if  ${True}    given BuiltIn.log   hello
+#                                                  ^^^^^^^  BDD Given namespace in run keyword with namespace
+#                                                          ^^^  BDD Given keyword in run keyword with namespace
+
+seventh1
+    [Template]    given log
+    1
+    2
 
 eight
     do.sell fish
@@ -160,7 +190,7 @@ a keyword
 
 a simple keyword
 #^^^^^^^^^^^^^^^  simple keyword with extra spaces and parameter
-    Pass Execution
+    Pass Execution    passed
 
 sleep a while
     S l e e p    1s

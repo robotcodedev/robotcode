@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 1
+  line: 75
+  name: Spaces
+result: null

@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 4
+  line: 166
+  name: keyword with dot
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Keyword *do.sell fish*'
+  range:
+    end:
+      character: 16
+      line: 166
+    start:
+      character: 4
+      line: 166

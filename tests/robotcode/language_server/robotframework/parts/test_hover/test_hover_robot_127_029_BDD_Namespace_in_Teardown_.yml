@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 29
+  line: 127
+  name: BDD Namespace in Teardown
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Library *BuiltIn*'
+  range:
+    end:
+      character: 30
+      line: 127
+    start:
+      character: 23
+      line: 127

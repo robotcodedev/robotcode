@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 11
-  line: 74
-  name: BuiltIn variable
-result: null
