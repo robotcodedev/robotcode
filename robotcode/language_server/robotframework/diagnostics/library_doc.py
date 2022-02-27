@@ -911,44 +911,6 @@ def error_from_exception(ex: BaseException, default_source: Optional[str], defau
     )
 
 
-BUILTIN_VARIABLES = [
-    "${CURDIR}",
-    "${EMPTY}",
-    "${TEMPDIR}",
-    "${EXECDIR}",
-    "${/}",
-    "${:}",
-    "${\\n}",
-    "${SPACE}",
-    "${True}",
-    "${False}",
-    "${None}",
-    "${null}",
-    "${TEST NAME}",
-    "@{TEST TAGS}",
-    "${TEST DOCUMENTATION}",
-    "${TEST STATUS}",
-    "${TEST MESSAGE}",
-    "${PREV TEST NAME}",
-    "${PREV TEST STATUS}",
-    "${PREV TEST MESSAGE}",
-    "${SUITE NAME}",
-    "${SUITE SOURCE}",
-    "${SUITE DOCUMENTATION}",
-    "&{SUITE METADATA}",
-    "${SUITE STATUS}",
-    "${SUITE MESSAGE}",
-    "${KEYWORD STATUS}",
-    "${KEYWORD MESSAGE}",
-    "${LOG LEVEL}",
-    "${OUTPUT FILE}",
-    "${LOG FILE}",
-    "${REPORT FILE}",
-    "${DEBUG FILE}",
-    "${OUTPUT DIR}",
-]
-
-
 @dataclass
 class _Variable(object):
 

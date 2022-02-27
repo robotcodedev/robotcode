@@ -17,6 +17,7 @@ from ...common.lsp_types import (
     Range,
 )
 from ...common.text_document import TextDocument
+from ..parts.model_helper import ModelHelperMixin
 from ..utils.ast import (
     Token,
     is_not_variable_token,
@@ -31,7 +32,7 @@ EXTRACT_COMMENT_PATTERN = re.compile(r".*(?:^ *|\t+| {2,})#(?P<comment>.*)$")
 ROBOTCODE_PATTERN = re.compile(r"(?P<marker>\brobotcode\b)\s*:\s*(?P<rule>\b\w+\b)")
 
 
-class Analyzer(AsyncVisitor):
+class Analyzer(AsyncVisitor, ModelHelperMixin):
     def __init__(self, model: ast.AST, namespace: Namespace) -> None:
         from robot.parsing.model.statements import Template, TestTemplate
 
@@ -109,7 +110,7 @@ class Analyzer(AsyncVisitor):
 
             for e in self.finder.diagnostics:
                 await self.append_diagnostics(
-                    range=range_from_node_or_token(node, keyword_token),
+                    range=range_from_node_or_token(node, self.strip_bdd_prefix(keyword_token)),
                     message=e.message,
                     severity=e.severity,
                     source=DIAGNOSTICS_SOURCE_NAME,
@@ -119,7 +120,7 @@ class Analyzer(AsyncVisitor):
             if result is not None:
                 if result.errors:
                     await self.append_diagnostics(
-                        range=range_from_node_or_token(node, keyword_token),
+                        range=range_from_node_or_token(node, self.strip_bdd_prefix(keyword_token)),
                         message="Keyword definition contains errors.",
                         severity=DiagnosticSeverity.ERROR,
                         source=DIAGNOSTICS_SOURCE_NAME,
@@ -162,7 +163,7 @@ class Analyzer(AsyncVisitor):
 
                 if result.is_deprecated:
                     await self.append_diagnostics(
-                        range=range_from_node_or_token(node, keyword_token),
+                        range=range_from_node_or_token(node, self.strip_bdd_prefix(keyword_token)),
                         message=f"Keyword '{result.name}' is deprecated"
                         f"{f': {result.deprecated_message}' if result.deprecated_message else ''}.",
                         severity=DiagnosticSeverity.HINT,
@@ -171,7 +172,7 @@ class Analyzer(AsyncVisitor):
                     )
                 if result.is_error_handler:
                     await self.append_diagnostics(
-                        range=range_from_node_or_token(node, keyword_token),
+                        range=range_from_node_or_token(node, self.strip_bdd_prefix(keyword_token)),
                         message=f"Keyword definition contains errors: {result.error_handler_message}",
                         severity=DiagnosticSeverity.ERROR,
                         source=DIAGNOSTICS_SOURCE_NAME,
@@ -191,7 +192,7 @@ class Analyzer(AsyncVisitor):
                     except BaseException as e:
                         await self.append_diagnostics(
                             range=Range(
-                                start=range_from_token(keyword_token).start,
+                                start=range_from_token(self.strip_bdd_prefix(keyword_token)).start,
                                 end=range_from_token(argument_tokens[-1]).end
                                 if argument_tokens
                                 else range_from_token(keyword_token).end,

@@ -81,6 +81,7 @@ class RobotSemTokenTypes(Enum):
     VARIABLE = "variable"
     KEYWORD = "keywordCall"
     KEYWORD_INNER = "keywordCallInner"
+    BDD_PREFIX = "bddPrefix"
     NAME = "nameCall"
     CONTINUATION = "continuation"
     SEPARATOR = "separator"
@@ -222,6 +223,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     ESCAPE_REGEX = re.compile(
         r"(?P<t>[^\\]+)|(?P<x>\\([^xuU]|x[0-f]{2}|u[0-f]{4}|U[0-f]{8}){0,1})", re.MULTILINE | re.DOTALL
     )
+    BDD_TOKEN_REGEX = re.compile(r"^(Given|When|Then|And|But)\s", flags=re.IGNORECASE)
 
     BUILTIN_MATCHER = KeywordMatcher("BuiltIn")
 
@@ -299,6 +301,23 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             elif token.type in [RobotToken.KEYWORD, ROBOT_KEYWORD_INNER] or (
                 token.type == RobotToken.NAME and isinstance(node, (Fixture, Template, TestTemplate))
             ):
+
+                bdd_match = cls.BDD_TOKEN_REGEX.match(token.value)
+                if bdd_match:
+                    bdd_len = len(bdd_match.group(1))
+                    yield SemTokenInfo.from_token(
+                        token, RobotSemTokenTypes.BDD_PREFIX, sem_mod, token.col_offset, bdd_len
+                    )
+                    yield SemTokenInfo.from_token(token, sem_type, sem_mod, token.col_offset + bdd_len, 1)
+
+                    token = RobotToken(
+                        token.type,
+                        token.value[bdd_len + 1 :],
+                        token.lineno,
+                        token.col_offset + bdd_len + 1,
+                        token.error,
+                    )
+
                 if col_offset is None:
                     col_offset = token.col_offset
 
@@ -639,10 +658,16 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                             if isinstance(node, KeywordCall)
                             else node.get_token(RobotToken.NAME),
                         )
+
+                        for kw_res in node.tokens:
+                            if kw_res == kw_token:
+                                break
+                            yield kw_res, node
+
                         if kw_token is not None:
                             kw: Optional[str] = None
 
-                            for _, name in iter_over_keyword_names_and_owners(kw_token.value):
+                            for _, name in iter_over_keyword_names_and_owners(self.strip_bdd_prefix(kw_token).value):
                                 if name is not None:
                                     matcher = KeywordMatcher(name)
                                     if matcher in ALL_RUN_KEYWORDS_MATCHERS:
@@ -650,7 +675,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                             if kw:
                                 kw_doc = await namespace.find_keyword(kw_token.value)
                                 if kw_doc is not None and kw_doc.is_any_run_keyword():
-                                    async for t in self.generate_run_kw_tokens(
+                                    async for kw_res in self.generate_run_kw_tokens(
                                         namespace,
                                         builtin_library_doc,
                                         libraries_matchers,
@@ -660,16 +685,16 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                                         node.tokens[node.tokens.index(kw_token) + 1 :],
                                         node,
                                     ):
-                                        yield t
+                                        yield kw_res
                                     continue
                             else:
-                                async for t in self.generate_keyword_tokens(
+                                async for kw_res in self.generate_keyword_tokens(
                                     namespace,
                                     kw_token,
                                     node.tokens[node.tokens.index(kw_token) + 1 :],
                                     node,
                                 ):
-                                    yield t
+                                    yield kw_res
 
                                 continue
 
@@ -680,7 +705,11 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             lambda t: range is None or token_in_range(t[0], range),
             async_dropwhile(
                 lambda t: range is not None and not token_in_range(t[0], range),
-                get_tokens(),
+                (
+                    (t, n)
+                    async for t, n in get_tokens()
+                    if t.type not in [RobotToken.SEPARATOR, RobotToken.EOL, RobotToken.EOS]
+                ),
             ),
         ):
             async for token in self.generate_sem_tokens(

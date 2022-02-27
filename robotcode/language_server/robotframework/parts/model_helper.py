@@ -420,3 +420,28 @@ class ModelHelperMixin:
                 )
 
         return cls.__expression_statement_types
+
+    BDD_TOKEN_REGEX = re.compile(r"^(Given|When|Then|And|But)\s", flags=re.IGNORECASE)
+    BDD_TOKEN = re.compile(r"^(Given|When|Then|And|But)$", flags=re.IGNORECASE)
+
+    @classmethod
+    def strip_bdd_prefix(cls, token: Token) -> Token:
+        from robot.parsing.lexer import Token as RobotToken
+
+        bdd_match = cls.BDD_TOKEN_REGEX.match(token.value)
+        if bdd_match:
+            bdd_len = len(bdd_match.group(1))
+
+            token = RobotToken(
+                token.type,
+                token.value[bdd_len + 1 :],
+                token.lineno,
+                token.col_offset + bdd_len + 1,
+                token.error,
+            )
+        return token
+
+    @classmethod
+    def is_bdd_token(cls, token: Token) -> bool:
+        bdd_match = cls.BDD_TOKEN.match(token.value)
+        return bool(bdd_match)

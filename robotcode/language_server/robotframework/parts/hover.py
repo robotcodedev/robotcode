@@ -266,6 +266,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         if result is not None:
             keyword_doc, keyword_token = result
 
+            keyword_token = self.strip_bdd_prefix(keyword_token)
+
             lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
 
             kw_range = range_from_token(keyword_token)
@@ -280,7 +282,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         range=r,
                     )
 
-            if keyword_doc is not None and not keyword_doc.is_error_handler:
+            if position in kw_range and keyword_doc is not None and not keyword_doc.is_error_handler:
                 return Hover(
                     contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
                     range=kw_range,
@@ -308,6 +310,9 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         if result is not None:
             keyword_doc, keyword_token = result
+
+            keyword_token = self.strip_bdd_prefix(keyword_token)
+
             lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
 
             kw_range = range_from_token(keyword_token)
@@ -322,7 +327,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         range=r,
                     )
 
-            if keyword_doc is not None and not keyword_doc.is_error_handler:
+            if position in kw_range and keyword_doc is not None and not keyword_doc.is_error_handler:
                 return Hover(
                     contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown()),
                     range=kw_range,
@@ -341,6 +346,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             keyword_token = cast(RobotToken, template_node.get_token(RobotToken.NAME))
             if keyword_token is None:
                 return None
+
+            keyword_token = self.strip_bdd_prefix(keyword_token)
 
             if position.is_in_range(range_from_token(keyword_token)):
                 namespace = await self.parent.documents_cache.get_namespace(document)

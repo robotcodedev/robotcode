@@ -362,6 +362,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         if result is not None:
             keyword_doc, keyword_token = result
 
+            keyword_token = self.strip_bdd_prefix(keyword_token)
+
             lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
 
             kw_range = range_from_token(keyword_token)
@@ -374,8 +376,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     # TODO: find references for Library Namespace
                     return None
 
-            if keyword_doc is not None:
-
+            if position in kw_range and keyword_doc is not None:
                 return [
                     *(
                         [Location(uri=str(Uri.from_path(keyword_doc.source)), range=keyword_doc.range)]
@@ -408,6 +409,9 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         if result is not None:
             keyword_doc, keyword_token = result
+
+            keyword_token = self.strip_bdd_prefix(keyword_token)
+
             lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
 
             kw_range = range_from_token(keyword_token)
@@ -420,7 +424,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     # TODO: find references for Library Namespace
                     return None
 
-            if keyword_doc is not None and not keyword_doc.is_error_handler:
+            if position in kw_range and keyword_doc is not None and not keyword_doc.is_error_handler:
                 return [
                     *(
                         [Location(uri=str(Uri.from_path(keyword_doc.source)), range=keyword_doc.range)]
@@ -444,6 +448,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             keyword_token = cast(RobotToken, node.get_token(RobotToken.NAME, RobotToken.ARGUMENT))
             if keyword_token is None:
                 return None
+
+            keyword_token = self.strip_bdd_prefix(keyword_token)
 
             if position.is_in_range(range_from_token(keyword_token)):
                 namespace = await self.parent.documents_cache.get_namespace(document)
@@ -565,6 +571,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         from robot.utils.escaping import unescape
 
         if kw_token is not None and is_not_variable_token(kw_token):
+            kw_token = self.strip_bdd_prefix(kw_token)
+
             kw: Optional[KeywordDoc] = None
             kw_matcher = KeywordMatcher(kw_doc.name)
             kw_name = unescape(kw_token.value) if unescape_kw_token else kw_token.value

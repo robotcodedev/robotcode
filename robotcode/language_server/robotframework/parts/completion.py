@@ -809,6 +809,9 @@ class CompletionCollector(ModelHelperMixin):
 
             if len(statement_node.tokens) > index:
                 token = statement_node.tokens[index]
+
+                token = self.strip_bdd_prefix(token)
+
                 r = range_from_token(token)
                 if position.is_in_range(r) or r.end == position:
                     return await create_items(in_assign, in_template, r, token, position)
@@ -821,7 +824,9 @@ class CompletionCollector(ModelHelperMixin):
 
                     r.end.character += 1
                     if position.is_in_range(r) or r.end == position:
-                        return await create_items(in_assign, in_template, r, token, position)
+                        return await create_items(
+                            in_assign, in_template, r, None if self.is_bdd_token(token) else token, position
+                        )
 
         return None
 
@@ -939,9 +944,26 @@ class CompletionCollector(ModelHelperMixin):
 
         if len(statement_node.tokens) > 2:
             token = cast(Token, statement_node.tokens[2])
+
+            token = self.strip_bdd_prefix(token)
+
             r = range_from_token(token)
             if position.is_in_range(r) or r.end == position:
-                return await self.create_keyword_completion_items(token, position, add_reserverd=False)
+                return await self.create_keyword_completion_items(
+                    None if self.is_bdd_token(token) else token, position, add_reserverd=False
+                )
+
+        if len(statement_node.tokens) > 3:
+            second_token = statement_node.tokens[3]
+            ws = whitespace_at_begin_of_token(second_token)
+            if ws < 1:
+                return None
+
+            r.end.character += 1
+            if position.is_in_range(r) or r.end == position:
+                return await self.create_keyword_completion_items(
+                    None if self.is_bdd_token(token) else token, position, add_reserverd=False
+                )
 
         return None
 
@@ -1025,6 +1047,7 @@ class CompletionCollector(ModelHelperMixin):
         statement_node = cast(Statement, node)
         if len(statement_node.tokens) > 2:
             token = cast(Token, statement_node.tokens[2])
+
             r = range_from_token(token)
             ws = whitespace_at_begin_of_token(token)
             if ws < 2:
@@ -1042,9 +1065,24 @@ class CompletionCollector(ModelHelperMixin):
 
         if len(statement_node.tokens) > 3:
             token = cast(Token, statement_node.tokens[3])
+
+            token = self.strip_bdd_prefix(token)
+
             r = range_from_token(token)
             if position.is_in_range(r) or r.end == position:
                 return await self.create_keyword_completion_items(token, position, add_reserverd=False)
+
+        if len(statement_node.tokens) > 4:
+            second_token = statement_node.tokens[4]
+            ws = whitespace_at_begin_of_token(second_token)
+            if ws < 1:
+                return None
+
+            r.end.character += 1
+            if position.is_in_range(r) or r.end == position:
+                return await self.create_keyword_completion_items(
+                    None if self.is_bdd_token(token) else token, position, add_reserverd=False
+                )
 
         return None
 

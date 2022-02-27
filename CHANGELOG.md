@@ -47,7 +47,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 - optimize loading of imports and collecting keywords
   - this addresses [#24](https://github.com/d-biehl/robotcode/issues/24)
   - one of the big points here is, beware of namespace pollution ;-)
-
+- Full Support for BDD Style keywords
+  - includes hover, goto, highlight, references, ...
 
 ##  0.5.5
 

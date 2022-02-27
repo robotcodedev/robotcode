@@ -48,6 +48,7 @@ from ..utils.ast import (
     tokenize_variables,
 )
 from ..utils.async_ast import AsyncVisitor
+from ..utils.variables import BUILTIN_VARIABLES
 from .entities import (
     ArgumentDefinition,
     BuiltInVariableDefinition,
@@ -62,7 +63,6 @@ from .entities import (
 from .imports_manager import ImportsManager
 from .library_doc import (
     BUILTIN_LIBRARY_NAME,
-    BUILTIN_VARIABLES,
     DEFAULT_LIBRARIES,
     KeywordDoc,
     KeywordError,

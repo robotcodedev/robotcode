@@ -139,6 +139,9 @@
           "nameCall": [
             "variable.function.keyword-call.robotframework"
           ],
+          "bddPrefix": [
+            "keyword.modifier.bdd-prefix.robotframework"
+          ],
           "continuation": [
             "punctuation.separator.continuation.robotframework"
           ],

@@ -16,7 +16,8 @@
         "--debugpy",
         "--log",
         "--log-level",
-        "TRACE"
+        "TRACE",
+        "--log-robotframework"
     ],
     // "robotcode.debug.groupOutput": false,
     // "robotcode.robot.args": [

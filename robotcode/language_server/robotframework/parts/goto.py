@@ -291,6 +291,8 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         if result is not None:
             keyword_doc, keyword_token = result
 
+            keyword_token = self.strip_bdd_prefix(keyword_token)
+
             lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
 
             kw_range = range_from_token(keyword_token)
@@ -321,7 +323,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     else:
                         return None
 
-            if keyword_doc is not None and keyword_doc.source:
+            if position in kw_range and keyword_doc is not None and keyword_doc.source:
                 return [
                     LocationLink(
                         origin_selection_range=kw_range,
@@ -355,6 +357,8 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         if result is not None:
             keyword_doc, keyword_token = result
 
+            keyword_token = self.strip_bdd_prefix(keyword_token)
+
             lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
 
             kw_range = range_from_token(keyword_token)
@@ -385,7 +389,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     else:
                         return None
 
-            if keyword_doc is not None and keyword_doc.source:
+            if position in kw_range and keyword_doc is not None and keyword_doc.source:
                 return [
                     LocationLink(
                         origin_selection_range=kw_range,
@@ -414,6 +418,8 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             keyword_token = cast(RobotToken, template_node.get_token(RobotToken.NAME))
             if keyword_token is None:
                 return None
+
+            keyword_token = self.strip_bdd_prefix(keyword_token)
 
             if position.is_in_range(range_from_token(keyword_token)):
                 namespace = await self.parent.documents_cache.get_namespace(document)
