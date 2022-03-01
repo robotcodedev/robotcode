@@ -12,6 +12,9 @@ webpack.config.js
 .yarnrc
 .eslintrc.json
 tsconfig.json
+vscode-client
+.eslintignore
+.prettier*
 
 
 # python
@@ -34,13 +37,14 @@ playground
 # svg files
 **/*.svg
 
+# coverage
 .coverage
 coverage.xml
-.prettier*
 .python-version
-.eslintignore
 
-scripts
-doc/templates
-
+# gitignore
 .gitignore/
+
+# others
+scripts
+doc
