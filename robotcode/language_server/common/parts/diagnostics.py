@@ -168,16 +168,17 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     async def on_did_close(self, sender: Any, document: TextDocument) -> None:
-        await self._cancel_entry(self._running_diagnostics.get(document.uri, None))
-
-        self.parent.send_notification(
-            "textDocument/publishDiagnostics",
-            PublishDiagnosticsParams(
-                uri=document.document_uri,
-                version=document._version,
-                diagnostics=[],
-            ),
-        )
+        try:
+            await self._cancel_entry(self._running_diagnostics.get(document.uri, None))
+        finally:
+            self.parent.send_notification(
+                "textDocument/publishDiagnostics",
+                PublishDiagnosticsParams(
+                    uri=document.document_uri,
+                    version=document._version,
+                    diagnostics=[],
+                ),
+            )
 
     @_logger.call
     async def on_did_change(self, sender: Any, document: TextDocument) -> None:

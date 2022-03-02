@@ -51,7 +51,6 @@ from ..utils.ast import (
     range_from_token,
 )
 from ..utils.async_ast import iter_nodes
-from ..utils.version import get_robot_version
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -149,7 +148,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def _references_default(
         self, nodes: List[ast.AST], document: TextDocument, position: Position, context: ReferenceContext
     ) -> Optional[List[Location]]:
-        import robot.parsing.model.statements
         from robot.parsing.lexer.tokens import Token as RobotToken
 
         namespace = await self.parent.documents_cache.get_namespace(document)
@@ -178,31 +176,23 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 None,
             )
 
-        if token_and_var is None:
-            if get_robot_version() >= (5, 0):
-                expression_statements: Tuple[Any, ...] = (
-                    robot.parsing.model.statements.IfHeader,
-                    robot.parsing.model.statements.WhileHeader,
-                )
-            else:
-                expression_statements = (robot.parsing.model.statements.IfHeader,)
-
-            if (
-                isinstance(node, Statement)
-                and isinstance(node, expression_statements)
-                and (token := node.get_token(RobotToken.ARGUMENT)) is not None
-                and position in range_from_token(token)
-            ):
-                token_and_var = await async_next(
-                    (
-                        (var_token, var)
-                        async for var_token, var in self.iter_expression_variables_from_token(
-                            token, namespace, nodes, position
-                        )
-                        if position in range_from_token(var_token)
-                    ),
-                    None,
-                )
+        if (
+            token_and_var is None
+            and isinstance(node, Statement)
+            and isinstance(node, self.get_expression_statement_types())
+            and (token := node.get_token(RobotToken.ARGUMENT)) is not None
+            and position in range_from_token(token)
+        ):
+            token_and_var = await async_next(
+                (
+                    (var_token, var)
+                    async for var_token, var in self.iter_expression_variables_from_token(
+                        token, namespace, nodes, position
+                    )
+                    if position in range_from_token(var_token)
+                ),
+                None,
+            )
 
         if token_and_var is not None:
             _, variable = token_and_var

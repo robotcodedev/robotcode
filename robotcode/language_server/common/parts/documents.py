@@ -72,8 +72,8 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
         for change in to_change.values():
             document = self._documents.get(DocumentUri(Uri(change.uri).normalized()), None)
             if document is not None and not document.opened_in_editor:
-                await self.did_close(self, document, callback_filter=language_id_filter(document))
                 await self.close_document(document, True)
+                await self.did_close(self, document, callback_filter=language_id_filter(document))
 
     @async_tasking_event
     async def did_open(sender, document: TextDocument) -> None:  # NOSONAR
