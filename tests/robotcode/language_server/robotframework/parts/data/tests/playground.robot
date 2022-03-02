@@ -31,7 +31,8 @@ first ?11?
 
 first *11*
     Log    hi
-    ${A}    Evaluate    2
+    #${A}    Evaluate    ${{$b+$b}}
+    ${A}    Evaluate    $b+$b
     # Evaluate    $a==1
     # Run Keyword If    $A    a    ELSE IF    $a==34
     # Run Keyword And Return If    $a==2    a
@@ -39,7 +40,7 @@ first *11*
 
     do something in a resource
 
-    IF  $A_Var=='123'
+    IF  $A_Var=='124'
         Log    Hello
     END
     IF    $a==2

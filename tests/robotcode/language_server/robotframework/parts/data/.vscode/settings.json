@@ -17,7 +17,8 @@
         "--log",
         "--log-level",
         "TRACE",
-        "--log-robotframework"
+        "--log-robotframework",
+        "--log-language-server"
     ],
     // "robotcode.debug.groupOutput": false,
     // "robotcode.robot.args": [
@@ -25,4 +26,5 @@
     // ],
     // "robotcode.debug.outputLog": true,
     // "robotcode.debug.outputMessages": true
+    //"python.analysis.diagnosticMode": "workspace"
 }

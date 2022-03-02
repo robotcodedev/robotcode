@@ -52,6 +52,33 @@ result:
   range:
     end:
       character: 7
+      line: 2
+    start:
+      character: 4
+      line: 2
+  uri: tests/bddstyle.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 4
+    start:
+      character: 4
+      line: 4
+  uri: tests/bddstyle.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 6
+    start:
+      character: 4
+      line: 6
+  uri: tests/bddstyle.robot
+- !Location
+  range:
+    end:
+      character: 7
       line: 30
     start:
       character: 4
@@ -583,100 +610,100 @@ result:
   range:
     end:
       character: 11
-      line: 42
+      line: 43
     start:
       character: 8
-      line: 42
+      line: 43
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 11
-      line: 47
+      line: 48
     start:
       character: 8
-      line: 47
+      line: 48
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 11
-      line: 49
+      line: 50
     start:
       character: 8
-      line: 49
+      line: 50
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 11
-      line: 53
+      line: 54
     start:
       character: 8
-      line: 53
+      line: 54
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 7
-      line: 57
+      line: 58
     start:
       character: 4
-      line: 57
+      line: 58
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 11
-      line: 60
+      line: 61
     start:
       character: 8
-      line: 60
+      line: 61
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 7
-      line: 66
+      line: 67
     start:
       character: 4
-      line: 66
+      line: 67
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 11
-      line: 74
+      line: 75
     start:
       character: 8
-      line: 74
+      line: 75
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 11
-      line: 76
+      line: 77
     start:
       character: 8
-      line: 76
+      line: 77
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 11
-      line: 78
+      line: 79
     start:
       character: 8
-      line: 78
+      line: 79
   uri: tests/playground.robot
 - !Location
   range:
     end:
       character: 7
-      line: 85
+      line: 86
     start:
       character: 4
-      line: 85
+      line: 86
   uri: tests/playground.robot
 - !Location
   range:
