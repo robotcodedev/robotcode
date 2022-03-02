@@ -175,7 +175,6 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
                 if namespace is None:
                     return []
 
-                tokens = await self.parent.documents_cache.get_tokens(document)
                 model = await self.parent.documents_cache.get_model(document)
 
                 real_range = Range(view_port.start, min(view_port.end, context.stopped_location.end))
