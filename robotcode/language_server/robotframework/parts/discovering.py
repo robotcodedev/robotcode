@@ -61,6 +61,7 @@ class FindTestCasesVisitor(AsyncVisitor):
     async def get(self, source: DocumentUri, model: ast.AST, base_name: Optional[str]) -> List[TestItem]:
         self._results: List[TestItem] = []
         self.source = source
+        self.path = Uri(source).to_path().resolve()
         self.base_name = base_name
         await self.visit(model)
         return self._results
@@ -80,7 +81,7 @@ class FindTestCasesVisitor(AsyncVisitor):
         self._results.append(
             TestItem(
                 type="test",
-                id=f"{self.source};{longname};{test_case.lineno}",
+                id=f"{self.path};{longname};{test_case.lineno}",
                 longname=longname,
                 label=test_case.name,
                 uri=self.source,
@@ -206,14 +207,13 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
             test: TestCase
             for test in suite.tests:
-                uri = str(Uri.from_path(test.source)) if test.source else None
                 children.append(
                     TestItem(
                         type="test",
-                        id=f"{uri};{test.longname};{test.lineno}",
+                        id=f"{Path(test.source).resolve()};{test.longname};{test.lineno}",
                         label=test.name,
                         longname=test.longname,
-                        uri=uri,
+                        uri=str(Uri.from_path(test.source)) if test.source else None,
                         range=Range(
                             start=Position(line=test.lineno - 1, character=0),
                             end=Position(line=test.lineno - 1, character=0),
@@ -225,13 +225,12 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             for s in suite.suites:
                 children.append(generate(s))
 
-            uri = str(Uri.from_path(suite.source)) if suite.source else None
             return TestItem(
                 type="suite",
-                id=f"{uri};{suite.longname}",
+                id=f"{Path(suite.source).resolve()};{suite.longname}",
                 label=suite.name,
                 longname=suite.longname,
-                uri=uri,
+                uri=str(Uri.from_path(suite.source)) if suite.source else None,
                 children=children,
                 range=Range(
                     start=Position(line=0, character=0),
@@ -277,20 +276,19 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                     )
                     suite_item = [generate(suite)] if suite else []
 
-                    uri = str(Uri.from_path(Path.cwd()))
                     return [
                         TestItem(
                             type="workspace",
-                            id=uri,
+                            id=str(Path.cwd()),
                             label=Path.cwd().name,
                             longname=Path.cwd().name,
-                            uri=uri,
+                            uri=str(Uri.from_path(Path.cwd())),
                             children=[
                                 *suite_item,
                                 *[
                                     TestItem(
                                         type="error",
-                                        id=f"{Uri.from_path(i)};ERROR",
+                                        id=f"{i};ERROR",
                                         longname="error",
                                         label=i,
                                         error=f"Parsing '{i}' failed: File or directory to does not exist.",

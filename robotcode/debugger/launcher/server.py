@@ -141,6 +141,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         groupOutput: Optional[bool] = False,
         stopOnEntry: Optional[bool] = False,  # noqa: N803
         arguments: Optional[LaunchRequestArguments] = None,
+        dryRun: Optional[bool] = None,
         *_args: Any,
         **_kwargs: Any,
     ) -> None:
@@ -178,6 +179,9 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         run_args += launcherArgs or []
 
         run_args += ["--"]
+
+        if dryRun:
+            run_args += ["--dryrun"]
 
         if outputDir:
             run_args += ["-d", outputDir]

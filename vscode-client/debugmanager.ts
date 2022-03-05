@@ -338,7 +338,8 @@ export class DebugManager {
     included: string[],
     excluded: string[],
     runId?: string,
-    options?: vscode.DebugSessionOptions
+    options?: vscode.DebugSessionOptions,
+    dryRun?: boolean
   ): Promise<void> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
@@ -379,6 +380,7 @@ export class DebugManager {
           args: args,
           console: config.get("debug.defaultConsole", "integratedTerminal"),
           runId: runId,
+          dryRun,
         },
       },
       options

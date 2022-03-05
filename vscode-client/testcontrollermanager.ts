@@ -26,6 +26,7 @@ type RobotEventType = "suite" | "test" | "keyword" | string;
 
 interface RobotExecutionEvent {
   type: RobotEventType;
+  id: string;
   attributes: RobotExecutionAttributes | undefined;
   failedKeywords: RobotExecutionAttributes[] | undefined;
 }
@@ -77,6 +78,8 @@ export class TestControllerManager {
   public readonly testController: vscode.TestController;
   public readonly runProfile: vscode.TestRunProfile;
   public readonly debugProfile: vscode.TestRunProfile;
+  public readonly dryRunProfile: vscode.TestRunProfile;
+  public readonly dryRunDebugProfile: vscode.TestRunProfile;
   private readonly refreshMutex = new Mutex();
   private readonly debugSessions = new Set<vscode.DebugSession>();
   private readonly didChangedTimer = new Map<string, DidChangeEntry>();
@@ -91,15 +94,31 @@ export class TestControllerManager {
     this.testController = vscode.tests.createTestController("robotCode.RobotFramework", "RobotFramework");
 
     this.runProfile = this.testController.createRunProfile(
-      "Run Tests",
+      "Run",
       vscode.TestRunProfileKind.Run,
-      async (request, token) => this.runTests(request, token)
+      async (request, token) => this.runTests(request, token),
+      true
+    );
+
+    this.dryRunProfile = this.testController.createRunProfile(
+      "Dry Run",
+      vscode.TestRunProfileKind.Run,
+      async (request, token) => this.runTests(request, token, true),
+      false
     );
 
     this.debugProfile = this.testController.createRunProfile(
       "Debug",
       vscode.TestRunProfileKind.Debug,
-      async (request, token) => this.runTests(request, token)
+      async (request, token) => this.runTests(request, token),
+      true
+    );
+
+    this.dryRunDebugProfile = this.testController.createRunProfile(
+      "Dry Debug",
+      vscode.TestRunProfileKind.Debug,
+      async (request, token) => this.runTests(request, token, true),
+      false
     );
 
     this.testController.resolveHandler = async (item) => {
@@ -563,7 +582,11 @@ export class TestControllerManager {
 
   private static readonly runId = TestControllerManager.runIdGenerator();
 
-  public async runTests(request: vscode.TestRunRequest, token: vscode.CancellationToken): Promise<void> {
+  public async runTests(
+    request: vscode.TestRunRequest,
+    token: vscode.CancellationToken,
+    dryRun?: boolean
+  ): Promise<void> {
     let includedItems: vscode.TestItem[] = [];
 
     if (request.include) {
@@ -601,7 +624,7 @@ export class TestControllerManager {
       const workspaceItem = this.findTestItemByUri(workspace.uri.toString());
 
       if (includedItems.length === 1 && includedItems[0] === workspaceItem && excluded.size === 0) {
-        await DebugManager.runTests(workspace, [], [], [], runId, options);
+        await DebugManager.runTests(workspace, [], [], [], runId, options, dryRun);
       } else {
         const includedInWs = ids.map((i) => this.findRobotItem(i)?.longname).filter((i) => i !== undefined) as string[];
         const excludedInWs =
@@ -621,7 +644,7 @@ export class TestControllerManager {
             suites.add(t);
           }
         }
-        await DebugManager.runTests(workspace, Array.from(suites), includedInWs, excludedInWs, runId, options);
+        await DebugManager.runTests(workspace, Array.from(suites), includedInWs, excludedInWs, runId, options, dryRun);
       }
     }
   }
@@ -671,7 +694,7 @@ export class TestControllerManager {
     const run = this.testRuns.get(runId);
 
     if (run !== undefined) {
-      const item = this.findTestItemById(event.attributes.longname);
+      const item = this.findTestItemById(event.id);
       if (item !== undefined) {
         run.started(item);
       }
@@ -696,7 +719,7 @@ export class TestControllerManager {
     const run = this.testRuns.get(runId);
 
     if (run !== undefined) {
-      const item = this.findTestItemById(event.attributes.longname);
+      const item = this.findTestItemById(event.id);
       if (item !== undefined) {
         switch (event.attributes.status) {
           case "PASS":

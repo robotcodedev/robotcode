@@ -528,6 +528,11 @@
                 "description": "Where to launch the debug target: internal console, integrated terminal, or external terminal.",
                 "default": "integratedTerminal"
               },
+              "dryRun": {
+                "type": "boolean",
+                "description": "Verifies test data and runs tests so that library keywords are not executed. Corresponds to the '--dryrun' option of the robot module.",
+                "default": false
+              },
               "python": {
                 "type": "string",
                 "description": "Specifies the python interpreter to use. If not specified, the python interpreter defined for the extension is used.",

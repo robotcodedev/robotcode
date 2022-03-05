@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Union, cast
 
 from .dap_types import Event, Model
@@ -8,6 +9,7 @@ from .debugger import Debugger
 @dataclass
 class RobotExecutionEventBody(Model):
     type: str
+    id: str
     attributes: Optional[Dict[str, Any]] = None
     failed_keywords: Optional[List[Dict[str, Any]]] = None
 
@@ -23,7 +25,15 @@ class ListenerV2:
 
     def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
         Debugger.instance().send_event(
-            self, Event(event="robotStarted", body=RobotExecutionEventBody(type="suite", attributes=dict(attributes)))
+            self,
+            Event(
+                event="robotStarted",
+                body=RobotExecutionEventBody(
+                    type="suite",
+                    id=f"{attributes.get('source', '')};{attributes.get('longname', '')}",
+                    attributes=dict(attributes),
+                ),
+            ),
         )
 
         Debugger.instance().start_output_group(name, attributes, "SUITE")
@@ -41,7 +51,10 @@ class ListenerV2:
             Event(
                 event="robotEnded",
                 body=RobotExecutionEventBody(
-                    type="suite", attributes=dict(attributes), failed_keywords=self.failed_keywords
+                    type="suite",
+                    attributes=dict(attributes),
+                    id=f"{attributes.get('source', '')};{attributes.get('longname', '')}",
+                    failed_keywords=self.failed_keywords,
                 ),
             ),
         )
@@ -50,7 +63,16 @@ class ListenerV2:
         self.failed_keywords = None
 
         Debugger.instance().send_event(
-            self, Event(event="robotStarted", body=RobotExecutionEventBody(type="test", attributes=dict(attributes)))
+            self,
+            Event(
+                event="robotStarted",
+                body=RobotExecutionEventBody(
+                    type="test",
+                    id=f"{attributes.get('source', '')};{attributes.get('longname', '')};"
+                    f"{attributes.get('lineno', 0)}",
+                    attributes=dict(attributes),
+                ),
+            ),
         )
 
         Debugger.instance().start_output_group(name, attributes, "TEST")
@@ -67,7 +89,11 @@ class ListenerV2:
             Event(
                 event="robotEnded",
                 body=RobotExecutionEventBody(
-                    type="test", attributes=dict(attributes), failed_keywords=self.failed_keywords
+                    type="test",
+                    id=f"{attributes.get('source', '')};{attributes.get('longname', '')};"
+                    f"{attributes.get('lineno', 0)}",
+                    attributes=dict(attributes),
+                    failed_keywords=self.failed_keywords,
                 ),
             ),
         )
@@ -153,6 +179,9 @@ class ListenerV2:
 class ListenerV3:
     ROBOT_LISTENER_API_VERSION = "3"
 
+    def __init__(self) -> None:
+        self._event_sended = False
+
     def start_suite(self, data: Any, result: Any) -> None:
         from robot.running import TestCase, TestSuite
 
@@ -163,9 +192,15 @@ class ListenerV3:
                 for s in item.tests:
                     yield from enqueue(s)
 
-            yield item.longname
+                yield f"{Path(item.source).resolve()};{item.longname}"
+                return
 
-        items = [i for i in enqueue(cast(TestSuite, data))]
+            yield f"{Path(item.source).resolve()};{item.longname};{item.lineno}"
+
+        if self._event_sended:
+            return
+
+        items = list(reversed([i for i in enqueue(cast(TestSuite, data))]))
 
         Debugger.instance().send_event(
             self,
@@ -174,6 +209,8 @@ class ListenerV3:
                 body={"items": items},
             ),
         )
+
+        self._event_sended = True
 
     def end_suite(self, data: Any, result: Any) -> None:
         pass
