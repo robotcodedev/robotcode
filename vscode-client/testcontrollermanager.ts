@@ -332,7 +332,7 @@ export class TestControllerManager {
           const openDoc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === item.uri?.toString());
 
           if (openDoc !== undefined) {
-            tests = await this.languageClientsManager.getTestsFromDocument(openDoc, robotItem.id, token);
+            tests = await this.languageClientsManager.getTestsFromDocument(openDoc, robotItem.longname, token);
           }
         }
         if (token?.isCancellationRequested) return;
@@ -587,7 +587,7 @@ export class TestControllerManager {
       }
     });
 
-    for (const [workspace, id] of included) {
+    for (const [workspace, ids] of included) {
       const runId = TestControllerManager.runId.next().value;
       this.testRuns.set(runId, run);
 
@@ -603,8 +603,12 @@ export class TestControllerManager {
       if (includedItems.length === 1 && includedItems[0] === workspaceItem && excluded.size === 0) {
         await DebugManager.runTests(workspace, [], [], [], runId, options);
       } else {
-        const includedInWs = id.map((i) => i.id);
-        const excludedInWs = excluded.get(workspace)?.map((i) => i.id) ?? [];
+        const includedInWs = ids.map((i) => this.findRobotItem(i)?.longname).filter((i) => i !== undefined) as string[];
+        const excludedInWs =
+          (excluded
+            .get(workspace)
+            ?.map((i) => this.findRobotItem(i)?.longname)
+            .filter((i) => i !== undefined) as string[]) ?? [];
         const suites = new Set<string>();
 
         for (const t of [...includedInWs, ...excludedInWs]) {

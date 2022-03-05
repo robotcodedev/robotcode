@@ -35,7 +35,7 @@ class GetAllTestsParams(Model):
 @dataclass(repr=False)
 class GetTestsParams(Model):
     text_document: TextDocumentIdentifier
-    id: Optional[str]
+    base_name: Optional[str]
 
 
 @dataclass(repr=False)
@@ -48,6 +48,7 @@ class TestItem(Model):
     type: str
     id: str
     label: str
+    longname: str
     uri: Optional[DocumentUri] = None
     children: Optional[List[TestItem]] = None
     description: Optional[str] = None
@@ -57,10 +58,10 @@ class TestItem(Model):
 
 
 class FindTestCasesVisitor(AsyncVisitor):
-    async def get(self, source: DocumentUri, model: ast.AST, id: Optional[str]) -> List[TestItem]:
+    async def get(self, source: DocumentUri, model: ast.AST, base_name: Optional[str]) -> List[TestItem]:
         self._results: List[TestItem] = []
         self.source = source
-        self.id = id
+        self.base_name = base_name
         await self.visit(model)
         return self._results
 
@@ -75,10 +76,12 @@ class FindTestCasesVisitor(AsyncVisitor):
         from robot.parsing.model.statements import Tags
 
         test_case = cast(TestCase, node)
+        longname = f"{self.base_name}.{test_case.name}" if self.base_name else test_case.name
         self._results.append(
             TestItem(
                 type="test",
-                id=f"{self.id}.{test_case.name}" if self.id else test_case.name,
+                id=f"{self.source};{longname};{test_case.lineno}",
+                longname=longname,
                 label=test_case.name,
                 uri=self.source,
                 range=Range(
@@ -203,12 +206,14 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
             test: TestCase
             for test in suite.tests:
+                uri = str(Uri.from_path(test.source)) if test.source else None
                 children.append(
                     TestItem(
                         type="test",
-                        id=test.longname,
+                        id=f"{uri};{test.longname};{test.lineno}",
                         label=test.name,
-                        uri=str(Uri.from_path(test.source)) if test.source else None,
+                        longname=test.longname,
+                        uri=uri,
                         range=Range(
                             start=Position(line=test.lineno - 1, character=0),
                             end=Position(line=test.lineno - 1, character=0),
@@ -220,11 +225,13 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             for s in suite.suites:
                 children.append(generate(s))
 
+            uri = str(Uri.from_path(suite.source)) if suite.source else None
             return TestItem(
                 type="suite",
-                id=suite.longname,
+                id=f"{uri};{suite.longname}",
                 label=suite.name,
-                uri=str(Uri.from_path(suite.source)) if suite.source else None,
+                longname=suite.longname,
+                uri=uri,
                 children=children,
                 range=Range(
                     start=Position(line=0, character=0),
@@ -270,17 +277,21 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                     )
                     suite_item = [generate(suite)] if suite else []
 
+                    uri = str(Uri.from_path(Path.cwd()))
                     return [
                         TestItem(
                             type="workspace",
-                            id=Path.cwd().name,
+                            id=uri,
                             label=Path.cwd().name,
+                            longname=Path.cwd().name,
+                            uri=uri,
                             children=[
                                 *suite_item,
                                 *[
                                     TestItem(
                                         type="error",
-                                        id=i,
+                                        id=f"{Uri.from_path(i)};ERROR",
+                                        longname="error",
                                         label=i,
                                         error=f"Parsing '{i}' failed: File or directory to does not exist.",
                                     )
@@ -298,7 +309,15 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
-                return [TestItem(type="error", id=Path.cwd().name, label=Path.cwd().name, error=str(e))]
+                return [
+                    TestItem(
+                        type="error",
+                        id=str(Uri.from_path(Path.cwd())),
+                        longname="error",
+                        label=Path.cwd().name,
+                        error=str(e),
+                    )
+                ]
 
     @rpc_method(name="robot/discovering/getTestsFromWorkspace", param_type=GetAllTestsParams)
     @_logger.call
@@ -317,7 +336,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
     @_logger.call
     async def get_tests_from_document(
-        self, text_document: TextDocumentIdentifier, id: Optional[str], *args: Any, **kwargs: Any
+        self, text_document: TextDocumentIdentifier, base_name: Optional[str], *args: Any, **kwargs: Any
     ) -> List[TestItem]:
         async def run() -> List[TestItem]:
             try:
@@ -328,7 +347,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                             Uri(text_document.uri).to_path(), language_id="robotframework"
                         )
                     ),
-                    id,
+                    base_name,
                 )
             except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                 raise

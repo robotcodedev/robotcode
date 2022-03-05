@@ -39,6 +39,7 @@ export interface RobotTestItem {
   uri?: string;
   children: RobotTestItem[] | undefined;
   label: string;
+  longname: string;
   description?: string;
   range?: Range;
   error?: string;
@@ -446,7 +447,7 @@ export class LanguageClientsManager {
 
   public async getTestsFromDocument(
     document: vscode.TextDocument,
-    id?: string,
+    base_name?: string,
     token?: vscode.CancellationToken
   ): Promise<RobotTestItem[] | undefined> {
     const client = await this.getLanguageClientForResource(document.uri);
@@ -459,13 +460,13 @@ export class LanguageClientsManager {
             "robot/discovering/getTestsFromDocument",
             {
               textDocument: { uri: document.uri.toString() },
-              id: id,
+              base_name: base_name,
             },
             token
           )
         : await client.sendRequest<RobotTestItem[]>("robot/discovering/getTestsFromDocument", {
             textDocument: { uri: document.uri.toString() },
-            id: id,
+            base_name: base_name,
           })) ?? undefined
     );
   }
