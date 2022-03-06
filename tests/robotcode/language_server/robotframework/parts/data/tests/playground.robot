@@ -14,6 +14,11 @@ ${CMD_VAR_LONG}    1
 
 *** Test Cases ***
 first *1*
+    [Documentation]     A test suite for valid login.
+    ...
+    ...               \${Execdir}: ${Execdir}
+    ...
+    ...               \${LOG_FILE}: ${LOG_FILE}
 
     Log    ${{$a+$b}}
     Log    ${CMD_VAR_LONG}
@@ -32,7 +37,7 @@ first ?11?
 first *11*
     Log    hi
     #${A}    Evaluate    ${{$b+$b}}
-    ${A}    Evaluate    $b+$b
+    #${A}    Evaluate    $b+$b
     # Evaluate    $a==1
     # Run Keyword If    $A    a    ELSE IF    $a==34
     # Run Keyword And Return If    $a==2    a

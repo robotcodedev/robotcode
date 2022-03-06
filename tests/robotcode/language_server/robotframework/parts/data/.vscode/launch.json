@@ -16,6 +16,18 @@
             }
         },
         {
+            "name": "RobotCode: Dry Run Current",
+            "type": "robotcode",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "target": "${file}",
+            "attachPython": true,
+            "dryRun": true,
+            "pythonConfiguration": {
+                "justMyCode": false
+            }
+        },
+        {
             "name": "RobotCode: Run All",
             "type": "robotcode",
             "request": "launch",

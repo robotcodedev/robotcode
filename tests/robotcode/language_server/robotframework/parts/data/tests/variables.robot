@@ -1,5 +1,11 @@
 *** Settings ***
-Suite Teardown      Run Keywords    Log    ${SUITE STATUS}    AND    Log    ${SUITE MESSAGE}    AND    Log Variables
+Suite Teardown      Run Keywords    Log    ${SUITE STATUS}    AND    Log    ${SUITE MESSAGE} ${TEST NAME}   AND    Log Variables
+Test Setup    Log    ${TEST NAME}
+
+*** Variables ***
+${pre_full_name}    ${PREV TEST NAME}_${PREV TEST STATUS}
+${full_name}    ${TEST NAME}_${TEST STATUS}
+
 
 *** Test Cases ***
 first
