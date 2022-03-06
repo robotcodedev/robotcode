@@ -177,6 +177,13 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         severity=DiagnosticSeverity.ERROR,
                         source=DIAGNOSTICS_SOURCE_NAME,
                     )
+                if result.is_reserved():
+                    await self.append_diagnostics(
+                        range=range_from_node_or_token(node, self.strip_bdd_prefix(keyword_token)),
+                        message=f"'{result.name}' is a reserved keyword.",
+                        severity=DiagnosticSeverity.ERROR,
+                        source=DIAGNOSTICS_SOURCE_NAME,
+                    )
 
                 if not isinstance(node, (Template, TestTemplate)):
                     try:

@@ -421,6 +421,9 @@ class KeywordDoc:
     def parameter_signature(self) -> str:
         return f"({', '.join(str(a) for a in self.args)})"
 
+    def is_reserved(self) -> bool:
+        return self.libname == RESERVED_LIBRARY_NAME
+
     def is_any_run_keyword(self) -> bool:
         return self.libname == BUILTIN_LIBRARY_NAME and self.name in ALL_RUN_KEYWORDS
 
