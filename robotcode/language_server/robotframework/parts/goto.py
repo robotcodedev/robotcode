@@ -346,9 +346,14 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             return None
 
         fixture_node = cast(Fixture, node)
+
+        name_token = cast(Token, fixture_node.get_token(RobotToken.NAME))
+        if name_token is None or name_token.value is None or name_token.value in ("", "NONE"):
+            return None
+
         result = await self.get_keyworddoc_and_token_from_position(
             fixture_node.name,
-            cast(Token, fixture_node.get_token(RobotToken.NAME)),
+            name_token,
             [cast(Token, t) for t in fixture_node.get_tokens(RobotToken.ARGUMENT)],
             namespace,
             position,

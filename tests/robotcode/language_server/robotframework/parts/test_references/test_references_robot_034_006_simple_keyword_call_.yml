@@ -826,28 +826,46 @@ result:
   range:
     end:
       character: 7
-      line: 11
+      line: 12
     start:
       character: 4
-      line: 11
+      line: 12
   uri: tests/setup_teardown.robot
 - !Location
   range:
     end:
       character: 7
-      line: 15
+      line: 16
     start:
       character: 4
-      line: 15
+      line: 16
   uri: tests/setup_teardown.robot
 - !Location
   range:
     end:
       character: 7
-      line: 24
+      line: 21
     start:
       character: 4
-      line: 24
+      line: 21
+  uri: tests/setup_teardown.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 31
+    start:
+      character: 4
+      line: 31
+  uri: tests/setup_teardown.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 34
+    start:
+      character: 4
+      line: 34
   uri: tests/setup_teardown.robot
 - !Location
   range:

@@ -461,7 +461,7 @@ class CompletionCollector(ModelHelperMixin):
         ]
 
     async def create_keyword_completion_items(
-        self, token: Optional[Token], position: Position, add_reserverd: bool = True
+        self, token: Optional[Token], position: Position, *, add_reserverd: bool = True, add_none: bool = False
     ) -> List[CompletionItem]:
         result: List[CompletionItem] = []
         if self.document is None:
@@ -600,6 +600,17 @@ class CompletionCollector(ModelHelperMixin):
                 },
             )
             result.append(c)
+
+        if add_none:
+            result.append(
+                CompletionItem(
+                    label="NONE",
+                    kind=CompletionItemKind.KEYWORD,
+                    sort_text="998_NONE",
+                    insert_text_format=InsertTextFormat.PLAINTEXT,
+                    text_edit=TextEdit(range=r, new_text="NONE") if r is not None else None,
+                )
+            )
 
         if add_reserverd:
             for k in get_reserved_keywords():
@@ -940,6 +951,7 @@ class CompletionCollector(ModelHelperMixin):
                     statement_node.tokens[2] if r.end == position and len(statement_node.tokens) > 2 else None,
                     position,
                     add_reserverd=False,
+                    add_none=True,
                 )
 
         if len(statement_node.tokens) > 2:
@@ -950,7 +962,10 @@ class CompletionCollector(ModelHelperMixin):
             r = range_from_token(token)
             if position.is_in_range(r) or r.end == position:
                 return await self.create_keyword_completion_items(
-                    None if self.is_bdd_token(token) else token, position, add_reserverd=False
+                    None if self.is_bdd_token(token) else token,
+                    position,
+                    add_reserverd=False,
+                    add_none=True,
                 )
 
         if len(statement_node.tokens) > 3:
@@ -962,7 +977,10 @@ class CompletionCollector(ModelHelperMixin):
             r.end.character += 1
             if position.is_in_range(r) or r.end == position:
                 return await self.create_keyword_completion_items(
-                    None if self.is_bdd_token(token) else token, position, add_reserverd=False
+                    None if self.is_bdd_token(token) else token,
+                    position,
+                    add_reserverd=False,
+                    add_none=True,
                 )
 
         return None
@@ -1061,6 +1079,7 @@ class CompletionCollector(ModelHelperMixin):
                     statement_node.tokens[3] if r.end == position and len(statement_node.tokens) > 3 else None,
                     position,
                     add_reserverd=False,
+                    add_none=True,
                 )
 
         if len(statement_node.tokens) > 3:
@@ -1070,7 +1089,12 @@ class CompletionCollector(ModelHelperMixin):
 
             r = range_from_token(token)
             if position.is_in_range(r) or r.end == position:
-                return await self.create_keyword_completion_items(token, position, add_reserverd=False)
+                return await self.create_keyword_completion_items(
+                    token,
+                    position,
+                    add_reserverd=False,
+                    add_none=True,
+                )
 
         if len(statement_node.tokens) > 4:
             second_token = statement_node.tokens[4]
@@ -1081,7 +1105,10 @@ class CompletionCollector(ModelHelperMixin):
             r.end.character += 1
             if position.is_in_range(r) or r.end == position:
                 return await self.create_keyword_completion_items(
-                    None if self.is_bdd_token(token) else token, position, add_reserverd=False
+                    None if self.is_bdd_token(token) else token,
+                    position,
+                    add_reserverd=False,
+                    add_none=True,
                 )
 
         return None
@@ -1694,5 +1721,10 @@ class CompletionCollector(ModelHelperMixin):
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Fixture
+
+        name_token = cast(Fixture, node).get_token(RobotToken.NAME)
+        if name_token is None or name_token.value is None or name_token.value in ("", "NONE"):
+            return None
 
         return await self._complete_KeywordCall_or_Fixture(RobotToken.NAME, node, nodes_at_position, position, context)

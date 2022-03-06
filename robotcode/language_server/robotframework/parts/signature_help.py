@@ -201,6 +201,11 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         self, node: ast.AST, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
     ) -> Optional[SignatureHelp]:
         from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Fixture
+
+        name_token = cast(Fixture, node).get_token(RobotToken.NAME)
+        if name_token is None or name_token.value is None or name_token.value in ("", "NONE"):
+            return None
 
         return await self._signature_help_KeywordCall_or_Fixture(RobotToken.NAME, node, document, position, context)
 

@@ -8,6 +8,9 @@ All notable changes to the "robotcode" extension will be documented in this file
 - Add "Dry Run" and "Dry Debug" profile to test explorer
   - You can select it via Run/Debug dropdown or Right Click on the "green arrow" before the test case/suite or in test explorer and then "Execute Using Profile"
 - Mark using reserved keywords like "Break", "While",... as errors
+- Support for NONE in Setup/Teardowns
+  - see [here](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#test-setup-and-teardown)
+  - fixes [#38](https://github.com/d-biehl/robotcode/issues/38)
 
 ##  0.6.0
 

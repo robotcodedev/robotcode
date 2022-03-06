@@ -368,7 +368,12 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         # TODO: calculate possible variables in NAME
 
-        if keyword_token is not None and is_not_variable_token(keyword_token):
+        if (
+            keyword_token is not None
+            and is_not_variable_token(keyword_token)
+            and keyword_token.value is not None
+            and keyword_token.value.upper() not in ("", "NONE")
+        ):
             await self._analyze_keyword_call(
                 value.name, value, keyword_token, [cast(Token, e) for e in value.get_tokens(RobotToken.ARGUMENT)]
             )
