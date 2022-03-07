@@ -645,7 +645,7 @@
     "lint": "eslint --ext .ts,.tsx,.js .",
     "lint-fix": "eslint --ext .ts,.tsx,.js --fix .",
     "test": "node ./out/test/runTest.js",
-    "version": "node scripts/updateVersions.js && git add .",
+    "version": "python scripts/update_versions.py && git add .",
     "package": "python scripts/package.py",
     "publish": "npm run package && python scripts/publish.py"
   },
@@ -676,7 +676,6 @@
     "mocha": "^9.2.1",
     "ovsx": "^0.3.0",
     "prettier": "^2.5.1",
-    "replace-in-file": "^6.3.2",
     "ts-loader": "^9.2.7",
     "typescript": "^4.6.2",
     "vsce": "^2.6.7",
