@@ -1,6 +1,7 @@
 import os
-from pathlib import Path
 import re
+from pathlib import Path
+
 from semantic_version import Version
 
 
