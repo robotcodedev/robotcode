@@ -645,7 +645,9 @@
     "lint": "eslint --ext .ts,.tsx,.js .",
     "lint-fix": "eslint --ext .ts,.tsx,.js --fix .",
     "test": "node ./out/test/runTest.js",
-    "version": "node scripts/updateVersions.js && git add ."
+    "version": "node scripts/updateVersions.js && git add .",
+    "package": "python scripts/package.py",
+    "publish": "npm run package && python scripts/publish.py"
   },
   "extensionDependencies": [
     "ms-python.python"

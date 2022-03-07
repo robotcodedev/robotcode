@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "robotcode"
 version = "0.7.0"
-description = "Language server,debugger and tools for RobotFramework"
+description = "Language server, debugger and tools for RobotFramework"
 authors = ["Daniel Biehl <daniel.biehl@imbus.de>"]
 homepage = 'https://github.com/d-biehl/robotcode'
 repository = 'https://github.com/d-biehl/robotcode'
@@ -74,6 +74,8 @@ types-PyYAML = "*"
 snakeviz = "*"
 pytest-regressions = "*"
 pytest-html = "^3.1.1"
+GitPython = "^3.1.27"
+semantic-version = "^2.9.0"
 
 
 [tool.poetry-dynamic-versioning]
