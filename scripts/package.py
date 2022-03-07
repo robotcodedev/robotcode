@@ -39,6 +39,14 @@ def main() -> None:
         ["npx", "vsce", "package", *(["--pre-release"] if pre_release else []), "-o", "./dist"], shell=True
     ).check_returncode()
 
+    run(
+        [
+            "poetry",
+            "build",
+        ],
+        shell=True,
+    ).check_returncode()
+
 
 if __name__ == "__main__":
     main()

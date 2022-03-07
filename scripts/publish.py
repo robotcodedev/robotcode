@@ -44,7 +44,6 @@ def main() -> None:
         [
             "poetry",
             "publish",
-            "--build",
             "--username",
             os.environ["PYPI_USERNAME"],
             "--password",
