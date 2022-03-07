@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+- none so far
+
+##  0.7.0
+
 - Add `dryRun` property to launch configuration
 - Add "Dry Run" and "Dry Debug" profile to test explorer
   - You can select it via Run/Debug dropdown or Right Click on the "green arrow" before the test case/suite or in test explorer and then "Execute Using Profile"
