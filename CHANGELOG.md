@@ -11,7 +11,9 @@ All notable changes to the "robotcode" extension will be documented in this file
 - Support for NONE in Setup/Teardowns
   - see [here](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#test-setup-and-teardown)
   - fixes [#38](https://github.com/d-biehl/robotcode/issues/38)
-
+- Decrease size of extension package
+- Sligtly correct displayName and description of VSCode package, for better relevance in Marketplace search
+  - See here [#39](https://github.com/d-biehl/robotcode/issues/39)
 ##  0.6.0
 
 ### added
