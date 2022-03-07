@@ -607,11 +607,13 @@ class ImportsManager:
             if len(e.references) == 0:
                 self._logger.debug(lambda: f"Remove Library Entry {k}")
                 async with self._libaries_lock:
-                    e1 = self._libaries.get(k, None)
-                    if e1 == e:
-                        self._libaries.pop(k, None)
+                    if len(e.references) == 0:
+                        e1 = self._libaries.get(k, None)
+                        if e1 == e:
+                            self._libaries.pop(k, None)
 
-                        await e.invalidate()
+                            await e.invalidate()
+                self._logger.debug(lambda: f"Library Entry {k} removed")
 
         try:
             if asyncio.get_running_loop():
@@ -624,11 +626,13 @@ class ImportsManager:
             if len(e.references) == 0:
                 self._logger.debug(lambda: f"Remove Resource Entry {k}")
                 async with self._resources_lock:
-                    e1 = self._resources.get(k, None)
-                    if e1 == e:
-                        self._resources.pop(k, None)
+                    if len(e.references) == 0:
+                        e1 = self._resources.get(k, None)
+                        if e1 == e:
+                            self._resources.pop(k, None)
 
-                        await e.invalidate()
+                            await e.invalidate()
+                self._logger.debug(lambda: f"Resource Entry {k} removed")
 
         try:
             if asyncio.get_running_loop():
@@ -641,11 +645,13 @@ class ImportsManager:
             if len(e.references) == 0:
                 self._logger.debug(lambda: f"Remove Variables Entry {k}")
                 async with self._variables_lock:
-                    e1 = self._variables.get(k, None)
-                    if e1 == e:
-                        self._variables.pop(k, None)
+                    if len(e.references) == 0:
+                        e1 = self._variables.get(k, None)
+                        if e1 == e:
+                            self._variables.pop(k, None)
 
-                        await e.invalidate()
+                            await e.invalidate()
+                self._logger.debug(lambda: f"Variables Entry {k} removed")
 
         try:
             if asyncio.get_running_loop():
