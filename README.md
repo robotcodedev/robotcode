@@ -162,7 +162,7 @@ and then type:
 
 put this to the `settings.json`
 
-```json
+```jsonc
 "editor.tokenColorCustomizations": {
     "textMateRules": [
         {
