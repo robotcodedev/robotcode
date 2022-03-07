@@ -6,7 +6,9 @@ from git.repo import Repo
 from semantic_version import Version
 
 
-def get_current_version(repo: Repo) -> Version:
+def get_current_version_from_git() -> Version:
+    repo = Repo(Path.cwd())
+
     result = None
     for tag in repo.tags:
         v = tag.name
@@ -32,9 +34,10 @@ def main() -> None:
     if not dist_path.exists():
         raise FileNotFoundError(f"dist folder '{dist_path}' not exists")
 
-    repo = Repo(Path.cwd())
-
-    current_version = get_current_version(repo)
+    if "npm_package_version" in os.environ:
+        current_version = Version(os.environ["npm_package_version"])
+    else:
+        current_version = get_current_version_from_git()
 
     vsix_path = Path(dist_path, f"robotcode-{current_version}.vsix")
 

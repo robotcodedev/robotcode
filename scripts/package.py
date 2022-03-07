@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from subprocess import run
 
@@ -5,7 +6,9 @@ from git.repo import Repo
 from semantic_version import Version
 
 
-def get_current_version(repo: Repo) -> Version:
+def get_current_version_from_git() -> Version:
+    repo = Repo(Path.cwd())
+
     result = None
     for tag in repo.tags:
         v = tag.name
@@ -30,9 +33,11 @@ def main() -> None:
     if not dist_path.exists():
         dist_path.mkdir()
 
-    repo = Repo(Path.cwd())
+    if "npm_package_version" in os.environ:
+        current_version = Version(os.environ["npm_package_version"])
+    else:
+        current_version = get_current_version_from_git()
 
-    current_version = get_current_version(repo)
     pre_release = current_version.minor % 2 != 0
 
     run(

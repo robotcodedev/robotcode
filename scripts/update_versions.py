@@ -11,8 +11,8 @@ def replace_in_file(filename: Path, pattern: "re.Pattern[str]", to: str) -> None
 
 
 def main() -> None:
-    # version = Version(os.environ["npm_package_version"])
-    version = Version("0.7.1")
+    version = Version(os.environ["npm_package_version"])
+
     preview = version.minor % 2 != 0
 
     for f in ["robotcode/_version.py", "pyproject.toml"]:
