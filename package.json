@@ -645,9 +645,6 @@
     "lint": "eslint --ext .ts,.tsx,.js .",
     "lint-fix": "eslint --ext .ts,.tsx,.js --fix .",
     "test": "node ./out/test/runTest.js",
-    "download-api": "vscode-dts dev",
-    "postdownload-api": "vscode-dts main",
-    "_postinstall": "npm run download-api",
     "version": "node scripts/updateVersions.js && git add ."
   },
   "extensionDependencies": [
