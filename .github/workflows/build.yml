@@ -119,13 +119,13 @@ jobs:
 
       - run: poetry-dynamic-versioning
 
-      - name: Build Python packages
-        run: poetry build
-
-      - name: Build VSCode package
+      - name: install node modules
         run: |
           npm install --also=dev
-          npx vsce package -o dist
+
+      - name: package
+        run: |
+          npm run package
 
       - name: Upload VSCode package
         uses: actions/upload-artifact@v2
