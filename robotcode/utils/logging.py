@@ -303,7 +303,9 @@ class LoggingDescriptor:
         "ROBOT_CALL_TRACING_ENABLED" in os.environ and os.environ["ROBOT_CALL_TRACING_ENABLED"] != "0"
     )
     _call_tracing_default_level = (
-        os.environ["ROBOT_CALL_TRACING_LEVEL"] if "ROBOT_CALL_TRACING_LEVEL" in os.environ else TRACE
+        logging.getLevelName(os.environ["ROBOT_CALL_TRACING_LEVEL"])
+        if "ROBOT_CALL_TRACING_LEVEL" in os.environ
+        else TRACE
     )
 
     @classmethod
