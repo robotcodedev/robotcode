@@ -51,6 +51,7 @@ classifiers = [
 [tool.poetry.scripts]
 npm-package = 'scripts.npm_package:main'
 npm-publish = 'scripts.npm_publish:main'
+extract-release-notes='scripts.extract_release_notes:main'
 
 [tool.poetry.dependencies]
 python = "^3.8"

@@ -2,8 +2,10 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- automate creating github release for a new version tag
+
 ##  0.7.2
 
 - none so far

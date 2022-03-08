@@ -1,6 +1,6 @@
 import os
+import re
 from pathlib import Path
-from subprocess import run
 
 from git.repo import Repo
 from semantic_version import Version
@@ -29,21 +29,17 @@ def get_current_version_from_git() -> Version:
 
 
 def main() -> None:
-    dist_path = Path("./dist")
-
-    if not dist_path.exists():
-        raise FileNotFoundError(f"dist folder '{dist_path}' not exists")
-
     if "npm_package_version" in os.environ:
-        current_version = Version(os.environ["npm_package_version"])
+        version = Version(os.environ["npm_package_version"])
     else:
-        current_version = get_current_version_from_git()
+        version = get_current_version_from_git()
 
-    vsix_path = Path(dist_path, f"robotcode-{current_version}.vsix")
+    changelog = Path("CHANGELOG.md").read_text()
 
-    run(f"npx vsce publish -i {vsix_path}", shell=True)
-    run(f"npx ovsx publish {vsix_path}", shell=True)
-    run(f"poetry publish --username {os.environ['PYPI_USERNAME']} --password {os.environ['PYPI_PASSWORD']}", shell=True)
+    regex = re.compile(rf"^\#\#\s*({version})(?P<text>.*?)^\#\#\s+", re.MULTILINE | re.DOTALL)
+
+    for match in regex.finditer(changelog):
+        print(match.group("text").strip())
 
 
 if __name__ == "__main__":
