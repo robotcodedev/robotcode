@@ -40,17 +40,9 @@ def main() -> None:
 
     pre_release = current_version.minor % 2 != 0
 
-    run(
-        ["npx", "vsce", "package", *(["--pre-release"] if pre_release else []), "-o", "./dist"], shell=True
-    ).check_returncode()
+    run(f"npx vsce package {'--pre-release' if pre_release else ''} -o ./dist", shell=True).check_returncode()
 
-    run(
-        [
-            "poetry",
-            "build",
-        ],
-        shell=True,
-    ).check_returncode()
+    run("poetry build", shell=True).check_returncode()
 
 
 if __name__ == "__main__":

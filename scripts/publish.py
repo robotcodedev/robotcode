@@ -41,18 +41,10 @@ def main() -> None:
 
     vsix_path = Path(dist_path, f"robotcode-{current_version}.vsix")
 
-    run(["npx", "vsce", "publish", "-i", vsix_path], shell=True).check_returncode()
-    run(["npx", "ovsx", "publish", vsix_path], shell=True).check_returncode()
+    run(f"npx vsce publish -i {vsix_path}", shell=True).check_returncode()
+    run(f"npx ovsx publish {vsix_path}", shell=True).check_returncode()
     run(
-        [
-            "poetry",
-            "publish",
-            "--username",
-            os.environ["PYPI_USERNAME"],
-            "--password",
-            os.environ["PYPI_PASSWORD"],
-        ],
-        shell=True,
+        f"poetry publish --username {os.environ['PYPI_USERNAME']} --password {os.environ['PYPI_PASSWORD']}", shell=True
     ).check_returncode()
 
 
