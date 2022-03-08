@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "robotcode"
-version = "0.7.2-preview"
+version = "0.7.3-preview"
 description = "Language server, debugger and tools for RobotFramework"
 authors = ["Daniel Biehl <daniel.biehl@imbus.de>"]
 homepage = 'https://github.com/d-biehl/robotcode'
