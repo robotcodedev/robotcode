@@ -48,6 +48,10 @@ classifiers = [
   "Topic :: Text Editors :: Integrated Development Environments (IDE)",
 ]
 
+[tool.poetry.scripts]
+npm-package = 'scripts.npm_package:main'
+npm-publish = 'scripts.npm_publish:main'
+
 [tool.poetry.dependencies]
 python = "^3.8"
 robotframework = {version =  ">=4.0.0", allow-prereleases = false}

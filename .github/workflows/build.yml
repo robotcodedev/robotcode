@@ -129,7 +129,7 @@ jobs:
 
       - name: package
         run: |
-          npm run package
+          poetry run npm-package
 
       - name: Upload VSCode package
         uses: actions/upload-artifact@v2
