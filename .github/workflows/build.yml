@@ -117,7 +117,7 @@ jobs:
       - uses: Gr1N/setup-poetry@v7
 
       - run: pip install poetry-dynamic-versioning
-      - run: pip install GitPython
+      - run: pip install GitPython semantic-version
 
       - run: poetry install
 
