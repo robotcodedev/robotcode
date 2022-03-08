@@ -116,9 +116,9 @@ addopts = "-ra -vv"
 filterwarnings = "ignore:.*Using or importing the ABCs from 'collections' instead of from 'collections.abc'.*:DeprecationWarning"
 testpaths = ["tests"]
 junit_suite_name = "robotcode"
-log_cli = true
-log_cli_level = 4
-log_cli_format = "%(levelname)s %(name)s: %(message)s"
+# log_cli = true
+# log_cli_level = 4
+# log_cli_format = "%(levelname)s %(name)s: %(message)s"
 asyncio_mode = "auto"
 
 [tool.isort]

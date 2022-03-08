@@ -10,8 +10,8 @@ on:
 
   workflow_dispatch:
 
-env:
-  ROBOT_CALL_TRACING_ENABLED: 1
+# env:
+#   ROBOT_CALL_TRACING_ENABLED: 1
 
 jobs:
   test:
