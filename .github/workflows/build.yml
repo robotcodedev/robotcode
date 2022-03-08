@@ -96,7 +96,7 @@ jobs:
         if: always()
 
   package:
-    #needs: test
+    needs: test
     runs-on: ubuntu-latest
 
     steps:
