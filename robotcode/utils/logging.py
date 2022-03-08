@@ -4,6 +4,7 @@ import collections
 import functools
 import inspect
 import logging
+import os
 import reprlib
 import time
 from enum import Enum
@@ -298,8 +299,12 @@ class LoggingDescriptor:
         level = logging.getLevelName(logger.getEffectiveLevel())
         return f"{self.__class__.__name__}(name={repr(logger.name)}, level={repr(level)})"
 
-    _call_tracing_enabled = False
-    _call_tracing_default_level = TRACE
+    _call_tracing_enabled = (
+        "ROBOT_CALL_TRACING_ENABLED" in os.environ and os.environ["ROBOT_CALL_TRACING_ENABLED"] != "0"
+    )
+    _call_tracing_default_level = (
+        os.environ["ROBOT_CALL_TRACING_LEVEL"] if "ROBOT_CALL_TRACING_LEVEL" in os.environ else TRACE
+    )
 
     @classmethod
     def set_call_tracing(cls, value: bool) -> None:

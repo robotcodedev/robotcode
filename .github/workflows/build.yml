@@ -10,6 +10,9 @@ on:
 
   workflow_dispatch:
 
+env:
+  ROBOT_CALL_TRACING_ENABLED: 1
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -114,6 +117,7 @@ jobs:
       - uses: Gr1N/setup-poetry@v7
 
       - run: pip install poetry-dynamic-versioning
+      - run: pip install GitPython
 
       - run: poetry install
 
@@ -125,7 +129,7 @@ jobs:
 
       - name: package
         run: |
-          poetry run npm run package
+          npm run package
 
       - name: Upload VSCode package
         uses: actions/upload-artifact@v2
