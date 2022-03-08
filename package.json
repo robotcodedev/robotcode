@@ -647,7 +647,8 @@
     "test": "node ./out/test/runTest.js",
     "version": "python scripts/update_versions.py && git add .",
     "package": "python scripts/package.py",
-    "publish": "npm run package && python scripts/publish.py"
+    "publish": "python scripts/publish.py",
+    "package-publish": "npm run package && python scripts/publish.py"
   },
   "extensionDependencies": [
     "ms-python.python"
