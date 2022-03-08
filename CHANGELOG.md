@@ -2,9 +2,15 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+### added
+
+- automate uploading of release assets
+
 ##  0.7.3
+
+### added
 
 - automate creating github release for a new version tag
 
@@ -21,6 +27,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 ##  0.7.0
 
 ### added
+
 - Add `dryRun` property to launch configuration
 - Add "Dry Run" and "Dry Debug" profile to test explorer
   - You can select it via Run/Debug dropdown or Right Click on the "green arrow" before the test case/suite or in test explorer and then "Execute Using Profile"
