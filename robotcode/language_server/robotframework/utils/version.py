@@ -12,13 +12,13 @@ class InvalidRobotVersionError(Exception):
 class RobotVersion(NamedTuple):
     major: int
     minor: int
-    patch: Optional[int]
-    pre_id: Optional[str]
-    pre_number: Optional[int]
-    dev: Optional[int]
+    patch: Optional[int] = None
+    pre_id: Optional[str] = None
+    pre_number: Optional[int] = None
+    dev: Optional[int] = None
 
 
-def get_robot_version() -> Tuple[int, int, Optional[int], Optional[str], Optional[int], Optional[int]]:
+def get_robot_version() -> RobotVersion:
     import robot
 
     def s_to_i(s: Optional[str]) -> Optional[int]:

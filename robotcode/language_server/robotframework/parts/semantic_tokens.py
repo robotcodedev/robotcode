@@ -200,6 +200,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                             RobotToken.RETURN_STATEMENT,
                             RobotToken.CONTINUE,
                             RobotToken.BREAK,
+                            RobotToken.OPTION,
                         }
                     ): (RobotSemTokenTypes.CONTROL_FLOW, None),
                 }
