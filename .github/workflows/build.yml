@@ -99,9 +99,7 @@ jobs:
         if: always()
 
   package:
-    needs: |
-      test
-      code-quality
+    needs: [code-quality, test]
 
     runs-on: ubuntu-latest
 
@@ -263,4 +261,3 @@ jobs:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
           PYPI_USERNAME: ${{ secrets.PYPI_USERNAME }}
           PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-
