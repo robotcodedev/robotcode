@@ -99,7 +99,10 @@ jobs:
         if: always()
 
   package:
-    needs: test
+    needs: |
+      test
+      code-quality
+
     runs-on: ubuntu-latest
 
     steps:
