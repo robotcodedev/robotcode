@@ -48,12 +48,10 @@ classifiers = [
   "Topic :: Text Editors :: Integrated Development Environments (IDE)",
 ]
 
-[tool.poetry.scripts]
-npm-run='scripts.npm_run:main'
 
 [tool.poetry.dependencies]
 python = "^3.8"
-robotframework = {version =  ">=4.0.0", allow-prereleases = false}
+robotframework = { version = ">=4.0.0", allow-prereleases = false }
 
 
 [tool.poetry.dev-dependencies]
