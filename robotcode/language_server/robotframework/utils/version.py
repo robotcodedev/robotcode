@@ -1,5 +1,5 @@
 import re
-from typing import NamedTuple, Optional, Tuple
+from typing import NamedTuple, Optional
 
 __all__ = ["InvalidRobotVersionError", "get_robot_version"]
 
