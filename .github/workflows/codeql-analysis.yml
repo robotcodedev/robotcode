@@ -53,8 +53,6 @@ jobs:
         virtualenvs-in-project: true
         installer-parallel: true
 
-    - run: pip install poetry-dynamic-versioning
-
     - name: Load cached venv
       id: cached-poetry-dependencies
       uses: actions/cache@v2
@@ -68,7 +66,6 @@ jobs:
 
     - name: install robotcode
       run: poetry install --no-interaction
-
 
     # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
     # If this step fails, then you should remove it and run the build manually (see below)
