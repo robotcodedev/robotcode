@@ -1,7 +1,7 @@
 {
   "name": "robotcode",
   "displayName": "Robot Code",
-  "description": "Robot Framework support for Visual Studio Code",
+  "description": "RobotFramework support for Visual Studio Code",
   "icon": "images/icon.png",
   "publisher": "d-biehl",
   "version": "0.7.6",
