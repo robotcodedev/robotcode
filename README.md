@@ -66,6 +66,7 @@ Autocompletion supports all supported variables types
     - Resources
     - Variables
 - Errors and Warnings
+
 ### Diagnostics and Linting
 
 RobotCode analyse your code and show diagnostics for:

@@ -4,14 +4,14 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "robotcode"
-version = "0.7.4-preview"
+version = "0.7.4dev"
 description = "Language server, debugger and tools for RobotFramework"
 authors = ["Daniel Biehl <daniel.biehl@imbus.de>"]
 homepage = 'https://github.com/d-biehl/robotcode'
 repository = 'https://github.com/d-biehl/robotcode'
 readme = "README.md"
 license = "Apache-2.0"
-include = ["robotcode/py.typed", "README.md"]
+include = ["robotcode/py.typed", "README.md", "CHANGELOG.md"]
 exclude = ["robotcode/external"]
 keywords = [
   "Test",
@@ -49,9 +49,7 @@ classifiers = [
 ]
 
 [tool.poetry.scripts]
-npm-package = 'scripts.npm_package:main'
-npm-publish = 'scripts.npm_publish:main'
-extract-release-notes='scripts.extract_release_notes:main'
+npm='scripts.npm:main'
 
 [tool.poetry.dependencies]
 python = "^3.8"
