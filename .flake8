@@ -1,7 +1,8 @@
 [flake8]
 max-line-length = 120
-exclude = 
+exclude =
     .git
+    .venv
     __pycache__
     .mypy_cache
     docs
