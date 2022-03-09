@@ -694,9 +694,6 @@ class ImportsManager:
     async def find_variables(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
         from robot.variables.search import contains_variable
 
-        # if contains_variable(name, "$@&%"):
-        #     name = name.replace("%{CI_PROJECT_DIR}", self.environment["CI_PROJECT_DIR"])
-
         if contains_variable(name, "$@&%"):
             return await asyncio.wait_for(
                 asyncio.get_running_loop().run_in_executor(
