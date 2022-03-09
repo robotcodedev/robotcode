@@ -40,34 +40,34 @@ jobs:
         # Prefix the list here with "+" to use these queries and those in the config file.
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
-      - name: setup python environment
-        id: setup-python
-        uses: actions/setup-python@v2
-        with:
-          python-version: "3.8"
+    - name: setup python environment
+      id: setup-python
+      uses: actions/setup-python@v2
+      with:
+        python-version: "3.8"
 
-      - name: install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
+    - name: install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
 
-      - run: pip install poetry-dynamic-versioning
+    - run: pip install poetry-dynamic-versioning
 
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v2
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v2
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
-      - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
 
-      - name: install robotcode
-        run: poetry install --no-interaction
+    - name: install robotcode
+      run: poetry install --no-interaction
 
 
     # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
