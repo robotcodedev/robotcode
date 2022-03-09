@@ -49,7 +49,7 @@ classifiers = [
 ]
 
 [tool.poetry.scripts]
-npm='scripts.npm:main'
+npm-run='scripts.npm_run:main'
 
 [tool.poetry.dependencies]
 python = "^3.8"

@@ -29,15 +29,33 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: setup python ${{ matrix.python-version }} environment
+        id: setup-python
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: Gr1N/setup-poetry@v7
+      - name: install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
 
       - run: pip install poetry-dynamic-versioning
 
-      - run: poetry install
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      - name: install robotcode
+        run: poetry install --no-interaction
 
       - name: "test python packages"
         timeout-minutes: 15
@@ -76,15 +94,33 @@ jobs:
       - uses: actions/checkout@v1
 
       - name: setup python environment
+        id: setup-python
         uses: actions/setup-python@v2
         with:
           python-version: "3.8"
 
-      - uses: Gr1N/setup-poetry@v7
+      - name: install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
 
       - run: pip install poetry-dynamic-versioning
 
-      - run: poetry install
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      - name: install robotcode
+        run: poetry install --no-interaction
 
       - run: poetry run isort --check --diff .
         if: always()
@@ -110,27 +146,49 @@ jobs:
 
       - run: git describe --tag
 
+      - name: setup python environment
+        id: setup-python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+
+      - name: install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      - run: pip install poetry-dynamic-versioning
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      - name: install robotcode
+        run: poetry install --no-interaction
+
+      - run: poetry-dynamic-versioning
+
       - name: Setup Node.js environment
         uses: actions/setup-node@v2
         with:
           node-version: "16"
-      - uses: actions/setup-python@v2
-        with:
-          python-version: "3.8"
-
-      - uses: Gr1N/setup-poetry@v7
-
-      - run: pip install poetry-dynamic-versioning
-
-      - run: poetry install
-
-      - run: poetry-dynamic-versioning
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
       - name: install node modules
         run: npm install --also=dev
 
       - name: package
-        run: poetry run npm run package
+        run: poetry run npm-run package
 
       - name: Upload VSCode package
         uses: actions/upload-artifact@v2
@@ -161,21 +219,43 @@ jobs:
 
       - run: git describe --tag
 
+      - name: setup python environment
+        id: setup-python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+
+      - name: install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      - run: pip install poetry-dynamic-versioning
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      - name: install robotcode
+        run: poetry install --no-interaction
+
+      - run: poetry-dynamic-versioning
+
       - name: Setup Node.js environment
         uses: actions/setup-node@v2
         with:
           node-version: "16"
-      - uses: actions/setup-python@v2
-        with:
-          python-version: "3.8"
-
-      - uses: Gr1N/setup-poetry@v7
-
-      - run: pip install poetry-dynamic-versioning
-
-      - run: poetry install
-
-      - run: poetry-dynamic-versioning
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
       - name: install node modules
         run: npm install --also=dev
@@ -195,7 +275,7 @@ jobs:
 
       - name: get release notes
         id: get_release_notes
-        run: echo "::set-output name=release_notes::$(poetry run npm run extract-release-notes)"
+        run: echo "::set-output name=release_notes::$(poetry run npm-run extract-release-notes)"
 
       - name: find assets
         id: find_assets
@@ -255,7 +335,7 @@ jobs:
           asset_content_type: application/whl
 
       - name: publish vsix and python packages
-        run: poetry run npm run publish
+        run: poetry run npm-run publish
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
           OVSX_PAT: ${{ secrets.OVSX_PAT }}

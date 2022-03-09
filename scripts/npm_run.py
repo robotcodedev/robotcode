@@ -3,7 +3,7 @@ from subprocess import run
 
 
 def main() -> int:
-    args = f"npm {' '.join(sys.argv[1:])}"
+    args = f"npm run {' '.join(sys.argv[1:])}"
     return run(args, shell=True).returncode
 
 
