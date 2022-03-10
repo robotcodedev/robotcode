@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 - none so far
+##  0.7.9
+
+- none so far
+
 ##  0.7.8
 
 - none so far
