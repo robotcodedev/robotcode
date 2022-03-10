@@ -649,7 +649,8 @@
     "package": "python scripts/package.py",
     "publish": "python scripts/publish.py",
     "package-publish": "npm run package && python scripts/publish.py",
-    "extract-release-notes": "python scripts/extract_release_notes.py"
+    "extract-release-notes": "python scripts/extract_release_notes.py",
+    "update-doc-links": "python scripts/update_doc_links.py"
   },
   "extensionDependencies": [
     "ms-python.python"
