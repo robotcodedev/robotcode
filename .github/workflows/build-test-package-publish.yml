@@ -280,7 +280,7 @@ jobs:
       - name: get release notes
         id: get_release_notes
         run: |
-          REL_NOTES="$(poetry run npm run extract-release-notes)"
+          REL_NOTES="$(poetry run npm run --silent extract-release-notes)"
           echo $REL_NOTES
           echo "::set-output name=release_notes::$REL_NOTES"
 
