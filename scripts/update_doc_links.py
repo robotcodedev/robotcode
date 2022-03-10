@@ -1,7 +1,6 @@
 import re
 from pathlib import Path
 
-
 from scripts.tools import get_version
 
 
