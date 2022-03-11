@@ -2,49 +2,13 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
-##  0.7.9
+## [Unreleased]
 
-- none so far
+- introduce new version scheme to support pre-release versions of the extension
+  - see [README](https://github.com/d-biehl/robotcode#using-pre-release-version)
+- rework handling VSCode test items to ensure all defined tests can be executed, also when they are ambiguous
+  - see [#37](https://github.com/d-biehl/robotcode/issues/37)
 
-##  0.7.8
-
-- none so far
-
-##  0.7.7
-
-- none so far
-
-##  0.7.6
-
-- change extension description
-
-##  0.7.5
-
-- none so far
-
-##  0.7.4
-
-### added
-
-- automate uploading of release assets
-
-##  0.7.3
-
-### added
-
-- automate creating github release for a new version tag
-
-##  0.7.2
-
-- none so far
-
-##  0.7.1
-
-### added
-
-- automate package and publish process
 
 ##  0.7.0
 
