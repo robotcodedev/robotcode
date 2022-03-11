@@ -348,12 +348,36 @@ export class TestControllerManager {
         let tests = robotItem?.children;
 
         if (robotItem?.type === "suite" && item.uri !== undefined) {
+          if (robotItem.children === undefined) robotItem.children = [];
+
           const openDoc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === item.uri?.toString());
 
           if (openDoc !== undefined) {
             tests = await this.languageClientsManager.getTestsFromDocument(openDoc, robotItem.longname, token);
+
+            if (tests !== undefined) {
+              for (const test of tests) {
+                const index = robotItem.children.findIndex((v) => v.id === test.id);
+                if (index >= 0 && robotItem.children) {
+                  robotItem.children[index] = test;
+                } else {
+                  robotItem.children.push(test);
+                }
+              }
+
+              const removed = robotItem.children.filter((v) => tests?.find((w) => w.id === v.id) === undefined);
+
+              robotItem.children = robotItem.children.filter((v) => removed.find((w) => w.id == v.id) === undefined);
+            } else {
+              robotItem.children = [];
+            }
+
+            robotItem.children = robotItem.children.sort(
+              (a, b) => (a.range?.start.line || -1) - (b.range?.start.line || -1)
+            );
           }
         }
+
         if (token?.isCancellationRequested) return;
 
         if (robotItem) {
@@ -372,7 +396,7 @@ export class TestControllerManager {
           }
 
           // TODO: we need a sleep after deletion here, it seem's there is a bug in vscode
-          if (this.removeNotAddedTestItems(item, addedIds)) await sleep(500);
+          if (this.removeNotAddedTestItems(item, addedIds)) await sleep(5);
         }
       } finally {
         item.busy = false;
@@ -408,7 +432,7 @@ export class TestControllerManager {
       }
 
       // TODO: we need a sleep after deletion here, it seem's there is a bug in vscode
-      if (this.removeNotAddedTestItems(undefined, addedIds)) await sleep(500);
+      if (this.removeNotAddedTestItems(undefined, addedIds)) await sleep(5);
     }
   }
 
@@ -498,7 +522,7 @@ export class TestControllerManager {
           this.removeWorkspaceFolderItems(w);
         }
       }
-      await sleep(500);
+      await sleep(5);
       await this.refresh();
     });
   }
