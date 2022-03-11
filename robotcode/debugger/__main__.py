@@ -177,6 +177,7 @@ async def run_robot(
 
         exit_code = -1
         try:
+
             exit_code = robot.run_cli(args, False)
         finally:
             if server.protocol.connected:
@@ -200,8 +201,6 @@ async def run_robot(
     except asyncio.CancelledError:
         pass
     finally:
-        await run_coroutine_from_thread_async(server.protocol.wait_for_all_events_sended)
-
         if server.protocol.connected:
             await run_coroutine_from_thread_async(server.protocol.terminate, loop=server.loop)
             try:
