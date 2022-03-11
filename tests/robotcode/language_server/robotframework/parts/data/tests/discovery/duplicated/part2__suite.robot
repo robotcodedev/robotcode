@@ -2,14 +2,5 @@
 first test
     Sleep    1s
 
-
-first test
+second test
     Sleep    1s
-
-
-
-
-
-
-
-

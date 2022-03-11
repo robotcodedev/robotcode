@@ -5,6 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "RobotCode: Two Same",
+            "type": "robotcode",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            //"target": "./tests/playground.robot  ./tests/playground.robot"
+            "args": [
+                "./tests/extras",
+                "./tests/extras"
+            ]
+        },
+        {
             "name": "RobotCode: Run Current",
             "type": "robotcode",
             "request": "launch",
