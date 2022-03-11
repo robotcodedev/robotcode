@@ -137,6 +137,18 @@ This is the simpliest way to create an running environment.
 - Open project in VSCode
 - Set the python interpreter to the created virtual environment
 
+### Using Pre-Release Version
+
+Starting from VSCode version 1.63 it is possible to use pre-release versions of an extension. RobotCode uses recommend way for a version scheme, the major.EVEN_NUMBER.patch for release versions and major.ODD_NUMBER.patch for pre-release versions. RobotCode pre-release version will provide smaller changes or bugfixes maybe just one or two, and then all changes where collected to create a normal minor release with an even minor number.
+
+You can select install pre-release version at installion via extensions view:
+
+![Extensions View](./doc/images/install_prelease_extension_list.gif)
+
+Or you can switch between release and pre-release version in the RobotCode Extension Information view:
+
+![Extension Information View](./doc/images/switch_release_prerelease.gif)
+
 
 ## Customization
 
