@@ -2,7 +2,9 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
+## [Unreleased]
+- none so far
+##  0.8.0
 
 - Introduce new version scheme to support pre-release versions of the extension
   - see [README](https://github.com/d-biehl/robotcode#using-pre-release-version)
