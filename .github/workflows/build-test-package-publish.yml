@@ -135,7 +135,7 @@ jobs:
         if: always()
 
   package:
-    #needs: [code-quality, test]
+    needs: [code-quality, test]
 
     runs-on: ubuntu-latest
 
