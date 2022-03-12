@@ -286,6 +286,41 @@ class BlockVariableVisitor(AsyncVisitor):
             except VariableError:
                 pass
 
+    async def visit_InlineIfHeader(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.errors import VariableError
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import InlineIfHeader
+
+        # TODO  analyse "Set Local/Global/Suite Variable"
+
+        n = cast(InlineIfHeader, node)
+
+        for assign_token in n.get_tokens(RobotToken.ASSIGN):
+            variable_token = self.get_variable_token(assign_token)
+
+            try:
+                if variable_token is not None:
+                    if (
+                        self.position is not None
+                        and self.position in range_from_node(n)
+                        and self.position > range_from_token(variable_token).end
+                    ):
+                        continue
+
+                    if variable_token.value not in self._results:
+                        self._results[variable_token.value] = LocalVariableDefinition(
+                            name=variable_token.value,
+                            name_token=strip_variable_token(variable_token),
+                            line_no=n.lineno,
+                            col_offset=n.col_offset,
+                            end_line_no=n.lineno,
+                            end_col_offset=n.end_col_offset,
+                            source=self.source,
+                        )
+
+            except VariableError:
+                pass
+
     async def visit_ForHeader(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import ForHeader
