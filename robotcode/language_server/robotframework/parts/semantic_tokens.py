@@ -366,6 +366,26 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset + kw_index, len(kw))
             elif token.type == RobotToken.NAME and isinstance(node, (LibraryImport, ResourceImport, VariablesImport)):
                 yield SemTokenInfo.from_token(token, RobotSemTokenTypes.NAMESPACE, sem_mod, col_offset, length)
+            elif get_robot_version() >= (5, 0) and token.type == RobotToken.OPTION:
+                from robot.parsing.model.statements import ExceptHeader, WhileHeader
+
+                if (
+                    isinstance(node, ExceptHeader)
+                    and token.value.startswith("type=")
+                    or isinstance(node, WhileHeader)
+                    and token.value.startswith("limit=")
+                ):
+                    if col_offset is None:
+                        col_offset = token.col_offset
+
+                    name, value = token.value.split("=", 1)
+                    yield SemTokenInfo.from_token(token, RobotSemTokenTypes.VARIABLE, sem_mod, col_offset, len(name))
+                    yield SemTokenInfo.from_token(
+                        token, SemanticTokenTypes.OPERATOR, sem_mod, col_offset + len(name), 1
+                    )
+                    yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset + len(name) + 1, len(value))
+                else:
+                    yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset, length)
             elif (
                 token.type in RobotToken.SETTING_TOKENS
                 and token.value
