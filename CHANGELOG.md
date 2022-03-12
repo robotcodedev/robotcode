@@ -4,12 +4,13 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
-- introduce new version scheme to support pre-release versions of the extension
+- Introduce new version scheme to support pre-release versions of the extension
   - see [README](https://github.com/d-biehl/robotcode#using-pre-release-version)
-- rework handling VSCode test items to ensure all defined tests can be executed, also when they are ambiguous
+- Rework handling VSCode test items to ensure all defined tests can be executed, also when they are ambiguous
   - see [#37](https://github.com/d-biehl/robotcode/issues/37)
-- semantic highlighting of new WHILE and EXCEPT options for RF 5.0
--
+- Semantic highlighting of new WHILE and EXCEPT options for RF 5.0
+- Support for inline IF for RF 5.0
+- Support for new BREAK, CONTINUE, RETURN statements for RF 5.0
 
 
 ##  0.7.0
