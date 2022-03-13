@@ -24,6 +24,14 @@ class RobotConfig(ConfigBase):
     log_file: Optional[str] = None
     debug_file: Optional[str] = None
     log_level: Optional[str] = None
+    mode: Optional[str] = None
+
+    def get_mode(self) -> Optional[bool]:
+        if self.mode == "rpa":
+            return True
+        elif self.mode == "norpa":
+            return False
+        return None
 
 
 @config_section("robotcode.syntax")

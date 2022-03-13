@@ -8,6 +8,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 - Optimize collecting model errors
   - also fixes [#42](https://github.com/d-biehl/robotcode/issues/42)
+- Add `mode` property to launch configuration and `robotcode.robot.mode` setting for global/workspace/folder
+  - define the robot running mode (default, rpa, norpa)
+  - corresponds to the '--rpa', '--norpa' option of the robot module.
+  - fixes [#21](https://github.com/d-biehl/robotcode/issues/21)
 
 ##  0.8.0
 

@@ -142,6 +142,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         stopOnEntry: Optional[bool] = False,  # noqa: N803
         arguments: Optional[LaunchRequestArguments] = None,
         dryRun: Optional[bool] = None,
+        mode: Optional[str] = None,
         *_args: Any,
         **_kwargs: Any,
     ) -> None:
@@ -179,6 +180,12 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         run_args += launcherArgs or []
 
         run_args += ["--"]
+
+        if mode:
+            if mode == "rpa":
+                run_args += ["--rpa"]
+            elif mode == "norpa":
+                run_args += ["--norpa"]
 
         if dryRun:
             run_args += ["--dryrun"]

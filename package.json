@@ -315,6 +315,22 @@
             "description": "Specifies the output directory where robotframework saves output files.",
             "scope": "resource"
           },
+          "robotcode.robot.mode": {
+            "type": "string",
+            "enum": [
+              "default",
+              "rpa",
+              "norpa"
+            ],
+            "enumDescriptions": [
+              "Mode is got from test/task header in data files.",
+              "Turn on the generic automation mode. Corresponds to the '--rpa' option of the robot module.",
+              "Force test automation mode. Corresponds to the '--norpa' option of the robot module."
+            ],
+            "description": "Specifies robot execution mode.",
+            "default": "default",
+            "scope": "resource"
+          },
           "robotcode.debug.defaultConfiguration": {
             "type": "object",
             "default": {},
@@ -587,6 +603,21 @@
                 "type": "boolean",
                 "description": "Group start and stop suite/test/keyword messages in debug console.",
                 "default": false
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "default",
+                  "rpa",
+                  "norpa"
+                ],
+                "enumDescriptions": [
+                  "Mode is got from test/task header in data files.",
+                  "Turn on the generic automation mode. Corresponds to the '--rpa' option of the robot module.",
+                  "Force test automation mode. Corresponds to the '--norpa' option of the robot module."
+                ],
+                "description": "Specifies robot execution mode.",
+                "default": "default"
               }
             }
           }

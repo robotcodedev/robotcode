@@ -18,6 +18,7 @@ from ...common.lsp_types import (
     Range,
     TextDocumentIdentifier,
 )
+from ..configuration import RobotConfig
 from ..utils.async_ast import AsyncVisitor
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -103,8 +104,15 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
+    async def get_config(self, workspace_uri: str) -> Optional[RobotConfig]:
+        folder = self.parent.workspace.get_workspace_folder(workspace_uri)
+        if folder is None:
+            return None
+
+        return await self.parent.workspace.get_configuration(RobotConfig, folder.uri)
+
     async def _get_tests_from_workspace(
-        self, workspace_folder: Path, paths: Optional[List[str]], suites: Optional[List[str]]
+        self, workspace_folder: str, paths: Optional[List[str]], suites: Optional[List[str]]
     ) -> List[TestItem]:
 
         from robot.output.logger import LOGGER
@@ -188,6 +196,9 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                         parsers[ext] = robot_parser
                 return parsers
 
+            def _validate_execution_mode(self, suite: Any) -> None:
+                super()._validate_execution_mode(suite)
+
         class MyTestSuiteBuilder(TestSuiteBuilder):
             def _validate_test_counts(self, suite: TestSuite, multisource: bool = False) -> None:
                 # we don't need this
@@ -240,8 +251,12 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 else None,
             )
 
+        workspace_path = Uri(workspace_folder).to_path()
         with LOGGER.cache_only:
             try:
+                config = await self.get_config(workspace_folder)
+                mode = config.get_mode() if config is not None else None
+
                 if paths and len(paths):
 
                     def normalize_paths(paths: List[str]) -> Iterator[str]:
@@ -251,7 +266,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                             p = Path(path)
 
                             if not p.is_absolute():
-                                p = Path(workspace_folder, p)
+                                p = Path(workspace_path, p)
 
                             if p.exists():
                                 yield str(p)
@@ -263,14 +278,17 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                             p = Path(path)
 
                             if not p.is_absolute():
-                                p = Path(workspace_folder, p)
+                                p = Path(workspace_path, p)
 
                             if not p.exists():
                                 yield str(p)
 
                     valid_paths = [i for i in normalize_paths(paths)]
                     suite: Optional[TestSuite] = (
-                        MyTestSuiteBuilder(included_suites=suites if suites else None).build(*valid_paths)
+                        MyTestSuiteBuilder(
+                            included_suites=suites if suites else None,
+                            rpa=mode,
+                        ).build(*valid_paths)
                         if valid_paths
                         else None
                     )
@@ -301,7 +319,9 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 else:
                     return [
                         generate(
-                            MyTestSuiteBuilder(included_suites=suites if suites else None).build(str(workspace_folder))
+                            MyTestSuiteBuilder(included_suites=suites if suites else None, rpa=mode).build(
+                                str(workspace_path)
+                            )
                         )
                     ]
             except (SystemExit, KeyboardInterrupt):
@@ -327,9 +347,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         *args: Any,
         **kwargs: Any,
     ) -> List[TestItem]:
-        return await run_coroutine_in_thread(
-            self._get_tests_from_workspace, Uri(workspace_folder).to_path(), paths, suites
-        )
+        return await run_coroutine_in_thread(self._get_tests_from_workspace, workspace_folder, paths, suites)
 
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
     @_logger.call
