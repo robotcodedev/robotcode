@@ -223,55 +223,55 @@ result:
   range:
     end:
       character: 11
-      line: 38
+      line: 40
     start:
       character: 8
-      line: 38
+      line: 40
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 7
-      line: 42
+      line: 44
     start:
       character: 4
-      line: 42
+      line: 44
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 18
-      line: 57
+      line: 59
     start:
       character: 15
-      line: 57
-  uri: tests/goto.robot
-- !Location
-  range:
-    end:
-      character: 29
-      line: 59
-    start:
-      character: 26
       line: 59
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 29
-      line: 64
+      line: 61
     start:
       character: 26
-      line: 64
+      line: 61
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 29
+      line: 66
+    start:
+      character: 26
+      line: 66
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 7
-      line: 74
+      line: 76
     start:
       character: 4
-      line: 74
+      line: 76
   uri: tests/goto.robot
 - !Location
   range:

@@ -10,7 +10,7 @@ Resource          ${CURDIR}/../resources/firstresource.resource
 #                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  built in var in Resource Import
 
 Library           ${DOT}/../lib/alibrary.py    a_param=${LIB_ARG}    WITH NAME    lib_var
-#                 ^^^^^^ var in Libary import path
+#                   ^^^ var in Libary import path
 #                                                        ^^^^^^^  var in library parameters
 
 *** Variables ***
@@ -23,11 +23,11 @@ ${DOT}    .
 *** Test Cases ***
 first
     Log    Hello ${A VAR}
-#                 ^^^^^^^  Variable
+#                  ^^^^^  Variable
 #   ^^^  BuiltIn Keyword
 
     Collections.Log Dictionary    ${A DICT}
-#                                 ^^^^^^^^^  Variable
+#                                   ^^^^^^  Variable
 #               ^^^^^^^^^^^^^^  Robot Library Keyword
 #   ^^^^^^^^^^^ Robot Namespace from Library
 
@@ -36,12 +36,14 @@ first
 #   ^^^^^^^ Robot BuilIn Namespace
 
     FOR    ${key}    ${value}    IN    &{A DICT}
+#            ^^^  For Variable
+#                      ^^^^^  For Variable
         Log    ${key}=${value}
-#              ^^^^^^  For Variable
-#                     ^^^^^^^^  For Variable
+#                ^^^  For Variable
+#                       ^^^^^  For Variable
     END
     Log    ${A_VAR_FROM_LIB}
-#          ^^^^^^^^^^^^^^^^^  Imported Variable
+#            ^^^^^^^^^^^^^^  Imported Variable
 
     do something in a resource
 #   ^^^^^^^^^^^^^^^^^^^^^^^^^^  Keyword from resource

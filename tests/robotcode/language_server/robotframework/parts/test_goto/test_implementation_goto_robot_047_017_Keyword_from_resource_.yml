@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 17
+  line: 47
+  name: Keyword from resource
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 30
+      line: 47
+    start:
+      character: 4
+      line: 47
+  target_range:
+    end:
+      character: 0
+      line: 5
+    start:
+      character: 0
+      line: 4
+  target_selection_range:
+    end:
+      character: 0
+      line: 5
+    start:
+      character: 0
+      line: 4
+  target_uri: firstresource.resource

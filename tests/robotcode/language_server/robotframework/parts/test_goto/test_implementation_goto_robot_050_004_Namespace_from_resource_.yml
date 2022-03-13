@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 4
+  line: 50
+  name: Namespace from resource
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 17
+      line: 50
+    start:
+      character: 4
+      line: 50
+  target_range:
+    end:
+      character: 63
+      line: 8
+    start:
+      character: 18
+      line: 8
+  target_selection_range:
+    end:
+      character: 63
+      line: 8
+    start:
+      character: 18
+      line: 8
+  target_uri: firstresource.resource

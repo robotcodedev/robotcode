@@ -13,7 +13,7 @@ result:
       line: 11
   target_range:
     end:
-      character: 12
+      character: 11
       line: 19
     start:
       character: 0
