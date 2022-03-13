@@ -4,7 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
-- none so far
+### added
+
+- Optimize collecting model errors
+  - also fixes [#42](https://github.com/d-biehl/robotcode/issues/42)
 
 ##  0.8.0
 

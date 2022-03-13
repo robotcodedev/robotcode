@@ -108,8 +108,10 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         if namespace is None:
             return None
 
+        model = await self.parent.documents_cache.get_model(document, False)
+
         return await CompletionCollector(
-            self.parent, document, namespace, await self.get_section_style(document)
+            self.parent, document, model, namespace, await self.get_section_style(document)
         ).collect(
             position,
             context,
@@ -126,9 +128,10 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
                 document = await self.parent.documents.get(document_uri)
                 if document is not None:
                     namespace = await self.parent.documents_cache.get_namespace(document)
+                    model = await self.parent.documents_cache.get_model(document, False)
                     if namespace is not None:
                         return await CompletionCollector(
-                            self.parent, document, namespace, await self.get_section_style(document)
+                            self.parent, document, model, namespace, await self.get_section_style(document)
                         ).resolve(completion_item)
 
         return completion_item
@@ -221,11 +224,17 @@ class CompletionCollector(ModelHelperMixin):
     _logger = LoggingDescriptor()
 
     def __init__(
-        self, parent: RobotLanguageServerProtocol, document: TextDocument, namespace: Namespace, section_style: str
+        self,
+        parent: RobotLanguageServerProtocol,
+        document: TextDocument,
+        model: ast.AST,
+        namespace: Namespace,
+        section_style: str,
     ) -> None:
         self.parent = parent
         self.section_style = section_style
         self.document = document
+        self.model = model
         self.namespace = namespace
 
     async def _find_methods(self, cls: Type[Any]) -> AsyncGenerator[_CompleteMethod, None]:
@@ -248,7 +257,7 @@ class CompletionCollector(ModelHelperMixin):
         self, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
 
-        result_nodes = await get_nodes_at_position(self.namespace.model, position)
+        result_nodes = await get_nodes_at_position(self.model, position)
 
         result_nodes.reverse()
 

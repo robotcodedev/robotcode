@@ -79,7 +79,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         self, sender: Any, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
     ) -> Optional[SignatureHelp]:
 
-        result_node = await get_node_at_position(await self.parent.documents_cache.get_model(document), position)
+        result_node = await get_node_at_position(await self.parent.documents_cache.get_model(document, False), position)
         if result_node is None:
             return None
 

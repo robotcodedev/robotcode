@@ -95,6 +95,12 @@ class Statement(Protocol):
         ...
 
 
+@runtime_checkable
+class HeaderAndBodyBlock(Protocol):
+    header: Any
+    body: List[Any]
+
+
 def range_from_token(token: Token) -> Range:
     return Range(
         start=Position(line=token.lineno - 1, character=token.col_offset),
@@ -105,12 +111,18 @@ def range_from_token(token: Token) -> Range:
     )
 
 
-def range_from_node(node: ast.AST, skip_non_data: bool = False) -> Range:
+def range_from_node(node: ast.AST, skip_non_data: bool = False, only_start: bool = False) -> Range:
     from robot.parsing.lexer import Token as RobotToken
 
     if skip_non_data and isinstance(node, HasTokens) and node.tokens:
         start_token = next((v for v in node.tokens if v.type not in RobotToken.NON_DATA_TOKENS), None)
-        end_token = next((v for v in reversed(node.tokens) if v.type not in RobotToken.NON_DATA_TOKENS), None)
+
+        if only_start and start_token is not None:
+            end_tokens = tuple(t for t in node.tokens if start_token.lineno == t.lineno)
+        else:
+            end_tokens = node.tokens
+
+        end_token = next((v for v in reversed(end_tokens) if v.type not in RobotToken.NON_DATA_TOKENS), None)
         if start_token is not None and end_token is not None:
             return Range(start=range_from_token(start_token).start, end=range_from_token(end_token).end)
 

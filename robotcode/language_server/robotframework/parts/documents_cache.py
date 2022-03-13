@@ -63,8 +63,21 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         else:
             return DocumentType.UNKNOWN
 
-    async def get_tokens(self, document: TextDocument) -> List[Token]:
+    async def get_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
+        if data_only:
+            return await document.get_cache(self.__get_tokens_data_only)
         return await document.get_cache(self.__get_tokens)
+
+    async def __get_tokens_data_only(self, document: TextDocument) -> List[Token]:
+        document_type = await self.get_document_type(document)
+        if document_type == DocumentType.INIT:
+            return await self.get_init_tokens(document, True)
+        elif document_type == DocumentType.GENERAL:
+            return await self.get_general_tokens(document, True)
+        elif document_type == DocumentType.RESOURCE:
+            return await self.get_resource_tokens(document, True)
+        else:
+            raise UnknownFileTypeError(str(document.uri))
 
     async def __get_tokens(self, document: TextDocument) -> List[Token]:
         document_type = await self.get_document_type(document)
@@ -77,8 +90,19 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         else:
             raise UnknownFileTypeError(str(document.uri))
 
-    async def get_general_tokens(self, document: TextDocument) -> List[Token]:
+    async def get_general_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
+        if data_only:
+            return await document.get_cache(self.__get_general_tokens_data_only)
         return await document.get_cache(self.__get_general_tokens)
+
+    async def __get_general_tokens_data_only(self, document: TextDocument) -> List[Token]:
+        import robot.api
+
+        def get(text: str) -> List[Token]:
+            with io.StringIO(text) as content:
+                return [e for e in robot.api.get_tokens(content, True) if check_canceled_sync()]
+
+        return await self.__get_tokens_internal(document, get)
 
     async def __get_general_tokens(self, document: TextDocument) -> List[Token]:
         import robot.api
@@ -97,8 +121,20 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         return get(await document.text())
 
-    async def get_resource_tokens(self, document: TextDocument) -> List[Token]:
+    async def get_resource_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
+        if data_only:
+            return await document.get_cache(self.__get_resource_tokens_data_only)
+
         return await document.get_cache(self.__get_resource_tokens)
+
+    async def __get_resource_tokens_data_only(self, document: TextDocument) -> List[Token]:
+        import robot.api
+
+        def get(text: str) -> List[Token]:
+            with io.StringIO(text) as content:
+                return [e for e in robot.api.get_resource_tokens(content, True) if check_canceled_sync()]
+
+        return await self.__get_tokens_internal(document, get)
 
     async def __get_resource_tokens(self, document: TextDocument) -> List[Token]:
         import robot.api
@@ -109,8 +145,19 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         return await self.__get_tokens_internal(document, get)
 
-    async def get_init_tokens(self, document: TextDocument) -> List[Token]:
+    async def get_init_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
+        if data_only:
+            return await document.get_cache(self.__get_init_tokens_data_only)
         return await document.get_cache(self.__get_init_tokens)
+
+    async def __get_init_tokens_data_only(self, document: TextDocument) -> List[Token]:
+        import robot.api
+
+        def get(text: str) -> List[Token]:
+            with io.StringIO(text) as content:
+                return [e for e in robot.api.get_init_tokens(content, True) if check_canceled_sync()]
+
+        return await self.__get_tokens_internal(document, get)
 
     async def __get_init_tokens(self, document: TextDocument) -> List[Token]:
         import robot.api
@@ -121,15 +168,15 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         return await self.__get_tokens_internal(document, get)
 
-    async def get_model(self, document: TextDocument) -> ast.AST:
+    async def get_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
         document_type = await self.get_document_type(document)
 
         if document_type == DocumentType.INIT:
-            return await self.get_init_model(document)
+            return await self.get_init_model(document, data_only)
         if document_type == DocumentType.GENERAL:
-            return await self.get_general_model(document)
+            return await self.get_general_model(document, data_only)
         if document_type == DocumentType.RESOURCE:
-            return await self.get_resource_model(document)
+            return await self.get_resource_model(document, data_only)
         else:
             raise UnknownFileTypeError(f"Unknown file type '{document.uri}'.")
 
@@ -150,20 +197,36 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         return cast(ast.AST, model)
 
-    async def get_general_model(self, document: TextDocument) -> ast.AST:
+    async def get_general_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
+        if data_only:
+            return await document.get_cache(self.__get_general_model_data_only)
         return await document.get_cache(self.__get_general_model)
+
+    async def __get_general_model_data_only(self, document: TextDocument) -> ast.AST:
+        return self.__get_model(document, await self.get_general_tokens(document, True), DocumentType.GENERAL)
 
     async def __get_general_model(self, document: TextDocument) -> ast.AST:
         return self.__get_model(document, await self.get_general_tokens(document), DocumentType.GENERAL)
 
-    async def get_resource_model(self, document: TextDocument) -> ast.AST:
+    async def get_resource_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
+        if data_only:
+            return await document.get_cache(self.__get_resource_model_data_only)
+
         return await document.get_cache(self.__get_resource_model)
+
+    async def __get_resource_model_data_only(self, document: TextDocument) -> ast.AST:
+        return self.__get_model(document, await self.get_resource_tokens(document, True), DocumentType.RESOURCE)
 
     async def __get_resource_model(self, document: TextDocument) -> ast.AST:
         return self.__get_model(document, await self.get_resource_tokens(document), DocumentType.RESOURCE)
 
-    async def get_init_model(self, document: TextDocument) -> ast.AST:
+    async def get_init_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
+        if data_only:
+            return await document.get_cache(self.__get_init_model_data_only)
         return await document.get_cache(self.__get_init_model)
+
+    async def __get_init_model_data_only(self, document: TextDocument) -> ast.AST:
+        return self.__get_model(document, await self.get_init_tokens(document, True), DocumentType.INIT)
 
     async def __get_init_model(self, document: TextDocument) -> ast.AST:
         return self.__get_model(document, await self.get_init_tokens(document), DocumentType.INIT)

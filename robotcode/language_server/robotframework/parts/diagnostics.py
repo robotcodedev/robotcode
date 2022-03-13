@@ -11,7 +11,7 @@ from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
 from ...common.parts.diagnostics import DiagnosticsResult
 from ...common.text_document import TextDocument
 from ..diagnostics.analyzer import Analyzer
-from ..utils.ast import Token, range_from_node, range_from_token
+from ..utils.ast import HeaderAndBodyBlock, Token, range_from_node, range_from_token
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -28,7 +28,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         self.source_name = "robotcode.diagnostics"
 
         parent.diagnostics.collect.add(self.collect_token_errors)
-        parent.diagnostics.collect.add(self.collect_walk_model_errors)
+        parent.diagnostics.collect.add(self.collect_model_errors)
 
         parent.diagnostics.collect.add(self.collect_namespace_diagnostics)
 
@@ -72,9 +72,21 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 ],
             )
 
-    def _create_error_from_node(self, node: ast.AST, msg: str, source: Optional[str] = None) -> Diagnostic:
+    def _create_error_from_node(
+        self, node: ast.AST, msg: str, source: Optional[str] = None, only_start: bool = True
+    ) -> Diagnostic:
+        from robot.parsing.model.statements import Statement
+
+        if isinstance(node, HeaderAndBodyBlock):
+            if node.header is not None:
+                node = node.header
+            elif node.body:
+                stmt = next((n for n in node.body if isinstance(n, Statement)), None)
+                if stmt is not None:
+                    node = stmt
+
         return Diagnostic(
-            range=range_from_node(node, True),
+            range=range_from_node(node, True, only_start),
             message=msg,
             severity=DiagnosticSeverity.ERROR,
             source=source if source is not None else self.source_name,
@@ -158,13 +170,13 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @threaded()
     @_logger.call
-    async def collect_walk_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    async def collect_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
 
         from ..utils.ast import HasError, HasErrors
         from ..utils.async_ast import iter_nodes
 
         try:
-            model = await self.parent.documents_cache.get_model(document)
+            model = await self.parent.documents_cache.get_model(document, True)
 
             result: List[Diagnostic] = []
             async for node in iter_nodes(model):
@@ -177,13 +189,13 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         if not await Analyzer.should_ignore(document, range_from_node(node)):
                             result.append(self._create_error_from_node(node, e))
 
-            return DiagnosticsResult(self.collect_walk_model_errors, result)
+            return DiagnosticsResult(self.collect_model_errors, result)
 
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             return DiagnosticsResult(
-                self.collect_walk_model_errors,
+                self.collect_model_errors,
                 [
                     Diagnostic(
                         range=Range(
