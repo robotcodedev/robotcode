@@ -205,73 +205,118 @@ result:
   range:
     end:
       character: 7
-      line: 24
+      line: 34
     start:
       character: 4
-      line: 24
+      line: 34
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 38
+    start:
+      character: 4
+      line: 38
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 40
+    start:
+      character: 4
+      line: 40
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 43
+    start:
+      character: 4
+      line: 43
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 45
+    start:
+      character: 4
+      line: 45
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 48
+    start:
+      character: 4
+      line: 48
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 15
-      line: 33
+      line: 55
     start:
       character: 12
-      line: 33
+      line: 55
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 11
-      line: 40
+      line: 62
     start:
       character: 8
-      line: 40
+      line: 62
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 7
-      line: 44
+      line: 66
     start:
       character: 4
-      line: 44
+      line: 66
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 18
-      line: 59
+      line: 81
     start:
       character: 15
-      line: 59
+      line: 81
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 29
-      line: 61
+      line: 83
     start:
       character: 26
-      line: 61
+      line: 83
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 29
-      line: 66
+      line: 88
     start:
       character: 26
-      line: 66
+      line: 88
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 7
-      line: 76
+      line: 98
     start:
       character: 4
-      line: 76
+      line: 98
   uri: tests/goto.robot
 - !Location
   range:

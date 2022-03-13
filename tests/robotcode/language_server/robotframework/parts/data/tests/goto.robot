@@ -17,14 +17,36 @@ Library           ${DOT}/../lib/alibrary.py    a_param=${LIB_ARG}    WITH NAME  
 ${A VAR}          i'm a var
 &{A DICT}         a=1    b=2    c=3
 ${LIB_ARG}    from lib
+# ^^^^^^^  Var declaration
 ${DOT}    .
+# ^^^  Var declaration
+@{list_var}    1    2    3
+# ^^^^^^^^  List Var declaration
+&{dict_var}    first=1    second=3
+# ^^^^^^^^  Dict Var declaration
 
+${all together}    ${A VAR} @{list var} ${dictvar}
+#                    ^^^^^ var usage
+#                             ^^^^^^^^ var usage
+#                                         ^^^^^^^ var usage
 
 *** Test Cases ***
 first
     Log    Hello ${A VAR}
 #                  ^^^^^  Variable
 #   ^^^  BuiltIn Keyword
+
+    Log    @{list_var}
+#            ^^^^^^^^  List Var
+    Log    ${list_var}
+#            ^^^^^^^^  List Var as normal var
+
+    Log    @{dict_var}
+#            ^^^^^^^^  Dict Var
+    Log    ${dict_var}
+#            ^^^^^^^^  Dict Var as normal var
+
+    Log    ${all together}
 
     Collections.Log Dictionary    ${A DICT}
 #                                   ^^^^^^  Variable

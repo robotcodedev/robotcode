@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 20
+  line: 45
+  name: Dict Var as normal var
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 21
+      line: 45
+    start:
+      character: 13
+      line: 45
+  target_range:
+    end:
+      character: 34
+      line: 24
+    start:
+      character: 0
+      line: 24
+  target_selection_range:
+    end:
+      character: 10
+      line: 24
+    start:
+      character: 2
+      line: 24
+  target_uri: goto.robot
