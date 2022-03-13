@@ -2,9 +2,13 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- none so far
+
 ##  0.8.0
+
+### added
 
 - Introduce new version scheme to support pre-release versions of the extension
   - see [README](https://github.com/d-biehl/robotcode#using-pre-release-version)
@@ -28,7 +32,7 @@ All notable changes to the "robotcode" extension will be documented in this file
   - fixes [#38](https://github.com/d-biehl/robotcode/issues/38)
 - Decrease size of extension package
 - Sligtly correct displayName and description of VSCode package, for better relevance in Marketplace search
-  - See here [#39](https://github.com/d-biehl/robotcode/issues/39)
+  - See [#39](https://github.com/d-biehl/robotcode/issues/39)
 
 ##  0.6.0
 
