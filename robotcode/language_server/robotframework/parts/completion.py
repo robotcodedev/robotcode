@@ -513,7 +513,8 @@ class CompletionCollector(ModelHelperMixin):
                                 CompletionItem(
                                     label=kw.name,
                                     kind=CompletionItemKind.FUNCTION,
-                                    detail=f"{CompleteResultKind.KEYWORD.value} {f'({kw.libname})' if kw.libname is not None else ''}",
+                                    detail=f"{CompleteResultKind.KEYWORD.value} "
+                                    f"{f'({kw.libname})' if kw.libname is not None else ''}",
                                     sort_text=f"020_{kw.name}",
                                     insert_text_format=InsertTextFormat.PLAINTEXT,
                                     text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
@@ -543,7 +544,8 @@ class CompletionCollector(ModelHelperMixin):
                                     CompletionItem(
                                         label=kw.name,
                                         kind=CompletionItemKind.FUNCTION,
-                                        detail=f"{CompleteResultKind.KEYWORD.value} {f'({kw.libname})' if kw.libname is not None else ''}",
+                                        detail=f"{CompleteResultKind.KEYWORD.value} "
+                                        f"{f'({kw.libname})' if kw.libname is not None else ''}",
                                         sort_text=f"020_{kw.name}",
                                         insert_text_format=InsertTextFormat.PLAINTEXT,
                                         text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
