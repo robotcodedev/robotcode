@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 11
-  line: 78
-  name: variable from lib
-result: null

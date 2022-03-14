@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 5
+  line: 74
+  name: BuiltIn Keyword
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Keyword *Log*'
+  range:
+    end:
+      character: 7
+      line: 74
+    start:
+      character: 4
+      line: 74

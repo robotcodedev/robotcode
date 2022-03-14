@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 11
-  line: 67
-  name: FOR loop variable declaration
-result: null

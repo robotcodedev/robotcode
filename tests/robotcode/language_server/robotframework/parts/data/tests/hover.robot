@@ -13,6 +13,8 @@ Variables         ${CURDIR}/../lib/myvariables.py
 Resource          ${CURDIR}/../resources/firstresource.resource
 #                                       ^^^^^^^^^^^^^^ resource import by path name
 #                   ^^^^^^^  variable in resource import
+Resource          ../resources/folder_a/duplicated.resource
+Resource          ../resources/folder_b/duplicated.resource
 
 *** Variables ***
 ${A VAR}=          i'm a var
@@ -169,6 +171,20 @@ eight
     firstresource.do.sell fish
 #                 ^^^^^^^^^^^^  keyword with dot after namespace
 #   ^^^^^^^^^^^^^  namespace in keyword with dot
+
+nineth
+    a resource keyword A
+#   ^^^^^^^^^^^^^^^^^^^^  duplicated keyword
+    a resource keyword B
+#   ^^^^^^^^^^^^^^^^^^^^  duplicated keyword
+    duplicated keyword
+#   ^^^^^^^^^^^^^^^^^^^^  duplicated keyword
+    duplicated.a resource keyword A
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  duplicated keyword
+    duplicated.a resource keyword B
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  duplicated keyword
+    duplicated.duplicated keyword
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  duplicated keyword
 
 *** Keywords ***
 a keyword

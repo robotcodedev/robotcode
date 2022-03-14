@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 27
-  line: 58
-  name: no hover for invalid variable reference
-result: null

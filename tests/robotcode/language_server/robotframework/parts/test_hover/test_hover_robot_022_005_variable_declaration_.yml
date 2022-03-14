@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 5
+  line: 22
+  name: variable declaration
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: (variable) &{A DICT}
+  range:
+    end:
+      character: 8
+      line: 22
+    start:
+      character: 2
+      line: 22
