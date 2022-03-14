@@ -2,11 +2,14 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
-##  0.9.1
+## [Unreleased]
 
 - none so far
+
+##  0.9.1
+
+- Rework handling keywords from resource files with duplicate names
+  - also fixes [#43](https://github.com/d-biehl/robotcode/issues/43)
 
 ##  0.9.0
 
