@@ -726,7 +726,11 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             lambda t: range is None or token_in_range(t[0], range),
             async_dropwhile(
                 lambda t: range is not None and not token_in_range(t[0], range),
-                ((t, n) async for t, n in get_tokens()),
+                (
+                    (t, n)
+                    async for t, n in get_tokens()
+                    if t.type not in [RobotToken.SEPARATOR, RobotToken.EOL, RobotToken.EOS]
+                ),
             ),
         ):
             async for token in self.generate_sem_tokens(
@@ -766,7 +770,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         self, document: TextDocument, range: Optional[Range]
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
 
-        model = await self.parent.documents_cache.get_model(document, True)
+        model = await self.parent.documents_cache.get_model(document, False)
         namespace = await self.parent.documents_cache.get_namespace(document)
 
         builtin_library_doc = next(

@@ -87,7 +87,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         from robotidy.api import RobotidyAPI
 
         try:
-            model = await self.parent.documents_cache.get_model(document)
+            model = await self.parent.documents_cache.get_model(document, False)
 
             robot_tidy = RobotidyAPI(document.uri.to_path(), None)
 
@@ -144,7 +144,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             SeparatorNormalizer,
         )
 
-        model = cast(File, await self.parent.documents_cache.get_model(document))
+        model = cast(File, await self.parent.documents_cache.get_model(document, False))
 
         Cleaner().visit(model)
         NewlineNormalizer(self.line_separator, self.short_test_name_length).visit(model)
