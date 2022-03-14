@@ -21,7 +21,7 @@ from typing import (
     cast,
 )
 
-from ....utils.async_itertools import async_chain, async_chain_iterator
+from ....utils.async_itertools import async_chain, async_chain_iterator, async_next
 from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id, trigger_characters
@@ -325,13 +325,11 @@ class CompletionCollector(ModelHelperMixin):
                                     kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
                                 )
                     elif type in [CompleteResultKind.KEYWORD.name]:
-                        libname = completion_item.data.get("libname", None)
-                        name = completion_item.data.get("name", None)
-
-                        if libname is not None and name is not None:
+                        id = completion_item.data.get("id", None)
+                        if id is not None:
                             try:
-                                kw_doc = next(
-                                    (kw for kw in await self.namespace.get_keywords() if kw.name == name),
+                                kw_doc = await async_next(
+                                    (kw async for kw in self.namespace.iter_all_keywords() if hash(kw) == id),
                                     None,
                                 )
 
@@ -511,43 +509,53 @@ class CompletionCollector(ModelHelperMixin):
                         for kw in libraries[library_name].library_doc.keywords.values():
                             if kw.is_error_handler:
                                 continue
-                            c = CompletionItem(
-                                label=kw.name,
-                                kind=CompletionItemKind.FUNCTION,
-                                detail=CompleteResultKind.KEYWORD.value,
-                                sort_text=f"020_{kw.name}",
-                                insert_text_format=InsertTextFormat.PLAINTEXT,
-                                text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
-                                data={
-                                    "document_uri": str(self.document.uri),
-                                    "type": CompleteResultKind.KEYWORD.name,
-                                    "libname": kw.libname,
-                                    "name": kw.name,
-                                },
+                            result.append(
+                                CompletionItem(
+                                    label=kw.name,
+                                    kind=CompletionItemKind.FUNCTION,
+                                    detail=f"{CompleteResultKind.KEYWORD.value} {f'({kw.libname})' if kw.libname is not None else ''}",
+                                    sort_text=f"020_{kw.name}",
+                                    insert_text_format=InsertTextFormat.PLAINTEXT,
+                                    text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
+                                    data={
+                                        "document_uri": str(self.document.uri),
+                                        "type": CompleteResultKind.KEYWORD.name,
+                                        "libname": kw.libname,
+                                        "name": kw.name,
+                                        "id": hash(kw),
+                                    },
+                                )
                             )
-                            result.append(c)
 
-                    resources = await self.namespace.get_resources()
-                    if library_name in resources:
+                    resources = {
+                        k: v
+                        for k, v in (await self.namespace.get_resources()).items()
+                        if library_name_matcher == KeywordMatcher(v.name)
+                    }
+
+                    if resources:
                         r.start.character = lib_name_index + 1
-                        for kw in resources[library_name].library_doc.keywords.values():
-                            if kw.is_error_handler:
-                                continue
-                            c = CompletionItem(
-                                label=kw.name,
-                                kind=CompletionItemKind.FUNCTION,
-                                detail=CompleteResultKind.KEYWORD.value,
-                                sort_text=f"020_{kw.name}",
-                                insert_text_format=InsertTextFormat.PLAINTEXT,
-                                text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
-                                data={
-                                    "document_uri": str(self.document.uri),
-                                    "type": CompleteResultKind.KEYWORD.name,
-                                    "libname": kw.libname,
-                                    "name": kw.name,
-                                },
-                            )
-                            result.append(c)
+                        for res in resources.values():
+                            for kw in res.library_doc.keywords.values():
+                                if kw.is_error_handler:
+                                    continue
+                                result.append(
+                                    CompletionItem(
+                                        label=kw.name,
+                                        kind=CompletionItemKind.FUNCTION,
+                                        detail=f"{CompleteResultKind.KEYWORD.value} {f'({kw.libname})' if kw.libname is not None else ''}",
+                                        sort_text=f"020_{kw.name}",
+                                        insert_text_format=InsertTextFormat.PLAINTEXT,
+                                        text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
+                                        data={
+                                            "document_uri": str(self.document.uri),
+                                            "type": CompleteResultKind.KEYWORD.name,
+                                            "libname": kw.libname,
+                                            "name": kw.name,
+                                            "id": hash(kw),
+                                        },
+                                    )
+                                )
 
                     return result
 
@@ -555,60 +563,64 @@ class CompletionCollector(ModelHelperMixin):
             if kw.is_error_handler:
                 continue
 
-            c = CompletionItem(
-                label=kw.name,
-                kind=CompletionItemKind.FUNCTION,
-                detail=f"{CompleteResultKind.KEYWORD.value} {f'({kw.libname})' if kw.libname is not None else ''}",
-                deprecated=kw.is_deprecated,
-                sort_text=f"020_{kw.name}",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
-                text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
-                data={
-                    "document_uri": str(self.document.uri),
-                    "type": CompleteResultKind.KEYWORD.name,
-                    "libname": kw.libname,
-                    "name": kw.name,
-                },
+            result.append(
+                CompletionItem(
+                    label=kw.name,
+                    kind=CompletionItemKind.FUNCTION,
+                    detail=f"{CompleteResultKind.KEYWORD.value} {f'({kw.libname})' if kw.libname is not None else ''}",
+                    deprecated=kw.is_deprecated,
+                    sort_text=f"020_{kw.name}",
+                    insert_text_format=InsertTextFormat.PLAINTEXT,
+                    text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
+                    data={
+                        "document_uri": str(self.document.uri),
+                        "type": CompleteResultKind.KEYWORD.name,
+                        "libname": kw.libname,
+                        "name": kw.name,
+                        "id": hash(kw),
+                    },
+                )
             )
-            result.append(c)
 
         for k, v in (await self.namespace.get_libraries()).items():
-            c = CompletionItem(
-                label=k,
-                kind=CompletionItemKind.MODULE,
-                detail="Library",
-                sort_text=f"030_{k}",
-                deprecated=v.library_doc.is_deprecated,
-                insert_text_format=InsertTextFormat.PLAINTEXT,
-                text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
-                data={
-                    "document_uri": str(self.document.uri),
-                    "type": CompleteResultKind.MODULE.name,
-                    "name": k,
-                    "import_name": v.import_name,
-                    "args": v.args,
-                    "alias": v.alias,
-                },
+            result.append(
+                CompletionItem(
+                    label=k,
+                    kind=CompletionItemKind.MODULE,
+                    detail="Library",
+                    sort_text=f"030_{v.name}",
+                    deprecated=v.library_doc.is_deprecated,
+                    insert_text_format=InsertTextFormat.PLAINTEXT,
+                    text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
+                    data={
+                        "document_uri": str(self.document.uri),
+                        "type": CompleteResultKind.MODULE.name,
+                        "name": v.name,
+                        "import_name": v.import_name,
+                        "args": v.args,
+                        "alias": v.alias,
+                    },
+                )
             )
-            result.append(c)
 
         for k, v in (await self.namespace.get_resources()).items():
-            c = CompletionItem(
-                label=k,
-                kind=CompletionItemKind.MODULE,
-                detail="Resource",
-                deprecated=v.library_doc.is_deprecated,
-                sort_text=f"030_{k}",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
-                text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
-                data={
-                    "document_uri": str(self.document.uri),
-                    "type": CompleteResultKind.RESOURCE.name,
-                    "name": v.name,
-                    "import_name": v.import_name,
-                },
+            result.append(
+                CompletionItem(
+                    label=v.name,
+                    kind=CompletionItemKind.MODULE,
+                    detail="Resource",
+                    deprecated=v.library_doc.is_deprecated,
+                    sort_text=f"030_{v.name}",
+                    insert_text_format=InsertTextFormat.PLAINTEXT,
+                    text_edit=TextEdit(range=r, new_text=v.name) if r is not None else None,
+                    data={
+                        "document_uri": str(self.document.uri),
+                        "type": CompleteResultKind.RESOURCE.name,
+                        "name": k,
+                        "import_name": v.import_name,
+                    },
+                )
             )
-            result.append(c)
 
         if add_none:
             result.append(
@@ -623,14 +635,15 @@ class CompletionCollector(ModelHelperMixin):
 
         if add_reserverd:
             for k in get_reserved_keywords():
-                c = CompletionItem(
-                    label=k,
-                    kind=CompletionItemKind.KEYWORD,
-                    sort_text=f"999_{k}",
-                    insert_text_format=InsertTextFormat.PLAINTEXT,
-                    text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
+                result.append(
+                    CompletionItem(
+                        label=k,
+                        kind=CompletionItemKind.KEYWORD,
+                        sort_text=f"999_{k}",
+                        insert_text_format=InsertTextFormat.PLAINTEXT,
+                        text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
+                    )
                 )
-                result.append(c)
 
         return result
 

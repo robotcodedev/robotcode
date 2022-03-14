@@ -1010,7 +1010,7 @@ class Namespace:
                         )
 
                         if allready_imported_resources is None and entry.library_doc.source != self.source:
-                            self._resources[entry.alias or entry.name or entry.import_name] = entry
+                            self._resources[entry.import_name] = entry
                             try:
                                 await self._import_imports(
                                     entry.imports,
@@ -1043,7 +1043,7 @@ class Namespace:
                                     allready_imported_resources is not None
                                     and allready_imported_resources.library_doc.source
                                 ):
-                                    self._resources[entry.alias or entry.name or entry.import_name] = entry
+                                    self._resources[entry.import_name] = entry
 
                                     await self.append_diagnostics(
                                         range=entry.import_range,
@@ -1278,9 +1278,20 @@ class Namespace:
         )
 
     @_logger.call
-    async def get_keywords(self) -> List[KeywordDoc]:
+    async def iter_all_keywords(self) -> AsyncGenerator[KeywordDoc, None]:
         import itertools
 
+        libdoc = await self.get_library_doc()
+
+        for doc in itertools.chain(
+            *(e.library_doc.keywords.values() for e in self._libraries.values()),
+            *(e.library_doc.keywords.values() for e in self._resources.values()),
+            libdoc.keywords.values() if libdoc is not None else [],
+        ):
+            yield doc
+
+    @_logger.call
+    async def get_keywords(self) -> List[KeywordDoc]:
         if self._keywords is None:
             async with self._keywords_lock:
                 if self._keywords is None:
@@ -1291,17 +1302,11 @@ class Namespace:
                         await self.ensure_initialized()
 
                         result: Dict[KeywordMatcher, KeywordDoc] = {}
-                        libdoc = await self.get_library_doc()
 
                         i = 0
-                        for name, doc in itertools.chain(
-                            *(e.library_doc.keywords.items() for e in self._libraries.values()),
-                            *(e.library_doc.keywords.items() for e in self._resources.values()),
-                            libdoc.keywords.items() if libdoc is not None else [],
-                        ):
+                        async for doc in self.iter_all_keywords():
                             i += 1
-                            # if not any(k for k in result.keys() if k == name):
-                            result[KeywordMatcher(name)] = doc
+                            result[KeywordMatcher(doc.name)] = doc
 
                         self._keywords = list(result.values())
                     finally:
