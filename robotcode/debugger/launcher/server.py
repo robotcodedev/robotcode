@@ -125,6 +125,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         python: str,
         cwd: str = ".",
         target: Optional[str] = None,
+        paths: Optional[List[str]] = None,
         args: Optional[List[str]] = None,
         env: Optional[Dict[str, Optional[Any]]] = None,
         console: Optional[Literal["internalConsole", "integratedTerminal", "externalTerminal"]] = "integratedTerminal",
@@ -140,9 +141,10 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         outputLog: Optional[bool] = False,
         groupOutput: Optional[bool] = False,
         stopOnEntry: Optional[bool] = False,  # noqa: N803
-        arguments: Optional[LaunchRequestArguments] = None,
         dryRun: Optional[bool] = None,
         mode: Optional[str] = None,
+        variableFiles: Optional[List[str]] = None,
+        arguments: Optional[LaunchRequestArguments] = None,
         *_args: Any,
         **_kwargs: Any,
     ) -> None:
@@ -197,11 +199,19 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
             for e in robotPythonPath:
                 run_args += ["-P", e]
 
+        if variableFiles:
+            for v in variableFiles:
+                run_args += ["-V", v]
+
         if variables:
             for k, v in variables.items():
                 run_args += ["-v", f"{k}:{v}"]
 
         run_args += args or []
+
+        if paths:
+            for p in paths:
+                run_args.append(p)
 
         if target:
             run_args.append(target)

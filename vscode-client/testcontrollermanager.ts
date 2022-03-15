@@ -412,7 +412,7 @@ export class TestControllerManager {
             folder,
             new WorkspaceFolderEntry(
               true,
-              await this.languageClientsManager.getTestsFromWorkspace(folder, [], undefined, token)
+              await this.languageClientsManager.getTestsFromWorkspace(folder, undefined, undefined, token)
             )
           );
         }
@@ -570,6 +570,13 @@ export class TestControllerManager {
       return vscode.workspace.getWorkspaceFolder(item.uri);
     }
 
+    let parent: vscode.TestItem | undefined = item;
+    while (parent?.parent !== undefined) {
+      parent = parent.parent;
+    }
+
+    if (parent) item = parent;
+
     for (const ws of vscode.workspace.workspaceFolders ?? []) {
       if (this.robotTestItems.has(ws)) {
         if (this.robotTestItems.get(ws)?.items?.find((w) => w.id === item.id) !== undefined) {
@@ -616,7 +623,14 @@ export class TestControllerManager {
     if (request.include) {
       includedItems = Array.from(request.include);
     } else {
-      this.testController.items.forEach((test) => includedItems.push(test));
+      this.testController.items.forEach((test) => {
+        const robotTest = this.findRobotItem(test);
+        if (robotTest?.type === "workspace") {
+          test.children.forEach((v) => includedItems.push(v));
+        } else {
+          includedItems.push(test);
+        }
+      });
     }
 
     const included = this.mapTestItemsToWorkspace(includedItems);
@@ -656,6 +670,7 @@ export class TestControllerManager {
             .get(workspace)
             ?.map((i) => this.findRobotItem(i)?.longname)
             .filter((i) => i !== undefined) as string[]) ?? [];
+
         const suites = new Set<string>();
 
         for (const t of [...includedInWs, ...excludedInWs]) {

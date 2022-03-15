@@ -241,7 +241,17 @@ export class LanguageClientsManager {
   ): Promise<LanguageClient | undefined> {
     return this.clientsMutex.dispatch(async () => {
       const uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
-      const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+      let workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+
+      if (!workspaceFolder || !create) {
+        if (vscode.workspace.workspaceFolders?.length === 1) {
+          workspaceFolder = vscode.workspace.workspaceFolders[0];
+        } else if (vscode.workspace.workspaceFolders?.length == 0) {
+          workspaceFolder = undefined;
+        } else {
+          workspaceFolder = undefined;
+        }
+      }
 
       if (!workspaceFolder || !create) return undefined;
 
@@ -264,9 +274,10 @@ export class LanguageClientsManager {
       let closeHandlerAction = CloseAction.DoNotRestart;
 
       const clientOptions: LanguageClientOptions = {
-        documentSelector: [
-          { scheme: "file", language: "robotframework", pattern: `${workspaceFolder.uri.fsPath}/**/*` },
-        ],
+        documentSelector:
+          vscode.workspace.workspaceFolders?.length === 1
+            ? [{ scheme: "file", language: "robotframework" }]
+            : [{ scheme: "file", language: "robotframework", pattern: `${workspaceFolder.uri.fsPath}/**/*` }],
         synchronize: {
           configurationSection: [CONFIG_SECTION],
         },
@@ -320,7 +331,7 @@ export class LanguageClientsManager {
         if (e.newState == State.Running) {
           closeHandlerAction = CloseAction.Restart;
         } else if (e.newState == State.Stopped) {
-          if (this.clients.get(workspaceFolder.uri.toString()) !== result)
+          if (workspaceFolder && this.clients.get(workspaceFolder.uri.toString()) !== result)
             closeHandlerAction = CloseAction.DoNotRestart;
         }
 
@@ -393,7 +404,11 @@ export class LanguageClientsManager {
     for (const document of vscode.workspace.textDocuments) {
       if (document.languageId === "robotframework") {
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
-        if (workspaceFolder) folders.add(workspaceFolder);
+        if (workspaceFolder) {
+          folders.add(workspaceFolder);
+        } else if (vscode.workspace.workspaceFolders?.length === 1) {
+          folders.add(vscode.workspace.workspaceFolders[0]);
+        }
       }
     }
 
@@ -433,14 +448,14 @@ export class LanguageClientsManager {
             "robot/discovering/getTestsFromWorkspace",
             {
               workspaceFolder: workspaceFolder.uri.toString(),
-              paths: paths ?? ["."],
+              paths: paths,
               suites,
             },
             token
           )
         : await client.sendRequest<RobotTestItem[]>("robot/discovering/getTestsFromWorkspace", {
             workspaceFolder: workspaceFolder.uri.toString(),
-            paths: paths ?? ["."],
+            paths: paths,
           })) ?? undefined
     );
   }

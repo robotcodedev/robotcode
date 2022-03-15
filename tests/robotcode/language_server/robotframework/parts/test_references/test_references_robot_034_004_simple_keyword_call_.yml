@@ -1344,3 +1344,12 @@ result:
       character: 69
       line: 47
   uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 2
+    start:
+      character: 4
+      line: 2
+  uri: tests1/first.robot

@@ -305,7 +305,10 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     async def get_imports_manager(self, document: TextDocument) -> ImportsManager:
         folder = self.parent.workspace.get_workspace_folder(document.uri)
         if folder is None:
-            return await self.default_imports_manager
+            if len(self.parent.workspace.workspace_folders) == 1:
+                folder = self.parent.workspace.workspace_folders[0]
+            else:
+                return await self.default_imports_manager
 
         if folder not in self._imports_managers:
             async with self._imports_managers_lock:

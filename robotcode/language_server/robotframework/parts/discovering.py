@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 @dataclass(repr=False)
 class GetAllTestsParams(Model):
     workspace_folder: str
-    paths: Optional[List[str]]
+    paths: Optional[List[str]] = None
     suites: Optional[List[str]] = None
 
 
@@ -221,7 +221,8 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 children.append(
                     TestItem(
                         type="test",
-                        id=f"{Path(test.source).resolve()};{test.longname};{test.lineno}",
+                        id=f"{Path(test.source).resolve() if test.source is not None else ''};"
+                        f"{test.longname};{test.lineno}",
                         label=test.name,
                         longname=test.longname,
                         uri=str(Uri.from_path(test.source)) if test.source else None,
@@ -238,7 +239,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
             return TestItem(
                 type="suite",
-                id=f"{Path(suite.source).resolve()};{suite.longname}",
+                id=f"{Path(suite.source).resolve() if suite.source is not None else ''};{suite.longname}",
                 label=suite.name,
                 longname=suite.longname,
                 uri=str(Uri.from_path(suite.source)) if suite.source else None,
@@ -256,6 +257,9 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             try:
                 config = await self.get_config(workspace_folder)
                 mode = config.get_mode() if config is not None else None
+
+                if paths is None and config is not None:
+                    paths = config.paths
 
                 if paths and len(paths):
 

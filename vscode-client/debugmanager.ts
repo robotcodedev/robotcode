@@ -106,6 +106,11 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
 
     debugConfiguration.args = [...config.get<string[]>("robot.args", []), ...(debugConfiguration.args ?? [])];
 
+    debugConfiguration.variableFiles = [
+      ...config.get<string[]>("robot.variableFiles", []),
+      ...(debugConfiguration.variableFiles ?? []),
+    ];
+
     debugConfiguration.variables = {
       ...config.get<{ [Key: string]: unknown }>("robot.variables", {}),
       ...(debugConfiguration.variables ?? {}),
@@ -368,6 +373,7 @@ export class DebugManager {
       args.push(`robotcode.debugger.modifiers.ExcludedByLongName${separator}${excluded.join(separator)}`);
     }
     const template = config.get("debug.defaultConfiguration", {});
+    const paths = config.get("robot.paths", []);
 
     await vscode.debug.startDebugging(
       folder,
@@ -378,7 +384,7 @@ export class DebugManager {
           name: "RobotCode: Run Tests",
           request: "launch",
           cwd: folder?.uri.fsPath,
-          target: ".",
+          paths: paths,
           args: args,
           console: config.get("debug.defaultConsole", "integratedTerminal"),
           runId: runId,
