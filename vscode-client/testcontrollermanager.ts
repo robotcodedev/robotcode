@@ -122,11 +122,7 @@ export class TestControllerManager {
     );
 
     this.testController.resolveHandler = async (item) => {
-      if (item === undefined) {
-        await this.refreshWorkspace();
-      } else {
-        await this.refresh(item);
-      }
+      await this.refresh(item);
     };
 
     const fileWatcher = vscode.workspace.createFileSystemWatcher("**/*.{robot,resource}");
