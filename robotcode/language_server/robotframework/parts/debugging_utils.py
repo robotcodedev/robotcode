@@ -103,7 +103,7 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
             if namespace is None:
                 return None
 
-            model = await self.parent.documents_cache.get_model(document)
+            model = await self.parent.documents_cache.get_model(document, False)
             if model is None:
                 return None
 
@@ -175,13 +175,11 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
                 if namespace is None:
                     return []
 
-                model = await self.parent.documents_cache.get_model(document)
+                model = await self.parent.documents_cache.get_model(document, False)
 
                 real_range = Range(view_port.start, min(view_port.end, context.stopped_location.end))
 
-                nodes = await get_nodes_at_position(
-                    await self.parent.documents_cache.get_model(document), context.stopped_location.start
-                )
+                nodes = await get_nodes_at_position(model, context.stopped_location.start)
 
                 def get_tokens() -> Generator[Tuple[Token, ast.AST], None, None]:
                     for n in iter_nodes(model):
