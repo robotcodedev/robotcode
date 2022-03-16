@@ -119,8 +119,8 @@ class StackFrameEntry:
         name: str,
         type: str,
         source: Optional[str],
-        line: int,
-        column: int = 1,
+        line: Optional[int],
+        column: Optional[int] = None,
         handler: Any = None,
         is_file: bool = True,
         libname: Optional[str] = None,
@@ -591,7 +591,7 @@ class Debugger:
         type: str,
         source: Optional[str],
         line: Optional[int],
-        column: Optional[int] = 1,
+        column: Optional[int] = None,
         *,
         handler: Any = None,
         libname: Optional[str] = None,
@@ -615,8 +615,8 @@ class Debugger:
             name,
             type,
             source,
-            line if line is not None else 0,
-            column if column is not None else 0,
+            line,
+            column,
             handler=handler,
             is_file=is_file,
             libname=libname,
@@ -690,7 +690,7 @@ class Debugger:
 
                 self.wait_for_running()
             elif entry.source:
-                self.process_start_state(entry.source, entry.line, entry.type, status)
+                self.process_start_state(entry.source, entry.line if entry.line is not None else 0, entry.type, status)
 
                 self.wait_for_running()
 
@@ -722,7 +722,7 @@ class Debugger:
         entry = self.add_stackframe_entry(name, type, source, line_no, longname=longname)
 
         if self.debug and entry.source:
-            self.process_start_state(entry.source, entry.line, entry.type, status)
+            self.process_start_state(entry.source, entry.line if entry.line is not None else 0, entry.type, status)
 
             self.wait_for_running()
 
@@ -749,7 +749,7 @@ class Debugger:
 
         status = attributes.get("status", "")
         source = attributes.get("source", None)
-        line_no = attributes.get("lineno", 1)
+        line_no = attributes.get("lineno", None)
         type = attributes.get("type", "KEYWORD")
         libname = attributes.get("libname", None)
         kwname = attributes.get("kwname", None)
@@ -770,7 +770,7 @@ class Debugger:
         if status == "NOT RUN" and type not in ["IF"]:
             return
 
-        if self.debug and entry.source:
+        if self.debug and entry.source and entry.line is not None:
             self.process_start_state(entry.source, entry.line, entry.type, status)
 
             self.wait_for_running()
@@ -791,7 +791,7 @@ class Debugger:
                 )
 
         source = attributes.get("source", None)
-        line_no = attributes.get("lineno", 1)
+        line_no = attributes.get("lineno", None)
         type = attributes.get("type", "KEYWORD")
         kwname = attributes.get("kwname", None)
 
@@ -836,8 +836,8 @@ class Debugger:
                     yield StackFrame(
                         id=v.id,
                         name=v.longname or v.kwname or v.name or v.type,
-                        line=v.stack_frames[0].line,
-                        column=v.stack_frames[0].column,
+                        line=v.stack_frames[0].line if v.stack_frames[0].line is not None else 0,
+                        column=v.stack_frames[0].column if v.stack_frames[0].column is not None else 1,
                         source=source_from_entry(v.stack_frames[0]),
                         presentation_hint="normal" if v.stack_frames[0].is_file else "subtle",
                         module_id=v.libname,
@@ -846,8 +846,8 @@ class Debugger:
                     yield StackFrame(
                         id=v.id,
                         name=v.longname or v.kwname or v.name or v.type,
-                        line=v.line,
-                        column=v.column,
+                        line=v.line if v.line is not None else 1,
+                        column=v.column if v.column is not None else 1,
                         source=source_from_entry(v),
                         presentation_hint="normal" if v.is_file else "subtle",
                         module_id=v.libname,
@@ -873,7 +873,7 @@ class Debugger:
                         output="LOG> {timestamp} {level}: {message}\n".format(**message),
                         category=OutputCategory.CONSOLE,
                         source=source,
-                        line=line,
+                        line=line if line is not None else 0,
                         column=0 if source is not None else None,
                     )
                 ),
