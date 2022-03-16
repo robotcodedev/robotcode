@@ -2,7 +2,9 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
+## [Unreleased]
+- none so far
+##  0.9.3
 
 - Introduce setting `robotcode.robot.paths` and correspondend launch config property `paths`
   - Specifies the paths where robot/robotcode should discover test suites. Corresponds to the 'paths' option of robot
