@@ -1097,10 +1097,7 @@ class Debugger:
         except BaseException as e:
             result = e
 
-        if result is not None:
-            return EvaluateResult(repr(result), repr(type(result)))
-
-        return EvaluateResult("")
+        return EvaluateResult(repr(result), repr(type(result)))
 
     def set_variable(
         self, variables_reference: int, name: str, value: str, format: Optional[ValueFormat] = None
