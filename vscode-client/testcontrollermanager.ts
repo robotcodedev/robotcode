@@ -625,7 +625,9 @@ export class TestControllerManager {
     } else {
       this.testController.items.forEach((test) => {
         const robotTest = this.findRobotItem(test);
-        if (robotTest?.type === "workspace") {
+        if (robotTest?.type === "error") {
+          return;
+        } else if (robotTest?.type === "workspace") {
           test.children.forEach((v) => includedItems.push(v));
         } else {
           includedItems.push(test);
@@ -635,6 +637,8 @@ export class TestControllerManager {
 
     const included = this.mapTestItemsToWorkspace(includedItems);
     const excluded = this.mapTestItemsToWorkspace(request.exclude ? Array.from(request.exclude) : []);
+
+    if (included.size === 0) return;
 
     const run = this.testController.createTestRun(request);
 

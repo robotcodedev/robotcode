@@ -8,6 +8,11 @@ All notable changes to the "robotcode" extension will be documented in this file
   - Specifies the paths where robot/robotcode should discover test suites. Corresponds to the 'paths' option of robot
 - Introduce setting `robotcode.robot.variableFiles` and correspondend launch config property `variableFiles`
   - Specifies the variable files for robotframework. Corresponds to the '--variablefile' option of robot.
+- Rework debugger termination
+  - if you want to stop the current run
+    - first click on stop tries to break the run like if you press <kbd>CTRL</kbd>+<kbd>c</kbd> to give the chance that logs and reports are written
+    - second click stops/kill execution
+- 'None' values are now shown correctly in debugger
 
 ##  0.9.2
 

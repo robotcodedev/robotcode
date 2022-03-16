@@ -137,6 +137,8 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
     async def _terminate(self, arguments: Optional[TerminateArguments] = None, *args: Any, **kwargs: Any) -> None:
         import signal
 
+        Debugger.instance().terminate()
+
         if not self._sigint_signaled:
             self._logger.info("Send SIGINT to process")
             signal.raise_signal(signal.SIGINT)
@@ -144,8 +146,6 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         else:
             self._logger.info("Send SIGTERM to process")
             signal.raise_signal(signal.SIGTERM)
-
-        Debugger.instance().stop()
 
     @rpc_method(name="disconnect", param_type=DisconnectArguments)
     async def _disconnect(self, arguments: Optional[DisconnectArguments] = None, *args: Any, **kwargs: Any) -> None:

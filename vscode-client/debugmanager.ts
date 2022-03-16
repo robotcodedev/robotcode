@@ -247,6 +247,14 @@ export class DebugManager {
               await DebugManager.OnDebugpyStarted(event.session, event.event, event.body);
               break;
             }
+            case "terminateRequested": {
+              for (const s of this._attachedSessions) {
+                if (s.parentSession == event.session) {
+                  await vscode.debug.stopDebugging(s);
+                }
+              }
+              break;
+            }
             case "robotExited": {
               await DebugManager.OnRobotExited(
                 event.session,
@@ -266,14 +274,7 @@ export class DebugManager {
         }
       }),
 
-      vscode.debug.onDidTerminateDebugSession(async (session) => {
-        if (session.type === "robotcode") {
-          for (const s of this._attachedSessions) {
-            if (s.parentSession === session) {
-              await vscode.debug.stopDebugging(s);
-            }
-          }
-        }
+      vscode.debug.onDidTerminateDebugSession((session) => {
         if (this._attachedSessions.has(session)) {
           this._attachedSessions.delete(session);
         }
@@ -423,8 +424,8 @@ export class DebugManager {
         {
           parentSession: session,
           compact: true,
-          lifecycleManagedByParent: true,
-          consoleMode: vscode.DebugConsoleMode.Separate,
+          lifecycleManagedByParent: false,
+          consoleMode: vscode.DebugConsoleMode.MergeWithParent,
         }
       );
     }

@@ -15,6 +15,7 @@ from ..dap_types import (
     ConfigurationDoneRequest,
     DisconnectArguments,
     DisconnectRequest,
+    Event,
     ExceptionBreakpointsFilter,
     InitializeRequestArguments,
     LaunchRequestArguments,
@@ -81,7 +82,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
             supports_conditional_breakpoints=True,
             supports_hit_conditional_breakpoints=True,
             support_terminate_debuggee=True,
-            support_suspend_debuggee=True,
+            # support_suspend_debuggee=True,
             supports_evaluate_for_hovers=True,
             supports_terminate_request=True,
             supports_log_points=True,
@@ -216,6 +217,9 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         if target:
             run_args.append(target)
 
+        if not paths and not target:
+            run_args.append(".")
+
         env = {k: ("" if v is None else str(v)) for k, v in env.items()} if env else {}
 
         if console in ["integratedTerminal", "externalTerminal"]:
@@ -273,6 +277,8 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
     @rpc_method(name="terminate", param_type=TerminateArguments)
     async def _terminate(self, arguments: Optional[TerminateArguments] = None, *args: Any, **kwargs: Any) -> None:
         if self.client.connected:
+            self.send_event(Event("terminateRequested"))
+
             return await self.client.protocol.send_request_async(TerminateRequest(arguments=arguments))
         else:
             await self.send_event_async(TerminatedEvent())

@@ -231,6 +231,7 @@ class Debugger:
         self.last_fail_message: Optional[str] = None
         self.stop_on_entry = False
         self.no_debug = False
+        self.terminated = False
 
     @property
     def debug(self) -> bool:
@@ -259,6 +260,10 @@ class Debugger:
     @robot_output_file.setter
     def robot_output_file(self, value: Optional[str]) -> None:
         self._robot_output_file = value
+
+    @_logger.call
+    def terminate(self) -> None:
+        self.terminated = True
 
     @_logger.call
     def start(self) -> None:
@@ -524,10 +529,14 @@ class Debugger:
                             )
 
     def process_end_state(self, status: str, filter_id: str, description: str, text: Optional[str]) -> None:
-        if status == "FAIL" and any(
-            v
-            for v in self.exception_breakpoints
-            if v.filter_options is not None and any(o for o in v.filter_options if o.filter_id == filter_id)
+        if (
+            not self.terminated
+            and status == "FAIL"
+            and any(
+                v
+                for v in self.exception_breakpoints
+                if v.filter_options is not None and any(o for o in v.filter_options if o.filter_id == filter_id)
+            )
         ):
             self.state = State.Paused
             self.send_event(
