@@ -257,7 +257,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
         fixture_node = cast(Fixture, node)
 
         name_token = cast(Token, fixture_node.get_token(RobotToken.NAME))
-        if name_token is None or name_token.value is None or name_token.value in ("", "NONE"):
+        if name_token is None or name_token.value is None or name_token.value.upper() in ("", "NONE"):
             return None
 
         result = await self.get_keyworddoc_and_token_from_position(
@@ -312,7 +312,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
         if template_node.value:
 
             keyword_token = cast(RobotToken, template_node.get_token(RobotToken.NAME))
-            if keyword_token is None:
+            if keyword_token is None or keyword_token.value is None or keyword_token.value.upper() in ("", "NONE"):
                 return None
 
             keyword_token = self.strip_bdd_prefix(keyword_token)

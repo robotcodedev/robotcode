@@ -16,6 +16,9 @@ second
     3    5    6    2
     a=1    2    4
 
+third
+    [Template]    NONE
+    Log    hello
 
 *** Keywords ***
 suite template keyword

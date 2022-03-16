@@ -389,7 +389,11 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         # TODO: calculate possible variables in NAME
 
-        if keyword_token is not None and is_not_variable_token(keyword_token):
+        if (
+            keyword_token is not None
+            and is_not_variable_token(keyword_token)
+            and keyword_token.value.upper() not in ("", "NONE")
+        ):
             await self._analyze_keyword_call(value.value, value, keyword_token, [])
 
         self.test_template = value
@@ -404,7 +408,11 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         # TODO: calculate possible variables in NAME
 
-        if keyword_token is not None and is_not_variable_token(keyword_token):
+        if (
+            keyword_token is not None
+            and is_not_variable_token(keyword_token)
+            and keyword_token.value.upper() not in ("", "NONE")
+        ):
             await self._analyze_keyword_call(value.value, value, keyword_token, [])
 
         await self.generic_visit(node)

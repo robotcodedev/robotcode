@@ -1748,7 +1748,7 @@ class CompletionCollector(ModelHelperMixin):
         from robot.parsing.model.statements import Fixture
 
         name_token = cast(Fixture, node).get_token(RobotToken.NAME)
-        if name_token is None or name_token.value is None or name_token.value in ("", "NONE"):
+        if name_token is None or name_token.value is None or name_token.value.upper() in ("", "NONE"):
             return None
 
         return await self._complete_KeywordCall_or_Fixture(RobotToken.NAME, node, nodes_at_position, position, context)
