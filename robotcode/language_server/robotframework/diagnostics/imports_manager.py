@@ -755,6 +755,7 @@ class ImportsManager:
 
             if result.stdout:
                 self._logger.warning(lambda: f"stdout captured at loading library {name}{repr(args)}:\n{result.stdout}")
+
             return result
 
         entry_key = _LibrariesEntryKey(source, args)

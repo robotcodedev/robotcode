@@ -134,15 +134,22 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             ignore_patterns=config.exclude_patterns or [],  # type: ignore
             absolute=True,
         ):
-            doc = await self.parent.robot_workspace.get_or_open_document(f, "robotframework")
+            try:
+                doc = await self.parent.robot_workspace.get_or_open_document(f, "robotframework")
+            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                raise
+            except BaseException as ex:
+                self._logger.exception(ex)
+            else:
+                futures.append(run_coroutine_in_thread(func, doc, *args, **kwargs))
 
-            futures.append(run_coroutine_in_thread(func, doc, *args, **kwargs))
         for e in await asyncio.gather(*futures, return_exceptions=True):
             if isinstance(e, BaseException):
                 if not isinstance(result, asyncio.CancelledError):
                     self._logger.exception(e)
                 continue
             result.extend(e)
+
         return result
 
     async def _references_default(
@@ -501,18 +508,25 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         lib_doc: Optional[LibraryDoc] = None,
     ) -> List[Location]:
 
-        namespace = await self.parent.documents_cache.get_namespace(doc)
+        try:
+            namespace = await self.parent.documents_cache.get_namespace(doc)
 
-        if (
-            lib_doc is not None
-            and lib_doc.source is not None
-            and lib_doc.source != str(doc.uri.to_path())
-            and lib_doc not in (e.library_doc for e in (await namespace.get_libraries()).values())
-            and lib_doc not in (e.library_doc for e in (await namespace.get_resources()).values())
-        ):
-            return []
+            if (
+                lib_doc is not None
+                and lib_doc.source is not None
+                and lib_doc.source != str(doc.uri.to_path())
+                and lib_doc not in (e.library_doc for e in (await namespace.get_libraries()).values())
+                and lib_doc not in (e.library_doc for e in (await namespace.get_resources()).values())
+            ):
+                return []
 
-        return await self._find_keyword_references_in_namespace(namespace, kw_doc)
+            return await self._find_keyword_references_in_namespace(namespace, kw_doc)
+        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+            raise
+        except BaseException as e:
+            self._logger.exception(e)
+
+        return []
 
     async def _find_keyword_references_in_namespace(self, namespace: Namespace, kw_doc: KeywordDoc) -> List[Location]:
         from robot.parsing.lexer.tokens import Token as RobotToken
