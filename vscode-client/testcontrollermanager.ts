@@ -648,7 +648,7 @@ export class TestControllerManager {
       }
     });
 
-    for (const [workspace, ids] of included) {
+    for (const [workspace, testItems] of included) {
       const runId = TestControllerManager.runId.next().value;
       this.testRuns.set(runId, run);
 
@@ -664,7 +664,9 @@ export class TestControllerManager {
       if (includedItems.length === 1 && includedItems[0] === workspaceItem && excluded.size === 0) {
         await DebugManager.runTests(workspace, [], [], [], runId, options, dryRun);
       } else {
-        const includedInWs = ids.map((i) => this.findRobotItem(i)?.longname).filter((i) => i !== undefined) as string[];
+        const includedInWs = testItems
+          .map((i) => this.findRobotItem(i)?.longname)
+          .filter((i) => i !== undefined) as string[];
         const excludedInWs =
           (excluded
             .get(workspace)
@@ -673,14 +675,15 @@ export class TestControllerManager {
 
         const suites = new Set<string>();
 
-        for (const t of [...includedInWs, ...excludedInWs]) {
-          const testItem = this.findTestItemById(t);
+        for (const testItem of [...testItems, ...(excluded.get(workspace) || [])]) {
           if (!testItem?.canResolveChildren) {
             if (testItem?.parent) {
-              suites.add(testItem.parent.id);
+              const longname = this.findRobotItem(testItem?.parent)?.longname;
+              if (longname) suites.add(longname);
             }
           } else {
-            suites.add(t);
+            const longname = this.findRobotItem(testItem)?.longname;
+            if (longname) suites.add(longname);
           }
         }
         await DebugManager.runTests(workspace, Array.from(suites), includedInWs, excludedInWs, runId, options, dryRun);
