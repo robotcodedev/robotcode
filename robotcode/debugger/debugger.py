@@ -212,7 +212,11 @@ class Debugger:
 
     def __init__(self) -> None:
         self.breakpoints: Dict[str, BreakpointsEntry] = {}
+
         self.exception_breakpoints: Set[ExceptionBreakpointsEntry] = set()
+        self.exception_breakpoints.add(
+            ExceptionBreakpointsEntry((), (ExceptionFilterOptions("uncaughted_failed_keyword"),), ())
+        )
 
         self.main_thread: Optional[threading.Thread] = None
         self.full_stack_frames: Deque[StackFrameEntry] = deque()
@@ -528,14 +532,14 @@ class Debugger:
                                 ),
                             )
 
-    def process_end_state(self, status: str, filter_id: str, description: str, text: Optional[str]) -> None:
+    def process_end_state(self, status: str, filter_id: Set[str], description: str, text: Optional[str]) -> None:
         if (
             not self.terminated
             and status == "FAIL"
             and any(
                 v
                 for v in self.exception_breakpoints
-                if v.filter_options is not None and any(o for o in v.filter_options if o.filter_id == filter_id)
+                if v.filter_options and any(o for o in v.filter_options if o.filter_id in filter_id)
             )
         ):
             self.state = State.Paused
@@ -633,6 +637,11 @@ class Debugger:
             longname=longname,
         )
 
+        self.full_stack_frames.appendleft(result)
+
+        if type in ["KEYWORD"] and source is None and line is None and column is None:
+            return result
+
         if type in ["SUITE", "TEST"]:
             self.stack_frames.appendleft(result)
         elif type in ["KEYWORD", "SETUP", "TEARDOWN"] and isinstance(handler, UserKeywordHandler):
@@ -644,8 +653,6 @@ class Debugger:
             if self.stack_frames:
                 self.stack_frames[0].stack_frames.appendleft(result)
 
-        self.full_stack_frames.appendleft(result)
-
         return result
 
     def remove_stackframe_entry(
@@ -654,11 +661,16 @@ class Debugger:
         type: str,
         source: Optional[str],
         line: Optional[int],
-        column: Optional[int] = 1,
+        column: Optional[int] = None,
         *,
         handler: Any = None,
     ) -> None:
         from robot.running.userkeyword import UserKeywordHandler
+
+        self.full_stack_frames.popleft()
+
+        if type in ["KEYWORD"] and source is None and line is None and column is None:
+            return
 
         if type in ["SUITE", "TEST"]:
             self.stack_frames.popleft()
@@ -670,8 +682,6 @@ class Debugger:
         else:
             if self.stack_frames:
                 self.stack_frames[0].stack_frames.popleft()
-
-        self.full_stack_frames.popleft()
 
     def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
         source = attributes.get("source", None)
@@ -707,12 +717,13 @@ class Debugger:
         if self.debug:
             status = attributes.get("status", "")
 
-            self.process_end_state(
-                status,
-                "failed_suite",
-                "Suite failed.",
-                f"Suite failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
-            )
+            if status == "FAIL":
+                self.process_end_state(
+                    status,
+                    {"failed_suite"},
+                    "Suite failed.",
+                    f"Suite failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
+                )
 
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
@@ -739,12 +750,13 @@ class Debugger:
         if self.debug:
             status = attributes.get("status", "")
 
-            self.process_end_state(
-                status,
-                "failed_test",
-                "Test failed.",
-                f"Test failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
-            )
+            if status == "FAIL":
+                self.process_end_state(
+                    status,
+                    {"failed_test"},
+                    "Test failed.",
+                    f"Test failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
+                )
 
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
@@ -784,6 +796,25 @@ class Debugger:
 
             self.wait_for_running()
 
+    CAUGHTED_KEYWORDS = [
+        "BuiltIn.Run Keyword And Expect Error",
+        "BuiltIn.Run Keyword And Ignore Error",
+        "BuiltIn.Run Keyword And Warn On Failure",
+        "BuiltIn.Wait Until Keyword Succeeds",
+        "BuiltIn.Run Keyword And Continue On Failure",
+    ]
+
+    def in_caughted_keyword(self) -> bool:
+        r = next(
+            (
+                v
+                for v in itertools.islice(self.full_stack_frames, 1, None)
+                if v.type == "KEYWORD" and v.longname in self.CAUGHTED_KEYWORDS
+            ),
+            None,
+        )
+        return r is None
+
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         from robot.running.context import EXECUTION_CONTEXTS
 
@@ -791,10 +822,10 @@ class Debugger:
         if self.debug:
             status = attributes.get("status", "")
 
-            if status != "NOT RUN" and type in ["KEYWORD", "SETUP", "TEARDOWN"]:
+            if status == "FAIL" and type in ["KEYWORD", "SETUP", "TEARDOWN"]:
                 self.process_end_state(
                     status,
-                    "failed_keyword",
+                    {"failed_keyword", *({"uncaughted_failed_keyword"} if self.in_caughted_keyword() else {})},
                     "Keyword failed.",
                     f"Keyword failed: {self.last_fail_message}" if self.last_fail_message else "Keyword failed.",
                 )
@@ -1149,7 +1180,7 @@ class Debugger:
 
         if filter_options is not None:
             for option in filter_options:
-                if option.filter_id in ["failed_keyword", "failed_test", "failed_suite"]:
+                if option.filter_id in ["failed_keyword", "uncaughted_failed_keyword", "failed_test", "failed_suite"]:
                     entry = ExceptionBreakpointsEntry(
                         tuple(filters),
                         tuple(filter_options) if filter_options is not None else None,
