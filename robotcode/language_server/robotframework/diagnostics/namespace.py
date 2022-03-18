@@ -141,11 +141,18 @@ class VariablesVisitor(AsyncVisitor):
 
 
 class BlockVariableVisitor(AsyncVisitor):
-    async def get(self, source: str, model: ast.AST, position: Optional[Position] = None) -> List[VariableDefinition]:
+    def __init__(self, source: str, position: Optional[Position] = None, in_args: bool = True) -> None:
+        super().__init__()
+
         self.source = source
         self.position = position
+        self.in_args = in_args
 
         self._results: Dict[str, VariableDefinition] = {}
+
+    async def get(self, model: ast.AST) -> List[VariableDefinition]:
+
+        self._results = {}
 
         await self.visit(model)
 
@@ -178,10 +185,10 @@ class BlockVariableVisitor(AsyncVisitor):
                     self._results[name] = ArgumentDefinition(
                         name=name,
                         name_token=strip_variable_token(variable_token),
-                        line_no=n.lineno,
-                        col_offset=n.col_offset,
-                        end_line_no=n.lineno,
-                        end_col_offset=n.end_col_offset,
+                        line_no=variable_token.lineno,
+                        col_offset=variable_token.col_offset,
+                        end_line_no=variable_token.lineno,
+                        end_col_offset=variable_token.end_col_offset,
                         source=self.source,
                     )
 
@@ -212,13 +219,16 @@ class BlockVariableVisitor(AsyncVisitor):
                 argument = self.get_variable_token(argument_token)
 
                 if argument is not None:
+                    if self.in_args and self.position is not None and self.position > range_from_token(argument).end:
+                        break
+
                     self._results[argument.value] = ArgumentDefinition(
                         name=argument.value,
                         name_token=strip_variable_token(argument),
-                        line_no=n.lineno,
-                        col_offset=n.col_offset,
-                        end_line_no=n.lineno,
-                        end_col_offset=n.end_col_offset,
+                        line_no=argument.lineno,
+                        col_offset=argument.col_offset,
+                        end_line_no=argument.lineno,
+                        end_col_offset=argument.end_col_offset,
                         source=self.source,
                     )
 
@@ -241,10 +251,10 @@ class BlockVariableVisitor(AsyncVisitor):
                     self._results[variable.value] = LocalVariableDefinition(
                         name=variable.value,
                         name_token=strip_variable_token(variable),
-                        line_no=n.lineno,
-                        col_offset=n.col_offset,
-                        end_line_no=n.lineno,
-                        end_col_offset=n.end_col_offset,
+                        line_no=variable.lineno,
+                        col_offset=variable.col_offset,
+                        end_line_no=variable.lineno,
+                        end_col_offset=variable.end_col_offset,
                         source=self.source,
                     )
 
@@ -276,10 +286,10 @@ class BlockVariableVisitor(AsyncVisitor):
                         self._results[variable_token.value] = LocalVariableDefinition(
                             name=variable_token.value,
                             name_token=strip_variable_token(variable_token),
-                            line_no=n.lineno,
-                            col_offset=n.col_offset,
-                            end_line_no=n.lineno,
-                            end_col_offset=n.end_col_offset,
+                            line_no=variable_token.lineno,
+                            col_offset=variable_token.col_offset,
+                            end_line_no=variable_token.lineno,
+                            end_col_offset=variable_token.end_col_offset,
                             source=self.source,
                         )
 
@@ -311,10 +321,10 @@ class BlockVariableVisitor(AsyncVisitor):
                         self._results[variable_token.value] = LocalVariableDefinition(
                             name=variable_token.value,
                             name_token=strip_variable_token(variable_token),
-                            line_no=n.lineno,
-                            col_offset=n.col_offset,
-                            end_line_no=n.lineno,
-                            end_col_offset=n.end_col_offset,
+                            line_no=variable_token.lineno,
+                            col_offset=variable_token.col_offset,
+                            end_line_no=variable_token.lineno,
+                            end_col_offset=variable_token.end_col_offset,
                             source=self.source,
                         )
 
@@ -333,10 +343,10 @@ class BlockVariableVisitor(AsyncVisitor):
                 self._results[variable_token.value] = LocalVariableDefinition(
                     name=variable_token.value,
                     name_token=strip_variable_token(variable_token),
-                    line_no=n.lineno,
-                    col_offset=n.col_offset,
-                    end_line_no=n.lineno,
-                    end_col_offset=n.end_col_offset,
+                    line_no=variable_token.lineno,
+                    col_offset=variable_token.col_offset,
+                    end_line_no=variable_token.lineno,
+                    end_col_offset=variable_token.end_col_offset,
                     source=self.source,
                 )
 
@@ -749,6 +759,7 @@ class Namespace:
         skip_commandline_variables: bool = False,
     ) -> AsyncGenerator[Tuple[VariableMatcher, VariableDefinition], None]:
         from robot.parsing.model.blocks import Keyword, TestCase
+        from robot.parsing.model.statements import Arguments
 
         # await self.ensure_initialized()
 
@@ -756,7 +767,9 @@ class Namespace:
 
         async for var in async_chain(
             *[
-                await BlockVariableVisitor().get(self.source, n, position)
+                await BlockVariableVisitor(
+                    self.source, position, isinstance(nodes[-1], Arguments) if nodes else False
+                ).get(n)
                 for n in nodes or []
                 if isinstance(n, (Keyword, TestCase))
             ],

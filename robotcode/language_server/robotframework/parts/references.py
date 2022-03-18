@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import itertools
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -47,8 +48,10 @@ from ..utils.ast import (
     get_nodes_at_position,
     get_tokens_at_position,
     is_not_variable_token,
+    iter_nodes_at_position,
     iter_over_keyword_names_and_owners,
     range_from_token,
+    tokenize_variables,
 )
 from ..utils.async_ast import iter_nodes
 
@@ -227,6 +230,35 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             else await self._find_references(document, self.find_variable_references_in_file, variable)
         )
 
+    async def yield_argument_name_and_rest(self, node: ast.AST, token: Token) -> AsyncGenerator[Token, None]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Arguments
+
+        if isinstance(node, Arguments) and token.type == RobotToken.ARGUMENT:
+            argument = next(
+                (
+                    v
+                    for v in itertools.dropwhile(
+                        lambda t: t.type in RobotToken.NON_DATA_TOKENS,
+                        tokenize_variables(token, ignore_errors=True),
+                    )
+                    if v.type == RobotToken.VARIABLE
+                ),
+                None,
+            )
+            if argument is None or argument.value == token.value:
+                yield token
+            else:
+                yield argument
+                i = len(argument.value)
+
+                async for t in self.yield_argument_name_and_rest(
+                    node, RobotToken(token.type, token.value[i:], token.lineno, token.col_offset + i, token.error)
+                ):
+                    yield t
+        else:
+            yield token
+
     @_logger.call
     async def find_variable_references_in_file(
         self,
@@ -234,13 +266,9 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         variable: VariableDefinition,
     ) -> List[Location]:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.blocks import Block, Keyword, Section, TestCase
 
         namespace = await self.parent.documents_cache.get_namespace(doc)
         model = await self.parent.documents_cache.get_model(doc)
-
-        result: List[Location] = []
-        current_block: Optional[Block] = None
 
         if (
             variable.source
@@ -259,24 +287,23 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         expression_statements = self.get_expression_statement_types()
 
+        result: List[Location] = []
+
         async for node in iter_nodes(model):
-            if isinstance(node, Section):
-                current_block = None
-            elif isinstance(node, (TestCase, Keyword)):
-                current_block = node
 
             if isinstance(node, HasTokens):
-                for token in node.tokens:
-                    async for token_and_var in self.iter_variables_from_token(
-                        token,
-                        namespace,
-                        [*([current_block] if current_block is not None else []), node],
-                        range_from_token(token).start,
-                    ):
-                        sub_token, found_variable = token_and_var
+                for token1 in node.tokens:
+                    async for token in self.yield_argument_name_and_rest(node, token1):
+                        async for token_and_var in self.iter_variables_from_token(
+                            token,
+                            namespace,
+                            [n async for n in iter_nodes_at_position(model, range_from_token(token).start)],
+                            range_from_token(token).start,
+                        ):
+                            sub_token, found_variable = token_and_var
 
-                        if found_variable == variable:
-                            result.append(Location(str(doc.uri), range_from_token(sub_token)))
+                            if found_variable == variable:
+                                result.append(Location(str(doc.uri), range_from_token(sub_token)))
 
             if (
                 isinstance(node, Statement)
@@ -286,7 +313,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 async for token_and_var in self.iter_expression_variables_from_token(
                     token,
                     namespace,
-                    [*([current_block] if current_block is not None else []), node],
+                    [n async for n in iter_nodes_at_position(model, range_from_token(token).start)],
                     range_from_token(token).start,
                 ):
                     sub_token, found_variable = token_and_var
