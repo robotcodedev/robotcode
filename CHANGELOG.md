@@ -2,7 +2,9 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
+## [Unreleased]
+- none so far
+##  0.9.4
 
 - Correct handling of argument definitions wich contains a default value with existing variable with same name
 - Implement "Uncaughted Failed Keywords" exception breakpoint
