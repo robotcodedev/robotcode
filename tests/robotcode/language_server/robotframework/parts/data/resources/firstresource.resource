@@ -7,3 +7,9 @@ do something in a resource
 
 do.sell fish
     Log    message
+
+
+some failing keyword
+    Log    hello from failing
+    Fail    ho
+    Log    end failing

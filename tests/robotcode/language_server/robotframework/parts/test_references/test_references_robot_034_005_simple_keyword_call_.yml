@@ -79,6 +79,33 @@ result:
   range:
     end:
       character: 7
+      line: 13
+    start:
+      character: 4
+      line: 13
+  uri: extras/test.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 15
+    start:
+      character: 4
+      line: 15
+  uri: extras/test.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 16
+    start:
+      character: 4
+      line: 16
+  uri: extras/test.robot
+- !Location
+  range:
+    end:
+      character: 7
       line: 2
     start:
       character: 4
@@ -137,6 +164,24 @@ result:
     start:
       character: 4
       line: 8
+  uri: resources/firstresource.resource
+- !Location
+  range:
+    end:
+      character: 7
+      line: 12
+    start:
+      character: 4
+      line: 12
+  uri: resources/firstresource.resource
+- !Location
+  range:
+    end:
+      character: 7
+      line: 14
+    start:
+      character: 4
+      line: 14
   uri: resources/firstresource.resource
 - !Location
   range:
@@ -1356,9 +1401,18 @@ result:
 - !Location
   range:
     end:
-      character: 7
-      line: 2
+      character: 11
+      line: 9
     start:
-      character: 4
-      line: 2
+      character: 8
+      line: 9
+  uri: tests1/first.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 12
+    start:
+      character: 8
+      line: 12
   uri: tests1/first.robot

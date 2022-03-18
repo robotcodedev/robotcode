@@ -6,7 +6,7 @@
     "robotcode.robot.env": {
         "ENV_VAR": "1"
     },
-    "robotcode.debug.attachPython": true,
+    //"robotcode.debug.attachPython": true,
     "robotcode.debug.defaultConfiguration": {
         "pythonConfiguration": {
             "justMyCode": false
@@ -27,5 +27,5 @@
     // "robotcode.debug.outputLog": true,
     // "robotcode.debug.outputMessages": true
     //"python.analysis.diagnosticMode": "workspace"
-    "robotcode.robot.paths": ["./tests", "./tests1"]
+    //"robotcode.robot.paths": ["./tests", "./tests1"]
 }

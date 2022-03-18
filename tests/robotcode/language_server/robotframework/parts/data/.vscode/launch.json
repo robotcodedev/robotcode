@@ -21,9 +21,18 @@
             "request": "launch",
             "cwd": "${workspaceFolder}",
             "target": "${file}",
-            "attachPython": true,
+            "launcherArgs": [
+                "-d",
+                "-dp",
+                "5678",
+                "-dw"
+            ],
+            //"attachPython": true,
             "pythonConfiguration": {
                 "justMyCode": false
+            },
+            "env": {
+                "FIRST": "value"
             }
         },
         {
