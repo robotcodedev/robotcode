@@ -2,8 +2,19 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Correct handling of argument definitions wich contains a default value with existing variable with same name
+- Implement "Uncaughted Failed Keywords" exception breakpoint
+  - from now this is the default breakpoint, means debugger stops only if a keyword failed and it is not called from:
+    - BuiltIn.Run Keyword And Expect Error
+    - BuiltIn.Run Keyword And Ignore Error
+    - "BuiltIn.Run Keyword And Warn On Failure
+    - "BuiltIn.Wait Until Keyword Succeeds
+    - "BuiltIn.Run Keyword And Continue On Failure
+  - partially fixes [#44](https://github.com/d-biehl/robotcode/issues/44)
+  - speedup updating test exploers view
+
 ##  0.9.3
 
 - Introduce setting `robotcode.robot.paths` and correspondend launch config property `paths`
