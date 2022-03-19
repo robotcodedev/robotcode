@@ -21,3 +21,57 @@ result:
     start:
       character: 4
       line: 37
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 66
+    start:
+      character: 4
+      line: 66
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 68
+    start:
+      character: 4
+      line: 68
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 76
+    start:
+      character: 4
+      line: 76
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 78
+    start:
+      character: 4
+      line: 78
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 86
+    start:
+      character: 4
+      line: 86
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 88
+    start:
+      character: 4
+      line: 88

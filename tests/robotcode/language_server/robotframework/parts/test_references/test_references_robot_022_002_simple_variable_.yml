@@ -66,3 +66,21 @@ result:
       character: 35
       line: 38
   uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 35
+      line: 124
+    start:
+      character: 30
+      line: 124
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 44
+      line: 133
+    start:
+      character: 39
+      line: 133
+  uri: tests/references.robot

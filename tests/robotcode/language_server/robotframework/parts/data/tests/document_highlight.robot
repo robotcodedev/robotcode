@@ -57,3 +57,34 @@ forth
     ${result}=    lib_var.A Library Keyword
 #   ^^^^^^^^^    Keyword assignment with equals sign
     Should Be Equal    ${result}   ${LIB_ARG}
+
+
+*** Keywords ***
+a keyword with params
+    [Arguments]    ${A VAR}=${A VAR}
+#                    ^^^^^ another argument
+#                             ^^^^^ a default value
+    Log    ${tt}
+#            ^^ argument usage
+    Log    ${A VAR}
+#            ^^^^^ argument usage
+
+another keyword with params
+    [Arguments]    ${tt}    ${A VAR}=${A VAR}
+#                    ^^ an argument
+#                             ^^^^^ another argument
+#                                      ^^^^^ a default value
+    Log    ${tt}
+#            ^^ argument usage
+    Log    ${A VAR}
+#            ^^^^^ argument usage
+
+again a keyword with params
+    [Arguments]    ${a}    ${b}=${a}
+#                    ^ an argument
+#                            ^ another argument
+#                                 ^ argument usage in argument
+    Log    ${a}
+#            ^ argument usage
+    Log    ${b}
+#            ^ argument usage

@@ -219,8 +219,13 @@ class BlockVariableVisitor(AsyncVisitor):
                 argument = self.get_variable_token(argument_token)
 
                 if argument is not None:
-                    if self.in_args and self.position is not None and self.position > range_from_token(argument).end:
-                        break
+                    if (
+                        self.in_args
+                        and self.position is not None
+                        and self.position in range_from_token(argument_token)
+                        and self.position > range_from_token(argument).end
+                    ):
+                        continue
 
                     self._results[argument.value] = ArgumentDefinition(
                         name=argument.value,

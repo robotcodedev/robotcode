@@ -211,3 +211,32 @@ a simple keyword
 sleep a while
     S l e e p    1s
 #   ^^^^^^^^^  simple keyword with extra spaces and parameter
+
+a keyword with params
+    [Arguments]    ${A VAR}=${A VAR}
+#                    ^^^^^ another argument
+#                             ^^^^^ a default value
+    Log    ${tt}
+#            ^^ argument usage
+    Log    ${A VAR}
+#            ^^^^^ argument usage
+
+another keyword with params
+    [Arguments]    ${tt}    ${A VAR}=${A VAR}
+#                    ^^ an argument
+#                             ^^^^^ another argument
+#                                      ^^^^^ a default value
+    Log    ${tt}
+#            ^^ argument usage
+    Log    ${A VAR}
+#            ^^^^^ argument usage
+
+again a keyword with params
+    [Arguments]    ${a}    ${b}=${a}
+#                    ^ an argument
+#                            ^ another argument
+#                                 ^ argument usage in argument
+    Log    ${a}
+#            ^ argument usage
+    Log    ${b}
+#            ^ argument usage

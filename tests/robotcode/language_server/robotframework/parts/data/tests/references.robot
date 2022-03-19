@@ -101,17 +101,51 @@ do something
     Log    done ${type}
 
 add ${number:[0-9]+} coins to ${thing}
+#^^  Embedded keyword
     Log    added ${number} coins to ${thing}
 
 add ${what:[a-zA-Z]+} to ${thing}
+#^^  Embedded keyword
     Log    this is duplicated
     Log    added ${what} to ${thing}
 
 add ${what:[a-zA-Z]+} to ${thing}
+#^^  Embedded keyword
     Log    added ${what} coins to ${thing}
 
 add ${what:[a-zA-Z ]+} to ${thing}
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Embedded keyword
     Log    added ${what} coins to ${thing}
 
 do add ${bananas} and to my bag
+#^^  Embedded keyword
     Log    ${bananas}
+
+a keyword with params
+    [Arguments]    ${A VAR}=${A VAR}
+#                    ^^^^^ another argument
+#                             ^^^^^ a default value
+    Log    ${tt}
+#            ^^ argument usage
+    Log    ${A VAR}
+#            ^^^^^ argument usage
+
+another keyword with params
+    [Arguments]    ${tt}    ${A VAR}=${A VAR}
+#                    ^^ an argument
+#                             ^^^^^ another argument
+#                                      ^^^^^ a default value
+    Log    ${tt}
+#            ^^ argument usage
+    Log    ${A VAR}
+#            ^^^^^ argument usage
+
+again a keyword with params
+    [Arguments]    ${a}    ${b}=${a}
+#                    ^ an argument
+#                            ^ another argument
+#                                 ^ argument usage in argument
+    Log    ${a}
+#            ^ argument usage
+    Log    ${b}
+#            ^ argument usage

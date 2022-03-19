@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 13
+  line: 115
+  name: argument usage
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 15
+      line: 115
+    start:
+      character: 13
+      line: 115
+  target_range:
+    end:
+      character: 24
+      line: 111
+    start:
+      character: 19
+      line: 111
+  target_selection_range:
+    end:
+      character: 23
+      line: 111
+    start:
+      character: 21
+      line: 111
+  target_uri: goto.robot
