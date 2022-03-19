@@ -92,6 +92,8 @@ a templated Test
     hello
     world
 
+third
+    just another keyword with params
 
 *** Keywords ***
 a simple keyword
@@ -119,13 +121,15 @@ another keyword with params
 #            ^^^^^ argument usage
 
 just another keyword with params
-    [Arguments]    ${tt}    ${A VAR}=${tt}    ${tt}=${A VAR}
+    [Arguments]    ${tt}    ${A VAR1}=${tt}    ${tt}=${A VAR1}
 #                    ^^ an argument
-#                             ^^^^^ another argument
-#                                      ^^^^^ a default value
+#                             ^^^^^^ another argument
+#                                      ^^ a default value
+#                                               ^^ an overridden argument
+#                                                     ^^^^^ a default value from overriden argument
     Log    ${tt}
 #            ^^ argument usage
-    Log    ${A VAR}
+    Log    ${A VAR1}
 #            ^^^^^ argument usage
 
 

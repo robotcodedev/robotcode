@@ -59,6 +59,11 @@ forth
     Should Be Equal    ${result}   ${LIB_ARG}
 
 
+fifth
+    a keyword with params
+    another keyword with params    1
+    again a keyword with params    1
+
 *** Keywords ***
 a keyword with params
     [Arguments]    ${A VAR}=${A VAR}
@@ -80,11 +85,13 @@ another keyword with params
 #            ^^^^^ argument usage
 
 again a keyword with params
-    [Arguments]    ${a}    ${b}=${a}
+    [Arguments]    ${a}    ${b}=${a}    ${c}=${b}
 #                    ^ an argument
 #                            ^ another argument
 #                                 ^ argument usage in argument
     Log    ${a}
 #            ^ argument usage
     Log    ${b}
+#            ^ argument usage
+    Log    ${c}
 #            ^ argument usage

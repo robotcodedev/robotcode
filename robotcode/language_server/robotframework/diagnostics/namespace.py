@@ -212,6 +212,7 @@ class BlockVariableVisitor(AsyncVisitor):
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Arguments
 
+        args: List[str] = []
         n = cast(Arguments, node)
         arguments = n.get_tokens(RobotToken.ARGUMENT)
         for argument_token in (cast(RobotToken, e) for e in arguments):
@@ -225,17 +226,19 @@ class BlockVariableVisitor(AsyncVisitor):
                         and self.position in range_from_token(argument_token)
                         and self.position > range_from_token(argument).end
                     ):
-                        continue
+                        break
 
-                    self._results[argument.value] = ArgumentDefinition(
-                        name=argument.value,
-                        name_token=strip_variable_token(argument),
-                        line_no=argument.lineno,
-                        col_offset=argument.col_offset,
-                        end_line_no=argument.lineno,
-                        end_col_offset=argument.end_col_offset,
-                        source=self.source,
-                    )
+                    if argument.value not in args:
+                        args.append(argument.value)
+                        self._results[argument.value] = ArgumentDefinition(
+                            name=argument.value,
+                            name_token=strip_variable_token(argument),
+                            line_no=argument.lineno,
+                            col_offset=argument.col_offset,
+                            end_line_no=argument.lineno,
+                            end_col_offset=argument.end_col_offset,
+                            source=self.source,
+                        )
 
             except VariableError:
                 pass

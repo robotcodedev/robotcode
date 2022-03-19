@@ -62,16 +62,16 @@ result:
   range:
     end:
       character: 35
-      line: 63
+      line: 68
     start:
       character: 30
-      line: 63
+      line: 68
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 44
-      line: 72
+      line: 77
     start:
       character: 39
-      line: 72
+      line: 77

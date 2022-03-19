@@ -54,6 +54,7 @@ from ..utils.ast import (
     get_nodes_at_position,
     get_tokens_at_position,
     range_from_token,
+    tokenize_variables,
     whitespace_at_begin_of_token,
     whitespace_from_begin_of_token,
 )
@@ -410,7 +411,7 @@ class CompletionCollector(ModelHelperMixin):
                 ),
                 filter_text=s.name[2:-1] if range is not None else None,
             )
-            for s in (await self.namespace.get_variable_matchers(nodes, position)).values()
+            for s in (await self.namespace.get_variable_matchers(list(reversed(nodes)), position)).values()
             if s.name is not None and (s.name_token is None or not position.is_in_range(range_from_token(s.name_token)))
         ]
 
@@ -649,6 +650,21 @@ class CompletionCollector(ModelHelperMixin):
 
         return result
 
+    def get_variable_token(self, token: Token) -> Optional[Token]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+
+        return next(
+            (
+                v
+                for v in itertools.dropwhile(
+                    lambda t: t.type in RobotToken.NON_DATA_TOKENS,
+                    tokenize_variables(token, ignore_errors=True),
+                )
+                if v.type == RobotToken.VARIABLE
+            ),
+            None,
+        )
+
     async def complete_default(
         self,
         nodes_at_position: List[ast.AST],
@@ -683,14 +699,15 @@ class CompletionCollector(ModelHelperMixin):
         elif position.character == 0:
             return await self.create_section_completion_items(None)
 
-        if (
-            len(nodes_at_position) > 1
-            and isinstance(nodes_at_position[0], Statement)
-            and not isinstance(nodes_at_position[0], Arguments)
-        ):
+        if len(nodes_at_position) > 1 and isinstance(nodes_at_position[0], HasTokens):
             node = nodes_at_position[0]
             tokens_at_position = get_tokens_at_position(node, position)
             token_at_position = tokens_at_position[-1]
+
+            if isinstance(node, Arguments):
+                arg = self.get_variable_token(token_at_position)
+                if arg is not None and position <= range_from_token(arg).end:
+                    return None
 
             token_at_position_index = tokens_at_position.index(token_at_position)
             while token_at_position.type in [RobotToken.EOL]:

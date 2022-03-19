@@ -2,8 +2,10 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Improve handling of completion of argument definitions
+
 ##  0.9.5
 
 ### added
