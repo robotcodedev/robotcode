@@ -121,10 +121,10 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         data: Union[Dict[Any, Any], List[Dict[Any, Any]]]
     ) -> Iterator[ProtocolMessage]:
         def inner(d: Dict[Any, Any]) -> ProtocolMessage:
-            result = from_dict(d, (Request, Response, Event))  # type: ignore
+            result = from_dict(d, (Request, Response, Event))
             if isinstance(result, Response) and not result.success:
                 result = from_dict(d, ErrorResponse)
-            return result  # type: ignore
+            return result
 
         if isinstance(data, list):
             for e in data:

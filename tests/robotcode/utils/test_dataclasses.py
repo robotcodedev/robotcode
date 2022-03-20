@@ -388,7 +388,7 @@ def test_decode_with_some_same_fields(expr: Any, type: Any, expected: str) -> No
 
 def test_decode_with_some_unambigous_fields_should_raise_typeerror() -> None:
     with pytest.raises(TypeError):
-        from_json('{"a":1, "b": 2}', (SimpleItem, SimpleItem2))  # type: ignore
+        from_json('{"a":1, "b": 2}', (SimpleItem, SimpleItem2))
 
 
 @dataclass

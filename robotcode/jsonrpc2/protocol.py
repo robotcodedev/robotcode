@@ -433,7 +433,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
                 return from_dict(
                     d,
-                    (  # type: ignore
+                    (
                         JsonRPCRequest,
                         JsonRPCResponse,
                         JsonRPCNotification,
