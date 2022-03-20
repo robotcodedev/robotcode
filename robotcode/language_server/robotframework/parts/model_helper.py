@@ -18,7 +18,7 @@ from typing import (
 )
 
 from ...common.lsp_types import Position
-from ..diagnostics.entities import VariableDefinition
+from ..diagnostics.entities import VariableDefinition, VariableNotFoundDefinition
 from ..diagnostics.library_doc import KeywordDoc, KeywordError
 from ..diagnostics.namespace import LibraryEntry, Namespace
 from ..utils.ast import (
@@ -239,6 +239,7 @@ class ModelHelperMixin:
         nodes: Optional[List[ast.AST]],
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
+        return_not_found: bool = False,
     ) -> AsyncGenerator[Tuple[Token, VariableDefinition], Any]:
         from robot.api.parsing import Token as RobotToken
 
@@ -250,14 +251,25 @@ class ModelHelperMixin:
                     var = await namespace.find_variable(
                         f"${{{tokval}}}", nodes, position, skip_commandline_variables=skip_commandline_variables
                     )
+                    sub_token = RobotToken(
+                        expression.type,
+                        tokval,
+                        expression.lineno,
+                        expression.col_offset + tokcol,
+                        expression.error,
+                    )
                     if var is not None:
-                        yield RobotToken(
-                            expression.type,
+                        yield sub_token, var
+                    elif return_not_found:
+                        yield sub_token, VariableNotFoundDefinition(
+                            sub_token.lineno,
+                            sub_token.col_offset,
+                            sub_token.lineno,
+                            sub_token.end_col_offset,
+                            namespace.source,
                             tokval,
-                            expression.lineno,
-                            expression.col_offset + tokcol,
-                            expression.error,
-                        ), var
+                            sub_token,
+                        )
                 variable_started = False
             if toknum == python_token.ERRORTOKEN and tokval == "$":
                 variable_started = True
@@ -331,9 +343,18 @@ class ModelHelperMixin:
         nodes: Optional[List[ast.AST]],
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
+        return_not_found: bool = False,
     ) -> AsyncGenerator[Tuple[Token, VariableDefinition], Any]:
         from robot.api.parsing import Token as RobotToken
         from robot.variables.search import contains_variable, search_variable
+
+        def is_number(name: str) -> bool:
+            from robot.variables.finders import NOT_FOUND, NumberFinder
+
+            if name.startswith("$"):
+                finder = NumberFinder()
+                return bool(finder.find(name) != NOT_FOUND)
+            return False
 
         async def iter_token(
             to: Token, ignore_errors: bool = False
@@ -352,6 +373,7 @@ class ModelHelperMixin:
                             nodes,
                             position,
                             skip_commandline_variables=skip_commandline_variables,
+                            return_not_found=return_not_found,
                         ):
                             yield v
 
@@ -384,6 +406,9 @@ class ModelHelperMixin:
                     yield strip_variable_token(sub_token), var
                     continue
 
+                if is_number(sub_token.value):
+                    continue
+
                 if (
                     sub_token.type == RobotToken.VARIABLE
                     and sub_token.value[:1] in "$@&%"
@@ -397,10 +422,33 @@ class ModelHelperMixin:
                         var = await namespace.find_variable(
                             name, nodes, position, skip_commandline_variables=skip_commandline_variables
                         )
+                        sub_sub_token = RobotToken(sub_token.type, name, sub_token.lineno, sub_token.col_offset)
                         if var is not None:
-                            yield strip_variable_token(
-                                RobotToken(sub_token.type, name, sub_token.lineno, sub_token.col_offset)
-                            ), var
+                            yield strip_variable_token(sub_sub_token), var
+                            continue
+                        if is_number(name):
+                            continue
+                        elif return_not_found:
+                            yield strip_variable_token(sub_sub_token), VariableNotFoundDefinition(
+                                sub_sub_token.lineno,
+                                sub_sub_token.col_offset,
+                                sub_sub_token.lineno,
+                                sub_sub_token.end_col_offset,
+                                namespace.source,
+                                name,
+                                sub_sub_token,
+                            )
+                            continue
+                if return_not_found:
+                    yield strip_variable_token(sub_token), VariableNotFoundDefinition(
+                        sub_token.lineno,
+                        sub_token.col_offset,
+                        sub_token.lineno,
+                        sub_token.end_col_offset,
+                        namespace.source,
+                        sub_token.value,
+                        sub_token,
+                    )
             else:
                 yield token_or_var
 

@@ -82,6 +82,7 @@ class VariableDefinitionType(Enum):
     BUILTIN_VARIABLE = "builtin variable"
     IMPORTED_VARIABLE = "imported variable"
     ENVIRONMENT_VARIABLE = "environment variable"
+    VARIABLE_NOT_FOUND = "variable not found"
 
 
 @dataclass
@@ -157,6 +158,15 @@ class ImportedVariableDefinition(VariableDefinition):
 class EnvironmentVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.ENVIRONMENT_VARIABLE
     resolvable: bool = True
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.name, self.type))
+
+
+@dataclass
+class VariableNotFoundDefinition(VariableDefinition):
+    type: VariableDefinitionType = VariableDefinitionType.VARIABLE_NOT_FOUND
+    resolvable: bool = False
 
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type))

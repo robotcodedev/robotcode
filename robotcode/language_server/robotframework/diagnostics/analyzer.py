@@ -19,12 +19,14 @@ from ...common.lsp_types import (
 from ...common.text_document import TextDocument
 from ..parts.model_helper import ModelHelperMixin
 from ..utils.ast import (
+    HasTokens,
     Token,
     is_not_variable_token,
     range_from_node_or_token,
     range_from_token,
 )
 from ..utils.async_ast import AsyncVisitor
+from .entities import VariableNotFoundDefinition
 from .library_doc import KeywordDoc, is_embedded_keyword
 from .namespace import DIAGNOSTICS_SOURCE_NAME, KeywordFinder, Namespace
 
@@ -37,11 +39,12 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         from robot.parsing.model.statements import Template, TestTemplate
 
         self.model = model
-        self._namespace = namespace
+        self.namespace = namespace
         self.current_testcase_or_keyword_name: Optional[str] = None
-        self.finder = KeywordFinder(self._namespace)
+        self.finder = KeywordFinder(self.namespace)
         self.test_template: Optional[TestTemplate] = None
         self.template: Optional[Template] = None
+        self.node_stack: List[ast.AST] = []
 
     async def run(self) -> List[Diagnostic]:
         self._results: List[Diagnostic] = []
@@ -50,7 +53,32 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         return self._results
 
     async def visit(self, node: ast.AST) -> None:
-        await super().visit(node)
+        from robot.variables.search import contains_variable
+
+        self.node_stack.append(node)
+        try:
+            if isinstance(node, HasTokens):
+                for token in (t for t in node.tokens if contains_variable(t.value, "$@&%")):
+
+                    async for var_token, var in self.iter_variables_from_token(
+                        token,
+                        self.namespace,
+                        self.node_stack,
+                        range_from_token(token).start,
+                        skip_commandline_variables=False,
+                        return_not_found=True,
+                    ):
+                        if isinstance(var, VariableNotFoundDefinition):
+                            await self.append_diagnostics(
+                                range=range_from_token(var_token),
+                                message=f"Variable '{var.name}' not found",
+                                severity=DiagnosticSeverity.ERROR,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                            )
+
+            await super().visit(node)
+        finally:
+            self.node_stack = self.node_stack[:-1]
 
     @staticmethod
     async def should_ignore(document: Optional[TextDocument], range: Range) -> bool:
@@ -83,7 +111,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         data: Optional[Any] = None,
     ) -> None:
 
-        if await self.should_ignore(self._namespace.document, range):
+        if await self.should_ignore(self.namespace.document, range):
             return
 
         self._results.append(
