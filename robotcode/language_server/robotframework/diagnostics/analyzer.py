@@ -61,7 +61,11 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         self.node_stack.append(node)
         try:
             if isinstance(node, HasTokens):
-                for token in (t for t in node.tokens if contains_variable(t.value, "$@&%")):
+                for token in (
+                    t
+                    for t in node.tokens
+                    if t.type != RobotToken.VARIABLE and t.error is None and contains_variable(t.value, "$@&%")
+                ):
                     async for var_token, var in self.iter_variables_from_token(
                         token,
                         self.namespace,
