@@ -54,9 +54,9 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         return self._results
 
     async def visit(self, node: ast.AST) -> None:
-        from robot.variables.search import contains_variable
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordCall
+        from robot.variables.search import contains_variable
 
         self.node_stack.append(node)
         try:
