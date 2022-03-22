@@ -19,6 +19,7 @@ class RobotConfig(ConfigBase):
     python_path: List[str] = field(default_factory=list)
     env: Dict[str, str] = field(default_factory=dict)
     variables: Dict[str, Any] = field(default_factory=dict)
+    variable_files: List[str] = field(default_factory=list)
     paths: List[str] = field(default_factory=list)
     output_dir: Optional[str] = None
     output_file: Optional[str] = None

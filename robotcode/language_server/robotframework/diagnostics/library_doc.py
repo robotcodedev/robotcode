@@ -165,52 +165,6 @@ RUN_KEYWORDS_MATCHER = KeywordMatcher(RUN_KEYWORDS_NAME)
 ALL_RUN_KEYWORDS_MATCHERS = [KeywordMatcher(e) for e in ALL_RUN_KEYWORDS]
 
 
-class InvalidVariableError(Exception):
-    pass
-
-
-class VariableMatcher:
-    def __init__(self, name: str) -> None:
-        from robot.utils.normalizing import normalize
-        from robot.variables.search import VariableSearcher
-
-        self.name = name
-
-        searcher = VariableSearcher("$@&%", ignore_errors=True)
-        match = searcher.search(name)
-
-        if match.base is None:
-            raise InvalidVariableError(f"Invalid variable '{name}'")
-
-        self.base = match.base
-
-        self.normalized_name = str(normalize(self.base, "_"))
-
-    def __eq__(self, o: object) -> bool:
-        from robot.utils.normalizing import normalize
-        from robot.variables.search import VariableSearcher
-
-        if isinstance(o, VariableMatcher):
-            return o.normalized_name == self.normalized_name
-        elif isinstance(o, str):
-            searcher = VariableSearcher("$@&%", ignore_errors=True)
-            match = searcher.search(o)
-            base = match.base
-            normalized = str(normalize(base, "_"))
-            return self.normalized_name == normalized
-        else:
-            return False
-
-    def __hash__(self) -> int:
-        return hash(self.name)
-
-    def __str__(self) -> str:
-        return self.name
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}(name={repr(self.name)})"
-
-
 @dataclass
 class Error:
     message: str

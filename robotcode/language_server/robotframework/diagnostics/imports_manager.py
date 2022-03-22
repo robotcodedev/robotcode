@@ -507,7 +507,9 @@ class ImportsManager:
         return self._python_path or []
 
     @_logger.call
-    def get_command_line_variables(self) -> List[VariableDefinition]:
+    async def get_command_line_variables(self) -> List[VariableDefinition]:
+        from robot.utils.text import split_args_from_name_or_path
+
         if self._command_line_variables is None:
             if self.config is None:
                 self._command_line_variables = []
@@ -516,6 +518,19 @@ class ImportsManager:
                     CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=(v,))
                     for k, v in self.config.variables.items()
                 ]
+                for variable_file in self.config.variable_files:
+                    name, args = split_args_from_name_or_path(variable_file)
+                    try:
+                        lib_doc = await self.get_libdoc_for_variables_import(
+                            name, tuple(args), str(self.folder.to_path()), self
+                        )
+                        if lib_doc is not None:
+                            self._command_line_variables += lib_doc.variables
+
+                    except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                        raise
+                    except BaseException as e:
+                        self._logger.exception(e)
 
         return self._command_line_variables
 

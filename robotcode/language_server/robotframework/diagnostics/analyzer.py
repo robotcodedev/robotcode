@@ -20,6 +20,7 @@ from ...common.text_document import TextDocument
 from ..parts.model_helper import ModelHelperMixin
 from ..utils.ast import (
     HasTokens,
+    Statement,
     Token,
     is_not_variable_token,
     range_from_node_or_token,
@@ -54,12 +55,13 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
     async def visit(self, node: ast.AST) -> None:
         from robot.variables.search import contains_variable
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import KeywordCall
 
         self.node_stack.append(node)
         try:
             if isinstance(node, HasTokens):
                 for token in (t for t in node.tokens if contains_variable(t.value, "$@&%")):
-
                     async for var_token, var in self.iter_variables_from_token(
                         token,
                         self.namespace,
@@ -75,6 +77,58 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                 severity=DiagnosticSeverity.ERROR,
                                 source=DIAGNOSTICS_SOURCE_NAME,
                             )
+            if (
+                isinstance(node, Statement)
+                and isinstance(node, self.get_expression_statement_types())
+                and (token := node.get_token(RobotToken.ARGUMENT)) is not None
+            ):
+                async for var_token, var in self.iter_expression_variables_from_token(
+                    token,
+                    self.namespace,
+                    self.node_stack,
+                    range_from_token(token).start,
+                    skip_commandline_variables=False,
+                    return_not_found=True,
+                ):
+                    if isinstance(var, VariableNotFoundDefinition):
+                        await self.append_diagnostics(
+                            range=range_from_token(var_token),
+                            message=f"Variable '{var.name}' not found",
+                            severity=DiagnosticSeverity.ERROR,
+                            source=DIAGNOSTICS_SOURCE_NAME,
+                        )
+            elif isinstance(node, Statement) and isinstance(node, KeywordCall) and node.keyword:
+                kw_doc = await self.namespace.find_keyword(node.keyword)
+                if kw_doc is not None and kw_doc.longname in [
+                    "BuiltIn.Evaluate",
+                    "BuiltIn.Should Be True",
+                    "BuiltIn.Should Not Be True",
+                    "BuiltIn.Skip If",
+                    "BuiltIn.Continue For Loop If",
+                    "BuiltIn.Exit For Loop If",
+                    "BuiltIn.Return From Keyword If",
+                    "BuiltIn.Run Keyword And Return If",
+                    "BuiltIn.Pass Execution If",
+                    "BuiltIn.Run Keyword If",
+                    "BuiltIn.Run Keyword Unless",
+                ]:
+                    tokens = node.get_tokens(RobotToken.ARGUMENT)
+                    if tokens and (token := tokens[0]):
+                        async for var_token, var in self.iter_expression_variables_from_token(
+                            token,
+                            self.namespace,
+                            self.node_stack,
+                            range_from_token(token).start,
+                            skip_commandline_variables=False,
+                            return_not_found=True,
+                        ):
+                            if isinstance(var, VariableNotFoundDefinition):
+                                await self.append_diagnostics(
+                                    range=range_from_token(var_token),
+                                    message=f"Variable '{var.name}' not found",
+                                    severity=DiagnosticSeverity.ERROR,
+                                    source=DIAGNOSTICS_SOURCE_NAME,
+                                )
 
             await super().visit(node)
         finally:

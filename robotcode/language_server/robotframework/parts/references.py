@@ -48,7 +48,6 @@ from ..utils.ast import (
     get_nodes_at_position,
     get_tokens_at_position,
     is_not_variable_token,
-    iter_nodes_at_position,
     iter_over_keyword_names_and_owners,
     range_from_token,
     tokenize_variables,
@@ -266,6 +265,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         variable: VariableDefinition,
     ) -> List[Location]:
         from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.blocks import Block, Keyword, Section, TestCase
 
         namespace = await self.parent.documents_cache.get_namespace(doc)
         model = await self.parent.documents_cache.get_model(doc)
@@ -281,6 +281,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 for e in (await namespace.get_imported_variables()).values()
                 if e.library_doc.source == variable.source
             )
+            and not any(e for e in await namespace.get_command_line_variables() if e.source == variable.source)
         ):
 
             return []
@@ -288,8 +289,13 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         expression_statements = self.get_expression_statement_types()
 
         result: List[Location] = []
+        current_block: Optional[Block] = None
 
         async for node in iter_nodes(model):
+            if isinstance(node, Section):
+                current_block = None
+            elif isinstance(node, (TestCase, Keyword)):
+                current_block = node
 
             if isinstance(node, HasTokens):
                 for token1 in node.tokens:
@@ -297,7 +303,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                         async for token_and_var in self.iter_variables_from_token(
                             token,
                             namespace,
-                            [n async for n in iter_nodes_at_position(model, range_from_token(token).start)],
+                            [*([current_block] if current_block is not None else []), node],
                             range_from_token(token).start,
                         ):
                             sub_token, found_variable = token_and_var
@@ -313,7 +319,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 async for token_and_var in self.iter_expression_variables_from_token(
                     token,
                     namespace,
-                    [n async for n in iter_nodes_at_position(model, range_from_token(token).start)],
+                    [*([current_block] if current_block is not None else []), node],
                     range_from_token(token).start,
                 ):
                     sub_token, found_variable = token_and_var

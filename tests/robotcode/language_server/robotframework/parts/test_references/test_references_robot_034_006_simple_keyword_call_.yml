@@ -853,10 +853,64 @@ result:
   range:
     end:
       character: 7
-      line: 22
+      line: 7
     start:
       character: 4
-      line: 22
+      line: 7
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 9
+    start:
+      character: 4
+      line: 9
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 10
+    start:
+      character: 4
+      line: 10
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 12
+    start:
+      character: 4
+      line: 12
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 13
+    start:
+      character: 4
+      line: 13
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 14
+    start:
+      character: 4
+      line: 14
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 16
+    start:
+      character: 4
+      line: 16
   uri: tests/playground.robot
 - !Location
   range:
@@ -875,177 +929,6 @@ result:
     start:
       character: 4
       line: 24
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 28
-    start:
-      character: 4
-      line: 28
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 29
-    start:
-      character: 4
-      line: 29
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 30
-    start:
-      character: 4
-      line: 30
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 31
-    start:
-      character: 4
-      line: 31
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 32
-    start:
-      character: 4
-      line: 32
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 33
-    start:
-      character: 4
-      line: 33
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 34
-    start:
-      character: 4
-      line: 34
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 37
-    start:
-      character: 4
-      line: 37
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 11
-      line: 48
-    start:
-      character: 8
-      line: 48
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 11
-      line: 53
-    start:
-      character: 8
-      line: 53
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 11
-      line: 55
-    start:
-      character: 8
-      line: 55
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 11
-      line: 59
-    start:
-      character: 8
-      line: 59
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 63
-    start:
-      character: 4
-      line: 63
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 11
-      line: 66
-    start:
-      character: 8
-      line: 66
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 72
-    start:
-      character: 4
-      line: 72
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 11
-      line: 80
-    start:
-      character: 8
-      line: 80
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 11
-      line: 82
-    start:
-      character: 8
-      line: 82
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 11
-      line: 84
-    start:
-      character: 8
-      line: 84
-  uri: tests/playground.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 91
-    start:
-      character: 4
-      line: 91
   uri: tests/playground.robot
 - !Location
   range:
@@ -1339,15 +1222,6 @@ result:
   range:
     end:
       character: 7
-      line: 11
-    start:
-      character: 4
-      line: 11
-  uri: tests/variables.robot
-- !Location
-  range:
-    end:
-      character: 7
       line: 12
     start:
       character: 4
@@ -1465,10 +1339,10 @@ result:
   range:
     end:
       character: 7
-      line: 26
+      line: 25
     start:
       character: 4
-      line: 26
+      line: 25
   uri: tests/variables.robot
 - !Location
   range:
@@ -1577,42 +1451,168 @@ result:
     start:
       character: 4
       line: 38
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 39
+    start:
+      character: 4
+      line: 39
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 21
-      line: 42
+      line: 43
     start:
       character: 18
-      line: 42
+      line: 43
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 47
+    start:
+      character: 8
+      line: 47
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 7
-      line: 46
+      line: 53
     start:
       character: 4
-      line: 46
+      line: 53
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 54
+    start:
+      character: 4
+      line: 54
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 56
+    start:
+      character: 4
+      line: 56
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 57
+    start:
+      character: 4
+      line: 57
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 59
+    start:
+      character: 4
+      line: 59
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 62
+    start:
+      character: 4
+      line: 62
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 77
+    start:
+      character: 8
+      line: 77
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 79
+    start:
+      character: 8
+      line: 79
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 43
+      line: 99
+    start:
+      character: 40
+      line: 99
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 34
+      line: 101
+    start:
+      character: 31
+      line: 101
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 36
+      line: 102
+    start:
+      character: 33
+      line: 102
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 109
+    start:
+      character: 4
+      line: 109
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 37
-      line: 47
+      line: 110
     start:
       character: 34
-      line: 47
+      line: 110
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 72
-      line: 47
+      line: 110
     start:
       character: 69
-      line: 47
+      line: 110
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 116
+    start:
+      character: 8
+      line: 116
   uri: tests/variables.robot
 - !Location
   range:

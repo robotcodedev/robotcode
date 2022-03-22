@@ -52,12 +52,14 @@ from ..utils.variables import BUILTIN_VARIABLES
 from .entities import (
     ArgumentDefinition,
     BuiltInVariableDefinition,
+    CommandLineVariableDefinition,
     EnvironmentVariableDefinition,
     Import,
     LibraryImport,
     LocalVariableDefinition,
     ResourceImport,
     VariableDefinition,
+    VariableMatcher,
     VariablesImport,
 )
 from .imports_manager import ImportsManager
@@ -68,7 +70,6 @@ from .library_doc import (
     KeywordError,
     KeywordMatcher,
     LibraryDoc,
-    VariableMatcher,
 )
 
 DIAGNOSTICS_SOURCE_NAME = "robotcode.namespace"
@@ -545,6 +546,8 @@ class Namespace:
         self._import_entries: OrderedDict[Import, LibraryEntry] = OrderedDict()
         self._own_variables: Optional[List[VariableDefinition]] = None
         self._own_variables_lock = Lock()
+        self._global_variables: Optional[List[VariableDefinition]] = None
+        self._global_variables_lock = Lock()
         self._diagnostics: List[Diagnostic] = []
         self._keywords: Optional[List[KeywordDoc]] = None
         self._keywords_lock = Lock()
@@ -603,6 +606,8 @@ class Namespace:
             self._analyzed = False
             self._diagnostics = []
             self._finder = None
+
+            await self._reset_global_variables()
 
         self.invalidated_callback(self)
 
@@ -722,6 +727,8 @@ class Namespace:
                                 ),
                             )
 
+                    await self._reset_global_variables()
+
                     self._initialized = True
 
         return self._initialized
@@ -756,8 +763,28 @@ class Namespace:
         return cls._builtin_variables
 
     @_logger.call
-    def get_command_line_variables(self) -> List[VariableDefinition]:
-        return self.imports_manager.get_command_line_variables()
+    async def get_command_line_variables(self) -> List[VariableDefinition]:
+        return await self.imports_manager.get_command_line_variables()
+
+    async def _reset_global_variables(self) -> None:
+        async with self._global_variables_lock:
+            self._global_variables = None
+
+    async def get_global_variables(self) -> List[VariableDefinition]:
+        if self._global_variables is None:
+            async with self._global_variables_lock:
+                if self._global_variables is None:
+                    self._global_variables = list(
+                        itertools.chain(
+                            await self.get_command_line_variables(),
+                            await self.get_own_variables(),
+                            *(e.variables for e in self._resources.values()),
+                            *(e.variables for e in self._variables.values()),
+                            self.get_builtin_variables(),
+                        )
+                    )
+
+        return self._global_variables
 
     @_logger.call
     async def yield_variables(
@@ -769,29 +796,33 @@ class Namespace:
         from robot.parsing.model.blocks import Keyword, TestCase
         from robot.parsing.model.statements import Arguments
 
-        # await self.ensure_initialized()
-
         yielded: Dict[VariableMatcher, VariableDefinition] = {}
+
+        test_or_keyword_nodes = list(
+            itertools.dropwhile(lambda v: not isinstance(v, (TestCase, Keyword)), nodes if nodes else [])
+        )
+        test_or_keyword = test_or_keyword_nodes[0] if test_or_keyword_nodes else None
 
         async for var in async_chain(
             *[
-                await BlockVariableVisitor(
-                    self.source, position, isinstance(nodes[-1], Arguments) if nodes else False
-                ).get(n)
-                for n in nodes or []
-                if isinstance(n, (Keyword, TestCase))
+                (
+                    await BlockVariableVisitor(
+                        self.source, position, isinstance(test_or_keyword_nodes[-1], Arguments) if nodes else False
+                    ).get(test_or_keyword)
+                )
+                if test_or_keyword is not None
+                else []
             ],
-            [] if skip_commandline_variables else (e for e in self.get_command_line_variables()),
-            (e for e in await self.get_own_variables()),
-            *(e.variables for e in self._resources.values()),
-            *(e.variables for e in self._variables.values()),
-            (e for e in self.get_builtin_variables()),
+            await self.get_global_variables(),
         ):
-            if var.name is not None:
-                matcher = VariableMatcher(var.name)
-                if matcher not in yielded.keys():
-                    yielded[matcher] = var
-                    yield matcher, var
+
+            if var.matcher not in yielded.keys():
+                yielded[var.matcher] = var
+
+                if skip_commandline_variables and isinstance(var, CommandLineVariableDefinition):
+                    continue
+
+                yield var.matcher, var
 
     async def get_resolvable_variables(
         self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
@@ -801,14 +832,6 @@ class Namespace:
             async for k, v in self.yield_variables(nodes, position, skip_commandline_variables=True)
             if v.has_value
         }
-
-    @_logger.call
-    async def get_variable_definitions(
-        self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
-    ) -> Dict[str, VariableDefinition]:
-        await self.ensure_initialized()
-
-        return {m.name: v async for m, v in self.yield_variables(nodes, position)}
 
     @_logger.call
     async def get_variable_matchers(
@@ -1009,6 +1032,8 @@ class Namespace:
                         source=DIAGNOSTICS_SOURCE_NAME,
                         code=type(e).__qualname__,
                     )
+            finally:
+                await self._reset_global_variables()
 
             return result, variables
 

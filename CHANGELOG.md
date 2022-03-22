@@ -4,7 +4,15 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
-- Improve handling of completion of argument definitions
+- Variable analysis, finds undefined variables
+  - in variables, also inner variables like ${a+${b}}
+  - in inline python expression like ${{$a+$b}}
+  - in expression arguments of IF/WHILE statements like $a<$b
+  - in BuiltIn keywords which contains an expression or condition argument, like `Evaluate`, `Should Be True`, `Skip If`, ...
+- Improve handling of completion for argument definitions
+- Support for variable files
+  - there is a new setting `robotcode.robot.variableFiles` and corresponding `variableFiles` launch configuration setting
+  - this corresponds to the `--variablefile` option from robot
 
 ##  0.9.5
 
