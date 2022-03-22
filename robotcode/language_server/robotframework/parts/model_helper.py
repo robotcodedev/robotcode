@@ -376,6 +376,17 @@ class ModelHelperMixin:
                             return_not_found=return_not_found,
                         ):
                             yield v
+                    elif base == "" and return_not_found:
+                        yield sub_token, VariableNotFoundDefinition(
+                            sub_token.lineno,
+                            sub_token.col_offset,
+                            sub_token.lineno,
+                            sub_token.end_col_offset,
+                            namespace.source,
+                            sub_token.value,
+                            sub_token,
+                        )
+                        return
 
                     if contains_variable(base, "$@&%"):
                         async for sub_token_or_var in iter_token(
