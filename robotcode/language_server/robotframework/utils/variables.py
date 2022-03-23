@@ -13,6 +13,7 @@ BUILTIN_VARIABLES = [
     "${False}",
     "${None}",
     "${null}",
+    "${OPTIONS}",
     "${TEST NAME}",
     "@{TEST TAGS}",
     "${TEST DOCUMENTATION}",
