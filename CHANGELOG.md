@@ -2,7 +2,9 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
+## [Unreleased]
+- none so far
+##  0.10.0
 
 ### added
 - Introduce setting `robotcode.robot.paths` and correspondend launch config property `paths`
