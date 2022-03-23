@@ -7,6 +7,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 ### added
 - Introduce setting `robotcode.robot.paths` and correspondend launch config property `paths`
   - Specifies the paths where robot/robotcode should discover test suites. Corresponds to the 'paths' option of robot
+- Introduce new RF 5 `${OPTIONS}` variable
 
 ##  0.9.6
 
