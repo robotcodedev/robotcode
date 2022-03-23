@@ -1222,33 +1222,6 @@ result:
   range:
     end:
       character: 7
-      line: 12
-    start:
-      character: 4
-      line: 12
-  uri: tests/variables.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 13
-    start:
-      character: 4
-      line: 13
-  uri: tests/variables.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 14
-    start:
-      character: 4
-      line: 14
-  uri: tests/variables.robot
-- !Location
-  range:
-    end:
-      character: 7
       line: 15
     start:
       character: 4
@@ -1348,6 +1321,15 @@ result:
   range:
     end:
       character: 7
+      line: 26
+    start:
+      character: 4
+      line: 26
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
       line: 27
     start:
       character: 4
@@ -1361,15 +1343,6 @@ result:
     start:
       character: 4
       line: 28
-  uri: tests/variables.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 29
-    start:
-      character: 4
-      line: 29
   uri: tests/variables.robot
 - !Location
   range:
@@ -1460,60 +1433,60 @@ result:
     start:
       character: 4
       line: 39
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 40
+    start:
+      character: 4
+      line: 40
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 41
+    start:
+      character: 4
+      line: 41
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 42
+    start:
+      character: 4
+      line: 42
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 21
-      line: 43
+      line: 46
     start:
       character: 18
-      line: 43
+      line: 46
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 11
-      line: 47
+      line: 50
     start:
       character: 8
-      line: 47
+      line: 50
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 7
-      line: 53
+      line: 58
     start:
       character: 4
-      line: 53
-  uri: tests/variables.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 54
-    start:
-      character: 4
-      line: 54
-  uri: tests/variables.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 56
-    start:
-      character: 4
-      line: 56
-  uri: tests/variables.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 57
-    start:
-      character: 4
-      line: 57
+      line: 58
   uri: tests/variables.robot
 - !Location
   range:
@@ -1536,83 +1509,137 @@ result:
 - !Location
   range:
     end:
-      character: 11
-      line: 77
+      character: 7
+      line: 63
     start:
-      character: 8
-      line: 77
+      character: 4
+      line: 63
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 65
+    start:
+      character: 4
+      line: 65
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 68
+    start:
+      character: 4
+      line: 68
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 11
-      line: 79
+      line: 83
     start:
       character: 8
-      line: 79
+      line: 83
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 85
+    start:
+      character: 8
+      line: 85
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 43
-      line: 99
+      line: 105
     start:
       character: 40
-      line: 99
+      line: 105
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 34
-      line: 101
+      line: 107
     start:
       character: 31
-      line: 101
+      line: 107
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 36
-      line: 102
+      line: 108
     start:
       character: 33
-      line: 102
+      line: 108
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 7
-      line: 109
+      line: 117
     start:
       character: 4
-      line: 109
+      line: 117
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 119
+    start:
+      character: 4
+      line: 119
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 120
+    start:
+      character: 4
+      line: 120
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 125
+    start:
+      character: 4
+      line: 125
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 37
-      line: 110
+      line: 126
     start:
       character: 34
-      line: 110
+      line: 126
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 72
-      line: 110
+      line: 126
     start:
       character: 69
-      line: 110
+      line: 126
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 11
-      line: 116
+      line: 132
     start:
       character: 8
-      line: 116
+      line: 132
   uri: tests/variables.robot
 - !Location
   range:

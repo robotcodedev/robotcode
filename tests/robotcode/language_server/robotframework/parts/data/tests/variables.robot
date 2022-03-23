@@ -6,7 +6,10 @@ Test Setup    Log    ${TEST NAME}
 *** Variables ***
 ${pre_full_name}    ${PREV TEST NAME}_${PREV TEST STATUS}
 ${full_name}    ${TEST NAME}_${TEST STATUS}
-
+${ZZ}    ${}
+${UU}    @{}
+${DD}    ${DD+1}    # TODO recursiv variable definition
+${aaa    1
 
 *** Test Cases ***
 first
@@ -50,10 +53,13 @@ second
 
     a keyword with loop    hello
 
+
 third
-    Log    ${asd}
+
     Log    ${hello there1 + ${asd}}
+    Log    ${asd}
     ${asd}    Set Variable    hello
+
     Log    ${asd}
     Log    ${hello there1 + ${asd}}
     ${hello there1}    Set Variable    hello
@@ -101,8 +107,18 @@ sixth
     Pass Execution If    $asd    hello
     Run Keyword If    $a+$d    log    hello
     Run Keyword Unless    $aa    log    hello
+    Run Keyword If    $a+$d    evaluate    $a+$b+$c
 
+*** Variables ***
+${VALUE}=           INFO
+${INFO_DATA}=       DATA
 
+*** Test Cases ***
+tc
+    Log    ${VALUE}
+
+    Log    ${${VALUE}_DATA1}
+    Log    ${${VALUE}_1}
 
 
 *** Keywords ***
