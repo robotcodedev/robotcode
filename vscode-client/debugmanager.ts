@@ -347,11 +347,17 @@ export class DebugManager {
     excluded: string[],
     runId?: string,
     options?: vscode.DebugSessionOptions,
-    dryRun?: boolean
+    dryRun?: boolean,
+    topLevelSuiteName?: string
   ): Promise<void> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
     const args = [];
+
+    if (topLevelSuiteName) {
+      args.push("--name");
+      args.push(topLevelSuiteName);
+    }
 
     for (const s of suites) {
       args.push("--suite");

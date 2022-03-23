@@ -659,7 +659,12 @@ export class TestControllerManager {
         };
       }
 
-      const workspaceItem = this.findTestItemByUri(workspace.uri.toString());
+      let workspaceItem = this.findTestItemByUri(workspace.uri.toString());
+      const workspaceRobotItem = workspaceItem ? this.findRobotItem(workspaceItem) : undefined;
+
+      if (workspaceRobotItem?.type == "workspace" && workspaceRobotItem.children?.length) {
+        workspaceItem = workspaceItem?.children.get(workspaceRobotItem.children[0].id);
+      }
 
       if (includedItems.length === 1 && includedItems[0] === workspaceItem && excluded.size === 0) {
         await DebugManager.runTests(workspace, [], [], [], runId, options, dryRun);
@@ -686,7 +691,23 @@ export class TestControllerManager {
             if (longname) suites.add(longname);
           }
         }
-        await DebugManager.runTests(workspace, Array.from(suites), includedInWs, excludedInWs, runId, options, dryRun);
+
+        let suiteName: string | undefined = undefined;
+
+        if (workspaceRobotItem?.type == "workspace" && workspaceRobotItem.children?.length) {
+          suiteName = workspaceRobotItem.children[0].longname;
+        }
+
+        await DebugManager.runTests(
+          workspace,
+          Array.from(suites),
+          includedInWs,
+          excludedInWs,
+          runId,
+          options,
+          dryRun,
+          suiteName
+        );
       }
     }
   }

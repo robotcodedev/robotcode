@@ -4,7 +4,9 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
-- none so far
+### added
+- Introduce setting `robotcode.robot.paths` and correspondend launch config property `paths`
+  - Specifies the paths where robot/robotcode should discover test suites. Corresponds to the 'paths' option of robot
 
 ##  0.9.6
 
@@ -45,8 +47,6 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ### added
 
-- Introduce setting `robotcode.robot.paths` and correspondend launch config property `paths`
-  - Specifies the paths where robot/robotcode should discover test suites. Corresponds to the 'paths' option of robot
 - Introduce setting `robotcode.robot.variableFiles` and correspondend launch config property `variableFiles`
   - Specifies the variable files for robotframework. Corresponds to the '--variablefile' option of robot.
 - Rework debugger termination
