@@ -2,9 +2,13 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- none so far
+
 ##  0.9.6
+
+### added
 
 - Variable analysis, finds undefined variables
   - in variables, also inner variables like ${a+${b}}
