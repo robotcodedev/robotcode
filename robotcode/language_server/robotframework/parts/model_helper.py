@@ -440,16 +440,18 @@ class ModelHelperMixin:
                         if is_number(name):
                             continue
                         elif return_not_found:
-                            yield strip_variable_token(sub_sub_token), VariableNotFoundDefinition(
-                                sub_sub_token.lineno,
-                                sub_sub_token.col_offset,
-                                sub_sub_token.lineno,
-                                sub_sub_token.end_col_offset,
-                                namespace.source,
-                                name,
-                                sub_sub_token,
-                            )
-                            continue
+                            if contains_variable(sub_token.value[2:-1]):
+                                continue
+                            else:
+                                yield strip_variable_token(sub_sub_token), VariableNotFoundDefinition(
+                                    sub_sub_token.lineno,
+                                    sub_sub_token.col_offset,
+                                    sub_sub_token.lineno,
+                                    sub_sub_token.end_col_offset,
+                                    namespace.source,
+                                    name,
+                                    sub_sub_token,
+                                )
                 if return_not_found:
                     yield strip_variable_token(sub_token), VariableNotFoundDefinition(
                         sub_token.lineno,

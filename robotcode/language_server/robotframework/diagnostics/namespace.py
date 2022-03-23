@@ -841,14 +841,6 @@ class Namespace:
 
         return {m: v async for m, v in self.yield_variables(nodes, position)}
 
-    _match_extended = re.compile(
-        r"""
-        (.+?)          # base name (group 1)
-        ([^\s\w].+)    # extended part (group 2)
-        """,
-        re.UNICODE | re.VERBOSE,
-    )
-
     @_logger.call
     async def find_variable(
         self,
