@@ -4,7 +4,6 @@ import ast
 import asyncio
 import enum
 import itertools
-import re
 import time
 import weakref
 from collections import OrderedDict
