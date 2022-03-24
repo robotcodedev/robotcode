@@ -55,7 +55,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
     async def visit(self, node: ast.AST) -> None:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import KeywordCall
+        from robot.parsing.model.statements import DocumentationOrMetadata, KeywordCall
         from robot.variables.search import contains_variable
 
         self.node_stack.append(node)
@@ -78,7 +78,9 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                             await self.append_diagnostics(
                                 range=range_from_token(var_token),
                                 message=f"Variable '{var.name}' not found",
-                                severity=DiagnosticSeverity.ERROR,
+                                severity=DiagnosticSeverity.HINT
+                                if isinstance(node, DocumentationOrMetadata)
+                                else DiagnosticSeverity.ERROR,
                                 source=DIAGNOSTICS_SOURCE_NAME,
                             )
             if (

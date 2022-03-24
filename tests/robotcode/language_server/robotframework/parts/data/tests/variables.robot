@@ -55,7 +55,8 @@ second
 
 
 third
-
+    Log    ${hello there1 + 1}
+    Log    ${hello there1}
     Log    ${hello there1 + ${asd}}
     Log    ${asd}
     ${asd}    Set Variable    hello
@@ -71,7 +72,7 @@ third
 fourth
     ${a}    Evaluate    1
     ${b}    Evaluate    2
-    ${c}    Set Variable    ${{$a+$b}}
+    ${c}    Set Variable    ${{$a+$b+$d}}
     ${d}    Set Variable    ${{$a+$b+c}}
     ${e}    Set Variable    ${{$a+$b+$e}}
     ${f}    Set Variable    ${{$a+$b+$e}}
@@ -108,6 +109,13 @@ sixth
     Run Keyword If    $a+$d    log    hello
     Run Keyword Unless    $aa    log    hello
     Run Keyword If    $a+$d    evaluate    $a+$b+$c
+
+seventh
+    [Documentation]    This is a documentation ${TEST}
+    ...
+    ...    Examples vars ${value} ${unknown value}
+
+    a keyword
 
 *** Variables ***
 ${VALUE}=           INFO
