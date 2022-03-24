@@ -183,15 +183,18 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
             async def aio_readline(rfile: BinaryIO, protocol: asyncio.Protocol) -> None:
                 protocol.connection_made(transport)
-                stdio_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="aio_readline")
-                with stdio_executor:
+
+                def run() -> None:
                     while (
                         self._stdio_stop_event is not None and not self._stdio_stop_event.is_set() and not rfile.closed
                     ):
-                        data = await self.loop.run_in_executor(
-                            stdio_executor, cast(io.BufferedReader, rfile).read1, 1000
-                        )
-                        protocol.data_received(data)
+                        if cast(io.BufferedReader, rfile).peek(1):
+                            data = cast(io.BufferedReader, rfile).read1(10000)
+
+                            self.loop.call_soon_threadsafe(protocol.data_received, data)
+
+                with ThreadPoolExecutor(max_workers=1, thread_name_prefix="aio_readline") as stdio_executor:
+                    await asyncio.wrap_future(stdio_executor.submit(run))
 
             self.loop.run_until_complete(aio_readline(transport.rfile, protocol))
 

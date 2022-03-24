@@ -87,12 +87,16 @@
 			"module": "robotcode.debugger",
 			"justMyCode": false,
 			"args": [
-				"-p", "6612",
+				"-p",
+				"6612",
 				"-w",
 				"--",
-				"-d", "results",
-				"-P", "./lib",
-				"-P", "./resources",
+				"-d",
+				"results",
+				"-P",
+				"./lib",
+				"-P",
+				"./resources",
 				//"C:\\tmp\\robottest\\tests\\bdd_style.robot"
 				"."
 			]
@@ -119,14 +123,7 @@
 			"justMyCode": false,
 			"args": [
 				"--mode",
-				"stdio",
-				"--call-tracing",
-				"--log-config",
-				"log.ini"
-				//"--debug",
-				// "--debug-json-rpc",
-				// "--debug-json-rpc-data",
-				//"--debug-colored"
+				"stdio"
 			]
 		},
 		{
@@ -162,13 +159,17 @@
 			"args": [
 				"--mode",
 				"stdio",
+				"--log",
+				"--log-level",
+				"TRACE",
 				"--call-tracing",
-				"--log-config",
-				"log.ini"
-				//"--debug",
-				// "--debug-json-rpc",
-				// "--debug-json-rpc-data",
-				//"--debug-colored"
+				"--log-json-rpc",
+				"--log-json-rpc-data",
+				"--log-language-server",
+				"--log-language-server-parts",
+				"--log-robotframework",
+				"--log-asyncio",
+				"--debug-asyncio"
 			]
 		},
 		{
