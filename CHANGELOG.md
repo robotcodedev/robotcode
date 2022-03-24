@@ -2,7 +2,9 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
+## [Unreleased]
+- none so far
+##  0.10.1
 
 ### added
 - Analyse variables in documentation or metadata settings shows a hint instead of an error if variable is not found
