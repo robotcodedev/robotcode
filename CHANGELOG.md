@@ -5,7 +5,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 ## [Unreleased]
 
 ### added
-- Analyse variables in documentation or metadata settings shows a hint instead of an error
+- Analyse variables in documentation or metadata settings shows a hint instead of an error if variable is not found
+  - fixes [#47](https://github.com/d-biehl/robotcode/issues/47)
+- Correct robocop shows false "Invalid number of empty lines between sections"
+  - fixes [#46](https://github.com/d-biehl/robotcode/issues/46)]
 
 ##  0.10.0
 
