@@ -7,14 +7,14 @@ repos:
     hooks:
       - id: system
         name: isort
-        entry: poetry run isort .
+        entry: poetry run isort --check --diff .
         pass_filenames: false
         language: system
   - repo: local
     hooks:
       - id: system
         name: Black
-        entry: poetry run black .
+        entry: poetry run black --check --diff .
         pass_filenames: false
         language: system
   - repo: local
