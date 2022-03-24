@@ -1,0 +1,40 @@
+fail_fast: true
+default_language_version:
+  python: python3.8
+default_stages: [commit, push]
+repos:
+  - repo: local
+    hooks:
+      - id: system
+        name: isort
+        entry: poetry run isort .
+        pass_filenames: false
+        language: system
+  - repo: local
+    hooks:
+      - id: system
+        name: Black
+        entry: poetry run black .
+        pass_filenames: false
+        language: system
+  - repo: local
+    hooks:
+      - id: system
+        name: Flake8
+        entry: poetry run flake8 .
+        pass_filenames: false
+        language: system
+  - repo: local
+    hooks:
+      - id: system
+        name: MyPy
+        entry: poetry run mypy .
+        pass_filenames: false
+        language: system
+  - repo: local
+    hooks:
+      - id: system
+        name: eslint
+        entry: npm run lint
+        pass_filenames: false
+        language: system
