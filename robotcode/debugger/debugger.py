@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import os
 import pathlib
 import re
 import threading
@@ -511,7 +512,7 @@ class Debugger:
                                 self,
                                 OutputEvent(
                                     body=OutputEventBody(
-                                        output=message,
+                                        output=message + os.linesep,
                                         category=OutputCategory.CONSOLE,
                                         source=Source(path=source) if source else None,
                                         line=line_no,
