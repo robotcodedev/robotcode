@@ -135,14 +135,14 @@ def range_from_node(node: ast.AST, skip_non_data: bool = False, only_start: bool
     )
 
 
-def token_in_range(token: Token, range: Range) -> bool:
+def token_in_range(token: Token, range: Range, include_end: bool = False) -> bool:
     token_range = range_from_token(token)
-    return token_range.start.is_in_range(range) or token_range.end.is_in_range(range)
+    return token_range.start.is_in_range(range, include_end) or token_range.end.is_in_range(range, include_end)
 
 
-def node_in_range(node: ast.AST, range: Range) -> bool:
+def node_in_range(node: ast.AST, range: Range, include_end: bool = False) -> bool:
     node_range = range_from_node(node)
-    return node_range.start.is_in_range(range) or node_range.end.is_in_range(range)
+    return node_range.start.is_in_range(range, include_end) or node_range.end.is_in_range(range, include_end)
 
 
 def range_from_node_or_token(node: ast.AST, token: Optional[Token]) -> Range:
@@ -196,20 +196,20 @@ def get_tokens_at_position(node: HasTokens, position: Position) -> List[Token]:
     return [t for t in node.tokens if position.is_in_range(range := range_from_token(t)) or range.end == position]
 
 
-def iter_nodes_at_position(node: ast.AST, position: Position) -> AsyncIterator[ast.AST]:
+def iter_nodes_at_position(node: ast.AST, position: Position, include_end: bool = False) -> AsyncIterator[ast.AST]:
     return (
         n
         async for n in async_ast.iter_nodes(node)
-        if position.is_in_range(range := range_from_node(n)) or range.end == position
+        if position.is_in_range(range := range_from_node(n), include_end) or range.end == position
     )
 
 
-async def get_nodes_at_position(node: ast.AST, position: Position) -> List[ast.AST]:
-    return [n async for n in iter_nodes_at_position(node, position)]
+async def get_nodes_at_position(node: ast.AST, position: Position, include_end: bool = False) -> List[ast.AST]:
+    return [n async for n in iter_nodes_at_position(node, position, include_end)]
 
 
-async def get_node_at_position(node: ast.AST, position: Position) -> Optional[ast.AST]:
-    result_nodes = await get_nodes_at_position(node, position)
+async def get_node_at_position(node: ast.AST, position: Position, include_end: bool = False) -> Optional[ast.AST]:
+    result_nodes = await get_nodes_at_position(node, position, include_end)
     if not result_nodes:
         return None
 

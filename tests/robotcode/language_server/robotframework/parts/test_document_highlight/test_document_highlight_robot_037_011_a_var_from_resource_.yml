@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 11
-  line: 37
-  name: a var from resource
-result: null

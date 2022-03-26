@@ -317,7 +317,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
 
             keyword_token = self.strip_bdd_prefix(keyword_token)
 
-            if position.is_in_range(range_from_token(keyword_token)):
+            if position.is_in_range(range_from_token(keyword_token), False):
                 namespace = await self.parent.documents_cache.get_namespace(document)
                 if namespace is None:
                     return None

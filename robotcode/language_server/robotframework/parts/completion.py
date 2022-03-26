@@ -683,7 +683,7 @@ class CompletionCollector(ModelHelperMixin):
                 only_stars = value is not None and "*" in value and all(v == "*" for v in value)
                 if (
                     r.start.character == 0
-                    and (position.is_in_range(r) or position == r.end)
+                    and (position.is_in_range(r))
                     and (only_stars or value.startswith("*") or position.character == 0)
                 ):
                     return await self.create_section_completion_items(r)
@@ -692,7 +692,7 @@ class CompletionCollector(ModelHelperMixin):
                     ws = whitespace_at_begin_of_token(statement_node.tokens[1])
                     if ws > 0:
                         r1.end.character = r1.start.character + ws
-                        if position.is_in_range(r1) or position == r1.end:
+                        if position.is_in_range(r1):
                             r.end = r1.end
                             return await self.create_section_completion_items(r)
 
@@ -782,7 +782,7 @@ class CompletionCollector(ModelHelperMixin):
             if len(statement_node.tokens) > 0:
                 token = cast(Token, statement_node.tokens[0])
                 r = range_from_token(token)
-                if position.is_in_range(r) or r.end == position:
+                if position.is_in_range(r):
                     return await self.create_settings_completion_items(r)
 
         return None
@@ -826,7 +826,7 @@ class CompletionCollector(ModelHelperMixin):
                     index += 1
                     in_assign = True
                     r = range_from_token(token)
-                    if position.is_in_range(r) or r.end == position:
+                    if position.is_in_range(r):
                         break
 
             if len(statement_node.tokens) > index:
@@ -839,7 +839,7 @@ class CompletionCollector(ModelHelperMixin):
                 ws_b = whitespace_from_begin_of_token(token)
                 r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
-                if position.is_in_range(r) or r.end == position:
+                if position.is_in_range(r):
                     return await create_items(
                         in_assign,
                         in_template,
@@ -865,7 +865,7 @@ class CompletionCollector(ModelHelperMixin):
                 token = self.strip_bdd_prefix(token)
 
                 r = range_from_token(token)
-                if position.is_in_range(r) or r.end == position:
+                if position.is_in_range(r):
                     return await create_items(in_assign, in_template, r, token, position)
 
                 if len(statement_node.tokens) > index + 1:
@@ -875,7 +875,7 @@ class CompletionCollector(ModelHelperMixin):
                         return None
 
                     r.end.character += 1
-                    if position.is_in_range(r) or r.end == position:
+                    if position.is_in_range(r):
                         return await create_items(
                             in_assign, in_template, r, None if self.is_bdd_token(token) else token, position
                         )
@@ -987,7 +987,7 @@ class CompletionCollector(ModelHelperMixin):
             ws_b = whitespace_from_begin_of_token(token)
             r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
-            if position.is_in_range(r) or r.end == position:
+            if position.is_in_range(r):
                 return await self.create_keyword_completion_items(
                     statement_node.tokens[2] if r.end == position and len(statement_node.tokens) > 2 else None,
                     position,
@@ -1001,7 +1001,7 @@ class CompletionCollector(ModelHelperMixin):
             token = self.strip_bdd_prefix(token)
 
             r = range_from_token(token)
-            if position.is_in_range(r) or r.end == position:
+            if position.is_in_range(r):
                 return await self.create_keyword_completion_items(
                     None if self.is_bdd_token(token) else token,
                     position,
@@ -1016,7 +1016,7 @@ class CompletionCollector(ModelHelperMixin):
                 return None
 
             r.end.character += 1
-            if position.is_in_range(r) or r.end == position:
+            if position.is_in_range(r):
                 return await self.create_keyword_completion_items(
                     None if self.is_bdd_token(token) else token,
                     position,
@@ -1115,7 +1115,7 @@ class CompletionCollector(ModelHelperMixin):
             ws_b = whitespace_from_begin_of_token(token)
             r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
-            if position.is_in_range(r) or r.end == position:
+            if position.is_in_range(r):
                 return await self.create_keyword_completion_items(
                     statement_node.tokens[3] if r.end == position and len(statement_node.tokens) > 3 else None,
                     position,
@@ -1129,7 +1129,7 @@ class CompletionCollector(ModelHelperMixin):
             token = self.strip_bdd_prefix(token)
 
             r = range_from_token(token)
-            if position.is_in_range(r) or r.end == position:
+            if position.is_in_range(r):
                 return await self.create_keyword_completion_items(
                     token,
                     position,
@@ -1144,7 +1144,7 @@ class CompletionCollector(ModelHelperMixin):
                 return None
 
             r.end.character += 1
-            if position.is_in_range(r) or r.end == position:
+            if position.is_in_range(r):
                 return await self.create_keyword_completion_items(
                     None if self.is_bdd_token(token) else token,
                     position,
@@ -1210,18 +1210,18 @@ class CompletionCollector(ModelHelperMixin):
 
             if len(import_node.tokens) > import_token_index + 2:
                 name_token = import_node.tokens[import_token_index + 2]
-                if not position.is_in_range(r := range_from_token(name_token)) and r.end != position:
+                if not position.is_in_range(r := range_from_token(name_token)):
                     return None
 
             elif len(import_node.tokens) > import_token_index + 1:
                 name_token = import_node.tokens[import_token_index + 1]
-                if position.is_in_range(r := range_from_token(name_token)) or r.end == position:
+                if position.is_in_range(r := range_from_token(name_token)):
                     if whitespace_at_begin_of_token(name_token) > 1:
 
                         ws_b = whitespace_from_begin_of_token(name_token)
                         r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
-                        if not position.is_in_range(r) and r.end != position:
+                        if not position.is_in_range(r):
                             return None
                     else:
                         return None
@@ -1448,18 +1448,18 @@ class CompletionCollector(ModelHelperMixin):
 
         if len(import_node.tokens) > import_token_index + 2:
             name_token = import_node.tokens[import_token_index + 2]
-            if not position.is_in_range(r := range_from_token(name_token)) and r.end != position:
+            if not position.is_in_range(r := range_from_token(name_token)):
                 return None
 
         elif len(import_node.tokens) > import_token_index + 1:
             name_token = import_node.tokens[import_token_index + 1]
-            if position.is_in_range(r := range_from_token(name_token)) or r.end == position:
+            if position.is_in_range(r := range_from_token(name_token)):
                 if whitespace_at_begin_of_token(name_token) > 1:
 
                     ws_b = whitespace_from_begin_of_token(name_token)
                     r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
-                    if not position.is_in_range(r) and r.end != position:
+                    if not position.is_in_range(r):
                         return None
                 else:
                     return None
@@ -1549,18 +1549,18 @@ class CompletionCollector(ModelHelperMixin):
 
         if len(import_node.tokens) > import_token_index + 2:
             name_token = import_node.tokens[import_token_index + 2]
-            if not position.is_in_range(r := range_from_token(name_token)) and r.end != position:
+            if not position.is_in_range(r := range_from_token(name_token)):
                 return None
 
         elif len(import_node.tokens) > import_token_index + 1:
             name_token = import_node.tokens[import_token_index + 1]
-            if position.is_in_range(r := range_from_token(name_token)) or r.end == position:
+            if position.is_in_range(r := range_from_token(name_token)):
                 if whitespace_at_begin_of_token(name_token) > 1:
 
                     ws_b = whitespace_from_begin_of_token(name_token)
                     r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
-                    if not position.is_in_range(r) and r.end != position:
+                    if not position.is_in_range(r):
                         return None
                 else:
                     return None

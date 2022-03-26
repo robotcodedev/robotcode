@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 30
-  line: 37
-  name: outer var
-result: null

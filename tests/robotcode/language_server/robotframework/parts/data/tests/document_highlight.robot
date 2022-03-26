@@ -36,7 +36,7 @@ first
 #           ^^^^^^^^^^^^^^  multiple references with namespace
 #                                  ^^^^^  multiple variables
     Log    ${A_VAR_FROM_RESOURE}
-#          ^^^^^^^^^^^^^^^^^^^^^ a var from resource
+#            ^^^^^^^^^^^^^^^^^^ a var from resource
 
 second
     [Template]    Log To Console
@@ -52,10 +52,10 @@ third
 
 forth
     ${result}    lib_hello.A Library Keyword
-#   ^^^^^^^^^    Keyword assignement
+#     ^^^^^^    Keyword assignement
     Should Be Equal    ${result}   from hello
     ${result}=    lib_var.A Library Keyword
-#   ^^^^^^^^^    Keyword assignment with equals sign
+#     ^^^^^^    Keyword assignment with equals sign
     Should Be Equal    ${result}   ${LIB_ARG}
 
 

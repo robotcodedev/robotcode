@@ -1052,7 +1052,10 @@ class Position(Model):
     def __iter__(self) -> Iterator[int]:
         return iter((self.line, self.character))
 
-    def is_in_range(self, range: "Range") -> bool:
+    def is_in_range(self, range: "Range", include_end: bool = True) -> bool:
+        if include_end:
+            return range.start <= self <= range.end
+
         return range.start <= self < range.end
 
 

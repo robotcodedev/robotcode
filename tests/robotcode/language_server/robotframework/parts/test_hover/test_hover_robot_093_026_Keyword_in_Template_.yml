@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 26
+  line: 93
+  name: Keyword in Template
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Keyword *Log*'
+  range:
+    end:
+      character: 29
+      line: 93
+    start:
+      character: 26
+      line: 93

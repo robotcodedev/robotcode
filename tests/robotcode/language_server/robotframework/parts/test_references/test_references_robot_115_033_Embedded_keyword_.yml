@@ -6,36 +6,27 @@ result:
 - !Location
   range:
     end:
-      character: 32
-      line: 80
-    start:
-      character: 4
-      line: 80
-  uri: tests/references.robot
-- !Location
-  range:
-    end:
-      character: 36
-      line: 90
-    start:
-      character: 4
-      line: 90
-  uri: tests/references.robot
-- !Location
-  range:
-    end:
-      character: 36
-      line: 92
-    start:
-      character: 4
-      line: 92
-  uri: tests/references.robot
-- !Location
-  range:
-    end:
-      character: 0
-      line: 116
-    start:
-      character: 0
+      character: 33
       line: 115
+    start:
+      character: 28
+      line: 115
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 33
+      line: 115
+    start:
+      character: 28
+      line: 115
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 41
+      line: 117
+    start:
+      character: 36
+      line: 117
   uri: tests/references.robot

@@ -12,7 +12,7 @@ Variables         ${CURDIR}/../lib/myvariables.py
 #                                  ^^^^^^^^^^^^^^ variable import by path name
 Resource          ${CURDIR}/../resources/firstresource.resource
 #                                       ^^^^^^^^^^^^^^ resource import by path name
-#                   ^^^^^^^  variable in resource import
+#                   ^^^^^^  variable in resource import
 Resource          ../resources/folder_a/duplicated.resource
 Resource          ../resources/folder_b/duplicated.resource
 
@@ -40,7 +40,8 @@ ${K}    ${A+'${B+"${F}"}'+'${D}'} ${C}
 #             ^  inner var
 #                 ^  inner var
 #                     ^  inner inner var
-#                             ^  outer var
+#                            ^  outer var
+#                                   ^  extra var
 
 ${D}    3
 ${E}    SEPARATOR=\n    asd    def    hij
@@ -68,7 +69,7 @@ first
 #               ^^^^^^^^^^^^^^ Keyword with namespace
 #   ^^^^^^^^^^^ namespace before keyword
     FOR    ${key}    ${value}    IN    &{A DICT}
-#          ^^^^^^ FOR loop variable declaration
+#           ^^^^ FOR loop variable declaration
         Log    ${key}=${value}
 #       ^^^ Keyword in FOR loop
     END
@@ -79,7 +80,7 @@ first
 #            ^^^^^^    BuiltIn variable
 #^^^    Spaces
     Log    ${A_VAR_FROM_LIB}
-#          ^^^^^^^^^^^^^^^^^    variable from lib
+#            ^^^^^^^^^^^^^^    variable from lib
 
     do something in a resource
 #   ^^^^^^^^^^^^^^^^^^^^^^^^^^  Keyword from resource
@@ -101,7 +102,7 @@ third
 #   ^^^^^^^^^    Keyword assignement
     Should Be Equal    ${result}   from hello
     ${result}=    lib_var.A Library Keyword
-#   ^^^^^^^^^    Keyword assignment with equals sign
+#     ^^^^^^    Keyword assignment with equals sign
     Should Be Equal    first=${result}   second=${LIB_ARG}
 
 forth

@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 12
+  line: 212
+  name: simple keyword with extra spaces and parameter
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '## Keyword *Sleep*'
+  range:
+    end:
+      character: 13
+      line: 212
+    start:
+      character: 4
+      line: 212
