@@ -2,7 +2,9 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
+## [Unreleased]
+- none so far
+##  0.11.0
 
 - correct find references at token ends
   - If the cursor is at the end of a keyword, for example, the keyword will also be highlighted and the references will be found.
