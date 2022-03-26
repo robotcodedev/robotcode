@@ -9,7 +9,12 @@ from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import DocumentSymbol, SymbolInformation, SymbolKind
 from ...common.text_document import TextDocument
-from ..utils.ast import Token, range_from_node, range_from_token, tokenize_variables
+from ..utils.ast_utils import (
+    Token,
+    range_from_node,
+    range_from_token,
+    tokenize_variables,
+)
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol

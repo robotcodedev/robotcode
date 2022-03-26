@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any, Optional, Tuple
 
 from ...common.lsp_types import Position, Range
-from ..utils.ast import Token
+from ..utils.ast_utils import Token
 
 
 @dataclass

@@ -27,7 +27,7 @@ from ...common.text_document import TextDocument
 from ..configuration import RobotConfig
 from ..diagnostics.imports_manager import ImportsManager
 from ..diagnostics.namespace import DocumentType, Namespace
-from ..utils.ast import Token
+from ..utils.ast_utils import Token
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol

@@ -21,7 +21,7 @@ from ...common.lsp_types import Position
 from ..diagnostics.entities import VariableDefinition, VariableNotFoundDefinition
 from ..diagnostics.library_doc import KeywordDoc, KeywordError
 from ..diagnostics.namespace import LibraryEntry, Namespace
-from ..utils.ast import (
+from ..utils.ast_utils import (
     Token,
     is_not_variable_token,
     iter_over_keyword_names_and_owners,

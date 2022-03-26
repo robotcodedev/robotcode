@@ -18,7 +18,7 @@ from ...common.lsp_types import (
 )
 from ...common.text_document import TextDocument
 from ..parts.model_helper import ModelHelperMixin
-from ..utils.ast import (
+from ..utils.ast_utils import (
     HasTokens,
     Statement,
     Token,

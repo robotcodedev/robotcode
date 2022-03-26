@@ -10,7 +10,6 @@ from typing import (
     Callable,
     Coroutine,
     Generic,
-    Literal,
     NamedTuple,
     Optional,
     Type,
@@ -147,7 +146,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         exception_type: Optional[Type[BaseException]],
         exception_value: Optional[BaseException],
         traceback: Optional[TracebackType],
-    ) -> Literal[False]:
+    ) -> bool:
         await self.close_async()
         return False
 
@@ -160,9 +159,8 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         exception_type: Optional[Type[BaseException]],
         exception_value: Optional[BaseException],
         traceback: Optional[TracebackType],
-    ) -> Literal[False]:
+    ) -> None:
         self.close()
-        return False
 
     @abc.abstractmethod
     def create_protocol(self) -> TProtocol:

@@ -8,7 +8,7 @@ from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import CodeLens, Command
 from ...common.text_document import TextDocument
-from ..utils.ast import range_from_token
+from ..utils.ast_utils import range_from_token
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol

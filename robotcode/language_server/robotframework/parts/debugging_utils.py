@@ -9,7 +9,7 @@ from ....utils.async_itertools import async_dropwhile, async_next, async_takewhi
 from ....utils.async_tools import run_coroutine_in_thread
 from ....utils.logging import LoggingDescriptor
 from ...common.lsp_types import Model, Position, Range, TextDocumentIdentifier
-from ..utils.ast import (
+from ..utils.ast_utils import (
     HasTokens,
     Statement,
     Token,

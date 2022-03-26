@@ -45,7 +45,7 @@ from ..diagnostics.library_doc import (
 )
 from ..diagnostics.namespace import LibraryEntry, Namespace, ResourceEntry
 from ..utils import async_ast
-from ..utils.ast import (
+from ..utils.ast_utils import (
     HasTokens,
     Token,
     is_not_variable_token,

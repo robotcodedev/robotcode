@@ -21,7 +21,7 @@ from ...common.decorators import language_id
 from ...common.lsp_types import DocumentHighlight, DocumentHighlightKind, Position
 from ...common.text_document import TextDocument
 from ..diagnostics.entities import VariableDefinition
-from ..utils.ast import (
+from ..utils.ast_utils import (
     HasTokens,
     Statement,
     Token,

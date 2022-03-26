@@ -48,7 +48,7 @@ from ..diagnostics.library_doc import (
     KeywordMatcher,
 )
 from ..diagnostics.namespace import Namespace
-from ..utils.ast import (
+from ..utils.ast_utils import (
     HasTokens,
     Token,
     get_nodes_at_position,

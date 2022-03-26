@@ -41,7 +41,7 @@ from ..diagnostics.library_doc import (
     LibraryDoc,
 )
 from ..diagnostics.namespace import Namespace
-from ..utils.ast import (
+from ..utils.ast_utils import (
     HasTokens,
     Statement,
     Token,

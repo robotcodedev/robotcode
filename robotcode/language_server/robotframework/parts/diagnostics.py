@@ -11,7 +11,12 @@ from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
 from ...common.parts.diagnostics import DiagnosticsResult
 from ...common.text_document import TextDocument
 from ..diagnostics.analyzer import Analyzer
-from ..utils.ast import HeaderAndBodyBlock, Token, range_from_node, range_from_token
+from ..utils.ast_utils import (
+    HeaderAndBodyBlock,
+    Token,
+    range_from_node,
+    range_from_token,
+)
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -172,7 +177,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @_logger.call
     async def collect_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
 
-        from ..utils.ast import HasError, HasErrors
+        from ..utils.ast_utils import HasError, HasErrors
         from ..utils.async_ast import iter_nodes
 
         try:

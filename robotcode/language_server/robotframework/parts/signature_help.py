@@ -28,7 +28,7 @@ from ...common.lsp_types import (
 )
 from ...common.text_document import TextDocument
 from ..diagnostics.library_doc import KeywordDoc, LibraryDoc
-from ..utils.ast import (
+from ..utils.ast_utils import (
     Token,
     get_node_at_position,
     get_tokens_at_position,

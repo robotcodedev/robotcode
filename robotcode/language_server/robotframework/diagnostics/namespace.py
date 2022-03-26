@@ -39,7 +39,7 @@ from ...common.lsp_types import (
     Range,
 )
 from ...common.text_document import TextDocument
-from ..utils.ast import (
+from ..utils.ast_utils import (
     Token,
     range_from_node,
     range_from_token,

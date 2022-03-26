@@ -51,3 +51,7 @@ def get_robot_version() -> RobotVersion:
         raise InvalidRobotVersionError() from ex
 
     raise InvalidRobotVersionError()
+
+
+if __name__ == "__main__":
+    print(get_robot_version() >= (4, 0))

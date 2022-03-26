@@ -807,7 +807,7 @@ class ImportsManager:
         from robot.running.usererrorhandler import UserErrorHandler
         from robot.running.userkeyword import UserLibrary
 
-        from ..utils.ast import HasError, HasErrors
+        from ..utils.ast_utils import HasError, HasErrors
 
         errors: List[Error] = []
 

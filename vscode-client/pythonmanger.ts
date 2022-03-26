@@ -1,3 +1,4 @@
+import { spawnSync } from "child_process";
 import * as path from "path";
 import * as vscode from "vscode";
 import { CONFIG_SECTION } from "./config";
@@ -72,8 +73,19 @@ export class PythonManager {
     return this._pythonDebugAdapterMain;
   }
 
+  public get checkRobotVersionMain(): string {
+    return this._checkRobotVersionMain;
+  }
+
+  public get checkPythonVersionScript(): string {
+    return this._pythonVersionScript;
+  }
+
   _pythonLanguageServerMain: string;
   _pythonDebugAdapterMain: string;
+  _checkRobotVersionMain: string;
+  _pythonVersionScript = "import sys; print(sys.version_info[:2]>=(3,8))";
+
   _pythonExtension: vscode.Extension<PythonExtensionApi> | undefined;
 
   constructor(
@@ -85,6 +97,10 @@ export class PythonManager {
     );
     this._pythonDebugAdapterMain = this.extensionContext.asAbsolutePath(
       path.join("robotcode", "debugger", "launcher", "__main__.py")
+    );
+
+    this._checkRobotVersionMain = this.extensionContext.asAbsolutePath(
+      path.join("robotcode", "language_server", "robotframework", "utils", "version.py")
     );
   }
 
@@ -135,5 +151,25 @@ export class PythonManager {
     }
 
     return result;
+  }
+
+  public checkPythonVersion(pythonCommand: string): boolean {
+    const res = spawnSync(pythonCommand, ["-u", "-c", this.checkPythonVersionScript], {
+      encoding: "ascii",
+    });
+    if (res.status == 0 && res.stdout && res.stdout.trimEnd() === "True") return true;
+
+    return false;
+  }
+
+  public checkRobotVersion(pythonCommand: string): boolean | undefined {
+    const res = spawnSync(pythonCommand, ["-u", this.checkRobotVersionMain], {
+      encoding: "ascii",
+    });
+
+    if (res.status == 0 && res.stdout && res.stdout.trimEnd() === "True") return true;
+    if (res.status != 0) return undefined;
+
+    return false;
   }
 }

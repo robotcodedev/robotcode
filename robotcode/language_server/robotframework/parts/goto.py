@@ -22,7 +22,7 @@ from ....utils.uri import Uri
 from ...common.decorators import language_id
 from ...common.lsp_types import Location, LocationLink, Position
 from ...common.text_document import TextDocument
-from ..utils.ast import (
+from ..utils.ast_utils import (
     HasTokens,
     Token,
     get_nodes_at_position,
