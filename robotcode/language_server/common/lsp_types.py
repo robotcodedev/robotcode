@@ -954,6 +954,18 @@ class LinkedEditingRangeRegistrationOptions(
 
 
 @dataclass(repr=False)
+class SelectionRangeOptions(WorkDoneProgressOptions):
+    pass
+
+
+@dataclass(repr=False)
+class SelectionRangeRegistrationOptions(
+    TextDocumentRegistrationOptions, SelectionRangeOptions, StaticRegistrationOptions
+):
+    pass
+
+
+@dataclass(repr=False)
 class ServerCapabilities(Model):
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None] = None
     completion_provider: Optional[CompletionOptions] = None
@@ -975,7 +987,7 @@ class ServerCapabilities(Model):
     # TODO rename_provider: Union[bool, RenameOptions, None] = None
     folding_range_provider: Union[bool, FoldingRangeOptions, FoldingRangeRegistrationOptions, None] = None
     execute_command_provider: Optional[ExecuteCommandOptions] = None
-    # TODO selection_range_provider: Union[bool, SelectionRangeOptions, SelectionRangeRegistrationOptions, None] = None
+    selection_range_provider: Union[bool, SelectionRangeOptions, SelectionRangeRegistrationOptions, None] = None
     linked_editing_range_provider: Union[
         bool, LinkedEditingRangeOptions, LinkedEditingRangeRegistrationOptions, None
     ] = None
@@ -1900,3 +1912,20 @@ class LinkedEditingRangeParams(WorkDoneProgressParams, TextDocumentPositionParam
 class LinkedEditingRanges(Model):
     ranges: List[Range]
     word_pattern: Optional[str] = None
+
+
+@dataclass(repr=False)
+class _SelectionRangeParams(Model):
+    text_document: TextDocumentIdentifier
+    positions: List[Position]
+
+
+@dataclass(repr=False)
+class SelectionRangeParams(WorkDoneProgressParams, PartialResultParams, _SelectionRangeParams):
+    pass
+
+
+@dataclass(repr=False)
+class SelectionRange(Model):
+    range: Range
+    parent: Optional[SelectionRange] = None

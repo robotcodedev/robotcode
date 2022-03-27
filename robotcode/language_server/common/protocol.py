@@ -50,6 +50,7 @@ from .parts.hover import HoverProtocolPart
 from .parts.implementation import ImplementationProtocolPart
 from .parts.linked_editing_ranges import LinkedEditingRangeProtocolPart
 from .parts.references import ReferencesProtocolPart
+from .parts.selection_range import SelectionRangeProtocolPart
 from .parts.semantic_tokens import SemanticTokensProtocolPart
 from .parts.signature_help import SignatureHelpProtocolPart
 from .parts.window import WindowProtocolPart
@@ -83,6 +84,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     references = ProtocolPartDescriptor(ReferencesProtocolPart)
     document_highlight = ProtocolPartDescriptor(DocumentHighlightProtocolPart)
     linked_editing_range = ProtocolPartDescriptor(LinkedEditingRangeProtocolPart)
+    selection_range = ProtocolPartDescriptor(SelectionRangeProtocolPart)
 
     name: Optional[str] = None
     version: Optional[str] = None

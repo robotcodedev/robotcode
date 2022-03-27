@@ -192,8 +192,12 @@ def whitespace_from_begin_of_token(token: Token) -> str:
     return result
 
 
-def get_tokens_at_position(node: HasTokens, position: Position) -> List[Token]:
-    return [t for t in node.tokens if position.is_in_range(range := range_from_token(t)) or range.end == position]
+def get_tokens_at_position(node: HasTokens, position: Position, include_end: bool = False) -> List[Token]:
+    return [
+        t
+        for t in node.tokens
+        if position.is_in_range(range := range_from_token(t), include_end) or range.end == position
+    ]
 
 
 def iter_nodes_at_position(node: ast.AST, position: Position, include_end: bool = False) -> AsyncIterator[ast.AST]:

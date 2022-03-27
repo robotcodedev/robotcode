@@ -27,6 +27,7 @@ from .parts.hover import RobotHoverProtocolPart
 from .parts.references import RobotReferencesProtocolPart
 from .parts.robocop_diagnostics import RobotRoboCopDiagnosticsProtocolPart
 from .parts.robot_workspace import RobotWorkspaceProtocolPart
+from .parts.selection_range import RobotSelectionRangeProtocolPart
 from .parts.semantic_tokens import RobotSemanticTokenProtocolPart
 from .parts.signature_help import RobotSignatureHelpProtocolPart
 from .utils.process_pool import shutdown_process_pool
@@ -84,6 +85,8 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     robot_references = ProtocolPartDescriptor(RobotReferencesProtocolPart)
     robot_document_highlight = ProtocolPartDescriptor(RobotDocumentHighlightProtocolPart)
     robot_codelens = ProtocolPartDescriptor(RobotCodeLensProtocolPart)
+    robot_selection_range = ProtocolPartDescriptor(RobotSelectionRangeProtocolPart)
+
     robot_workspace = ProtocolPartDescriptor(RobotWorkspaceProtocolPart)
 
     robot_discovering = ProtocolPartDescriptor(DiscoveringProtocolPart)

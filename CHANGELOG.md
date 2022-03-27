@@ -2,8 +2,11 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Implement [Selection Range](https://code.visualstudio.com/docs/editor/codebasics#_shrinkexpand-selection) support for Robot Framework
+  - starting from a point in the source code you can select the surrounding keyword, block (IF/WHILE,...), test case, test section and so on
+
 ##  0.11.1
 
 - Provide better error messages if python and robot environment not matches RobotCode requirements
