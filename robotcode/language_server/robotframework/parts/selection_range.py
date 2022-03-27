@@ -57,17 +57,18 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
                 node = nodes[-1]
                 if node is not None and isinstance(node, HasTokens):
                     tokens = get_tokens_at_position(node, position, True)
-                    token = tokens[-1]
-                    if token is not None:
-                        current_range = SelectionRange(range_from_token(token), current_range)
-                        async for var_token, _ in self.iter_variables_from_token(
-                            token, namespace, nodes, position, return_not_found=True
-                        ):
-                            var_token_range = range_from_token(var_token)
+                    if tokens:
+                        token = tokens[-1]
+                        if token is not None:
+                            current_range = SelectionRange(range_from_token(token), current_range)
+                            async for var_token, _ in self.iter_variables_from_token(
+                                token, namespace, nodes, position, return_not_found=True
+                            ):
+                                var_token_range = range_from_token(var_token)
 
-                            if position in var_token_range:
-                                current_range = SelectionRange(var_token_range, current_range)
-                                break
+                                if position in var_token_range:
+                                    current_range = SelectionRange(var_token_range, current_range)
+                                    break
 
                 results.append(current_range)
 

@@ -2,8 +2,10 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Fix selection range on white space
+
 ##  0.11.2
 
 - Implement [Selection Range](https://code.visualstudio.com/docs/editor/codebasics#_shrinkexpand-selection) support for Robot Framework
