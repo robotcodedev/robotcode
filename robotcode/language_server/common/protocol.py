@@ -48,6 +48,7 @@ from .parts.folding_range import FoldingRangeProtocolPart
 from .parts.formatting import FormattingProtocolPart
 from .parts.hover import HoverProtocolPart
 from .parts.implementation import ImplementationProtocolPart
+from .parts.linked_editing_ranges import LinkedEditingRangeProtocolPart
 from .parts.references import ReferencesProtocolPart
 from .parts.semantic_tokens import SemanticTokensProtocolPart
 from .parts.signature_help import SignatureHelpProtocolPart
@@ -81,6 +82,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     semantic_tokens = ProtocolPartDescriptor(SemanticTokensProtocolPart)
     references = ProtocolPartDescriptor(ReferencesProtocolPart)
     document_highlight = ProtocolPartDescriptor(DocumentHighlightProtocolPart)
+    linked_editing_range = ProtocolPartDescriptor(LinkedEditingRangeProtocolPart)
 
     name: Optional[str] = None
     version: Optional[str] = None

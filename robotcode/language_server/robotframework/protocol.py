@@ -87,7 +87,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     robot_workspace = ProtocolPartDescriptor(RobotWorkspaceProtocolPart)
 
     robot_discovering = ProtocolPartDescriptor(DiscoveringProtocolPart)
-    robot_debuggin_utils = ProtocolPartDescriptor(RobotDebuggingUtilsProtocolPart)
+    robot_debugging_utils = ProtocolPartDescriptor(RobotDebuggingUtilsProtocolPart)
 
     name = "RobotCode"
     version = __version__

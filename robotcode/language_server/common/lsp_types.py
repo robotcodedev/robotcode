@@ -942,6 +942,18 @@ class DocumentHighlightRegistrationOptions(TextDocumentRegistrationOptions, Docu
 
 
 @dataclass(repr=False)
+class LinkedEditingRangeOptions(WorkDoneProgressOptions):
+    pass
+
+
+@dataclass(repr=False)
+class LinkedEditingRangeRegistrationOptions(
+    TextDocumentRegistrationOptions, LinkedEditingRangeOptions, StaticRegistrationOptions
+):
+    pass
+
+
+@dataclass(repr=False)
 class ServerCapabilities(Model):
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None] = None
     completion_provider: Optional[CompletionOptions] = None
@@ -964,9 +976,9 @@ class ServerCapabilities(Model):
     folding_range_provider: Union[bool, FoldingRangeOptions, FoldingRangeRegistrationOptions, None] = None
     execute_command_provider: Optional[ExecuteCommandOptions] = None
     # TODO selection_range_provider: Union[bool, SelectionRangeOptions, SelectionRangeRegistrationOptions, None] = None
-    # TODO linked_editing_range_provider: Union[
-    #     boolean, LinkedEditingRangeOptions, LinkedEditingRangeRegistrationOptions, None
-    # ] = None
+    linked_editing_range_provider: Union[
+        bool, LinkedEditingRangeOptions, LinkedEditingRangeRegistrationOptions, None
+    ] = None
     # TODO call_hierarchy_provider: Union[boolean, CallHierarchyOptions, CallHierarchyRegistrationOptions, None] = None
     semantic_tokens_provider: Union[SemanticTokensOptions, SemanticTokensRegistrationOptions, None] = None
     # TODO moniker_provider: Union[bool, MonikerOptions, MonikerRegistrationOptions, None] = None
@@ -1877,3 +1889,14 @@ class DocumentHighlightKind(Enum):
 class DocumentHighlight(Model):
     range: Range
     kind: Optional[DocumentHighlightKind] = None
+
+
+@dataclass(repr=False)
+class LinkedEditingRangeParams(WorkDoneProgressParams, TextDocumentPositionParams):
+    pass
+
+
+@dataclass(repr=False)
+class LinkedEditingRanges(Model):
+    ranges: List[Range]
+    word_pattern: Optional[str] = None
