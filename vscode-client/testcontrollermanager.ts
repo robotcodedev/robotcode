@@ -670,12 +670,24 @@ export class TestControllerManager {
         await DebugManager.runTests(workspace, [], [], [], runId, options, dryRun);
       } else {
         const includedInWs = testItems
-          .map((i) => this.findRobotItem(i)?.longname)
+          .map((i) => {
+            const ritem = this.findRobotItem(i);
+            if (ritem?.type == "workspace" && ritem.children?.length) {
+              return ritem.children[0].longname;
+            }
+            return ritem?.longname;
+          })
           .filter((i) => i !== undefined) as string[];
         const excludedInWs =
           (excluded
             .get(workspace)
-            ?.map((i) => this.findRobotItem(i)?.longname)
+            ?.map((i) => {
+              const ritem = this.findRobotItem(i);
+              if (ritem?.type == "workspace" && ritem.children?.length) {
+                return ritem.children[0].longname;
+              }
+              return ritem?.longname;
+            })
             .filter((i) => i !== undefined) as string[]) ?? [];
 
         const suites = new Set<string>();
@@ -687,7 +699,11 @@ export class TestControllerManager {
               if (longname) suites.add(longname);
             }
           } else {
-            const longname = this.findRobotItem(testItem)?.longname;
+            const ritem = this.findRobotItem(testItem);
+            let longname = ritem?.longname;
+            if (ritem?.type == "workspace" && ritem.children?.length) {
+              longname = ritem.children[0].longname;
+            }
             if (longname) suites.add(longname);
           }
         }
