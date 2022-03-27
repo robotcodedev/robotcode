@@ -6,6 +6,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 - Provide better error messages if python and robot environment not matches RobotCode requirements
   - fixes [#40](https://github.com/d-biehl/robotcode/issues/40)
+- Correct restart of language server client if python interpreter changed
 
 ##  0.11.0
 

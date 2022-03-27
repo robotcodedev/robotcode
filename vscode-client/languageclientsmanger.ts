@@ -108,10 +108,12 @@ export class LanguageClientsManager {
       this.pythonManager.pythonExtension?.exports.settings.onDidChangeExecutionDetails(async (uri) => {
         if (uri !== undefined) {
           const folder = vscode.workspace.getWorkspaceFolder(uri);
+          let needsRestart = false;
           if (folder !== undefined) {
-            this._pythonValidPythonAndRobotEnv.delete(folder);
+            needsRestart = this._pythonValidPythonAndRobotEnv.has(folder);
+            if (needsRestart) this._pythonValidPythonAndRobotEnv.delete(folder);
           }
-          await this.refresh(uri);
+          await this.refresh(uri, needsRestart);
         } else {
           await this.restart();
         }
@@ -441,7 +443,7 @@ export class LanguageClientsManager {
     await this.refresh();
   }
 
-  public async refresh(uri?: vscode.Uri): Promise<void> {
+  public async refresh(uri?: vscode.Uri, restart?: boolean): Promise<void> {
     await this.clientsMutex.dispatch(async () => {
       if (uri) {
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
@@ -463,6 +465,13 @@ export class LanguageClientsManager {
     });
 
     const folders = new Set<vscode.WorkspaceFolder>();
+
+    if (uri != undefined && restart) {
+      const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+      if (workspaceFolder) {
+        folders.add(workspaceFolder);
+      }
+    }
 
     for (const document of vscode.workspace.textDocuments) {
       if (document.languageId === "robotframework") {
