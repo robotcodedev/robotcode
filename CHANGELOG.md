@@ -2,8 +2,10 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Enable automatic publication of releases on github
+
 ##  0.11.4
 
 - none so far
