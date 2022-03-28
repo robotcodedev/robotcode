@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 - none so far
+##  0.11.4
+
+- none so far
+
 ##  0.10.2
 
 - Correct error in find variable references with invalid variables in variable section
