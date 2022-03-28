@@ -2,8 +2,10 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Correct error in find variable references with invalid variables in variable section
+
 ##  0.11.3
 
 - Fix selection range on white space

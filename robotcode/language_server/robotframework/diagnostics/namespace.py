@@ -54,6 +54,7 @@ from .entities import (
     CommandLineVariableDefinition,
     EnvironmentVariableDefinition,
     Import,
+    InvalidVariableError,
     LibraryImport,
     LocalVariableDefinition,
     ResourceImport,
@@ -847,6 +848,7 @@ class Namespace:
         nodes: Optional[List[ast.AST]] = None,
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
+        ignore_error: bool = False,
     ) -> Optional[VariableDefinition]:
 
         await self.ensure_initialized()
@@ -854,15 +856,19 @@ class Namespace:
         if name[:2] == "%{" and name[-1] == "}":
             return EnvironmentVariableDefinition(0, 0, 0, 0, "", name, None)
 
-        matcher = VariableMatcher(name)
+        try:
+            matcher = VariableMatcher(name)
 
-        async for m, v in self.yield_variables(
-            nodes,
-            position,
-            skip_commandline_variables=skip_commandline_variables,
-        ):
-            if matcher == m:
-                return v
+            async for m, v in self.yield_variables(
+                nodes,
+                position,
+                skip_commandline_variables=skip_commandline_variables,
+            ):
+                if matcher == m:
+                    return v
+        except InvalidVariableError:
+            if not ignore_error:
+                raise
 
         return None
 

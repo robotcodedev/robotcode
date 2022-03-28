@@ -120,3 +120,12 @@ result:
       character: 18
       line: 9
   uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 19
+      line: 15
+    start:
+      character: 13
+      line: 15
+  uri: tests/variables.robot

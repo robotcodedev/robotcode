@@ -249,7 +249,11 @@ class ModelHelperMixin:
             if variable_started:
                 if toknum == python_token.NAME:
                     var = await namespace.find_variable(
-                        f"${{{tokval}}}", nodes, position, skip_commandline_variables=skip_commandline_variables
+                        f"${{{tokval}}}",
+                        nodes,
+                        position,
+                        skip_commandline_variables=skip_commandline_variables,
+                        ignore_error=True,
                     )
                     sub_token = RobotToken(
                         expression.type,
@@ -411,7 +415,7 @@ class ModelHelperMixin:
                 sub_token = token_or_var
                 name = sub_token.value
                 var = await namespace.find_variable(
-                    name, nodes, position, skip_commandline_variables=skip_commandline_variables
+                    name, nodes, position, skip_commandline_variables=skip_commandline_variables, ignore_error=True
                 )
                 if var is not None:
                     yield strip_variable_token(sub_token), var
@@ -431,7 +435,11 @@ class ModelHelperMixin:
                         base_name, _ = match.groups()
                         name = f"{name[0]}{{{base_name.strip()}}}"
                         var = await namespace.find_variable(
-                            name, nodes, position, skip_commandline_variables=skip_commandline_variables
+                            name,
+                            nodes,
+                            position,
+                            skip_commandline_variables=skip_commandline_variables,
+                            ignore_error=True,
                         )
                         sub_sub_token = RobotToken(sub_token.type, name, sub_token.lineno, sub_token.col_offset)
                         if var is not None:
