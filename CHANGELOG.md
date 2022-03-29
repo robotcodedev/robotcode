@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 - none so far
+##  0.11.6
+
+- none so far
+
 ##  0.11.5
 
 - Enable automatic publication of releases on github
