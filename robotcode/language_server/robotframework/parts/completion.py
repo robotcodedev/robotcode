@@ -186,7 +186,7 @@ def get_snippets() -> Dict[str, List[str]]:
                 {
                     "TRYEX": ["TRY", "    $0", r"EXCEPT  message", "    ", "END", ""],
                     "TRYEXAS": ["TRY", "    $0", r"EXCEPT  message    AS    \${ex}", "    ", "END", ""],
-                    "WHILE": [r"WHILE  $1:expression", "    $0", "END", ""],
+                    "WHILE": [r"WHILE  ${1:expression}", "    $0", "END", ""],
                 }
             )
     return __snippets
