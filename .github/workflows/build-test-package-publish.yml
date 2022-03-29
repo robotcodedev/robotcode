@@ -290,7 +290,7 @@ jobs:
           echo "$REL_NOTES"
 
           echo "::set-output name=release_notes::$REL_NOTES"
-          echo "::set-output name=is_prelease::$((poetry run npm run --silent is-prerelease)"
+          echo "::set-output name=is_prelease::$(poetry run npm run --silent is-prerelease)"
 
       - name: find assets
         id: find_assets
