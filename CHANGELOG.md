@@ -2,8 +2,14 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+### added
+
+- optimize restart language clients if configuration changed
+- support for progress feature of language server protocol
+- correct WHILE snippets
+
 ##  0.11.6
 
 - none so far
