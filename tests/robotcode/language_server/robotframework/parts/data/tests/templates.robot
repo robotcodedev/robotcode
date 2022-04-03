@@ -3,13 +3,20 @@ Test Template       suite template keyword
 
 Test Template       check that 1 plus ${b} is ${expected}
 
+*** Variables ***
+${A VAR}    4
+@{LIST VAR}    1    2    3
+
 *** Test Cases ***
 first
     [Tags]    robot:continue-on-failure
     [Template]    template keyword
-    1    2    3
-    3    5    6    2
-    a=1    2    4
+    1    ${A VAR}    3
+    @{LIST VAR}
+    1    ${UNKNOWN VAR}    3
+    @{LIST VAR}    2
+    3    5    ${A VAR}    2
+    a=1    ${UNKNOWN VAR}    4
 
 second
     [Tags]    robot:continue-on-failure
@@ -37,13 +44,18 @@ templated with embedded2
 
 templated with embedded1
     [Template]    check that 1 plus ${b} is ${expected}
-    2    3
-    4    7
+    a    3
+    1    7
+
+templated with embedded3
+    [Template]    check that 1 plus a is ${expected}
+    2
+    4
 
 templated with embedded not defined
     [Template]    verify that ${a} plus ${b} is ${expected}
     1    2    3
-    3    4    7
+    3    a    7
 
 *** Keywords ***
 suite template keyword

@@ -34,11 +34,22 @@ Template with FOR and IF
         END
     END
 
+Template with FOR and IF invalid
+    [Template]    Example keyword
+    FOR    ${item}    IN    @{ITEMS}
+        IF  ${item} < 5
+            ${item}    2nd arg
+            ${item}    2nd arg    2
+        ELSE
+            ${item}    3nd arg
+        END
+    END
+
 *** Keywords ***
 Login with invalid credentials should fail
     [Arguments]    ${username}    ${password}
     Log    ${username}    ${password}
 
 Example keyword
-    [Arguments]    @{items}
-    Log    ${items}
+    [Arguments]    ${a}    ${b}
+    Log    ${a} ${b}

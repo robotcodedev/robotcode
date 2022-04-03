@@ -1114,82 +1114,19 @@ result:
   range:
     end:
       character: 7
-      line: 21
+      line: 28
     start:
       character: 4
-      line: 21
+      line: 28
   uri: tests/templates.robot
 - !Location
   range:
     end:
       character: 7
-      line: 50
+      line: 62
     start:
       character: 4
-      line: 50
-  uri: tests/templates.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 51
-    start:
-      character: 4
-      line: 51
-  uri: tests/templates.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 52
-    start:
-      character: 4
-      line: 52
-  uri: tests/templates.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 53
-    start:
-      character: 4
-      line: 53
-  uri: tests/templates.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 57
-    start:
-      character: 4
-      line: 57
-  uri: tests/templates.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 58
-    start:
-      character: 4
-      line: 58
-  uri: tests/templates.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 59
-    start:
-      character: 4
-      line: 59
-  uri: tests/templates.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 60
-    start:
-      character: 4
-      line: 60
+      line: 62
   uri: tests/templates.robot
 - !Location
   range:
@@ -1199,69 +1136,132 @@ result:
     start:
       character: 4
       line: 63
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 64
+    start:
+      character: 4
+      line: 64
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 65
+    start:
+      character: 4
+      line: 65
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 69
+    start:
+      character: 4
+      line: 69
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 70
+    start:
+      character: 4
+      line: 70
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 71
+    start:
+      character: 4
+      line: 71
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 72
+    start:
+      character: 4
+      line: 72
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 75
+    start:
+      character: 4
+      line: 75
   uri: tests/templates.robot
 - !Location
   range:
     end:
       character: 37
-      line: 64
+      line: 76
     start:
       character: 34
-      line: 64
+      line: 76
   uri: tests/templates.robot
 - !Location
   range:
     end:
       character: 72
-      line: 64
+      line: 76
     start:
       character: 69
-      line: 64
+      line: 76
   uri: tests/templates.robot
 - !Location
   range:
     end:
       character: 11
-      line: 70
+      line: 82
     start:
       character: 8
-      line: 70
+      line: 82
   uri: tests/templates.robot
 - !Location
   range:
     end:
       character: 7
-      line: 74
+      line: 86
     start:
       character: 4
-      line: 74
+      line: 86
   uri: tests/templates.robot
 - !Location
   range:
     end:
       character: 7
-      line: 78
+      line: 90
     start:
       character: 4
-      line: 78
+      line: 90
   uri: tests/templates.robot
 - !Location
   range:
     end:
       character: 7
-      line: 39
+      line: 50
     start:
       character: 4
-      line: 39
+      line: 50
   uri: tests/templates2.robot
 - !Location
   range:
     end:
       character: 7
-      line: 43
+      line: 54
     start:
       character: 4
-      line: 43
+      line: 54
   uri: tests/templates2.robot
 - !Location
   range:

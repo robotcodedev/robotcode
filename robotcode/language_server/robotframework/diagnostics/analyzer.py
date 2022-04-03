@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import re
-from typing import Any, List, Optional, Union, cast
+from typing import Any, List, Optional, Tuple, Union, cast
 
 from ....utils.uri import Uri
 from ...common.lsp_types import (
@@ -23,6 +23,7 @@ from ..utils.ast_utils import (
     Statement,
     Token,
     is_not_variable_token,
+    range_from_node,
     range_from_node_or_token,
     range_from_token,
 )
@@ -500,7 +501,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             await self._analyze_keyword_call(
                 value.value, value, keyword_token, [], analyse_run_keywords=False, allow_variables=True
             )
-
+        self.template = value
         await self.generic_visit(node)
 
     async def visit_KeywordCall(self, node: ast.AST) -> None:  # noqa: N802
@@ -556,6 +557,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             await self.generic_visit(node)
         finally:
             self.current_testcase_or_keyword_name = None
+            self.template = None
 
     async def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
@@ -592,3 +594,61 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             await self.generic_visit(node)
         finally:
             self.current_testcase_or_keyword_name = None
+
+    def _format_template(self, template: str, arguments: Tuple[str, ...]) -> Tuple[str, Tuple[str, ...]]:
+        from robot.variables import VariableIterator
+
+        variables = VariableIterator(template, identifiers="$")
+        count = len(variables)
+        if count == 0 or count != len(arguments):
+            return template, arguments
+        temp = []
+        for (before, _, after), arg in zip(variables, arguments):
+            temp.extend([before, arg])
+        temp.append(after)
+        return "".join(temp), ()
+
+    async def visit_TemplateArguments(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import TemplateArguments
+
+        arguments = cast(TemplateArguments, node)
+
+        template = self.template or self.test_template
+        if template is not None and template.value is not None and template.value.upper() not in ("", "NONE"):
+            argument_tokens = arguments.get_tokens(RobotToken.ARGUMENT)
+            args = tuple(t.value for t in argument_tokens)
+            keyword = template.value
+            keyword, args = self._format_template(keyword, args)
+
+            result = await self.finder.find_keyword(keyword)
+            if result is not None:
+                try:
+                    if result.arguments is not None:
+                        result.arguments.resolve(
+                            args,
+                            None,
+                            resolve_variables_until=result.args_to_process,
+                            resolve_named=not result.is_any_run_keyword(),
+                        )
+                except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                    raise
+                except BaseException as e:
+                    await self.append_diagnostics(
+                        range=range_from_node(arguments, skip_non_data=True),
+                        message=str(e),
+                        severity=DiagnosticSeverity.ERROR,
+                        source=DIAGNOSTICS_SOURCE_NAME,
+                        code=type(e).__qualname__,
+                    )
+
+            for d in self.finder.diagnostics:
+                await self.append_diagnostics(
+                    range=range_from_node(arguments, skip_non_data=True),
+                    message=d.message,
+                    severity=d.severity,
+                    source=DIAGNOSTICS_SOURCE_NAME,
+                    code=d.code,
+                )
+
+        await self.generic_visit(node)

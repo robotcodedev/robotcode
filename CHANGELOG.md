@@ -2,8 +2,15 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+### added
+- Test Templates argument analysis
+  - Basic usage
+  - Templates with embedded arguments
+  - Templates with FOR loops and IF/ELSE structures
+  - see also [Robot Framework documentation](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#test-templates)
+
 ##  0.11.7
 
 ### added
