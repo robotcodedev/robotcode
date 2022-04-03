@@ -14,11 +14,11 @@
     },
     "robotcode.languageServer.args": [
         "--debugpy",
-        "--log",
-        "--log-level",
-        "TRACE",
-        "--log-robotframework",
-        "--log-language-server"
+        // "--log",
+        // "--log-level",
+        // "TRACE",
+        // "--log-robotframework",
+        // "--log-language-server"
     ],
     // "robotcode.debug.groupOutput": false,
     // "robotcode.robot.args": [
