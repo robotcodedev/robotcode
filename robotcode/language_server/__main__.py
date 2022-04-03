@@ -100,6 +100,7 @@ def create_parser() -> argparse.ArgumentParser:
     result.add_argument("-pn", "--pipe-name", default=None, help="pipe name for pipe mode", type=str)
 
     result.add_argument("--log", action="store_true", help="enable logging")
+    result.add_argument("--log-all", action="store_true", help="enable all log messages")
     result.add_argument("--log-json-rpc", action="store_true", help="show json-rpc log messages")
     result.add_argument("--log-json-rpc-data", action="store_true", help="show json-rpc-data log messages")
     result.add_argument("--log-language-server", action="store_true", help="show language server log messages")
@@ -151,18 +152,19 @@ def init_logging(args: argparse.Namespace) -> None:
     if args.log_file is not None:
         _logger.logger.addHandler(get_log_handler(args.log_file))
 
-    if not args.log_robotframework:
-        logging.getLogger("robotcode.language_server.robotframework").setLevel(logging.CRITICAL)
-    if not args.log_language_server_parts:
-        logging.getLogger("robotcode.language_server.common.parts").setLevel(logging.CRITICAL)
-    if not args.log_language_server:
-        logging.getLogger("robotcode.language_server.common").setLevel(logging.CRITICAL)
-    if not args.log_json_rpc:
-        logging.getLogger("robotcode.jsonrpc2").setLevel(logging.CRITICAL)
-    if not args.log_json_rpc_data:
-        logging.getLogger("robotcode.jsonrpc2.protocol.JsonRPCProtocol_data").setLevel(logging.CRITICAL)
-    if not args.log_asyncio:
-        logging.getLogger("asyncio").setLevel(logging.CRITICAL)
+    if not args.log_all:
+        if not args.log_robotframework:
+            logging.getLogger("robotcode.language_server.robotframework").setLevel(logging.CRITICAL)
+        if not args.log_language_server_parts:
+            logging.getLogger("robotcode.language_server.common.parts").setLevel(logging.CRITICAL)
+        if not args.log_language_server:
+            logging.getLogger("robotcode.language_server.common").setLevel(logging.CRITICAL)
+        if not args.log_json_rpc:
+            logging.getLogger("robotcode.jsonrpc2").setLevel(logging.CRITICAL)
+        if not args.log_json_rpc_data:
+            logging.getLogger("robotcode.jsonrpc2.protocol.JsonRPCProtocol_data").setLevel(logging.CRITICAL)
+        if not args.log_asyncio:
+            logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
 
 def main() -> None:
