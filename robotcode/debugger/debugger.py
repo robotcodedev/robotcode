@@ -1062,6 +1062,7 @@ class Debugger:
         return list(result.values())
 
     IS_VARIABLE_RE = re.compile(r"^[$@&%]\{.*\}$")
+    IS_VARIABLE_ASSIGNMENT_RE = re.compile(r"^[$@&%]\{.*\}=?$")
     SPLIT_LINE = re.compile(r"(?= {2,}| ?\t)\s*")
     CURRDIR = re.compile(r"(?i)\$\{CURDIR\}")
 
@@ -1104,9 +1105,19 @@ class Debugger:
 
             if expression.startswith("! "):
                 splitted = self.SPLIT_LINE.split(expression[2:].strip())
+
                 if splitted:
-                    kw = Keyword(name=splitted[0], args=tuple(splitted[1:]))
-                    result = kw.run(evaluate_context)
+                    variables: List[str] = []
+                    while len(splitted) > 1 and self.IS_VARIABLE_ASSIGNMENT_RE.match(splitted[0].strip()):
+                        var = splitted[0]
+                        splitted = splitted[1:]
+                        if var.endswith("="):
+                            var = var[:-1]
+                        variables.append(var)
+
+                    if splitted:
+                        kw = Keyword(name=splitted[0], args=tuple(splitted[1:]), assign=tuple(variables))
+                        result = kw.run(evaluate_context)
 
             elif self.IS_VARIABLE_RE.match(expression.strip()):
                 try:

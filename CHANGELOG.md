@@ -2,8 +2,44 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+### added
+
+- Return values of keywords calls can be assigned to variables in the debugger console
+  - You can call keywords in the debugger console just as you would write your keyword calls in robot files.
+    Everything that starts with `'! '` (beware the space) is handled like a keyword call, for example:
+
+    ```
+    ! Log  Hello
+    ```
+
+    would call the keyword `Log` and writes `Hello` to report.
+
+    ```
+    !  Evaluate  1+2
+    ```
+
+    calls `Evaluate` and writes the result to the log.
+
+    To assign the result of a keyword to a variable write something like
+
+    ```
+    ! ${result}  Evaluate  1+2
+    ```
+
+    This will assign the result of the expression to the variable `${result}` in the current execution context.
+
+    A more complex example:
+
+    ```
+    ! ${a}  @{c}=  ${b}  Evaluate  "Hello World!!! How do you do?".split(' ')
+    ```
+
+    A side effect of this is that the keyword calls are logged in log.html when you continue your debug session.
+
+
+
 ##  0.11.8
 
 ### added
