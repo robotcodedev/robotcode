@@ -438,9 +438,9 @@ export class LanguageClientsManager {
     });
   }
 
-  public async restart(): Promise<void> {
+  public async restart(uri?: vscode.Uri): Promise<void> {
     this._pythonValidPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
-    await this.refresh();
+    await this.refresh(uri, true);
   }
 
   public async refresh(uri?: vscode.Uri, restart?: boolean): Promise<void> {

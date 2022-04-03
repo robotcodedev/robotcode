@@ -65,6 +65,8 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(async (event) => {
+      const affectedFolders = new Set<vscode.Uri>();
+
       for (const s of [
         "robotcode.python",
         "robotcode.languageServer",
@@ -72,9 +74,16 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         "robotcode.robocop",
         "robotcode.robotidy",
       ]) {
-        if (event.affectsConfiguration(s)) {
-          await languageClientManger.restart();
+        for (const ws of vscode.workspace.workspaceFolders ?? []) {
+          if (languageClientManger.clients.has(ws.uri.toString()))
+            if (event.affectsConfiguration(s, ws)) {
+              affectedFolders.add(ws.uri);
+            }
         }
+      }
+
+      for (const uri of affectedFolders) {
+        await languageClientManger.restart(uri);
       }
     })
   );
