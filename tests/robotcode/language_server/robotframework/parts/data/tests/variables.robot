@@ -128,6 +128,20 @@ tc
     Log    ${${VALUE}_DATA1}
     Log    ${${VALUE}_1}
 
+templated
+    [Template]  templated kw
+    1  2  3
+    3  4  7
+
+templated with embedded
+    [Template]  check that ${a} plus ${b} is ${expected}
+    1  2  3
+    3  4  7
+
+templated with embedded not defined
+    [Template]  verify that ${a} plus ${b} is ${expected}
+    1  2  3
+    3  4  7
 
 *** Keywords ***
 do something
@@ -141,3 +155,9 @@ a keyword with loop
         Log    ${i} ${aaa}
     END
 
+check that ${a} plus ${b} is ${expected}
+    log  ${a} ${b} ${expected}
+
+templated kw
+    [Arguments]  ${a}  ${b}  ${expected}
+    log  ${a} ${b} ${expected}
