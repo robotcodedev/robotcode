@@ -92,7 +92,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     robot_discovering = ProtocolPartDescriptor(DiscoveringProtocolPart)
     robot_debugging_utils = ProtocolPartDescriptor(RobotDebuggingUtilsProtocolPart)
 
-    name = "RobotCode"
+    name = "RobotCode Language Server"
     version = __version__
 
     file_extensions = {"robot", "resource", "py"}

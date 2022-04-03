@@ -37,6 +37,7 @@ class PublishDiagnosticsEntry:
         version: Optional[int],
         factory: Callable[..., asyncio.Future[Any]],
         done_callback: Callable[[PublishDiagnosticsEntry], Any],
+        no_wait: bool = False,
     ) -> None:
 
         self.uri = uri
@@ -48,6 +49,7 @@ class PublishDiagnosticsEntry:
         self._future: Optional[asyncio.Future[Any]] = None
 
         self.done = False
+        self.no_wait = no_wait
 
         def _done(t: asyncio.Future[Any]) -> None:
             self.done = True
@@ -57,7 +59,9 @@ class PublishDiagnosticsEntry:
         self._future.add_done_callback(_done)
 
     async def _wait_and_run(self) -> None:
-        await asyncio.sleep(DIAGNOSTICS_DEBOUNCE)
+        if not self.no_wait:
+            await asyncio.sleep(DIAGNOSTICS_DEBOUNCE)
+
         await self._factory()
 
     def __del__(self) -> None:
@@ -190,21 +194,23 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             self._running_diagnostics.pop(e.uri, None)
 
     @_logger.call
-    async def start_publish_diagnostics_task(self, document: TextDocument) -> None:
+    async def start_publish_diagnostics_task(self, document: TextDocument, no_wait: bool = False) -> None:
         async with self._tasks_lock:
             entry = self._running_diagnostics.get(document.uri, None)
 
-            if entry is not None and entry.version == document.version:
-                return
+        if entry is not None and entry.version == document.version:
+            return
 
-            await self._cancel_entry(entry)
+        await self._cancel_entry(entry)
 
-            self._running_diagnostics[document.uri] = PublishDiagnosticsEntry(
-                document.uri,
-                document.version,
-                lambda: run_coroutine_in_thread(self.publish_diagnostics, document.document_uri),
-                self._delete_entry,
-            )
+        self._running_diagnostics[document.uri] = PublishDiagnosticsEntry(
+            document.uri,
+            document.version,
+            lambda: run_coroutine_in_thread(self.publish_diagnostics, document.document_uri),
+            # lambda: create_sub_task(self.publish_diagnostics(document.document_uri)),
+            self._delete_entry,
+            no_wait,
+        )
 
     @_logger.call
     async def publish_diagnostics(self, document_uri: DocumentUri) -> None:

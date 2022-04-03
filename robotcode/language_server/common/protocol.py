@@ -24,6 +24,7 @@ from .lsp_types import (
     InitializeParams,
     InitializeResult,
     InitializeResultServerInfo,
+    ProgressToken,
     Registration,
     RegistrationParams,
     SaveOptions,
@@ -164,6 +165,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         trace: Optional[TraceValue] = None,
         client_info: Optional[ClientInfo] = None,
         workspace_folders: Optional[List[WorkspaceFolder]] = None,
+        work_done_token: Optional[ProgressToken] = None,
         *args: Any,
         **kwargs: Any,
     ) -> InitializeResult:
@@ -175,26 +177,37 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
         self._workspace = Workspace(self, root_uri=root_uri, root_path=root_path, workspace_folders=workspace_folders)
 
-        self.initialization_options = initialization_options
-        try:
-            await self.on_initialize(self, initialization_options)
-        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
-            raise
-        except JsonRPCErrorException:
-            raise
-        except BaseException as e:
-            raise JsonRPCErrorException(
-                JsonRPCErrors.INTERNAL_ERROR, f"Can't start language server: {e}", InitializeError(retry=False)
-            ) from e
-
-        return InitializeResult(
-            capabilities=self.capabilities,
-            **(
-                {"server_info": InitializeResultServerInfo(name=self.name, version=self.version)}
-                if self.name is not None
-                else {}
-            ),
+        folders = (
+            ", ".join((f"'{v.name}'" for v in self._workspace.workspace_folders))
+            if self._workspace.workspace_folders
+            else ""
         )
+
+        self.window.progress_begin(work_done_token, f"Initialize {folders}...")
+
+        try:
+            self.initialization_options = initialization_options
+            try:
+                await self.on_initialize(self, initialization_options)
+            except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                raise
+            except JsonRPCErrorException:
+                raise
+            except BaseException as e:
+                raise JsonRPCErrorException(
+                    JsonRPCErrors.INTERNAL_ERROR, f"Can't start language server: {e}", InitializeError(retry=False)
+                ) from e
+
+            return InitializeResult(
+                capabilities=self.capabilities,
+                **(
+                    {"server_info": InitializeResultServerInfo(name=self.name, version=self.version)}
+                    if self.name is not None
+                    else {}
+                ),
+            )
+        finally:
+            self.window.progress_end(work_done_token)
 
     @async_event
     async def on_initialize(sender, initialization_options: Optional[Any] = None) -> None:  # pragma: no cover, NOSONAR

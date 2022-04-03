@@ -1929,3 +1929,52 @@ class SelectionRangeParams(WorkDoneProgressParams, PartialResultParams, _Selecti
 class SelectionRange(Model):
     range: Range
     parent: Optional[SelectionRange] = None
+
+
+@dataclass(repr=False)
+class ProgressParams(Model):
+    token: ProgressToken
+    value: Any
+
+
+@dataclass(repr=False)
+class WorkDoneProgressCreateParams(Model):
+    token: ProgressToken
+
+
+@dataclass(repr=False)
+class WorkDoneProgressCancelParams(Model):
+    token: ProgressToken
+
+
+@dataclass(repr=False)
+class WorkDoneProgressBase(Model):
+    kind: Literal["begin", "end", "report"]
+
+
+@dataclass(repr=False)
+class _WorkDoneProgressCommon(Model):
+    title: str
+    message: Optional[str] = None
+    percentage: Optional[int] = None
+    cancellable: Optional[bool] = None
+
+
+@dataclass(repr=False)
+class WorkDoneProgressBegin(WorkDoneProgressBase, _WorkDoneProgressCommon):
+    kind: Literal["begin"] = "begin"
+
+
+@dataclass(repr=False)
+class WorkDoneProgressReport(WorkDoneProgressBase, _WorkDoneProgressCommon):
+    kind: Literal["report"] = "report"
+
+
+@dataclass(repr=False)
+class _WorkDoneProgressEnd(Model):
+    message: Optional[str] = None
+
+
+@dataclass(repr=False)
+class WorkDoneProgressEnd(WorkDoneProgressBase, _WorkDoneProgressEnd):
+    kind: Literal["end"] = "end"
