@@ -10,6 +10,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 - support for progress feature of language server protocol
 - correct WHILE snippets
 - handle invalid regular expressions in embedded keywords
+- correct handling of templates with embedded arguments
 
 ##  0.11.6
 

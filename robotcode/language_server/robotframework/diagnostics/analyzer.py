@@ -55,12 +55,17 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
     async def visit(self, node: ast.AST) -> None:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import DocumentationOrMetadata, KeywordCall
+        from robot.parsing.model.statements import (
+            DocumentationOrMetadata,
+            KeywordCall,
+            Template,
+            TestTemplate,
+        )
         from robot.variables.search import contains_variable
 
         self.node_stack.append(node)
         try:
-            if isinstance(node, HasTokens):
+            if isinstance(node, HasTokens) and not isinstance(node, (TestTemplate, Template)):
                 for token in (
                     t
                     for t in node.tokens
@@ -185,13 +190,14 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         keyword_token: Token,
         argument_tokens: List[Token],
         analyse_run_keywords: bool = True,
+        allow_variables: bool = False,
     ) -> Optional[KeywordDoc]:
         from robot.parsing.model.statements import Template, TestTemplate
 
         result: Optional[KeywordDoc] = None
 
         try:
-            if not is_not_variable_token(keyword_token):
+            if not allow_variables and not is_not_variable_token(keyword_token):
                 return None
 
             result = await self.finder.find_keyword(keyword)
@@ -475,14 +481,10 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         value = cast(TestTemplate, node)
         keyword_token = cast(Token, value.get_token(RobotToken.NAME))
 
-        # TODO: calculate possible variables in NAME
-
-        if (
-            keyword_token is not None
-            and is_not_variable_token(keyword_token)
-            and keyword_token.value.upper() not in ("", "NONE")
-        ):
-            await self._analyze_keyword_call(value.value, value, keyword_token, [])
+        if keyword_token is not None and keyword_token.value.upper() not in ("", "NONE"):
+            await self._analyze_keyword_call(
+                value.value, value, keyword_token, [], analyse_run_keywords=False, allow_variables=True
+            )
 
         self.test_template = value
         await self.generic_visit(node)
@@ -494,14 +496,10 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         value = cast(Template, node)
         keyword_token = cast(Token, value.get_token(RobotToken.NAME))
 
-        # TODO: calculate possible variables in NAME
-
-        if (
-            keyword_token is not None
-            and is_not_variable_token(keyword_token)
-            and keyword_token.value.upper() not in ("", "NONE")
-        ):
-            await self._analyze_keyword_call(value.value, value, keyword_token, [])
+        if keyword_token is not None and keyword_token.value.upper() not in ("", "NONE"):
+            await self._analyze_keyword_call(
+                value.value, value, keyword_token, [], analyse_run_keywords=False, allow_variables=True
+            )
 
         await self.generic_visit(node)
 
