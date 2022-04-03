@@ -10,6 +10,7 @@ import threading
 import weakref
 from collections import deque
 from concurrent.futures.thread import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 from types import TracebackType
 from typing import (
     Any,
@@ -574,7 +575,7 @@ class Lock:
     async def __aexit__(
         self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
     ) -> None:
-        self.release()
+        await self.release()
 
     def __repr__(self) -> str:
         res = super().__repr__()
@@ -583,19 +584,22 @@ class Lock:
             extra = f"{extra}, waiters:{len(self._waiters)}"
         return f"<{res[1:-1]} [{extra}]>"
 
-    def locked(self) -> bool:
-        return self._locked
+    @asynccontextmanager
+    async def __inner_lock(self) -> AsyncGenerator[bool, None]:
+        with self._lock as r:
+            yield r
 
     async def acquire(self) -> bool:
-
-        with self._lock:
+        async with self.__inner_lock():
             if not self._locked and (self._waiters is None or all(w.cancelled() for w in self._waiters)):
                 self._locked = True
                 return True
 
         if self._waiters is None:
             self._waiters = deque()
+
         fut = create_sub_future()
+
         with self._lock:
             self._waiters.append(fut)
 
@@ -609,14 +613,14 @@ class Lock:
                 self._wake_up_first()
             raise
 
-        with self._lock:
+        async with self.__inner_lock():
             self._locked = True
 
         return True
 
-    def release(self) -> None:
+    async def release(self) -> None:
         if self._locked:
-            with self._lock:
+            async with self.__inner_lock():
                 self._locked = False
             self._wake_up_first()
         else:
