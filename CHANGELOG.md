@@ -9,6 +9,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 - optimize restart language clients if configuration changed
 - support for progress feature of language server protocol
 - correct WHILE snippets
+- handle invalid regular expressions in embedded keywords
 
 ##  0.11.6
 

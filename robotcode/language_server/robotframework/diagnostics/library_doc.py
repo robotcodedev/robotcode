@@ -85,13 +85,13 @@ DEFAULT_DOC_FORMAT = "ROBOT"
 
 
 def is_embedded_keyword(name: str) -> bool:
-    from robot.errors import VariableError
+    from robot.errors import DataError, VariableError
     from robot.running.arguments.embedded import EmbeddedArguments
 
     try:
         if EmbeddedArguments(name):
             return True
-    except VariableError:
+    except (VariableError, DataError):
         return True
 
     return False
@@ -114,13 +114,13 @@ class KeywordMatcher:
 
     @property
     def embedded_arguments(self) -> Any:
-        from robot.errors import VariableError
+        from robot.errors import DataError, VariableError
         from robot.running.arguments.embedded import EmbeddedArguments
 
         if self._embedded_arguments is None:
             try:
                 self._embedded_arguments = EmbeddedArguments(self.name)
-            except VariableError:
+            except (VariableError, DataError):
                 self._embedded_arguments = ()
 
         return self._embedded_arguments
