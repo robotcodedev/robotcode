@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import io
 import os
+import re
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from ....utils.async_tools import threaded
@@ -78,6 +79,8 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         return None
 
+    RE_LINEBREAKS = re.compile(r"\r\n|\r|\n")
+
     async def format_robot_tidy(
         self, document: TextDocument, options: FormattingOptions, **further_options: Any
     ) -> Optional[List[TextEdit]]:
@@ -96,7 +99,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             if not changed:
                 return None
 
-            new_lines = new.text.splitlines()
+            new_lines = self.RE_LINEBREAKS.split(new.text)
 
             result: List[TextEdit] = []
             matcher = SequenceMatcher(a=await document.get_lines(), b=new_lines, autojunk=False)
