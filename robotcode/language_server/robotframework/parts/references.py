@@ -348,25 +348,10 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         doc = await namespace.get_library_doc()
         if doc is not None:
-            keyword = next(
-                (v for v in doc.keywords.keywords if v.name == name_token.value and v.line_no == kw_node.lineno),
-                None,
-            )
+            keyword = await self.get_keyword_definition_at_token(namespace, name_token)
 
             if keyword is not None and keyword.source and not keyword.is_error_handler:
-                return [
-                    *(
-                        [
-                            Location(
-                                uri=str(Uri.from_path(keyword.source)),
-                                range=keyword.range,
-                            )
-                        ]
-                        if context.include_declaration and keyword.source
-                        else []
-                    ),
-                    *await self.find_keyword_references(document, keyword),
-                ]
+                return await self.find_keyword_references(document, keyword, context.include_declaration)
 
         return None
 
@@ -407,14 +392,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     return None
 
             if position in kw_range and keyword_doc is not None:
-                return [
-                    *(
-                        [Location(uri=str(Uri.from_path(keyword_doc.source)), range=keyword_doc.range)]
-                        if context.include_declaration and keyword_doc.source
-                        else []
-                    ),
-                    *await self.find_keyword_references(document, keyword_doc),
-                ]
+                return await self.find_keyword_references(document, keyword_doc, context.include_declaration)
 
         return None
 
@@ -460,14 +438,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     return None
 
             if position in kw_range and keyword_doc is not None and not keyword_doc.is_error_handler:
-                return [
-                    *(
-                        [Location(uri=str(Uri.from_path(keyword_doc.source)), range=keyword_doc.range)]
-                        if context.include_declaration and keyword_doc.source
-                        else []
-                    ),
-                    *await self.find_keyword_references(document, keyword_doc),
-                ]
+                return await self.find_keyword_references(document, keyword_doc, context.include_declaration)
 
         return None
 
@@ -506,20 +477,9 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                         if position in r:
                             # TODO: find references for Library Namespace
                             return None
+
                     if keyword_doc:
-                        return [
-                            *(
-                                [
-                                    Location(
-                                        uri=str(Uri.from_path(keyword_doc.source)),
-                                        range=keyword_doc.range,
-                                    )
-                                ]
-                                if context.include_declaration and keyword_doc.source
-                                else []
-                            ),
-                            *await self.find_keyword_references(document, keyword_doc),
-                        ]
+                        return await self.find_keyword_references(document, keyword_doc, context.include_declaration)
 
         return None
 
@@ -539,6 +499,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         doc: TextDocument,
         kw_doc: KeywordDoc,
         lib_doc: Optional[LibraryDoc] = None,
+        include_declaration: bool = True,
     ) -> List[Location]:
 
         try:
@@ -553,7 +514,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             ):
                 return []
 
-            return await self._find_keyword_references_in_namespace(namespace, kw_doc)
+            return await self._find_keyword_references_in_namespace(namespace, kw_doc, include_declaration)
         except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
             raise
         except BaseException as e:
@@ -561,11 +522,14 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         return []
 
-    async def _find_keyword_references_in_namespace(self, namespace: Namespace, kw_doc: KeywordDoc) -> List[Location]:
+    async def _find_keyword_references_in_namespace(
+        self, namespace: Namespace, kw_doc: KeywordDoc, include_declaration: bool = True
+    ) -> List[Location]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import (
             Fixture,
             KeywordCall,
+            KeywordName,
             Template,
             TestTemplate,
         )
@@ -598,6 +562,18 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
                 async for location in self.get_keyword_references_from_tokens(namespace, kw_doc, node, kw_token, []):
                     result.append(location)
+            elif include_declaration and isinstance(node, KeywordName):
+                kw_token = node.get_token(RobotToken.KEYWORD_NAME)
+                if kw_token:
+                    kw = await self.get_keyword_definition_at_token(namespace, kw_token)
+
+                    if kw is not None and kw == kw_doc:
+                        result.append(
+                            Location(
+                                str(Uri.from_path(namespace.source).normalized()),
+                                range=range_from_token(kw_token),
+                            )
+                        )
 
         return result
 
@@ -728,7 +704,9 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     async for e in self.get_keyword_references_from_tokens(namespace, kw_doc, node, t, args, True):
                         yield e
 
-    async def find_keyword_references(self, document: TextDocument, kw_doc: KeywordDoc) -> List[Location]:
+    async def find_keyword_references(
+        self, document: TextDocument, kw_doc: KeywordDoc, include_declaration: bool = True
+    ) -> List[Location]:
         folder = self.parent.workspace.get_workspace_folder(document.uri)
         if folder is None:
             return []
@@ -757,7 +735,9 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             or await namespace.get_library_doc()
         )
 
-        return await self._find_references(document, self.find_keyword_references_in_file, kw_doc, lib_doc)
+        return await self._find_references(
+            document, self.find_keyword_references_in_file, kw_doc, lib_doc, include_declaration
+        )
 
     @_logger.call
     async def _find_library_import_references_in_file(

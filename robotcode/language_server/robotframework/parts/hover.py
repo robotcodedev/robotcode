@@ -537,11 +537,11 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             return None
 
         kw_node = cast(KeywordName, node)
-        name_token = kw_node.get_token(RobotToken.KEYWORD_NAME)
+        name_token = cast(RobotToken, kw_node.get_token(RobotToken.KEYWORD_NAME))
         if not name_token:
             return None
 
-        result = (await namespace.get_library_doc()).keywords.get(name_token.value, None)
+        result = await self.get_keyword_definition_at_token(namespace, name_token)
 
         if result is not None and not result.is_error_handler:
             return Hover(

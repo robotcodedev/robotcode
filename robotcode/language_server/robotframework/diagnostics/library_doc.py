@@ -229,7 +229,7 @@ class ArgumentSpec:
     defaults: Any
     types: Any
 
-    __robot_arguments: Optional[Any] = None
+    __robot_arguments: Optional[Any] = field(default=None, compare=False)
 
     @staticmethod
     def from_robot_argument_spec(spec: Any) -> ArgumentSpec:
@@ -469,6 +469,9 @@ class KeywordStore:
             return self.__getitem__(key)
         except KeyError:
             return default
+
+    def get_all(self, key: str) -> List[KeywordDoc]:
+        return [v for k, v in self._matchers.items() if k == key]
 
 
 @dataclass

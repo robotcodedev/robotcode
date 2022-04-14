@@ -1,6 +1,6 @@
 from typing import Any, Callable, List, Protocol, TypeVar, runtime_checkable
 
-from robotcode.language_server.common.text_document import TextDocument
+from .text_document import TextDocument
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 

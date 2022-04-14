@@ -20,8 +20,6 @@ from typing import (
     cast,
 )
 
-from robotcode.language_server.robotframework.utils.version import get_robot_version
-
 from ....utils.async_itertools import async_dropwhile, async_takewhile
 from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
@@ -52,6 +50,7 @@ from ..utils.ast_utils import (
     iter_over_keyword_names_and_owners,
     token_in_range,
 )
+from ..utils.version import get_robot_version
 from .model_helper import ModelHelperMixin
 
 if TYPE_CHECKING:

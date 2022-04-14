@@ -25,6 +25,7 @@ from .parts.formatting import RobotFormattingProtocolPart
 from .parts.goto import RobotGotoProtocolPart
 from .parts.hover import RobotHoverProtocolPart
 from .parts.references import RobotReferencesProtocolPart
+from .parts.rename import RobotRenameProtocolPart
 from .parts.robocop_diagnostics import RobotRoboCopDiagnosticsProtocolPart
 from .parts.robot_workspace import RobotWorkspaceProtocolPart
 from .parts.selection_range import RobotSelectionRangeProtocolPart
@@ -86,6 +87,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     robot_document_highlight = ProtocolPartDescriptor(RobotDocumentHighlightProtocolPart)
     robot_codelens = ProtocolPartDescriptor(RobotCodeLensProtocolPart)
     robot_selection_range = ProtocolPartDescriptor(RobotSelectionRangeProtocolPart)
+    robot_rename = ProtocolPartDescriptor(RobotRenameProtocolPart)
 
     robot_workspace = ProtocolPartDescriptor(RobotWorkspaceProtocolPart)
 

@@ -254,7 +254,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         if not name_token:
             return None
 
-        result = await namespace.find_keyword(name_token.value)
+        result = await self.get_keyword_definition_at_token(namespace, name_token)
 
         if result is not None and not result.is_error_handler and result.source:
             token_range = range_from_token(name_token)

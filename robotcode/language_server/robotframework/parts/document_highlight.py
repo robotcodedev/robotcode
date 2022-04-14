@@ -194,17 +194,8 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
                 and keyword_doc.source
             ):
                 return [
-                    *(
-                        [DocumentHighlight(keyword_doc.range, DocumentHighlightKind.TEXT)]
-                        if keyword_doc.source == str(document.uri.to_path())
-                        else []
-                    ),
-                    *(
-                        DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
-                        for e in await self.parent.robot_references.find_keyword_references_in_file(
-                            document, keyword_doc
-                        )
-                    ),
+                    DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
+                    for e in await self.parent.robot_references.find_keyword_references_in_file(document, keyword_doc)
                 ]
 
         return None
@@ -228,18 +219,12 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
 
         doc = await namespace.get_library_doc()
         if doc is not None:
-            keyword = next(
-                (v for v in doc.keywords.keywords if v.name == name_token.value and v.line_no == kw_node.lineno),
-                None,
-            )
+            keyword = await self.get_keyword_definition_at_token(namespace, name_token)
 
             if keyword is not None and keyword.source and not keyword.is_error_handler:
                 return [
-                    DocumentHighlight(keyword.range, DocumentHighlightKind.TEXT),
-                    *(
-                        DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
-                        for e in await self.parent.robot_references.find_keyword_references_in_file(document, keyword)
-                    ),
+                    DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
+                    for e in await self.parent.robot_references.find_keyword_references_in_file(document, keyword)
                 ]
 
         return None
@@ -287,17 +272,8 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
 
             if position in kw_range and keyword_doc is not None and not keyword_doc.is_error_handler:
                 return [
-                    *(
-                        [DocumentHighlight(keyword_doc.range, DocumentHighlightKind.TEXT)]
-                        if keyword_doc.source == str(document.uri.to_path())
-                        else []
-                    ),
-                    *(
-                        DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
-                        for e in await self.parent.robot_references.find_keyword_references_in_file(
-                            document, keyword_doc
-                        )
-                    ),
+                    DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
+                    for e in await self.parent.robot_references.find_keyword_references_in_file(document, keyword_doc)
                 ]
 
         return None
@@ -340,17 +316,10 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
 
                     if not keyword_doc.is_error_handler:
                         return [
-                            *(
-                                [DocumentHighlight(keyword_doc.range, DocumentHighlightKind.TEXT)]
-                                if keyword_doc.source == str(document.uri.to_path())
-                                else []
-                            ),
-                            *(
-                                DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
-                                for e in await self.parent.robot_references.find_keyword_references_in_file(
-                                    document, keyword_doc
-                                )
-                            ),
+                            DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
+                            for e in await self.parent.robot_references.find_keyword_references_in_file(
+                                document, keyword_doc
+                            )
                         ]
         return None
 

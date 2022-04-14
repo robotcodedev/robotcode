@@ -2,5 +2,9 @@
 duplicated keyword
     Log    hello
 
-a resource keyword A
+A Resource Keyword A
     Log    hello
+
+a dummy keyword
+    duplicated keyword
+    A Resource Keyword A

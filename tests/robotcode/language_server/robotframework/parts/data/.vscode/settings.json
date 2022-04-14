@@ -20,6 +20,7 @@
         // "--log-robotframework",
         // "--log-language-server"
     ],
+    //"robotcode.robocop.enabled": false,
     // "robotcode.debug.groupOutput": false,
     // "robotcode.robot.args": [
     //     "-L", "TRACE"

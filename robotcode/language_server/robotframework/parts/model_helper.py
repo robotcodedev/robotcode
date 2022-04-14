@@ -514,3 +514,10 @@ class ModelHelperMixin:
     def is_bdd_token(cls, token: Token) -> bool:
         bdd_match = cls.BDD_TOKEN.match(token.value)
         return bool(bdd_match)
+
+    @classmethod
+    async def get_keyword_definition_at_token(cls, namespace: Namespace, token: Token) -> Optional[KeywordDoc]:
+        return next(
+            (k for k in (await namespace.get_library_doc()).keywords.get_all(token.value) if k.line_no == token.lineno),
+            None,
+        )

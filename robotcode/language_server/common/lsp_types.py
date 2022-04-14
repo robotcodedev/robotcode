@@ -966,6 +966,16 @@ class SelectionRangeRegistrationOptions(
 
 
 @dataclass(repr=False)
+class RenameOptions(WorkDoneProgressOptions):
+    prepare_provider: Optional[bool] = None
+
+
+@dataclass(repr=False)
+class RenameRegistrationOptions(TextDocumentRegistrationOptions, RenameOptions, StaticRegistrationOptions):
+    pass
+
+
+@dataclass(repr=False)
 class ServerCapabilities(Model):
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None] = None
     completion_provider: Optional[CompletionOptions] = None
@@ -984,7 +994,7 @@ class ServerCapabilities(Model):
     document_formatting_provider: Union[bool, DocumentFormattingOptions, None] = None
     document_range_formatting_provider: Union[bool, DocumentRangeFormattingOptions, None] = None
     # TODO document_on_type_formatting_provider: Optional[DocumentOnTypeFormattingOptions] = None
-    # TODO rename_provider: Union[bool, RenameOptions, None] = None
+    rename_provider: Union[bool, RenameOptions, None] = None
     folding_range_provider: Union[bool, FoldingRangeOptions, FoldingRangeRegistrationOptions, None] = None
     execute_command_provider: Optional[ExecuteCommandOptions] = None
     selection_range_provider: Union[bool, SelectionRangeOptions, SelectionRangeRegistrationOptions, None] = None
@@ -1139,7 +1149,7 @@ class TextDocumentIdentifier(Model):
 
 @dataclass(repr=False)
 class OptionalVersionedTextDocumentIdentifier(TextDocumentIdentifier):
-    version: Optional[int] = None
+    version: Optional[int]
 
 
 @dataclass(repr=False)
@@ -1429,7 +1439,7 @@ class AnnotatedTextEdit(TextEdit):
 @dataclass(repr=False)
 class TextDocumentEdit(Model):
     text_document: OptionalVersionedTextDocumentIdentifier
-    edits: Union[TextEdit, AnnotatedTextEdit]
+    edits: List[Union[TextEdit, AnnotatedTextEdit]]
 
 
 @dataclass(repr=False)
@@ -1442,7 +1452,7 @@ class ChangeAnnotation(Model):
 @dataclass(repr=False)
 class WorkspaceEdit(Model):
     changes: Optional[Dict[DocumentUri, List[TextEdit]]] = None
-    document_changes: Union[List[TextDocumentEdit], TextDocumentEdit, CreateFile, RenameFile, DeleteFile, None] = None
+    document_changes: Optional[List[Union[TextDocumentEdit, CreateFile, RenameFile, DeleteFile]]] = None
     change_annotations: Optional[Dict[ChangeAnnotationIdentifier, ChangeAnnotation]] = None
 
 
@@ -1978,3 +1988,32 @@ class _WorkDoneProgressEnd(Model):
 @dataclass(repr=False)
 class WorkDoneProgressEnd(WorkDoneProgressBase, _WorkDoneProgressEnd):
     kind: Literal["end"] = "end"
+
+
+@dataclass(repr=False)
+class _RenameParams(Model):
+    new_name: str
+
+
+@dataclass(repr=False)
+class RenameParams(WorkDoneProgressParams, TextDocumentPositionParams, _RenameParams):
+    pass
+
+
+@dataclass(repr=False)
+class PrepareRenameParams(TextDocumentPositionParams):
+    pass
+
+
+@dataclass(repr=False)
+class PrepareRenameResultWithPlaceHolder(Model):
+    range: Range
+    placeholder: str
+
+
+@dataclass(repr=False)
+class PrepareRenameResultWithDefaultBehavior(Model):
+    default_behavior: bool
+
+
+PrepareRenameResult = Union[Range, PrepareRenameResultWithPlaceHolder, PrepareRenameResultWithDefaultBehavior]
