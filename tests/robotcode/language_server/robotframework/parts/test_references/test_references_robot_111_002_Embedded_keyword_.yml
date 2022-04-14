@@ -6,8 +6,8 @@ result:
 - !Location
   range:
     end:
-      character: 0
-      line: 112
+      character: 33
+      line: 111
     start:
       character: 0
       line: 111

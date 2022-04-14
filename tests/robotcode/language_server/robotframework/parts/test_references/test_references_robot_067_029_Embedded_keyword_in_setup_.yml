@@ -33,8 +33,8 @@ result:
 - !Location
   range:
     end:
-      character: 0
-      line: 96
+      character: 20
+      line: 95
     start:
       character: 0
       line: 95

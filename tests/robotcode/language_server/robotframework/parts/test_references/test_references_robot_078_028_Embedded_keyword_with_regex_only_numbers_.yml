@@ -24,8 +24,8 @@ result:
 - !Location
   range:
     end:
-      character: 0
-      line: 103
+      character: 38
+      line: 102
     start:
       character: 0
       line: 102
