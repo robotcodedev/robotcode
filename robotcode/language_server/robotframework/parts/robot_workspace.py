@@ -56,7 +56,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         async def run() -> None:
             token = await self.parent.window.create_progress()
 
-            self.parent.window.progress_begin(token, "Analyze files")
+            self.parent.window.progress_begin(token, "Analyze...", cancellable=True)
             try:
                 for folder in self.parent.workspace.workspace_folders:
                     config = (
@@ -69,8 +69,12 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                         ignore_patterns=config.exclude_patterns or [],  # type: ignore
                         absolute=True,
                     ):
+                        if self.parent.window.progress_is_canceled(token):
+                            break
 
-                        self.parent.window.progress_report(token, "analyze " + str(f.relative_to(folder.uri.to_path())))
+                        self.parent.window.progress_report(
+                            token, "analyze " + str(f.relative_to(folder.uri.to_path())), cancellable=True
+                        )
                         try:
                             document = await self.get_or_open_document(f, "robotframework")
 
@@ -89,3 +93,4 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                 self.parent.window.progress_end(token)
 
         await run()
+        # await run()

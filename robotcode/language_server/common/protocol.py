@@ -90,6 +90,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     rename = ProtocolPartDescriptor(RenameProtocolPart)
 
     name: Optional[str] = None
+    short_name: Optional[str] = None
     version: Optional[str] = None
 
     file_extensions: Set[str] = set()

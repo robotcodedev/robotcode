@@ -1,5 +1,7 @@
 import uuid
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
+
+from robotcode.jsonrpc2.protocol import rpc_method
 
 from ..lsp_types import (
     URI,
@@ -54,6 +56,8 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             )
         ).success
 
+    __progress_tokens: Dict[ProgressToken, bool] = {}
+
     async def create_progress(self) -> Optional[ProgressToken]:
 
         if (
@@ -63,9 +67,27 @@ class WindowProtocolPart(LanguageServerProtocolPart):
         ):
             token = str(uuid.uuid4())
             await self.parent.send_request_async("window/workDoneProgress/create", WorkDoneProgressCreateParams(token))
+            self.__progress_tokens[token] = False
             return token
 
         return None
+
+    @rpc_method(name="window/workDoneProgress/cancel", param_type=WorkDoneProgressCancelParams)
+    async def _window_work_done_progress_cancel(
+        self,
+        token: ProgressToken,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+
+        if token in self.__progress_tokens:
+            self.__progress_tokens[token] = True
+
+    def progress_is_canceled(self, token: Optional[ProgressToken]) -> bool:
+        if token is None:
+            return False
+
+        return token in self.__progress_tokens and self.__progress_tokens.get(token, False)
 
     def progress_cancel(self, token: Optional[ProgressToken]) -> None:
         if (
@@ -104,7 +126,10 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             self._progress(
                 token,
                 WorkDoneProgressBegin(
-                    title or self.parent.name or self._default_title, message, percentage, cancellable
+                    title or self.parent.short_name or self.parent.name or self._default_title,
+                    message,
+                    percentage,
+                    cancellable,
                 ),
             )
 
@@ -125,7 +150,10 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             self._progress(
                 token,
                 WorkDoneProgressReport(
-                    title or self.parent.name or self._default_title, message, percentage, cancellable
+                    title or self.parent.short_name or self.parent.name or self._default_title,
+                    message,
+                    percentage,
+                    cancellable,
                 ),
             )
 
@@ -140,4 +168,8 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             and self.parent.client_capabilities.window
             and self.parent.client_capabilities.window.work_done_progress
         ):
-            self._progress(token, WorkDoneProgressEnd(message))
+            try:
+                self._progress(token, WorkDoneProgressEnd(message))
+            finally:
+                if token in self.__progress_tokens:
+                    self.__progress_tokens.pop(token)
