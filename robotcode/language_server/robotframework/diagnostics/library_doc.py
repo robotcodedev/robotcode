@@ -294,6 +294,7 @@ class KeywordDoc:
     end_line_no: int = -1
     type: str = "keyword"
     libname: Optional[str] = None
+    libtype: Optional[str] = None
     longname: Optional[str] = None
     is_embedded: bool = False
     errors: Optional[List[Error]] = None
@@ -1221,6 +1222,7 @@ def get_library_doc(
                             # libname=kw[1].libname,
                             # longname=kw[1].longname,
                             libname=libdoc.name,
+                            libtype=libdoc.type,
                             longname=f"{libdoc.name}.{kw[0].name}",
                             doc_format=str(lib.doc_format) or DEFAULT_DOC_FORMAT,
                             is_initializer=True,
@@ -1258,6 +1260,7 @@ def get_library_doc(
                             source=kw[0].source,
                             line_no=kw[0].lineno,
                             libname=libdoc.name,
+                            libtype=libdoc.type,
                             longname=f"{libdoc.name}.{kw[0].name}",
                             is_embedded=is_embedded_keyword(kw[0].name),
                             doc_format=str(lib.doc_format) or DEFAULT_DOC_FORMAT,

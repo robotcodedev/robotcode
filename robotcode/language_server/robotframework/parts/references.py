@@ -735,9 +735,16 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             or await namespace.get_library_doc()
         )
 
-        return await self._find_references(
-            document, self.find_keyword_references_in_file, kw_doc, lib_doc, include_declaration
-        )
+        return [
+            *(
+                [Location(str(Uri.from_path(kw_doc.source)), kw_doc.range)]
+                if include_declaration and kw_doc.libtype == "LIBRARY" and kw_doc.source
+                else []
+            ),
+            *await self._find_references(
+                document, self.find_keyword_references_in_file, kw_doc, lib_doc, include_declaration
+            ),
+        ]
 
     @_logger.call
     async def _find_library_import_references_in_file(

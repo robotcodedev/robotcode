@@ -883,6 +883,7 @@ class ImportsManager:
                     source=kw[0].source,
                     line_no=kw[0].lineno,
                     libname=libdoc.name,
+                    libtype=libdoc.type,
                     is_embedded=is_embedded_keyword(kw[0].name),
                     errors=getattr(kw[1], "errors") if hasattr(kw[1], "errors") else None,
                     is_error_handler=isinstance(kw[1], UserErrorHandler),

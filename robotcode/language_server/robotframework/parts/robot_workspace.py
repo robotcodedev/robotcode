@@ -48,7 +48,8 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
 
     @_logger.call
     async def _on_initialized(self, sender: Any) -> None:
-        self.parent.workspace.did_change_configuration.add(self._on_change_configuration)
+        # self.parent.workspace.did_change_configuration.add(self._on_change_configuration)
+        pass
 
     @_logger.call
     @threaded()
