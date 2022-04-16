@@ -920,7 +920,7 @@ class Namespace:
                         variables=variables,
                     )
 
-                    # allready imported
+                    # already imported
                     if any(r for r in self._resources.values() if r.library_doc.source == source):
                         return None, variables
 
@@ -1047,12 +1047,12 @@ class Namespace:
                 if entry is not None:
                     if isinstance(entry, ResourceEntry):
                         assert entry.library_doc.source is not None
-                        allready_imported_resources = next(
+                        already_imported_resources = next(
                             (e for e in self._resources.values() if e.library_doc.source == entry.library_doc.source),
                             None,
                         )
 
-                        if allready_imported_resources is None and entry.library_doc.source != self.source:
+                        if already_imported_resources is None and entry.library_doc.source != self.source:
                             self._resources[entry.import_name] = entry
                             try:
                                 await self._import_imports(
@@ -1083,8 +1083,8 @@ class Namespace:
                                         source=DIAGNOSTICS_SOURCE_NAME,
                                     )
                                 elif (
-                                    allready_imported_resources is not None
-                                    and allready_imported_resources.library_doc.source
+                                    already_imported_resources is not None
+                                    and already_imported_resources.library_doc.source
                                 ):
                                     self._resources[entry.import_name] = entry
 
@@ -1096,8 +1096,8 @@ class Namespace:
                                         related_information=[
                                             DiagnosticRelatedInformation(
                                                 location=Location(
-                                                    uri=str(Uri.from_path(allready_imported_resources.import_source)),
-                                                    range=allready_imported_resources.import_range,
+                                                    uri=str(Uri.from_path(already_imported_resources.import_source)),
+                                                    range=already_imported_resources.import_range,
                                                 ),
                                                 message="",
                                             )
@@ -1105,7 +1105,7 @@ class Namespace:
                                     )
 
                     elif isinstance(entry, VariablesEntry):
-                        allready_imported_variables = [
+                        already_imported_variables = [
                             e
                             for e in self._variables.values()
                             if e.library_doc.source == entry.library_doc.source
@@ -1114,8 +1114,8 @@ class Namespace:
                         ]
                         if (
                             top_level
-                            and allready_imported_variables
-                            and allready_imported_variables[0].library_doc.source
+                            and already_imported_variables
+                            and already_imported_variables[0].library_doc.source
                         ):
                             await self.append_diagnostics(
                                 range=entry.import_range,
@@ -1125,8 +1125,8 @@ class Namespace:
                                 related_information=[
                                     DiagnosticRelatedInformation(
                                         location=Location(
-                                            uri=str(Uri.from_path(allready_imported_variables[0].import_source)),
-                                            range=allready_imported_variables[0].import_range,
+                                            uri=str(Uri.from_path(already_imported_variables[0].import_source)),
+                                            range=already_imported_variables[0].import_range,
                                         ),
                                         message="",
                                     )
@@ -1156,14 +1156,14 @@ class Namespace:
                             )
                             continue
 
-                        allready_imported_library = [
+                        already_imported_library = [
                             e
                             for e in self._libraries.values()
                             if e.library_doc.source == entry.library_doc.source
                             and e.alias == entry.alias
                             and e.args == entry.args
                         ]
-                        if top_level and allready_imported_library and allready_imported_library[0].library_doc.source:
+                        if top_level and already_imported_library and already_imported_library[0].library_doc.source:
                             await self.append_diagnostics(
                                 range=entry.import_range,
                                 message=f'Library "{entry}" already imported.',
@@ -1172,8 +1172,8 @@ class Namespace:
                                 related_information=[
                                     DiagnosticRelatedInformation(
                                         location=Location(
-                                            uri=str(Uri.from_path(allready_imported_library[0].import_source)),
-                                            range=allready_imported_library[0].import_range,
+                                            uri=str(Uri.from_path(already_imported_library[0].import_source)),
+                                            range=already_imported_library[0].import_range,
                                         ),
                                         message="",
                                     )
