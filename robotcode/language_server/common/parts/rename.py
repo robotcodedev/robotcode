@@ -3,7 +3,7 @@ from __future__ import annotations
 from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from ....jsonrpc2.protocol import rpc_method
+from ....jsonrpc2.protocol import JsonRPCErrorException, rpc_method
 from ....utils.async_tools import async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ..decorators import language_id_filter
@@ -24,6 +24,10 @@ if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol
 
 from .protocol_part import LanguageServerProtocolPart
+
+
+class CantRenameException(Exception):
+    pass
 
 
 class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
@@ -118,6 +122,9 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             self, document, position, callback_filter=language_id_filter(document)
         ):
             if isinstance(result, BaseException):
+                if isinstance(result, CantRenameException):
+                    raise JsonRPCErrorException(100, str(result))
+
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
             else:

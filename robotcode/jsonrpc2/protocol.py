@@ -525,10 +525,10 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         method: str,
         params: Optional[Any] = None,
         return_type_or_converter: Optional[Type[_TResult]] = None,
-    ) -> asyncio.Future[_TResult]:
+    ) -> asyncio.Future[Optional[_TResult]]:
 
         with self._sended_request_lock:
-            result: asyncio.Future[_TResult] = create_sub_future()
+            result: asyncio.Future[Optional[_TResult]] = create_sub_future()
             self._sended_request_count += 1
             id = self._sended_request_count
 
@@ -544,7 +544,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         method: str,
         params: Optional[Any] = None,
         return_type: Optional[Type[_TResult]] = None,
-    ) -> _TResult:
+    ) -> Optional[_TResult]:
 
         return await self.send_request(method, params, return_type)
 
@@ -571,7 +571,9 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
         try:
             if not entry.future.done():
-                res = from_dict(message.result, entry.result_type)
+                res = None
+                if message.result is not None:
+                    res = from_dict(message.result, entry.result_type)
                 if entry.future._loop == asyncio.get_running_loop():
                     entry.future.set_result(res)
                 else:

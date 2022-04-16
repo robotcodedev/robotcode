@@ -315,6 +315,14 @@ class KeywordDoc:
         return self.deprecated or DEPRECATED_PATTERN.match(self.doc) is not None
 
     @property
+    def is_resource_keyword(self) -> bool:
+        return self.libtype == "RESOURCE"
+
+    @property
+    def is_library_keyword(self) -> bool:
+        return self.libtype == "LIBRARY"
+
+    @property
     def deprecated_message(self) -> str:
         if (m := DEPRECATED_PATTERN.match(self.doc)) is not None:
             return m.group("message").strip()

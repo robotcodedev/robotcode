@@ -22,6 +22,8 @@ from ....utils.logging import LoggingDescriptor
 # from ....utils.uri import Uri
 from ...common.decorators import language_id
 from ...common.lsp_types import (
+    AnnotatedTextEdit,
+    ChangeAnnotation,
     CreateFile,
     DeleteFile,
     OptionalVersionedTextDocumentIdentifier,
@@ -30,9 +32,9 @@ from ...common.lsp_types import (
     PrepareRenameResultWithPlaceHolder,
     RenameFile,
     TextDocumentEdit,
-    TextEdit,
     WorkspaceEdit,
 )
+from ...common.parts.rename import CantRenameException
 from ...common.text_document import TextDocument
 
 # from ..diagnostics.entities import VariableDefinition
@@ -207,36 +209,57 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
 
         return None
 
-    async def prepare_rename_KeywordCall(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position
-    ) -> Optional[PrepareRenameResult]:
-        result = await self._find_KeywordCall(node, document, position)
+    def _prepare_rename_keyword(self, result: Optional[Tuple[KeywordDoc, Token]]) -> Optional[PrepareRenameResult]:
         if result is not None:
             kw_doc, token = result
+
+            if kw_doc.is_embedded:
+                raise CantRenameException("Renaming of keywords with embedded parameters is not supported.")
+
+            if kw_doc.is_library_keyword:
+                self.parent.window.show_message(
+                    "You are about to rename a library keyword. "
+                    "Only references are renamed and you have to rename the keyword definition yourself."
+                )
+
             return PrepareRenameResultWithPlaceHolder(range_from_token(token), token.value)
 
         return None
 
-    async def rename_KeywordCall(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+    async def _rename_keyword(
+        self, document: TextDocument, new_name: str, result: Optional[Tuple[KeywordDoc, Token]]
     ) -> Optional[WorkspaceEdit]:
-        result = await self._find_KeywordCall(node, document, position)
         if result is not None:
             kw_doc, token = result
-            references = await self.parent.robot_references.find_keyword_references(document, kw_doc)
+
+            references = await self.parent.robot_references.find_keyword_references(
+                document, kw_doc, include_declaration=kw_doc.is_resource_keyword
+            )
             changes: List[Union[TextDocumentEdit, CreateFile, RenameFile, DeleteFile]] = []
 
             for reference in references:
                 changes.append(
                     TextDocumentEdit(
                         OptionalVersionedTextDocumentIdentifier(reference.uri, None),
-                        [TextEdit(reference.range, new_name)],
+                        [AnnotatedTextEdit(reference.range, new_name, annotation_id="a")],
                     )
                 )
 
-            return WorkspaceEdit(document_changes=changes)
+            return WorkspaceEdit(
+                document_changes=changes, change_annotations={"a": ChangeAnnotation("refactor", False, "replace call")}
+            )
 
         return None
+
+    async def prepare_rename_KeywordCall(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[PrepareRenameResult]:
+        return self._prepare_rename_keyword(await self._find_KeywordCall(node, document, position))
+
+    async def rename_KeywordCall(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+    ) -> Optional[WorkspaceEdit]:
+        return await self._rename_keyword(document, new_name, await self._find_KeywordCall(node, document, position))
 
     async def _find_KeywordCall(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position
@@ -294,157 +317,183 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
 
         return None
 
-    # async def highlight_KeywordName(  # noqa: N802
-    #     self, node: ast.AST, document: TextDocument, position: Position
-    # ) -> Optional[List[DocumentHighlight]]:
-    #     from robot.parsing.lexer.tokens import Token as RobotToken
-    #     from robot.parsing.model.statements import KeywordName
+    async def prepare_rename_KeywordName(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[PrepareRenameResult]:
+        return self._prepare_rename_keyword(await self._find_KeywordName(node, document, position))
 
-    #     namespace = await self.parent.documents_cache.get_namespace(document)
-    #     if namespace is None:
-    #         return None
+    async def rename_KeywordName(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+    ) -> Optional[WorkspaceEdit]:
+        return await self._rename_keyword(document, new_name, await self._find_KeywordName(node, document, position))
 
-    #     kw_node = cast(KeywordName, node)
+    async def _find_KeywordName(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[Tuple[KeywordDoc, Token]]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import KeywordName
 
-    #     name_token = cast(RobotToken, kw_node.get_token(RobotToken.KEYWORD_NAME))
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
 
-    #     if not name_token:
-    #         return None
+        kw_node = cast(KeywordName, node)
 
-    #     doc = await namespace.get_library_doc()
-    #     if doc is not None:
-    #         keyword = next(
-    #             (v for v in doc.keywords.keywords if v.name == name_token.value and v.line_no == kw_node.lineno),
-    #             None,
-    #         )
+        name_token = cast(RobotToken, kw_node.get_token(RobotToken.KEYWORD_NAME))
 
-    #         if keyword is not None and keyword.source and not keyword.is_error_handler:
-    #             return [
-    #                 DocumentHighlight(keyword.range, DocumentHighlightKind.TEXT),
-    #                 *(
-    #                     DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
-    #                     for e in await self.parent.robot_references.find_keyword_references_in_file(document, keyword)
-    #                 ),
-    #             ]
+        if not name_token:
+            return None
 
-    #     return None
+        doc = await namespace.get_library_doc()
+        if doc is not None:
+            keyword = next(
+                (v for v in doc.keywords.keywords if v.name == name_token.value and v.line_no == kw_node.lineno),
+                None,
+            )
 
-    # async def highlight_Fixture(  # noqa: N802
-    #     self, node: ast.AST, document: TextDocument, position: Position
-    # ) -> Optional[List[DocumentHighlight]]:
-    #     from robot.parsing.lexer.tokens import Token as RobotToken
-    #     from robot.parsing.model.statements import Fixture
+            if keyword is not None and keyword.source and not keyword.is_error_handler:
+                return keyword, name_token
 
-    #     namespace = await self.parent.documents_cache.get_namespace(document)
-    #     if namespace is None:
-    #         return None
+        return None
 
-    #     fixture_node = cast(Fixture, node)
+    async def prepare_rename_Fixture(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[PrepareRenameResult]:
+        return self._prepare_rename_keyword(await self._find_Fixture(node, document, position))
 
-    #     name_token = cast(Token, fixture_node.get_token(RobotToken.NAME))
-    #     if name_token is None or name_token.value is None or name_token.value.upper() in ("", "NONE"):
-    #         return None
+    async def rename_Fixture(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+    ) -> Optional[WorkspaceEdit]:
+        return await self._rename_keyword(document, new_name, await self._find_Fixture(node, document, position))
 
-    #     result = await self.get_keyworddoc_and_token_from_position(
-    #         fixture_node.name,
-    #         name_token,
-    #         [cast(Token, t) for t in fixture_node.get_tokens(RobotToken.ARGUMENT)],
-    #         namespace,
-    #         position,
-    #     )
+    async def _find_Fixture(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[Tuple[KeywordDoc, Token]]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Fixture
 
-    #     if result is not None:
-    #         keyword_doc, keyword_token = result
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
 
-    #         keyword_token = self.strip_bdd_prefix(keyword_token)
+        fixture_node = cast(Fixture, node)
 
-    #         lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+        name_token = cast(Token, fixture_node.get_token(RobotToken.NAME))
+        if name_token is None or name_token.value is None or name_token.value.upper() in ("", "NONE"):
+            return None
 
-    #         kw_range = range_from_token(keyword_token)
+        result = await self.get_keyworddoc_and_token_from_position(
+            fixture_node.name,
+            name_token,
+            [cast(Token, t) for t in fixture_node.get_tokens(RobotToken.ARGUMENT)],
+            namespace,
+            position,
+        )
 
-    #         if lib_entry and kw_namespace:
-    #             r = range_from_token(keyword_token)
-    #             r.end.character = r.start.character + len(kw_namespace)
-    #             kw_range.start.character = r.end.character + 1
-    #             if position in r:
-    #                 # TODO highlight namespaces
-    #                 return None
+        if result is not None:
+            keyword_doc, keyword_token = result
 
-    #         if position in kw_range and keyword_doc is not None and not keyword_doc.is_error_handler:
-    #             return [
-    #                 *(
-    #                     [DocumentHighlight(keyword_doc.range, DocumentHighlightKind.TEXT)]
-    #                     if keyword_doc.source == str(document.uri.to_path())
-    #                     else []
-    #                 ),
-    #                 *(
-    #                     DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
-    #                     for e in await self.parent.robot_references.find_keyword_references_in_file(
-    #                         document, keyword_doc
-    #                     )
-    #                 ),
-    #             ]
+            keyword_token = self.strip_bdd_prefix(keyword_token)
 
-    #     return None
+            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
 
-    # async def _highlight_Template_or_TestTemplate(  # noqa: N802
-    #     self, node: ast.AST, document: TextDocument, position: Position
-    # ) -> Optional[List[DocumentHighlight]]:
-    #     from robot.parsing.lexer.tokens import Token as RobotToken
-    #     from robot.parsing.model.statements import Template, TestTemplate
+            kw_range = range_from_token(keyword_token)
 
-    #     template_node = cast(Union[Template, TestTemplate], node)
-    #     if template_node.value:
+            if lib_entry and kw_namespace:
+                r = range_from_token(keyword_token)
+                r.end.character = r.start.character + len(kw_namespace)
+                kw_range.start.character = r.end.character + 1
+                if position in r:
+                    # TODO highlight namespaces
+                    return None
 
-    #         keyword_token = cast(RobotToken, template_node.get_token(RobotToken.NAME))
-    #         if keyword_token is None or keyword_token.value is None or keyword_token.value.upper() in ("", "NONE"):
-    #             return None
+            if position in kw_range and keyword_doc is not None and not keyword_doc.is_error_handler:
+                return (
+                    keyword_doc,
+                    RobotToken(
+                        keyword_token.type,
+                        keyword_token.value[len(kw_namespace) + 1 :],
+                        keyword_token.lineno,
+                        keyword_token.col_offset + len(kw_namespace) + 1,
+                        keyword_token.error,
+                    )
+                    if lib_entry and kw_namespace
+                    else keyword_token,
+                )
 
-    #         keyword_token = self.strip_bdd_prefix(keyword_token)
+        return None
 
-    #         if position.is_in_range(range_from_token(keyword_token), False):
-    #             namespace = await self.parent.documents_cache.get_namespace(document)
-    #             if namespace is None:
-    #                 return None
+    async def _find_Template_or_TestTemplate(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[Tuple[KeywordDoc, Token]]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Template, TestTemplate
 
-    #             keyword_doc = await namespace.find_keyword(template_node.value)
+        template_node = cast(Union[Template, TestTemplate], node)
+        if template_node.value:
 
-    #             if keyword_doc is not None:
+            keyword_token = cast(RobotToken, template_node.get_token(RobotToken.NAME))
+            if keyword_token is None or keyword_token.value is None or keyword_token.value.upper() in ("", "NONE"):
+                return None
 
-    #                 lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+            keyword_token = self.strip_bdd_prefix(keyword_token)
 
-    #                 kw_range = range_from_token(keyword_token)
+            if position.is_in_range(range_from_token(keyword_token), False):
+                namespace = await self.parent.documents_cache.get_namespace(document)
+                if namespace is None:
+                    return None
 
-    #                 if lib_entry and kw_namespace:
-    #                     r = range_from_token(keyword_token)
-    #                     r.end.character = r.start.character + len(kw_namespace)
-    #                     kw_range.start.character = r.end.character + 1
-    #                     if position in r:
-    #                         # TODO highlight namespaces
-    #                         return None
+                keyword_doc = await namespace.find_keyword(template_node.value)
 
-    #                 if not keyword_doc.is_error_handler:
-    #                     return [
-    #                         *(
-    #                             [DocumentHighlight(keyword_doc.range, DocumentHighlightKind.TEXT)]
-    #                             if keyword_doc.source == str(document.uri.to_path())
-    #                             else []
-    #                         ),
-    #                         *(
-    #                             DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
-    #                             for e in await self.parent.robot_references.find_keyword_references_in_file(
-    #                                 document, keyword_doc
-    #                             )
-    #                         ),
-    #                     ]
-    #     return None
+                if keyword_doc is not None:
 
-    # async def highlight_TestTemplate(  # noqa: N802
-    #     self, result_node: ast.AST, document: TextDocument, position: Position
-    # ) -> Optional[List[DocumentHighlight]]:
-    #     return await self._highlight_Template_or_TestTemplate(result_node, document, position)
+                    lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
 
-    # async def highlight_Template(  # noqa: N802
-    #     self, result_node: ast.AST, document: TextDocument, position: Position
-    # ) -> Optional[List[DocumentHighlight]]:
-    #     return await self._highlight_Template_or_TestTemplate(result_node, document, position)
+                    kw_range = range_from_token(keyword_token)
+
+                    if lib_entry and kw_namespace:
+                        r = range_from_token(keyword_token)
+                        r.end.character = r.start.character + len(kw_namespace)
+                        kw_range.start.character = r.end.character + 1
+                        if position in r:
+                            # TODO highlight namespaces
+                            return None
+
+                    if not keyword_doc.is_error_handler:
+                        return (
+                            keyword_doc,
+                            RobotToken(
+                                keyword_token.type,
+                                keyword_token.value[len(kw_namespace) + 1 :],
+                                keyword_token.lineno,
+                                keyword_token.col_offset + len(kw_namespace) + 1,
+                                keyword_token.error,
+                            )
+                            if lib_entry and kw_namespace
+                            else keyword_token,
+                        )
+        return None
+
+    async def prepare_rename_TestTemplate(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[PrepareRenameResult]:
+        return self._prepare_rename_keyword(await self._find_Template_or_TestTemplate(node, document, position))
+
+    async def rename_TestTemplate(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+    ) -> Optional[WorkspaceEdit]:
+        return await self._rename_keyword(
+            document, new_name, await self._find_Template_or_TestTemplate(node, document, position)
+        )
+
+    async def prepare_rename_Template(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[PrepareRenameResult]:
+        return self._prepare_rename_keyword(await self._find_Template_or_TestTemplate(node, document, position))
+
+    async def rename_Template(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+    ) -> Optional[WorkspaceEdit]:
+        return await self._rename_keyword(
+            document, new_name, await self._find_Template_or_TestTemplate(node, document, position)
+        )

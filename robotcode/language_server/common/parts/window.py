@@ -34,12 +34,13 @@ class WindowProtocolPart(LanguageServerProtocolPart):
 
     async def show_message_request(
         self, message: str, actions: List[str] = [], type: MessageType = MessageType.INFO
-    ) -> MessageActionItem:
-        return await self.parent.send_request_async(
+    ) -> Optional[str]:
+        r = await self.parent.send_request_async(
             "window/showMessageRequest",
             ShowMessageRequestParams(type=type, message=message, actions=[MessageActionItem(title=a) for a in actions]),
             MessageActionItem,
         )
+        return r.title if r is not None else None
 
     async def show_document(
         self,
@@ -48,13 +49,12 @@ class WindowProtocolPart(LanguageServerProtocolPart):
         take_focus: Optional[bool] = None,
         selection: Optional[Range] = None,
     ) -> bool:
-        return (
-            await self.parent.send_request_async(
-                "window/showDocument",
-                ShowDocumentParams(uri=uri, external=external, take_focus=take_focus, selection=selection),
-                ShowDocumentResult,
-            )
-        ).success
+        r = await self.parent.send_request_async(
+            "window/showDocument",
+            ShowDocumentParams(uri=uri, external=external, take_focus=take_focus, selection=selection),
+            ShowDocumentResult,
+        )
+        return r.success if r is not None else False
 
     __progress_tokens: Dict[ProgressToken, bool] = {}
 

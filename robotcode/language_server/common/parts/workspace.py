@@ -303,20 +303,20 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
             and self.parent.client_capabilities.workspace
             and self.parent.client_capabilities.workspace.configuration
         ):
-            return (
-                await self.parent.send_request_async(
-                    "workspace/configuration",
-                    ConfigurationParams(
-                        items=[
-                            ConfigurationItem(
-                                scope_uri=str(scope_uri) if isinstance(scope_uri, Uri) else scope_uri,
-                                section=str(section),
-                            )
-                        ]
-                    ),
-                    list,
-                )
-            )[0]
+            r = await self.parent.send_request_async(
+                "workspace/configuration",
+                ConfigurationParams(
+                    items=[
+                        ConfigurationItem(
+                            scope_uri=str(scope_uri) if isinstance(scope_uri, Uri) else scope_uri,
+                            section=str(section),
+                        )
+                    ]
+                ),
+                list,
+            )
+
+            return r[0] if r is not None else None
 
         result = self.settings
         for sub_key in str(section).split("."):
