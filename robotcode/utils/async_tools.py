@@ -609,8 +609,9 @@ class Lock:
             finally:
                 self._waiters.remove(fut)
         except asyncio.CancelledError:
-            if not self._locked:
-                self._wake_up_first()
+            async with self.__inner_lock():
+                if not self._locked:
+                    self._wake_up_first()
             raise
 
         async with self.__inner_lock():
