@@ -3,7 +3,7 @@ Library           Collections
 #                 ^^^^^^^^^^^ library import by module name
 Library           alibrary    a_param=from hello    WITH NAME    lib_hello
 Library           alibrary    a_param=${LIB_ARG}    WITH NAME    lib_var
-#                                      ^^^^^^^^  Variable in library params
+#                                       ^^^^^^^  Variable in library params
 Library           ${CURDIR}/../lib/myvariables.py
 #                                  ^^^^^^^^^^^^^^ library import by path name
 #                   ^^^^^^  variable in library import
@@ -179,13 +179,13 @@ nineth
     a resource keyword B
 #   ^^^^^^^^^^^^^^^^^^^^  duplicated keyword
     duplicated keyword
-#   ^^^^^^^^^^^^^^^^^^^^  duplicated keyword
+#   ^^^^^^^^^^^^^^^^^^  duplicated keyword
     duplicated.a resource keyword A
 #   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  duplicated keyword
     duplicated.a resource keyword B
 #   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  duplicated keyword
     duplicated.duplicated keyword
-#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  duplicated keyword
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  duplicated keyword
 
 *** Keywords ***
 a keyword

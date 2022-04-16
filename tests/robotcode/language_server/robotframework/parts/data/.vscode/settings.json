@@ -18,7 +18,8 @@
         // "--log-level",
         // "TRACE",
         // "--log-robotframework",
-        // "--log-language-server"
+        // // "--log-language-server"
+        // "--call-tracing"
     ],
     //"robotcode.robocop.enabled": false,
     // "robotcode.debug.groupOutput": false,
