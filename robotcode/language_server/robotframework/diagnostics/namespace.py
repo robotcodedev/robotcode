@@ -914,16 +914,6 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Resource setting requires value.")
 
-                    source = await self.imports_manager.find_resource(
-                        value.name,
-                        base_dir,
-                        variables=variables,
-                    )
-
-                    # already imported
-                    if any(r for r in self._resources.values() if r.library_doc.source == source):
-                        return None, variables
-
                     result = await self._get_resource_entry(value.name, base_dir, sentinel=value, variables=variables)
                     result.import_range = value.range()
                     result.import_source = value.source
@@ -1086,7 +1076,7 @@ class Namespace:
                                     already_imported_resources is not None
                                     and already_imported_resources.library_doc.source
                                 ):
-                                    self._resources[entry.import_name] = entry
+                                    # self._resources[entry.import_name] = entry
 
                                     await self.append_diagnostics(
                                         range=entry.import_range,
