@@ -217,16 +217,20 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     if context.include_declaration and variable.source
                     else []
                 ),
-                *(await self.find_variable_references(document, variable)),
+                *(await self.find_variable_references(document, variable, context.include_declaration)),
             ]
 
         return None
 
-    async def find_variable_references(self, document: TextDocument, variable: VariableDefinition) -> List[Location]:
+    async def find_variable_references(
+        self, document: TextDocument, variable: VariableDefinition, include_declaration: bool = True
+    ) -> List[Location]:
         return (
-            await create_sub_task(self.find_variable_references_in_file(document, variable))
+            await create_sub_task(self.find_variable_references_in_file(document, variable, include_declaration))
             if isinstance(variable, (ArgumentDefinition, LocalVariableDefinition))
-            else await self._find_references(document, self.find_variable_references_in_file, variable)
+            else await self._find_references(
+                document, self.find_variable_references_in_file, variable, include_declaration
+            )
         )
 
     async def yield_argument_name_and_rest(self, node: ast.AST, token: Token) -> AsyncGenerator[Token, None]:
@@ -260,9 +264,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
     @_logger.call
     async def find_variable_references_in_file(
-        self,
-        doc: TextDocument,
-        variable: VariableDefinition,
+        self, doc: TextDocument, variable: VariableDefinition, include_declaration: bool = True
     ) -> List[Location]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.blocks import Block, Keyword, Section, TestCase
@@ -309,7 +311,14 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                             sub_token, found_variable = token_and_var
 
                             if found_variable == variable:
-                                result.append(Location(str(doc.uri), range_from_token(sub_token)))
+                                if (
+                                    include_declaration
+                                    or found_variable.name_token is None
+                                    or not include_declaration
+                                    and variable.name_token is not None
+                                    and range_from_token(variable.name_token) != range_from_token(sub_token)
+                                ):
+                                    result.append(Location(str(doc.uri), range_from_token(sub_token)))
 
             if (
                 isinstance(node, Statement)

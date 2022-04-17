@@ -15,11 +15,9 @@ from typing import (
     cast,
 )
 
-# from ....utils.async_itertools import async_next
+from ....utils.async_itertools import async_next
 from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
-
-# from ....utils.uri import Uri
 from ...common.decorators import language_id
 from ...common.lsp_types import (
     AnnotatedTextEdit,
@@ -36,12 +34,14 @@ from ...common.lsp_types import (
 )
 from ...common.parts.rename import CantRenameException
 from ...common.text_document import TextDocument
-
-# from ..diagnostics.entities import VariableDefinition
+from ..diagnostics.entities import VariableDefinition, VariableDefinitionType
 from ..diagnostics.library_doc import KeywordDoc
-from ..utils.ast_utils import (  # HasTokens,; Statement,; get_tokens_at_position,
+from ..utils.ast_utils import (
+    HasTokens,
+    Statement,
     Token,
     get_nodes_at_position,
+    get_tokens_at_position,
     range_from_token,
 )
 
@@ -148,66 +148,118 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
     async def _prepare_rename_default(
         self, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Optional[PrepareRenameResult]:
-        pass
+        result = await self._find_default(nodes, document, position)
+        if result is not None:
+            var, token = result
+
+            if var.type == VariableDefinitionType.BUILTIN_VARIABLE:
+                self.parent.window.show_message("You cannot rename a builtin variable, only references are renamed.")
+
+            elif var.type == VariableDefinitionType.IMPORTED_VARIABLE:
+                self.parent.window.show_message(
+                    "You are about to rename an imported variable. "
+                    "Only references are renamed and you have to rename the variable definition yourself."
+                )
+            elif var.type == VariableDefinitionType.COMMAND_LINE_VARIABLE:
+                self.parent.window.show_message(
+                    "You are about to rename a variable defined at commandline. "
+                    "Only references are renamed and you have to rename the variable definition yourself."
+                )
+            elif var.type == VariableDefinitionType.ENVIRONMENT_VARIABLE:
+                self.parent.window.show_message(
+                    "You are about to rename an environment variable. "
+                    "Only references are renamed and you have to rename the variable definition yourself."
+                )
+
+            return PrepareRenameResultWithPlaceHolder(range_from_token(token), token.value)
+
+        return None
 
     async def _rename_default(
         self, nodes: List[ast.AST], document: TextDocument, position: Position, new_name: str
     ) -> Optional[WorkspaceEdit]:
-        # from robot.parsing.lexer.tokens import Token as RobotToken
+        result = await self._find_default(nodes, document, position)
 
-        # namespace = await self.parent.documents_cache.get_namespace(document)
-        # if namespace is None:
-        #     return None
+        if result is not None:
+            var, _ = result
 
-        # if not nodes:
-        #     return None
+            references = await self.parent.robot_references.find_variable_references(
+                document,
+                var,
+                include_declaration=var.type
+                in [
+                    VariableDefinitionType.VARIABLE,
+                    VariableDefinitionType.ARGUMENT,
+                    VariableDefinitionType.LOCAL_VARIABLE,
+                ],
+            )
+            changes: List[Union[TextDocumentEdit, CreateFile, RenameFile, DeleteFile]] = []
 
-        # node = nodes[-1]
+            for reference in references:
+                changes.append(
+                    TextDocumentEdit(
+                        OptionalVersionedTextDocumentIdentifier(reference.uri, None),
+                        [AnnotatedTextEdit(reference.range, new_name, annotation_id="rename_variable")],
+                    )
+                )
 
-        # if not isinstance(node, HasTokens):
-        #     return None
-
-        # tokens = get_tokens_at_position(node, position)
-
-        # token_and_var: Optional[Tuple[Token, VariableDefinition]] = None
-
-        # for token in tokens:
-        #     token_and_var = await async_next(
-        #         (
-        #             (var_token, var)
-        #             async for var_token, var in self.iter_variables_from_token(token, namespace, nodes, position)
-        #             if position in range_from_token(var_token)
-        #         ),
-        #         None,
-        #     )
-
-        # if (
-        #     token_and_var is None
-        #     and isinstance(node, Statement)
-        #     and isinstance(node, self.get_expression_statement_types())
-        #     and (token := node.get_token(RobotToken.ARGUMENT)) is not None
-        #     and position in range_from_token(token)
-        # ):
-        #     token_and_var = await async_next(
-        #         (
-        #             (var_token, var)
-        #             async for var_token, var in self.iter_expression_variables_from_token(
-        #                 token, namespace, nodes, position
-        #             )
-        #             if position in range_from_token(var_token)
-        #         ),
-        #         None,
-        #     )
-
-        # if token_and_var is not None:
-        #     _, variable = token_and_var
-
-        #     return [
-        #         DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
-        #         for e in await self.parent.robot_references.find_variable_references_in_file(document, variable)
-        #     ]
+            return WorkspaceEdit(
+                document_changes=changes,
+                change_annotations={"rename_variable": ChangeAnnotation("Rename Variable", False)},
+            )
 
         return None
+
+    async def _find_default(
+        self, nodes: List[ast.AST], document: TextDocument, position: Position
+    ) -> Optional[Tuple[VariableDefinition, Token]]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return None
+
+        if not nodes:
+            return None
+
+        node = nodes[-1]
+
+        if not isinstance(node, HasTokens):
+            return None
+
+        tokens = get_tokens_at_position(node, position)
+
+        token_and_var: Optional[Tuple[VariableDefinition, Token]] = None
+
+        for token in tokens:
+            token_and_var = await async_next(
+                (
+                    (var, var_token)
+                    async for var_token, var in self.iter_variables_from_token(token, namespace, nodes, position)
+                    if position in range_from_token(var_token)
+                ),
+                None,
+            )
+
+        if (
+            token_and_var is None
+            and isinstance(node, Statement)
+            and isinstance(node, self.get_expression_statement_types())
+            and (token := node.get_token(RobotToken.ARGUMENT)) is not None
+            and position in range_from_token(token)
+        ):
+            token_and_var = await async_next(
+                (
+                    (var, var_token)
+                    async for var_token, var in self.iter_expression_variables_from_token(
+                        token, namespace, nodes, position
+                    )
+                    if position in range_from_token(var_token)
+                ),
+                None,
+            )
+
+        return token_and_var
 
     def _prepare_rename_keyword(self, result: Optional[Tuple[KeywordDoc, Token]]) -> Optional[PrepareRenameResult]:
         if result is not None:
@@ -230,7 +282,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         self, document: TextDocument, new_name: str, result: Optional[Tuple[KeywordDoc, Token]]
     ) -> Optional[WorkspaceEdit]:
         if result is not None:
-            kw_doc, token = result
+            kw_doc, _ = result
 
             references = await self.parent.robot_references.find_keyword_references(
                 document, kw_doc, include_declaration=kw_doc.is_resource_keyword
@@ -241,12 +293,13 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
                 changes.append(
                     TextDocumentEdit(
                         OptionalVersionedTextDocumentIdentifier(reference.uri, None),
-                        [AnnotatedTextEdit(reference.range, new_name, annotation_id="a")],
+                        [AnnotatedTextEdit(reference.range, new_name, annotation_id="rename_keyword")],
                     )
                 )
 
             return WorkspaceEdit(
-                document_changes=changes, change_annotations={"a": ChangeAnnotation("refactor", False, "replace call")}
+                document_changes=changes,
+                change_annotations={"rename_keyword": ChangeAnnotation("Rename Keyword", False)},
             )
 
         return None
@@ -404,7 +457,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
                 r.end.character = r.start.character + len(kw_namespace)
                 kw_range.start.character = r.end.character + 1
                 if position in r:
-                    # TODO highlight namespaces
+                    # TODO namespaces
                     return None
 
             if position in kw_range and keyword_doc is not None and not keyword_doc.is_error_handler:
@@ -456,7 +509,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
                         r.end.character = r.start.character + len(kw_namespace)
                         kw_range.start.character = r.end.character + 1
                         if position in r:
-                            # TODO highlight namespaces
+                            # TODO namespaces
                             return None
 
                     if not keyword_doc.is_error_handler:
