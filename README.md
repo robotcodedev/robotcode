@@ -1,6 +1,7 @@
 # RobotCode
 
-An [extension](https://marketplace.visualstudio.com/VSCode) which brings support for [RobotFramework](https://robotframework.org/) to [Visual Studio Code](https://code.visualstudio.com/), including features like IntelliSense, linting, debugging, code navigation, code formatting, test explorer, find references for keywords and variables, and more!
+An [extension](https://marketplace.visualstudio.com/VSCode) which brings support for [RobotFramework](https://robotframework.org/)
+to [Visual Studio Code](https://code.visualstudio.com/), including [features](#features) like code completion, debugging, test explorer, refactoring and more!
 
 ## Requirements
 
@@ -27,7 +28,9 @@ Here is a list of Features:
 - [Running and Debugging](#running-and-debugging)
 - [Multi-root Workspace folders](#multi-root-workspace-folders)
 - Test Explorer
-- and many more
+- Refactorings
+  - renaming keywords
+  - renaming variables
 
 ### Autocomplete and IntelliSense
 

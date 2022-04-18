@@ -2,8 +2,11 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- renaming of keywords and variables
+- speedup loading of resources
+
 ##  0.11.9
 
 ### added
