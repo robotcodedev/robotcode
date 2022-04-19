@@ -317,7 +317,7 @@ export class LanguageClientsManager {
 
       const config = vscode.workspace.getConfiguration(CONFIG_SECTION, uri);
 
-      const mode = config.get<string>("languageServer.mode", "stdio");
+      const mode = config.get<string>("languageServer.mode", "pipe");
 
       const serverOptions: ServerOptions | undefined =
         mode === "tcp" ? this.getServerOptionsTCP(workspaceFolder) : await this.getServerOptions(workspaceFolder, mode);
@@ -372,6 +372,7 @@ export class LanguageClientsManager {
           },
         },
         diagnosticCollectionName: "robotcode",
+        // TODO: how we can start a language client on workspace level, not on folder level
         workspaceFolder,
         outputChannel,
         markdown: {
