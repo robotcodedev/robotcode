@@ -1,8 +1,8 @@
+import contextlib
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional
 
-from robotcode.jsonrpc2.protocol import rpc_method
-
+from ....jsonrpc2.protocol import rpc_method
 from ..lsp_types import (
     URI,
     LogMessageParams,
@@ -23,6 +23,51 @@ from ..lsp_types import (
     WorkDoneProgressReport,
 )
 from .protocol_part import LanguageServerProtocolPart
+
+
+class Progress:
+    def __init__(
+        self,
+        parent: "WindowProtocolPart",
+        token: Optional[ProgressToken],
+        message: Optional[str] = None,
+        max: Optional[int] = None,
+    ) -> None:
+        self.parent = parent
+        self.token = token
+        self.ended = False
+        self.message = message
+        self.max = max
+
+    def report(
+        self,
+        message: Optional[str] = None,
+        current: Optional[int] = None,
+        max: Optional[int] = None,
+        percentage: Optional[int] = None,
+        cancellable: Optional[bool] = None,
+        title: Optional[str] = None,
+    ) -> None:
+        if max is not None:
+            self.max = max
+
+        self.parent.progress_report(
+            self.token,
+            message if message is not None else self.message,
+            int(current * 100 / self.max)
+            if percentage is None and current is not None and self.max is not None
+            else percentage,
+            cancellable,
+            title,
+        )
+
+    def end(self, message: Optional[str] = None) -> None:
+        self.parent.progress_end(self.token, message)
+        self.ended = True
+
+    @property
+    def is_canceled(self) -> bool:
+        return self.parent.progress_is_canceled(self.token)
 
 
 class WindowProtocolPart(LanguageServerProtocolPart):
@@ -58,6 +103,30 @@ class WindowProtocolPart(LanguageServerProtocolPart):
 
     __progress_tokens: Dict[ProgressToken, bool] = {}
 
+    @contextlib.asynccontextmanager
+    async def progress(
+        self,
+        message: Optional[str] = None,
+        max: Optional[int] = None,
+        current: Optional[int] = None,
+        percentage: Optional[int] = None,
+        cancellable: Optional[bool] = None,
+        title: Optional[str] = None,
+    ) -> AsyncIterator[Progress]:
+        p = Progress(self, await self.create_progress(), message, max)
+        self.progress_begin(
+            p.token,
+            message,
+            int(current * 100 / max) if percentage is None and current is not None and max is not None else percentage,
+            cancellable,
+            title,
+        )
+        try:
+            yield p
+        finally:
+            if not p.ended:
+                self.progress_end(p.token)
+
     async def create_progress(self) -> Optional[ProgressToken]:
 
         if (
@@ -88,15 +157,6 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             return False
 
         return token in self.__progress_tokens and self.__progress_tokens.get(token, False)
-
-    def progress_cancel(self, token: Optional[ProgressToken]) -> None:
-        if (
-            token is not None
-            and self.parent.client_capabilities
-            and self.parent.client_capabilities.window
-            and self.parent.client_capabilities.window.work_done_progress
-        ):
-            self.parent.send_notification("window/workDoneProgress/cancel", WorkDoneProgressCancelParams(token))
 
     def _progress(self, token: Optional[ProgressToken], value: WorkDoneProgressBase) -> None:
         if (

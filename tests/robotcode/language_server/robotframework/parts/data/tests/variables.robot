@@ -64,7 +64,7 @@ third
     Log    ${asd}
     Log    ${hello there1 + ${asd}}
     ${hello there1}    Set Variable    hello
-    Log    ${hello there1 + ${asd}}
+    Log    ${hello there1 + ${asd}}    # TODO resolve vars?
 
     &{a dict}    Set Variable    hello=hi    there=12
     Log    ${a dict.hello}
@@ -142,6 +142,9 @@ templated with embedded not defined
     [Template]  verify that ${a} plus ${b} is ${expected}
     1  2  3
     3  4  7
+
+environmentvars
+    log  ${%{LEIDAD_TESTENV}.leidad_server.ip}  port=${%{LEIDAD_TESTENV}.leidad_server.port}  # TODO
 
 *** Keywords ***
 do something

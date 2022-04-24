@@ -4,7 +4,7 @@ import ast
 import re
 import token as python_token
 from io import StringIO
-from tokenize import generate_tokens
+from tokenize import TokenError, generate_tokens
 from typing import (
     Any,
     AsyncGenerator,
@@ -244,39 +244,41 @@ class ModelHelperMixin:
         from robot.api.parsing import Token as RobotToken
 
         variable_started = False
-
-        for toknum, tokval, (_, tokcol), _, _ in generate_tokens(StringIO(expression.value).readline):
-            if variable_started:
-                if toknum == python_token.NAME:
-                    var = await namespace.find_variable(
-                        f"${{{tokval}}}",
-                        nodes,
-                        position,
-                        skip_commandline_variables=skip_commandline_variables,
-                        ignore_error=True,
-                    )
-                    sub_token = RobotToken(
-                        expression.type,
-                        tokval,
-                        expression.lineno,
-                        expression.col_offset + tokcol,
-                        expression.error,
-                    )
-                    if var is not None:
-                        yield sub_token, var
-                    elif return_not_found:
-                        yield sub_token, VariableNotFoundDefinition(
-                            sub_token.lineno,
-                            sub_token.col_offset,
-                            sub_token.lineno,
-                            sub_token.end_col_offset,
-                            namespace.source,
-                            tokval,
-                            sub_token,
+        try:
+            for toknum, tokval, (_, tokcol), _, _ in generate_tokens(StringIO(expression.value).readline):
+                if variable_started:
+                    if toknum == python_token.NAME:
+                        var = await namespace.find_variable(
+                            f"${{{tokval}}}",
+                            nodes,
+                            position,
+                            skip_commandline_variables=skip_commandline_variables,
+                            ignore_error=True,
                         )
-                variable_started = False
-            if toknum == python_token.ERRORTOKEN and tokval == "$":
-                variable_started = True
+                        sub_token = RobotToken(
+                            expression.type,
+                            tokval,
+                            expression.lineno,
+                            expression.col_offset + tokcol,
+                            expression.error,
+                        )
+                        if var is not None:
+                            yield sub_token, var
+                        elif return_not_found:
+                            yield sub_token, VariableNotFoundDefinition(
+                                sub_token.lineno,
+                                sub_token.col_offset,
+                                sub_token.lineno,
+                                sub_token.end_col_offset,
+                                namespace.source,
+                                tokval,
+                                sub_token,
+                            )
+                    variable_started = False
+                if toknum == python_token.ERRORTOKEN and tokval == "$":
+                    variable_started = True
+        except TokenError:
+            pass
 
     @staticmethod
     def remove_index_from_variable_token(token: Token) -> Tuple[Token, Optional[Token]]:

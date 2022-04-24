@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import asyncio
-import os
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from ....utils.async_tools import threaded
 from ....utils.glob_path import iter_files
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
-from ...common.lsp_types import DocumentUri
-from ...common.text_document import TextDocument
-from ..configuration import WorkspaceConfig
+from ...common.decorators import language_id
+from ...common.parts.diagnostics import DiagnosticsMode, WorkspaceDocumentsResult
+from ..configuration import AnalysisConfig, AnalysisProgressMode, RobotCodeConfig
 from ..diagnostics.library_doc import RESOURCE_FILE_EXTENSION, ROBOT_FILE_EXTENSION
 
 if TYPE_CHECKING:
@@ -20,78 +18,92 @@ if TYPE_CHECKING:
 from .protocol_part import RobotLanguageServerProtocolPart
 
 
+class CantReadDocumentException(Exception):
+    pass
+
+
 class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
-        self.parent.on_initialized.add(self._on_initialized)
+        self.parent.documents.on_read_document_text.add(self._on_read_document_text)
+        self.parent.diagnostics.collect_workspace_documents.add(self.collect_workspace_diagnostics)
+        self.parent.diagnostics.on_get_diagnostics_mode.add(self.on_get_diagnostics_mode)
 
-    @_logger.call
-    async def get_or_open_document(
-        self, path: Union[str, os.PathLike[Any]], language_id: str, version: Optional[int] = None
-    ) -> TextDocument:
+    @language_id("robotframework")
+    async def _on_read_document_text(self, sender: Any, uri: Uri) -> Optional[str]:
         from robot.utils import FileReader
 
-        uri = Uri.from_path(path).normalized()
+        with FileReader(uri.to_path()) as reader:
+            return str(reader.read())
 
-        result = await self.parent.documents.get(uri)
-        if result is not None:
-            return result
+    async def on_get_diagnostics_mode(self, sender: Any, uri: Uri) -> Optional[DiagnosticsMode]:
+        config = await self.parent.workspace.get_configuration(AnalysisConfig, uri)
+        return config.diagnostic_mode
 
-        with FileReader(Path(path)) as reader:
-            text = str(reader.read())
-
-        return await self.parent.documents.append_document(
-            document_uri=DocumentUri(uri), language_id=language_id, text=text, version=version
-        )
-
-    @_logger.call
-    async def _on_initialized(self, sender: Any) -> None:
-        # self.parent.workspace.did_change_configuration.add(self._on_change_configuration)
-        pass
-
-    @_logger.call
     @threaded()
-    async def _on_change_configuration(self, sender: Any, settings: Dict[str, Any]) -> None:
-        async def run() -> None:
-            token = await self.parent.window.create_progress()
+    async def collect_workspace_diagnostics(self, sender: Any) -> List[WorkspaceDocumentsResult]:
 
-            self.parent.window.progress_begin(token, "Analyze...", cancellable=True)
-            try:
-                for folder in self.parent.workspace.workspace_folders:
-                    config = (
-                        await self.parent.workspace.get_configuration(WorkspaceConfig, folder.uri) or WorkspaceConfig()
-                    )
+        result: List[WorkspaceDocumentsResult] = []
 
+        for folder in self.parent.workspace.workspace_folders:
+            config = await self.parent.workspace.get_configuration(RobotCodeConfig, folder.uri)
+
+            async with self.parent.window.progress("Collect sources", cancellable=False):
+                files = [
+                    f
                     async for f in iter_files(
                         folder.uri.to_path(),
-                        (f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}"),
-                        ignore_patterns=config.exclude_patterns or [],  # type: ignore
+                        f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}",
+                        ignore_patterns=config.workspace.exclude_patterns or [],  # type: ignore
                         absolute=True,
-                    ):
-                        if self.parent.window.progress_is_canceled(token):
+                    )
+                ]
+
+            canceled = False
+            async with self.parent.window.progress(
+                "Load workspace", cancellable=True, current=0, max=len(files)
+            ) as progress:
+                for i, f in enumerate(files):
+                    try:
+                        if progress.is_canceled:
+                            canceled = True
                             break
 
-                        self.parent.window.progress_report(
-                            token, "analyze " + str(f.relative_to(folder.uri.to_path())), cancellable=True
+                        name = f.relative_to(folder.uri.to_path())
+
+                        progress.report(
+                            f"Load {str(name)}"
+                            if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
+                            else None,
+                            current=i,
                         )
-                        try:
-                            document = await self.get_or_open_document(f, "robotframework")
 
+                        document = await self.parent.documents.get_or_open_document(f, "robotframework")
+
+                        if not document.opened_in_editor:
                             await (await self.parent.documents_cache.get_namespace(document)).ensure_initialized()
-                            # run_coroutine_in_thread(self.parent.diagnostics.publish_diagnostics, str(document.uri))
 
-                        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                            raise
-                        except BaseException:
-                            pass
+                            if config.analysis.diagnostic_mode == DiagnosticsMode.WORKSPACE:
+                                result.append(
+                                    WorkspaceDocumentsResult(
+                                        str(name)
+                                        if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
+                                        else None,
+                                        document,
+                                    )
+                                )
 
-            except BaseException:
-                self.parent.window.progress_cancel(token)
-                raise
-            else:
-                self.parent.window.progress_end(token)
+                    except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                        raise
+                    except BaseException as e:
+                        self._logger.exception(e)
 
-        await run()
-        # await run()
+        if canceled:
+            return []
+
+        if config.analysis.max_project_file_count > 0 and len(files) > config.analysis.max_project_file_count:
+            result = result[: config.analysis.max_project_file_count]
+
+        return result

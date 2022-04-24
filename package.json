@@ -9,7 +9,7 @@
     "name": "Daniel Biehl",
     "url": "https://github.com/d-biehl/"
   },
-  "homepage": "https://github.com/d-biehl/robotcode",
+  "homepage": "https://robotcode.io",
   "repository": {
     "type": "git",
     "url": "https://github.com/d-biehl/robotcode"
@@ -413,21 +413,6 @@
             "description": "Defines if the test report should be opened a run session automatically.",
             "scope": "resource"
           },
-          "robotcode.workspace.excludePatterns": {
-            "type": "array",
-            "default": [
-              "**/.git/**",
-              "**/node_modules/**",
-              "**/.pytest_cache/**",
-              "**/__pycache__/**",
-              "**/.mypy_cache/**"
-            ],
-            "items": {
-              "type": "string"
-            },
-            "description": "Specifies glob patterns for excluding files and folders from analysing by the language server.",
-            "scope": "resource"
-          },
           "robotcode.robocop.enabled": {
             "type": "boolean",
             "default": true,
@@ -465,6 +450,55 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Enables 'robotidy' code formatting, if installed. See [robotidy](https://github.com/MarketSquare/robotframework-tidy)",
+            "scope": "resource"
+          },
+          "robotcode.analysis.diagnosticMode": {
+            "type": "string",
+            "enum": [
+              "openFilesOnly",
+              "workspace"
+            ],
+            "default": "openFilesOnly",
+            "enumDescriptions": [
+              "Analyzes and reports errors only on open files.",
+              "Analyzes and reports errors on all files in the workspace."
+            ],
+            "description": "Analysis mode for diagnostics.",
+            "scope": "resource"
+          },
+          "robotcode.analysis.progressMode": {
+            "type": "string",
+            "enum": [
+              "simple",
+              "detailed"
+            ],
+            "default": "simple",
+            "enumDescriptions": [
+              "Show only simple progress messages.",
+              "Show detailed progress messages."
+            ],
+            "description": "Analysis mode for diagnostics.",
+            "scope": "resource"
+          },
+          "robotcode.workspace.excludePatterns": {
+            "type": "array",
+            "default": [
+              "**/.git/**",
+              "**/node_modules/**",
+              "**/.pytest_cache/**",
+              "**/__pycache__/**",
+              "**/.mypy_cache/**"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Specifies glob patterns for excluding files and folders from analysing by the language server.",
+            "scope": "resource"
+          },
+          "robotcode.analysis.maxProjectFileCount": {
+            "type": "integer",
+            "default": 1000,
+            "description": "Specifies the maximum number of files for which diagnostics are reported for the whole project/workspace folder. Specifies 0 or less to disable the limit completely.",
             "scope": "resource"
           }
         }
@@ -520,7 +554,7 @@
     "debuggers": [
       {
         "type": "robotcode",
-        "label": "RobotCode Debugger",
+        "label": "RobotCode",
         "languages": [
           "robotframework"
         ],

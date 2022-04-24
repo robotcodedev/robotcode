@@ -132,7 +132,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 doc = asyncio.run_coroutine_threadsafe(
                     self.parent.documents.get(Uri.from_path(source).normalized()), self.parent._loop
                 ).result()
-                if doc is not None and doc.version is not None:
+                if doc is not None and doc.opened_in_editor:
                     return asyncio.run_coroutine_threadsafe(doc.text(), self.parent._loop).result()
 
             return source
@@ -256,7 +256,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         with LOGGER.cache_only:
             try:
                 config = await self.get_config(workspace_folder)
-                mode = config.get_mode() if config is not None else None
+                rpa_mode = config.get_rpa_mode() if config is not None else None
 
                 if paths is None and config is not None:
                     paths = config.paths
@@ -291,7 +291,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                     suite: Optional[TestSuite] = (
                         MyTestSuiteBuilder(
                             included_suites=suites if suites else None,
-                            rpa=mode,
+                            rpa=rpa_mode,
                         ).build(*valid_paths)
                         if valid_paths
                         else None
@@ -323,7 +323,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 else:
                     return [
                         generate(
-                            MyTestSuiteBuilder(included_suites=suites if suites else None, rpa=mode).build(
+                            MyTestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode).build(
                                 str(workspace_path)
                             )
                         )
@@ -363,7 +363,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 return await FindTestCasesVisitor().get(
                     text_document.uri,
                     await self.parent.documents_cache.get_model(
-                        await self.parent.robot_workspace.get_or_open_document(
+                        await self.parent.documents.get_or_open_document(
                             Uri(text_document.uri).to_path(), language_id="robotframework"
                         )
                     ),

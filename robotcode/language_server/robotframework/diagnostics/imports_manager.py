@@ -28,7 +28,7 @@ from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
 from ....utils.uri import Uri
 from ...common.decorators import language_id
-from ...common.lsp_types import FileChangeType, FileEvent
+from ...common.lsp_types import DocumentUri, FileChangeType, FileEvent
 from ...common.parts.workspace import FileWatcherEntry, Workspace
 from ...common.text_document import TextDocument
 from ..configuration import RobotConfig
@@ -75,8 +75,12 @@ FIND_FILE_TIME_OUT = 10
 COMPLETE_LIBRARY_IMPORT_TIME_OUT = COMPLETE_RESOURCE_IMPORT_TIME_OUT = COMPLETE_VARIABLES_IMPORT_TIME_OUT = 10
 
 
+class _EntryKey:
+    pass
+
+
 @dataclass()
-class _LibrariesEntryKey:
+class _LibrariesEntryKey(_EntryKey):
     name: str
     args: Tuple[Any, ...]
 
@@ -265,7 +269,7 @@ class _LibrariesEntry(_ImportEntry):
 
 
 @dataclass()
-class _ResourcesEntryKey:
+class _ResourcesEntryKey(_EntryKey):
     name: str
 
     def __hash__(self) -> int:
@@ -293,8 +297,6 @@ class _ResourcesEntry(_ImportEntry):
 
     async def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
         async with self._lock:
-            if self._document is None or self._document._version is None:
-                return None
 
             for change in changes:
                 uri = Uri(change.uri)
@@ -313,20 +315,8 @@ class _ResourcesEntry(_ImportEntry):
 
             return None
 
-    def __close_document(self, document: TextDocument) -> None:
-        try:
-            if asyncio.get_running_loop():
-                create_sub_task(self.parent.parent_protocol.documents.close_document(document))
-        except RuntimeError:
-            pass
-
     async def _update(self) -> None:
         self._document = await self._get_document_coroutine()
-
-        for r in self.references:
-            self._document.references.add(r)
-
-            weakref.finalize(r, self.__close_document, self._document)
 
         if self._document._version is None:
             self.file_watchers.append(
@@ -378,7 +368,7 @@ class _ResourcesEntry(_ImportEntry):
 
 
 @dataclass()
-class _VariablesEntryKey:
+class _VariablesEntryKey(_EntryKey):
     name: str
     args: Tuple[Any, ...]
 
@@ -473,6 +463,7 @@ class ImportsManager:
         self._variables_lock = Lock()
         self._variables: OrderedDict[_VariablesEntryKey, _VariablesEntry] = OrderedDict()
         self.file_watchers: List[FileWatcherEntry] = []
+        self.parent_protocol.documents.did_create_uri.add(self._do_imports_changed)
         self.parent_protocol.documents.did_change.add(self.resource_document_changed)
         self._command_line_variables: Optional[List[VariableDefinition]] = None
 
@@ -546,6 +537,13 @@ class ImportsManager:
     async def variables_changed(sender, variables: List[LibraryDoc]) -> None:  # NOSONAR
         ...
 
+    @async_tasking_event
+    async def imports_changed(sender, uri: DocumentUri) -> None:  # NOSONAR
+        ...
+
+    async def _do_imports_changed(self, sender: Any, uri: DocumentUri) -> None:  # NOSONAR
+        await self.imports_changed(self, uri)
+
     @language_id("robotframework")
     async def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
         resource_changed: List[LibraryDoc] = []
@@ -574,52 +572,69 @@ class ImportsManager:
         if resource_changed:
             await self.resources_changed(self, resource_changed)
 
+    @_logger.call
     async def did_change_watched_files(self, sender: Any, changes: List[FileEvent]) -> None:
-        libraries_changed: List[LibraryDoc] = []
-        resource_changed: List[LibraryDoc] = []
-        variables_changed: List[LibraryDoc] = []
+        libraries_changed: List[Tuple[_LibrariesEntryKey, FileChangeType, Optional[LibraryDoc]]] = []
+        resource_changed: List[Tuple[_ResourcesEntryKey, FileChangeType, Optional[LibraryDoc]]] = []
+        variables_changed: List[Tuple[_VariablesEntryKey, FileChangeType, Optional[LibraryDoc]]] = []
 
         lib_doc: Optional[LibraryDoc]
 
         async with self._libaries_lock:
-            for l_entry in self._libaries.values():
+            for l_key, l_entry in self._libaries.items():
                 lib_doc = None
                 if await l_entry.is_valid():
                     lib_doc = await l_entry.get_libdoc()
                 result = await l_entry.check_file_changed(changes)
-                if result is not None and lib_doc is not None:
-                    libraries_changed.append(lib_doc)
+                if result is not None:
+                    libraries_changed.append((l_key, result, lib_doc))
 
-        async with self._resources_lock:
-            for r_entry in self._resources.values():
-                lib_doc = None
-                if await r_entry.is_valid():
-                    lib_doc = await r_entry.get_libdoc()
-                result = await r_entry.check_file_changed(changes)
-                if result is not None and lib_doc is not None:
-                    resource_changed.append(await r_entry.get_libdoc())
+        try:
+            async with self._resources_lock:
+                for r_key, r_entry in self._resources.items():
+                    lib_doc = None
+                    if await r_entry.is_valid():
+                        lib_doc = await r_entry.get_libdoc()
+                    result = await r_entry.check_file_changed(changes)
+                    if result is not None:
+                        resource_changed.append((r_key, result, lib_doc))
+        except BaseException as e:
+            self._logger.exception(e)
+            raise
 
         async with self._variables_lock:
-            for v_entry in self._variables.values():
+            for v_key, v_entry in self._variables.items():
                 lib_doc = None
                 if await v_entry.is_valid():
                     lib_doc = await v_entry.get_libdoc()
                 result = await v_entry.check_file_changed(changes)
-                if result is not None and lib_doc is not None:
-                    variables_changed.append(await v_entry.get_libdoc())
+                if result is not None:
+                    variables_changed.append((v_key, result, lib_doc))
 
         if libraries_changed:
-            await self.libraries_changed(self, libraries_changed)
+            for (l, t, _) in libraries_changed:
+                if t == FileChangeType.DELETED:
+                    self.__remove_library_entry(l, self._libaries[l], True)
+
+            await self.libraries_changed(self, [v for (_, _, v) in libraries_changed if v is not None])
 
         if resource_changed:
-            await self.resources_changed(self, resource_changed)
+            for (r, t, _) in resource_changed:
+                if t == FileChangeType.DELETED:
+                    self.__remove_resource_entry(r, self._resources[r], True)
+
+            await self.resources_changed(self, [v for (_, _, v) in resource_changed if v is not None])
 
         if variables_changed:
-            await self.variables_changed(self, variables_changed)
+            for (v, t, _) in variables_changed:
+                if t == FileChangeType.DELETED:
+                    self.__remove_variables_entry(v, self._variables[v], True)
 
-    def __remove_library_entry(self, entry_key: _LibrariesEntryKey, entry: _LibrariesEntry) -> None:
+            await self.variables_changed(self, [v for (_, _, v) in variables_changed if v is not None])
+
+    def __remove_library_entry(self, entry_key: _LibrariesEntryKey, entry: _LibrariesEntry, now: bool = False) -> None:
         async def remove(k: _LibrariesEntryKey, e: _LibrariesEntry) -> None:
-            if len(e.references) == 0:
+            if len(e.references) == 0 or now:
                 self._logger.debug(lambda: f"Remove Library Entry {k}")
                 async with self._libaries_lock:
                     if len(e.references) == 0:
@@ -636,9 +651,9 @@ class ImportsManager:
         except RuntimeError:
             pass
 
-    def __remove_resource_entry(self, entry_key: _ResourcesEntryKey, entry: _ResourcesEntry) -> None:
+    def __remove_resource_entry(self, entry_key: _ResourcesEntryKey, entry: _ResourcesEntry, now: bool = False) -> None:
         async def remove(k: _ResourcesEntryKey, e: _ResourcesEntry) -> None:
-            if len(e.references) == 0:
+            if len(e.references) == 0 or now:
                 self._logger.debug(lambda: f"Remove Resource Entry {k}")
                 async with self._resources_lock:
                     if len(e.references) == 0:
@@ -655,9 +670,11 @@ class ImportsManager:
         except RuntimeError:
             pass
 
-    def __remove_variables_entry(self, entry_key: _VariablesEntryKey, entry: _VariablesEntry) -> None:
+    def __remove_variables_entry(
+        self, entry_key: _VariablesEntryKey, entry: _VariablesEntry, now: bool = False
+    ) -> None:
         async def remove(k: _VariablesEntryKey, e: _VariablesEntry) -> None:
-            if len(e.references) == 0:
+            if len(e.references) == 0 or now:
                 self._logger.debug(lambda: f"Remove Variables Entry {k}")
                 async with self._variables_lock:
                     if len(e.references) == 0:
@@ -998,7 +1015,7 @@ class ImportsManager:
                     f"Supported extensions are {', '.join(repr(s) for s in RESOURCE_EXTENSIONS)}."
                 )
 
-            return await self.parent_protocol.robot_workspace.get_or_open_document(source_path, "robotframework")
+            return await self.parent_protocol.documents.get_or_open_document(source_path, "robotframework")
 
         entry_key = _ResourcesEntryKey(source)
 

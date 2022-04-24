@@ -5,7 +5,6 @@ import concurrent.futures
 import contextvars
 import functools
 import inspect
-import os
 import threading
 import weakref
 from collections import deque
@@ -435,27 +434,18 @@ def check_canceled_sync() -> bool:
     return True
 
 
-THREADPOOL_POOL_MAX_WORKERS = None
-
-__tread_pool_executor: Optional[ThreadPoolExecutor] = None
-
-
 def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyncio.Future[_T]:
     global __tread_pool_executor
+
     loop = asyncio.get_running_loop()
+
     ctx = contextvars.copy_context()
     func_call = functools.partial(ctx.run, func, *args, **kwargs)
 
-    if __tread_pool_executor is None:
-        __tread_pool_executor = ThreadPoolExecutor(
-            max_workers=(
-                int(s)
-                if (s := os.environ.get("ROBOT_THREADPOOL_POOL_MAX_WORKERS", None)) and s.isnumeric()
-                else THREADPOOL_POOL_MAX_WORKERS
-            )
-        )
-
-    return cast("asyncio.Future[_T]", loop.run_in_executor(__tread_pool_executor, cast(Callable[..., _T], func_call)))
+    return cast(
+        "asyncio.Future[_T]",
+        loop.run_in_executor(None, cast(Callable[..., _T], func_call)),
+    )
 
 
 def run_coroutine_in_thread(
@@ -681,11 +671,16 @@ def get_current_future_info() -> Optional[FutureInfo]:
     return _running_tasks[ct]
 
 
-def create_sub_task(coro: Awaitable[_T], *, name: Optional[str] = None) -> asyncio.Task[_T]:
+def create_sub_task(
+    coro: Awaitable[_T], *, name: Optional[str] = None, loop: Optional[asyncio.AbstractEventLoop] = None
+) -> asyncio.Task[_T]:
 
     ct = get_current_future_info()
 
-    result = asyncio.create_task(coro, name=name)
+    if loop is not None:
+        result = loop.create_task(coro, name=name)
+    else:
+        result = asyncio.create_task(coro, name=name)
 
     if ct is not None:
         ct.children.add(result)

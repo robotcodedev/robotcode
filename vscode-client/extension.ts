@@ -73,6 +73,8 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         "robotcode.robot",
         "robotcode.robocop",
         "robotcode.robotidy",
+        "robotcode.analysis",
+        "robotcode.workspace",
       ]) {
         for (const ws of vscode.workspace.workspaceFolders ?? []) {
           if (languageClientManger.clients.has(ws.uri.toString()))

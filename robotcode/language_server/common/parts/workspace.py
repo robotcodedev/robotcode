@@ -125,6 +125,7 @@ class HasConfigSection(Protocol):
     __config_section__: str
 
 
+@config_section("unknown")
 @dataclass
 class ConfigBase(Model):
     pass
@@ -173,22 +174,46 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
             ),
             file_operations=ServerCapabilitiesWorkspaceFileOperations(
                 did_create=FileOperationRegistrationOptions(
-                    filters=[FileOperationFilter(pattern=FileOperationPattern(glob="**/*"))]
+                    filters=[
+                        FileOperationFilter(
+                            pattern=FileOperationPattern(glob=f"**/*.{{{','.join(self.parent.file_extensions)}}}")
+                        )
+                    ]
                 ),
                 will_create=FileOperationRegistrationOptions(
-                    filters=[FileOperationFilter(pattern=FileOperationPattern(glob="**/*"))]
+                    filters=[
+                        FileOperationFilter(
+                            pattern=FileOperationPattern(glob=f"**/*.{{{','.join(self.parent.file_extensions)}}}")
+                        )
+                    ]
                 ),
                 did_rename=FileOperationRegistrationOptions(
-                    filters=[FileOperationFilter(pattern=FileOperationPattern(glob="**/*"))]
+                    filters=[
+                        FileOperationFilter(
+                            pattern=FileOperationPattern(glob=f"**/*.{{{','.join(self.parent.file_extensions)}}}")
+                        )
+                    ]
                 ),
                 will_rename=FileOperationRegistrationOptions(
-                    filters=[FileOperationFilter(pattern=FileOperationPattern(glob="**/*"))]
+                    filters=[
+                        FileOperationFilter(
+                            pattern=FileOperationPattern(glob=f"**/*.{{{','.join(self.parent.file_extensions)}}}")
+                        )
+                    ]
                 ),
                 did_delete=FileOperationRegistrationOptions(
-                    filters=[FileOperationFilter(pattern=FileOperationPattern(glob="**/*"))]
+                    filters=[
+                        FileOperationFilter(
+                            pattern=FileOperationPattern(glob=f"**/*.{{{','.join(self.parent.file_extensions)}}}")
+                        )
+                    ]
                 ),
                 will_delete=FileOperationRegistrationOptions(
-                    filters=[FileOperationFilter(pattern=FileOperationPattern(glob="**/*"))]
+                    filters=[
+                        FileOperationFilter(
+                            pattern=FileOperationPattern(glob=f"**/*.{{{','.join(self.parent.file_extensions)}}}")
+                        )
+                    ]
                 ),
             ),
         )
@@ -282,22 +307,17 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
     async def _workspace_did_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
         await self.did_delete_files(self, list(f.uri for f in files))
 
-    async def get_configuration(
-        self, section: Union[Type[_TConfig], str], scope_uri: Union[str, Uri, None] = None
-    ) -> Union[_TConfig, Any]:
+    async def get_configuration(self, section: Type[_TConfig], scope_uri: Union[str, Uri, None] = None) -> _TConfig:
 
-        if isinstance(section, (ConfigBase, HasConfigSection)):
-            config = from_dict(
-                await self.get_configuration(
-                    section=cast(HasConfigSection, section).__config_section__, scope_uri=scope_uri
-                ),
-                section,
-            )
-            if config is None:
-                return None
+        config = await self.get_configuration_raw(
+            section=cast(HasConfigSection, section).__config_section__, scope_uri=scope_uri
+        )
 
-            return from_dict(config, section)
+        return from_dict(config if config is not None else {}, section)
 
+    async def get_configuration_raw(
+        self, section: Optional[str], scope_uri: Union[str, Uri, None] = None
+    ) -> Optional[Any]:
         if (
             self.parent.client_capabilities
             and self.parent.client_capabilities.workspace
@@ -309,7 +329,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
                     items=[
                         ConfigurationItem(
                             scope_uri=str(scope_uri) if isinstance(scope_uri, Uri) else scope_uri,
-                            section=str(section),
+                            section=section,
                         )
                     ]
                 ),

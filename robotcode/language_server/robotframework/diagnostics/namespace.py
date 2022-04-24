@@ -34,6 +34,7 @@ from ...common.lsp_types import (
     DiagnosticRelatedInformation,
     DiagnosticSeverity,
     DiagnosticTag,
+    DocumentUri,
     Location,
     Position,
     Range,
@@ -523,9 +524,11 @@ class Namespace:
         super().__init__()
 
         self.imports_manager = imports_manager
+        self.imports_manager.imports_changed.add(self.imports_changed)
         self.imports_manager.libraries_changed.add(self.libraries_changed)
         self.imports_manager.resources_changed.add(self.resources_changed)
         self.imports_manager.variables_changed.add(self.variables_changed)
+
         self.model = model
         self.source = source
         self.invalidated_callback = invalidated_callback
@@ -560,6 +563,12 @@ class Namespace:
     @property
     def document(self) -> Optional[TextDocument]:
         return self._document() if self._document is not None else None
+
+    async def imports_changed(self, sender: Any, uri: DocumentUri) -> None:  # NOSONAR
+        if self.document is not None:
+            self.document.set_data(Namespace.DataEntry, None)
+
+        await self.invalidate()
 
     @_logger.call
     async def libraries_changed(self, sender: Any, libraries: List[LibraryDoc]) -> None:

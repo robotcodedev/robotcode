@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Optional, Tuple
 
@@ -137,10 +137,10 @@ class VariableDefinition(SourceEntity):
     name_token: Optional[Token]
     type: VariableDefinitionType = VariableDefinitionType.VARIABLE
 
-    has_value: bool = False
-    resolvable: bool = False
+    has_value: bool = field(default=False, compare=False)
+    resolvable: bool = field(default=False, compare=False)
 
-    value: Any = None
+    value: Any = field(default=None, compare=False)
 
     __matcher: Optional[VariableMatcher] = None
 

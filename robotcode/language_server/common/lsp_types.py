@@ -8,9 +8,9 @@ from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union
 
 from ...utils.dataclasses import to_camel_case, to_snake_case
 
-ProgressToken = Union[str, int]
 DocumentUri = str
 URI = str
+ProgressToken = Union[str, int]
 
 
 @dataclass(repr=False)

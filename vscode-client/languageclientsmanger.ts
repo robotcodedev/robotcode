@@ -134,7 +134,7 @@ export class LanguageClientsManager {
     this.clients.clear();
 
     for (const client of clients) {
-      promises.push(client.stop());
+      promises.push(client.stop(10000));
     }
 
     return Promise.all(promises).then(
@@ -345,7 +345,7 @@ export class LanguageClientsManager {
           storageUri: this.extensionContext?.storageUri?.toString(),
           globalStorageUri: this.extensionContext?.globalStorageUri?.toString(),
         },
-        revealOutputChannelOn: RevealOutputChannelOn.Info,
+        revealOutputChannelOn: RevealOutputChannelOn.Never, // TODO: should we make this configurable?
         initializationFailedHandler: (error: ResponseError<InitializeError> | Error | undefined) => {
           if (error)
             void vscode.window // NOSONAR
@@ -455,7 +455,7 @@ export class LanguageClientsManager {
         this.clients.delete(workspaceFolder.uri.toString());
 
         if (client) {
-          await client.stop();
+          await client.stop(10000);
           await sleep(500);
         }
       } else {
@@ -467,7 +467,7 @@ export class LanguageClientsManager {
 
     const folders = new Set<vscode.WorkspaceFolder>();
 
-    if (uri != undefined && restart) {
+    if (uri !== undefined && restart) {
       const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
       if (workspaceFolder) {
         folders.add(workspaceFolder);
@@ -481,6 +481,19 @@ export class LanguageClientsManager {
           folders.add(workspaceFolder);
         } else if (vscode.workspace.workspaceFolders?.length === 1) {
           folders.add(vscode.workspace.workspaceFolders[0]);
+        }
+      }
+    }
+
+    if (uri === undefined) {
+      for (const f of vscode.workspace.workspaceFolders || []) {
+        const robotFiles = await vscode.workspace.findFiles(
+          new vscode.RelativePattern(f, "**/*.{robot,resource}"),
+          undefined,
+          1
+        );
+        if (robotFiles.length > 0) {
+          folders.add(f);
         }
       }
     }

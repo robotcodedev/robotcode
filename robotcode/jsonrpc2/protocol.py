@@ -341,6 +341,10 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
         self._message_buf = bytes()
         self._loop: Optional[asyncio.AbstractEventLoop] = None
 
+    @property
+    def loop(self) -> Optional[asyncio.AbstractEventLoop]:
+        return self._loop
+
     @async_event
     async def on_connection_made(sender, transport: asyncio.BaseTransport) -> None:
         ...

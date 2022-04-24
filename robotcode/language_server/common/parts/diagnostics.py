@@ -3,10 +3,12 @@ from __future__ import annotations
 import asyncio
 import itertools
 from dataclasses import dataclass
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 
 from ....utils.async_tools import (
     Lock,
+    async_event,
     async_tasking_event_iterator,
     check_canceled,
     create_sub_task,
@@ -25,7 +27,16 @@ from .protocol_part import LanguageServerProtocolPart
 
 __all__ = ["DiagnosticsProtocolPart", "DiagnosticsResult"]
 
-DIAGNOSTICS_DEBOUNCE = 0.75
+
+class DiagnosticsMode(Enum):
+    WORKSPACE = "workspace"
+    OPENFILESONLY = "openFilesOnly"
+
+
+DOCUMENT_DIAGNOSTICS_DEBOUNCE = 0.75
+WORKSPACE_DIAGNOSTICS_DEBOUNCE = 2
+
+WORKSPACE_URI = Uri("workspace:/")
 
 
 class PublishDiagnosticsEntry:
@@ -38,6 +49,7 @@ class PublishDiagnosticsEntry:
         factory: Callable[..., asyncio.Future[Any]],
         done_callback: Callable[[PublishDiagnosticsEntry], Any],
         no_wait: bool = False,
+        wait_time: float = DOCUMENT_DIAGNOSTICS_DEBOUNCE,
     ) -> None:
 
         self.uri = uri
@@ -50,6 +62,7 @@ class PublishDiagnosticsEntry:
 
         self.done = False
         self.no_wait = no_wait
+        self.wait_time = wait_time
 
         def _done(t: asyncio.Future[Any]) -> None:
             self.done = True
@@ -60,7 +73,7 @@ class PublishDiagnosticsEntry:
 
     async def _wait_and_run(self) -> None:
         if not self.no_wait:
-            await asyncio.sleep(DIAGNOSTICS_DEBOUNCE)
+            await asyncio.sleep(self.wait_time)
 
         await self._factory()
 
@@ -110,6 +123,12 @@ class DiagnosticsResult:
     diagnostics: Optional[List[Diagnostic]] = None
 
 
+@dataclass
+class WorkspaceDocumentsResult:
+    name: Optional[str]
+    document: TextDocument
+
+
 class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
@@ -119,8 +138,10 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self._running_diagnostics: Dict[Uri, PublishDiagnosticsEntry] = {}
         self._tasks_lock = Lock()
 
+        self.parent.on_initialized.add(self.on_initialized)
         self.parent.on_connection_lost.add(self.on_connection_lost)
         self.parent.on_shutdown.add(self.on_shutdown)
+        self.parent.documents.did_append_document.add(self.on_did_append_document)
         self.parent.documents.did_open.add(self.on_did_open)
         self.parent.documents.did_change.add(self.on_did_change)
         self.parent.documents.did_close.add(self.on_did_close)
@@ -128,6 +149,10 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
     @async_tasking_event_iterator
     async def collect(sender, document: TextDocument) -> DiagnosticsResult:  # NOSONAR
+        ...
+
+    @async_tasking_event_iterator
+    async def collect_workspace_documents(sender) -> List[WorkspaceDocumentsResult]:  # NOSONAR
         ...
 
     @_logger.call
@@ -159,19 +184,49 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         if not entry.done:
             await entry.cancel()
 
+    async def create_publish_document_diagnostics_task(
+        self, document: TextDocument, no_wait: bool = False, wait_time: float = DOCUMENT_DIAGNOSTICS_DEBOUNCE
+    ) -> Optional[asyncio.Task[Any]]:
+        mode = await self.get_diagnostics_mode(document.uri)
+        if mode == DiagnosticsMode.WORKSPACE or document.opened_in_editor:
+            return create_sub_task(
+                self.start_publish_document_diagnostics_task(document, no_wait, wait_time), loop=self.parent.loop
+            )
+        return None
+
+    @language_id("robotframework")
+    @_logger.call
+    async def on_did_append_document(self, sender: Any, document: TextDocument) -> None:
+        # self.create_publish_document_diagnostics_task(document)
+        pass
+
     @language_id("robotframework")
     @_logger.call
     async def on_did_open(self, sender: Any, document: TextDocument) -> None:
-        create_sub_task(self.start_publish_diagnostics_task(document))
+        await self.create_publish_document_diagnostics_task(document)
 
     @language_id("robotframework")
     @_logger.call
     async def on_did_save(self, sender: Any, document: TextDocument) -> None:
-        create_sub_task(self.start_publish_diagnostics_task(document))
+        await self.create_publish_document_diagnostics_task(document)
+
+    @async_event
+    async def on_get_diagnostics_mode(sender, uri: Uri) -> Optional[DiagnosticsMode]:  # NOSONAR
+        ...
+
+    async def get_diagnostics_mode(self, uri: Uri) -> DiagnosticsMode:
+        for e in await self.on_get_diagnostics_mode(self, uri):
+            if e is not None:
+                return cast(DiagnosticsMode, e)
+
+        return DiagnosticsMode.OPENFILESONLY
 
     @language_id("robotframework")
     @_logger.call
     async def on_did_close(self, sender: Any, document: TextDocument) -> None:
+        if await self.get_diagnostics_mode(document.uri) == DiagnosticsMode.WORKSPACE:
+            return
+
         try:
             await self._cancel_entry(self._running_diagnostics.get(document.uri, None))
         finally:
@@ -185,16 +240,48 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             )
 
     @_logger.call
+    async def on_initialized(self, sender: Any) -> None:
+        self.create_publish_workspace_diagnostics_task()
+
+    @_logger.call
     async def on_did_change(self, sender: Any, document: TextDocument) -> None:
-        create_sub_task(self.start_publish_diagnostics_task(document))
+        await self.create_publish_document_diagnostics_task(document)
 
     @_logger.call
     def _delete_entry(self, e: PublishDiagnosticsEntry) -> None:
         if e.uri in self._running_diagnostics and self._running_diagnostics[e.uri] == e:
             self._running_diagnostics.pop(e.uri, None)
 
+    def create_publish_workspace_diagnostics_task(self, no_wait: bool = False) -> asyncio.Task[Any]:
+        return create_sub_task(self.start_publish_workspace_diagnostics_task(no_wait), loop=self.parent.loop)
+
     @_logger.call
-    async def start_publish_diagnostics_task(self, document: TextDocument, no_wait: bool = False) -> None:
+    async def start_publish_workspace_diagnostics_task(self, no_wait: bool = False) -> None:
+        async with self._tasks_lock:
+            entry = self._running_diagnostics.get(WORKSPACE_URI, None)
+
+        await self._cancel_entry(entry)
+
+        self._running_diagnostics[WORKSPACE_URI] = PublishDiagnosticsEntry(
+            WORKSPACE_URI,
+            None,
+            lambda: run_coroutine_in_thread(self.publish_workspace_diagnostics),
+            self._delete_entry,
+            no_wait,
+            WORKSPACE_DIAGNOSTICS_DEBOUNCE,
+        )
+
+    @_logger.call
+    async def start_publish_document_diagnostics_task(
+        self,
+        document: TextDocument,
+        no_wait: bool = False,
+        wait_time: float = DOCUMENT_DIAGNOSTICS_DEBOUNCE,
+    ) -> None:
+        mode = await self.get_diagnostics_mode(document.uri)
+        if mode != DiagnosticsMode.WORKSPACE and not document.opened_in_editor:
+            return
+
         async with self._tasks_lock:
             entry = self._running_diagnostics.get(document.uri, None)
 
@@ -206,14 +293,14 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self._running_diagnostics[document.uri] = PublishDiagnosticsEntry(
             document.uri,
             document.version,
-            lambda: run_coroutine_in_thread(self.publish_diagnostics, document.document_uri),
-            # lambda: create_sub_task(self.publish_diagnostics(document.document_uri)),
+            lambda: run_coroutine_in_thread(self.publish_document_diagnostics, document.document_uri),
             self._delete_entry,
             no_wait,
+            wait_time,
         )
 
     @_logger.call
-    async def publish_diagnostics(self, document_uri: DocumentUri) -> None:
+    async def publish_document_diagnostics(self, document_uri: DocumentUri) -> None:
         document = await self.parent.documents.get(document_uri)
         if document is None:
             return
@@ -254,3 +341,36 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             diagnostics.pop(k)
 
         document.set_data(self, diagnostics)
+
+    @_logger.call
+    async def publish_workspace_diagnostics(self) -> None:
+        canceled = False
+
+        async for result_any in self.collect_workspace_documents(
+            self,
+            return_exceptions=True,
+        ):
+            await check_canceled()
+            if canceled:
+                break
+
+            if isinstance(result_any, BaseException):
+                if not isinstance(result_any, asyncio.CancelledError):
+                    self._logger.exception(result_any, exc_info=result_any)
+                    continue
+
+            result = cast(List[WorkspaceDocumentsResult], result_any)
+            async with self.parent.window.progress(
+                "Analyze workspace",
+                cancellable=True,
+                current=0,
+                max=len(result),
+            ) as progress:
+                for i, v in enumerate(result):
+                    if progress.is_canceled:
+                        canceled = True
+                        break
+
+                    progress.report(f"Analyze {v.name}" if v.name else None, cancellable=False, current=i + 1)
+
+                    await self.publish_document_diagnostics(str(v.document.uri))

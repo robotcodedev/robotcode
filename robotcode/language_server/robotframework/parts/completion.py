@@ -79,7 +79,6 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
     async def get_section_style(self, document: TextDocument) -> str:
         if (folder := self.parent.workspace.get_workspace_folder(document.uri)) is not None:
             config = await self.parent.workspace.get_configuration(SyntaxConfig, folder.uri)
-
             return config.section_style or DEFAULT_SECTIONS_STYLE
 
         return DEFAULT_SECTIONS_STYLE

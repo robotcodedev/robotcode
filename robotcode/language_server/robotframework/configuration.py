@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
+from ..common.parts.diagnostics import DiagnosticsMode
 from ..common.parts.workspace import ConfigBase, config_section
 
 
@@ -10,6 +12,12 @@ class LanguageServerConfig(ConfigBase):
     mode: str = "stdio"
     tcp_port: int = 0
     args: Tuple[str, ...] = field(default_factory=tuple)
+
+
+class RpaMode(Enum):
+    DEFAULT = "default"
+    RPA = "rpa"
+    NORPA = "norpa"
 
 
 @config_section("robotcode.robot")
@@ -26,12 +34,12 @@ class RobotConfig(ConfigBase):
     log_file: Optional[str] = None
     debug_file: Optional[str] = None
     log_level: Optional[str] = None
-    mode: Optional[str] = None
+    mode: Optional[RpaMode] = None
 
-    def get_mode(self) -> Optional[bool]:
-        if self.mode == "rpa":
+    def get_rpa_mode(self) -> Optional[bool]:
+        if self.mode == RpaMode.RPA:
             return True
-        elif self.mode == "norpa":
+        elif self.mode == RpaMode.NORPA:
             return False
         return None
 
@@ -63,6 +71,19 @@ class WorkspaceConfig(ConfigBase):
     exclude_patterns: List[str] = field(default_factory=list)
 
 
+class AnalysisProgressMode(Enum):
+    SIMPLE = "simple"
+    DETAILED = "detailed"
+
+
+@config_section("robotcode.analysis")
+@dataclass
+class AnalysisConfig(ConfigBase):
+    diagnostic_mode: DiagnosticsMode = DiagnosticsMode.OPENFILESONLY
+    progress_mode: AnalysisProgressMode = AnalysisProgressMode.SIMPLE
+    max_project_file_count: int = 1000
+
+
 @config_section("robotcode")
 @dataclass
 class RobotCodeConfig(ConfigBase):
@@ -70,3 +91,4 @@ class RobotCodeConfig(ConfigBase):
     robot: RobotConfig = field(default_factory=RobotConfig)
     syntax: SyntaxConfig = field(default_factory=SyntaxConfig)
     workspace: WorkspaceConfig = field(default_factory=WorkspaceConfig)
+    analysis: AnalysisConfig = field(default_factory=AnalysisConfig)

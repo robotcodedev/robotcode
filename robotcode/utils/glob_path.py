@@ -88,9 +88,16 @@ async def iter_files(
     ignore_patterns: Union[List[Union[Pattern, str]], Pattern, str, None] = None,
     *,
     absolute: bool = False,
+    _base_path: Union[Path, str, os.PathLike[str], None] = None,
 ) -> AsyncGenerator[Path, None]:
     if not isinstance(path, Path):
         path = Path(path or ".")
+
+    if _base_path is None:
+        _base_path = path
+    else:
+        if not isinstance(_base_path, Path):
+            path = Path(_base_path)
 
     if patterns is not None and not isinstance(patterns, (set, list, tuple)):
         patterns = [patterns]
@@ -104,11 +111,15 @@ async def iter_files(
 
     try:
         for f in path.iterdir():
-            if ignore_patterns is None or not any(p.matches(f) for p in cast(Iterable[Pattern], ignore_patterns)):
+            if ignore_patterns is None or not any(
+                p.matches(f.relative_to(_base_path)) for p in cast(Iterable[Pattern], ignore_patterns)
+            ):
                 if f.is_dir():
-                    async for e in iter_files(f, patterns, ignore_patterns, absolute=absolute):
+                    async for e in iter_files(f, patterns, ignore_patterns, absolute=absolute, _base_path=_base_path):
                         yield e
-                elif patterns is None or any(p.matches(str(f)) for p in cast(Iterable[Pattern], patterns)):
+                elif patterns is None or any(
+                    p.matches(str(f.relative_to(_base_path))) for p in cast(Iterable[Pattern], patterns)
+                ):
                     yield f.absolute() if absolute else f
     except PermissionError:
         pass

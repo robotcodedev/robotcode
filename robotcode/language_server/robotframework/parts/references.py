@@ -114,43 +114,41 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         return None
 
-    async def _find_references(
+    async def _find_references_in_workspace(
         self,
         document: TextDocument,
         func: Callable[..., Coroutine[None, None, List[Location]]],
         *args: Any,
         **kwargs: Any,
     ) -> List[Location]:
-        folder = self.parent.workspace.get_workspace_folder(document.uri)
-        if folder is None:
-            return []
-
         futures: List[Awaitable[List[Location]]] = []
+
         result: List[Location] = []
 
-        config = await self.parent.workspace.get_configuration(WorkspaceConfig, folder.uri) or WorkspaceConfig()
+        for folder in self.parent.workspace.workspace_folders:
+            config = await self.parent.workspace.get_configuration(WorkspaceConfig, folder.uri) or WorkspaceConfig()
 
-        async for f in iter_files(
-            folder.uri.to_path(),
-            (f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}"),
-            ignore_patterns=config.exclude_patterns or [],  # type: ignore
-            absolute=True,
-        ):
-            try:
-                doc = await self.parent.robot_workspace.get_or_open_document(f, "robotframework")
-            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                raise
-            except BaseException as ex:
-                self._logger.exception(ex)
-            else:
-                futures.append(run_coroutine_in_thread(func, doc, *args, **kwargs))
+            async for f in iter_files(
+                folder.uri.to_path(),
+                (f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}"),
+                ignore_patterns=config.exclude_patterns or [],  # type: ignore
+                absolute=True,
+            ):
+                try:
+                    doc = await self.parent.documents.get_or_open_document(f, "robotframework")
+                except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                    raise
+                except BaseException as ex:
+                    self._logger.exception(ex)
+                else:
+                    futures.append(run_coroutine_in_thread(func, doc, *args, **kwargs))
 
-        for e in await asyncio.gather(*futures, return_exceptions=True):
-            if isinstance(e, BaseException):
-                if not isinstance(result, asyncio.CancelledError):
-                    self._logger.exception(e)
-                continue
-            result.extend(e)
+            for e in await asyncio.gather(*futures, return_exceptions=True):
+                if isinstance(e, BaseException):
+                    if not isinstance(result, asyncio.CancelledError):
+                        self._logger.exception(e)
+                    continue
+                result.extend(e)
 
         return result
 
@@ -228,7 +226,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         return (
             await create_sub_task(self.find_variable_references_in_file(document, variable, include_declaration))
             if isinstance(variable, (ArgumentDefinition, LocalVariableDefinition))
-            else await self._find_references(
+            else await self._find_references_in_workspace(
                 document, self.find_variable_references_in_file, variable, include_declaration
             )
         )
@@ -716,9 +714,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def find_keyword_references(
         self, document: TextDocument, kw_doc: KeywordDoc, include_declaration: bool = True
     ) -> List[Location]:
-        folder = self.parent.workspace.get_workspace_folder(document.uri)
-        if folder is None:
-            return []
 
         namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
@@ -747,10 +742,23 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         return [
             *(
                 [Location(str(Uri.from_path(kw_doc.source)), kw_doc.range)]
-                if include_declaration and kw_doc.libtype == "LIBRARY" and kw_doc.source
+                if include_declaration and kw_doc.is_library_keyword and kw_doc.source
                 else []
             ),
-            *await self._find_references(
+            *(
+                await self.find_keyword_references_in_file(
+                    await self.parent.documents.get_or_open_document(kw_doc.source, "robotframework"),
+                    kw_doc,
+                    lib_doc,
+                    include_declaration,
+                )
+                if include_declaration
+                and kw_doc.is_resource_keyword
+                and kw_doc.source
+                and self.parent.workspace.get_workspace_folder(Uri.from_path(kw_doc.source)) is None
+                else []
+            ),
+            *await self._find_references_in_workspace(
                 document, self.find_keyword_references_in_file, kw_doc, lib_doc, include_declaration
             ),
         ]
@@ -799,7 +807,9 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             if library_doc is None:
                 return None
 
-            return await self._find_references(document, self._find_library_import_references_in_file, library_doc)
+            return await self._find_references_in_workspace(
+                document, self._find_library_import_references_in_file, library_doc
+            )
 
         return None
 
@@ -842,7 +852,9 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             if library_doc is None:
                 return None
 
-            return await self._find_references(document, self._find_resource_import_references_in_file, library_doc)
+            return await self._find_references_in_workspace(
+                document, self._find_resource_import_references_in_file, library_doc
+            )
 
         return None
 
@@ -884,6 +896,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             if library_doc is None:
                 return None
 
-            return await self._find_references(document, self._find_variables_import_references_in_file, library_doc)
+            return await self._find_references_in_workspace(
+                document, self._find_variables_import_references_in_file, library_doc
+            )
 
         return None

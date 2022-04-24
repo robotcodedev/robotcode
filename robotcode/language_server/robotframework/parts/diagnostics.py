@@ -8,7 +8,11 @@ from ....utils.async_tools import check_canceled, threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
-from ...common.parts.diagnostics import DiagnosticsResult
+from ...common.parts.diagnostics import (
+    DOCUMENT_DIAGNOSTICS_DEBOUNCE,
+    WORKSPACE_DIAGNOSTICS_DEBOUNCE,
+    DiagnosticsResult,
+)
 from ...common.text_document import TextDocument
 from ..diagnostics.analyzer import Analyzer
 from ..utils.ast_utils import (
@@ -41,7 +45,10 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
-        await self.parent.diagnostics.start_publish_diagnostics_task(document)
+        await self.parent.diagnostics.create_publish_document_diagnostics_task(
+            document,
+            wait_time=DOCUMENT_DIAGNOSTICS_DEBOUNCE if document.opened_in_editor else WORKSPACE_DIAGNOSTICS_DEBOUNCE,
+        )
 
     @language_id("robotframework")
     @threaded()
@@ -55,6 +62,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
+            self._logger.exception(e)
             return DiagnosticsResult(
                 self.collect_namespace_diagnostics,
                 [

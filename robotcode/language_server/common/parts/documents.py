@@ -1,11 +1,22 @@
 from __future__ import annotations
 
-import gc
+import asyncio
+import os
 import re
-from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Union,
+    cast,
+)
 
 from ....jsonrpc2.protocol import JsonRPCException, rpc_method
-from ....utils.async_tools import Lock, async_tasking_event
+from ....utils.async_tools import Lock, async_event, async_tasking_event
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ..decorators import language_id_filter
@@ -15,6 +26,7 @@ from ..lsp_types import (
     DidOpenTextDocumentParams,
     DidSaveTextDocumentParams,
     DocumentUri,
+    FileChangeType,
     FileEvent,
     TextDocumentContentChangeEvent,
     TextDocumentContentRangeChangeEvent,
@@ -43,6 +55,10 @@ class LanguageServerDocumentException(JsonRPCException):
     pass
 
 
+class CantReadDocumentException(Exception):
+    pass
+
+
 class TextDocumentProtocolPart(LanguageServerProtocolPart):
 
     _logger = LoggingDescriptor()
@@ -61,7 +77,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
             await self.parent.workspace.add_file_watcher(
                 self._file_watcher,
                 f"**/*.{{{','.join(self.parent.file_extensions)}}}",
-                WatchKind.CHANGE | WatchKind.DELETE,
+                WatchKind.CREATE | WatchKind.CHANGE | WatchKind.DELETE,
             )
 
     async def _file_watcher(self, sender: Any, changes: List[FileEvent]) -> None:
@@ -70,10 +86,68 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
             to_change[change.uri] = change
 
         for change in to_change.values():
+            if change.type == FileChangeType.CREATED:
+                await self.did_create_uri(self, change.uri)
+
             document = self._documents.get(DocumentUri(Uri(change.uri).normalized()), None)
-            if document is not None and not document.opened_in_editor:
-                await self.close_document(document, True)
-                await self.did_close(self, document, callback_filter=language_id_filter(document))
+            if document is not None and change.type == FileChangeType.CREATED:
+                await self.did_create(self, document, callback_filter=language_id_filter(document))
+            elif document is not None and not document.opened_in_editor:
+                if change.type == FileChangeType.DELETED:
+                    await self.close_document(document, True)
+                    await self.did_close(self, document, callback_filter=language_id_filter(document))
+                elif change.type == FileChangeType.CHANGED:
+                    document.apply_full_change(
+                        None, await self.read_document_text(document.uri, language_id_filter(document))
+                    )
+                    await self.did_change(self, document, callback_filter=language_id_filter(document))
+
+    async def read_document_text(self, uri: Uri, language_id: Union[str, Callable[[Any], bool]]) -> str:
+        for e in await self.on_read_document_text(
+            self, uri, callback_filter=language_id_filter(language_id) if isinstance(language_id, str) else language_id
+        ):
+            if e is not None:
+                return self._normalize_line_endings(cast(str, e))
+
+        raise FileNotFoundError(str(uri))
+
+    @_logger.call
+    async def get_or_open_document(
+        self, path: Union[str, os.PathLike[Any]], language_id: str, version: Optional[int] = None
+    ) -> TextDocument:
+        uri = Uri.from_path(path).normalized()
+
+        result = await self.parent.documents.get(uri)
+        if result is not None:
+            return result
+
+        try:
+            return await self.parent.documents.append_document(
+                document_uri=DocumentUri(uri),
+                language_id=language_id,
+                text=await self.read_document_text(uri, language_id),
+                version=version,
+            )
+        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+            raise
+        except BaseException as e:
+            raise CantReadDocumentException(f"Error reading document '{path}': {str(e)}") from e
+
+    @async_event
+    async def on_read_document_text(sender, uri: Uri) -> Optional[str]:  # NOSONAR
+        ...
+
+    @async_tasking_event
+    async def did_append_document(sender, document: TextDocument) -> None:  # NOSONAR
+        ...
+
+    @async_tasking_event
+    async def did_create_uri(sender, uri: DocumentUri) -> None:  # NOSONAR
+        ...
+
+    @async_tasking_event
+    async def did_create(sender, document: TextDocument) -> None:  # NOSONAR
+        ...
 
     @async_tasking_event
     async def did_open(sender, document: TextDocument) -> None:  # NOSONAR
@@ -134,6 +208,8 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
 
             self._documents[document_uri] = document
 
+            await self.did_append_document(self, document, callback_filter=language_id_filter(document))
+
             return document
 
     __NORMALIZE_LINE_ENDINGS = re.compile(r"(\r?\n)")
@@ -164,7 +240,6 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
                     await document.apply_full_change(text_document.version, normalized_text)
 
             document.opened_in_editor = True
-            document.references.add(self)
 
         await self.did_open(self, document, callback_filter=language_id_filter(document))
 
@@ -178,26 +253,24 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
         document = await self.get(uri)
 
         if document is not None:
-            document.references.remove(self)
             document.opened_in_editor = False
 
             await self.close_document(document)
+
             await self.did_close(self, document, callback_filter=language_id_filter(document))
 
     @_logger.call
-    async def close_document(self, document: TextDocument, ignore_references: bool = False) -> None:
-        async with self._lock:
-            if len(document.references) == 0 or ignore_references:
+    async def close_document(self, document: TextDocument, real_close: bool = False) -> None:
+        if real_close:
+            async with self._lock:
                 self._documents.pop(str(document.uri), None)
 
-                await document.clear()
-                del document
-            else:
-                document._version = None
-                if await document.revert(None):
-                    await self.did_change(self, document, callback_filter=language_id_filter(document))
-
-            gc.collect()
+            await document.clear()
+            del document
+        else:
+            document._version = None
+            if await document.revert(None):
+                await self.did_change(self, document, callback_filter=language_id_filter(document))
 
     @rpc_method(name="textDocument/willSave", param_type=WillSaveTextDocumentParams)
     @_logger.call

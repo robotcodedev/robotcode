@@ -1,4 +1,4 @@
-from typing import Any, Callable, List, Protocol, TypeVar, runtime_checkable
+from typing import Any, Callable, List, Protocol, TypeVar, Union, runtime_checkable
 
 from .text_document import TextDocument
 
@@ -57,8 +57,12 @@ class HasAllCommitCharacters(Protocol):
     __all_commit_characters__: List[str]
 
 
-def language_id_filter(document: TextDocument) -> Callable[[Any], bool]:
+def language_id_filter(language_id_or_document: Union[str, TextDocument]) -> Callable[[Any], bool]:
     def filter(c: Any) -> bool:
-        return not isinstance(c, HasLanguageId) or c.__language_id__ == document.language_id
+        return not isinstance(c, HasLanguageId) or c.__language_id__ == (
+            language_id_or_document.language_id
+            if isinstance(language_id_or_document, TextDocument)
+            else language_id_or_document
+        )
 
     return filter

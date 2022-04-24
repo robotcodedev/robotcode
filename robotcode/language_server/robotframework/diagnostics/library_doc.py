@@ -1171,7 +1171,7 @@ def get_library_doc(
             lib = get_test_library(
                 libcode,
                 source,
-                name,
+                library_name,
                 args,
                 create_handlers=False,
                 variables=robot_variables,
