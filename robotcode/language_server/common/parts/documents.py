@@ -97,8 +97,8 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
                     await self.close_document(document, True)
                     await self.did_close(self, document, callback_filter=language_id_filter(document))
                 elif change.type == FileChangeType.CHANGED:
-                    document.apply_full_change(
-                        None, await self.read_document_text(document.uri, language_id_filter(document))
+                    await document.apply_full_change(
+                        None, await self.read_document_text(document.uri, language_id_filter(document)), save=True
                     )
                     await self.did_change(self, document, callback_filter=language_id_filter(document))
 
