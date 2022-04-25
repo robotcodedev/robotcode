@@ -460,8 +460,8 @@
             ],
             "default": "openFilesOnly",
             "enumDescriptions": [
-              "Analyzes and reports errors only on open files.",
-              "Analyzes and reports errors on all files in the workspace."
+              "Analyzes and reports problems only on open files.",
+              "Analyzes and reports problems on all files in the workspace."
             ],
             "description": "Analysis mode for diagnostics.",
             "scope": "resource"
@@ -475,9 +475,9 @@
             "default": "simple",
             "enumDescriptions": [
               "Show only simple progress messages.",
-              "Show detailed progress messages."
+              "Show detailed progress messages. Displays the filenames that are currently being analyzed."
             ],
-            "description": "Analysis mode for diagnostics.",
+            "description": "Progress mode for diagnostics.",
             "scope": "resource"
           },
           "robotcode.workspace.excludePatterns": {

@@ -2,8 +2,32 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+### added
+
+- Project wide code analysis
+  - there are some new settings that allow to display project-wide problems:
+    - `robotcode.analysis.diagnosticMode` Analysis mode for diagnostics.
+      - `openFilesOnly` Analyzes and reports problems only on open files.
+      - `workspace` Analyzes and reports problems on all files in the workspace.
+      - default: `openFilesOnly`
+    - `robotcode.analysis.progressMode` Progress mode for diagnostics.
+      - `simple` Show only simple progress messages.
+      - `detailed` Show detailed progress messages. Displays the filenames that are currently being analyzed.
+      - default: `simple`
+    - `robotcode.analysis.maxProjectFileCount` Specifies the maximum number of files for which diagnostics are reported for the whole project/workspace folder. Specifies 0 or less to disable the limit completely.
+      - default: `1000`
+    - `robotcode.workspace.excludePatterns` Specifies glob patterns for excluding files and folders from analysing by the language server.
+- Rework loading and handling source documents
+  - this speedups a lot of things like:
+    - UI response
+    - finding references
+    - renaming of keywords and variables
+    - loading reloading libraries and resources
+  - When you create/rename/delete files, keywords, variables, you get an immediate response in the UI
+
+
 ##  0.11.10
 
 - renaming of keywords and variables
