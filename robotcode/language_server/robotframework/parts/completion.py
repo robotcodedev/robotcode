@@ -1661,7 +1661,7 @@ class CompletionCollector(ModelHelperMixin):
             return None
 
         if (
-            token_at_position.type == RobotToken.EOL
+            token_at_position.type in [RobotToken.EOL, RobotToken.SEPARATOR]
             and len(tokens_at_position) > 1
             and tokens_at_position[-2].type == RobotToken.KEYWORD
         ):
