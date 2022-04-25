@@ -22,11 +22,11 @@ Here is a list of Features:
 
 - [Autocomplete and IntelliSense](#Autocomplete-and-IntelliSense)
 - [Code Navigation](#code-navigation)
-- [Diagnostics]()
 - [Diagnostics and Linting](#diagnostics-and-linting)
 - [Code Formatting](#code-formatting)
 - [Running and Debugging](#running-and-debugging)
 - [Multi-root Workspace folders](#multi-root-workspace-folders)
+- Find implementations and usage of keywords, variables, libraries, resource and variable files
 - Test Explorer
 - Refactorings
   - renaming keywords
