@@ -1699,64 +1699,64 @@ result:
   range:
     end:
       character: 7
-      line: 146
+      line: 152
     start:
       character: 4
-      line: 146
+      line: 152
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 7
-      line: 150
+      line: 156
     start:
       character: 4
-      line: 150
+      line: 156
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 37
-      line: 151
+      line: 157
     start:
       character: 34
-      line: 151
+      line: 157
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 72
-      line: 151
+      line: 157
     start:
       character: 69
-      line: 151
+      line: 157
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 11
-      line: 157
+      line: 163
     start:
       character: 8
-      line: 157
+      line: 163
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 7
-      line: 161
+      line: 167
     start:
       character: 4
-      line: 161
+      line: 167
   uri: tests/variables.robot
 - !Location
   range:
     end:
       character: 7
-      line: 165
+      line: 171
     start:
       character: 4
-      line: 165
+      line: 171
   uri: tests/variables.robot
 - !Location
   range:

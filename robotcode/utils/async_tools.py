@@ -689,6 +689,19 @@ def create_sub_task(
     return result
 
 
+def create_delayed_sub_task(
+    coro: Awaitable[_T], *, delay: float, name: Optional[str] = None, loop: Optional[asyncio.AbstractEventLoop] = None
+) -> asyncio.Task[Optional[_T]]:
+    async def run() -> Optional[_T]:
+        try:
+            await asyncio.sleep(delay)
+            return await coro
+        except asyncio.CancelledError:
+            return None
+
+    return create_sub_task(run(), name=name, loop=loop)
+
+
 def create_sub_future(loop: Optional[asyncio.AbstractEventLoop] = None) -> asyncio.Future[Any]:
 
     ct = get_current_future_info()

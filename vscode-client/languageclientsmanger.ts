@@ -16,7 +16,9 @@ import {
   RevealOutputChannelOn,
   State,
   Position,
+  Location,
   Range,
+  ResolveCodeLensSignature,
 } from "vscode-languageclient/node";
 import { sleep, Mutex } from "./utils";
 import { CONFIG_SECTION } from "./config";
@@ -380,6 +382,48 @@ export class LanguageClientsManager {
           supportHtml: true,
         },
         progressOnInitialization: true,
+        middleware: {
+          resolveCodeLens(
+            this: void, // NOSONAR
+            codeLens: vscode.CodeLens,
+            token: vscode.CancellationToken,
+            next: ResolveCodeLensSignature
+          ): vscode.ProviderResult<vscode.CodeLens> {
+            const resolvedCodeLens = next(codeLens, token);
+
+            const resolveFunc = (codeLensToFix: vscode.CodeLens): vscode.CodeLens => {
+              if (codeLensToFix.command?.command === "editor.action.showReferences") {
+                const args = codeLensToFix.command.arguments as [string, Position, Location[]];
+
+                codeLensToFix.command.arguments = [
+                  vscode.Uri.parse(args[0]),
+                  new vscode.Position(args[1].line, args[1].character),
+                  args[2].map((position) => {
+                    return new vscode.Location(
+                      vscode.Uri.parse(position.uri),
+                      new vscode.Range(
+                        position.range.start.line,
+                        position.range.start.character,
+                        position.range.end.line,
+                        position.range.end.character
+                      )
+                    );
+                  }),
+                ];
+              }
+
+              return codeLensToFix;
+            };
+
+            if ((resolvedCodeLens as Thenable<vscode.CodeLens>).then) {
+              return (resolvedCodeLens as Thenable<vscode.CodeLens>).then(resolveFunc);
+            } else if (resolvedCodeLens as vscode.CodeLens) {
+              return resolveFunc(resolvedCodeLens as vscode.CodeLens);
+            }
+
+            return resolvedCodeLens;
+          },
+        },
       };
 
       this.outputChannel.appendLine(`create Language client: ${name}`);

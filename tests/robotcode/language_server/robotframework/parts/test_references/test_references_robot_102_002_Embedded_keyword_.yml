@@ -21,12 +21,3 @@ result:
       character: 4
       line: 78
   uri: tests/references.robot
-- !Location
-  range:
-    end:
-      character: 38
-      line: 102
-    start:
-      character: 0
-      line: 102
-  uri: tests/references.robot

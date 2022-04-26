@@ -500,6 +500,11 @@
             "default": 1000,
             "description": "Specifies the maximum number of files for which diagnostics are reported for the whole project/workspace folder. Specifies 0 or less to disable the limit completely.",
             "scope": "resource"
+          },
+          "robotcode.analysis.referencesCodeLens": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable/disable references CodeLens for RobotFramework files."
           }
         }
       }

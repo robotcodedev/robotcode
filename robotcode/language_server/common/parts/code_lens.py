@@ -78,7 +78,7 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 if result is not None:
                     results.append(result)
 
-        if len(results) > 0:
+        if len(results) > 1:
             self._logger.warning("More then one resolve result collected.")
             return results[-1]
 

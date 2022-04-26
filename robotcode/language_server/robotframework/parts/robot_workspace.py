@@ -28,8 +28,9 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
         self.parent.documents.on_read_document_text.add(self._on_read_document_text)
-        self.parent.diagnostics.collect_workspace_documents.add(self.collect_workspace_diagnostics)
+        self.parent.diagnostics.collect_workspace_documents.add(self._collect_workspace_documents)
         self.parent.diagnostics.on_get_diagnostics_mode.add(self.on_get_diagnostics_mode)
+        self.workspace_loaded = False
 
     @language_id("robotframework")
     async def _on_read_document_text(self, sender: Any, uri: Uri) -> Optional[str]:
@@ -43,7 +44,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         return config.diagnostic_mode
 
     @threaded()
-    async def collect_workspace_diagnostics(self, sender: Any) -> List[WorkspaceDocumentsResult]:
+    async def _collect_workspace_documents(self, sender: Any) -> List[WorkspaceDocumentsResult]:
 
         result: List[WorkspaceDocumentsResult] = []
 
@@ -99,6 +100,10 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                         raise
                     except BaseException as e:
                         self._logger.exception(e)
+
+        self.workspace_loaded = True
+        if config.analysis.references_code_lens:
+            await self.parent.code_lens.refresh()
 
         if canceled:
             return []

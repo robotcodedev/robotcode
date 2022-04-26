@@ -358,7 +358,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             keyword = await self.get_keyword_definition_at_token(namespace, name_token)
 
             if keyword is not None and keyword.source and not keyword.is_error_handler:
-                return await self.find_keyword_references(document, keyword, context.include_declaration)
+                return await self.find_keyword_references(document, keyword, False)
 
         return None
 
@@ -595,7 +595,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     ) -> AsyncGenerator[Location, None]:
         from robot.utils.escaping import unescape
 
-        if kw_token is not None and is_not_variable_token(kw_token):
+        if kw_token is not None:
             kw_token = self.strip_bdd_prefix(kw_token)
 
             kw: Optional[KeywordDoc] = None

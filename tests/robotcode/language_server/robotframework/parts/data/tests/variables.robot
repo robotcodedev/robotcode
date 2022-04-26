@@ -138,13 +138,19 @@ templated with embedded
     1  2  3
     3  4  7
 
+templated with embedded
+    [Template]  check that ${a} plus ${b} is ${expected}
+    a  c  b
+    ${EMPTY}  4  7
+    1 2  4  7
+
 templated with embedded not defined
     [Template]  verify that ${a} plus ${b} is ${expected}
     1  2  3
     3  4  7
 
 environmentvars
-    log  ${%{LEIDAD_TESTENV}.leidad_server.ip}  port=${%{LEIDAD_TESTENV}.leidad_server.port}  # TODO
+    log  ${%{TESTENV}.server.ip}  port=${%{TESTENV}.server.port}  # TODO
 
 *** Keywords ***
 do something
@@ -158,7 +164,7 @@ a keyword with loop
         Log    ${i} ${aaa}
     END
 
-check that ${a} plus ${b} is ${expected}
+check that ${a:[0-9\ ]*} plus ${b} is ${expected}
     log  ${a} ${b} ${expected}
 
 templated kw

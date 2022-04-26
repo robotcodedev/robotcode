@@ -2,14 +2,20 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+### added
+
+- Reference CodeLenses
+  - Code lenses are displayed above the keyword definitions showing the usage of the keyword
+  - You can enable/disable this with the new setting `robotcode.analysis.referencesCodeLens`
+
 ##  0.11.11
 
 ### added
 
 - Project wide code analysis
-  - there are some new settings that allow to display project-wide problems:
+  - There are some new settings that allow to display project-wide problems:
     - `robotcode.analysis.diagnosticMode` Analysis mode for diagnostics.
       - `openFilesOnly` Analyzes and reports problems only on open files.
       - `workspace` Analyzes and reports problems on all files in the workspace.

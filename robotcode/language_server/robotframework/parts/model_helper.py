@@ -519,7 +519,11 @@ class ModelHelperMixin:
 
     @classmethod
     async def get_keyword_definition_at_token(cls, namespace: Namespace, token: Token) -> Optional[KeywordDoc]:
+        return await cls.get_keyword_definition_at_line(namespace, token.value, token.lineno)
+
+    @classmethod
+    async def get_keyword_definition_at_line(cls, namespace: Namespace, value: str, line: int) -> Optional[KeywordDoc]:
         return next(
-            (k for k in (await namespace.get_library_doc()).keywords.get_all(token.value) if k.line_no == token.lineno),
+            (k for k in (await namespace.get_library_doc()).keywords.get_all(value) if k.line_no == line),
             None,
         )
