@@ -80,6 +80,8 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
 
         return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)
 
+    @language_id("robotframework")
+    @threaded()
     async def resolve(self, sender: Any, code_lens: CodeLens) -> Optional[CodeLens]:
         if code_lens.data is None:
             return code_lens
