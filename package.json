@@ -410,7 +410,7 @@
           "robotcode.run.openReportAfterRun": {
             "type": "boolean",
             "default": false,
-            "description": "Defines if the test report should be opened a run session automatically.",
+            "description": "Defines if the report should be opened after a run.",
             "scope": "resource"
           },
           "robotcode.robocop.enabled": {
