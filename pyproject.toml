@@ -1,5 +1,5 @@
 [build-system]
-requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
@@ -79,19 +79,6 @@ GitPython = "^3.1.27"
 semantic-version = "^2.9.0"
 pre-commit = "^2.17.0"
 
-
-[tool.poetry-dynamic-versioning]
-enable = false
-vcs = "git"
-style = "semver"
-
-[tool.poetry-dynamic-versioning.substitution]
-files = ["*/_version.py", "package.json"]
-
-patterns = [
-  "(^__version__\\s*=\\s*['\\\"])[^'\\\"]*(['\\\"])",
-  "(\\\"version\\\"\\s*:\\s*['\\\"])[0-9]+[^'\\\"]*(['\\\"])",
-]
 
 [tool.black]
 line-length = 120
