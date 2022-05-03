@@ -15,9 +15,9 @@ class GitDescribeVersion(NamedTuple):
 def get_current_version_from_git() -> Version:
     repo = Repo(Path.cwd())
 
-    git_version = GitDescribeVersion(*repo.git.describe("--long", "--first-parent", "--match", "v[0-9]*").split("-"))
+    git_version = GitDescribeVersion(*repo.git.describe("--long", "--match", "v[0-9]*").split("-"))
     version = Version(git_version.version[1:])
-    if git_version.commits is not None:
+    if git_version.commits is not None and git_version.commits != "0":
         version = version.next_patch()
         version.prerelease = ("dev", git_version.commits)
     return version
