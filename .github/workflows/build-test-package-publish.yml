@@ -141,6 +141,7 @@ jobs:
           fetch-depth: 0
 
       - run: git describe --tag
+      - run: git describe --tag --long --first-parent --match "v[0-9]*"
 
       - name: setup python environment
         id: setup-python
@@ -180,10 +181,11 @@ jobs:
         run: npm install --also=dev
 
       - name: update versions from git
+        if: ${{ !startsWith( github.ref, 'refs/tags/v') }}
         run: poetry run python ./scripts/update_git_versions.py
 
       - name: update doc links
-        if: ${{ !startsWith( github.ref, 'refs/tags/v') }}
+        if: ${{ startsWith( github.ref, 'refs/tags/v') }}
         run: poetry run npm run update-doc-links
 
       - name: package
