@@ -890,6 +890,7 @@ class Namespace:
         top_level: bool = False,
         variables: Optional[Dict[str, Any]] = None,
         source: Optional[str] = None,
+        parent_import: Optional[Import] = None,
     ) -> None:
         async def _import(
             value: Import, variables: Optional[Dict[str, Any]] = None
@@ -923,27 +924,46 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Resource setting requires value.")
 
-                    result = await self._get_resource_entry(value.name, base_dir, sentinel=value, variables=variables)
-                    result.import_range = value.range()
-                    result.import_source = value.source
+                    source = await self.imports_manager.find_resource(value.name, base_dir, variables=variables)
 
-                    self._import_entries[value] = result
-                    if result.variables:
-                        variables = None
-
-                    if top_level and (
-                        not result.library_doc.errors
-                        and top_level
-                        and not result.imports
-                        and not result.variables
-                        and not result.library_doc.keywords
-                    ):
-                        await self.append_diagnostics(
-                            range=value.range(),
-                            message=f"Imported resource file '{value.name}' is empty.",
-                            severity=DiagnosticSeverity.WARNING,
-                            source=DIAGNOSTICS_SOURCE_NAME,
+                    if self.source == source:
+                        if parent_import:
+                            await self.append_diagnostics(
+                                range=parent_import.range(),
+                                message="Possible circular import.",
+                                severity=DiagnosticSeverity.INFORMATION,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                                related_information=[
+                                    DiagnosticRelatedInformation(
+                                        location=Location(str(Uri.from_path(value.source)), value.range()),
+                                        message=f"'{Path(self.source).name}' is also imported here.",
+                                    )
+                                ],
+                            )
+                    else:
+                        result = await self._get_resource_entry(
+                            value.name, base_dir, sentinel=value, variables=variables
                         )
+                        result.import_range = value.range()
+                        result.import_source = value.source
+
+                        self._import_entries[value] = result
+                        if result.variables:
+                            variables = None
+
+                        if top_level and (
+                            not result.library_doc.errors
+                            and top_level
+                            and not result.imports
+                            and not result.variables
+                            and not result.library_doc.keywords
+                        ):
+                            await self.append_diagnostics(
+                                range=value.range(),
+                                message=f"Imported resource file '{value.name}' is empty.",
+                                severity=DiagnosticSeverity.WARNING,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                            )
 
                 elif isinstance(value, VariablesImport):
 
@@ -1060,6 +1080,7 @@ class Namespace:
                                     top_level=False,
                                     variables=variables,
                                     source=entry.library_doc.source,
+                                    parent_import=imp if top_level else parent_import,
                                 )
                             except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                                 raise
@@ -1085,8 +1106,6 @@ class Namespace:
                                     already_imported_resources is not None
                                     and already_imported_resources.library_doc.source
                                 ):
-                                    # self._resources[entry.import_name] = entry
-
                                     await self.append_diagnostics(
                                         range=entry.import_range,
                                         message=f"Resource {entry} already imported.",

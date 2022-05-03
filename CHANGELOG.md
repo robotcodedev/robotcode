@@ -2,8 +2,11 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Information about possible circular imports
+  - if one resource file imports another resource file and vice versa an information message is shown in source code and problems list
+
 ##  0.11.16
 
 - none so far

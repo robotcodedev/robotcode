@@ -1,7 +1,7 @@
 data: !GeneratedTestData
-  character: 26
+  character: 16
   line: 1
-  name: a built library
+  name: a builtin library
 result:
 - !Location
   range:

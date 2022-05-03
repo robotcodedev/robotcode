@@ -1,6 +1,6 @@
 *** Settings ***
 Library         Collections
-#               ^^^^^^^^^^^ a built library
+#               ^^^^^^^^^^^ a builtin library
 Library         ${CURDIR}/../lib/myvariables.py
 #                 ^^^^^^  Variable in library import path
 #                             ^^^^^^^^^^^^^^ a custom library with path
