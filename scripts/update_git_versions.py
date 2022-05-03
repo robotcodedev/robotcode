@@ -1,4 +1,3 @@
-import os
 import re
 from pathlib import Path
 
@@ -24,11 +23,11 @@ def main() -> None:
             rf"\g<1>{version or ''}{'.dev.0' if preview and version.prerelease is None else ''}\g<3>",
         )
 
-    for f in ["CHANGELOG.md"]:
+    for f in ["package.json"]:
         replace_in_file(
             Path(f),
-            re.compile(r"^(\#*\s*)(\[Unreleased\])$", re.MULTILINE),
-            rf"\g<1>\g<2>{os.linesep}- none so far{os.linesep}\g<1> {version or ''}",
+            re.compile(r"""(\"version\"\s*:\s*['"])([0-9]+\.[0-9]+\.[0-9]+.*)(['"])""", re.MULTILINE),
+            rf"\g<1>{version or ''}{'.dev.0' if preview and version.prerelease is None else ''}\g<3>",
         )
 
 

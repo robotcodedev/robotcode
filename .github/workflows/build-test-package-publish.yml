@@ -179,8 +179,11 @@ jobs:
       - name: install node modules
         run: npm install --also=dev
 
+      - name: update versions from git
+        run: poetry run python .\scripts\update_git_versions.py
+
       - name: update doc links
-        if: startsWith( github.ref, 'refs/tags/v')
+        if: ${{ !startsWith( github.ref, 'refs/tags/v') }}
         run: poetry run npm run update-doc-links
 
       - name: package
