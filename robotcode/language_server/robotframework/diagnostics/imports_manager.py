@@ -23,6 +23,7 @@ from typing import (
     final,
 )
 
+from ....utils.async_cache import AsyncSimpleCache
 from ....utils.async_tools import Lock, async_tasking_event, create_sub_task
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
@@ -471,6 +472,10 @@ class ImportsManager:
         self._python_path: Optional[List[str]] = None
         self._environment: Optional[Mapping[str, str]] = None
 
+        self._library_files_cache = AsyncSimpleCache()
+        self._resource_files_cache = AsyncSimpleCache()
+        self._variables_files_cache = AsyncSimpleCache()
+
     @property
     def environment(self) -> Mapping[str, str]:
         if self._environment is None:
@@ -691,8 +696,10 @@ class ImportsManager:
         except RuntimeError:
             pass
 
-    @_logger.call
     async def find_library(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
+        return await self._library_files_cache.get(self._find_library, name, base_dir, variables)
+
+    async def _find_library(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
         from robot.libraries import STDLIBS
         from robot.variables.search import contains_variable
 
@@ -722,8 +729,41 @@ class ImportsManager:
 
         return result
 
+    async def find_resource(
+        self, name: str, base_dir: str, file_type: str = "Resource", variables: Optional[Dict[str, Any]] = None
+    ) -> str:
+        return await self._resource_files_cache.get(self.__find_resource, name, base_dir, file_type, variables)
+
     @_logger.call
+    async def __find_resource(
+        self, name: str, base_dir: str, file_type: str = "Resource", variables: Optional[Dict[str, Any]] = None
+    ) -> str:
+        from robot.variables.search import contains_variable
+
+        if contains_variable(name, "$@&%"):
+            return await asyncio.wait_for(
+                asyncio.get_running_loop().run_in_executor(
+                    self.process_pool,
+                    find_file,
+                    name,
+                    str(self.folder.to_path()),
+                    base_dir,
+                    self.config.python_path if self.config is not None else None,
+                    self.config.env if self.config is not None else None,
+                    self.config.variables if self.config is not None else None,
+                    variables,
+                    file_type,
+                ),
+                FIND_FILE_TIME_OUT,
+            )
+
+        return str(find_file_ex(name, base_dir, self.python_path, file_type))
+
     async def find_variables(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
+        return await self._variables_files_cache.get(self._find_variables, name, base_dir, variables)
+
+    @_logger.call
+    async def _find_variables(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
         from robot.variables.search import contains_variable
 
         if contains_variable(name, "$@&%"):
@@ -969,34 +1009,6 @@ class ImportsManager:
             weakref.finalize(sentinel, self.__remove_variables_entry, entry_key, entry)
 
         return await entry.get_libdoc()
-
-    @_logger.call
-    async def find_resource(
-        self, name: str, base_dir: str, file_type: str = "Resource", variables: Optional[Dict[str, Any]] = None
-    ) -> str:
-        from robot.variables.search import contains_variable
-
-        # if contains_variable(name, "$@&%"):
-        #     name = name.replace("%{CI_PROJECT_DIR}", self.environment["CI_PROJECT_DIR"])
-
-        if contains_variable(name, "$@&%"):
-            return await asyncio.wait_for(
-                asyncio.get_running_loop().run_in_executor(
-                    self.process_pool,
-                    find_file,
-                    name,
-                    str(self.folder.to_path()),
-                    base_dir,
-                    self.config.python_path if self.config is not None else None,
-                    self.config.env if self.config is not None else None,
-                    self.config.variables if self.config is not None else None,
-                    variables,
-                    file_type,
-                ),
-                FIND_FILE_TIME_OUT,
-            )
-
-        return str(find_file_ex(name, base_dir, self.python_path, file_type))
 
     @_logger.call
     async def _get_entry_for_resource_import(

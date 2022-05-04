@@ -4,6 +4,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+### added
+
 - Information about possible circular imports
   - if one resource file imports another resource file and vice versa an information message is shown in source code and problems list
 
