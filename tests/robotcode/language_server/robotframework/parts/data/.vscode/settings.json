@@ -13,7 +13,7 @@
         }
     },
     "robotcode.languageServer.args": [
-        // "--debugpy",
+        "--debugpy",
         // "--log",
         // "--log-level",
         // "TRACE",
@@ -30,5 +30,5 @@
     // "robotcode.debug.outputMessages": true
     //"python.analysis.diagnosticMode": "workspace"
     //"robotcode.robot.paths": ["./tests", "./tests1"]
-    "robotcode.analysis.diagnosticMode": "workspace"
+    "robotcode.analysis.diagnosticMode": "openFilesOnly"
 }

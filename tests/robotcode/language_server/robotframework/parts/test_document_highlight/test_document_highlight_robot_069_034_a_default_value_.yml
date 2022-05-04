@@ -1,6 +1,6 @@
 data: !GeneratedTestData
-  character: 43
-  line: 77
+  character: 34
+  line: 69
   name: a default value
 result:
 - !DocumentHighlight
@@ -62,16 +62,16 @@ result:
   range:
     end:
       character: 35
-      line: 68
+      line: 69
     start:
       character: 30
-      line: 68
+      line: 69
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 44
-      line: 77
+      line: 78
     start:
       character: 39
-      line: 77
+      line: 78

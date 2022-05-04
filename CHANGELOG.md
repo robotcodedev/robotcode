@@ -8,6 +8,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 - Information about possible circular imports
   - if one resource file imports another resource file and vice versa an information message is shown in source code and problems list
+- References for arguments also finds named arguments
 
 ##  0.11.16
 

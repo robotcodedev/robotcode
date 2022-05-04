@@ -1,6 +1,6 @@
 data: !GeneratedTestData
   character: 13
-  line: 91
+  line: 92
   name: argument usage
 result:
 - !DocumentHighlight
@@ -8,25 +8,25 @@ result:
   range:
     end:
       character: 22
-      line: 87
+      line: 88
     start:
       character: 21
-      line: 87
+      line: 88
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 35
-      line: 87
+      line: 88
     start:
       character: 34
-      line: 87
+      line: 88
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 14
-      line: 91
+      line: 92
     start:
       character: 13
-      line: 91
+      line: 92

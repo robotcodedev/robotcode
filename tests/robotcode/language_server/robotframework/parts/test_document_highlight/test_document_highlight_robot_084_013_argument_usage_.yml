@@ -1,23 +1,23 @@
 data: !GeneratedTestData
-  character: 22
-  line: 77
-  name: an argument
+  character: 13
+  line: 84
+  name: argument usage
 result:
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
-      character: 23
-      line: 77
+      character: 35
+      line: 78
     start:
-      character: 21
-      line: 77
+      character: 30
+      line: 78
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
-      character: 15
-      line: 81
+      character: 18
+      line: 84
     start:
       character: 13
-      line: 81
+      line: 84

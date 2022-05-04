@@ -225,7 +225,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     ) -> List[Location]:
         return (
             await create_sub_task(self.find_variable_references_in_file(document, variable, include_declaration))
-            if isinstance(variable, (ArgumentDefinition, LocalVariableDefinition))
+            if isinstance(variable, (LocalVariableDefinition))
             else await self._find_references_in_workspace(
                 document, self.find_variable_references_in_file, variable, include_declaration
             )
@@ -266,6 +266,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     ) -> List[Location]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.blocks import Block, Keyword, Section, TestCase
+        from robot.parsing.model.statements import Fixture, KeywordCall
+        from robot.utils.escaping import split_from_equals
 
         namespace = await self.parent.documents_cache.get_namespace(doc)
         model = await self.parent.documents_cache.get_model(doc)
@@ -333,6 +335,26 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
                     if found_variable == variable:
                         result.append(Location(str(doc.uri), range_from_token(sub_token)))
+
+            if (
+                isinstance(variable, ArgumentDefinition)
+                and isinstance(node, (KeywordCall, Fixture))
+                and variable.name_token
+            ):
+                kw_token = cast(
+                    Token,
+                    node.get_token(RobotToken.KEYWORD)
+                    if isinstance(node, KeywordCall)
+                    else node.get_token(RobotToken.NAME),
+                )
+                if kw_token and kw_token.value:
+                    kw = await namespace.find_keyword(kw_token.value)
+                    if kw is not None and kw == variable.keyword_doc:
+                        for arg in node.get_tokens(RobotToken.ARGUMENT):
+                            name, value = split_from_equals(arg.value)
+                            if value is not None and name == variable.name_token.value:
+                                name_token = RobotToken(RobotToken.ARGUMENT, name, arg.lineno, arg.col_offset)
+                                result.append(Location(str(doc.uri), range_from_token(name_token)))
 
         return result
 

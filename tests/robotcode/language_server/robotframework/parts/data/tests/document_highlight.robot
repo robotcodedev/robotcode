@@ -63,6 +63,7 @@ fifth
     a keyword with params
     another keyword with params    1
     again a keyword with params    1
+    a keyword with args    a=2    a long name=99    a_short_name=342
 
 *** Keywords ***
 a keyword with params

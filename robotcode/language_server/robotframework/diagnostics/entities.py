@@ -1,9 +1,12 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Optional, Tuple
 
 from ...common.lsp_types import Position, Range
 from ..utils.ast_utils import Token
+
+if TYPE_CHECKING:
+    from .library_doc import KeywordDoc
 
 
 @dataclass
@@ -195,6 +198,7 @@ class CommandLineVariableDefinition(VariableDefinition):
 @dataclass
 class ArgumentDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.ARGUMENT
+    keyword_doc: Optional["KeywordDoc"] = None
 
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type))

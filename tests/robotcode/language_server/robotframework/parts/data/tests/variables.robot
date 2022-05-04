@@ -152,6 +152,10 @@ templated with embedded not defined
 environmentvars
     log  ${%{TESTENV}.server.ip}  port=${%{TESTENV}.server.port}  # TODO
 
+named arguments
+    a keyword with loop    aaa=hello
+
+
 *** Keywords ***
 do something
     Log    hello from do something

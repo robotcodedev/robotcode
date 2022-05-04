@@ -143,14 +143,17 @@ class VariablesVisitor(AsyncVisitor):
 
 
 class BlockVariableVisitor(AsyncVisitor):
-    def __init__(self, source: str, position: Optional[Position] = None, in_args: bool = True) -> None:
+    def __init__(
+        self, namespace: Namespace, source: str, position: Optional[Position] = None, in_args: bool = True
+    ) -> None:
         super().__init__()
-
+        self.namespace = namespace
         self.source = source
         self.position = position
         self.in_args = in_args
 
         self._results: Dict[str, VariableDefinition] = {}
+        self.current_kw_doc: Optional[KeywordDoc] = None
 
     async def get(self, model: ast.AST) -> List[VariableDefinition]:
 
@@ -164,15 +167,26 @@ class BlockVariableVisitor(AsyncVisitor):
         if self.position is None or self.position >= range_from_node(node).start:
             return await super().visit(node)
 
+    async def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
+        try:
+            await self.generic_visit(node)
+        finally:
+            self.current_kw_doc = None
+
     async def visit_KeywordName(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordName
         from robot.variables.search import VariableSearcher
 
+        from ..parts.model_helper import ModelHelperMixin
+
         n = cast(KeywordName, node)
         name_token = cast(Token, n.get_token(RobotToken.KEYWORD_NAME))
 
         if name_token is not None and name_token.value:
+            keyword = await ModelHelperMixin.get_keyword_definition_at_token(self.namespace, name_token)
+            self.current_kw_doc = keyword
+
             for variable_token in filter(
                 lambda e: e.type == RobotToken.VARIABLE,
                 tokenize_variables(name_token, identifiers="$", ignore_errors=True),
@@ -192,6 +206,7 @@ class BlockVariableVisitor(AsyncVisitor):
                         end_line_no=variable_token.lineno,
                         end_col_offset=variable_token.end_col_offset,
                         source=self.source,
+                        keyword_doc=self.current_kw_doc,
                     )
 
     def get_variable_token(self, token: Token) -> Optional[Token]:
@@ -240,6 +255,7 @@ class BlockVariableVisitor(AsyncVisitor):
                             end_line_no=argument.lineno,
                             end_col_offset=argument.end_col_offset,
                             source=self.source,
+                            keyword_doc=self.current_kw_doc,
                         )
 
             except VariableError:
@@ -816,7 +832,10 @@ class Namespace:
             *[
                 (
                     await BlockVariableVisitor(
-                        self.source, position, isinstance(test_or_keyword_nodes[-1], Arguments) if nodes else False
+                        self,
+                        self.source,
+                        position,
+                        isinstance(test_or_keyword_nodes[-1], Arguments) if nodes else False,
                     ).get(test_or_keyword)
                 )
                 if test_or_keyword is not None
