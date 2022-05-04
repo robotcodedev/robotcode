@@ -934,6 +934,7 @@ def _get_default_variables() -> Any:
             "${REPORT FILE}": "",
             "${DEBUG FILE}": "",
             "${OUTPUT DIR}": "",
+            "${OPTIONS}": "",
         }.items():
             __default_variables[k] = v
 
