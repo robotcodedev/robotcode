@@ -576,8 +576,16 @@ class Lock:
 
     @asynccontextmanager
     async def __inner_lock(self) -> AsyncGenerator[bool, None]:
-        with self._lock as r:
-            yield r
+        b = self._lock.acquire(blocking=False)
+        while not b:
+            await asyncio.sleep(0.01)
+            b = self._lock.acquire(blocking=False)
+
+        try:
+            yield b
+        finally:
+            if b:
+                self._lock.release()
 
     async def acquire(self) -> bool:
         async with self.__inner_lock():
@@ -595,13 +603,18 @@ class Lock:
 
         try:
             try:
-                await fut
+                await asyncio.wait_for(fut, 15)  # TODO remove this hack
+            except asyncio.TimeoutError:
+                pass
             finally:
                 self._waiters.remove(fut)
         except asyncio.CancelledError:
+            wakeup = False
             async with self.__inner_lock():
-                if not self._locked:
-                    self._wake_up_first()
+                wakeup = not self._locked
+
+            if wakeup:
+                self._wake_up_first()
             raise
 
         async with self.__inner_lock():
@@ -610,12 +623,13 @@ class Lock:
         return True
 
     async def release(self) -> None:
-        if self._locked:
-            async with self.__inner_lock():
+        async with self.__inner_lock():
+            if self._locked:
                 self._locked = False
-            self._wake_up_first()
-        else:
-            raise RuntimeError("Lock is not acquired.")
+            else:
+                raise RuntimeError("Lock is not acquired.")
+
+        self._wake_up_first()
 
     def _wake_up_first(self) -> None:
         if not self._waiters:
@@ -625,11 +639,14 @@ class Lock:
         except StopIteration:
             return
 
+        def s() -> None:
+            fut.set_result(True)
+
         if not fut.done():
             if fut._loop == asyncio.get_running_loop():
                 fut.set_result(True)
             else:
-                fut._loop.call_soon_threadsafe(fut.set_result, True)
+                fut._loop.call_soon_threadsafe(s)
 
 
 class FutureInfo:
