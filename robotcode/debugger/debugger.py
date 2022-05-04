@@ -112,6 +112,11 @@ class StackTraceResult(NamedTuple):
     total_frames: int
 
 
+class InvalidThreadId(Exception):
+    def __init__(self, thread_id: Any) -> None:
+        super().__init__(f"Invalid thread id {thread_id}")
+
+
 class StackFrameEntry:
     def __init__(
         self,
@@ -294,7 +299,7 @@ class Debugger:
     @_logger.call
     def continue_thread(self, thread_id: int) -> None:
         if self.main_thread is None or thread_id != self.main_thread.ident:
-            raise RuntimeError("Invalid threadId")
+            raise InvalidThreadId(thread_id)
 
         with self.condition:
             self.state = State.Running
@@ -303,7 +308,7 @@ class Debugger:
     @_logger.call
     def pause_thread(self, thread_id: int) -> None:
         if self.main_thread is None or thread_id != self.main_thread.ident:
-            raise RuntimeError("Invalid threadId")
+            raise InvalidThreadId(thread_id)
 
         with self.condition:
             self.requested_state = RequestedState.Pause
@@ -314,7 +319,7 @@ class Debugger:
     @_logger.call
     def next(self, thread_id: int, granularity: Optional[SteppingGranularity] = None) -> None:
         if self.main_thread is None or thread_id != self.main_thread.ident:
-            raise RuntimeError("Invalid threadId")
+            raise InvalidThreadId(thread_id)
 
         with self.condition:
             self.state = State.Running
@@ -346,7 +351,7 @@ class Debugger:
         self, thread_id: int, target_id: Optional[int] = None, granularity: Optional[SteppingGranularity] = None
     ) -> None:
         if self.main_thread is None or thread_id != self.main_thread.ident:
-            raise RuntimeError("Invalid threadId")
+            raise InvalidThreadId(thread_id)
 
         with self.condition:
             self.requested_state = RequestedState.StepIn
@@ -357,7 +362,7 @@ class Debugger:
     @_logger.call
     def step_out(self, thread_id: int, granularity: Optional[SteppingGranularity] = None) -> None:
         if self.main_thread is None or thread_id != self.main_thread.ident:
-            raise RuntimeError("Invalid threadId")
+            raise InvalidThreadId(thread_id)
 
         with self.condition:
             self.requested_state = RequestedState.StepOut
@@ -384,7 +389,7 @@ class Debugger:
             self.condition.notify_all()
 
     @event
-    def send_event(sender, event: Event) -> None:
+    def send_event(sender, event: Event) -> None:  # NOSONAR
         ...
 
     def set_breakpoints(
@@ -862,6 +867,9 @@ class Debugger:
         levels: Optional[int] = None,
         format: Optional[StackFrameFormat] = None,
     ) -> StackTraceResult:
+        if self.main_thread is None or thread_id != self.main_thread.ident:
+            raise InvalidThreadId(thread_id)
+
         start_frame = start_frame or 0
         levels = start_frame + (levels or len(self.stack_frames))
 
