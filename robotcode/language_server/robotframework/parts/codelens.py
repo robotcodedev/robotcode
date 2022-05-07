@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
-from ....utils.async_tools import threaded
+from ....utils.async_tools import create_sub_task, threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import CodeLens, Command
@@ -105,14 +105,35 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
             kw_doc = await self.get_keyword_definition_at_line(namespace, name, line)
 
             if kw_doc is not None and not kw_doc.is_error_handler:
-                references = await self.parent.robot_references.find_keyword_references(
+                if not await self.parent.robot_references.has_cached_keyword_references(
                     document, kw_doc, include_declaration=False
-                )
-                code_lens.command = Command(
-                    f"{len(references)} references",
-                    "editor.action.showReferences",
-                    [str(document.uri), code_lens.range.start, references],
-                )
+                ):
+                    code_lens.command = Command(
+                        "...",
+                        "editor.action.showReferences",
+                        [str(document.uri), code_lens.range.start, []],
+                    )
+
+                    async def find_refs() -> None:
+                        if document is None or kw_doc is None:
+                            return
+
+                        await self.parent.robot_references.find_keyword_references(
+                            document, kw_doc, include_declaration=False
+                        )
+
+                        await self.parent.code_lens.refresh()
+
+                    create_sub_task(find_refs(), loop=self.parent.loop)
+                else:
+                    references = await self.parent.robot_references.find_keyword_references(
+                        document, kw_doc, include_declaration=False
+                    )
+                    code_lens.command = Command(
+                        f"{len(references)} references",
+                        "editor.action.showReferences",
+                        [str(document.uri), code_lens.range.start, references],
+                    )
             else:
                 code_lens.command = Command(
                     "0 references",

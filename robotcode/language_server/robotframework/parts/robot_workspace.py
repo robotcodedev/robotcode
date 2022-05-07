@@ -102,6 +102,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                         self._logger.exception(e)
 
         self.workspace_loaded = True
+
         if config.analysis.references_code_lens:
             await self.parent.code_lens.refresh()
 

@@ -332,3 +332,39 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
         self, result_node: ast.AST, document: TextDocument, position: Position
     ) -> Optional[List[DocumentHighlight]]:
         return await self._highlight_Template_or_TestTemplate(result_node, document, position)
+
+    async def _highlight_ForceTags_DefaultTags_Tags(  # noqa: N802
+        self, result_node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[List[DocumentHighlight]]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.utils.normalizing import normalize
+
+        token = get_tokens_at_position(cast(HasTokens, result_node), position)[-1]
+
+        if token is None:
+            return None
+
+        if token.type in [RobotToken.ARGUMENT] and token.value:
+            return [
+                DocumentHighlight(e.range, DocumentHighlightKind.TEXT)
+                for e in await self.parent.robot_references.find_tag_references_in_file(
+                    document, normalize(token.value, ignore="_")
+                )
+            ]
+
+        return None
+
+    async def highlight_ForceTags(  # noqa: N802
+        self, result_node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[List[DocumentHighlight]]:
+        return await self._highlight_ForceTags_DefaultTags_Tags(result_node, document, position)
+
+    async def highlight_DefaultTags(  # noqa: N802
+        self, result_node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[List[DocumentHighlight]]:
+        return await self._highlight_ForceTags_DefaultTags_Tags(result_node, document, position)
+
+    async def highlight_Tags(  # noqa: N802
+        self, result_node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[List[DocumentHighlight]]:
+        return await self._highlight_ForceTags_DefaultTags_Tags(result_node, document, position)

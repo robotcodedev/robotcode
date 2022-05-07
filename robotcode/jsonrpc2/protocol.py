@@ -581,7 +581,11 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 if entry.future._loop == asyncio.get_running_loop():
                     entry.future.set_result(res)
                 else:
-                    entry.future._loop.call_soon_threadsafe(entry.future.set_result, res)
+                    if entry.future._loop.is_running():
+                        entry.future._loop.call_soon_threadsafe(entry.future.set_result, res)
+                    else:
+                        self._logger.warning("Response loop is not running.")
+
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:

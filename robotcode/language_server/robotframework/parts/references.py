@@ -18,6 +18,7 @@ from typing import (
     cast,
 )
 
+from ....utils.async_cache import AsyncSimpleCache
 from ....utils.async_itertools import async_next
 from ....utils.async_tools import create_sub_task, run_coroutine_in_thread, threaded
 from ....utils.glob_path import iter_files
@@ -70,6 +71,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         super().__init__(parent)
 
         parent.references.collect.add(self.collect)
+
+        self._keyword_reference_cache = AsyncSimpleCache(max_items=128)
 
     def _find_method(self, cls: Type[Any]) -> Optional[_ReferencesMethod]:
         if cls is ast.AST:
@@ -733,7 +736,19 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     async for e in self.get_keyword_references_from_tokens(namespace, kw_doc, node, t, args, True):
                         yield e
 
+    async def has_cached_keyword_references(
+        self, document: TextDocument, kw_doc: KeywordDoc, include_declaration: bool = True
+    ) -> bool:
+        return await self._keyword_reference_cache.has(document, kw_doc, include_declaration)
+
     async def find_keyword_references(
+        self, document: TextDocument, kw_doc: KeywordDoc, include_declaration: bool = True
+    ) -> List[Location]:
+        return await self._keyword_reference_cache.get(
+            self._find_keyword_references, document, kw_doc, include_declaration
+        )
+
+    async def _find_keyword_references(
         self, document: TextDocument, kw_doc: KeywordDoc, include_declaration: bool = True
     ) -> List[Location]:
 
@@ -923,3 +938,63 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             )
 
         return None
+
+    async def find_tag_references_in_file(
+        self, doc: TextDocument, tag: str, is_normalized: bool = False
+    ) -> List[Location]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import DefaultTags, ForceTags, Tags
+        from robot.utils.normalizing import normalize
+
+        model = await self.parent.documents_cache.get_model(doc)
+        if model is None:
+            return []
+
+        result: List[Location] = []
+        if not is_normalized:
+            tag = normalize(tag, ignore="_")
+
+        async for node in iter_nodes(model):
+            if isinstance(node, (ForceTags, DefaultTags, Tags)):
+                for token in node.get_tokens(RobotToken.ARGUMENT):
+                    if token.value and normalize(token.value, ignore="_") == tag:
+                        result.append(Location(str(doc.uri), range_from_token(token)))
+
+        return result
+
+    async def _references_ForceTags_DefaultTags_Tags(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, context: ReferenceContext
+    ) -> Optional[List[Location]]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+
+        token = get_tokens_at_position(cast(HasTokens, node), position)[-1]
+
+        if token is None:
+            return None
+
+        if token.type in [RobotToken.ARGUMENT] and token.value:
+            return await self.find_tag_references(document, token.value)
+
+        return None
+
+    async def find_tag_references(self, document: TextDocument, tag: str) -> List[Location]:
+        from robot.utils.normalizing import normalize
+
+        return await self._find_references_in_workspace(
+            document, self.find_tag_references_in_file, normalize(tag, ignore="_"), True
+        )
+
+    async def references_ForceTags(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, context: ReferenceContext
+    ) -> Optional[List[Location]]:
+        return await self._references_ForceTags_DefaultTags_Tags(node, document, position, context)
+
+    async def references_DefaultTags(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, context: ReferenceContext
+    ) -> Optional[List[Location]]:
+        return await self._references_ForceTags_DefaultTags_Tags(node, document, position, context)
+
+    async def references_Tags(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, context: ReferenceContext
+    ) -> Optional[List[Location]]:
+        return await self._references_ForceTags_DefaultTags_Tags(node, document, position, context)

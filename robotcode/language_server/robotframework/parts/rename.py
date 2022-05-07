@@ -550,3 +550,79 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         return await self._rename_keyword(
             document, new_name, await self._find_Template_or_TestTemplate(node, document, position)
         )
+
+    async def _prepare_rename_tags(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[PrepareRenameResult]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+
+        token = get_tokens_at_position(cast(HasTokens, node), position)[-1]
+
+        if token is None:
+            return None
+
+        if token.type in [RobotToken.ARGUMENT] and token.value:
+            return PrepareRenameResultWithPlaceHolder(range_from_token(token), token.value)
+
+        return None
+
+    async def prepare_rename_ForceTags(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[PrepareRenameResult]:
+        return await self._prepare_rename_tags(node, document, position)
+
+    async def prepare_rename_DefaultTags(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[PrepareRenameResult]:
+        return await self._prepare_rename_tags(node, document, position)
+
+    async def prepare_rename_Tags(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position
+    ) -> Optional[PrepareRenameResult]:
+        return await self._prepare_rename_tags(node, document, position)
+
+    async def _rename_tags(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+    ) -> Optional[WorkspaceEdit]:
+
+        from robot.parsing.lexer.tokens import Token as RobotToken
+
+        token = get_tokens_at_position(cast(HasTokens, node), position)[-1]
+
+        if token is None:
+            return None
+
+        if token.type in [RobotToken.ARGUMENT] and token.value:
+            references = await self.parent.robot_references.find_tag_references(document, token.value)
+
+            changes: List[Union[TextDocumentEdit, CreateFile, RenameFile, DeleteFile]] = []
+
+            for reference in references:
+                changes.append(
+                    TextDocumentEdit(
+                        OptionalVersionedTextDocumentIdentifier(reference.uri, None),
+                        [AnnotatedTextEdit(reference.range, new_name, annotation_id="rename_tag")],
+                    )
+                )
+
+            return WorkspaceEdit(
+                document_changes=changes,
+                change_annotations={"rename_keyword": ChangeAnnotation("Rename Tag", False)},
+            )
+
+        return None
+
+    async def rename_ForceTags(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+    ) -> Optional[WorkspaceEdit]:
+        return await self._rename_tags(node, document, position, new_name)
+
+    async def rename_DefaultTags(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+    ) -> Optional[WorkspaceEdit]:
+        return await self._rename_tags(node, document, position, new_name)
+
+    async def rename_Tags(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+    ) -> Optional[WorkspaceEdit]:
+        return await self._rename_tags(node, document, position, new_name)
