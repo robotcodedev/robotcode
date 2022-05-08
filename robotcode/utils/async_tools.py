@@ -575,17 +575,19 @@ class Lock:
         return f"<{res[1:-1]} [{extra}]>"
 
     @asynccontextmanager
-    async def __inner_lock(self) -> AsyncGenerator[bool, None]:
+    async def __inner_lock(self) -> AsyncGenerator[Any, None]:
         b = self._lock.acquire(blocking=False)
         while not b:
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0)
             b = self._lock.acquire(blocking=False)
 
         try:
-            yield b
+            yield None
         finally:
-            if b:
-                self._lock.release()
+            self._lock.release()
+        # with self._lock:
+        #     yield None
+        # yield None
 
     async def acquire(self) -> bool:
         async with self.__inner_lock():
@@ -593,33 +595,26 @@ class Lock:
                 self._locked = True
                 return True
 
-        if self._waiters is None:
-            self._waiters = deque()
+            if self._waiters is None:
+                self._waiters = deque()
 
-        fut = create_sub_future()
-
-        with self._lock:
+            fut = create_sub_future()
             self._waiters.append(fut)
 
         try:
             try:
-                await asyncio.wait_for(fut, 15)  # TODO remove this hack
-            except asyncio.TimeoutError:
-                pass
+                await fut
             finally:
-                self._waiters.remove(fut)
+                async with self.__inner_lock():
+                    self._waiters.remove(fut)
         except asyncio.CancelledError:
-            wakeup = False
             async with self.__inner_lock():
-                wakeup = not self._locked
-
-            if wakeup:
-                self._wake_up_first()
+                if self._locked:
+                    await self._wake_up_first()
             raise
 
         async with self.__inner_lock():
             self._locked = True
-
         return True
 
     async def release(self) -> None:
@@ -629,24 +624,26 @@ class Lock:
             else:
                 raise RuntimeError("Lock is not acquired.")
 
-        self._wake_up_first()
+            await self._wake_up_first()
 
-    def _wake_up_first(self) -> None:
+    async def _wake_up_first(self) -> None:
         if not self._waiters:
             return
+
         try:
             fut = next(iter(self._waiters))
         except StopIteration:
             return
 
         def s() -> None:
-            fut.set_result(True)
-
-        if not fut.done():
-            if fut._loop == asyncio.get_running_loop():
+            if not fut.done():
                 fut.set_result(True)
-            else:
-                fut._loop.call_soon_threadsafe(s)
+
+        if fut._loop == asyncio.get_running_loop():
+            if not fut.done():
+                fut.set_result(True)
+        else:
+            fut._loop.call_soon_threadsafe(s)
 
 
 class FutureInfo:

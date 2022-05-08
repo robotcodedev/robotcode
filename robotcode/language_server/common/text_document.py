@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections
 import inspect
 import io
 import weakref
@@ -19,9 +20,10 @@ _T = TypeVar("_T")
 
 
 class CacheEntry:
-    def __init__(self, data: Any = None) -> None:
-        self.data = data
-        self.lock = Lock()
+    def __init__(self) -> None:
+        self.data: Any = None
+        self.has_data: bool = False
+        self.lock: Lock = Lock()
 
 
 class TextDocument:
@@ -46,7 +48,7 @@ class TextDocument:
         self._orig_text = text
         self._orig_version = version
         self._lines: Optional[List[str]] = None
-        self._cache: Dict[weakref.ref[Any], CacheEntry] = {}
+        self._cache: Dict[weakref.ref[Any], CacheEntry] = collections.defaultdict(CacheEntry)
         self._data: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
         self.opened_in_editor = False
 
@@ -163,13 +165,11 @@ class TextDocument:
             self._invalidate_data()
 
     async def __remove_cache_entry_safe(self, _ref: Any) -> None:
-        if _ref in self._cache:
-            async with self._lock:
-                if _ref in self._cache:
-                    self._cache.pop(_ref)
+        async with self._lock:
+            if _ref in self._cache:
+                self._cache.pop(_ref)
 
     def __remove_cache_entry(self, ref: Any) -> None:
-
         create_sub_task(self.__remove_cache_entry_safe(ref))
 
     def __get_cache_reference(self, entry: Callable[..., Any], /, *, add_remove: bool = True) -> weakref.ref[Any]:
@@ -189,23 +189,16 @@ class TextDocument:
     ) -> _T:
 
         reference = self.__get_cache_reference(entry)
-        e = self._cache.get(reference, None)
 
-        if e is None:
-            async with self._lock:
-                e = self._cache.get(reference, None)
-                if e is None:
+        async with self._lock:
+            e = self._cache[reference]
 
-                    e = CacheEntry()
+        async with e.lock:
+            if not e.has_data:
+                e.data = await entry(self, *args, **kwargs)
+                e.has_data = True
 
-                    self._cache[reference] = e
-
-        if e.data is None:
-            async with e.lock:
-                if e.data is None:
-                    e.data = await entry(self, *args, **kwargs)
-
-        return cast("_T", e.data)
+            return cast(_T, e.data)
 
     @_logger.call
     async def remove_cache_entry(

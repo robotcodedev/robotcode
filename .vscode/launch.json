@@ -54,6 +54,20 @@
 			"cwd": "${workspaceFolder}",
 		},
 		{
+			"name": "Python: Pytest All Test Parallel",
+			"type": "python",
+			"request": "launch",
+			"module": "pytest",
+			"args": [
+				"-n",
+				"8",
+				"."
+			],
+			"console": "integratedTerminal",
+			"justMyCode": false,
+			"cwd": "${workspaceFolder}",
+		},
+		{
 			"name": "Python: Pytest All Test Coverage",
 			"type": "python",
 			"request": "launch",

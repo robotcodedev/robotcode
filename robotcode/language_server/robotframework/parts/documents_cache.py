@@ -199,37 +199,41 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
     async def get_general_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
         if data_only:
-            return await document.get_cache(self.__get_general_model_data_only)
-        return await document.get_cache(self.__get_general_model)
+            return await document.get_cache(
+                self.__get_general_model_data_only, await self.get_general_tokens(document, True)
+            )
+        return await document.get_cache(self.__get_general_model, await self.get_general_tokens(document))
 
-    async def __get_general_model_data_only(self, document: TextDocument) -> ast.AST:
-        return self.__get_model(document, await self.get_general_tokens(document, True), DocumentType.GENERAL)
+    async def __get_general_model_data_only(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
+        return self.__get_model(document, tokens, DocumentType.GENERAL)
 
-    async def __get_general_model(self, document: TextDocument) -> ast.AST:
-        return self.__get_model(document, await self.get_general_tokens(document), DocumentType.GENERAL)
+    async def __get_general_model(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
+        return self.__get_model(document, tokens, DocumentType.GENERAL)
 
     async def get_resource_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
         if data_only:
-            return await document.get_cache(self.__get_resource_model_data_only)
+            return await document.get_cache(
+                self.__get_resource_model_data_only, await self.get_resource_tokens(document, True)
+            )
 
-        return await document.get_cache(self.__get_resource_model)
+        return await document.get_cache(self.__get_resource_model, await self.get_resource_tokens(document))
 
-    async def __get_resource_model_data_only(self, document: TextDocument) -> ast.AST:
-        return self.__get_model(document, await self.get_resource_tokens(document, True), DocumentType.RESOURCE)
+    async def __get_resource_model_data_only(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
+        return self.__get_model(document, tokens, DocumentType.RESOURCE)
 
-    async def __get_resource_model(self, document: TextDocument) -> ast.AST:
-        return self.__get_model(document, await self.get_resource_tokens(document), DocumentType.RESOURCE)
+    async def __get_resource_model(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
+        return self.__get_model(document, tokens, DocumentType.RESOURCE)
 
     async def get_init_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
         if data_only:
-            return await document.get_cache(self.__get_init_model_data_only)
-        return await document.get_cache(self.__get_init_model)
+            return await document.get_cache(self.__get_init_model_data_only, await self.get_init_tokens(document, True))
+        return await document.get_cache(self.__get_init_model, await self.get_init_tokens(document))
 
-    async def __get_init_model_data_only(self, document: TextDocument) -> ast.AST:
-        return self.__get_model(document, await self.get_init_tokens(document, True), DocumentType.INIT)
+    async def __get_init_model_data_only(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
+        return self.__get_model(document, tokens, DocumentType.INIT)
 
-    async def __get_init_model(self, document: TextDocument) -> ast.AST:
-        return self.__get_model(document, await self.get_init_tokens(document), DocumentType.INIT)
+    async def __get_init_model(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
+        return self.__get_model(document, tokens, DocumentType.INIT)
 
     async def get_namespace(self, document: TextDocument) -> Namespace:
         return await document.get_cache(self.__get_namespace)

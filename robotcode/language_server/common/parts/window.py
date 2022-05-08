@@ -117,7 +117,7 @@ class WindowProtocolPart(LanguageServerProtocolPart):
         self.progress_begin(
             p.token,
             message,
-            int(current * 100 / max) if percentage is None and current is not None and max is not None else percentage,
+            int(current * 100 / max) if percentage is None and current is not None and max else percentage,
             cancellable,
             title,
         )

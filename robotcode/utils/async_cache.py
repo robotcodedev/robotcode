@@ -1,5 +1,4 @@
 from collections import defaultdict
-from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Dict, List, Tuple, TypeVar, cast
 
 from .async_tools import Lock
@@ -13,11 +12,11 @@ def _freeze(v: Any) -> Any:
     return v
 
 
-@dataclass
 class CacheEntry:
-    value: Any = None
-    has_value: bool = False
-    lock: Lock = Lock()
+    def __init__(self) -> None:
+        self.data: Any = None
+        self.has_data: bool = False
+        self.lock: Lock = Lock()
 
 
 class AsyncSimpleCache:
@@ -34,21 +33,20 @@ class AsyncSimpleCache:
     async def get(self, func: Callable[..., Awaitable[_T]], *args: Any, **kwargs: Any) -> _T:
         key = self._make_key(*args, **kwargs)
 
-        async with self._lock:
-            entry = self._cache[key]
-            if entry.has_value:
-                return cast(_T, entry.value)
+        # async with self._lock:
+        entry = self._cache[key]
 
         async with entry.lock:
-            entry.value = await func(*args, **kwargs)
-            entry.has_value = True
+            if not entry.has_data:
+                entry.data = await func(*args, **kwargs)
+                entry.has_data = True
 
-            self._order.insert(0, key)
+                self._order.insert(0, key)
 
-            if len(self._order) > self.max_items:
-                del self._cache[self._order.pop()]
+                if len(self._order) > self.max_items:
+                    del self._cache[self._order.pop()]
 
-            return entry.value
+            return cast(_T, entry.data)
 
     @staticmethod
     def _make_key(*args: Any, **kwargs: Any) -> Tuple[Any, ...]:
