@@ -241,7 +241,10 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
             if lib_doc is None or lib_doc.errors:
                 lib_doc = await namespace.imports_manager.get_libdoc_for_library_import(
-                    str(library_node.name), (), str(document.uri.to_path().parent)
+                    str(library_node.name),
+                    (),
+                    str(document.uri.to_path().parent),
+                    variables=await namespace.get_resolvable_variables(),
                 )
 
             if lib_doc is None:

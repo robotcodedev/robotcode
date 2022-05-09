@@ -131,6 +131,9 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
 
                 if self.current_symbol is not None and self.current_symbol.children is not None:
                     for argument_token in (cast(RobotToken, e) for e in arguments):
+                        if argument_token.value == "@{}":
+                            continue
+
                         argument = self.get_variable_token(argument_token)
 
                         if argument is not None:

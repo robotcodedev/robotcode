@@ -2,8 +2,12 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Find references, highlight references and rename for tags
+- Correct handling of keyword only arguments
+- Fix the occurrence of spontaneous deadlocks
+
 ##  0.11.17
 
 ### added

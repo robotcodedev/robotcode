@@ -174,3 +174,10 @@ check that ${a:[0-9\ ]*} plus ${b} is ${expected}
 templated kw
     [Arguments]  ${a}  ${b}  ${expected}
     log  ${a} ${b} ${expected}
+
+a keyword with kwonly separator
+    [Arguments]    ${name}    @{}    ${version}=<unknown>    ${scope}    ${keywords}    ${listener}=False
+    No Operation
+
+dummy
+    a keyword with kwonly separator  a   scope=1  keywords=1

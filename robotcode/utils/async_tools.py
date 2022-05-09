@@ -604,14 +604,13 @@ class Lock:
             finally:
                 async with self.__inner_lock():
                     self._waiters.remove(fut)
+                    self._locked = True
         except asyncio.CancelledError:
             async with self.__inner_lock():
                 if self._locked:
                     await self._wake_up_first()
             raise
 
-        async with self.__inner_lock():
-            self._locked = True
         return True
 
     async def release(self) -> None:

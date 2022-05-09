@@ -57,6 +57,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
     async def visit(self, node: ast.AST) -> None:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import (
+            Arguments,
             DocumentationOrMetadata,
             KeywordCall,
             Template,
@@ -72,6 +73,9 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     for t in node.tokens
                     if t.type != RobotToken.VARIABLE and t.error is None and contains_variable(t.value, "$@&%")
                 ):
+                    if isinstance(node, Arguments) and token.value == "@{}":
+                        continue
+
                     async for var_token, var in self.iter_variables_from_token(
                         token,
                         self.namespace,

@@ -510,7 +510,10 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
                     if libdoc is None or libdoc.errors:
                         libdoc = await namespace.imports_manager.get_libdoc_for_library_import(
-                            str(library_node.name), (), str(document.uri.to_path().parent)
+                            str(library_node.name),
+                            (),
+                            str(document.uri.to_path().parent),
+                            variables=await namespace.get_resolvable_variables(),
                         )
 
                     if libdoc is None:
@@ -555,7 +558,9 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
                     if libdoc is None or libdoc.errors:
                         libdoc = await namespace.imports_manager.get_libdoc_for_resource_import(
-                            str(resource_node.name), str(document.uri.to_path().parent)
+                            str(resource_node.name),
+                            str(document.uri.to_path().parent),
+                            variables=await namespace.get_resolvable_variables(),
                         )
 
                     if libdoc is None:
@@ -600,7 +605,10 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
                     if libdoc is None or libdoc.errors:
                         libdoc = await namespace.imports_manager.get_libdoc_for_variables_import(
-                            str(variables_node.name), (), str(document.uri.to_path().parent)
+                            str(variables_node.name),
+                            (),
+                            str(document.uri.to_path().parent),
+                            variables=await namespace.get_resolvable_variables(),
                         )
 
                     if libdoc is None:

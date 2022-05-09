@@ -236,7 +236,7 @@ class BlockVariableVisitor(AsyncVisitor):
             try:
                 argument = self.get_variable_token(argument_token)
 
-                if argument is not None:
+                if argument is not None and argument.value != "@{}":
                     if (
                         self.in_args
                         and self.position is not None
