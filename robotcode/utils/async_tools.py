@@ -585,9 +585,6 @@ class Lock:
             yield None
         finally:
             self._lock.release()
-        # with self._lock:
-        #     yield None
-        # yield None
 
     async def acquire(self) -> bool:
         async with self.__inner_lock():

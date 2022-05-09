@@ -18,7 +18,7 @@ from typing import (
     cast,
 )
 
-from ....utils.async_cache import AsyncSimpleCache
+from ....utils.async_cache import AsyncSimpleLRUCache
 from ....utils.async_itertools import async_next
 from ....utils.async_tools import create_sub_task, run_coroutine_in_thread, threaded
 from ....utils.glob_path import iter_files
@@ -72,7 +72,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         parent.references.collect.add(self.collect)
 
-        self._keyword_reference_cache = AsyncSimpleCache(max_items=128)
+        self._keyword_reference_cache = AsyncSimpleLRUCache(max_items=128)
 
     def _find_method(self, cls: Type[Any]) -> Optional[_ReferencesMethod]:
         if cls is ast.AST:

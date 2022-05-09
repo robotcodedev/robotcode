@@ -23,7 +23,7 @@ from typing import (
     final,
 )
 
-from ....utils.async_cache import AsyncSimpleCache
+from ....utils.async_cache import AsyncSimpleLRUCache
 from ....utils.async_tools import Lock, async_tasking_event, create_sub_task
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
@@ -472,9 +472,9 @@ class ImportsManager:
         self._python_path: Optional[List[str]] = None
         self._environment: Optional[Mapping[str, str]] = None
 
-        self._library_files_cache = AsyncSimpleCache()
-        self._resource_files_cache = AsyncSimpleCache()
-        self._variables_files_cache = AsyncSimpleCache()
+        self._library_files_cache = AsyncSimpleLRUCache()
+        self._resource_files_cache = AsyncSimpleLRUCache()
+        self._variables_files_cache = AsyncSimpleLRUCache()
 
     @property
     def environment(self) -> Mapping[str, str]:

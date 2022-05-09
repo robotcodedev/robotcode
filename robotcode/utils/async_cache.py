@@ -19,7 +19,7 @@ class CacheEntry:
         self.lock: Lock = Lock()
 
 
-class AsyncSimpleCache:
+class AsyncSimpleLRUCache:
     def __init__(self, max_items: int = 128) -> None:
         self.max_items = max_items
 
