@@ -26,11 +26,11 @@ Here is a list of Features:
 - [Code Formatting](#code-formatting)
 - [Running and Debugging](#running-and-debugging)
 - [Multi-root Workspace folders](#multi-root-workspace-folders)
-- Find implementations and usage of keywords, variables, libraries, resource and variable files
+- Find implementations and references of keywords, variables, libraries, resource and variable files
+  - Show codelenses for keyword definitions
 - Test Explorer
 - Refactorings
-  - renaming keywords
-  - renaming variables
+  - renaming keywords, variables, tags
 
 ### Autocomplete and IntelliSense
 
@@ -68,6 +68,7 @@ Autocompletion supports all supported variables types
     - Libraries
     - Resources
     - Variables
+  - Tags
 - Errors and Warnings
 
 ### Diagnostics and Linting
