@@ -67,6 +67,15 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         self.node_stack.append(node)
         try:
+            severity = (
+                DiagnosticSeverity.HINT if isinstance(node, DocumentationOrMetadata) else DiagnosticSeverity.ERROR
+            )
+
+            if isinstance(node, Statement) and isinstance(node, KeywordCall) and node.keyword:
+                kw_doc = await self.namespace.find_keyword(node.keyword)
+                if kw_doc is not None and kw_doc.longname in ["BuiltIn.Comment"]:
+                    severity = DiagnosticSeverity.HINT
+
             if isinstance(node, HasTokens) and not isinstance(node, (TestTemplate, Template)):
                 for token in (
                     t
@@ -87,10 +96,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         if isinstance(var, VariableNotFoundDefinition):
                             await self.append_diagnostics(
                                 range=range_from_token(var_token),
-                                message=f"Variable '{var.name}' not found",
-                                severity=DiagnosticSeverity.HINT
-                                if isinstance(node, DocumentationOrMetadata)
-                                else DiagnosticSeverity.ERROR,
+                                message=f"Variable '{var.name}' not found.",
+                                severity=severity,
                                 source=DIAGNOSTICS_SOURCE_NAME,
                             )
             if (
@@ -109,7 +116,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     if isinstance(var, VariableNotFoundDefinition):
                         await self.append_diagnostics(
                             range=range_from_token(var_token),
-                            message=f"Variable '{var.name}' not found",
+                            message=f"Variable '{var.name}' not found.",
                             severity=DiagnosticSeverity.ERROR,
                             source=DIAGNOSTICS_SOURCE_NAME,
                         )
@@ -141,7 +148,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                             if isinstance(var, VariableNotFoundDefinition):
                                 await self.append_diagnostics(
                                     range=range_from_token(var_token),
-                                    message=f"Variable '{var.name}' not found",
+                                    message=f"Variable '{var.name}' not found.",
                                     severity=DiagnosticSeverity.ERROR,
                                     source=DIAGNOSTICS_SOURCE_NAME,
                                 )
@@ -360,7 +367,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 if t.value == "AND":
                     await self.append_diagnostics(
                         range=range_from_token(t),
-                        message=f"Incorrect use of {t.value}",
+                        message=f"Incorrect use of {t.value}.",
                         severity=DiagnosticSeverity.ERROR,
                         source=DIAGNOSTICS_SOURCE_NAME,
                     )
