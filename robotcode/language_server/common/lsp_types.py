@@ -30,12 +30,9 @@ class Model:
             for f in dataclasses.fields(self)
             if f.repr
             and (
-                (f.default == dataclasses.MISSING and f.default_factory == dataclasses.MISSING)  # type: ignore
+                (f.default == dataclasses.MISSING and f.default_factory == dataclasses.MISSING)
                 or (f.default != dataclasses.MISSING and f.default != getattr(self, f.name))
-                or (
-                    f.default_factory != dataclasses.MISSING  # type: ignore
-                    and getattr(self, f.name) != f.default_factory()
-                )
+                or (f.default_factory != dataclasses.MISSING and getattr(self, f.name) != f.default_factory())
             )
         )
         return f"{self.__class__.__qualname__}({args})"

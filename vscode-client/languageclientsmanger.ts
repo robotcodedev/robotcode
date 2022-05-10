@@ -430,12 +430,17 @@ export class LanguageClientsManager {
       result = new LanguageClient(`$robotCode:${workspaceFolder.uri.toString()}`, name, serverOptions, clientOptions);
 
       this.outputChannel.appendLine(`trying to start Language client: ${name}`);
-      result.start();
 
       result.onDidChangeState((e) => {
         if (e.newState == State.Running) {
+          this.outputChannel.appendLine(
+            `client for ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} running.`
+          );
           closeHandlerAction = CloseAction.Restart;
         } else if (e.newState == State.Stopped) {
+          this.outputChannel.appendLine(
+            `client for ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} stopped.`
+          );
           if (workspaceFolder && this.clients.get(workspaceFolder.uri.toString()) !== result)
             closeHandlerAction = CloseAction.DoNotRestart;
         }
@@ -451,35 +456,27 @@ export class LanguageClientsManager {
         });
       });
 
-      result = await result.onReady().then(
-        async (_) => {
-          this.outputChannel.appendLine(`client  ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} ready.`);
-          let counter = 0;
-          try {
-            while (!result?.initializeResult && counter < 1000) {
-              await sleep(10);
-              counter++;
-            }
-          } catch {
-            // do nothing
-            this.outputChannel.appendLine(
-              `client  ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} did not initialize correctly`
-            );
-            return undefined;
-          }
-          return result;
+      const started = await result.start().then(
+        (_) => {
+          this.outputChannel.appendLine(
+            `client for ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} started.`
+          );
+          return true;
         },
         (reason) => {
           this.outputChannel.appendLine(
             `client  ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} error: ${reason}`
           );
-          return undefined;
+          return false;
         }
       );
 
-      if (result) this.clients.set(workspaceFolder.uri.toString(), result);
+      if (started) {
+        this.clients.set(workspaceFolder.uri.toString(), result);
+        return result;
+      }
 
-      return result;
+      return undefined;
     });
   }
 

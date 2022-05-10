@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import (
     Any,
     Callable,
+    Coroutine,
     Dict,
     Generic,
     Iterator,
@@ -722,7 +723,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             params = self._convert_params(e.method, e.param_type, message.params)
             result = e.method(*params[0], **params[1])
             if inspect.isawaitable(result):
-                create_sub_task(result)
+                create_sub_task(cast(Coroutine[Any, Any, Any], result))
 
         except asyncio.CancelledError:
             pass

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Optional, cast
+from typing import Any, Optional
 
 from ..jsonrpc2.server import TcpParams
 from ..utils.logging import LoggingDescriptor
@@ -60,7 +60,7 @@ class DAPClient:
                         port=self.tcp_params.port,
                     )
 
-                    self._protocol = cast(DAPClientProtocol, protocol)
+                    self._protocol = protocol
                     self._protocol.on_connection_lost.add(self.on_connection_lost)
                 except (asyncio.CancelledError, KeyboardInterrupt, SystemExit):
                     raise

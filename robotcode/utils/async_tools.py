@@ -682,7 +682,7 @@ def get_current_future_info() -> Optional[FutureInfo]:
 
 
 def create_sub_task(
-    coro: Awaitable[_T], *, name: Optional[str] = None, loop: Optional[asyncio.AbstractEventLoop] = None
+    coro: Coroutine[Any, Any, _T], *, name: Optional[str] = None, loop: Optional[asyncio.AbstractEventLoop] = None
 ) -> asyncio.Task[_T]:
 
     ct = get_current_future_info()
