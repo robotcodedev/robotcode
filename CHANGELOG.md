@@ -7,6 +7,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 - Implement API Changes for RobotTidy >= 2.2
   - fixes [#55](https://github.com/d-biehl/robotcode/issues/55)
 - Switch to new LSP Protocol Version 3.17 and vscode-languageclient 8.0.0
+- Disable 4SpacesTab if [GitHub CoPilot](https://copilot.github.com/) is showing inline suggestions
+  - Thanks: @Snooz82
 
 ##  0.12.0
 

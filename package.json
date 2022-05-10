@@ -199,7 +199,7 @@
         "args": {
           "text": "    "
         },
-        "when": "!inlineSuggestionVisible && editorTextFocus && editorLangId == robotframework && !editorHasSelection && !inSnippetMode && !suggestWidgetVisible && config.robotcode.editor.4SpacesTab"
+        "when": "editorLangId == robotframework && editorTextFocus && !editorHasSelection && !inSnippetMode && !suggestWidgetVisible && config.robotcode.editor.4SpacesTab && !inlineSuggestionVisible"
       }
     ],
     "configuration": [
