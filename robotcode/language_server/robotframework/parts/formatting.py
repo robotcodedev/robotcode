@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 from ..configuration import RoboTidyConfig
+from ..utils.version import create_version_from_str
 from .model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -43,8 +44,8 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         parent.formatting.format.add(self.format)
 
-        # TODO implement range formatting
-        # parent.formatting.format_range.add(self.format_range)
+        if robotidy_installed():
+            parent.formatting.format_range.add(self.format_range)
 
         self.space_count = 4
         self.use_pipes = False
@@ -82,19 +83,37 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     RE_LINEBREAKS = re.compile(r"\r\n|\r|\n")
 
     async def format_robot_tidy(
-        self, document: TextDocument, options: FormattingOptions, **further_options: Any
+        self, document: TextDocument, options: FormattingOptions, range: Optional[Range] = None, **further_options: Any
     ) -> Optional[List[TextEdit]]:
 
         from difflib import SequenceMatcher
 
         from robotidy.api import RobotidyAPI
+        from robotidy.version import __version__
 
         try:
             model = await self.parent.documents_cache.get_model(document, False)
+            if model is None:
+                return None
 
             robot_tidy = RobotidyAPI(document.uri.to_path(), None)
 
-            changed, _, new = robot_tidy.transform(model)
+            if range is not None:
+                robot_tidy.formatting_config.start_line = range.start.line
+                robot_tidy.formatting_config.end_line = range.end.line + 1
+
+            if create_version_from_str(__version__) >= (2, 2):
+                from robotidy.disablers import RegisterDisablers
+
+                disabler_finder = RegisterDisablers(
+                    robot_tidy.formatting_config.start_line, robot_tidy.formatting_config.end_line
+                )
+                disabler_finder.visit(model)
+                if disabler_finder.file_disabled:
+                    return None
+                changed, _, new = robot_tidy.transform(model, disabler_finder.disablers)
+            else:
+                changed, _, new = robot_tidy.transform(model)
 
             if not changed:
                 return None
@@ -173,8 +192,9 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def format_range(
         self, sender: Any, document: TextDocument, range: Range, options: FormattingOptions, **further_options: Any
     ) -> Optional[List[TextEdit]]:
-        # TODO implement range formatting
-        # config = await self.get_config(document)
-        # if config and config.enabled and robotidy_installed():
-        #     return await self.format_robot_tidy(document, options, range=range, **further_options)
+
+        config = await self.get_config(document)
+        if config and config.enabled and robotidy_installed():
+            return await self.format_robot_tidy(document, options, range=range, **further_options)
+
         return None

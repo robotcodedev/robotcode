@@ -1,15 +1,15 @@
 import re
 from typing import NamedTuple, Optional
 
-__all__ = ["InvalidRobotVersionError", "get_robot_version"]
+__all__ = ["InvalidVersionError", "get_robot_version"]
 
 
-class InvalidRobotVersionError(Exception):
+class InvalidVersionError(Exception):
     def __init__(self) -> None:
         super().__init__("Invalid robot version string.")
 
 
-class RobotVersion(NamedTuple):
+class Version(NamedTuple):
     major: int
     minor: int
     patch: Optional[int] = None
@@ -18,13 +18,16 @@ class RobotVersion(NamedTuple):
     dev: Optional[int] = None
 
 
-def get_robot_version() -> RobotVersion:
+def get_robot_version() -> Version:
     import robot
 
+    return create_version_from_str(robot.get_version())
+
+
+def create_version_from_str(version_str: str) -> Version:
     def s_to_i(s: Optional[str]) -> Optional[int]:
         return int(s) if s is not None else None
 
-    robot_version = robot.get_version()
     try:
         m = re.match(
             r"(?P<major>\d+)"
@@ -33,11 +36,11 @@ def get_robot_version() -> RobotVersion:
             r"((?P<pre_id>a|b|rc)(?P<pre_number>\d+))?"
             r"(\.(dev(?P<dev>\d+)))?"
             r"(?P<rest>.+)?",
-            robot_version,
+            version_str,
         )
 
         if m is not None and m.group("rest") is None:
-            return RobotVersion(
+            return Version(
                 int(m.group("major")),
                 int(m.group("minor")),
                 s_to_i(m.group("patch")),
@@ -48,9 +51,9 @@ def get_robot_version() -> RobotVersion:
     except (SystemExit, KeyboardInterrupt):
         raise
     except BaseException as ex:
-        raise InvalidRobotVersionError() from ex
+        raise InvalidVersionError() from ex
 
-    raise InvalidRobotVersionError()
+    raise InvalidVersionError()
 
 
 if __name__ == "__main__":
