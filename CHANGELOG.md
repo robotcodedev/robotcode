@@ -2,8 +2,12 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Implement API Changes for RobotTidy >= 2.2
+  - fixes [#55](https://github.com/d-biehl/robotcode/issues/55)
+- Switch to new LSP Protocol Version 3.17 and vscode-languageclient 8.0.0
+
 ##  0.12.0
 
 - Find references, highlight references and rename for tags
