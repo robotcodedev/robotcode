@@ -280,44 +280,6 @@ export class DebugManager {
         }
       }),
 
-      vscode.languages.registerInlineValuesProvider("robotframework", {
-        provideInlineValues(
-          document: vscode.TextDocument,
-          viewPort: vscode.Range,
-          context: vscode.InlineValueContext,
-          token: vscode.CancellationToken
-        ): vscode.ProviderResult<vscode.InlineValue[]> {
-          return languageClientsManager.getInlineValues(document, viewPort, context, token).then(
-            (r) => {
-              const result: vscode.InlineValue[] = [];
-
-              for (const c of r) {
-                switch (c.type) {
-                  case "text":
-                    result.push(new vscode.InlineValueText(toVsCodeRange(c.range), c.text));
-
-                    break;
-                  case "variable":
-                    result.push(
-                      new vscode.InlineValueVariableLookup(
-                        toVsCodeRange(c.range),
-                        c.variableName,
-                        c.caseSensitiveLookup
-                      )
-                    );
-                    break;
-                  case "expression":
-                    result.push(new vscode.InlineValueEvaluatableExpression(toVsCodeRange(c.range), c.expression));
-                }
-              }
-              if (r) return result;
-              else return [];
-            },
-            (_) => []
-          );
-        },
-      }),
-
       vscode.languages.registerEvaluatableExpressionProvider("robotframework", {
         provideEvaluatableExpression(
           document: vscode.TextDocument,

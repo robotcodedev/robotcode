@@ -49,6 +49,7 @@ from .parts.folding_range import FoldingRangeProtocolPart
 from .parts.formatting import FormattingProtocolPart
 from .parts.hover import HoverProtocolPart
 from .parts.implementation import ImplementationProtocolPart
+from .parts.inline_value import InlineValueProtocolPart
 from .parts.linked_editing_ranges import LinkedEditingRangeProtocolPart
 from .parts.references import ReferencesProtocolPart
 from .parts.rename import RenameProtocolPart
@@ -88,6 +89,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     linked_editing_range = ProtocolPartDescriptor(LinkedEditingRangeProtocolPart)
     selection_range = ProtocolPartDescriptor(SelectionRangeProtocolPart)
     rename = ProtocolPartDescriptor(RenameProtocolPart)
+    inline_value = ProtocolPartDescriptor(InlineValueProtocolPart)
 
     name: Optional[str] = None
     short_name: Optional[str] = None

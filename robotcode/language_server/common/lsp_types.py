@@ -13,6 +13,30 @@ URI = str
 ProgressToken = Union[str, int]
 
 
+class ErrorCodes:
+    PARSE_ERROR = -32700
+    INVALID_REQUEST = -32600
+    METHOD_NOT_FOUND = -32601
+    INVALID_PARAMS = -32602
+    INTERNAL_ERROR = -32603
+    SERVER_ERROR_START = -32000
+    SERVER_ERROR_END = -32099
+
+    JSON_RPC_RESERVED_ERROR_RANGE_START = -32099
+
+    SERVER_NOT_INITIALIZED = -32002
+    UNKNOWN_ERROR = -32001
+
+    JSON_RPC_RESERVED_ERROR_RANGE_END = -32000
+
+    LSP_RESERVED_ERROR_RANGE_START = -32899
+    REQUEST_FAILED = -32803
+    SERVER_CANCELLED = -32802
+    CONTENT_MODIFIED = -32801
+    REQUEST_CANCELLED = -32800
+    LSP_RESERVED_ERROR_RANGE_END = -32800
+
+
 @dataclass(repr=False)
 class Model:
     @classmethod
@@ -485,11 +509,32 @@ class PublishDiagnosticsClientCapabilities(Model):
     data_support: Optional[bool] = None
 
 
+class FoldingRangeKind(Enum):
+    COMMENT = "comment"
+    IMPORTS = "imports"
+    REGION = "region"
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return super().__str__()
+
+
+@dataclass(repr=False)
+class FoldingRangeClientCapabilitiesFoldingRangeKind(Model):
+    value_set: Optional[List[FoldingRangeKind]]
+
+
+@dataclass(repr=False)
+class FoldingRangeClientCapabilitiesFoldingRange(Model):
+    collapsed_text: Optional[bool] = None
+
+
 @dataclass(repr=False)
 class FoldingRangeClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     range_limit: Optional[int] = None
     line_folding_only: Optional[bool] = None
+    folding_range_kind: Optional[FoldingRangeClientCapabilitiesFoldingRangeKind] = None
+    folding_range: Optional[FoldingRangeClientCapabilitiesFoldingRange] = None
 
 
 @dataclass(repr=False)
@@ -533,11 +578,29 @@ class SemanticTokensClientCapabilities(Model):
     formats: List[TokenFormat]
     overlapping_token_support: Optional[bool] = None
     multiline_token_support: Optional[bool] = None
+    server_cancel_support: Optional[bool] = None
+    augments_syntax_tokens: Optional[bool] = None
     dynamic_registration: Optional[bool] = None
 
 
 @dataclass(repr=False)
 class MonikerClientCapabilities(Model):
+    dynamic_registration: Optional[bool] = None
+
+
+@dataclass(repr=False)
+class InlayHintClientCapabilitiesResolveSupport(Model):
+    properties: List[str]
+
+
+@dataclass(repr=False)
+class InlayHintClientCapabilities(Model):
+    dynamic_registration: Optional[bool] = None
+    resolve_support: Optional[InlayHintClientCapabilitiesResolveSupport] = None
+
+
+@dataclass(repr=False)
+class InlineValueClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
@@ -569,6 +632,10 @@ class TextDocumentClientCapabilities(Model):
     call_hierarchy: Optional[CallHierarchyClientCapabilities] = None
     semantic_tokens: Optional[SemanticTokensClientCapabilities] = None
     moniker: Optional[MonikerClientCapabilities] = None
+    # TODO typeHierarchy?: TypeHierarchyClientCapabilities;
+    inline_value: Optional[InlineValueClientCapabilities] = None
+    inlay_hint: Optional[InlayHintClientCapabilities] = None
+    # TODO diagnostic?: DiagnosticClientCapabilities;
 
 
 @dataclass(repr=False)
@@ -596,6 +663,7 @@ class RegularExpressionsClientCapabilities(Model):
 class MarkdownClientCapabilities(Model):
     parser: str
     version: Optional[str] = None
+    allowed_tags: Optional[List[str]] = None
 
 
 @dataclass(repr=False)
@@ -607,6 +675,11 @@ class ClientCapabilitiesWorkspaceFileOperationsWorkspaceClientCapabilities(Model
     will_rename: Optional[bool] = None
     did_delete: Optional[bool] = None
     will_delete: Optional[bool] = None
+
+
+@dataclass(repr=False)
+class InlineValueWorkspaceClientCapabilities(Model):
+    refresh_support: Optional[bool] = None
 
 
 @dataclass(repr=False)
@@ -622,6 +695,7 @@ class ClientCapabilitiesWorkspace(Model):
     semantic_tokens: Optional[SemanticTokensWorkspaceClientCapabilities] = None
     code_lens: Optional[CodeLensWorkspaceClientCapabilities] = None
     file_operations: Optional[ClientCapabilitiesWorkspaceFileOperationsWorkspaceClientCapabilities] = None
+    inline_value: Optional[InlineValueWorkspaceClientCapabilities] = None
 
 
 @dataclass(repr=False)
@@ -973,6 +1047,16 @@ class RenameRegistrationOptions(TextDocumentRegistrationOptions, RenameOptions, 
 
 
 @dataclass(repr=False)
+class InlineValueOptions(WorkDoneProgressOptions):
+    pass
+
+
+@dataclass(repr=False)
+class InlineValueRegistrationOptions(InlineValueOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions):
+    pass
+
+
+@dataclass(repr=False)
 class ServerCapabilities(Model):
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None] = None
     completion_provider: Optional[CompletionOptions] = None
@@ -1001,6 +1085,9 @@ class ServerCapabilities(Model):
     # TODO call_hierarchy_provider: Union[boolean, CallHierarchyOptions, CallHierarchyRegistrationOptions, None] = None
     semantic_tokens_provider: Union[SemanticTokensOptions, SemanticTokensRegistrationOptions, None] = None
     # TODO moniker_provider: Union[bool, MonikerOptions, MonikerRegistrationOptions, None] = None
+
+    # TODO typeHierarchyProvider?: boolean | TypeHierarchyOptions | TypeHierarchyRegistrationOptions;
+    inline_value_provider: Union[bool, InlineValueOptions, InlineValueRegistrationOptions, None] = None
     workspace_symbol_provider: Union[bool, WorkspaceSymbolOptions, None] = None
     workspace: Optional[ServerCapabilitiesWorkspace] = None
     experimental: Optional[Any] = None
@@ -1333,15 +1420,6 @@ class FoldingRangeParams(WorkDoneProgressParams, _FoldingRangeParams):
     pass
 
 
-class FoldingRangeKind(Enum):
-    Comment = "comment"
-    Imports = "imports"
-    Region = "region"
-
-    def __repr__(self) -> str:  # pragma: no cover
-        return super().__str__()
-
-
 @dataclass(repr=False)
 class FoldingRange(Model):
     start_line: int
@@ -1349,6 +1427,7 @@ class FoldingRange(Model):
     start_character: Optional[int] = None
     end_character: Optional[int] = None
     kind: Union[FoldingRangeKind, str, None] = None
+    collapsed_text: Optional[str] = None
 
 
 @dataclass(repr=False)
@@ -2014,3 +2093,44 @@ class PrepareRenameResultWithDefaultBehavior(Model):
 
 
 PrepareRenameResult = Union[Range, PrepareRenameResultWithPlaceHolder, PrepareRenameResultWithDefaultBehavior]
+
+
+@dataclass(repr=False)
+class InlineValueContext(Model):
+    # TODO: this differs from definition in the LSP 3.17 spec
+    stopped_location: Union[Range, List[Position]]
+    frame_id: Optional[int] = None
+
+
+@dataclass(repr=False)
+class _InlineValueParams(Model):
+    text_document: TextDocumentIdentifier
+    range: Range
+    context: InlineValueContext
+
+
+@dataclass(repr=False)
+class InlineValueParams(WorkDoneProgressParams, _InlineValueParams):
+    pass
+
+
+@dataclass(repr=False)
+class InlineValueText(Model):
+    range: Range
+    text: str
+
+
+@dataclass(repr=False)
+class InlineValueVariableLookup(Model):
+    range: Range
+    variable_name: Optional[str]
+    case_sensitive_lookup: bool
+
+
+@dataclass(repr=False)
+class InlineValueEvaluatableExpression(Model):
+    range: Range
+    expression: Optional[str]
+
+
+InlineValue = Union[InlineValueText, InlineValueVariableLookup, InlineValueEvaluatableExpression]

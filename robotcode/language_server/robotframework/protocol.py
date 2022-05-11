@@ -24,6 +24,7 @@ from .parts.folding_range import RobotFoldingRangeProtocolPart
 from .parts.formatting import RobotFormattingProtocolPart
 from .parts.goto import RobotGotoProtocolPart
 from .parts.hover import RobotHoverProtocolPart
+from .parts.inline_value import RobotInlineValueProtocolPart
 from .parts.references import RobotReferencesProtocolPart
 from .parts.rename import RobotRenameProtocolPart
 from .parts.robocop_diagnostics import RobotRoboCopDiagnosticsProtocolPart
@@ -88,6 +89,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     robot_codelens = ProtocolPartDescriptor(RobotCodeLensProtocolPart)
     robot_selection_range = ProtocolPartDescriptor(RobotSelectionRangeProtocolPart)
     robot_rename = ProtocolPartDescriptor(RobotRenameProtocolPart)
+    robot_inline_value = ProtocolPartDescriptor(RobotInlineValueProtocolPart)
 
     robot_workspace = ProtocolPartDescriptor(RobotWorkspaceProtocolPart)
 
