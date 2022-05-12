@@ -2,8 +2,10 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Some corrections in highlightning to provide better bracket matching in arguments
+
 ##  0.12.1
 
 - Implement API Changes for RobotTidy >= 2.2

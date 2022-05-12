@@ -68,7 +68,7 @@ class RobotSemTokenTypes(Enum):
     SETTING_IMPORT = "settingImport"
     SETTING = "setting"
     HEADER = "header"
-    HEADER_SETTING = "headerSetting"
+    HEADER_SETTINGS = "headerSettings"
     HEADER_VARIABLE = "headerVariable"
     HEADER_TESTCASE = "headerTestcase"
     HEADER_COMMENT = "headerComment"
@@ -141,7 +141,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         definition: Dict[FrozenSet[str], Tuple[Enum, Optional[Set[Enum]]]] = {
             frozenset(RobotToken.HEADER_TOKENS): (RobotSemTokenTypes.HEADER, None),
-            frozenset({RobotToken.SETTING_HEADER}): (RobotSemTokenTypes.HEADER_SETTING, None),
+            frozenset({RobotToken.SETTING_HEADER}): (RobotSemTokenTypes.HEADER_SETTINGS, None),
             frozenset({RobotToken.VARIABLE_HEADER}): (RobotSemTokenTypes.HEADER_VARIABLE, None),
             frozenset({RobotToken.TESTCASE_HEADER}): (RobotSemTokenTypes.HEADER_TESTCASE, None),
             frozenset({RobotToken.KEYWORD_HEADER}): (RobotSemTokenTypes.HEADER_KEYWORD, None),
