@@ -53,9 +53,6 @@ class RobotInlineValueProtocolPart(RobotLanguageServerProtocolPart, ModelHelperM
 
         model = await self.parent.documents_cache.get_model(document, False)
 
-        if isinstance(context.stopped_location, list):
-            return None
-
         real_range = Range(range.start, min(range.end, context.stopped_location.end))
 
         nodes = await get_nodes_at_position(model, context.stopped_location.start)

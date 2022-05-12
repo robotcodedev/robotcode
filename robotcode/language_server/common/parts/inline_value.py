@@ -66,9 +66,6 @@ class InlineValueProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         if document is None:
             return None
 
-        if isinstance(context.stopped_location, list):  # TODO this is a hack, fix it
-            context.stopped_location = Range(*context.stopped_location)
-
         for result in await self.collect(self, document, range, context, callback_filter=language_id_filter(document)):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):

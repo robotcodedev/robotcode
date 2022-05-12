@@ -16,6 +16,7 @@ from ...utils.async_tools import async_event
 from ...utils.logging import LoggingDescriptor
 from .has_extend_capabilities import HasExtendCapabilities
 from .lsp_types import (
+    UTF16,
     CancelParams,
     ClientCapabilities,
     ClientInfo,
@@ -193,6 +194,13 @@ class LanguageServerProtocol(JsonRPCProtocol):
         try:
             self.initialization_options = initialization_options
             try:
+                if (
+                    self.client_capabilities.general
+                    and self.client_capabilities.general.position_encodings
+                    and UTF16 in self.client_capabilities.general.position_encodings
+                ):
+                    self.capabilities.position_encoding = UTF16
+
                 await self.on_initialize(self, initialization_options)
             except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                 raise

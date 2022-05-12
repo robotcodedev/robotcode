@@ -605,6 +605,12 @@ class InlineValueClientCapabilities(Model):
 
 
 @dataclass(repr=False)
+class DiagnosticClientCapabilities(Model):
+    dynamic_registration: Optional[bool] = None
+    related_document_support: Optional[bool] = None
+
+
+@dataclass(repr=False)
 class TextDocumentClientCapabilities(Model):
     synchronization: Optional[TextDocumentSyncClientCapabilities] = None
     completion: Optional[CompletionClientCapabilities] = None
@@ -635,7 +641,7 @@ class TextDocumentClientCapabilities(Model):
     # TODO typeHierarchy?: TypeHierarchyClientCapabilities;
     inline_value: Optional[InlineValueClientCapabilities] = None
     inlay_hint: Optional[InlayHintClientCapabilities] = None
-    # TODO diagnostic?: DiagnosticClientCapabilities;
+    diagnostic: Optional[DiagnosticClientCapabilities] = None
 
 
 @dataclass(repr=False)
@@ -683,6 +689,16 @@ class InlineValueWorkspaceClientCapabilities(Model):
 
 
 @dataclass(repr=False)
+class InlayHintWorkspaceClientCapabilities(Model):
+    refresh_support: Optional[bool] = None
+
+
+@dataclass(repr=False)
+class DiagnosticWorkspaceClientCapabilities(Model):
+    refresh_support: Optional[bool] = None
+
+
+@dataclass(repr=False)
 class ClientCapabilitiesWorkspace(Model):
     apply_edit: Optional[bool] = None
     workspace_edit: Optional[WorkspaceEditClientCapabilities] = None
@@ -696,6 +712,8 @@ class ClientCapabilitiesWorkspace(Model):
     code_lens: Optional[CodeLensWorkspaceClientCapabilities] = None
     file_operations: Optional[ClientCapabilitiesWorkspaceFileOperationsWorkspaceClientCapabilities] = None
     inline_value: Optional[InlineValueWorkspaceClientCapabilities] = None
+    inlay_hint: Optional[InlayHintWorkspaceClientCapabilities] = None
+    diagnostics: Optional[DiagnosticWorkspaceClientCapabilities] = None
 
 
 @dataclass(repr=False)
@@ -705,10 +723,18 @@ class ClientCapabilitiesWindow(Model):
     show_document: Optional[ShowDocumentClientCapabilities] = None
 
 
+PositionEncodingKind = str
+
+UTF8: PositionEncodingKind = "utf-8"
+UTF16: PositionEncodingKind = "utf-16"
+UTF32: PositionEncodingKind = "utf-32"
+
+
 @dataclass(repr=False)
 class ClientCapabilitiesGeneral(Model):
     regular_expressions: Optional[RegularExpressionsClientCapabilities] = None
     markdown: Optional[MarkdownClientCapabilities] = None
+    position_encodings: Optional[List[PositionEncodingKind]] = None
 
 
 @dataclass(repr=False)
@@ -1058,6 +1084,7 @@ class InlineValueRegistrationOptions(InlineValueOptions, TextDocumentRegistratio
 
 @dataclass(repr=False)
 class ServerCapabilities(Model):
+    position_encoding: Optional[PositionEncodingKind] = None
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None] = None
     completion_provider: Optional[CompletionOptions] = None
     hover_provider: Union[bool, HoverOptions, None] = None
@@ -2097,9 +2124,8 @@ PrepareRenameResult = Union[Range, PrepareRenameResultWithPlaceHolder, PrepareRe
 
 @dataclass(repr=False)
 class InlineValueContext(Model):
-    # TODO: this differs from definition in the LSP 3.17 spec
-    stopped_location: Union[Range, List[Position]]
-    frame_id: Optional[int] = None
+    frame_id: int
+    stopped_location: Range
 
 
 @dataclass(repr=False)
