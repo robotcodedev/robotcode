@@ -467,16 +467,47 @@ class CompletionCollector(ModelHelperMixin):
             for setting in KEYWORD_SETTINGS
         ]
 
+    def get_keyword_snipped_text(self, kw: KeywordDoc, in_template: bool) -> str:
+        from robot.variables.search import VariableIterator
+
+        if not kw.is_embedded:
+            return kw.name
+
+        result = ""
+        for index, (before, variable, after) in enumerate(
+            VariableIterator(kw.name, identifiers="$", ignore_errors=True)
+        ):
+            var_name = variable[2:-1].split(":", 1)[0]
+            result += before
+            result += "${" + str(index + 1) + ":"
+            if in_template:
+                result += "\\${"
+
+            result += var_name
+
+            if in_template:
+                result += "\\}"
+
+            result += "}"
+
+        result += after
+
+        return result
+
     async def create_keyword_completion_items(
-        self, token: Optional[Token], position: Position, *, add_reserverd: bool = True, add_none: bool = False
+        self,
+        token: Optional[Token],
+        position: Position,
+        *,
+        add_reserverd: bool = True,
+        add_none: bool = False,
+        in_template: bool = False,
     ) -> List[CompletionItem]:
         result: List[CompletionItem] = []
         if self.document is None:
             return []
 
         r: Optional[Range] = None
-
-        # TODO: create Snippet for embedded keywords?
 
         if token is not None:
             r = range_from_token(token)
@@ -516,8 +547,17 @@ class CompletionCollector(ModelHelperMixin):
                                     detail=f"{CompleteResultKind.KEYWORD.value} "
                                     f"{f'({kw.libname})' if kw.libname is not None else ''}",
                                     sort_text=f"020_{kw.name}",
-                                    insert_text_format=InsertTextFormat.PLAINTEXT,
-                                    text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
+                                    insert_text_format=InsertTextFormat.PLAINTEXT
+                                    if not kw.is_embedded
+                                    else InsertTextFormat.SNIPPET,
+                                    text_edit=TextEdit(
+                                        range=r,
+                                        new_text=kw.name
+                                        if not kw.is_embedded
+                                        else self.get_keyword_snipped_text(kw, in_template),
+                                    )
+                                    if r is not None
+                                    else None,
                                     data={
                                         "document_uri": str(self.document.uri),
                                         "type": CompleteResultKind.KEYWORD.name,
@@ -540,6 +580,7 @@ class CompletionCollector(ModelHelperMixin):
                             for kw in res.library_doc.keywords.values():
                                 if kw.is_error_handler:
                                     continue
+
                                 result.append(
                                     CompletionItem(
                                         label=kw.name,
@@ -547,8 +588,15 @@ class CompletionCollector(ModelHelperMixin):
                                         detail=f"{CompleteResultKind.KEYWORD.value} "
                                         f"{f'({kw.libname})' if kw.libname is not None else ''}",
                                         sort_text=f"020_{kw.name}",
-                                        insert_text_format=InsertTextFormat.PLAINTEXT,
-                                        text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
+                                        insert_text_format=InsertTextFormat.PLAINTEXT
+                                        if not kw.is_embedded
+                                        else InsertTextFormat.SNIPPET,
+                                        text_edit=TextEdit(
+                                            range=r,
+                                            new_text=kw.name
+                                            if not kw.is_embedded
+                                            else self.get_keyword_snipped_text(kw, in_template),
+                                        ),
                                         data={
                                             "document_uri": str(self.document.uri),
                                             "type": CompleteResultKind.KEYWORD.name,
@@ -561,6 +609,9 @@ class CompletionCollector(ModelHelperMixin):
 
                     return result
 
+        if r is None:
+            r = Range(position, position)
+
         for kw in await self.namespace.get_keywords():
             if kw.is_error_handler:
                 continue
@@ -572,8 +623,11 @@ class CompletionCollector(ModelHelperMixin):
                     detail=f"{CompleteResultKind.KEYWORD.value} {f'({kw.libname})' if kw.libname is not None else ''}",
                     deprecated=kw.is_deprecated,
                     sort_text=f"020_{kw.name}",
-                    insert_text_format=InsertTextFormat.PLAINTEXT,
-                    text_edit=TextEdit(range=r, new_text=kw.name) if r is not None else None,
+                    insert_text_format=InsertTextFormat.PLAINTEXT if not kw.is_embedded else InsertTextFormat.SNIPPET,
+                    text_edit=TextEdit(
+                        range=r,
+                        new_text=kw.name if not kw.is_embedded else self.get_keyword_snipped_text(kw, in_template),
+                    ),
                     data={
                         "document_uri": str(self.document.uri),
                         "type": CompleteResultKind.KEYWORD.name,
@@ -593,7 +647,7 @@ class CompletionCollector(ModelHelperMixin):
                     sort_text=f"030_{v.name}",
                     deprecated=v.library_doc.is_deprecated,
                     insert_text_format=InsertTextFormat.PLAINTEXT,
-                    text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
+                    text_edit=TextEdit(range=r, new_text=k),
                     data={
                         "document_uri": str(self.document.uri),
                         "type": CompleteResultKind.MODULE.name,
@@ -614,7 +668,7 @@ class CompletionCollector(ModelHelperMixin):
                     deprecated=v.library_doc.is_deprecated,
                     sort_text=f"030_{v.name}",
                     insert_text_format=InsertTextFormat.PLAINTEXT,
-                    text_edit=TextEdit(range=r, new_text=v.name) if r is not None else None,
+                    text_edit=TextEdit(range=r, new_text=v.name),
                     data={
                         "document_uri": str(self.document.uri),
                         "type": CompleteResultKind.RESOURCE.name,
@@ -631,7 +685,7 @@ class CompletionCollector(ModelHelperMixin):
                     kind=CompletionItemKind.KEYWORD,
                     sort_text="998_NONE",
                     insert_text_format=InsertTextFormat.PLAINTEXT,
-                    text_edit=TextEdit(range=r, new_text="NONE") if r is not None else None,
+                    text_edit=TextEdit(range=r, new_text="NONE"),
                 )
             )
 
@@ -643,7 +697,7 @@ class CompletionCollector(ModelHelperMixin):
                         kind=CompletionItemKind.KEYWORD,
                         sort_text=f"999_{k}",
                         insert_text_format=InsertTextFormat.PLAINTEXT,
-                        text_edit=TextEdit(range=r, new_text=k) if r is not None else None,
+                        text_edit=TextEdit(range=r, new_text=k),
                     )
                 )
 
@@ -965,7 +1019,7 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.model.statements import Statement
+        from robot.parsing.model.statements import Statement, TestTemplate
 
         # TODO should this be configurable?
         if (
@@ -992,6 +1046,7 @@ class CompletionCollector(ModelHelperMixin):
                     position,
                     add_reserverd=False,
                     add_none=True,
+                    in_template=isinstance(node, TestTemplate),
                 )
 
         if len(statement_node.tokens) > 2:
@@ -1006,6 +1061,7 @@ class CompletionCollector(ModelHelperMixin):
                     position,
                     add_reserverd=False,
                     add_none=True,
+                    in_template=isinstance(node, TestTemplate),
                 )
 
         if len(statement_node.tokens) > 3:
@@ -1021,6 +1077,7 @@ class CompletionCollector(ModelHelperMixin):
                     position,
                     add_reserverd=False,
                     add_none=True,
+                    in_template=isinstance(node, TestTemplate),
                 )
 
         return None
@@ -1092,7 +1149,7 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.model.statements import Statement
+        from robot.parsing.model.statements import Statement, Template
 
         # TODO should this be configurable?
         if (
@@ -1120,6 +1177,7 @@ class CompletionCollector(ModelHelperMixin):
                     position,
                     add_reserverd=False,
                     add_none=True,
+                    in_template=isinstance(node, Template),
                 )
 
         if len(statement_node.tokens) > 3:
@@ -1130,10 +1188,7 @@ class CompletionCollector(ModelHelperMixin):
             r = range_from_token(token)
             if position.is_in_range(r):
                 return await self.create_keyword_completion_items(
-                    token,
-                    position,
-                    add_reserverd=False,
-                    add_none=True,
+                    token, position, add_reserverd=False, add_none=True, in_template=isinstance(node, Template)
                 )
 
         if len(statement_node.tokens) > 4:
@@ -1149,6 +1204,7 @@ class CompletionCollector(ModelHelperMixin):
                     position,
                     add_reserverd=False,
                     add_none=True,
+                    in_template=isinstance(node, Template),
                 )
 
         return None
