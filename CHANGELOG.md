@@ -2,7 +2,9 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
+## [Unreleased]
+- none so far
+##  0.13.1
 
 - Switching to LSP Client 8.0.0 requires a VSCode version >= 1.67
 - Create snippets for embedded argument keywords
