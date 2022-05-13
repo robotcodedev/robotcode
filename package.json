@@ -18,7 +18,7 @@
     "url": "https://github.com/d-biehl/robotcode/issues"
   },
   "engines": {
-    "vscode": "^1.63.0"
+    "vscode": "^1.67.0"
   },
   "categories": [
     "Programming Languages",
@@ -772,7 +772,7 @@
     "@types/glob": "^7.2.0",
     "@types/mocha": "^9.1.1",
     "@types/node": "^14.16.0",
-    "@types/vscode": "^1.63.0",
+    "@types/vscode": "^1.67.0",
     "@typescript-eslint/eslint-plugin": "^5.23.0",
     "@typescript-eslint/parser": "^5.23.0",
     "@vscode/debugadapter-testsupport": "^1.55.1",

@@ -7,7 +7,7 @@ to [Visual Studio Code](https://code.visualstudio.com/), including [features](#f
 
 * Python 3.8 or above
 * Robotframework 4.0 and above
-* VSCode version 1.61 and above
+* VSCode version 1.67 and above
 
 ## Installed extensions
 

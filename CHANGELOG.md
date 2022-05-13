@@ -2,8 +2,10 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Switching to LSP Client 8.0.0 requires a VSCode version >= 1.67
+
 ##  0.13.0
 
 - Some corrections in highlightning to provide better bracket matching in arguments
