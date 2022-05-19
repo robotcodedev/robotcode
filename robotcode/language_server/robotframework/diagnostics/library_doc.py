@@ -30,9 +30,15 @@ from typing import (
 
 from ....utils.path import path_is_relative_to
 from ...common.lsp_types import Position, Range
+from ..utils.ast_utils import Token, range_from_token
 from ..utils.markdownformatter import MarkDownFormatter
 from ..utils.version import get_robot_version
-from .entities import ImportedVariableDefinition, VariableDefinition
+from .entities import (
+    ArgumentDefinition,
+    ImportedVariableDefinition,
+    SourceEntity,
+    VariableDefinition,
+)
 
 RUN_KEYWORD_NAMES = [
     "Run Keyword",
@@ -284,14 +290,12 @@ class ArgumentSpec:
 
 
 @dataclass
-class KeywordDoc:
+class KeywordDoc(SourceEntity):
     name: str = ""
+    name_token: Optional[Token] = None
     args: Tuple[KeywordArgumentDoc, ...] = ()
     doc: str = ""
     tags: Tuple[str, ...] = ()
-    source: Optional[str] = None
-    line_no: int = -1
-    end_line_no: int = -1
     type: str = "keyword"
     libname: Optional[str] = None
     libtype: Optional[str] = None
@@ -306,9 +310,16 @@ class KeywordDoc:
     args_to_process: Optional[int] = None
     deprecated: bool = False
     arguments: Optional[ArgumentSpec] = None
+    argument_definitions: Optional[List[ArgumentDefinition]] = None
 
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
+
+    @property
+    def matcher(self) -> KeywordMatcher:
+        if not hasattr(self, "__matcher"):
+            self.__matcher = KeywordMatcher(self.name)
+        return self.__matcher
 
     @property
     def is_deprecated(self) -> bool:
@@ -330,13 +341,23 @@ class KeywordDoc:
 
     @property
     def range(self) -> Range:
-        return Range(
-            start=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
-            end=Position(
-                line=self.end_line_no - 1 if self.end_line_no >= 0 else self.line_no if self.line_no >= 0 else 0,
-                character=0,
-            ),
-        )
+        if self.name_token is not None:
+            return range_from_token(self.name_token)
+        else:
+            return Range(
+                start=Position(
+                    line=self.line_no - 1 if self.line_no > 0 else 0,
+                    character=self.col_offset if self.col_offset >= 0 else 0,
+                ),
+                end=Position(
+                    line=self.end_line_no - 1 if self.end_line_no >= 0 else self.line_no if self.line_no > 0 else 0,
+                    character=self.end_col_offset
+                    if self.end_col_offset >= 0
+                    else self.col_offset
+                    if self.col_offset >= 0
+                    else 0,
+                ),
+            )
 
     def to_markdown(self, add_signature: bool = True, header_level: int = 0) -> str:
         if self.doc_format == DEFAULT_DOC_FORMAT:
@@ -502,7 +523,7 @@ class LibraryDoc:
     source: Optional[str] = None
     line_no: int = -1
     end_line_no: int = -1
-    inits: KeywordStore = field(default_factory=KeywordStore)
+    inits: KeywordStore = field(default_factory=KeywordStore, compare=False)
     keywords: KeywordStore = field(default_factory=KeywordStore, compare=False)
     module_spec: Optional[ModuleSpec] = None
     errors: Optional[List[Error]] = field(default=None, compare=False)
@@ -1227,9 +1248,10 @@ def get_library_doc(
                             tags=tuple(kw[0].tags),
                             source=kw[0].source,
                             line_no=kw[0].lineno,
+                            col_offset=-1,
+                            end_col_offset=-1,
+                            end_line_no=-1,
                             type="library",
-                            # libname=kw[1].libname,
-                            # longname=kw[1].longname,
                             libname=libdoc.name,
                             libtype=libdoc.type,
                             longname=f"{libdoc.name}.{kw[0].name}",
@@ -1268,6 +1290,9 @@ def get_library_doc(
                             tags=tuple(kw[0].tags),
                             source=kw[0].source,
                             line_no=kw[0].lineno,
+                            col_offset=-1,
+                            end_col_offset=-1,
+                            end_line_no=-1,
                             libname=libdoc.name,
                             libtype=libdoc.type,
                             longname=f"{libdoc.name}.{kw[0].name}",

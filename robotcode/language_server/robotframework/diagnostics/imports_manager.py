@@ -33,6 +33,7 @@ from ...common.lsp_types import DocumentUri, FileChangeType, FileEvent
 from ...common.parts.workspace import FileWatcherEntry, Workspace
 from ...common.text_document import TextDocument
 from ..configuration import RobotConfig
+from ..utils.ast_utils import HasError, HasErrors, Token
 from ..utils.async_ast import walk
 from ..utils.robot_path import find_file_ex
 from ..utils.version import get_robot_version
@@ -859,16 +860,20 @@ class ImportsManager:
 
         from robot.errors import DataError
         from robot.libdocpkg.robotbuilder import KeywordDocBuilder
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import KeywordName
         from robot.running.builder.transformers import ResourceBuilder
         from robot.running.model import ResourceFile
         from robot.running.usererrorhandler import UserErrorHandler
         from robot.running.userkeyword import UserLibrary
 
-        from ..utils.ast_utils import HasError, HasErrors
-
         errors: List[Error] = []
+        keyword_names: List[KeywordName] = []
 
         async for node in walk(model):
+            if isinstance(node, KeywordName):
+                keyword_names.append(node)
+
             error = node.error if isinstance(node, HasError) else None
             if error is not None:
                 errors.append(Error(message=error, type_name="ModelError", source=source, line_no=node.lineno))
@@ -877,6 +882,13 @@ class ImportsManager:
                 if node_errors is not None:
                     for e in node_errors:
                         errors.append(Error(message=e, type_name="ModelError", source=source, line_no=node.lineno))
+
+        def get_keyword_name_token_from_line(line: int) -> Optional[Token]:
+            for keyword_name in keyword_names:
+                if keyword_name.lineno == line:
+                    return cast(Token, keyword_name.get_token(RobotToken.KEYWORD_NAME))
+
+            return None
 
         res = ResourceFile(source=source)
 
@@ -938,7 +950,11 @@ class ImportsManager:
                     doc=kw[0].doc,
                     tags=tuple(kw[0].tags),
                     source=kw[0].source,
+                    name_token=get_keyword_name_token_from_line(kw[0].lineno),
                     line_no=kw[0].lineno,
+                    col_offset=-1,
+                    end_col_offset=-1,
+                    end_line_no=-1,
                     libname=libdoc.name,
                     libtype=libdoc.type,
                     is_embedded=is_embedded_keyword(kw[0].name),

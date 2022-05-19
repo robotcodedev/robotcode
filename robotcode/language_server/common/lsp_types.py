@@ -566,7 +566,7 @@ class SemanticTokensClientCapabilitiesRequestsFull(Model):
 
 @dataclass(repr=False)
 class SemanticTokensClientCapabilitiesRequests(Model):
-    range: Union[bool, Dict[Any, Any], None]
+    range: Union[bool, Dict[Any, Any], None] = None
     full: Union[SemanticTokensClientCapabilitiesRequestsFull, bool, None] = None
 
 
@@ -1203,6 +1203,9 @@ class Position(Model):
 
         return range.start <= self < range.end
 
+    def __hash__(self) -> int:
+        return hash((self.line, self.character))
+
 
 @dataclass(repr=False)
 class Range(Model):
@@ -1238,6 +1241,9 @@ class Range(Model):
 
     def is_in_range(self, range: Range) -> bool:
         return range.start.is_in_range(self) and range.end.is_in_range(self)
+
+    def __hash__(self) -> int:
+        return hash((self.start, self.end))
 
 
 @dataclass(repr=False)
@@ -1396,6 +1402,9 @@ class CodeDescription(Model):
 class Location(Model):
     uri: DocumentUri
     range: Range
+
+    def __hash__(self) -> int:
+        return hash((self.uri, self.range))
 
 
 @dataclass(repr=False)

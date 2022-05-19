@@ -2,8 +2,11 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- References are now collected at source code analyze phase
+  - this speeds up thinks like find references/renaming/highlight and so on
+
 ##  0.13.1
 
 - Switching to LSP Client 8.0.0 requires a VSCode version >= 1.67

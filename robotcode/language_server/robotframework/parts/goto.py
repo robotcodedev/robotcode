@@ -149,10 +149,10 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         LocationLink(
                             origin_selection_range=range_from_token(var_token),
                             target_uri=str(Uri.from_path(variable.source)),
-                            target_range=variable.range(),
+                            target_range=variable.range,
                             target_selection_range=range_from_token(variable.name_token)
                             if variable.name_token
-                            else variable.range(),
+                            else variable.range,
                         )
                     ]
         return None
@@ -189,10 +189,10 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         LocationLink(
                             origin_selection_range=range_from_token(var_token),
                             target_uri=str(Uri.from_path(variable.source)),
-                            target_range=variable.range(),
+                            target_range=variable.range,
                             target_selection_range=range_from_token(variable.name_token)
                             if variable.name_token
-                            else variable.range(),
+                            else variable.range,
                         )
                     ]
 
@@ -230,10 +230,10 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         LocationLink(
                             origin_selection_range=range_from_token(var_token),
                             target_uri=str(Uri.from_path(variable.source)),
-                            target_range=variable.range(),
+                            target_range=variable.range,
                             target_selection_range=range_from_token(variable.name_token)
                             if variable.name_token
-                            else variable.range(),
+                            else variable.range,
                         )
                     ]
         return None

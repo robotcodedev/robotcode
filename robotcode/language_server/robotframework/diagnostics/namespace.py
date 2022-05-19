@@ -19,6 +19,7 @@ from typing import (
     NamedTuple,
     Optional,
     Sequence,
+    Set,
     Tuple,
     Union,
     cast,
@@ -196,11 +197,13 @@ class BlockVariableVisitor(AsyncVisitor):
                     match = searcher.search(variable_token.value)
                     if match.base is None:
                         continue
-                    name = f"{match.identifier}{{{match.base.split(':', 1)[0]}}}"
-
-                    self._results[name] = ArgumentDefinition(
-                        name=name,
-                        name_token=strip_variable_token(variable_token),
+                    name = match.base.split(":", 1)[0]
+                    full_name = f"{match.identifier}{{{name}}}"
+                    var_token = strip_variable_token(variable_token)
+                    var_token.value = name
+                    self._results[full_name] = ArgumentDefinition(
+                        name=full_name,
+                        name_token=var_token,
                         line_no=variable_token.lineno,
                         col_offset=variable_token.col_offset,
                         end_line_no=variable_token.lineno,
@@ -232,6 +235,8 @@ class BlockVariableVisitor(AsyncVisitor):
         args: List[str] = []
         n = cast(Arguments, node)
         arguments = n.get_tokens(RobotToken.ARGUMENT)
+        argument_definitions = []
+
         for argument_token in (cast(RobotToken, e) for e in arguments):
             try:
                 argument = self.get_variable_token(argument_token)
@@ -247,7 +252,7 @@ class BlockVariableVisitor(AsyncVisitor):
 
                     if argument.value not in args:
                         args.append(argument.value)
-                        self._results[argument.value] = ArgumentDefinition(
+                        arg_def = ArgumentDefinition(
                             name=argument.value,
                             name_token=strip_variable_token(argument),
                             line_no=argument.lineno,
@@ -257,9 +262,14 @@ class BlockVariableVisitor(AsyncVisitor):
                             source=self.source,
                             keyword_doc=self.current_kw_doc,
                         )
+                        self._results[argument.value] = arg_def
+                        argument_definitions.append(arg_def)
 
             except VariableError:
                 pass
+
+        if self.current_kw_doc is not None:
+            self.current_kw_doc.argument_definitions = argument_definitions
 
     async def visit_ExceptHeader(self, node: ast.AST) -> None:  # noqa: N802
         from robot.errors import VariableError
@@ -292,7 +302,7 @@ class BlockVariableVisitor(AsyncVisitor):
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordCall
 
-        # TODO  analyse "Set Local/Global/Suite Variable"
+        # TODO  analyze "Set Local/Global/Suite Variable"
 
         n = cast(KeywordCall, node)
 
@@ -327,7 +337,7 @@ class BlockVariableVisitor(AsyncVisitor):
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import InlineIfHeader
 
-        # TODO  analyse "Set Local/Global/Suite Variable"
+        # TODO  analyze "Set Local/Global/Suite Variable"
 
         n = cast(InlineIfHeader, node)
 
@@ -495,7 +505,7 @@ class LibraryEntry:
     args: Tuple[Any, ...] = ()
     alias: Optional[str] = None
     import_range: Range = field(default_factory=lambda: Range.zero())
-    import_source: str = ""
+    import_source: Optional[str] = None
 
     def __str__(self) -> str:
         result = self.import_name
@@ -536,20 +546,19 @@ class Namespace:
         invalidated_callback: Callable[[Namespace], None],
         document: Optional[TextDocument] = None,
         document_type: Optional[DocumentType] = None,
+        keywords_namespace: Optional[Namespace] = None,
     ) -> None:
         super().__init__()
 
         self.imports_manager = imports_manager
-        self.imports_manager.imports_changed.add(self.imports_changed)
-        self.imports_manager.libraries_changed.add(self.libraries_changed)
-        self.imports_manager.resources_changed.add(self.resources_changed)
-        self.imports_manager.variables_changed.add(self.variables_changed)
 
         self.model = model
         self.source = source
         self.invalidated_callback = invalidated_callback
         self._document = weakref.ref(document) if document is not None else None
         self.document_type: Optional[DocumentType] = document_type
+        self.keywords_namespace = keywords_namespace
+
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
         self._libraries_matchers: Optional[Dict[KeywordMatcher, LibraryEntry]] = None
         self._resources: OrderedDict[str, ResourceEntry] = OrderedDict()
@@ -567,14 +576,24 @@ class Namespace:
         self._own_variables_lock = Lock()
         self._global_variables: Optional[List[VariableDefinition]] = None
         self._global_variables_lock = Lock()
+
         self._diagnostics: List[Diagnostic] = []
+        self._keyword_references: Dict[KeywordDoc, Set[Location]] = {}
+        self._variable_references: Dict[VariableDefinition, Set[Location]] = {}
+
         self._keywords: Optional[List[KeywordDoc]] = None
+
         self._keywords_lock = Lock()
 
         # TODO: how to get the search order from model
         self.search_order: Tuple[str, ...] = ()
 
         self._finder: Optional[KeywordFinder] = None
+
+        self.imports_manager.imports_changed.add(self.imports_changed)
+        self.imports_manager.libraries_changed.add(self.libraries_changed)
+        self.imports_manager.resources_changed.add(self.resources_changed)
+        self.imports_manager.variables_changed.add(self.variables_changed)
 
     @property
     def document(self) -> Optional[TextDocument]:
@@ -630,6 +649,9 @@ class Namespace:
             self._library_doc = None
             self._analyzed = False
             self._diagnostics = []
+            self._keyword_references = {}
+            self._variable_references = {}
+
             self._finder = None
 
             await self._reset_global_variables()
@@ -643,6 +665,21 @@ class Namespace:
         await self._analyze()
 
         return self._diagnostics
+
+    @_logger.call
+    async def get_keyword_references(self) -> Dict[KeywordDoc, Set[Location]]:
+        await self.ensure_initialized()
+
+        await self._analyze()
+
+        return self._keyword_references
+
+    async def get_variable_references(self) -> Dict[VariableDefinition, Set[Location]]:
+        await self.ensure_initialized()
+
+        await self._analyze()
+
+        return self._variable_references
 
     @_logger.call
     async def get_libraries(self) -> OrderedDict[str, LibraryEntry]:
@@ -686,6 +723,8 @@ class Namespace:
                         append_model_errors=self.document_type is not None
                         and self.document_type in [DocumentType.RESOURCE],
                     )
+                if self.keywords_namespace is not None:
+                    self._library_doc.keywords = (await self.keywords_namespace.get_library_doc()).keywords
 
         return self._library_doc
 
@@ -923,7 +962,7 @@ class Namespace:
                     result = await self._get_library_entry(
                         value.name, value.args, value.alias, base_dir, sentinel=value, variables=variables
                     )
-                    result.import_range = value.range()
+                    result.import_range = value.range
                     result.import_source = value.source
 
                     self._import_entries[value] = result
@@ -934,7 +973,7 @@ class Namespace:
                         and (len(result.library_doc.keywords) == 0 and not bool(result.library_doc.has_listener))
                     ):
                         await self.append_diagnostics(
-                            range=value.range(),
+                            range=value.range,
                             message=f"Imported library '{value.name}' contains no keywords.",
                             severity=DiagnosticSeverity.WARNING,
                             source=DIAGNOSTICS_SOURCE_NAME,
@@ -948,22 +987,24 @@ class Namespace:
                     if self.source == source:
                         if parent_import:
                             await self.append_diagnostics(
-                                range=parent_import.range(),
+                                range=parent_import.range,
                                 message="Possible circular import.",
                                 severity=DiagnosticSeverity.INFORMATION,
                                 source=DIAGNOSTICS_SOURCE_NAME,
                                 related_information=[
                                     DiagnosticRelatedInformation(
-                                        location=Location(str(Uri.from_path(value.source)), value.range()),
+                                        location=Location(str(Uri.from_path(value.source)), value.range),
                                         message=f"'{Path(self.source).name}' is also imported here.",
                                     )
-                                ],
+                                ]
+                                if value.source
+                                else None,
                             )
                     else:
                         result = await self._get_resource_entry(
                             value.name, base_dir, sentinel=value, variables=variables
                         )
-                        result.import_range = value.range()
+                        result.import_range = value.range
                         result.import_source = value.source
 
                         self._import_entries[value] = result
@@ -978,7 +1019,7 @@ class Namespace:
                             and not result.library_doc.keywords
                         ):
                             await self.append_diagnostics(
-                                range=value.range(),
+                                range=value.range,
                                 message=f"Imported resource file '{value.name}' is empty.",
                                 severity=DiagnosticSeverity.WARNING,
                                 source=DIAGNOSTICS_SOURCE_NAME,
@@ -993,7 +1034,7 @@ class Namespace:
                         value.name, value.args, base_dir, sentinel=value, variables=variables
                     )
 
-                    result.import_range = value.range()
+                    result.import_range = value.range
                     result.import_source = value.source
 
                     self._import_entries[value] = result
@@ -1005,7 +1046,7 @@ class Namespace:
                     if result.library_doc.source is not None and result.library_doc.errors:
                         if any(err.source for err in result.library_doc.errors):
                             await self.append_diagnostics(
-                                range=value.range(),
+                                range=value.range,
                                 message="Import definition contains errors.",
                                 severity=DiagnosticSeverity.ERROR,
                                 source=DIAGNOSTICS_SOURCE_NAME,
@@ -1040,7 +1081,7 @@ class Namespace:
                             )
                         for err in filter(lambda e: e.source is None, result.library_doc.errors):
                             await self.append_diagnostics(
-                                range=value.range(),
+                                range=value.range,
                                 message=err.message,
                                 severity=DiagnosticSeverity.ERROR,
                                 source=DIAGNOSTICS_SOURCE_NAME,
@@ -1049,7 +1090,7 @@ class Namespace:
                     elif result.library_doc.errors is not None:
                         for err in result.library_doc.errors:
                             await self.append_diagnostics(
-                                range=value.range(),
+                                range=value.range,
                                 message=err.message,
                                 severity=DiagnosticSeverity.ERROR,
                                 source=DIAGNOSTICS_SOURCE_NAME,
@@ -1061,7 +1102,7 @@ class Namespace:
             except BaseException as e:
                 if top_level:
                     await self.append_diagnostics(
-                        range=value.range(),
+                        range=value.range,
                         message=str(e),
                         severity=DiagnosticSeverity.ERROR,
                         source=DIAGNOSTICS_SOURCE_NAME,
@@ -1138,7 +1179,9 @@ class Namespace:
                                                 ),
                                                 message="",
                                             )
-                                        ],
+                                        ]
+                                        if already_imported_resources.import_source
+                                        else None,
                                     )
 
                     elif isinstance(entry, VariablesEntry):
@@ -1167,7 +1210,9 @@ class Namespace:
                                         ),
                                         message="",
                                     )
-                                ],
+                                ]
+                                if already_imported_variables[0].import_source
+                                else None,
                             )
 
                         if (entry.alias or entry.name or entry.import_name) not in self._variables:
@@ -1189,7 +1234,9 @@ class Namespace:
                                         ),
                                         message="",
                                     )
-                                ],
+                                ]
+                                if entry.import_source
+                                else None,
                             )
                             continue
 
@@ -1214,7 +1261,9 @@ class Namespace:
                                         ),
                                         message="",
                                     )
-                                ],
+                                ]
+                                if already_imported_library[0].import_source
+                                else None,
                             )
 
                         if (entry.alias or entry.name or entry.import_name) not in self._libraries:
@@ -1392,7 +1441,7 @@ class Namespace:
                     finally:
                         self._logger.debug(
                             lambda: f"end collecting {len(self._keywords) if self._keywords else 0}"
-                            f" keywords in {time.time()-current_time}s analyse {i} keywords"
+                            f" keywords in {time.time()-current_time}s analyze {i} keywords"
                         )
 
         return self._keywords
@@ -1430,10 +1479,15 @@ class Namespace:
                     self._logger.debug(lambda: f"start analyze {self.document}")
 
                     try:
-
                         result = await Analyzer(self.model, self).run()
 
-                        self._diagnostics += result
+                        self._diagnostics += result.diagnostics
+                        if self.keywords_namespace is not None:
+                            self._keyword_references = await self.keywords_namespace.get_keyword_references()
+                            self._variable_references = await self.keywords_namespace.get_variable_references()
+                        else:
+                            self._keyword_references = result.keyword_references
+                            self._variable_references = result.variable_references
 
                         lib_doc = await self.get_library_doc()
 

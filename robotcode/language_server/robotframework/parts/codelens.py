@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import ast
-from typing import TYPE_CHECKING, Any, List, Optional, cast
+from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, cast
 
-from ....utils.async_tools import create_sub_task, threaded
+from robotcode.language_server.robotframework.diagnostics.library_doc import KeywordDoc
+
+from ....utils.async_tools import create_sub_task, run_coroutine_in_thread, threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import CodeLens, Command
@@ -26,6 +28,8 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
 
         parent.code_lens.collect.add(self.collect)
         parent.code_lens.resolve.add(self.resolve)
+
+        self._running_task: Set[Tuple[TextDocument, KeywordDoc]] = set()
 
     @language_id("robotframework")
     @threaded()
@@ -118,13 +122,28 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
                         if document is None or kw_doc is None:
                             return
 
-                        await self.parent.robot_references.find_keyword_references(
-                            document, kw_doc, include_declaration=False
+                        await run_coroutine_in_thread(
+                            self.parent.robot_references.find_keyword_references,
+                            document,
+                            kw_doc,
+                            include_declaration=False,
                         )
+                        # await self.parent.robot_references.find_keyword_references(
+                        #     document, kw_doc, include_declaration=False
+                        # )
 
                         await self.parent.code_lens.refresh()
 
-                    create_sub_task(find_refs(), loop=self.parent.loop)
+                    key = (document, kw_doc)
+                    if key not in self._running_task:
+                        task = create_sub_task(find_refs(), loop=self.parent.loop)
+
+                        def done(task: Any) -> None:
+                            self._running_task.remove(key)
+
+                        task.add_done_callback(done)
+
+                        self._running_task.add(key)
                 else:
                     references = await self.parent.robot_references.find_keyword_references(
                         document, kw_doc, include_declaration=False

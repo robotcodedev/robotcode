@@ -212,7 +212,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     [
                         Location(
                             uri=str(Uri.from_path(variable.source)),
-                            range=range_from_token(variable.name_token) if variable.name_token else variable.range(),
+                            range=range_from_token(variable.name_token) if variable.name_token else variable.range,
                         ),
                     ]
                     if context.include_declaration and variable.source

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import itertools
 import re
-from typing import Any, List, Optional, Tuple, Union, cast
+from collections import defaultdict
+from dataclasses import dataclass
+from typing import Any, AsyncGenerator, Dict, List, Optional, Set, Tuple, Union, cast
 
 from ....utils.uri import Uri
 from ...common.lsp_types import (
@@ -23,17 +26,26 @@ from ..utils.ast_utils import (
     Statement,
     Token,
     is_not_variable_token,
+    iter_over_keyword_names_and_owners,
     range_from_node,
     range_from_node_or_token,
     range_from_token,
+    tokenize_variables,
 )
 from ..utils.async_ast import AsyncVisitor
-from .entities import VariableNotFoundDefinition
+from .entities import VariableDefinition, VariableNotFoundDefinition
 from .library_doc import KeywordDoc, is_embedded_keyword
 from .namespace import DIAGNOSTICS_SOURCE_NAME, KeywordFinder, Namespace
 
 EXTRACT_COMMENT_PATTERN = re.compile(r".*(?:^ *|\t+| {2,})#(?P<comment>.*)$")
 ROBOTCODE_PATTERN = re.compile(r"(?P<marker>\brobotcode\b)\s*:\s*(?P<rule>\b\w+\b)")
+
+
+@dataclass
+class AnalyzerResult:
+    diagnostics: List[Diagnostic]
+    keyword_references: Dict[KeywordDoc, Set[Location]]
+    variable_references: Dict[VariableDefinition, Set[Location]]
 
 
 class Analyzer(AsyncVisitor, ModelHelperMixin):
@@ -47,12 +59,46 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         self.test_template: Optional[TestTemplate] = None
         self.template: Optional[Template] = None
         self.node_stack: List[ast.AST] = []
+        self._diagnostics: List[Diagnostic] = []
+        self._keyword_references: Dict[KeywordDoc, Set[Location]] = defaultdict(set)
+        self._variable_references: Dict[VariableDefinition, Set[Location]] = defaultdict(set)
 
-    async def run(self) -> List[Diagnostic]:
-        self._results: List[Diagnostic] = []
+    async def run(self) -> AnalyzerResult:
+        self._diagnostics = []
+        self._keyword_references = defaultdict(set)
 
         await self.visit(self.model)
-        return self._results
+
+        return AnalyzerResult(self._diagnostics, self._keyword_references, self._variable_references)
+
+    async def yield_argument_name_and_rest(self, node: ast.AST, token: Token) -> AsyncGenerator[Token, None]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Arguments
+
+        if isinstance(node, Arguments) and token.type == RobotToken.ARGUMENT:
+            argument = next(
+                (
+                    v
+                    for v in itertools.dropwhile(
+                        lambda t: t.type in RobotToken.NON_DATA_TOKENS,
+                        tokenize_variables(token, ignore_errors=True),
+                    )
+                    if v.type == RobotToken.VARIABLE
+                ),
+                None,
+            )
+            if argument is None or argument.value == token.value:
+                yield token
+            else:
+                yield argument
+                i = len(argument.value)
+
+                async for t in self.yield_argument_name_and_rest(
+                    node, RobotToken(token.type, token.value[i:], token.lineno, token.col_offset + i, token.error)
+                ):
+                    yield t
+        else:
+            yield token
 
     async def visit(self, node: ast.AST) -> None:
         from robot.parsing.lexer.tokens import Token as RobotToken
@@ -77,29 +123,35 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     severity = DiagnosticSeverity.HINT
 
             if isinstance(node, HasTokens) and not isinstance(node, (TestTemplate, Template)):
-                for token in (
+                for token1 in (
                     t
                     for t in node.tokens
                     if t.type != RobotToken.VARIABLE and t.error is None and contains_variable(t.value, "$@&%")
                 ):
-                    if isinstance(node, Arguments) and token.value == "@{}":
-                        continue
+                    async for token in self.yield_argument_name_and_rest(node, token1):
+                        if isinstance(node, Arguments) and token.value == "@{}":
+                            continue
 
-                    async for var_token, var in self.iter_variables_from_token(
-                        token,
-                        self.namespace,
-                        self.node_stack,
-                        range_from_token(token).start,
-                        skip_commandline_variables=False,
-                        return_not_found=True,
-                    ):
-                        if isinstance(var, VariableNotFoundDefinition):
-                            await self.append_diagnostics(
-                                range=range_from_token(var_token),
-                                message=f"Variable '{var.name}' not found.",
-                                severity=severity,
-                                source=DIAGNOSTICS_SOURCE_NAME,
-                            )
+                        async for var_token, var in self.iter_variables_from_token(
+                            token,
+                            self.namespace,
+                            self.node_stack,
+                            range_from_token(token).start,
+                            skip_commandline_variables=False,
+                            return_not_found=True,
+                        ):
+                            if isinstance(var, VariableNotFoundDefinition):
+                                await self.append_diagnostics(
+                                    range=range_from_token(var_token),
+                                    message=f"Variable '{var.name}' not found.",
+                                    severity=severity,
+                                    source=DIAGNOSTICS_SOURCE_NAME,
+                                )
+                            else:
+                                if self.namespace.document is not None:
+                                    self._variable_references[var].add(
+                                        Location(self.namespace.document.document_uri, range_from_token(var_token))
+                                    )
             if (
                 isinstance(node, Statement)
                 and isinstance(node, self.get_expression_statement_types())
@@ -120,38 +172,11 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                             severity=DiagnosticSeverity.ERROR,
                             source=DIAGNOSTICS_SOURCE_NAME,
                         )
-            elif isinstance(node, Statement) and isinstance(node, KeywordCall) and node.keyword:
-                kw_doc = await self.namespace.find_keyword(node.keyword)
-                if kw_doc is not None and kw_doc.longname in [
-                    "BuiltIn.Evaluate",
-                    "BuiltIn.Should Be True",
-                    "BuiltIn.Should Not Be True",
-                    "BuiltIn.Skip If",
-                    "BuiltIn.Continue For Loop If",
-                    "BuiltIn.Exit For Loop If",
-                    "BuiltIn.Return From Keyword If",
-                    "BuiltIn.Run Keyword And Return If",
-                    "BuiltIn.Pass Execution If",
-                    "BuiltIn.Run Keyword If",
-                    "BuiltIn.Run Keyword Unless",
-                ]:
-                    tokens = node.get_tokens(RobotToken.ARGUMENT)
-                    if tokens and (token := tokens[0]):
-                        async for var_token, var in self.iter_expression_variables_from_token(
-                            token,
-                            self.namespace,
-                            self.node_stack,
-                            range_from_token(token).start,
-                            skip_commandline_variables=False,
-                            return_not_found=True,
-                        ):
-                            if isinstance(var, VariableNotFoundDefinition):
-                                await self.append_diagnostics(
-                                    range=range_from_token(var_token),
-                                    message=f"Variable '{var.name}' not found.",
-                                    severity=DiagnosticSeverity.ERROR,
-                                    source=DIAGNOSTICS_SOURCE_NAME,
-                                )
+                    else:
+                        if self.namespace.document is not None:
+                            self._variable_references[var].add(
+                                Location(self.namespace.document.document_uri, range_from_token(var_token))
+                            )
 
             await super().visit(node)
         finally:
@@ -191,7 +216,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         if await self.should_ignore(self.namespace.document, range):
             return
 
-        self._results.append(
+        self._diagnostics.append(
             Diagnostic(range, message, severity, code, code_description, source, tags, related_information, data)
         )
 
@@ -204,7 +229,9 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         analyse_run_keywords: bool = True,
         allow_variables: bool = False,
     ) -> Optional[KeywordDoc]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Template, TestTemplate
+        from robot.utils.escaping import split_from_equals
 
         result: Optional[KeywordDoc] = None
 
@@ -212,11 +239,32 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             if not allow_variables and not is_not_variable_token(keyword_token):
                 return None
 
+            keyword_token = self.strip_bdd_prefix(keyword_token)
+            kw_range = range_from_token(keyword_token)
+
+            if keyword is not None:
+                libraries_matchers = await self.namespace.get_libraries_matchers()
+                resources_matchers = await self.namespace.get_resources_matchers()
+
+                for lib, name in iter_over_keyword_names_and_owners(keyword):
+                    if (
+                        lib is not None
+                        and not any(k for k in libraries_matchers.keys() if k == lib)
+                        and not any(k for k in resources_matchers.keys() if k == lib)
+                    ):
+                        continue
+
+                    lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(self.namespace, keyword_token)
+                    if lib_entry and kw_namespace:
+                        r = range_from_token(keyword_token)
+                        r.end.character = r.start.character + len(kw_namespace)
+                        kw_range.start.character = r.end.character + 1
+
             result = await self.finder.find_keyword(keyword)
 
             for e in self.finder.diagnostics:
                 await self.append_diagnostics(
-                    range=range_from_node_or_token(node, self.strip_bdd_prefix(keyword_token)),
+                    range=kw_range,
                     message=e.message,
                     severity=e.severity,
                     source=DIAGNOSTICS_SOURCE_NAME,
@@ -224,9 +272,12 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 )
 
             if result is not None:
+                if self.namespace.document is not None:
+                    self._keyword_references[result].add(Location(self.namespace.document.document_uri, kw_range))
+
                 if result.errors:
                     await self.append_diagnostics(
-                        range=range_from_node_or_token(node, self.strip_bdd_prefix(keyword_token)),
+                        range=kw_range,
                         message="Keyword definition contains errors.",
                         severity=DiagnosticSeverity.ERROR,
                         source=DIAGNOSTICS_SOURCE_NAME,
@@ -269,7 +320,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
                 if result.is_deprecated:
                     await self.append_diagnostics(
-                        range=range_from_node_or_token(node, self.strip_bdd_prefix(keyword_token)),
+                        range=kw_range,
                         message=f"Keyword '{result.name}' is deprecated"
                         f"{f': {result.deprecated_message}' if result.deprecated_message else ''}.",
                         severity=DiagnosticSeverity.HINT,
@@ -278,14 +329,14 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     )
                 if result.is_error_handler:
                     await self.append_diagnostics(
-                        range=range_from_node_or_token(node, self.strip_bdd_prefix(keyword_token)),
+                        range=kw_range,
                         message=f"Keyword definition contains errors: {result.error_handler_message}",
                         severity=DiagnosticSeverity.ERROR,
                         source=DIAGNOSTICS_SOURCE_NAME,
                     )
                 if result.is_reserved():
                     await self.append_diagnostics(
-                        range=range_from_node_or_token(node, self.strip_bdd_prefix(keyword_token)),
+                        range=kw_range,
                         message=f"'{result.name}' is a reserved keyword.",
                         severity=DiagnosticSeverity.ERROR,
                         source=DIAGNOSTICS_SOURCE_NAME,
@@ -305,10 +356,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     except BaseException as e:
                         await self.append_diagnostics(
                             range=Range(
-                                start=range_from_token(self.strip_bdd_prefix(keyword_token)).start,
-                                end=range_from_token(argument_tokens[-1]).end
-                                if argument_tokens
-                                else range_from_token(keyword_token).end,
+                                start=kw_range.start,
+                                end=range_from_token(argument_tokens[-1]).end if argument_tokens else kw_range.end,
                             ),
                             message=str(e),
                             severity=DiagnosticSeverity.ERROR,
@@ -326,6 +375,56 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 source=DIAGNOSTICS_SOURCE_NAME,
                 code=type(e).__qualname__,
             )
+
+        if self.namespace.document is not None and result is not None:
+            if result.longname in [
+                "BuiltIn.Evaluate",
+                "BuiltIn.Should Be True",
+                "BuiltIn.Should Not Be True",
+                "BuiltIn.Skip If",
+                "BuiltIn.Continue For Loop If",
+                "BuiltIn.Exit For Loop If",
+                "BuiltIn.Return From Keyword If",
+                "BuiltIn.Run Keyword And Return If",
+                "BuiltIn.Pass Execution If",
+                "BuiltIn.Run Keyword If",
+                "BuiltIn.Run Keyword Unless",
+            ]:
+                tokens = argument_tokens
+                if tokens and (token := tokens[0]):
+                    async for var_token, var in self.iter_expression_variables_from_token(
+                        token,
+                        self.namespace,
+                        self.node_stack,
+                        range_from_token(token).start,
+                        skip_commandline_variables=False,
+                        return_not_found=True,
+                    ):
+                        if isinstance(var, VariableNotFoundDefinition):
+                            await self.append_diagnostics(
+                                range=range_from_token(var_token),
+                                message=f"Variable '{var.name}' not found.",
+                                severity=DiagnosticSeverity.ERROR,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                            )
+                        else:
+                            if self.namespace.document is not None:
+                                self._variable_references[var].add(
+                                    Location(self.namespace.document.document_uri, range_from_token(var_token))
+                                )
+            if result.argument_definitions:
+                for arg in argument_tokens:
+                    name, value = split_from_equals(arg.value)
+                    if value is not None and name:
+                        arg_def = next(
+                            (e for e in result.argument_definitions if e.name_token and e.name_token.value == name),
+                            None,
+                        )
+                        if arg_def is not None:
+                            name_token = RobotToken(RobotToken.ARGUMENT, name, arg.lineno, arg.col_offset)
+                            self._variable_references[arg_def].add(
+                                Location(self.namespace.document.document_uri, range_from_token(name_token))
+                            )
 
         if result is not None and analyse_run_keywords:
             await self._analyse_run_keyword(result, node, argument_tokens)

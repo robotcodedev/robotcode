@@ -78,6 +78,8 @@ class Uri(Mapping[str, str]):
 
         self._parts.scheme = self._parts.scheme or _DEFAULT_SCHEME
 
+        self._path: Optional[Path] = None
+
     def __str__(self) -> str:
         return parse.urlunparse(tuple(self._parts))
 
@@ -85,7 +87,10 @@ class Uri(Mapping[str, str]):
         return f"{type(self).__name__}({repr(parse.urlunparse(tuple(self._parts)))})"
 
     def to_path(self) -> Path:
-        return Path(self._to_path_str())
+        if self._path is None:
+            self._path = Path(self._to_path_str())
+
+        return self._path
 
     def _to_path_str(self) -> str:
         """Returns the filesystem path of the given URI.

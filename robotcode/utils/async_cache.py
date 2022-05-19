@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Awaitable, Callable, Dict, List, Tuple, TypeVar, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, TypeVar, cast
 
 from .async_tools import Lock
 
@@ -20,15 +20,21 @@ class CacheEntry:
 
 
 class AsyncSimpleLRUCache:
-    def __init__(self, max_items: int = 128) -> None:
+    def __init__(self, max_items: Optional[int] = 128) -> None:
         self.max_items = max_items
 
         self._cache: Dict[Tuple[Any, ...], CacheEntry] = defaultdict(CacheEntry)
-        self._order: List[Tuple[Any, ...]] = []
+        if self.max_items:
+            self._order: List[Tuple[Any, ...]] = []
         self._lock = Lock()
 
     async def has(self, *args: Any, **kwargs: Any) -> bool:
-        return self._make_key(*args, **kwargs) in self._cache
+        key = self._make_key(*args, **kwargs)
+
+        if key in self._cache:
+            return self._cache[key].has_data
+
+        return False
 
     async def get(self, func: Callable[..., Awaitable[_T]], *args: Any, **kwargs: Any) -> _T:
         key = self._make_key(*args, **kwargs)
@@ -41,10 +47,11 @@ class AsyncSimpleLRUCache:
                 entry.data = await func(*args, **kwargs)
                 entry.has_data = True
 
-                self._order.insert(0, key)
+                if self.max_items:
+                    self._order.insert(0, key)
 
-                if len(self._order) > self.max_items:
-                    del self._cache[self._order.pop()]
+                    if len(self._order) > self.max_items:
+                        del self._cache[self._order.pop()]
 
             return cast(_T, entry.data)
 

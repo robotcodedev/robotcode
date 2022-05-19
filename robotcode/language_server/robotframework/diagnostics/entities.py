@@ -15,7 +15,17 @@ class SourceEntity:
     col_offset: int
     end_line_no: int
     end_col_offset: int
-    source: str
+    source: Optional[str]
+
+    @property
+    def range(self) -> Range:
+        return Range(
+            start=Position(line=self.line_no - 1, character=self.col_offset),
+            end=Position(line=self.end_line_no - 1, character=self.end_col_offset),
+        )
+
+    def __hash__(self) -> int:
+        return hash((self.line_no, self.col_offset, self.end_line_no, self.end_col_offset, self.source))
 
 
 @dataclass
@@ -23,6 +33,7 @@ class Import(SourceEntity):
     name: Optional[str]
     name_token: Optional[Token]
 
+    @property
     def range(self) -> Range:
         return Range(
             start=Position(
@@ -154,8 +165,9 @@ class VariableDefinition(SourceEntity):
         return self.__matcher
 
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type, self.range, self.source, self.name_token))
+        return hash((type(self), self.name, self.type, self.range, self.source))
 
+    @property
     def range(self) -> Range:
         return Range(
             start=Position(
