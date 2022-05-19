@@ -115,10 +115,10 @@ result:
   range:
     end:
       character: 0
-      line: 2918
+      line: 2862
     start:
       character: 0
-      line: 2917
+      line: 2861
   uri: libraries/BuiltIn.py
 - !Location
   range:
@@ -1640,15 +1640,6 @@ result:
     start:
       character: 8
       line: 86
-  uri: tests/variables.robot
-- !Location
-  range:
-    end:
-      character: 23
-      line: 93
-    start:
-      character: 20
-      line: 93
   uri: tests/variables.robot
 - !Location
   range:
