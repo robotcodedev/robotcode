@@ -84,3 +84,12 @@ result:
     start:
       character: 4
       line: 96
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 106
+    start:
+      character: 4
+      line: 106

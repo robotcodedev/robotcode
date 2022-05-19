@@ -1,0 +1,14 @@
+data: !GeneratedTestData
+  character: 34
+  line: 146
+  name: argument usage in argument
+result:
+- !Location
+  range:
+    end:
+      character: 22
+      line: 146
+    start:
+      character: 21
+      line: 146
+  uri: tests/references.robot

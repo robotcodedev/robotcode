@@ -3,7 +3,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional, Tuple
 
 from ...common.lsp_types import Position, Range
-from ..utils.ast_utils import Token
+from ..utils.ast_utils import Token, range_from_token
 
 if TYPE_CHECKING:
     from .library_doc import KeywordDoc
@@ -166,6 +166,13 @@ class VariableDefinition(SourceEntity):
 
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type, self.range, self.source))
+
+    @property
+    def name_range(self) -> Range:
+        if self.name_token is not None:
+            return range_from_token(self.name_token)
+        else:
+            return self.range
 
     @property
     def range(self) -> Range:

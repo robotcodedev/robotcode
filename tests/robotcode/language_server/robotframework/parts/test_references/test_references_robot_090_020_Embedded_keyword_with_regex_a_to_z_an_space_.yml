@@ -34,8 +34,8 @@ result:
   range:
     end:
       character: 34
-      line: 115
+      line: 118
     start:
       character: 0
-      line: 115
+      line: 118
   uri: tests/references.robot

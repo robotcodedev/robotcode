@@ -1,0 +1,32 @@
+data: !GeneratedTestData
+  character: 38
+  line: 105
+  name: embedded argument usage
+result:
+- !Location
+  range:
+    end:
+      character: 37
+      line: 102
+    start:
+      character: 32
+      line: 102
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 37
+      line: 102
+    start:
+      character: 32
+      line: 102
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 43
+      line: 105
+    start:
+      character: 38
+      line: 105
+  uri: tests/references.robot

@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 2
-  line: 106
-  name: Embedded keyword
-result: null

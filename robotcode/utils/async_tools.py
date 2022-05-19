@@ -606,21 +606,24 @@ class Lock:
                     self._waiters.remove(fut)
                     self._locked = True
         except asyncio.CancelledError:
-            await self._wake_up_first()
+            await self._wake_up_next()
             raise
 
         return True
 
     async def release(self) -> None:
+        import warnings
+
         async with self.__inner_lock():
-            if self._locked:
-                self._locked = False
-            else:
-                raise RuntimeError("Lock is not acquired.")
+            if not bool(self._waiters):
+                if self._locked:
+                    self._locked = False
+                else:
+                    warnings.warn(f"Lock is not acquired ({len(self._waiters) if self._waiters else 0} waiters).")
 
-            await self._wake_up_first()
+            await self._wake_up_next()
 
-    async def _wake_up_first(self) -> None:
+    async def _wake_up_next(self) -> None:
         if not self._waiters:
             return
 

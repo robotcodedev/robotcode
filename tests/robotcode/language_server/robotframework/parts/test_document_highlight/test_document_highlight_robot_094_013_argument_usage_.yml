@@ -16,6 +16,15 @@ result:
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
+      character: 30
+      line: 88
+    start:
+      character: 29
+      line: 88
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
       character: 48
       line: 88
     start:
@@ -30,3 +39,21 @@ result:
     start:
       character: 13
       line: 94
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 52
+      line: 99
+    start:
+      character: 51
+      line: 99
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 48
+      line: 101
+    start:
+      character: 47
+      line: 101

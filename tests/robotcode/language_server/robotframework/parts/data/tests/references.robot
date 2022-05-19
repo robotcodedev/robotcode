@@ -102,7 +102,10 @@ do something
 
 add ${number:[0-9]+} coins to ${thing}
 #^^  Embedded keyword
+#     ^^^^^^  Embedded keyword
     Log    added ${number} coins to ${thing}
+#                  ^^^^^^ embedded argument usage
+#                                     ^^^^^ embedded argument usage
 
 add ${what:[a-zA-Z]+} to ${thing}
 #^^  Embedded keyword

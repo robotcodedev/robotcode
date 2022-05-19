@@ -268,6 +268,15 @@ result:
   range:
     end:
       character: 7
+      line: 106
+    start:
+      character: 4
+      line: 106
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
       line: 10
     start:
       character: 4
@@ -961,109 +970,109 @@ result:
   range:
     end:
       character: 7
-      line: 104
+      line: 105
     start:
       character: 4
-      line: 104
+      line: 105
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 7
-      line: 108
+      line: 111
     start:
       character: 4
-      line: 108
+      line: 111
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 7
-      line: 109
+      line: 112
     start:
       character: 4
-      line: 109
+      line: 112
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 7
-      line: 113
+      line: 116
     start:
       character: 4
-      line: 113
+      line: 116
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 7
-      line: 117
+      line: 120
     start:
       character: 4
-      line: 117
+      line: 120
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 7
-      line: 121
+      line: 124
     start:
       character: 4
-      line: 121
+      line: 124
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 7
-      line: 127
+      line: 130
     start:
       character: 4
-      line: 127
+      line: 130
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 7
-      line: 129
+      line: 132
     start:
       character: 4
-      line: 129
+      line: 132
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 7
-      line: 137
+      line: 140
     start:
       character: 4
-      line: 137
+      line: 140
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 7
-      line: 139
+      line: 142
     start:
       character: 4
-      line: 139
+      line: 142
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 7
-      line: 147
+      line: 150
     start:
       character: 4
-      line: 147
+      line: 150
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 7
-      line: 149
+      line: 152
     start:
       character: 4
-      line: 149
+      line: 152
   uri: tests/references.robot
 - !Location
   range:

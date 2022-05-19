@@ -96,3 +96,14 @@ again a keyword with params
 #            ^ argument usage
     Log    ${c}
 #            ^ argument usage
+
+    Run Keyword If    ${a}    Should Be Equal    ${b}    ${c}
+    Run Keyword If    $a    Should Be Equal    ${{$c}}    ${c}
+    Run Keyword If    ${a}    run keyword    ${b}    ${{$c}}
+
+
+add ${number:[0-9]+} coins to ${thing}
+#     ^^^^^^  Embedded keyword
+    Log    added ${number} coins to ${thing}
+#                  ^^^^^^ embedded argument usage
+#                                     ^^^^^ embedded argument usage
