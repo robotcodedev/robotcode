@@ -32,6 +32,7 @@ from ....utils.path import path_is_relative_to
 from ...common.lsp_types import Position, Range
 from ..utils.ast_utils import Token, range_from_token
 from ..utils.markdownformatter import MarkDownFormatter
+from ..utils.match import normalize
 from ..utils.version import get_robot_version
 from .entities import (
     ArgumentDefinition,
@@ -111,10 +112,9 @@ class KeywordMatcher:
 
     @property
     def normalized_name(self) -> str:
-        from robot.utils.normalizing import normalize
 
         if self._normalized_name is None:
-            self._normalized_name = str(normalize(self.name, "_"))
+            self._normalized_name = str(normalize(self.name))
 
         return self._normalized_name
 
@@ -132,8 +132,6 @@ class KeywordMatcher:
         return self._embedded_arguments
 
     def __eq__(self, o: Any) -> bool:
-        from robot.utils.normalizing import normalize
-
         if isinstance(o, KeywordMatcher):
             if not self.embedded_arguments:
                 return self.normalized_name == o.normalized_name
@@ -146,7 +144,7 @@ class KeywordMatcher:
         if self.embedded_arguments:
             return self.embedded_arguments.name.match(o) is not None
 
-        return self.normalized_name == str(normalize(o, "_"))
+        return self.normalized_name == str(normalize(o))
 
     def __hash__(self) -> int:
         return hash(

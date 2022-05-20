@@ -37,6 +37,7 @@ from ..utils.ast_utils import (
     range_from_token,
 )
 from ..utils.async_ast import iter_nodes
+from ..utils.match import normalize
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -455,7 +456,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     ) -> List[Location]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import DefaultTags, ForceTags, Tags
-        from robot.utils.normalizing import normalize
 
         model = await self.parent.documents_cache.get_model(doc)
         if model is None:
@@ -463,12 +463,12 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         result: List[Location] = []
         if not is_normalized:
-            tag = normalize(tag, ignore="_")
+            tag = normalize(tag)
 
         async for node in iter_nodes(model):
             if isinstance(node, (ForceTags, DefaultTags, Tags)):
                 for token in node.get_tokens(RobotToken.ARGUMENT):
-                    if token.value and normalize(token.value, ignore="_") == tag:
+                    if token.value and normalize(token.value) == tag:
                         result.append(Location(str(doc.uri), range_from_token(token)))
 
         return result
@@ -489,10 +489,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         return None
 
     async def find_tag_references(self, document: TextDocument, tag: str) -> List[Location]:
-        from robot.utils.normalizing import normalize
-
         return await self._find_references_in_workspace(
-            document, self.find_tag_references_in_file, normalize(tag, ignore="_"), True
+            document, self.find_tag_references_in_file, normalize(tag), True
         )
 
     async def references_ForceTags(  # noqa: N802

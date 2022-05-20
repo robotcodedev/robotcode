@@ -49,6 +49,7 @@ from ..utils.ast_utils import (
     tokenize_variables,
 )
 from ..utils.async_ast import AsyncVisitor
+from ..utils.match import eq
 from ..utils.variables import BUILTIN_VARIABLES
 from .entities import (
     ArgumentDefinition,
@@ -1421,7 +1422,7 @@ class Namespace:
             async with self._keywords_lock:
                 if self._keywords is None:
 
-                    current_time = time.time()
+                    current_time = time.monotonic()
                     self._logger.debug("start collecting keywords")
                     try:
                         await self.ensure_initialized()
@@ -1437,7 +1438,7 @@ class Namespace:
                     finally:
                         self._logger.debug(
                             lambda: f"end collecting {len(self._keywords) if self._keywords else 0}"
-                            f" keywords in {time.time()-current_time}s analyze {i} keywords"
+                            f" keywords in {time.monotonic()-current_time}s analyze {i} keywords"
                         )
 
         return self._keywords
@@ -1465,6 +1466,8 @@ class Namespace:
 
     @_logger.call
     async def _analyze(self) -> None:
+        import time
+
         from .analyzer import Analyzer
 
         if not self._analyzed:
@@ -1473,6 +1476,7 @@ class Namespace:
                     canceled = False
 
                     self._logger.debug(lambda: f"start analyze {self.document}")
+                    start_time = time.monotonic()
 
                     try:
                         result = await Analyzer(self.model, self).run()
@@ -1507,10 +1511,11 @@ class Namespace:
                         raise
                     finally:
                         self._analyzed = not canceled
+
                         self._logger.debug(
-                            lambda: f"end analyzed {self.document} succeed"
+                            lambda: f"end analyzed {self.document} succeed in {time.monotonic() - start_time}s"
                             if self._analyzed
-                            else f"end analyzed {self.document} failed"
+                            else f"end analyzed {self.document} failed in {time.monotonic() - start_time}s"
                         )
 
     async def get_finder(self) -> KeywordFinder:
@@ -1632,8 +1637,6 @@ class KeywordFinder:
         return found[0][1] if found else None
 
     async def find_keywords(self, owner_name: str, name: str) -> Sequence[Tuple[LibraryEntry, KeywordDoc]]:
-        from robot.utils.match import eq
-
         return [
             (v, v.library_doc.keywords[name])
             async for v in async_chain(self.namespace._libraries.values(), self.namespace._resources.values())
@@ -1681,7 +1684,6 @@ class KeywordFinder:
     async def _get_keyword_based_on_search_order(
         self, entries: List[Tuple[LibraryEntry, KeywordDoc]]
     ) -> List[Tuple[LibraryEntry, KeywordDoc]]:
-        from robot.utils.match import eq
 
         for libname in self.namespace.search_order:
             for e in entries:

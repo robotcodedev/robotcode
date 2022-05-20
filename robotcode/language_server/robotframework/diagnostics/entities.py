@@ -94,8 +94,9 @@ class InvalidVariableError(Exception):
 
 class VariableMatcher:
     def __init__(self, name: str) -> None:
-        from robot.utils.normalizing import normalize
         from robot.variables.search import VariableSearcher
+
+        from ..utils.match import normalize
 
         self.name = name
 
@@ -107,7 +108,7 @@ class VariableMatcher:
 
         self.base = match.base
 
-        self.normalized_name = str(normalize(self.base, "_"))
+        self.normalized_name = str(normalize(self.base))
 
     def __eq__(self, o: object) -> bool:
         from robot.utils.normalizing import normalize
@@ -119,7 +120,7 @@ class VariableMatcher:
             searcher = VariableSearcher("$@&%", ignore_errors=True)
             match = searcher.search(o)
             base = match.base
-            normalized = str(normalize(base, "_"))
+            normalized = str(normalize(base))
             return self.normalized_name == normalized
         else:
             return False
