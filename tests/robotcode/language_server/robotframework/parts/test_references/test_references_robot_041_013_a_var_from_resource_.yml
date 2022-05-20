@@ -15,15 +15,6 @@ result:
 - !Location
   range:
     end:
-      character: 20
-      line: 1
-    start:
-      character: 2
-      line: 1
-  uri: resources/firstresource.resource
-- !Location
-  range:
-    end:
       character: 31
       line: 37
     start:

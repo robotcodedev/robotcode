@@ -36,20 +36,6 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
         if namespace is None:
             return None
 
-        all_kw_refs = await namespace.get_keyword_references()
-        if all_kw_refs:
-            for kw, kw_refs in all_kw_refs.items():
-                for r in kw_refs:
-                    if (kw.source == namespace.source and position in kw.range) or position in r.range:
-                        return [
-                            *(
-                                [DocumentHighlight(kw.range, DocumentHighlightKind.TEXT)]
-                                if kw.source == namespace.source
-                                else []
-                            ),
-                            *(DocumentHighlight(e.range, DocumentHighlightKind.TEXT) for e in kw_refs),
-                        ]
-
         all_variable_refs = await namespace.get_variable_references()
         if all_variable_refs:
             for var, var_refs in all_variable_refs.items():
@@ -62,6 +48,20 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
                                 else []
                             ),
                             *(DocumentHighlight(e.range, DocumentHighlightKind.TEXT) for e in var_refs),
+                        ]
+
+        all_kw_refs = await namespace.get_keyword_references()
+        if all_kw_refs:
+            for kw, kw_refs in all_kw_refs.items():
+                for r in kw_refs:
+                    if (kw.source == namespace.source and position in kw.range) or position in r.range:
+                        return [
+                            *(
+                                [DocumentHighlight(kw.range, DocumentHighlightKind.TEXT)]
+                                if kw.source == namespace.source
+                                else []
+                            ),
+                            *(DocumentHighlight(e.range, DocumentHighlightKind.TEXT) for e in kw_refs),
                         ]
 
         return None

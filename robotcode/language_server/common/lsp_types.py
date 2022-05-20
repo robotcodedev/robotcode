@@ -1228,6 +1228,19 @@ class Range(Model):
             ),
         )
 
+    @staticmethod
+    def invalid() -> "Range":
+        return Range(
+            start=Position(
+                line=-1,
+                character=-1,
+            ),
+            end=Position(
+                line=-1,
+                character=-1,
+            ),
+        )
+
     def extend(self, start_line: int = 0, start_character: int = 0, end_line: int = 0, end_character: int = 0) -> Range:
         return Range(
             start=Position(line=self.start.line + start_line, character=self.start.character + start_character),

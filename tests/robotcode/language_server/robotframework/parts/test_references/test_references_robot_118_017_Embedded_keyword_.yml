@@ -30,3 +30,12 @@ result:
       character: 4
       line: 92
   uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 34
+      line: 118
+    start:
+      character: 0
+      line: 118
+  uri: tests/references.robot

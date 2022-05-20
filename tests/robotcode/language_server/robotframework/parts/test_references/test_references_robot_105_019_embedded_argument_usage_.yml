@@ -15,15 +15,6 @@ result:
 - !Location
   range:
     end:
-      character: 12
-      line: 102
-    start:
-      character: 6
-      line: 102
-  uri: tests/references.robot
-- !Location
-  range:
-    end:
       character: 25
       line: 105
     start:

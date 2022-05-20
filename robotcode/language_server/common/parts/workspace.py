@@ -24,6 +24,7 @@ from typing import (
 )
 
 from ....jsonrpc2.protocol import rpc_method
+from ....utils.async_cache import AsyncSimpleLRUCache
 from ....utils.async_tools import (
     Lock,
     async_event,
@@ -161,6 +162,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         self._file_watchers_lock = Lock()
 
         self.parent.on_shutdown.add(self._on_shutdown)
+        self._config_cache = AsyncSimpleLRUCache(max_items=1000)
 
     @_logger.call
     async def _on_shutdown(self, sender: Any) -> None:
@@ -233,6 +235,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
     @rpc_method(name="workspace/didChangeConfiguration", param_type=DidChangeConfigurationParams)
     @_logger.call
     async def _workspace_did_change_configuration(self, settings: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
+        await self._config_cache.clear()
         self.settings = settings
         await self.did_change_configuration(self, settings)
 
@@ -308,6 +311,9 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         await self.did_delete_files(self, list(f.uri for f in files))
 
     async def get_configuration(self, section: Type[_TConfig], scope_uri: Union[str, Uri, None] = None) -> _TConfig:
+        return await self._config_cache.get(self._get_configuration, section, scope_uri)
+
+    async def _get_configuration(self, section: Type[_TConfig], scope_uri: Union[str, Uri, None] = None) -> _TConfig:
 
         config = await self.get_configuration_raw(
             section=cast(HasConfigSection, section).__config_section__, scope_uri=scope_uri

@@ -16,15 +16,6 @@ result:
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
-      character: 12
-      line: 53
-    start:
-      character: 6
-      line: 53
-- !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
-  range:
-    end:
       character: 31
       line: 55
     start:

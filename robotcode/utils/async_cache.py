@@ -24,9 +24,9 @@ class AsyncSimpleLRUCache:
         self.max_items = max_items
 
         self._cache: Dict[Tuple[Any, ...], CacheEntry] = defaultdict(CacheEntry)
+        self._order: Optional[List[Tuple[Any, ...]]] = None
         if self.max_items:
-            self._order: List[Tuple[Any, ...]] = []
-        self._lock = Lock()
+            self._order = []
 
     async def has(self, *args: Any, **kwargs: Any) -> bool:
         key = self._make_key(*args, **kwargs)
@@ -39,7 +39,6 @@ class AsyncSimpleLRUCache:
     async def get(self, func: Callable[..., Awaitable[_T]], *args: Any, **kwargs: Any) -> _T:
         key = self._make_key(*args, **kwargs)
 
-        # async with self._lock:
         entry = self._cache[key]
 
         async with entry.lock:
@@ -47,7 +46,7 @@ class AsyncSimpleLRUCache:
                 entry.data = await func(*args, **kwargs)
                 entry.has_data = True
 
-                if self.max_items:
+                if self._order is not None and self.max_items is not None:
                     self._order.insert(0, key)
 
                     if len(self._order) > self.max_items:
@@ -58,3 +57,8 @@ class AsyncSimpleLRUCache:
     @staticmethod
     def _make_key(*args: Any, **kwargs: Any) -> Tuple[Any, ...]:
         return (tuple(_freeze(v) for v in args), hash(frozenset({k: _freeze(v) for k, v in kwargs.items()})))
+
+    async def clear(self) -> None:
+        self._cache.clear()
+        if self._order is not None:
+            self._order.clear()

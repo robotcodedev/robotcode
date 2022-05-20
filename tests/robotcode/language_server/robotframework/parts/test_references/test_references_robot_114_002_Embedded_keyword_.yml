@@ -2,4 +2,13 @@ data: !GeneratedTestData
   character: 2
   line: 114
   name: Embedded keyword
-result: []
+result:
+- !Location
+  range:
+    end:
+      character: 33
+      line: 114
+    start:
+      character: 0
+      line: 114
+  uri: tests/references.robot

@@ -273,25 +273,11 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
                 callback_filter=language_id_filter(document),
             )
 
-    async def get_keywords_namespace(self, document: TextDocument) -> Namespace:
-        return await document.get_cache(self.__get_keywords_namespace)
-
-    async def __get_keywords_namespace(self, document: TextDocument) -> Namespace:
-        model = await self.get_general_model(document)
-
-        def invalidate(namespace: Namespace) -> None:
-            create_sub_task(self.__invalidate_namespace(namespace))
-
-        imports_manager = await self.get_imports_manager(document)
-
-        return Namespace(imports_manager, model, str(document.uri.to_path()), invalidate, document)
-
     async def __get_namespace_for_document_type(
         self,
         document: TextDocument,
         document_type: Optional[DocumentType],
     ) -> Namespace:
-        keywords_namespace: Optional[Namespace] = await self.get_keywords_namespace(document)
 
         if document_type is not None and document_type == DocumentType.INIT:
             model = await self.get_init_model(document)
@@ -307,9 +293,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         def invalidate(namespace: Namespace) -> None:
             create_sub_task(self.__invalidate_namespace(namespace))
 
-        return Namespace(
-            imports_manager, model, str(document.uri.to_path()), invalidate, document, document_type, keywords_namespace
-        )
+        return Namespace(imports_manager, model, str(document.uri.to_path()), invalidate, document, document_type)
 
     @property
     async def default_imports_manager(self) -> ImportsManager:

@@ -38,7 +38,7 @@ async def test(
         return Location("/".join(location.uri.split("/")[-2:]), location.range)
 
     result = await protocol.robot_references.collect(
-        protocol.robot_document_highlight,
+        protocol.robot_references,
         test_document,
         Position(line=data.line, character=data.character),
         ReferenceContext(include_declaration=True),

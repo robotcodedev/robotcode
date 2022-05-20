@@ -12,3 +12,12 @@ result:
       character: 29
       line: 146
   uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 14
+      line: 152
+    start:
+      character: 13
+      line: 152
+  uri: tests/references.robot

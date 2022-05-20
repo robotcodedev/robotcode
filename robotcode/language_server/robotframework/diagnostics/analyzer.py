@@ -149,9 +149,11 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                 )
                             else:
                                 if self.namespace.document is not None:
-                                    self._variable_references[var].add(
-                                        Location(self.namespace.document.document_uri, range_from_token(var_token))
-                                    )
+                                    var_range = range_from_token(var_token)
+                                    if var.name_range != var_range:
+                                        self._variable_references[var].add(
+                                            Location(self.namespace.document.document_uri, var_range)
+                                        )
             if (
                 isinstance(node, Statement)
                 and isinstance(node, self.get_expression_statement_types())
@@ -174,9 +176,11 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         )
                     else:
                         if self.namespace.document is not None:
-                            self._variable_references[var].add(
-                                Location(self.namespace.document.document_uri, range_from_token(var_token))
-                            )
+                            var_range = range_from_token(var_token)
+                            if var.name_range != var_range:
+                                self._variable_references[var].add(
+                                    Location(self.namespace.document.document_uri, range_from_token(var_token))
+                                )
 
             await super().visit(node)
         finally:
@@ -677,8 +681,12 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         keyword = cast(Keyword, node)
 
         if keyword.name:
-
             name_token = cast(KeywordName, keyword.header).get_token(RobotToken.KEYWORD_NAME)
+            kw_doc = await self.get_keyword_definition_at_token(self.namespace, name_token)
+
+            if kw_doc is not None and kw_doc not in self._keyword_references:
+                self._keyword_references[kw_doc] = set()
+
             if is_embedded_keyword(keyword.name) and any(
                 isinstance(v, Arguments) and len(v.values) > 0 for v in keyword.body
             ):

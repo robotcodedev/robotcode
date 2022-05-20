@@ -292,25 +292,25 @@ class ArgumentSpec:
 @dataclass
 class KeywordDoc(SourceEntity):
     name: str = ""
-    name_token: Optional[Token] = None
-    args: Tuple[KeywordArgumentDoc, ...] = ()
-    doc: str = ""
+    name_token: Optional[Token] = field(default=None, compare=False)
+    args: Tuple[KeywordArgumentDoc, ...] = field(default=(), compare=False)
+    doc: str = field(default="", compare=False)
     tags: Tuple[str, ...] = ()
     type: str = "keyword"
     libname: Optional[str] = None
     libtype: Optional[str] = None
     longname: Optional[str] = None
     is_embedded: bool = False
-    errors: Optional[List[Error]] = None
+    errors: Optional[List[Error]] = field(default=None, compare=False)
     doc_format: str = DEFAULT_DOC_FORMAT
     is_error_handler: bool = False
-    error_handler_message: Optional[str] = None
+    error_handler_message: Optional[str] = field(default=None, compare=False)
     is_initializer: bool = False
-    is_registered_run_keyword: bool = False
-    args_to_process: Optional[int] = None
-    deprecated: bool = False
-    arguments: Optional[ArgumentSpec] = None
-    argument_definitions: Optional[List[ArgumentDefinition]] = None
+    is_registered_run_keyword: bool = field(default=False, compare=False)
+    args_to_process: Optional[int] = field(default=None, compare=False)
+    deprecated: bool = field(default=False, compare=False)
+    arguments: Optional[ArgumentSpec] = field(default=None, compare=False)
+    argument_definitions: Optional[List[ArgumentDefinition]] = field(default=None, compare=False)
 
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
@@ -338,6 +338,13 @@ class KeywordDoc(SourceEntity):
         if (m := DEPRECATED_PATTERN.match(self.doc)) is not None:
             return m.group("message").strip()
         return ""
+
+    @property
+    def name_range(self) -> Range:
+        if self.name_token is not None:
+            return range_from_token(self.name_token)
+        else:
+            return Range.invalid()
 
     @property
     def range(self) -> Range:
@@ -431,7 +438,26 @@ class KeywordDoc(SourceEntity):
         return self.libname == BUILTIN_LIBRARY_NAME and self.name == RUN_KEYWORDS_NAME
 
     def __hash__(self) -> int:
-        return id(self)
+        # return id(self)
+        return hash(
+            (
+                self.name,
+                self.longname,
+                self.source,
+                self.line_no,
+                self.col_offset,
+                self.end_line_no,
+                self.end_col_offset,
+                self.type,
+                self.libname,
+                self.libtype,
+                self.is_embedded,
+                self.is_initializer,
+                self.is_error_handler,
+                self.doc_format,
+                self.tags,
+            )
+        )
 
 
 class KeywordError(Exception):

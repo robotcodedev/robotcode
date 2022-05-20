@@ -546,7 +546,6 @@ class Namespace:
         invalidated_callback: Callable[[Namespace], None],
         document: Optional[TextDocument] = None,
         document_type: Optional[DocumentType] = None,
-        keywords_namespace: Optional[Namespace] = None,
     ) -> None:
         super().__init__()
 
@@ -557,7 +556,6 @@ class Namespace:
         self.invalidated_callback = invalidated_callback
         self._document = weakref.ref(document) if document is not None else None
         self.document_type: Optional[DocumentType] = document_type
-        self.keywords_namespace = keywords_namespace
 
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
         self._libraries_matchers: Optional[Dict[KeywordMatcher, LibraryEntry]] = None
@@ -723,8 +721,6 @@ class Namespace:
                         append_model_errors=self.document_type is not None
                         and self.document_type in [DocumentType.RESOURCE],
                     )
-                if self.keywords_namespace is not None:
-                    self._library_doc.keywords = (await self.keywords_namespace.get_library_doc()).keywords
 
         return self._library_doc
 
@@ -1482,12 +1478,8 @@ class Namespace:
                         result = await Analyzer(self.model, self).run()
 
                         self._diagnostics += result.diagnostics
-                        if self.keywords_namespace is not None:
-                            self._keyword_references = await self.keywords_namespace.get_keyword_references()
-                            self._variable_references = await self.keywords_namespace.get_variable_references()
-                        else:
-                            self._keyword_references = result.keyword_references
-                            self._variable_references = result.variable_references
+                        self._keyword_references = result.keyword_references
+                        self._variable_references = result.variable_references
 
                         lib_doc = await self.get_library_doc()
 

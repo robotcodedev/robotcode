@@ -615,7 +615,7 @@ class Lock:
         import warnings
 
         async with self.__inner_lock():
-            if not bool(self._waiters):
+            if self._waiters is None or len(self._waiters) == 0:
                 if self._locked:
                     self._locked = False
                 else:
