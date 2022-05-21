@@ -105,7 +105,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         name = code_lens.data["name"]
         line = code_lens.data["line"]
 
-        if self.parent.robot_workspace.workspace_loaded:
+        if self.parent.robot_workspace.workspace_loaded.is_set():
             kw_doc = await self.get_keyword_definition_at_line(namespace, name, line)
 
             if kw_doc is not None and not kw_doc.is_error_handler:
@@ -128,6 +128,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
                             kw_doc,
                             include_declaration=False,
                         )
+
                         # await self.parent.robot_references.find_keyword_references(
                         #     document, kw_doc, include_declaration=False
                         # )

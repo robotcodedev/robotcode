@@ -475,6 +475,7 @@ def run_coroutine_in_thread(
                 inner_task.cancel()
 
             return await inner_task
+
         finally:
             threading.current_thread().setName(old_name)
 
@@ -585,6 +586,8 @@ class Lock:
             yield None
         finally:
             self._lock.release()
+        # with self._lock:
+        #     yield None
 
     async def acquire(self) -> bool:
         async with self.__inner_lock():
@@ -603,7 +606,8 @@ class Lock:
                 await fut
             finally:
                 async with self.__inner_lock():
-                    self._waiters.remove(fut)
+                    if fut in self._waiters:
+                        self._waiters.remove(fut)
                     self._locked = True
         except asyncio.CancelledError:
             await self._wake_up_next()
@@ -621,16 +625,19 @@ class Lock:
                 else:
                     warnings.warn(f"Lock is not acquired ({len(self._waiters) if self._waiters else 0} waiters).")
 
-            await self._wake_up_next()
+        await self._wake_up_next()
 
     async def _wake_up_next(self) -> None:
         if not self._waiters:
             return
 
-        try:
-            fut = next(iter(self._waiters))
-        except StopIteration:
-            return
+        async with self.__inner_lock():
+            try:
+                fut = next(iter(self._waiters))
+            except StopIteration:
+                return
+            if fut in self._waiters:
+                self._waiters.remove(fut)
 
         def s() -> None:
             if not fut.done():
@@ -640,7 +647,8 @@ class Lock:
             if not fut.done():
                 fut.set_result(True)
         else:
-            fut._loop.call_soon_threadsafe(s)
+            if fut._loop.is_running():
+                fut._loop.call_soon_threadsafe(s)
 
 
 class FutureInfo:

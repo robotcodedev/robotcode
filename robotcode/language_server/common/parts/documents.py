@@ -69,6 +69,10 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
         self.parent.on_initialized.add(self._protocol_initialized)
         self._lock = Lock()
 
+    @property
+    def documents(self) -> List[TextDocument]:
+        return list(self._documents.values())
+
     async def _protocol_initialized(self, sender: Any) -> None:
         await self._update_filewatchers()
 

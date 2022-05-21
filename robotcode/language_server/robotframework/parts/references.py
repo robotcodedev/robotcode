@@ -15,21 +15,14 @@ from typing import (
 )
 
 from ....utils.async_cache import AsyncSimpleLRUCache
-from ....utils.async_tools import run_coroutine_in_thread, threaded
-from ....utils.glob_path import iter_files
+from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.decorators import language_id
 from ...common.lsp_types import Location, Position, ReferenceContext
 from ...common.text_document import TextDocument
-from ..configuration import WorkspaceConfig
 from ..diagnostics.entities import LocalVariableDefinition, VariableDefinition
-from ..diagnostics.library_doc import (
-    RESOURCE_FILE_EXTENSION,
-    ROBOT_FILE_EXTENSION,
-    KeywordDoc,
-    LibraryDoc,
-)
+from ..diagnostics.library_doc import KeywordDoc, LibraryDoc
 from ..utils.ast_utils import (
     HasTokens,
     get_nodes_at_position,
@@ -108,36 +101,13 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         *args: Any,
         **kwargs: Any,
     ) -> List[Location]:
-        futures: List[Awaitable[List[Location]]] = []
+        await self.parent.robot_workspace.workspace_loaded.wait()
 
         result: List[Location] = []
 
-        for folder in self.parent.workspace.workspace_folders:
-
-            config = await self.parent.workspace.get_configuration(WorkspaceConfig, folder.uri) or WorkspaceConfig()
-
-            async for f in iter_files(
-                folder.uri.to_path(),
-                (f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}"),
-                ignore_patterns=config.exclude_patterns or [],  # type: ignore
-                absolute=True,
-            ):
-                try:
-                    doc = await self.parent.documents.get_or_open_document(f, "robotframework")
-                except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                    raise
-                except BaseException as ex:
-                    self._logger.exception(ex)
-                else:
-                    futures.append(run_coroutine_in_thread(func, doc, *args, **kwargs))
-
-            for e in await asyncio.gather(*futures, return_exceptions=True):
-                if isinstance(e, BaseException):
-                    if not isinstance(result, asyncio.CancelledError):
-                        self._logger.exception(e)
-                    continue
-                if e:
-                    result.extend(e)
+        for doc in self.parent.documents.documents:
+            if doc.language_id == "robotframework":
+                result.extend(await func(doc, *args, **kwargs))
 
         return result
 
