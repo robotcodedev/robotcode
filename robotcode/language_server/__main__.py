@@ -139,6 +139,9 @@ def init_colored_logs(log_level: Any) -> bool:
     return True
 
 
+DEFAULT_LOG_LEVEL = logging.ERROR
+
+
 def init_logging(args: argparse.Namespace) -> None:
     log_level = logging._checkLevel(args.log_level) if args.log else logging.WARNING  # type: ignore
 
@@ -154,17 +157,17 @@ def init_logging(args: argparse.Namespace) -> None:
 
     if not args.log_all:
         if not args.log_robotframework:
-            logging.getLogger("robotcode.language_server.robotframework").setLevel(logging.CRITICAL)
+            logging.getLogger("robotcode.language_server.robotframework").setLevel(DEFAULT_LOG_LEVEL)
         if not args.log_language_server_parts:
-            logging.getLogger("robotcode.language_server.common.parts").setLevel(logging.CRITICAL)
+            logging.getLogger("robotcode.language_server.common.parts").setLevel(DEFAULT_LOG_LEVEL)
         if not args.log_language_server:
-            logging.getLogger("robotcode.language_server.common").setLevel(logging.CRITICAL)
+            logging.getLogger("robotcode.language_server.common").setLevel(DEFAULT_LOG_LEVEL)
         if not args.log_json_rpc:
-            logging.getLogger("robotcode.jsonrpc2").setLevel(logging.CRITICAL)
+            logging.getLogger("robotcode.jsonrpc2").setLevel(DEFAULT_LOG_LEVEL)
         if not args.log_json_rpc_data:
-            logging.getLogger("robotcode.jsonrpc2.protocol.JsonRPCProtocol_data").setLevel(logging.CRITICAL)
+            logging.getLogger("robotcode.jsonrpc2.protocol.JsonRPCProtocol_data").setLevel(DEFAULT_LOG_LEVEL)
         if not args.log_asyncio:
-            logging.getLogger("asyncio").setLevel(logging.CRITICAL)
+            logging.getLogger("asyncio").setLevel(DEFAULT_LOG_LEVEL)
 
 
 def main() -> None:
@@ -187,7 +190,7 @@ def main() -> None:
         os.environ["PYTHONASYNCIODEBUG"] = "1"
         logging.getLogger("asyncio").level = logging.DEBUG
     else:
-        logging.getLogger("asyncio").level = logging.CRITICAL
+        logging.getLogger("asyncio").level = DEFAULT_LOG_LEVEL
 
     if args.log:
         if args.log_config is not None:
