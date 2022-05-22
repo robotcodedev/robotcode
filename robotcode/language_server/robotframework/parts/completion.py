@@ -1308,12 +1308,12 @@ class CompletionCollector(ModelHelperMixin):
             sep = text_before_position[last_separator_index] if last_separator_index < len(text_before_position) else ""
 
             try:
-                list = await self.namespace.imports_manager.complete_library_import(
+                complete_list = await self.namespace.imports_manager.complete_library_import(
                     first_part if first_part else None,
                     str(self.document.uri.to_path().parent),
                     await self.namespace.get_resolvable_variables(nodes_at_position, position),
                 )
-                if not list:
+                if not complete_list:
                     return None
             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                 raise
@@ -1346,7 +1346,7 @@ class CompletionCollector(ModelHelperMixin):
                         "name": ((first_part + sep) if first_part is not None else "") + e.label,
                     },
                 )
-                for e in list
+                for e in complete_list
             ]
 
         async def complete_arguments() -> Optional[List[CompletionItem]]:
@@ -1414,10 +1414,9 @@ class CompletionCollector(ModelHelperMixin):
 
             try:
                 libdoc = await self.namespace.get_imported_library_libdoc(
-                    import_node.name, (), str(self.document.uri.to_path().parent)
+                    import_node.name, import_node.args, import_node.alias
                 )
-                if not list:
-                    return None
+
             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                 raise
             except BaseException as e:
@@ -1542,12 +1541,12 @@ class CompletionCollector(ModelHelperMixin):
         )
 
         try:
-            list = await self.namespace.imports_manager.complete_resource_import(
+            complete_list = await self.namespace.imports_manager.complete_resource_import(
                 first_part if first_part else None,
                 str(self.document.uri.to_path().parent),
                 await self.namespace.get_resolvable_variables(nodes_at_position, position),
             )
-            if not list:
+            if not complete_list:
                 return None
         except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
             raise
@@ -1579,7 +1578,7 @@ class CompletionCollector(ModelHelperMixin):
                     "name": ((first_part) if first_part is not None else "") + e.label,
                 },
             )
-            for e in list
+            for e in complete_list
         ]
 
     async def complete_VariablesImport(  # noqa: N802
@@ -1643,12 +1642,12 @@ class CompletionCollector(ModelHelperMixin):
         )
 
         try:
-            list = await self.namespace.imports_manager.complete_variables_import(
+            complete_list = await self.namespace.imports_manager.complete_variables_import(
                 first_part if first_part else None,
                 str(self.document.uri.to_path().parent),
                 await self.namespace.get_resolvable_variables(nodes_at_position, position),
             )
-            if not list:
+            if not complete_list:
                 return None
         except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
             raise
@@ -1680,7 +1679,7 @@ class CompletionCollector(ModelHelperMixin):
                     "name": ((first_part) if first_part is not None else "") + e.label,
                 },
             )
-            for e in list
+            for e in complete_list
         ]
 
     async def _complete_KeywordCall_or_Fixture(  # noqa: N802
