@@ -57,7 +57,7 @@ jobs:
 
       - name: "test python packages"
         timeout-minutes: 15
-        run: poetry run pytest --junitxml=test-results/python-${{ matrix.python-version }}/test-results.xml --html=test-results/python-${{ matrix.python-version }}/report.html --self-contained-html
+        run: poetry run pytest "--junitxml=test-results/python-${{ matrix.python-version }}/test-results.xml" "--html=test-results/python-${{ matrix.python-version }}/report.html" --self-contained-html
 
       - name: upload test results
         if: always()
