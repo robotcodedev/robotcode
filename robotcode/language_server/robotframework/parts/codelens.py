@@ -28,8 +28,12 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
 
         parent.code_lens.collect.add(self.collect)
         parent.code_lens.resolve.add(self.resolve)
+        parent.robot_references.cache_cleared.add(self.robot_references_cache_cleared)
 
         self._running_task: Set[Tuple[TextDocument, KeywordDoc]] = set()
+
+    async def robot_references_cache_cleared(self, sender: Any) -> None:  # NOSONAR
+        await self.parent.code_lens.refresh()
 
     @language_id("robotframework")
     @threaded()
