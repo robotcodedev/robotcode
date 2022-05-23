@@ -50,6 +50,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         parent.references.collect.add(self.collect)
         parent.documents.did_change.add(self.document_did_change)
         self._keyword_reference_cache = AsyncSimpleLRUCache(max_items=None)
+        self._variable_reference_cache = AsyncSimpleLRUCache(max_items=None)
 
     @async_event
     async def cache_cleared(sender) -> None:  # NOSONAR
@@ -146,7 +147,19 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         return None
 
+    async def has_cached_variable_references(
+        self, document: TextDocument, variable: VariableDefinition, include_declaration: bool = True
+    ) -> bool:
+        return await self._variable_reference_cache.has(document, variable, include_declaration)
+
     async def find_variable_references(
+        self, document: TextDocument, variable: VariableDefinition, include_declaration: bool = True
+    ) -> List[Location]:
+        return await self._variable_reference_cache.get(
+            self._find_variable_references, document, variable, include_declaration
+        )
+
+    async def _find_variable_references(
         self, document: TextDocument, variable: VariableDefinition, include_declaration: bool = True
     ) -> List[Location]:
         result = []

@@ -77,7 +77,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 if res_document is not None:
                     await self.parent.diagnostics.create_publish_document_diagnostics_task(
                         res_document,
-                        wait_time=DOCUMENT_DIAGNOSTICS_DEBOUNCE
+                        wait_time=DOCUMENT_DIAGNOSTICS_DEBOUNCE * 2
                         if res_document.opened_in_editor
                         else WORKSPACE_DIAGNOSTICS_DEBOUNCE,
                     )
@@ -284,6 +284,21 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                             tags=[DiagnosticTag.Unnecessary],
                         )
                     )
+
+            for var in await namespace.get_own_variables():
+                references = await self.parent.robot_references.find_variable_references(document, var, False)
+                if not references and not await Analyzer.should_ignore(document, var.name_range):
+                    result.append(
+                        Diagnostic(
+                            range=var.name_range,
+                            message=f"Variable '{var.name}' is not used.",
+                            severity=DiagnosticSeverity.WARNING,
+                            source=self.source_name,
+                            code="VariableNotUsed",
+                            tags=[DiagnosticTag.Unnecessary],
+                        )
+                    )
+
             return DiagnosticsResult(self.collect_unused_references, result)
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise

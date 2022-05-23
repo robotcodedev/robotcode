@@ -245,10 +245,10 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
             uri = str(Uri(text_document.uri).normalized())
             document = self._documents.get(uri, None)
 
-            text_changed = True
             normalized_text = self._normalize_line_endings(text_document.text)
 
             if document is None:
+                text_changed = False
                 document = await self._create_document(
                     text_document.uri, normalized_text, text_document.language_id, text_document.version
                 )

@@ -737,60 +737,63 @@ class Namespace:
         if not self._initialized:
             async with self._initialize_lock:
                 if not self._initialized:
+                    try:
+                        self._logger.debug(f"ensure_initialized -> initialize {self.document}")
 
-                    self._logger.debug(f"ensure_initialized -> initialize {self.document}")
+                        imports = await self.get_imports()
 
-                    imports = await self.get_imports()
-
-                    data_entry: Optional[Namespace.DataEntry] = None
-                    if self.document is not None:
-                        # check or save several data in documents data cache,
-                        # if imports are different, then the data is invalid
-                        old_imports: List[Import] = self.document.get_data(Namespace)
-                        if old_imports is None:
-                            self.document.set_data(Namespace, imports)
-                        elif old_imports != imports:
-                            new_imports = []
-                            for e in old_imports:
-                                if e in imports:
-                                    new_imports.append(e)
-                            for e in imports:
-                                if e not in new_imports:
-                                    new_imports.append(e)
-                            self.document.set_data(Namespace, new_imports)
-                            self.document.set_data(Namespace.DataEntry, None)
-                        else:
-                            data_entry = self.document.get_data(Namespace.DataEntry)
-
-                    if data_entry is not None:
-                        self._libraries = data_entry.libraries.copy()
-                        self._resources = data_entry.resources.copy()
-                        self._variables = data_entry.variables.copy()
-                        self._diagnostics = data_entry.diagnostics.copy()
-                        self._import_entries = data_entry.import_entries.copy()
-                    else:
-                        variables = await self.get_resolvable_variables()
-
-                        await self._import_default_libraries(variables)
-                        await self._import_imports(
-                            imports, str(Path(self.source).parent), top_level=True, variables=variables
-                        )
-
+                        data_entry: Optional[Namespace.DataEntry] = None
                         if self.document is not None:
-                            self.document.set_data(
-                                Namespace.DataEntry,
-                                Namespace.DataEntry(
-                                    self._libraries.copy(),
-                                    self._resources.copy(),
-                                    self._variables.copy(),
-                                    self._diagnostics.copy(),
-                                    self._import_entries.copy(),
-                                ),
+                            # check or save several data in documents data cache,
+                            # if imports are different, then the data is invalid
+                            old_imports: List[Import] = self.document.get_data(Namespace)
+                            if old_imports is None:
+                                self.document.set_data(Namespace, imports)
+                            elif old_imports != imports:
+                                new_imports = []
+                                for e in old_imports:
+                                    if e in imports:
+                                        new_imports.append(e)
+                                for e in imports:
+                                    if e not in new_imports:
+                                        new_imports.append(e)
+                                self.document.set_data(Namespace, new_imports)
+                                self.document.set_data(Namespace.DataEntry, None)
+                            else:
+                                data_entry = self.document.get_data(Namespace.DataEntry)
+
+                        if data_entry is not None:
+                            self._libraries = data_entry.libraries.copy()
+                            self._resources = data_entry.resources.copy()
+                            self._variables = data_entry.variables.copy()
+                            self._diagnostics = data_entry.diagnostics.copy()
+                            self._import_entries = data_entry.import_entries.copy()
+                        else:
+                            variables = await self.get_resolvable_variables()
+
+                            await self._import_default_libraries(variables)
+                            await self._import_imports(
+                                imports, str(Path(self.source).parent), top_level=True, variables=variables
                             )
 
-                    await self._reset_global_variables()
+                            if self.document is not None:
+                                self.document.set_data(
+                                    Namespace.DataEntry,
+                                    Namespace.DataEntry(
+                                        self._libraries.copy(),
+                                        self._resources.copy(),
+                                        self._variables.copy(),
+                                        self._diagnostics.copy(),
+                                        self._import_entries.copy(),
+                                    ),
+                                )
 
-                    self._initialized = True
+                        await self._reset_global_variables()
+
+                        self._initialized = True
+                    except BaseException:
+                        await self.invalidate()
+                        raise
 
         return self._initialized
 
