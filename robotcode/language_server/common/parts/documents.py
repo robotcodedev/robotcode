@@ -16,7 +16,12 @@ from typing import (
 )
 
 from ....jsonrpc2.protocol import JsonRPCException, rpc_method
-from ....utils.async_tools import Lock, async_event, async_tasking_event
+from ....utils.async_tools import (
+    Lock,
+    async_event,
+    async_tasking_event,
+    create_sub_task,
+)
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ..decorators import language_id_filter
@@ -91,20 +96,28 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
 
         for change in to_change.values():
             if change.type == FileChangeType.CREATED:
-                await self.did_create_uri(self, change.uri)
+                create_sub_task(self.did_create_uri(self, change.uri), loop=self.parent.loop)
 
             document = self._documents.get(DocumentUri(Uri(change.uri).normalized()), None)
             if document is not None and change.type == FileChangeType.CREATED:
-                await self.did_create(self, document, callback_filter=language_id_filter(document))
+                create_sub_task(
+                    self.did_create(self, document, callback_filter=language_id_filter(document)), loop=self.parent.loop
+                )
             elif document is not None and not document.opened_in_editor:
                 if change.type == FileChangeType.DELETED:
                     await self.close_document(document, True)
-                    await self.did_close(self, document, callback_filter=language_id_filter(document))
+                    create_sub_task(
+                        self.did_close(self, document, callback_filter=language_id_filter(document)),
+                        loop=self.parent.loop,
+                    )
                 elif change.type == FileChangeType.CHANGED:
                     await document.apply_full_change(
                         None, await self.read_document_text(document.uri, language_id_filter(document)), save=True
                     )
-                    await self.did_change(self, document, callback_filter=language_id_filter(document))
+                    create_sub_task(
+                        self.did_change(self, document, callback_filter=language_id_filter(document)),
+                        loop=self.parent.loop,
+                    )
 
     async def read_document_text(self, uri: Uri, language_id: Union[str, Callable[[Any], bool]]) -> str:
         for e in await self.on_read_document_text(
@@ -212,7 +225,10 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
 
             self._documents[document_uri] = document
 
-            await self.did_append_document(self, document, callback_filter=language_id_filter(document))
+            create_sub_task(
+                self.did_append_document(self, document, callback_filter=language_id_filter(document)),
+                loop=self.parent.loop,
+            )
 
             return document
 
@@ -245,10 +261,15 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
 
             document.opened_in_editor = True
 
-        await self.did_open(self, document, callback_filter=language_id_filter(document))
+        create_sub_task(
+            self.did_open(self, document, callback_filter=language_id_filter(document)), loop=self.parent.loop
+        )
 
         if text_changed:
-            await self.did_change(self, document, callback_filter=language_id_filter(document))
+            create_sub_task(
+                self.did_change(self, document, callback_filter=language_id_filter(document)),
+                loop=self.parent.loop,
+            )
 
     @rpc_method(name="textDocument/didClose", param_type=DidCloseTextDocumentParams)
     @_logger.call
@@ -260,8 +281,9 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
             document.opened_in_editor = False
 
             await self.close_document(document)
-
-            await self.did_close(self, document, callback_filter=language_id_filter(document))
+            create_sub_task(
+                self.did_close(self, document, callback_filter=language_id_filter(document)), loop=self.parent.loop
+            )
 
     @_logger.call
     async def close_document(self, document: TextDocument, real_close: bool = False) -> None:
@@ -274,7 +296,9 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
         else:
             document._version = None
             if await document.revert(None):
-                await self.did_change(self, document, callback_filter=language_id_filter(document))
+                create_sub_task(
+                    self.did_change(self, document, callback_filter=language_id_filter(document)), loop=self.parent.loop
+                )
 
     @rpc_method(name="textDocument/willSave", param_type=WillSaveTextDocumentParams)
     @_logger.call
@@ -299,9 +323,14 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
                 text_changed = await document.text() != normalized_text
                 if text_changed:
                     await document.save(None, text)
-                    await self.did_change(self, document, callback_filter=language_id_filter(document))
+                    create_sub_task(
+                        self.did_change(self, document, callback_filter=language_id_filter(document)),
+                        loop=self.parent.loop,
+                    )
 
-            await self.did_save(self, document, callback_filter=language_id_filter(document))
+            create_sub_task(
+                self.did_save(self, document, callback_filter=language_id_filter(document)), loop=self.parent.loop
+            )
 
     @rpc_method(name="textDocument/willSaveWaitUntil", param_type=WillSaveTextDocumentParams)
     @_logger.call
@@ -352,4 +381,6 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
                     f"for document {text_document.uri}."
                 )
 
-        await self.did_change(self, document, callback_filter=language_id_filter(document))
+        create_sub_task(
+            self.did_change(self, document, callback_filter=language_id_filter(document)), loop=self.parent.loop
+        )

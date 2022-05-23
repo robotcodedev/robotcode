@@ -7,8 +7,10 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 
 from ....utils.async_tools import (
+    Event,
     Lock,
     async_event,
+    async_tasking_event,
     async_tasking_event_iterator,
     check_canceled,
     create_sub_task,
@@ -147,12 +149,18 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.parent.documents.did_close.add(self.on_did_close)
         self.parent.documents.did_save.add(self.on_did_save)
 
+        self.workspace_diagnostics_running = Event()
+
     @async_tasking_event_iterator
     async def collect(sender, document: TextDocument) -> DiagnosticsResult:  # NOSONAR
         ...
 
     @async_tasking_event_iterator
     async def collect_workspace_documents(sender) -> List[WorkspaceDocumentsResult]:  # NOSONAR
+        ...
+
+    @async_tasking_event
+    async def workspace_diagnostics_stopped(sender) -> None:  # NOSONAR
         ...
 
     @_logger.call
@@ -203,6 +211,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     async def on_did_open(self, sender: Any, document: TextDocument) -> None:
+        await self.workspace_diagnostics_running.wait()
+
         await self.create_publish_document_diagnostics_task(document)
 
     @language_id("robotframework")
@@ -300,7 +310,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         )
 
     @_logger.call
-    async def publish_document_diagnostics(self, document_uri: DocumentUri) -> None:
+    async def publish_document_diagnostics(self, document_uri: DocumentUri, threaded: bool = True) -> None:
+
         document = await self.parent.documents.get(document_uri)
         if document is None:
             return
@@ -314,6 +325,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             document,
             callback_filter=language_id_filter(document),
             return_exceptions=True,
+            threaded=threaded,
         ):
             await check_canceled()
 
@@ -327,8 +339,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 diagnostics[result.key] = result.diagnostics if result.diagnostics else []
                 collected_keys.append(result.key)
 
-                asyncio.get_event_loop().call_soon(
-                    self.parent.send_notification,
+                self.parent.send_notification(
                     "textDocument/publishDiagnostics",
                     PublishDiagnosticsParams(
                         uri=document.document_uri,
@@ -345,32 +356,36 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     @_logger.call
     async def publish_workspace_diagnostics(self) -> None:
         canceled = False
+        self.workspace_diagnostics_running.clear()
+        try:
+            async for result_any in self.collect_workspace_documents(
+                self,
+                return_exceptions=True,
+            ):
+                await check_canceled()
+                if canceled:
+                    break
 
-        async for result_any in self.collect_workspace_documents(
-            self,
-            return_exceptions=True,
-        ):
-            await check_canceled()
-            if canceled:
-                break
+                if isinstance(result_any, BaseException):
+                    if not isinstance(result_any, asyncio.CancelledError):
+                        self._logger.exception(result_any, exc_info=result_any)
+                        continue
 
-            if isinstance(result_any, BaseException):
-                if not isinstance(result_any, asyncio.CancelledError):
-                    self._logger.exception(result_any, exc_info=result_any)
-                    continue
+                result = cast(List[WorkspaceDocumentsResult], result_any)
+                async with self.parent.window.progress(
+                    "Analyze workspace",
+                    cancellable=True,
+                    current=0,
+                    max=len(result),
+                ) as progress:
+                    for i, v in enumerate(result):
+                        if progress.is_canceled:
+                            canceled = True
+                            break
 
-            result = cast(List[WorkspaceDocumentsResult], result_any)
-            async with self.parent.window.progress(
-                "Analyze workspace",
-                cancellable=True,
-                current=0,
-                max=len(result),
-            ) as progress:
-                for i, v in enumerate(result):
-                    if progress.is_canceled:
-                        canceled = True
-                        break
+                        progress.report(f"Analyze {v.name}" if v.name else None, cancellable=False, current=i + 1)
 
-                    progress.report(f"Analyze {v.name}" if v.name else None, cancellable=False, current=i + 1)
-
-                    await self.publish_document_diagnostics(str(v.document.uri))
+                        await self.publish_document_diagnostics(str(v.document.uri))
+        finally:
+            self.workspace_diagnostics_running.set()
+            await self.workspace_diagnostics_stopped(self)

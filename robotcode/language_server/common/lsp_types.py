@@ -1045,7 +1045,7 @@ class LinkedEditingRangeOptions(WorkDoneProgressOptions):
 
 @dataclass(repr=False)
 class LinkedEditingRangeRegistrationOptions(
-    TextDocumentRegistrationOptions, LinkedEditingRangeOptions, StaticRegistrationOptions
+    LinkedEditingRangeOptions, StaticRegistrationOptions, TextDocumentRegistrationOptions
 ):
     pass
 
@@ -1068,7 +1068,7 @@ class RenameOptions(WorkDoneProgressOptions):
 
 
 @dataclass(repr=False)
-class RenameRegistrationOptions(TextDocumentRegistrationOptions, RenameOptions, StaticRegistrationOptions):
+class RenameRegistrationOptions(RenameOptions, StaticRegistrationOptions, TextDocumentRegistrationOptions):
     pass
 
 
@@ -1078,7 +1078,24 @@ class InlineValueOptions(WorkDoneProgressOptions):
 
 
 @dataclass(repr=False)
-class InlineValueRegistrationOptions(InlineValueOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions):
+class InlineValueRegistrationOptions(TextDocumentRegistrationOptions, StaticRegistrationOptions, InlineValueOptions):
+    pass
+
+
+@dataclass(repr=False)
+class _DiagnosticOptions(Model):
+    inter_file_dependencies: bool
+    workspace_diagnostics: bool
+    identifier: Optional[str] = None
+
+
+@dataclass(repr=False)
+class DiagnosticOptions(WorkDoneProgressOptions, _DiagnosticOptions):
+    pass
+
+
+@dataclass(repr=False)
+class DiagnosticRegistrationOptions(TextDocumentRegistrationOptions, StaticRegistrationOptions, DiagnosticOptions):
     pass
 
 
@@ -1115,6 +1132,9 @@ class ServerCapabilities(Model):
 
     # TODO typeHierarchyProvider?: boolean | TypeHierarchyOptions | TypeHierarchyRegistrationOptions;
     inline_value_provider: Union[bool, InlineValueOptions, InlineValueRegistrationOptions, None] = None
+    # TODO inlayHintProvider?: boolean | InlayHintOptions | InlayHintRegistrationOptions;
+    diagnostic_provider: Union[DiagnosticOptions, DiagnosticRegistrationOptions, None] = None
+
     workspace_symbol_provider: Union[bool, WorkspaceSymbolOptions, None] = None
     workspace: Optional[ServerCapabilitiesWorkspace] = None
     experimental: Optional[Any] = None

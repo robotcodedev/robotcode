@@ -6,8 +6,15 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 from ....utils.async_tools import check_canceled, threaded
 from ....utils.logging import LoggingDescriptor
+from ....utils.uri import Uri
 from ...common.decorators import language_id
-from ...common.lsp_types import Diagnostic, DiagnosticSeverity, Position, Range
+from ...common.lsp_types import (
+    Diagnostic,
+    DiagnosticSeverity,
+    DiagnosticTag,
+    Position,
+    Range,
+)
 from ...common.parts.diagnostics import (
     DOCUMENT_DIAGNOSTICS_DEBOUNCE,
     WORKSPACE_DIAGNOSTICS_DEBOUNCE,
@@ -41,7 +48,14 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         parent.diagnostics.collect.add(self.collect_namespace_diagnostics)
 
+        parent.diagnostics.collect.add(self.collect_unused_references)
+
         parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
+
+        parent.documents.did_change.add(self.documents_did_change)
+
+    async def cache_cleared(self, sender: Any) -> None:
+        ...
 
     @language_id("robotframework")
     async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
@@ -49,6 +63,24 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             document,
             wait_time=DOCUMENT_DIAGNOSTICS_DEBOUNCE if document.opened_in_editor else WORKSPACE_DIAGNOSTICS_DEBOUNCE,
         )
+
+    @language_id("robotframework")
+    async def documents_did_change(self, sender: Any, document: TextDocument) -> None:
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        if namespace is None:
+            return
+
+        resources = (await namespace.get_resources()).values()
+        for res in resources:
+            if res.library_doc.source:
+                res_document = await self.parent.documents.get(Uri.from_path(res.library_doc.source).normalized())
+                if res_document is not None:
+                    await self.parent.diagnostics.create_publish_document_diagnostics_task(
+                        res_document,
+                        wait_time=DOCUMENT_DIAGNOSTICS_DEBOUNCE
+                        if res_document.opened_in_editor
+                        else WORKSPACE_DIAGNOSTICS_DEBOUNCE,
+                    )
 
     @language_id("robotframework")
     @threaded()
@@ -222,6 +254,55 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                             ),
                         ),
                         message=f"Fatal: can't get model diagnostics '{e}' ({type(e).__qualname__})",
+                        severity=DiagnosticSeverity.ERROR,
+                        source=self.source_name,
+                        code=type(e).__qualname__,
+                    )
+                ],
+            )
+
+    @language_id("robotframework")
+    @threaded()
+    @_logger.call
+    async def collect_unused_references(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+        try:
+            namespace = await self.parent.documents_cache.get_namespace(document)
+            if namespace is None:
+                return DiagnosticsResult(self.collect_unused_references, None)
+
+            result: List[Diagnostic] = []
+            for kw in (await namespace.get_library_doc()).keywords.values():
+                references = await self.parent.robot_references.find_keyword_references(document, kw, False)
+                if not references and not await Analyzer.should_ignore(document, kw.name_range):
+                    result.append(
+                        Diagnostic(
+                            range=kw.name_range,
+                            message=f"Keyword '{kw.name}' is not used.",
+                            severity=DiagnosticSeverity.WARNING,
+                            source=self.source_name,
+                            code="KeywordNotUsed",
+                            tags=[DiagnosticTag.Unnecessary],
+                        )
+                    )
+            return DiagnosticsResult(self.collect_unused_references, result)
+        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            return DiagnosticsResult(
+                self.collect_unused_references,
+                [
+                    Diagnostic(
+                        range=Range(
+                            start=Position(
+                                line=0,
+                                character=0,
+                            ),
+                            end=Position(
+                                line=len(await document.get_lines()),
+                                character=len((await document.get_lines())[-1] or ""),
+                            ),
+                        ),
+                        message=f"Fatal: can't collect unused references '{e}' ({type(e).__qualname__})",
                         severity=DiagnosticSeverity.ERROR,
                         source=self.source_name,
                         code=type(e).__qualname__,

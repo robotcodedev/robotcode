@@ -103,9 +103,6 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
 
         self.workspace_loaded.set()
 
-        if config.analysis.references_code_lens:
-            await self.parent.code_lens.refresh()
-
         if canceled:
             return []
 

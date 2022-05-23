@@ -200,6 +200,7 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
         result_callback: Optional[Callable[[Optional[_TResult], Optional[BaseException]], Any]] = None,
         return_exceptions: Optional[bool] = True,
         callback_filter: Optional[Callable[[_TCallable], bool]] = None,
+        threaded: Optional[bool] = True,
         **kwargs: Any,
     ) -> AsyncIterator[Union[_TResult, BaseException]]:
         def _done(f: asyncio.Future[_TResult]) -> None:
@@ -217,7 +218,7 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
             set(self),
         ):
             if method is not None:
-                if isinstance(method, HasThreaded) and cast(HasThreaded, method).__threaded__:
+                if threaded and isinstance(method, HasThreaded) and cast(HasThreaded, method).__threaded__:
                     future = run_coroutine_in_thread(ensure_coroutine(method), *args, **kwargs)
                 else:
                     future = create_sub_task(ensure_coroutine(method)(*args, **kwargs))

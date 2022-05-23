@@ -29,10 +29,14 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         parent.code_lens.collect.add(self.collect)
         parent.code_lens.resolve.add(self.resolve)
         parent.robot_references.cache_cleared.add(self.robot_references_cache_cleared)
+        parent.diagnostics.workspace_diagnostics_stopped.add(self.diagnostics_workspace_diagnostics_stopped)
 
         self._running_task: Set[Tuple[TextDocument, KeywordDoc]] = set()
 
     async def robot_references_cache_cleared(self, sender: Any) -> None:  # NOSONAR
+        await self.parent.code_lens.refresh()
+
+    async def diagnostics_workspace_diagnostics_stopped(self, sender: Any) -> None:  # NOSONAR
         await self.parent.code_lens.refresh()
 
     @language_id("robotframework")
@@ -109,7 +113,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         name = code_lens.data["name"]
         line = code_lens.data["line"]
 
-        if self.parent.robot_workspace.workspace_loaded.is_set():
+        if self.parent.diagnostics.workspace_diagnostics_running.is_set():
             kw_doc = await self.get_keyword_definition_at_line(namespace, name, line)
 
             if kw_doc is not None and not kw_doc.is_error_handler:
