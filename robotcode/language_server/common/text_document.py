@@ -39,7 +39,6 @@ class TextDocument:
         super().__init__()
 
         self._lock = Lock()
-        self._references: weakref.WeakSet[Any] = weakref.WeakSet()
         self.document_uri = document_uri
         self.uri = Uri(self.document_uri).normalized()
         self.language_id = language_id
@@ -51,10 +50,6 @@ class TextDocument:
         self._cache: Dict[weakref.ref[Any], CacheEntry] = collections.defaultdict(CacheEntry)
         self._data: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
         self.opened_in_editor = False
-
-    @property
-    def references(self) -> weakref.WeakSet[Any]:  # pragma: no cover
-        return self._references
 
     @property
     def version(self) -> Optional[int]:
