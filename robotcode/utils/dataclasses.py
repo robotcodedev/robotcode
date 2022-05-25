@@ -1,6 +1,7 @@
 # pyright: reportMissingTypeArgument=true, reportMissingParameterType=true
 import dataclasses
 import enum
+import functools
 import inspect
 import json
 import re
@@ -32,6 +33,7 @@ _RE_SNAKE_CASE_1 = re.compile(r"[\-\.\s]")
 _RE_SNAKE_CASE_2 = re.compile(r"[A-Z]")
 
 
+@functools.lru_cache(1024)
 def to_snake_case(s: str) -> str:
 
     s = _RE_SNAKE_CASE_1.sub("_", s)
@@ -44,6 +46,7 @@ _RE_CAMEL_CASE_1 = re.compile(r"^[\-_\.]")
 _RE_CAMEL_CASE_2 = re.compile(r"[\-_\.\s]([a-z])")
 
 
+@functools.lru_cache(1024)
 def to_camel_case(s: str) -> str:
     s = _RE_CAMEL_CASE_1.sub("", str(s))
     if not s:

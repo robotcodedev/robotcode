@@ -2202,3 +2202,118 @@ class InlineValueEvaluatableExpression(Model):
 
 
 InlineValue = Union[InlineValueText, InlineValueVariableLookup, InlineValueEvaluatableExpression]
+
+
+@dataclass(repr=False)
+class _DocumentDiagnosticParams(Model):
+    text_document: TextDocumentIdentifier
+    identifier: Optional[str] = None
+    previous_result_id: Optional[str] = None
+
+
+@dataclass(repr=False)
+class DocumentDiagnosticParams(WorkDoneProgressParams, PartialResultParams, _DocumentDiagnosticParams):
+    pass
+
+
+class DocumentDiagnosticReportKind(Enum):
+    FULL = "full"
+    UNCHANGED = "unchanged"
+
+
+@dataclass(repr=False)
+class FullDocumentDiagnosticReport(Model):
+    items: List[Diagnostic]
+    result_id: Optional[str] = None
+    kind: Literal[DocumentDiagnosticReportKind.FULL] = DocumentDiagnosticReportKind.FULL
+
+
+@dataclass(repr=False)
+class UnchangedDocumentDiagnosticReport(Model):
+    result_id: str
+    kind: DocumentDiagnosticReportKind = DocumentDiagnosticReportKind.UNCHANGED
+
+
+@dataclass(repr=False)
+class RelatedFullDocumentDiagnosticReport(FullDocumentDiagnosticReport):
+    related_documents: Optional[
+        Dict[DocumentUri, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]
+    ] = None
+
+
+@dataclass(repr=False)
+class RelatedUnchangedDocumentDiagnosticReport(UnchangedDocumentDiagnosticReport):
+    related_documents: Optional[
+        Dict[DocumentUri, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]
+    ] = None
+
+
+DocumentDiagnosticReport = Union[RelatedFullDocumentDiagnosticReport, RelatedUnchangedDocumentDiagnosticReport]
+
+
+@dataclass(repr=False)
+class DocumentDiagnosticReportPartialResult(Model):
+    related_documents: Optional[
+        Dict[DocumentUri, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]
+    ] = None
+
+
+@dataclass(repr=False)
+class DiagnosticServerCancellationData(Model):
+    retrigger_request: bool
+
+
+@dataclass(repr=False)
+class PreviousResultId(Model):
+    uri: DocumentUri
+    value: str
+
+
+@dataclass(repr=False)
+class _WorkspaceDiagnosticParams(Model):
+    previous_result_ids: List[PreviousResultId]
+    identifier: Optional[str] = None
+
+
+@dataclass(repr=False)
+class WorkspaceDiagnosticParams(WorkDoneProgressParams, PartialResultParams, _WorkspaceDiagnosticParams):
+    pass
+
+
+@dataclass(repr=False)
+class _WorkspaceFullDocumentDiagnosticReport(Model):
+    uri: DocumentUri
+    version: Optional[int]
+
+
+@dataclass(repr=False)
+class WorkspaceFullDocumentDiagnosticReport(FullDocumentDiagnosticReport, _WorkspaceFullDocumentDiagnosticReport):
+    pass
+
+
+@dataclass(repr=False)
+class _WorkspaceUnchangedDocumentDiagnosticReport(Model):
+    uri: DocumentUri
+    version: Optional[int]
+
+
+@dataclass(repr=False)
+class WorkspaceUnchangedDocumentDiagnosticReport(
+    UnchangedDocumentDiagnosticReport, _WorkspaceUnchangedDocumentDiagnosticReport
+):
+    pass
+
+
+WorkspaceDocumentDiagnosticReport = Union[
+    WorkspaceFullDocumentDiagnosticReport, WorkspaceUnchangedDocumentDiagnosticReport
+]
+
+
+@dataclass(repr=False)
+class WorkspaceDiagnosticReportPartialResult(Model):
+    items: List[WorkspaceDocumentDiagnosticReport]
+
+
+@dataclass(repr=False)
+class WorkspaceDiagnosticReport(Model):
+    items: List[WorkspaceDocumentDiagnosticReport]
