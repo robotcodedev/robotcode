@@ -9,6 +9,7 @@ from ....utils.logging import LoggingDescriptor
 from ..decorators import language_id_filter
 from ..has_extend_capabilities import HasExtendCapabilities
 from ..lsp_types import (
+    ErrorCodes,
     Position,
     PrepareRenameParams,
     PrepareRenameResult,
@@ -123,7 +124,7 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         ):
             if isinstance(result, BaseException):
                 if isinstance(result, CantRenameException):
-                    raise JsonRPCErrorException(100, str(result))
+                    raise JsonRPCErrorException(ErrorCodes.INVALID_PARAMS, str(result))
 
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)

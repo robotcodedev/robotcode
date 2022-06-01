@@ -281,6 +281,9 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
             document.opened_in_editor = False
 
             await self.close_document(document)
+
+            document.version = None
+
             create_sub_task(
                 self.did_close(self, document, callback_filter=language_id_filter(document)), loop=self.parent.loop
             )

@@ -373,7 +373,6 @@ export class LanguageClientsManager {
             };
           },
         },
-        diagnosticCollectionName: "robotcode",
         // TODO: how we can start a language client on workspace level, not on folder level
         workspaceFolder,
         outputChannel,
@@ -432,7 +431,13 @@ export class LanguageClientsManager {
       this.outputChannel.appendLine(`trying to start Language client: ${name}`);
 
       result.onDidChangeState((e) => {
-        if (e.newState == State.Running) {
+        if (e.newState == State.Starting) {
+          result?.diagnostics?.clear();
+
+          this.outputChannel.appendLine(
+            `client for ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} starting.`
+          );
+        } else if (e.newState == State.Running) {
           this.outputChannel.appendLine(
             `client for ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} running.`
           );

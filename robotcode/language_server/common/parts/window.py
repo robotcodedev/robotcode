@@ -15,7 +15,6 @@ from ..lsp_types import (
     ShowDocumentResult,
     ShowMessageParams,
     ShowMessageRequestParams,
-    WorkDoneProgressBase,
     WorkDoneProgressBegin,
     WorkDoneProgressCancelParams,
     WorkDoneProgressCreateParams,
@@ -112,8 +111,10 @@ class WindowProtocolPart(LanguageServerProtocolPart):
         percentage: Optional[int] = None,
         cancellable: Optional[bool] = None,
         title: Optional[str] = None,
+        *,
+        progress_token: Optional[ProgressToken] = None,
     ) -> AsyncIterator[Progress]:
-        p = Progress(self, await self.create_progress(), message, max)
+        p = Progress(self, await self.create_progress() if progress_token is None else progress_token, message, max)
         self.progress_begin(
             p.token,
             message,
@@ -158,7 +159,7 @@ class WindowProtocolPart(LanguageServerProtocolPart):
 
         return token in self.__progress_tokens and self.__progress_tokens.get(token, False)
 
-    def _progress(self, token: Optional[ProgressToken], value: WorkDoneProgressBase) -> None:
+    def send_progress(self, token: Optional[ProgressToken], value: Any) -> None:
         if (
             token is not None
             and self.parent.client_capabilities
@@ -183,7 +184,7 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             and self.parent.client_capabilities.window
             and self.parent.client_capabilities.window.work_done_progress
         ):
-            self._progress(
+            self.send_progress(
                 token,
                 WorkDoneProgressBegin(
                     title or self.parent.short_name or self.parent.name or self._default_title,
@@ -207,7 +208,7 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             and self.parent.client_capabilities.window
             and self.parent.client_capabilities.window.work_done_progress
         ):
-            self._progress(
+            self.send_progress(
                 token,
                 WorkDoneProgressReport(
                     title or self.parent.short_name or self.parent.name or self._default_title,
@@ -229,7 +230,7 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             and self.parent.client_capabilities.window.work_done_progress
         ):
             try:
-                self._progress(token, WorkDoneProgressEnd(message))
+                self.send_progress(token, WorkDoneProgressEnd(message))
             finally:
                 if token in self.__progress_tokens:
                     self.__progress_tokens.pop(token)

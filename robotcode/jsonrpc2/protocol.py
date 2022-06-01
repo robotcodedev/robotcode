@@ -31,7 +31,13 @@ from typing import (
     runtime_checkable,
 )
 
-from ..utils.async_tools import async_event, create_sub_future, create_sub_task
+from ..utils.async_tools import (
+    HasThreaded,
+    async_event,
+    create_sub_future,
+    create_sub_task,
+    run_coroutine_in_thread,
+)
 from ..utils.dataclasses import as_json, from_dict
 from ..utils.inspect import ensure_coroutine, iter_methods
 from ..utils.logging import LoggingDescriptor
@@ -69,6 +75,8 @@ class JsonRPCErrors:
     INTERNAL_ERROR = -32603
     SERVER_ERROR_START = -32000
     SERVER_ERROR_END = -32099
+
+    REQUEST_CANCELLED = -32800
 
 
 PROTOCOL_VERSION = "2.0"
@@ -674,10 +682,13 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
         params = self._convert_params(e.method, e.param_type, message.params)
 
-        task = create_sub_task(
-            ensure_coroutine(e.method)(*params[0], **params[1]),
-            name=message.method,
-        )
+        if isinstance(e.method, HasThreaded) and cast(HasThreaded, e.method).__threaded__:
+            task = run_coroutine_in_thread(ensure_coroutine(e.method), *params[0], **params[1])
+        else:
+            task = create_sub_task(
+                ensure_coroutine(e.method)(*params[0], **params[1]),
+                name=message.method,
+            )
         with self._received_request_lock:
             self._received_request[message.id] = ReceivedRequestEntry(task, message, e.cancelable)
 
@@ -686,6 +697,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 self.send_response(message.id, t.result())
             except asyncio.CancelledError:
                 self._logger.debug(f"request message {repr(message)} canceled")
+                self.send_error(JsonRPCErrors.REQUEST_CANCELLED, "Request canceled.", id=message.id)
             except (SystemExit, KeyboardInterrupt):
                 raise
             except JsonRPCErrorException as ex:

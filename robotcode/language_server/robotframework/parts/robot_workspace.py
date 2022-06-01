@@ -8,8 +8,12 @@ from ....utils.glob_path import iter_files
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.decorators import language_id
-from ...common.parts.diagnostics import DiagnosticsMode, WorkspaceDocumentsResult
-from ..configuration import AnalysisConfig, AnalysisProgressMode, RobotCodeConfig
+from ...common.parts.diagnostics import (
+    AnalysisProgressMode,
+    DiagnosticsMode,
+    WorkspaceDocumentsResult,
+)
+from ..configuration import AnalysisConfig, RobotCodeConfig
 from ..diagnostics.library_doc import RESOURCE_FILE_EXTENSION, ROBOT_FILE_EXTENSION
 
 if TYPE_CHECKING:
@@ -30,6 +34,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         self.parent.documents.on_read_document_text.add(self._on_read_document_text)
         self.parent.diagnostics.collect_workspace_documents.add(self._collect_workspace_documents)
         self.parent.diagnostics.on_get_diagnostics_mode.add(self.on_get_diagnostics_mode)
+        self.parent.diagnostics.on_get_analysis_progress_mode.add(self.on_get_analysis_progress_mode)
         self.workspace_loaded = Event()
 
     @language_id("robotframework")
@@ -42,6 +47,10 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
     async def on_get_diagnostics_mode(self, sender: Any, uri: Uri) -> Optional[DiagnosticsMode]:
         config = await self.parent.workspace.get_configuration(AnalysisConfig, uri)
         return config.diagnostic_mode
+
+    async def on_get_analysis_progress_mode(self, sender: Any, uri: Uri) -> Optional[AnalysisProgressMode]:
+        config = await self.parent.workspace.get_configuration(AnalysisConfig, uri)
+        return config.progress_mode
 
     @threaded()
     async def _collect_workspace_documents(self, sender: Any) -> List[WorkspaceDocumentsResult]:

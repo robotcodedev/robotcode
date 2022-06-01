@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
-from ..common.parts.diagnostics import DiagnosticsMode
+from ..common.parts.diagnostics import AnalysisProgressMode, DiagnosticsMode
 from ..common.parts.workspace import ConfigBase, config_section
 
 
@@ -69,11 +69,6 @@ class RoboTidyConfig(ConfigBase):
 @dataclass
 class WorkspaceConfig(ConfigBase):
     exclude_patterns: List[str] = field(default_factory=list)
-
-
-class AnalysisProgressMode(Enum):
-    SIMPLE = "simple"
-    DETAILED = "detailed"
 
 
 @config_section("robotcode.analysis")

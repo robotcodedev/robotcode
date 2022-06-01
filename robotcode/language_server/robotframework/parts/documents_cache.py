@@ -266,7 +266,8 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     async def __invalidate_namespace(self, namespace: Namespace) -> None:
         document = namespace.document
         if document is not None:
-            await document.remove_cache_entry(self.__get_namespace)
+            await document.invalidate_cache()
+
             await self.namespace_invalidated(
                 self,
                 document,

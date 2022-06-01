@@ -55,6 +55,10 @@ class TextDocument:
     def version(self) -> Optional[int]:
         return self._version
 
+    @version.setter
+    def version(self, value: Optional[int]) -> None:
+        self._version = value
+
     def __str__(self) -> str:  # pragma: no cover
         return self.__repr__()
 
@@ -140,8 +144,10 @@ class TextDocument:
         return self._lines
 
     async def get_lines(self) -> List[str]:
-        async with self._lock:
-            return self.__get_lines()
+        if self._lines is None:
+            async with self._lock:
+                return self.__get_lines()
+        return self._lines
 
     def _invalidate_cache(self) -> None:
         self._cache.clear()

@@ -3,14 +3,13 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, cast
 
-from robotcode.language_server.robotframework.diagnostics.library_doc import KeywordDoc
-
 from ....utils.async_tools import create_sub_task, run_coroutine_in_thread, threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import CodeLens, Command
 from ...common.text_document import TextDocument
 from ..configuration import AnalysisConfig
+from ..diagnostics.library_doc import KeywordDoc
 from ..utils.ast_utils import range_from_token
 from .model_helper import ModelHelperMixin
 
@@ -28,15 +27,17 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
 
         parent.code_lens.collect.add(self.collect)
         parent.code_lens.resolve.add(self.resolve)
+
         parent.robot_references.cache_cleared.add(self.robot_references_cache_cleared)
-        parent.diagnostics.workspace_diagnostics_stopped.add(self.diagnostics_workspace_diagnostics_stopped)
 
         self._running_task: Set[Tuple[TextDocument, KeywordDoc]] = set()
+
+        parent.diagnostics.on_workspace_loaded.add(self.diagnostics_on_workspace_loaded)
 
     async def robot_references_cache_cleared(self, sender: Any) -> None:  # NOSONAR
         await self.parent.code_lens.refresh()
 
-    async def diagnostics_workspace_diagnostics_stopped(self, sender: Any) -> None:  # NOSONAR
+    async def diagnostics_on_workspace_loaded(self, sender: Any) -> None:  # NOSONAR
         await self.parent.code_lens.refresh()
 
     @language_id("robotframework")
@@ -113,7 +114,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         name = code_lens.data["name"]
         line = code_lens.data["line"]
 
-        if self.parent.diagnostics.workspace_diagnostics_running.is_set():
+        if self.parent.diagnostics.workspace_loaded_event.is_set():
             kw_doc = await self.get_keyword_definition_at_line(namespace, name, line)
 
             if kw_doc is not None and not kw_doc.is_error_handler:

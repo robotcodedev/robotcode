@@ -58,6 +58,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
     async def document_did_change(self, sender: Any, document: TextDocument) -> None:
         await self._keyword_reference_cache.clear()
+        await self._variable_reference_cache.clear()
+
         await self.cache_cleared(self)
 
     def _find_method(self, cls: Type[Any]) -> Optional[_ReferencesMethod]:
@@ -110,7 +112,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         *args: Any,
         **kwargs: Any,
     ) -> List[Location]:
-        await self.parent.robot_workspace.workspace_loaded.wait()
+
+        await self.parent.diagnostics.ensure_workspace_loaded()
 
         result: List[Location] = []
 

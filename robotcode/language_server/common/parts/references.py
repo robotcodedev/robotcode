@@ -52,6 +52,8 @@ class ReferencesProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         **kwargs: Any,
     ) -> Optional[List[Location]]:
 
+        await self.parent.diagnostics.ensure_workspace_loaded()
+
         locations: List[Location] = []
 
         document = await self.parent.documents.get(text_document.uri)

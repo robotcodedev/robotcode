@@ -252,6 +252,8 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 else None,
             )
 
+        await self.parent.diagnostics.ensure_workspace_loaded()
+
         workspace_path = Uri(workspace_folder).to_path()
         with LOGGER.cache_only:
             try:
