@@ -43,12 +43,9 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         parent.diagnostics.collect.add(self.collect_namespace_diagnostics)
 
-        parent.diagnostics.collect.add(self.collect_unused_references)
+        parent.diagnostics.collect_stage2.add(self.collect_unused_references)
 
         parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
-
-    async def cache_cleared(self, sender: Any) -> None:
-        ...
 
     @language_id("robotframework")
     async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
@@ -56,6 +53,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @threaded()
+    @_logger.call
     async def collect_namespace_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         try:
             namespace = await self.parent.documents_cache.get_namespace(document)
@@ -120,6 +118,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         )
 
     @language_id("robotframework")
+    @threaded()
     @_logger.call
     async def collect_token_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         from robot.errors import VariableError

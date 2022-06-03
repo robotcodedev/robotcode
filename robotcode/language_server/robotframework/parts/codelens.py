@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, cast
 
-from ....utils.async_tools import create_sub_task, run_coroutine_in_thread, threaded
+from ....utils.async_tools import create_sub_task, threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import CodeLens, Command
@@ -28,16 +28,13 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         parent.code_lens.collect.add(self.collect)
         parent.code_lens.resolve.add(self.resolve)
 
-        parent.robot_references.cache_cleared.add(self.robot_references_cache_cleared)
-
         self._running_task: Set[Tuple[TextDocument, KeywordDoc]] = set()
 
-        parent.diagnostics.on_workspace_loaded.add(self.diagnostics_on_workspace_loaded)
+        parent.diagnostics.on_workspace_loaded.add(self.codelens_refresh)
+        parent.diagnostics.on_document_diagnostics_ended.add(self.codelens_refresh)
+        parent.diagnostics.on_workspace_diagnostics_ended.add(self.codelens_refresh)
 
-    async def robot_references_cache_cleared(self, sender: Any) -> None:  # NOSONAR
-        await self.parent.code_lens.refresh()
-
-    async def diagnostics_on_workspace_loaded(self, sender: Any) -> None:  # NOSONAR
+    async def codelens_refresh(self, sender: Any) -> None:  # NOSONAR
         await self.parent.code_lens.refresh()
 
     @language_id("robotframework")
@@ -114,7 +111,11 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         name = code_lens.data["name"]
         line = code_lens.data["line"]
 
-        if self.parent.diagnostics.workspace_loaded_event.is_set():
+        if (
+            self.parent.diagnostics.workspace_loaded_event.is_set()
+            and self.parent.diagnostics.in_get_workspace_diagnostics.is_set()
+            and self.parent.diagnostics.in_get_document_diagnostics.is_set()
+        ):
             kw_doc = await self.get_keyword_definition_at_line(namespace, name, line)
 
             if kw_doc is not None and not kw_doc.is_error_handler:
@@ -131,16 +132,16 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
                         if document is None or kw_doc is None:
                             return
 
-                        await run_coroutine_in_thread(
-                            self.parent.robot_references.find_keyword_references,
-                            document,
-                            kw_doc,
-                            include_declaration=False,
-                        )
-
-                        # await self.parent.robot_references.find_keyword_references(
-                        #     document, kw_doc, include_declaration=False
+                        # await run_coroutine_in_thread(
+                        #     self.parent.robot_references.find_keyword_references,
+                        #     document,
+                        #     kw_doc,
+                        #     include_declaration=False,
                         # )
+
+                        await self.parent.robot_references.find_keyword_references(
+                            document, kw_doc, include_declaration=False
+                        )
 
                         await self.parent.code_lens.refresh()
 

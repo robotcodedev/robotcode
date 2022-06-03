@@ -27,30 +27,33 @@ class AsyncSimpleLRUCache:
         self._order: Optional[List[Tuple[Any, ...]]] = None
         if self.max_items:
             self._order = []
+        self.lock: Lock = Lock()
 
     async def has(self, *args: Any, **kwargs: Any) -> bool:
         key = self._make_key(*args, **kwargs)
-
-        if key in self._cache:
-            return self._cache[key].has_data
+        async with self.lock:
+            if key in self._cache:
+                return self._cache[key].has_data
 
         return False
 
     async def get(self, func: Callable[..., Awaitable[_T]], *args: Any, **kwargs: Any) -> _T:
         key = self._make_key(*args, **kwargs)
 
-        entry = self._cache[key]
+        async with self.lock:
+            entry = self._cache[key]
 
         async with entry.lock:
             if not entry.has_data:
                 entry.data = await func(*args, **kwargs)
                 entry.has_data = True
 
-                if self._order is not None and self.max_items is not None:
-                    self._order.insert(0, key)
+                async with self.lock:
+                    if self._order is not None and self.max_items is not None:
+                        self._order.insert(0, key)
 
-                    if len(self._order) > self.max_items:
-                        del self._cache[self._order.pop()]
+                        if len(self._order) > self.max_items:
+                            del self._cache[self._order.pop()]
 
             return cast(_T, entry.data)
 
@@ -59,6 +62,7 @@ class AsyncSimpleLRUCache:
         return (tuple(_freeze(v) for v in args), hash(frozenset({k: _freeze(v) for k, v in kwargs.items()})))
 
     async def clear(self) -> None:
-        self._cache.clear()
-        if self._order is not None:
-            self._order.clear()
+        async with self.lock:
+            self._cache.clear()
+            if self._order is not None:
+                self._order.clear()

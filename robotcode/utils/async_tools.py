@@ -6,6 +6,7 @@ import contextvars
 import functools
 import inspect
 import threading
+import warnings
 import weakref
 from collections import deque
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -435,6 +436,9 @@ def check_canceled_sync() -> bool:
     return True
 
 
+__threadpool_executor = ThreadPoolExecutor(thread_name_prefix="sub_asyncio")
+
+
 def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyncio.Future[_T]:
     global __tread_pool_executor
 
@@ -445,7 +449,7 @@ def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyn
 
     return cast(
         "asyncio.Future[_T]",
-        loop.run_in_executor(None, cast(Callable[..., _T], func_call)),
+        loop.run_in_executor(__threadpool_executor, cast(Callable[..., _T], func_call)),
     )
 
 
@@ -481,7 +485,21 @@ def run_coroutine_in_thread(
             threading.current_thread().setName(old_name)
 
     def run() -> _T:
-        return asyncio.run(create_inner_task())
+        loop = asyncio.new_event_loop()
+        try:
+            asyncio.set_event_loop(loop)
+
+            return loop.run_until_complete(create_inner_task())
+        finally:
+            try:
+                running_tasks = asyncio.all_tasks(loop)
+                if running_tasks:
+                    loop.run_until_complete(asyncio.gather(*running_tasks, loop=loop, return_exceptions=True))
+
+                loop.run_until_complete(loop.shutdown_asyncgens())
+            finally:
+                asyncio.set_event_loop(None)
+                loop.close()
 
     cti = get_current_future_info()
     result = run_in_thread(run)
@@ -508,9 +526,9 @@ def run_coroutine_in_thread(
 class Event:
     """Thread safe version of an async Event"""
 
-    def __init__(self) -> None:
+    def __init__(self, value: bool = False) -> None:
         self._waiters: Deque[asyncio.Future[Any]] = deque()
-        self._value = False
+        self._value = value
         self._lock = threading.RLock()
 
     def __repr__(self) -> str:
@@ -521,39 +539,165 @@ class Event:
         return f"<{res[1:-1]} [{extra}]>"
 
     def is_set(self) -> bool:
-        return self._value
+        with self._lock:
+            return self._value
 
     def set(self) -> None:
-        if not self._value:
-            self._value = True
+        with self._lock:
+            if not self._value:
+                self._value = True
 
-            with self._lock:
                 for fut in self._waiters:
                     if not fut.done():
                         if fut._loop == asyncio.get_running_loop():
-                            fut.set_result(True)
+                            if not fut.done():
+                                fut.set_result(True)
                         else:
-                            fut._loop.call_soon_threadsafe(fut.set_result, True)
+
+                            def s(w: asyncio.Future[Any]) -> None:
+                                if not w.done():
+                                    w.set_result(True)
+
+                            if not fut.done():
+                                fut._loop.call_soon_threadsafe(s, fut)
 
     def clear(self) -> None:
-        self._value = False
+        with self._lock:
+            self._value = False
 
-    async def wait(self) -> bool:
+    async def wait(self, timeout: Optional[float] = None) -> bool:
         if self._value:
             return True
 
+        fut = create_sub_future()
         with self._lock:
-            fut = create_sub_future()
             self._waiters.append(fut)
         try:
-            await fut
+            await asyncio.wait_for(fut, timeout)
             return True
+        except asyncio.TimeoutError:
+            return False
         finally:
             with self._lock:
                 self._waiters.remove(fut)
 
 
+class Semaphore:
+    """Thread safe version of a Semaphore"""
+
+    def __init__(self, value: int = 1) -> None:
+        if value < 0:
+            raise ValueError("Semaphore initial value must be >= 0")
+        self._value = value
+        self._waiters: Deque[asyncio.Future[Any]] = deque()
+
+        self._lock = threading.RLock()
+
+    def __repr__(self) -> str:
+        res = super().__repr__()
+        extra = "locked" if self.locked() else f"unlocked, value:{self._value}"
+        if self._waiters:
+            extra = f"{extra}, waiters:{len(self._waiters)}"
+        return f"<{res[1:-1]} [{extra}]>"
+
+    def _wake_up_next(self) -> None:
+        while self._waiters:
+            with self._lock:
+                waiter = self._waiters.popleft()
+
+            if not waiter.done():
+                if waiter._loop == asyncio.get_running_loop():
+                    if not waiter.done():
+                        waiter.set_result(True)
+                else:
+                    if waiter._loop.is_running():
+
+                        def s(w: asyncio.Future[Any]) -> None:
+                            if not w.done():
+                                w.set_result(True)
+
+                        if not waiter.done():
+                            waiter._loop.call_soon_threadsafe(s, waiter)
+                    else:
+                        warnings.warn("Loop is not running.")
+                        if not waiter.done():
+                            waiter.set_result(True)
+
+    def locked(self) -> bool:
+        with self._lock:
+            return self._value == 0
+
+    async def acquire(self, timeout: Optional[float] = None) -> bool:
+        while self._value <= 0:
+            fut = create_sub_future()
+            with self._lock:
+                self._waiters.append(fut)
+            try:
+                await asyncio.wait_for(fut, timeout)
+            except asyncio.TimeoutError:
+                return False
+            except BaseException:
+                if not fut.done():
+                    fut.cancel()
+                if self._value > 0 and not fut.cancelled():
+                    self._wake_up_next()
+
+                raise
+
+        with self._lock:
+            self._value -= 1
+
+        return True
+
+    def release(self) -> None:
+        self._value += 1
+        self._wake_up_next()
+
+    async def __aenter__(self) -> None:
+        await self.acquire()
+
+    async def __aexit__(
+        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
+    ) -> None:
+        self.release()
+
+
+class BoundedSemaphore(Semaphore):
+    """Thread safe version of a BoundedSemaphore"""
+
+    def __init__(self, value: int = 1) -> None:
+        self._bound_value = value
+        super().__init__(value)
+
+    def release(self) -> None:
+        if self._value >= self._bound_value:
+            raise ValueError("BoundedSemaphore released too many times")
+        super().release()
+
+
 class Lock:
+    def __init__(self) -> None:
+        self._block = BoundedSemaphore(value=1)
+
+    def __repr__(self) -> str:
+        return "<%s _block=%s>" % (self.__class__.__name__, self._block)
+
+    async def acquire(self, timeout: Optional[float] = None) -> bool:
+        return await self._block.acquire(timeout)
+
+    def release(self) -> None:
+        self._block.release()
+
+    async def __aenter__(self) -> None:
+        await self.acquire()
+
+    async def __aexit__(
+        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
+    ) -> None:
+        self.release()
+
+
+class OldLock:
     """Threadsafe version of an async Lock."""
 
     def __init__(self) -> None:
@@ -617,8 +761,6 @@ class Lock:
         return True
 
     async def release(self) -> None:
-        import warnings
-
         async with self.__inner_lock():
             if self._waiters is None or len(self._waiters) == 0:
                 if self._locked:

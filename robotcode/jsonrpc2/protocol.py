@@ -595,7 +595,12 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                     entry.future.set_result(res)
                 else:
                     if entry.future._loop.is_running():
-                        entry.future._loop.call_soon_threadsafe(entry.future.set_result, res)
+
+                        def s(f: asyncio.Future[Any], r: Any) -> None:
+                            if not f.done():
+                                f.set_result(r)
+
+                        entry.future._loop.call_soon_threadsafe(s, entry.future, res)
                     else:
                         self._logger.warning("Response loop is not running.")
 
@@ -700,8 +705,8 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 self.send_error(JsonRPCErrors.REQUEST_CANCELLED, "Request canceled.", id=message.id)
             except (SystemExit, KeyboardInterrupt):
                 raise
-            except JsonRPCErrorException as ex:
-                self.send_error(ex.code, ex.message, id=message.id, data=ex.data)
+            except JsonRPCErrorException as e:
+                self.send_error(e.code, e.message or f"{type(e).__name__}: {e}", id=message.id, data=e.data)
             except BaseException as e:
                 self._logger.exception(e)
                 self.send_error(JsonRPCErrors.INTERNAL_ERROR, f"{type(e).__name__}: {e}", id=message.id)

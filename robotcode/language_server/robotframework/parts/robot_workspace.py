@@ -32,7 +32,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
         self.parent.documents.on_read_document_text.add(self._on_read_document_text)
-        self.parent.diagnostics.collect_workspace_documents.add(self._collect_workspace_documents)
+        self.parent.diagnostics.load_workspace_documents.add(self._load_workspace_documents)
         self.parent.diagnostics.on_get_diagnostics_mode.add(self.on_get_diagnostics_mode)
         self.parent.diagnostics.on_get_analysis_progress_mode.add(self.on_get_analysis_progress_mode)
         self.workspace_loaded = Event()
@@ -53,7 +53,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         return config.progress_mode
 
     @threaded()
-    async def _collect_workspace_documents(self, sender: Any) -> List[WorkspaceDocumentsResult]:
+    async def _load_workspace_documents(self, sender: Any) -> List[WorkspaceDocumentsResult]:
 
         result: List[WorkspaceDocumentsResult] = []
 
