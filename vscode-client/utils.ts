@@ -103,7 +103,7 @@ export class WeakValueMap<K, V extends object> implements Map<K, V> {
     }
   }
 
-  readonly [Symbol.toStringTag]: "WeakValueMap";
+  readonly [Symbol.toStringTag]: string = "WeakValueMap";
 }
 
 export class WeakValueSet<V extends object> implements Set<V> {
@@ -189,5 +189,5 @@ export class WeakValueSet<V extends object> implements Set<V> {
     return this.values();
   }
 
-  [Symbol.toStringTag]: string;
+  readonly [Symbol.toStringTag]: string = "WeakValueSet";
 }
