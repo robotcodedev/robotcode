@@ -47,7 +47,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @threaded()
     @_logger.call
-    async def collect_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    async def collect_diagnostics(self, sender: Any, document: TextDocument, full: bool) -> DiagnosticsResult:
 
         workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
         if workspace_folder is not None:

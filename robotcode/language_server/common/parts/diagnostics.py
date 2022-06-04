@@ -14,7 +14,6 @@ from ....utils.async_tools import (
     async_tasking_event,
     async_tasking_event_iterator,
     create_sub_task,
-    threaded,
 )
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
@@ -92,6 +91,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         self._current_workspace_task: Optional[asyncio.Task[WorkspaceDiagnosticReport]] = None
         self.in_get_document_diagnostics = Event(True)
         self.in_get_workspace_diagnostics = Event(True)
+        self._collect_full_diagnostics = False
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if (
@@ -106,12 +106,17 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                 work_done_progress=True,
             )
 
-    @async_tasking_event_iterator
-    async def collect(sender, document: TextDocument) -> DiagnosticsResult:  # NOSONAR
-        ...
+    @property
+    def collect_full_diagnostics(self) -> bool:
+        return self._collect_full_diagnostics
+
+    async def set_collect_full_diagnostics(self, value: bool) -> None:
+        if self._collect_full_diagnostics != value:
+            self._collect_full_diagnostics = value
+            await self.refresh()
 
     @async_tasking_event_iterator
-    async def collect_stage2(sender, document: TextDocument) -> DiagnosticsResult:  # NOSONAR
+    async def collect(sender, document: TextDocument, full: bool) -> DiagnosticsResult:  # NOSONAR
         ...
 
     @async_tasking_event
@@ -153,6 +158,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                         await self.on_workspace_loaded(self)
 
     async def get_document_diagnostics(self, document: TextDocument) -> RelatedFullDocumentDiagnosticReport:
+        if self.collect_full_diagnostics:
+            return await document.get_cache(self.__get_full_document_diagnostics)
         return await document.get_cache(self.__get_document_diagnostics)
 
     async def __get_document_diagnostics(self, document: TextDocument) -> RelatedFullDocumentDiagnosticReport:
@@ -163,6 +170,29 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         async for result_any in self.collect(
             self,
             document,
+            full=False,
+            callback_filter=language_id_filter(document),
+            return_exceptions=True,
+        ):
+            result = cast(DiagnosticsResult, result_any)
+
+            if isinstance(result, BaseException):
+                if not isinstance(result, asyncio.CancelledError):
+                    self._logger.exception(result, exc_info=result)
+            else:
+                diagnostics.extend(result.diagnostics or [])
+
+        return RelatedFullDocumentDiagnosticReport(items=diagnostics, result_id=str(uuid.uuid4()))
+
+    async def __get_full_document_diagnostics(self, document: TextDocument) -> RelatedFullDocumentDiagnosticReport:
+        await self.ensure_workspace_loaded()
+
+        diagnostics: List[Diagnostic] = []
+
+        async for result_any in self.collect(
+            self,
+            document,
+            full=True,
             callback_filter=language_id_filter(document),
             return_exceptions=True,
         ):
@@ -177,7 +207,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         return RelatedFullDocumentDiagnosticReport(items=diagnostics, result_id=str(uuid.uuid4()))
 
     @rpc_method(name="textDocument/diagnostic", param_type=DocumentDiagnosticParams)
-    @threaded()
     async def _text_document_diagnostic(
         self,
         text_document: TextDocumentIdentifier,
@@ -236,7 +265,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             self._logger.debug(lambda: f"textDocument/diagnostic ready  {text_document}")
 
     @rpc_method(name="workspace/diagnostic", param_type=WorkspaceDiagnosticParams)
-    @threaded()
     async def _workspace_diagnostic(
         self,
         identifier: Optional[str],
@@ -272,7 +300,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
         async def _get_partial_diagnostics() -> WorkspaceDiagnosticReport:
             async with self.parent.window.progress(
-                "Analyse Workspace", progress_token=work_done_token, cancellable=False
+                f"Analyse {'full ' if self.collect_full_diagnostics else ''} Workspace",
+                progress_token=work_done_token,
+                cancellable=False,
             ) as progress:
 
                 async def _task(doc: TextDocument) -> None:
@@ -285,7 +315,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                         else:
                             name = path.relative_to(folder.uri.to_path())
 
-                        progress.report(f"Analyse {name}")
+                        progress.report(f"Analyse {'full ' if self.collect_full_diagnostics else ''} {name}")
 
                     doc_result = await self.get_document_diagnostics(doc)
 
@@ -332,7 +362,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             task = create_sub_task(_get_diagnostics() if partial_result_token is None else _get_partial_diagnostics())
             self._current_workspace_task = task
             try:
-                return await task
+                result = await task
+                await self.set_collect_full_diagnostics(True)
+                return result
             except asyncio.CancelledError as e:
                 self._logger.debug("workspace/diagnostic canceled")
                 raise JsonRPCErrorException(
@@ -349,6 +381,12 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
     def cancel_workspace_diagnostics(self) -> None:
         if self._current_workspace_task is not None and not self._current_workspace_task.done():
             self._current_workspace_task.cancel()
+
+    def cancel_document_diagnostics(self, document: TextDocument) -> None:
+        task = self._current_document_tasks.get(document, None)
+        if task is not None:
+            self._logger.critical(lambda: f"textDocument/diagnostic canceled {document}")
+            task.cancel()
 
     async def get_analysis_progress_mode(self, uri: Uri) -> AnalysisProgressMode:
         for e in await self.on_get_analysis_progress_mode(self, uri):

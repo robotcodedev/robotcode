@@ -494,7 +494,7 @@ def run_coroutine_in_thread(
             try:
                 running_tasks = asyncio.all_tasks(loop)
                 if running_tasks:
-                    loop.run_until_complete(asyncio.gather(*running_tasks, loop=loop, return_exceptions=True))
+                    loop.run_until_complete(asyncio.gather(*running_tasks, return_exceptions=True))
 
                 loop.run_until_complete(loop.shutdown_asyncgens())
             finally:
@@ -601,27 +601,25 @@ class Semaphore:
         return f"<{res[1:-1]} [{extra}]>"
 
     def _wake_up_next(self) -> None:
-        while self._waiters:
-            with self._lock:
+        with self._lock:
+            while self._waiters:
                 waiter = self._waiters.popleft()
 
-            if not waiter.done():
-                if waiter._loop == asyncio.get_running_loop():
-                    if not waiter.done():
-                        waiter.set_result(True)
-                else:
-                    if waiter._loop.is_running():
-
-                        def s(w: asyncio.Future[Any]) -> None:
-                            if not w.done():
-                                w.set_result(True)
-
-                        if not waiter.done():
-                            waiter._loop.call_soon_threadsafe(s, waiter)
-                    else:
-                        warnings.warn("Loop is not running.")
+                if not waiter.done():
+                    if waiter._loop == asyncio.get_running_loop():
                         if not waiter.done():
                             waiter.set_result(True)
+                    else:
+                        if waiter._loop.is_running():
+
+                            def s(w: asyncio.Future[Any]) -> None:
+                                if w._loop.is_running() and not w.done():
+                                    w.set_result(True)
+
+                            if not waiter.done():
+                                waiter._loop.call_soon_threadsafe(s, waiter)
+                        else:
+                            warnings.warn("Loop is not running.")
 
     def locked(self) -> bool:
         with self._lock:
@@ -688,6 +686,10 @@ class Lock:
     def release(self) -> None:
         self._block.release()
 
+    @property
+    def locked(self) -> bool:
+        return self._block.locked()
+
     async def __aenter__(self) -> None:
         await self.acquire()
 
@@ -733,6 +735,10 @@ class OldLock:
             self._lock.release()
         # with self._lock:
         #     yield None
+
+    @property
+    def locked(self) -> bool:
+        return self._locked
 
     async def acquire(self) -> bool:
         async with self.__inner_lock():
