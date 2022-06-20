@@ -97,9 +97,9 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
                     default=False,
                 ),
                 ExceptionBreakpointsFilter(
-                    filter="uncaughted_failed_keyword",
-                    label="Uncaughted Failed Keywords",
-                    description="Breaks on uncaughted failed keywords",
+                    filter="uncaught_failed_keyword",
+                    label="Uncaught Failed Keywords",
+                    description="Breaks on uncaught failed keywords",
                     default=True,
                 ),
                 ExceptionBreakpointsFilter(

@@ -221,7 +221,7 @@ class Debugger:
 
         self.exception_breakpoints: Set[ExceptionBreakpointsEntry] = set()
         self.exception_breakpoints.add(
-            ExceptionBreakpointsEntry((), (ExceptionFilterOptions("uncaughted_failed_keyword"),), ())
+            ExceptionBreakpointsEntry((), (ExceptionFilterOptions("uncaught_failed_keyword"),), ())
         )
 
         self.main_thread: Optional[threading.Thread] = None
@@ -831,7 +831,7 @@ class Debugger:
             if status == "FAIL" and type in ["KEYWORD", "SETUP", "TEARDOWN"]:
                 self.process_end_state(
                     status,
-                    {"failed_keyword", *({"uncaughted_failed_keyword"} if self.in_caughted_keyword() else {})},
+                    {"failed_keyword", *({"uncaught_failed_keyword"} if self.in_caughted_keyword() else {})},
                     "Keyword failed.",
                     f"Keyword failed: {self.last_fail_message}" if self.last_fail_message else "Keyword failed.",
                 )
@@ -1200,7 +1200,7 @@ class Debugger:
 
         if filter_options is not None:
             for option in filter_options:
-                if option.filter_id in ["failed_keyword", "uncaughted_failed_keyword", "failed_test", "failed_suite"]:
+                if option.filter_id in ["failed_keyword", "uncaught_failed_keyword", "failed_test", "failed_suite"]:
                     entry = ExceptionBreakpointsEntry(
                         tuple(filters),
                         tuple(filter_options) if filter_options is not None else None,
