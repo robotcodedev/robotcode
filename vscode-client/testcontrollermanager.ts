@@ -284,7 +284,7 @@ export class TestControllerManager {
     this.didChangedTimer.set(
       uri_str,
       new DidChangeEntry(
-        setTimeout((_) => {
+        setTimeout(() => {
           const item = this.findTestItemForDocument(document);
           if (item)
             this.refresh(item).then(
@@ -540,7 +540,7 @@ export class TestControllerManager {
       const token = new vscode.CancellationTokenSource();
 
       this.fileChangeTimer = new DidChangeEntry(
-        setTimeout((_) => {
+        setTimeout(() => {
           this.refreshWorkspace(workspace, reason).then(
             () => undefined,
             () => undefined

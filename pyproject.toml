@@ -95,6 +95,7 @@ exclude = '''
     | dist
     | out
     | robotcode/external
+    | playground
   )/
 )
 '''
@@ -139,3 +140,12 @@ warn_unused_configs = true
 strict = true
 disallow_subclassing_any = false
 ignore_missing_imports = true
+exclude = [
+  "\\.mypy_cache",
+  "\\.venv",
+  "build",
+  "dist",
+  "out",
+  "robotcode/external",
+  "playground",
+]
