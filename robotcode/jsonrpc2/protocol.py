@@ -12,7 +12,6 @@ from dataclasses import dataclass, field
 from typing import (
     Any,
     Callable,
-    Coroutine,
     Dict,
     Generic,
     Iterator,
@@ -477,9 +476,13 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
     def _handle_messages(self, iterator: Iterator[JsonRPCMessage]) -> None:
         def done(f: asyncio.Future[Any]) -> None:
-            ex = f.exception()
-            if ex is not None and not isinstance(ex, asyncio.CancelledError):
-                self._logger.exception(ex, exc_info=ex)
+            if f.done() and not f.cancelled():
+                ex = f.exception()
+
+                if ex is None or isinstance(ex, asyncio.CancelledError):
+                    return
+
+                # self._logger.exception(ex, exc_info=ex)
 
         for m in iterator:
             create_sub_task(self.handle_message(m)).add_done_callback(done)
@@ -487,13 +490,13 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
     @_logger.call
     async def handle_message(self, message: JsonRPCMessage) -> None:
         if isinstance(message, JsonRPCRequest):
-            self.handle_request(message)
+            await self.handle_request(message)
         elif isinstance(message, JsonRPCNotification):
-            self.handle_notification(message)
+            await self.handle_notification(message)
         elif isinstance(message, JsonRPCError):
-            self.handle_error(message)
+            await self.handle_error(message)
         elif isinstance(message, JsonRPCResponse):
-            self.handle_response(message)
+            await self.handle_response(message)
 
     @_logger.call
     def send_response(self, id: Optional[Union[str, int, None]], result: Optional[Any] = None) -> None:
@@ -570,7 +573,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         self.send_message(JsonRPCNotification(method=method, params=params))
 
     @_logger.call(exception=True)
-    def handle_response(self, message: JsonRPCResponse) -> None:
+    async def handle_response(self, message: JsonRPCResponse) -> None:
         if message.id is None:
             error = "Invalid response. Response id is null."
             self._logger.warning(error)
@@ -614,7 +617,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                     entry.future._loop.call_soon_threadsafe(entry.future.set_exception, e)
 
     @_logger.call
-    def handle_error(self, message: JsonRPCError) -> None:
+    async def handle_error(self, message: JsonRPCError) -> None:
         raise JsonRPCErrorException(message.error.code, message.error.message, message.error.data)
 
     @staticmethod
@@ -674,7 +677,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         return args, kw_args
 
     @_logger.call
-    def handle_request(self, message: JsonRPCRequest) -> Optional[asyncio.Task[_T]]:
+    async def handle_request(self, message: JsonRPCRequest) -> None:
         e = self.registry.get_entry(message.method)
 
         if e is None or not callable(e.method):
@@ -716,7 +719,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
         task.add_done_callback(done)
 
-        return task
+        await task
 
     @_logger.call
     def cancel_request(self, id: Union[int, str, None]) -> None:
@@ -734,7 +737,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 entry.future.cancel()
 
     @_logger.call
-    def handle_notification(self, message: JsonRPCNotification) -> None:
+    async def handle_notification(self, message: JsonRPCNotification) -> None:
         e = self.registry.get_entry(message.method)
 
         if e is None or not callable(e.method):
@@ -742,10 +745,16 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             return
         try:
             params = self._convert_params(e.method, e.param_type, message.params)
-            result = e.method(*params[0], **params[1])
-            if inspect.isawaitable(result):
-                create_sub_task(cast(Coroutine[Any, Any, Any], result))
 
+            if isinstance(e.method, HasThreaded) and cast(HasThreaded, e.method).__threaded__:
+                task = run_coroutine_in_thread(ensure_coroutine(e.method), *params[0], **params[1])
+            else:
+                task = create_sub_task(
+                    ensure_coroutine(e.method)(*params[0], **params[1]),
+                    name=message.method,
+                )
+
+            await task
         except asyncio.CancelledError:
             pass
         except (SystemExit, KeyboardInterrupt):

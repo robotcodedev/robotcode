@@ -14,6 +14,7 @@ from ....utils.async_tools import (
     async_tasking_event,
     async_tasking_event_iterator,
     create_sub_task,
+    threaded,
 )
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
@@ -101,7 +102,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         ):
             capabilities.diagnostic_provider = DiagnosticOptions(
                 inter_file_dependencies=True,
-                workspace_diagnostics=True,
+                workspace_diagnostics=False,
                 identifier=f"robotcodelsp_{uuid.uuid4()}",
                 work_done_progress=True,
             )
@@ -190,11 +191,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         diagnostics: List[Diagnostic] = []
 
         async for result_any in self.collect(
-            self,
-            document,
-            full=True,
-            callback_filter=language_id_filter(document),
-            return_exceptions=True,
+            self, document, full=True, callback_filter=language_id_filter(document), return_exceptions=True
         ):
             result = cast(DiagnosticsResult, result_any)
 
@@ -207,6 +204,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         return RelatedFullDocumentDiagnosticReport(items=diagnostics, result_id=str(uuid.uuid4()))
 
     @rpc_method(name="textDocument/diagnostic", param_type=DocumentDiagnosticParams)
+    @threaded()
     async def _text_document_diagnostic(
         self,
         text_document: TextDocumentIdentifier,
@@ -265,6 +263,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             self._logger.debug(lambda: f"textDocument/diagnostic ready  {text_document}")
 
     @rpc_method(name="workspace/diagnostic", param_type=WorkspaceDiagnosticParams)
+    @threaded()
     async def _workspace_diagnostic(
         self,
         identifier: Optional[str],
