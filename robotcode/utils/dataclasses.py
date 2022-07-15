@@ -171,6 +171,7 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
 
         if (
             t is Any
+            or t is Ellipsis  # type: ignore
             or isinstance(value, origin or t)
             or (isinstance(value, Sequence) and args and issubclass(origin or t, Sequence))
         ):
