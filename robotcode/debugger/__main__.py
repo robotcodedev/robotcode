@@ -90,6 +90,8 @@ async def start_debugpy_async(
     from .dap_types import Event
 
     port = check_free_port(debugpy_port)
+    if port != debugpy_port:
+        _logger.warning(f"start debugpy session on port {port}")
 
     if enable_debugpy(port) and await run_coroutine_from_thread_async(
         server.protocol.wait_for_client, wait_for_client_timeout, loop=server.loop
