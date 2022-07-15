@@ -3,6 +3,8 @@
 All notable changes to the "robotcode" extension will be documented in this file.
 
 ## [Unreleased]
+- none so far
+##  0.13.2
 
 - Support for robotidy 3.0
 - References are now collected at source code analyze phase
