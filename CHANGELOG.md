@@ -4,6 +4,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+- Support for robotidy 3.0
 - References are now collected at source code analyze phase
   - this speeds up thinks like find references/renaming/highlight and so on
 
