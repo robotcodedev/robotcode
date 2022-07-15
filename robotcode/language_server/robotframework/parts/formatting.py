@@ -88,32 +88,54 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         from difflib import SequenceMatcher
 
-        from robotidy.api import RobotidyAPI
         from robotidy.version import __version__
 
         try:
+            robotidy_version = create_version_from_str(__version__)
+
             model = await self.parent.documents_cache.get_model(document, False)
             if model is None:
                 return None
 
-            robot_tidy = RobotidyAPI(document.uri.to_path(), None)
-
-            if range is not None:
-                robot_tidy.formatting_config.start_line = range.start.line
-                robot_tidy.formatting_config.end_line = range.end.line + 1
-
-            if create_version_from_str(__version__) >= (2, 2):
+            if robotidy_version >= (3, 0):
+                from robotidy.api import get_robotidy
                 from robotidy.disablers import RegisterDisablers
 
+                robot_tidy = get_robotidy(document.uri.to_path(), None)
+
+                if range is not None:
+                    robot_tidy.config.formatting.start_line = range.start.line
+                    robot_tidy.config.formatting.end_line = range.end.line + 1
+
                 disabler_finder = RegisterDisablers(
-                    robot_tidy.formatting_config.start_line, robot_tidy.formatting_config.end_line
+                    robot_tidy.config.formatting.start_line, robot_tidy.config.formatting.end_line
                 )
                 disabler_finder.visit(model)
                 if disabler_finder.file_disabled:
                     return None
                 changed, _, new = robot_tidy.transform(model, disabler_finder.disablers)
+
             else:
-                changed, _, new = robot_tidy.transform(model)
+                from robotidy.api import RobotidyAPI
+
+                robot_tidy = RobotidyAPI(document.uri.to_path(), None)
+
+                if range is not None:
+                    robot_tidy.formatting_config.start_line = range.start.line
+                    robot_tidy.formatting_config.end_line = range.end.line + 1
+
+                if robotidy_version >= (2, 2):
+                    from robotidy.disablers import RegisterDisablers
+
+                    disabler_finder = RegisterDisablers(
+                        robot_tidy.formatting_config.start_line, robot_tidy.formatting_config.end_line
+                    )
+                    disabler_finder.visit(model)
+                    if disabler_finder.file_disabled:
+                        return None
+                    changed, _, new = robot_tidy.transform(model, disabler_finder.disablers)
+                else:
+                    changed, _, new = robot_tidy.transform(model)
 
             if not changed:
                 return None
