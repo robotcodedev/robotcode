@@ -3,7 +3,9 @@
 All notable changes to the "robotcode" extension will be documented in this file.
 
 ## [Unreleased]
-- none so far
+
+- Highlight localized robot files (RobotFramework >= 5.1)
+
 ##  0.13.2
 
 - Support for robotidy 3.0
