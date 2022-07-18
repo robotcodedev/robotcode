@@ -16,6 +16,7 @@ from types import ModuleType
 from typing import (
     AbstractSet,
     Any,
+    ClassVar,
     Dict,
     Iterable,
     Iterator,
@@ -283,9 +284,6 @@ class ArgumentSpec:
         )
         resolver.resolve(arguments, variables)
 
-    def __hash__(self) -> int:
-        return id(self)
-
 
 @dataclass
 class KeywordDoc(SourceEntity):
@@ -436,7 +434,6 @@ class KeywordDoc(SourceEntity):
         return self.libname == BUILTIN_LIBRARY_NAME and self.name == RUN_KEYWORDS_NAME
 
     def __hash__(self) -> int:
-        # return id(self)
         return hash(
             (
                 self.name,
@@ -607,12 +604,12 @@ class LibraryDoc:
 
         return None
 
-    _inline_link: re.Pattern = re.compile(  # type: ignore
+    _inline_link: ClassVar[re.Pattern] = re.compile(  # type: ignore
         r"([\`])((?:\1|.)+?)\1",
         re.VERBOSE,
     )
 
-    _headers: re.Pattern = re.compile(r"^(={1,5})\s+(\S.*?)\s+\1$", re.MULTILINE)  # type: ignore
+    _headers: ClassVar[re.Pattern] = re.compile(r"^(={1,5})\s+(\S.*?)\s+\1$", re.MULTILINE)  # type: ignore
 
     def _process_inline_links(self, text: str) -> str:
         headers = [v.group(2) for v in self._headers.finditer(text)]
@@ -706,7 +703,7 @@ class VariablesDoc(LibraryDoc):
 
 
 def is_library_by_path(path: str) -> bool:
-    return path.lower().endswith((".py", ".java", ".class", "/", os.sep))
+    return path.lower().endswith((".py", "/", os.sep))
 
 
 def is_variables_by_path(path: str) -> bool:
@@ -1327,7 +1324,9 @@ def get_library_doc(
                             is_registered_run_keyword=RUN_KW_REGISTER.is_run_keyword(libdoc.name, kw[0].name),
                             args_to_process=RUN_KW_REGISTER.get_args_to_process(libdoc.name, kw[0].name),
                             deprecated=kw[0].deprecated,
-                            arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
+                            arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments)
+                            if not kw[1].is_error_handler
+                            else None,
                         )
                         for kw in [
                             (KeywordDocBuilder().build_keyword(k), k)

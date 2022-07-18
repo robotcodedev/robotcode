@@ -1,4 +1,7 @@
+import os
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 from ..._version import __version__
@@ -12,6 +15,7 @@ from ...utils.logging import LoggingDescriptor
 from ..common.lsp_types import InitializeError, Model
 from ..common.parts.document_symbols import symbol_information_label
 from ..common.protocol import LanguageServerProtocol
+from .configuration import RobotConfig
 from .parts.codelens import RobotCodeLensProtocolPart
 from .parts.completion import RobotCompletionProtocolPart
 from .parts.debugging_utils import RobotDebuggingUtilsProtocolPart
@@ -106,6 +110,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         super().__init__(server)
         self.options = Options()
         self.on_initialize.add(self._on_initialize)
+        self.on_initialized.add(self._on_initialized)
         self.on_shutdown.add(self._on_shutdown)
 
     @_logger.call
@@ -125,3 +130,21 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
             self.options = from_dict(initialization_options, Options)
 
         self._logger.debug(f"initialized with {repr(self.options)}")
+
+    async def _on_initialized(self, sender: Any) -> None:
+        for folder in self.workspace.workspace_folders:
+            config: RobotConfig = await self.workspace.get_configuration(RobotConfig, folder.uri)
+            if config is not None:
+                if config.env:
+                    for k, v in config.env.items():
+                        os.environ[k] = v
+
+                if config.python_path:
+                    for p in config.python_path:
+                        pa = Path(p)
+                        if not pa.is_absolute():
+                            pa = Path(folder.uri.to_path(), pa)
+
+                        absolute_path = str(pa.absolute())
+                        if absolute_path not in sys.path:
+                            sys.path.insert(0, absolute_path)

@@ -150,8 +150,8 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         self.root_uri = root_uri
 
         self.root_path = root_path
-        self.workspace_folders_lock = Lock()
-        self.workspace_folders: List[WorkspaceFolder] = (
+        self._workspace_folders_lock = Lock()
+        self._workspace_folders: List[WorkspaceFolder] = (
             [WorkspaceFolder(w.name, Uri(w.uri), w.uri) for w in workspace_folders]
             if workspace_folders is not None
             else []
@@ -163,6 +163,10 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
 
         self.parent.on_shutdown.add(self._on_shutdown)
         self._config_cache = AsyncSimpleLRUCache(max_items=1000)
+
+    @property
+    def workspace_folders(self) -> List[WorkspaceFolder]:
+        return self._workspace_folders
 
     @_logger.call
     async def _on_shutdown(self, sender: Any) -> None:
@@ -374,19 +378,19 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         self, event: WorkspaceFoldersChangeEvent, *args: Any, **kwargs: Any
     ) -> None:
 
-        async with self.workspace_folders_lock:
+        async with self._workspace_folders_lock:
             to_remove: List[WorkspaceFolder] = []
             for removed in event.removed:
-                to_remove += [w for w in self.workspace_folders if w.uri == removed.uri]
+                to_remove += [w for w in self._workspace_folders if w.uri == removed.uri]
 
             for removed in event.added:
-                to_remove += [w for w in self.workspace_folders if w.uri == removed.uri]
+                to_remove += [w for w in self._workspace_folders if w.uri == removed.uri]
 
             for r in to_remove:
-                self.workspace_folders.remove(r)
+                self._workspace_folders.remove(r)
 
             for a in event.added:
-                self.workspace_folders.append(WorkspaceFolder(a.name, Uri(a.uri), a.uri))
+                self._workspace_folders.append(WorkspaceFolder(a.name, Uri(a.uri), a.uri))
 
     @async_event
     async def did_change_watched_files(sender, changes: List[FileEvent]) -> None:  # NOSONAR
