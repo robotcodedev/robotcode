@@ -1460,15 +1460,20 @@ class CompletionCollector(ModelHelperMixin):
             if context is None or context.trigger_kind != CompletionTriggerKind.INVOKED:
                 return []
 
-            if import_node.name and not any(v for v in import_node.tokens if v.value == "WITH NAME"):
+            if get_robot_version() >= (5, 1):
+                namespace_marker = ["AS", "WITH NAME"]
+            else:
+                namespace_marker = ["WITH NAME"]
+
+            if import_node.name and not any(v for v in import_node.tokens if v.value in namespace_marker):
                 name_token = import_node.get_token(RobotToken.NAME)
                 if position >= range_from_token(name_token).extend(end_character=2).end:
                     return [
                         CompletionItem(
-                            label="WITH NAME",
+                            label="AS" if get_robot_version() >= (5, 1) else "WITH NAME",
                             kind=CompletionItemKind.KEYWORD,
                             # detail=e.detail,
-                            sort_text="03_WITH NAME",
+                            sort_text="03_NAMESPACE_MARKER",
                             insert_text_format=InsertTextFormat.PLAINTEXT,
                         )
                     ]
