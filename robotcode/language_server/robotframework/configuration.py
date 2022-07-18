@@ -35,6 +35,7 @@ class RobotConfig(ConfigBase):
     debug_file: Optional[str] = None
     log_level: Optional[str] = None
     mode: Optional[RpaMode] = None
+    languages: Optional[List[str]] = None
 
     def get_rpa_mode(self) -> Optional[bool]:
         if self.mode == RpaMode.RPA:

@@ -145,6 +145,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         dryRun: Optional[bool] = None,
         mode: Optional[str] = None,
         variableFiles: Optional[List[str]] = None,
+        languages: Optional[List[str]] = None,
         arguments: Optional[LaunchRequestArguments] = None,
         *_args: Any,
         **_kwargs: Any,
@@ -183,6 +184,10 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         run_args += launcherArgs or []
 
         run_args += ["--"]
+
+        if languages:
+            for lang in languages:
+                run_args += ["--language", lang]
 
         if mode:
             if mode == "rpa":

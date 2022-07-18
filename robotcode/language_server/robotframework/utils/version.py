@@ -18,10 +18,16 @@ class Version(NamedTuple):
     dev: Optional[int] = None
 
 
-def get_robot_version() -> Version:
-    import robot
+_robot_version: Optional[Version] = None
 
-    return create_version_from_str(robot.get_version())
+
+def get_robot_version() -> Version:
+    global _robot_version
+    if _robot_version is None:
+        import robot
+
+        return create_version_from_str(robot.get_version())
+    return _robot_version
 
 
 def create_version_from_str(version_str: str) -> Version:

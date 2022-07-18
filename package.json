@@ -312,6 +312,15 @@
             "description": "Specifies the environment variables for robotframework.",
             "scope": "resource"
           },
+          "robotcode.robot.languages": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "Specifies the supported language(s) that can be used to write _robot_ files. Corresponds to the '`--language lang *`' option of __robot__.",
+            "scope": "resource"
+          },
           "robotcode.robot.variables": {
             "type": "object",
             "default": {},
@@ -636,6 +645,14 @@
                 "type": "object",
                 "description": "Defines a template for the python launch configuration.",
                 "default": {}
+              },
+              "languages": {
+                "type": "array",
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "markdownDescription": "Specifies the supported language(s) that can be used to write _robot_ files. Corresponds to the '`--language lang *`' option of __robot__."
               },
               "variables": {
                 "type": "object",

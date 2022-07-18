@@ -125,7 +125,13 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             SuiteStructureParser,
             TestSuiteBuilder,
         )
-        from robot.running.builder.testsettings import TestDefaults
+
+        from ..utils.version import get_robot_version
+
+        if get_robot_version() >= (5, 1):
+            from robot.running.builder.settings import Defaults as TestDefaults
+        else:
+            from robot.running.builder.testsettings import TestDefaults
 
         def get_document_text(source: str) -> str:
             if self.parent._loop:
@@ -159,7 +165,15 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                     defaults = TestDefaults()
                 if model is None:
                     try:
-                        model = get_model(self._get_source(source), data_only=True, curdir=self._get_curdir(source))
+                        if get_robot_version() >= (5, 1):
+                            model = get_model(
+                                self._get_source(source),
+                                data_only=True,
+                                curdir=self._get_curdir(source),
+                                lang=self.lang,
+                            )
+                        else:
+                            model = get_model(self._get_source(source), data_only=True, curdir=self._get_curdir(source))
                     except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                         raise
                     except BaseException:
@@ -180,6 +194,24 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
                 with FileReader(source) as reader:
                     return read_rest_data(reader)
+
+        class MySuiteStructureParserWithLang(SuiteStructureParser):
+            def _get_parsers(self, extensions: List[str], lang: Any, process_curdir: bool) -> RobotParser:
+                robot_parser = MyRobotParser(lang, process_curdir)
+                rest_parser = MyRestParser(lang, process_curdir)
+                parsers = {
+                    None: NoInitFileDirectoryParser(),
+                    "robot": robot_parser,
+                    "rst": rest_parser,
+                    "rest": rest_parser,
+                }
+                for ext in extensions:
+                    if ext not in parsers:
+                        parsers[ext] = robot_parser
+                return parsers
+
+            def _validate_execution_mode(self, suite: Any) -> None:
+                super()._validate_execution_mode(suite)
 
         class MySuiteStructureParser(SuiteStructureParser):
             def _get_parsers(self, extensions: List[str], process_curdir: bool) -> RobotParser:
@@ -206,7 +238,12 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
             def build(self, *paths: str) -> TestSuite:
                 structure = SuiteStructureBuilder(self.included_extensions, self.included_suites).build(paths)
-                parser = MySuiteStructureParser(self.included_extensions, self.rpa, self.process_curdir)
+                if get_robot_version() >= (5, 1):
+                    parser = MySuiteStructureParserWithLang(
+                        self.included_extensions, self.rpa, self.lang, self.process_curdir
+                    )
+                else:
+                    parser = MySuiteStructureParser(self.included_extensions, self.rpa, self.process_curdir)
                 suite = parser.parse(structure)
                 if not self.included_suites and not self.allow_empty_suite:
                     self._validate_test_counts(suite, multisource=len(paths) > 1)
@@ -259,6 +296,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             try:
                 config = await self.get_config(workspace_folder)
                 rpa_mode = config.get_rpa_mode() if config is not None else None
+                languages = config.languages if config is not None else None
 
                 if paths is None and config is not None:
                     paths = config.paths
@@ -290,14 +328,15 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                                 yield str(p)
 
                     valid_paths = [i for i in normalize_paths(paths)]
-                    suite: Optional[TestSuite] = (
-                        MyTestSuiteBuilder(
-                            included_suites=suites if suites else None,
-                            rpa=rpa_mode,
-                        ).build(*valid_paths)
-                        if valid_paths
-                        else None
-                    )
+
+                    if get_robot_version() >= (5, 1):
+                        builder = MyTestSuiteBuilder(
+                            included_suites=suites if suites else None, rpa=rpa_mode, lang=languages
+                        )
+                    else:
+                        builder = MyTestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
+
+                    suite: Optional[TestSuite] = builder.build(*valid_paths) if valid_paths else None
                     suite_item = [generate(suite)] if suite else []
 
                     return [
@@ -323,13 +362,13 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     ]
                 else:
-                    return [
-                        generate(
-                            MyTestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode).build(
-                                str(workspace_path)
-                            )
+                    if get_robot_version() >= (5, 1):
+                        builder = MyTestSuiteBuilder(
+                            included_suites=suites if suites else None, rpa=rpa_mode, lang=languages
                         )
-                    ]
+                    else:
+                        builder = MyTestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
+                    return [generate(builder.build(str(workspace_path)))]
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:

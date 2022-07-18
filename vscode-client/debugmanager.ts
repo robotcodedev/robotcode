@@ -126,6 +126,9 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
 
     debugConfiguration.mode = debugConfiguration?.mode ?? config.get<string | undefined>("robot.mode", undefined);
 
+    debugConfiguration.languages =
+      debugConfiguration?.languages ?? config.get<string | undefined>("robot.languages", undefined);
+
     debugConfiguration.attachPython = debugConfiguration?.attachPython ?? config.get<boolean>("debug.attachPython");
 
     debugConfiguration.outputMessages =

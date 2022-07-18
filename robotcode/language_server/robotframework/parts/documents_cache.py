@@ -28,6 +28,7 @@ from ..configuration import RobotConfig
 from ..diagnostics.imports_manager import ImportsManager
 from ..diagnostics.namespace import DocumentType, Namespace
 from ..utils.ast_utils import Token
+from ..utils.version import get_robot_version
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -46,6 +47,23 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         self._imports_managers_lock = Lock()
         self._imports_managers: weakref.WeakKeyDictionary[WorkspaceFolder, ImportsManager] = weakref.WeakKeyDictionary()
         self._default_imports_manager: Optional[ImportsManager] = None
+
+    async def get_languages(self, document: TextDocument) -> Optional[List[str]]:
+        if get_robot_version() < (5, 1):
+            return None
+
+        folder = self.parent.workspace.get_workspace_folder(document.uri)
+        if folder is None:
+            return None
+
+        config = await self.parent.workspace.get_configuration(RobotConfig, folder.uri)
+
+        lang = config.languages
+
+        if isinstance(lang, List) and len(lang) == 0:
+            lang = None
+
+        return lang
 
     async def get_document_type(self, document: TextDocument) -> DocumentType:
         return await document.get_cache(self.__get_document_type)
@@ -95,21 +113,59 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
             return await document.get_cache(self.__get_general_tokens_data_only)
         return await document.get_cache(self.__get_general_tokens)
 
-    async def __get_general_tokens_data_only(self, document: TextDocument) -> List[Token]:
+    def __internal_get_tokens(
+        self, source: Any, data_only: bool = False, tokenize_variables: bool = False, lang: Any = None
+    ) -> Any:
         import robot.api
+
+        if get_robot_version() >= (5, 1):
+            return robot.api.get_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables, lang=lang)
+        else:
+            return robot.api.get_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
+
+    def __internal_get_resource_tokens(
+        self,
+        source: Any,
+        data_only: bool = False,
+        tokenize_variables: bool = False,
+        lang: Any = None,
+    ) -> Any:
+        import robot.api
+
+        if get_robot_version() >= (5, 1):
+            return robot.api.get_resource_tokens(
+                source, data_only=data_only, tokenize_variables=tokenize_variables, lang=lang
+            )
+        else:
+            return robot.api.get_resource_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
+
+    def __internal_get_init_tokens(
+        self, source: Any, data_only: bool = False, tokenize_variables: bool = False, lang: Any = None
+    ) -> Any:
+        import robot.api
+
+        if get_robot_version() >= (5, 1):
+            return robot.api.get_init_tokens(
+                source, data_only=data_only, tokenize_variables=tokenize_variables, lang=lang
+            )
+        else:
+            return robot.api.get_init_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
+
+    async def __get_general_tokens_data_only(self, document: TextDocument) -> List[Token]:
+        lang = await self.get_languages(document)
 
         def get(text: str) -> List[Token]:
             with io.StringIO(text) as content:
-                return [e for e in robot.api.get_tokens(content, True) if check_canceled_sync()]
+                return [e for e in self.__internal_get_tokens(content, True, lang=lang) if check_canceled_sync()]
 
         return await self.__get_tokens_internal(document, get)
 
     async def __get_general_tokens(self, document: TextDocument) -> List[Token]:
-        import robot.api
+        lang = await self.get_languages(document)
 
         def get(text: str) -> List[Token]:
             with io.StringIO(text) as content:
-                return [e for e in robot.api.get_tokens(content) if check_canceled_sync()]
+                return [e for e in self.__internal_get_tokens(content, lang=lang) if check_canceled_sync()]
 
         return await self.__get_tokens_internal(document, get)
 
@@ -128,20 +184,22 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         return await document.get_cache(self.__get_resource_tokens)
 
     async def __get_resource_tokens_data_only(self, document: TextDocument) -> List[Token]:
-        import robot.api
+        lang = await self.get_languages(document)
 
         def get(text: str) -> List[Token]:
             with io.StringIO(text) as content:
-                return [e for e in robot.api.get_resource_tokens(content, True) if check_canceled_sync()]
+                return [
+                    e for e in self.__internal_get_resource_tokens(content, True, lang=lang) if check_canceled_sync()
+                ]
 
         return await self.__get_tokens_internal(document, get)
 
     async def __get_resource_tokens(self, document: TextDocument) -> List[Token]:
-        import robot.api
+        lang = await self.get_languages(document)
 
         def get(text: str) -> List[Token]:
             with io.StringIO(text) as content:
-                return [e for e in robot.api.get_resource_tokens(content) if check_canceled_sync()]
+                return [e for e in self.__internal_get_resource_tokens(content, lang=lang) if check_canceled_sync()]
 
         return await self.__get_tokens_internal(document, get)
 
@@ -151,20 +209,20 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         return await document.get_cache(self.__get_init_tokens)
 
     async def __get_init_tokens_data_only(self, document: TextDocument) -> List[Token]:
-        import robot.api
+        lang = await self.get_languages(document)
 
         def get(text: str) -> List[Token]:
             with io.StringIO(text) as content:
-                return [e for e in robot.api.get_init_tokens(content, True) if check_canceled_sync()]
+                return [e for e in self.__internal_get_init_tokens(content, True, lang=lang) if check_canceled_sync()]
 
         return await self.__get_tokens_internal(document, get)
 
     async def __get_init_tokens(self, document: TextDocument) -> List[Token]:
-        import robot.api
+        lang = await self.get_languages(document)
 
         def get(text: str) -> List[Token]:
             with io.StringIO(text) as content:
-                return [e for e in robot.api.get_init_tokens(content) if check_canceled_sync()]
+                return [e for e in self.__internal_get_init_tokens(content, lang=lang) if check_canceled_sync()]
 
         return await self.__get_tokens_internal(document, get)
 
@@ -184,7 +242,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         from robot.parsing.lexer import Token
         from robot.parsing.parser.parser import _get_model
 
-        def get_tokens(_source: str, _data_only: bool = False) -> Generator[Token, None, None]:
+        def get_tokens(source: str, data_only: bool = False, lang: Any = None) -> Generator[Token, None, None]:
             for t in tokens:
                 check_canceled_sync()
 
