@@ -29,7 +29,6 @@ from typing import (
     cast,
 )
 
-from ....utils.path import path_is_relative_to
 from ...common.lsp_types import Position, Range
 from ..utils.ast_utils import Token, range_from_token
 from ..utils.markdownformatter import MarkDownFormatter
@@ -715,15 +714,15 @@ def update_python_path_and_env(
 ) -> None:
     os.chdir(Path(working_dir))
 
-    if pythonpath is not None:
-        for p in pythonpath:
-            absolute_path = str(Path(p).absolute())
-            if absolute_path not in sys.path:
-                sys.path.insert(0, absolute_path)
+    # if pythonpath is not None:
+    #     for p in pythonpath:
+    #         absolute_path = str(Path(p).absolute())
+    #         if absolute_path not in sys.path:
+    #             sys.path.insert(0, absolute_path)
 
-    if environment:
-        for k, v in environment.items():
-            os.environ[k] = v
+    # if environment:
+    #     for k, v in environment.items():
+    #         os.environ[k] = v
 
 
 __PRELOADED_MODULES: Optional[Set[ModuleType]] = None
@@ -732,18 +731,18 @@ __PRELOADED_MODULES: Optional[Set[ModuleType]] = None
 def _update_env(
     working_dir: str = ".", pythonpath: Optional[List[str]] = None, environment: Optional[Dict[str, str]] = None
 ) -> None:
-    import gc
+    # import gc
 
-    unload_preloaded_modules()
+    # unload_preloaded_modules()
 
-    file = Path(__file__).resolve()
-    top = file.parents[3]
-    for p in filter(lambda v: path_is_relative_to(v, top), sys.path.copy()):
-        sys.path.remove(p)
+    # file = Path(__file__).resolve()
+    # top = file.parents[3]
+    # for p in filter(lambda v: path_is_relative_to(v, top), sys.path.copy()):
+    #     sys.path.remove(p)
 
-    importlib.invalidate_caches()
+    # importlib.invalidate_caches()
 
-    gc.collect()
+    # gc.collect()
 
     update_python_path_and_env(working_dir, pythonpath, environment)
 

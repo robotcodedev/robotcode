@@ -7,6 +7,7 @@ import sys
 import weakref
 from abc import ABC, abstractmethod
 from collections import OrderedDict
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import (
@@ -43,7 +44,7 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
     from .namespace import Namespace
 
-from ..utils.process_pool import get_process_pool
+
 from .library_doc import (
     ROBOT_LIBRARY_PACKAGE,
     ArgumentSpec,
@@ -469,7 +470,7 @@ class ImportsManager:
         self.parent_protocol.documents.did_change.add(self.resource_document_changed)
         self._command_line_variables: Optional[List[VariableDefinition]] = None
 
-        self.process_pool = get_process_pool()
+        # self.process_pool = get_process_pool()
         self._python_path: Optional[List[str]] = None
         self._environment: Optional[Mapping[str, str]] = None
 
@@ -707,7 +708,8 @@ class ImportsManager:
         if contains_variable(name, "$@&%"):
             return await asyncio.wait_for(
                 asyncio.get_running_loop().run_in_executor(
-                    self.process_pool,
+                    # self.process_pool,
+                    None,
                     find_library,
                     name,
                     str(self.folder.to_path()),
@@ -744,7 +746,8 @@ class ImportsManager:
         if contains_variable(name, "$@&%"):
             return await asyncio.wait_for(
                 asyncio.get_running_loop().run_in_executor(
-                    self.process_pool,
+                    # self.process_pool,
+                    None,
                     find_file,
                     name,
                     str(self.folder.to_path()),
@@ -761,16 +764,17 @@ class ImportsManager:
         return str(find_file_ex(name, base_dir, self.python_path, file_type))
 
     async def find_variables(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
-        return await self._variables_files_cache.get(self._find_variables, name, base_dir, variables)
+        return await self._variables_files_cache.get(self.__find_variables, name, base_dir, variables)
 
     @_logger.call
-    async def _find_variables(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
+    async def __find_variables(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
         from robot.variables.search import contains_variable
 
         if contains_variable(name, "$@&%"):
             return await asyncio.wait_for(
                 asyncio.get_running_loop().run_in_executor(
-                    self.process_pool,
+                    # self.process_pool,
+                    None,
                     find_variables,
                     name,
                     str(self.folder.to_path()),
@@ -810,26 +814,29 @@ class ImportsManager:
         async def _get_libdoc() -> LibraryDoc:
             self._logger.debug(lambda: f"Load Library {source}{repr(args)}")
 
-            result = await asyncio.wait_for(
-                asyncio.get_running_loop().run_in_executor(
-                    self.process_pool,
-                    get_library_doc,
-                    name,
-                    args,
-                    str(self.folder.to_path()),
-                    base_dir,
-                    self.config.python_path if self.config is not None else None,
-                    self.config.env if self.config is not None else None,
-                    self.config.variables if self.config is not None else None,
-                    variables,
-                ),
-                LOAD_LIBRARY_TIME_OUT,
-            )
+            with ProcessPoolExecutor(max_workers=1) as executor:
+                result = await asyncio.wait_for(
+                    asyncio.get_running_loop().run_in_executor(
+                        executor,
+                        get_library_doc,
+                        name,
+                        args,
+                        str(self.folder.to_path()),
+                        base_dir,
+                        self.config.python_path if self.config is not None else None,
+                        self.config.env if self.config is not None else None,
+                        self.config.variables if self.config is not None else None,
+                        variables,
+                    ),
+                    LOAD_LIBRARY_TIME_OUT,
+                )
 
-            if result.stdout:
-                self._logger.warning(lambda: f"stdout captured at loading library {name}{repr(args)}:\n{result.stdout}")
+                if result.stdout:
+                    self._logger.warning(
+                        lambda: f"stdout captured at loading library {name}{repr(args)}:\n{result.stdout}"
+                    )
 
-            return result
+                return result
 
         entry_key = _LibrariesEntryKey(source, args)
 
@@ -989,27 +996,28 @@ class ImportsManager:
         async def _get_libdoc() -> VariablesDoc:
             self._logger.debug(lambda: f"Load variables {source}{repr(args)}")
 
-            result = await asyncio.wait_for(
-                asyncio.get_running_loop().run_in_executor(
-                    self.process_pool,
-                    get_variables_doc,
-                    name,
-                    args,
-                    str(self.folder.to_path()),
-                    base_dir,
-                    self.config.python_path if self.config is not None else None,
-                    self.config.env if self.config is not None else None,
-                    self.config.variables if self.config is not None else None,
-                    variables,
-                ),
-                LOAD_LIBRARY_TIME_OUT,
-            )
-
-            if result.stdout:
-                self._logger.warning(
-                    lambda: f"stdout captured at loading variables {name}{repr(args)}:\n{result.stdout}"
+            with ProcessPoolExecutor(max_workers=1) as executor:
+                result = await asyncio.wait_for(
+                    asyncio.get_running_loop().run_in_executor(
+                        executor,
+                        get_variables_doc,
+                        name,
+                        args,
+                        str(self.folder.to_path()),
+                        base_dir,
+                        self.config.python_path if self.config is not None else None,
+                        self.config.env if self.config is not None else None,
+                        self.config.variables if self.config is not None else None,
+                        variables,
+                    ),
+                    LOAD_LIBRARY_TIME_OUT,
                 )
-            return result
+
+                if result.stdout:
+                    self._logger.warning(
+                        lambda: f"stdout captured at loading variables {name}{repr(args)}:\n{result.stdout}"
+                    )
+                return result
 
         entry_key = _VariablesEntryKey(source, args)
 
@@ -1095,7 +1103,8 @@ class ImportsManager:
     ) -> Optional[List[CompleteResult]]:
         result = await asyncio.wait_for(
             asyncio.get_running_loop().run_in_executor(
-                self.process_pool,
+                # self.process_pool,
+                None,
                 complete_library_import,
                 name,
                 str(self.folder.to_path()),
@@ -1115,7 +1124,8 @@ class ImportsManager:
     ) -> Optional[List[CompleteResult]]:
         result = await asyncio.wait_for(
             asyncio.get_running_loop().run_in_executor(
-                self.process_pool,
+                # self.process_pool,
+                None,
                 complete_resource_import,
                 name,
                 str(self.folder.to_path()),
@@ -1135,7 +1145,8 @@ class ImportsManager:
     ) -> Optional[List[CompleteResult]]:
         result = await asyncio.wait_for(
             asyncio.get_running_loop().run_in_executor(
-                self.process_pool,
+                # self.process_pool,
+                None,
                 complete_variables_import,
                 name,
                 str(self.folder.to_path()),
@@ -1155,7 +1166,8 @@ class ImportsManager:
     ) -> Any:
         result = await asyncio.wait_for(
             asyncio.get_running_loop().run_in_executor(
-                self.process_pool,
+                # self.process_pool,
+                None,
                 resolve_variable,
                 name,
                 str(self.folder.to_path()),
