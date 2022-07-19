@@ -36,7 +36,6 @@ from .parts.robot_workspace import RobotWorkspaceProtocolPart
 from .parts.selection_range import RobotSelectionRangeProtocolPart
 from .parts.semantic_tokens import RobotSemanticTokenProtocolPart
 from .parts.signature_help import RobotSignatureHelpProtocolPart
-from .utils.process_pool import shutdown_process_pool
 from .utils.version import get_robot_version
 
 if TYPE_CHECKING:
@@ -115,7 +114,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
     @_logger.call
     async def _on_shutdown(self, sender: Any) -> None:
-        shutdown_process_pool()
+        pass
 
     @_logger.call
     async def _on_initialize(self, sender: Any, initialization_options: Optional[Any] = None) -> None:
