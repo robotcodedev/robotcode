@@ -24,6 +24,15 @@ result:
 - !Location
   range:
     end:
+      character: 22
+      line: 1
+    start:
+      character: 11
+      line: 1
+  uri: tests/external_libray.robot
+- !Location
+  range:
+    end:
       character: 43
       line: 11
     start:
