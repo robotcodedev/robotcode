@@ -102,7 +102,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         ):
             capabilities.diagnostic_provider = DiagnosticOptions(
                 inter_file_dependencies=True,
-                workspace_diagnostics=False,
+                workspace_diagnostics=True,
                 identifier=f"robotcodelsp_{uuid.uuid4()}",
                 work_done_progress=True,
             )
@@ -350,7 +350,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
                 return WorkspaceDiagnosticReport(items=[])
 
-        await self.in_get_document_diagnostics.wait()
         self.in_get_workspace_diagnostics.clear()
         try:
             await self.ensure_workspace_loaded()

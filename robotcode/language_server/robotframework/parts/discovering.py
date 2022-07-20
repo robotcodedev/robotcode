@@ -135,11 +135,9 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
         def get_document_text(source: str) -> str:
             if self.parent._loop:
-                doc = asyncio.run_coroutine_threadsafe(
-                    self.parent.documents.get(Uri.from_path(source).normalized()), self.parent._loop
-                ).result()
+                doc = self.parent.documents.get_sync(Uri.from_path(source).normalized())
                 if doc is not None and doc.opened_in_editor:
-                    return asyncio.run_coroutine_threadsafe(doc.text(), self.parent._loop).result()
+                    return doc.text_sync()
 
             return source
 

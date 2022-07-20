@@ -70,6 +70,9 @@ class TextDocument:
             f")"
         )
 
+    def text_sync(self) -> str:
+        return self._text
+
     async def text(self) -> str:
         async with self._lock:
             return self._text

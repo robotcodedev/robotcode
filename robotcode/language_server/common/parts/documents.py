@@ -182,9 +182,12 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
     async def did_save(sender, document: TextDocument) -> None:  # NOSONAR
         ...
 
+    def get_sync(self, _uri: Union[DocumentUri, Uri]) -> Optional[TextDocument]:
+        return self._documents.get(str(Uri(_uri).normalized() if not isinstance(_uri, Uri) else _uri), None)
+
     async def get(self, _uri: Union[DocumentUri, Uri]) -> Optional[TextDocument]:
         async with self._lock:
-            return self._documents.get(str(Uri(_uri).normalized() if not isinstance(_uri, Uri) else _uri), None)
+            return self.get_sync(_uri)
 
     def __len__(self) -> int:
         return self._documents.__len__()

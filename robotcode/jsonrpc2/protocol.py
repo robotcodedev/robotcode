@@ -482,8 +482,6 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 if ex is None or isinstance(ex, asyncio.CancelledError):
                     return
 
-                # self._logger.exception(ex, exc_info=ex)
-
         for m in iterator:
             create_sub_task(self.handle_message(m)).add_done_callback(done)
 
