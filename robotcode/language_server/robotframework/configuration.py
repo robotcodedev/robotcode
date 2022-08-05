@@ -78,7 +78,7 @@ class AnalysisConfig(ConfigBase):
     diagnostic_mode: DiagnosticsMode = DiagnosticsMode.OPENFILESONLY
     progress_mode: AnalysisProgressMode = AnalysisProgressMode.SIMPLE
     max_project_file_count: int = 1000
-    references_code_lens: bool = True
+    references_code_lens: bool = False
 
 
 @config_section("robotcode")
