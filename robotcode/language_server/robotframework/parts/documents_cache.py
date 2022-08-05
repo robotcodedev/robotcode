@@ -354,17 +354,16 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         return Namespace(imports_manager, model, str(document.uri.to_path()), invalidate, document, document_type)
 
-    @property
     async def default_imports_manager(self) -> ImportsManager:
-        if self._default_imports_manager is None:
-            async with self._imports_managers_lock:
-                if self._default_imports_manager is None:
-                    self._default_imports_manager = ImportsManager(
-                        self.parent,
-                        Uri(self.parent.workspace.root_uri or "."),
-                        RobotConfig(args=(), python_path=[], env={}, variables={}),
-                    )
-        return self._default_imports_manager
+        async with self._imports_managers_lock:
+            if self._default_imports_manager is None:
+                self._default_imports_manager = ImportsManager(
+                    self.parent,
+                    Uri(self.parent.workspace.root_uri or "."),
+                    RobotConfig(args=(), python_path=[], env={}, variables={}),
+                )
+
+            return self._default_imports_manager
 
     async def get_imports_manager(self, document: TextDocument) -> ImportsManager:
         folder = self.parent.workspace.get_workspace_folder(document.uri)
@@ -372,7 +371,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
             if len(self.parent.workspace.workspace_folders) == 1:
                 folder = self.parent.workspace.workspace_folders[0]
             else:
-                return await self.default_imports_manager
+                return await self.default_imports_manager()
 
         if folder not in self._imports_managers:
             async with self._imports_managers_lock:
