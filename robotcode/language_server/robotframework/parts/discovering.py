@@ -62,7 +62,7 @@ class FindTestCasesVisitor(AsyncVisitor):
     async def get(self, source: DocumentUri, model: ast.AST, base_name: Optional[str]) -> List[TestItem]:
         self._results: List[TestItem] = []
         self.source = source
-        self.path = Uri(source).to_path().resolve()
+        self.path = Uri(source).to_path()
         self.base_name = base_name
         await self.visit(model)
         return self._results
@@ -256,8 +256,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 children.append(
                     TestItem(
                         type="test",
-                        id=f"{Path(test.source).resolve() if test.source is not None else ''};"
-                        f"{test.longname};{test.lineno}",
+                        id=f"{Path(test.source) if test.source is not None else ''};" f"{test.longname};{test.lineno}",
                         label=test.name,
                         longname=test.longname,
                         uri=str(Uri.from_path(test.source)) if test.source else None,
@@ -274,7 +273,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
             return TestItem(
                 type="suite",
-                id=f"{Path(suite.source).resolve() if suite.source is not None else ''};{suite.longname}",
+                id=f"{Path(suite.source) if suite.source is not None else ''};{suite.longname}",
                 label=suite.name,
                 longname=suite.longname,
                 uri=str(Uri.from_path(suite.source)) if suite.source else None,
