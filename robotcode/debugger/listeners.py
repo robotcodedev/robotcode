@@ -192,10 +192,10 @@ class ListenerV3:
                 for s in item.tests:
                     yield from enqueue(s)
 
-                yield f"{Path(item.source) if item.source is not None else ''};{item.longname}"
+                yield f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname}"
                 return
 
-            yield f"{Path(item.source if item.source is not None else '')};{item.longname};{item.lineno}"
+            yield f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname};{item.lineno}"
 
         if self._event_sended:
             return
