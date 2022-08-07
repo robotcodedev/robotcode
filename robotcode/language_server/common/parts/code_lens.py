@@ -4,7 +4,7 @@ from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_tools import async_tasking_event
+from ....utils.async_tools import async_tasking_event, threaded
 from ....utils.logging import LoggingDescriptor
 from ..decorators import language_id_filter
 from ..has_extend_capabilities import HasExtendCapabilities
@@ -43,6 +43,7 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             capabilities.code_lens_provider = CodeLensOptions(resolve_provider=True if len(self.resolve) > 0 else None)
 
     @rpc_method(name="textDocument/codeLens", param_type=CodeLensParams)
+    @threaded()
     async def _text_document_code_lens(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Optional[List[CodeLens]]:
@@ -66,6 +67,7 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         return None
 
     @rpc_method(name="codeLens/resolve", param_type=CodeLens)
+    @threaded()
     async def _code_lens_resolve(self, params: CodeLens, *args: Any, **kwargs: Any) -> CodeLens:
 
         results: List[CodeLens] = []

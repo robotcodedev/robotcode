@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_itertools import async_next
-from ....utils.async_tools import run_coroutine_in_thread
+from ....utils.async_tools import run_coroutine_in_thread, threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.lsp_types import Model, Position, Range, TextDocumentIdentifier
 from ..utils.ast_utils import (
@@ -42,6 +42,7 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
         super().__init__(parent)
 
     @rpc_method(name="robot/debugging/getEvaluatableExpression", param_type=EvaluatableExpressionParams)
+    @threaded()
     @_logger.call
     async def _get_evaluatable_expression(
         self,

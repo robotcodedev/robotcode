@@ -4,7 +4,7 @@ from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_tools import async_tasking_event
+from ....utils.async_tools import async_tasking_event, threaded
 from ....utils.logging import LoggingDescriptor
 from ..decorators import language_id_filter
 from ..has_extend_capabilities import HasExtendCapabilities
@@ -50,6 +50,7 @@ class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             capabilities.definition_provider = True
 
     @rpc_method(name="textDocument/definition", param_type=DefinitionParams)
+    @threaded()
     async def _text_document_definition(
         self, text_document: TextDocumentIdentifier, position: Position, *args: Any, **kwargs: Any
     ) -> Optional[Union[Location, List[Location], List[LocationLink]]]:

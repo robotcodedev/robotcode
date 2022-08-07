@@ -49,9 +49,11 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
-        self.parent.diagnostics.cancel_workspace_diagnostics()
-        self.parent.diagnostics.cancel_document_diagnostics(document)
-        await self.parent.diagnostics.set_collect_full_diagnostics(False)
+        # await asyncio.sleep(2)
+        # await self.parent.diagnostics.cancel_workspace_diagnostics()
+        # await self.parent.diagnostics.cancel_document_diagnostics(document)
+        # await self.parent.diagnostics.set_collect_full_diagnostics(False)
+        pass
 
     @language_id("robotframework")
     @threaded()

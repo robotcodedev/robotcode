@@ -354,7 +354,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        document = await self.get(str(Uri(text_document.uri).normalized()))
+        document = self.get_sync(str(Uri(text_document.uri).normalized()))
         if document is None:
             raise LanguageServerDocumentException(f"Document {text_document.uri} is not opened.")
 

@@ -456,7 +456,7 @@ def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyn
 def run_coroutine_in_thread(
     coro: Callable[..., Coroutine[Any, Any, _T]], *args: Any, **kwargs: Any
 ) -> asyncio.Future[_T]:
-    callback_added_event = Event()
+    callback_added_event = threading.Event()
     inner_task: Optional[asyncio.Task[_T]] = None
     canceled = False
     result: Optional[asyncio.Future[_T]] = None
@@ -469,7 +469,7 @@ def run_coroutine_in_thread(
         old_name = threading.current_thread().getName()
         threading.current_thread().setName(coro.__qualname__)
         try:
-            await callback_added_event.wait()
+            callback_added_event.wait(5)
 
             if ct is not None and result is not None:
                 _running_tasks[result].children.add(ct)
@@ -523,20 +523,19 @@ def run_coroutine_in_thread(
     return result
 
 
-_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-
-
 @contextlib.asynccontextmanager
 async def async_lock(lock: threading.RLock) -> AsyncGenerator[None, None]:
-    locked = lock.acquire(False)
+    locked = lock.acquire(blocking=False)
     while not locked:
-        await asyncio.sleep(0)
+        await asyncio.sleep(0.001)
         locked = lock.acquire(False)
     try:
         yield
     finally:
         if locked:
             lock.release()
+    # with lock:
+    #     yield
 
 
 class Event:

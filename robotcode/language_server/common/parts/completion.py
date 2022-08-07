@@ -5,7 +5,7 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_tools import async_tasking_event
+from ....utils.async_tools import async_tasking_event, threaded
 from ....utils.logging import LoggingDescriptor
 from ..decorators import (
     HasAllCommitCharacters,
@@ -79,6 +79,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             )
 
     @rpc_method(name="textDocument/completion", param_type=CompletionParams)
+    @threaded()
     async def _text_document_completion(
         self,
         text_document: TextDocumentIdentifier,

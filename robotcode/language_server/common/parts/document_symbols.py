@@ -15,7 +15,7 @@ from typing import (
 )
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_tools import async_tasking_event
+from ....utils.async_tools import async_tasking_event, threaded
 from ....utils.logging import LoggingDescriptor
 from ..decorators import language_id_filter
 from ..has_extend_capabilities import HasExtendCapabilities
@@ -98,6 +98,7 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilit
                     capabilities.document_symbol_provider = True
 
     @rpc_method(name="textDocument/documentSymbol", param_type=DocumentSymbolParams)
+    @threaded()
     async def _text_document_symbol(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:

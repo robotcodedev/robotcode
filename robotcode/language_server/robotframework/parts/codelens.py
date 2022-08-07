@@ -114,7 +114,6 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         if (
             self.parent.diagnostics.workspace_loaded_event.is_set()
             and self.parent.diagnostics.in_get_workspace_diagnostics.is_set()
-            and self.parent.diagnostics.in_get_document_diagnostics.is_set()
         ):
             kw_doc = await self.get_keyword_definition_at_line(namespace, name, line)
 

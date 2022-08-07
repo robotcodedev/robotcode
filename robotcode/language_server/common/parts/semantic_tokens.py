@@ -5,7 +5,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, List, Union
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_tools import async_tasking_event
+from ....utils.async_tools import async_tasking_event, threaded
 from ....utils.logging import LoggingDescriptor
 from ..decorators import language_id_filter
 from ..has_extend_capabilities import HasExtendCapabilities
@@ -78,6 +78,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
             )
 
     @rpc_method(name="textDocument/semanticTokens/full", param_type=SemanticTokensParams)
+    @threaded()
     async def _text_document_semantic_tokens_full(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
@@ -108,6 +109,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
         return None
 
     @rpc_method(name="textDocument/semanticTokens/full/delta", param_type=SemanticTokensDeltaParams)
+    @threaded()
     async def _text_document_semantic_tokens_full_delta(
         self, text_document: TextDocumentIdentifier, previous_result_id: str, *args: Any, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None]:
@@ -139,6 +141,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
         return None
 
     @rpc_method(name="textDocument/semanticTokens/range", param_type=SemanticTokensRangeParams)
+    @threaded()
     async def _text_document_semantic_tokens_range(
         self, text_document: TextDocumentIdentifier, range: Range, *args: Any, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:

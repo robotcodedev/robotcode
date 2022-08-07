@@ -4,7 +4,7 @@ from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, List, Optional, Union
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_tools import async_tasking_event
+from ....utils.async_tools import async_tasking_event, threaded
 from ....utils.logging import LoggingDescriptor
 from ..decorators import HasLanguageId, language_id_filter
 from ..has_extend_capabilities import HasExtendCapabilities
@@ -52,6 +52,7 @@ class InlineValueProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             )
 
     @rpc_method(name="textDocument/inlineValue", param_type=InlineValueParams)
+    @threaded()
     async def _text_document_inline_value(
         self,
         text_document: TextDocumentIdentifier,
