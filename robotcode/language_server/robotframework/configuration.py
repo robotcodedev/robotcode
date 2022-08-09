@@ -79,6 +79,7 @@ class AnalysisConfig(ConfigBase):
     progress_mode: AnalysisProgressMode = AnalysisProgressMode.SIMPLE
     max_project_file_count: int = 1000
     references_code_lens: bool = False
+    find_unused_references: bool = False
 
 
 @config_section("robotcode")

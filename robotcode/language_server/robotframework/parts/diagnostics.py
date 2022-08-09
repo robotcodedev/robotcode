@@ -16,6 +16,7 @@ from ...common.lsp_types import (
 )
 from ...common.parts.diagnostics import DiagnosticsResult
 from ...common.text_document import TextDocument
+from ..configuration import AnalysisConfig
 from ..diagnostics.analyzer import Analyzer
 from ..utils.ast_utils import (
     HeaderAndBodyBlock,
@@ -49,11 +50,8 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
-        # await asyncio.sleep(2)
-        # await self.parent.diagnostics.cancel_workspace_diagnostics()
-        # await self.parent.diagnostics.cancel_document_diagnostics(document)
-        # await self.parent.diagnostics.set_collect_full_diagnostics(False)
-        pass
+        await self.parent.diagnostics.cancel_document_diagnostics(document)
+        await self.parent.diagnostics.cancel_workspace_diagnostics()
 
     @language_id("robotframework")
     @threaded()
@@ -249,8 +247,11 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @threaded()
     @_logger.call
     async def collect_unused_references(self, sender: Any, document: TextDocument, full: bool) -> DiagnosticsResult:
-        if not full:
+        config = await self.parent.workspace.get_configuration(AnalysisConfig, document.uri)
+
+        if not full or not config.find_unused_references:
             return DiagnosticsResult(self.collect_unused_references, [])
+
         return await document.get_cache(self._collect_unused_references, full)
 
     async def _collect_unused_references(self, document: TextDocument, full: bool) -> DiagnosticsResult:

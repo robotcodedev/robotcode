@@ -82,6 +82,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         super().__init__(protocol)
 
         self.workspace_loaded_event = Event()
+
         self._workspace_load_lock = Lock()
         self._workspace_loaded = False
 
@@ -92,7 +93,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         self._current_workspace_task: Optional[asyncio.Task[WorkspaceDiagnosticReport]] = None
 
         self.in_get_workspace_diagnostics = Event(True)
-        self._collect_full_diagnostics = False
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if (
@@ -106,15 +106,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                 identifier=f"robotcodelsp_{uuid.uuid4()}",
                 work_done_progress=True,
             )
-
-    @property
-    def collect_full_diagnostics(self) -> bool:
-        return self._collect_full_diagnostics
-
-    async def set_collect_full_diagnostics(self, value: bool) -> None:
-        if self._collect_full_diagnostics != value:
-            self._collect_full_diagnostics = value
-            await self.refresh()
 
     @async_tasking_event_iterator
     async def collect(sender, document: TextDocument, full: bool) -> DiagnosticsResult:  # NOSONAR
@@ -216,8 +207,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         self._logger.debug(lambda: f"textDocument/diagnostic for {text_document}")
 
         try:
-            # await self.ensure_workspace_loaded()
-
             document = await self.parent.documents.get(text_document.uri)
             if document is None:
                 raise JsonRPCErrorException(ErrorCodes.INVALID_PARAMS, f"Document {text_document!r} not found")
@@ -274,13 +263,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             result: List[WorkspaceDocumentDiagnosticReport] = []
 
             for doc in self.parent.documents.documents:
-                if self._current_workspace_task is None:
-                    raise JsonRPCErrorException(
-                        ErrorCodes.SERVER_CANCELLED,
-                        "ServerCancelled",
-                        data=DiagnosticServerCancellationData(True),
-                    )
-
                 doc_result = await self.get_document_diagnostics(doc)
 
                 if doc_result.result_id is not None and any(
@@ -301,7 +283,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
         async def _get_partial_diagnostics() -> WorkspaceDiagnosticReport:
             async with self.parent.window.progress(
-                f"Analyse {'full ' if self.collect_full_diagnostics else ''} Workspace",
+                "Analyse Workspace",
                 progress_token=work_done_token,
                 cancellable=False,
             ) as progress:
@@ -315,7 +297,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                         else:
                             name = path.relative_to(folder.uri.to_path())
 
-                        progress.report(f"Analyse {'full ' if self.collect_full_diagnostics else ''} {name}")
+                        progress.report(f"Analyse {name}")
 
                     doc_result = await self.get_document_diagnostics(doc)
 
@@ -349,12 +331,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                 for doc in self.parent.documents.documents:
                     if await self.get_diagnostics_mode(doc.uri) == DiagnosticsMode.WORKSPACE:
                         await _task(doc)
-                        if self._current_workspace_task is None:
-                            raise JsonRPCErrorException(
-                                ErrorCodes.SERVER_CANCELLED,
-                                "ServerCancelled",
-                                data=DiagnosticServerCancellationData(True),
-                            )
 
                 return WorkspaceDiagnosticReport(items=[])
 
@@ -368,11 +344,15 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             task = create_sub_task(_get_diagnostics() if partial_result_token is None else _get_partial_diagnostics())
             self._current_workspace_task = task
             try:
-                result = await task
-                await self.set_collect_full_diagnostics(True)
-                return result
+                return await task
             except asyncio.CancelledError:
                 self._logger.debug("workspace/diagnostic canceled")
+                if self._current_workspace_task is None:
+                    raise JsonRPCErrorException(
+                        ErrorCodes.SERVER_CANCELLED,
+                        "ServerCancelled",
+                        data=DiagnosticServerCancellationData(True),
+                    )
                 raise
             finally:
                 if self._current_workspace_task == task:
