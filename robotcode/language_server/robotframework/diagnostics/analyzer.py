@@ -146,6 +146,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                     message=f"Variable '{var.name}' not found.",
                                     severity=severity,
                                     source=DIAGNOSTICS_SOURCE_NAME,
+                                    code="VariableNotFound",
                                 )
                             else:
                                 if self.namespace.document is not None:
@@ -173,6 +174,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                             message=f"Variable '{var.name}' not found.",
                             severity=DiagnosticSeverity.ERROR,
                             source=DIAGNOSTICS_SOURCE_NAME,
+                            code="VariableNotFound",
                         )
                     else:
                         if self.namespace.document is not None:
@@ -221,7 +223,17 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             return
 
         self._diagnostics.append(
-            Diagnostic(range, message, severity, code, code_description, source, tags, related_information, data)
+            Diagnostic(
+                range,
+                message,
+                severity,
+                code,
+                code_description,
+                source or DIAGNOSTICS_SOURCE_NAME,
+                tags,
+                related_information,
+                data,
+            )
         )
 
     async def _analyze_keyword_call(
@@ -271,7 +283,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     range=kw_range,
                     message=e.message,
                     severity=e.severity,
-                    source=DIAGNOSTICS_SOURCE_NAME,
                     code=e.code,
                 )
 
@@ -284,7 +295,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         range=kw_range,
                         message="Keyword definition contains errors.",
                         severity=DiagnosticSeverity.ERROR,
-                        source=DIAGNOSTICS_SOURCE_NAME,
                         related_information=[
                             DiagnosticRelatedInformation(
                                 location=Location(
@@ -328,22 +338,22 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         message=f"Keyword '{result.name}' is deprecated"
                         f"{f': {result.deprecated_message}' if result.deprecated_message else ''}.",
                         severity=DiagnosticSeverity.HINT,
-                        source=DIAGNOSTICS_SOURCE_NAME,
                         tags=[DiagnosticTag.Deprecated],
+                        code="DeprecatedKeyword",
                     )
                 if result.is_error_handler:
                     await self.append_diagnostics(
                         range=kw_range,
                         message=f"Keyword definition contains errors: {result.error_handler_message}",
                         severity=DiagnosticSeverity.ERROR,
-                        source=DIAGNOSTICS_SOURCE_NAME,
+                        code="KeywordContainsErrors",
                     )
                 if result.is_reserved():
                     await self.append_diagnostics(
                         range=kw_range,
                         message=f"'{result.name}' is a reserved keyword.",
                         severity=DiagnosticSeverity.ERROR,
-                        source=DIAGNOSTICS_SOURCE_NAME,
+                        code="ReservedKeyword",
                     )
 
                 if not isinstance(node, (Template, TestTemplate)):
@@ -365,7 +375,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                             ),
                             message=str(e),
                             severity=DiagnosticSeverity.ERROR,
-                            source=DIAGNOSTICS_SOURCE_NAME,
                             code=type(e).__qualname__,
                         )
 
@@ -376,7 +385,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 range=range_from_node_or_token(node, keyword_token),
                 message=str(e),
                 severity=DiagnosticSeverity.ERROR,
-                source=DIAGNOSTICS_SOURCE_NAME,
                 code=type(e).__qualname__,
             )
 
@@ -409,7 +417,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                 range=range_from_token(var_token),
                                 message=f"Variable '{var.name}' not found.",
                                 severity=DiagnosticSeverity.ERROR,
-                                source=DIAGNOSTICS_SOURCE_NAME,
+                                code="VariableNotFound",
                             )
                         else:
                             if self.namespace.document is not None:
@@ -472,7 +480,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         range=range_from_token(t),
                         message=f"Incorrect use of {t.value}.",
                         severity=DiagnosticSeverity.ERROR,
-                        source=DIAGNOSTICS_SOURCE_NAME,
+                        code="IncorrectUse",
                     )
                     continue
 
@@ -630,7 +638,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 range=range_from_node_or_token(value, value.get_token(RobotToken.ASSIGN)),
                 message="Keyword name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
-                source=DIAGNOSTICS_SOURCE_NAME,
                 code="KeywordError",
             )
         else:
@@ -643,8 +650,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 range=range_from_node_or_token(value, value.get_token(RobotToken.ASSIGN)),
                 message="Code is unreachable.",
                 severity=DiagnosticSeverity.HINT,
-                source=DIAGNOSTICS_SOURCE_NAME,
                 tags=[DiagnosticTag.Unnecessary],
+                code="CodeUnreachable",
             )
 
         await self.generic_visit(node)
@@ -662,7 +669,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 range=range_from_node_or_token(testcase, name_token),
                 message="Test case name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
-                source=DIAGNOSTICS_SOURCE_NAME,
                 code="KeywordError",
             )
 
@@ -694,7 +700,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     range=range_from_node_or_token(keyword, name_token),
                     message="Keyword cannot have both normal and embedded arguments.",
                     severity=DiagnosticSeverity.ERROR,
-                    source=DIAGNOSTICS_SOURCE_NAME,
                     code="KeywordError",
                 )
         else:
@@ -703,7 +708,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 range=range_from_node_or_token(keyword, name_token),
                 message="Keyword name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
-                source=DIAGNOSTICS_SOURCE_NAME,
                 code="KeywordError",
             )
 
@@ -756,7 +760,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         range=range_from_node(arguments, skip_non_data=True),
                         message=str(e),
                         severity=DiagnosticSeverity.ERROR,
-                        source=DIAGNOSTICS_SOURCE_NAME,
                         code=type(e).__qualname__,
                     )
 
@@ -765,7 +768,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     range=range_from_node(arguments, skip_non_data=True),
                     message=d.message,
                     severity=d.severity,
-                    source=DIAGNOSTICS_SOURCE_NAME,
                     code=d.code,
                 )
 
