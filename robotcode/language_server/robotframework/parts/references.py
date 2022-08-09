@@ -271,7 +271,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         namespace = await self.parent.documents_cache.get_namespace(document)
         if namespace is None:
-            return None
+            return []
 
         lib_doc = (
             next(
