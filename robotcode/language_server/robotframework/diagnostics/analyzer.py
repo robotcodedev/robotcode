@@ -149,6 +149,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             KeywordCall,
             Template,
             TestTemplate,
+            Variable,
         )
         from robot.variables.search import contains_variable
 
@@ -167,7 +168,9 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 for token1 in (
                     t
                     for t in node.tokens
-                    if t.type != RobotToken.VARIABLE and t.error is None and contains_variable(t.value, "$@&%")
+                    if not (isinstance(node, Variable) and t.type == RobotToken.VARIABLE)
+                    and t.error is None
+                    and contains_variable(t.value, "$@&%")
                 ):
                     async for token in self.yield_argument_name_and_rest(node, token1):
                         if isinstance(node, Arguments) and token.value == "@{}":
@@ -199,6 +202,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                     elif var not in self._variable_references and token1.type in [
                                         RobotToken.ASSIGN,
                                         RobotToken.ARGUMENT,
+                                        RobotToken.VARIABLE,
                                     ]:
                                         self._variable_references[var] = set()
 
