@@ -18,6 +18,7 @@ from ...common.parts.diagnostics import DiagnosticsResult
 from ...common.text_document import TextDocument
 from ..configuration import AnalysisConfig
 from ..diagnostics.analyzer import Analyzer
+from ..diagnostics.entities import ArgumentDefinition
 from ..utils.ast_utils import (
     HeaderAndBodyBlock,
     Token,
@@ -278,13 +279,14 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     )
 
-            for var in await namespace.get_own_variables():
+            for var in (await namespace.get_variable_references()).keys():
                 references = await self.parent.robot_references.find_variable_references(document, var, False)
                 if not references and not await Analyzer.should_ignore(document, var.name_range):
                     result.append(
                         Diagnostic(
                             range=var.name_range,
-                            message=f"Variable '{var.name}' is not used.",
+                            message=f"{'Argument' if isinstance(var, ArgumentDefinition) else 'Variable'}"
+                            f" '{var.name}' is not used.",
                             severity=DiagnosticSeverity.WARNING,
                             source=self.source_name,
                             code="VariableNotUsed",

@@ -194,7 +194,7 @@ class LocalVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.LOCAL_VARIABLE
 
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type))
+        return hash((type(self), self.name, self.type, self.range, self.source))
 
 
 @dataclass
@@ -221,7 +221,7 @@ class ArgumentDefinition(VariableDefinition):
     keyword_doc: Optional["KeywordDoc"] = None
 
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type))
+        return hash((type(self), self.name, self.type, self.range, self.source))
 
 
 @dataclass
@@ -229,7 +229,7 @@ class ImportedVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.IMPORTED_VARIABLE
 
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type))
+        return hash((type(self), self.name, self.type, self.source))
 
 
 @dataclass

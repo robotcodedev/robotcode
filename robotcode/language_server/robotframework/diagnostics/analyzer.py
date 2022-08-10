@@ -30,6 +30,7 @@ from ..utils.ast_utils import (
     range_from_node,
     range_from_node_or_token,
     range_from_token,
+    strip_variable_token,
     tokenize_variables,
 )
 from ..utils.async_ast import AsyncVisitor
@@ -100,6 +101,46 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         else:
             yield token
 
+    async def visit_Variable(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Variable
+        from robot.variables import search_variable
+
+        variable = cast(Variable, node)
+
+        name_token = variable.get_token(RobotToken.VARIABLE)
+        name = name_token.value
+
+        if name is not None:
+
+            match = search_variable(name, ignore_errors=True)
+            if not match.is_assign(allow_assign_mark=True):
+                return
+
+            if name.endswith("="):
+                name = name[:-1].rstrip()
+
+            r = range_from_token(
+                strip_variable_token(
+                    RobotToken(name_token.type, name, name_token.lineno, name_token.col_offset, name_token.error)
+                )
+            )
+
+            var_def = next(
+                (
+                    v
+                    for v in await self.namespace.get_own_variables()
+                    if v.name_token is not None and range_from_token(v.name_token) == r
+                ),
+                None,
+            )
+
+            if var_def is None:
+                return
+
+            if var_def not in self._variable_references:
+                self._variable_references[var_def] = set()
+
     async def visit(self, node: ast.AST) -> None:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import (
@@ -155,6 +196,12 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                         self._variable_references[var].add(
                                             Location(self.namespace.document.document_uri, var_range)
                                         )
+                                    elif var not in self._variable_references and token1.type in [
+                                        RobotToken.ASSIGN,
+                                        RobotToken.ARGUMENT,
+                                    ]:
+                                        self._variable_references[var] = set()
+
             if (
                 isinstance(node, Statement)
                 and isinstance(node, self.get_expression_statement_types())
