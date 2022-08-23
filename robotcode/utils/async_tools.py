@@ -436,7 +436,7 @@ def check_canceled_sync() -> bool:
     return True
 
 
-__threadpool_executor = ThreadPoolExecutor(thread_name_prefix="sub_asyncio")
+# __threadpool_executor = ThreadPoolExecutor(thread_name_prefix="sub_asyncio")
 
 
 def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyncio.Future[_T]:
@@ -447,10 +447,20 @@ def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyn
     ctx = contextvars.copy_context()
     func_call = functools.partial(ctx.run, func, *args, **kwargs)
 
-    return cast(
-        "asyncio.Future[_T]",
-        loop.run_in_executor(__threadpool_executor, cast(Callable[..., _T], func_call)),
-    )
+    # return cast(
+    #     "asyncio.Future[_T]",
+    #     # loop.run_in_executor(__threadpool_executor, cast(Callable[..., _T], func_call)),
+    #     loop.run_in_executor(None, cast(Callable[..., _T], func_call)),
+    # )
+
+    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sub_asyncio")
+    try:
+        return cast(
+            "asyncio.Future[_T]",
+            loop.run_in_executor(executor, cast(Callable[..., _T], func_call)),
+        )
+    finally:
+        executor.shutdown(wait=False)
 
 
 def run_coroutine_in_thread(
@@ -525,10 +535,16 @@ def run_coroutine_in_thread(
 
 @contextlib.asynccontextmanager
 async def async_lock(lock: threading.RLock) -> AsyncGenerator[None, None]:
+    import time
+
+    start_time = time.monotonic()
     locked = lock.acquire(blocking=False)
     while not locked:
+        if time.monotonic() - start_time >= 10:
+            raise RuntimeError("Timeout waiting for lock")
+
         await asyncio.sleep(0.001)
-        locked = lock.acquire(False)
+        locked = lock.acquire(blocking=False)
     try:
         yield
     finally:
@@ -878,7 +894,16 @@ def create_sub_task(
     ct = get_current_future_info()
 
     if loop is not None:
-        result = loop.create_task(coro, name=name)
+        if loop == asyncio.get_running_loop():
+            result = loop.create_task(coro, name=name)
+        else:
+
+            async def s(
+                lo: asyncio.AbstractEventLoop, c: Coroutine[Any, Any, _T], n: Optional[str]
+            ) -> asyncio.Task[_T]:
+                return create_sub_task(c, name=n, loop=lo)
+
+            return asyncio.run_coroutine_threadsafe(s(loop, coro, name), loop=loop).result()
     else:
         result = asyncio.create_task(coro, name=name)
 

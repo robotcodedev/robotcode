@@ -470,7 +470,6 @@ class ImportsManager:
         self.parent_protocol.documents.did_change.add(self.resource_document_changed)
         self._command_line_variables: Optional[List[VariableDefinition]] = None
 
-        # self.process_pool = get_process_pool()
         self._python_path: Optional[List[str]] = None
         self._environment: Optional[Mapping[str, str]] = None
 

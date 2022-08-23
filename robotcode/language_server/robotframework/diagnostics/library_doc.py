@@ -12,7 +12,6 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from types import ModuleType
 from typing import (
     AbstractSet,
     Any,
@@ -23,7 +22,6 @@ from typing import (
     List,
     NamedTuple,
     Optional,
-    Set,
     Tuple,
     Union,
     cast,
@@ -96,8 +94,12 @@ def is_embedded_keyword(name: str) -> bool:
     from robot.running.arguments.embedded import EmbeddedArguments
 
     try:
-        if EmbeddedArguments(name):
-            return True
+        if get_robot_version() >= (5, 1):
+            if EmbeddedArguments.from_name(name):
+                return True
+        else:
+            if EmbeddedArguments(name):
+                return True
     except (VariableError, DataError):
         return True
 
@@ -105,8 +107,9 @@ def is_embedded_keyword(name: str) -> bool:
 
 
 class KeywordMatcher:
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, can_have_embedded: bool = True) -> None:
         self.name = name
+        self._can_have_embedded = can_have_embedded
         self._normalized_name: Optional[str] = None
         self._embedded_arguments: Any = None
 
@@ -124,9 +127,15 @@ class KeywordMatcher:
         from robot.running.arguments.embedded import EmbeddedArguments
 
         if self._embedded_arguments is None:
-            try:
-                self._embedded_arguments = EmbeddedArguments(self.name)
-            except (VariableError, DataError):
+            if self._can_have_embedded:
+                try:
+                    if get_robot_version() >= (5, 1):
+                        self._embedded_arguments = EmbeddedArguments.from_name(self.name)
+                    else:
+                        self._embedded_arguments = EmbeddedArguments(self.name)
+                except (VariableError, DataError):
+                    self._embedded_arguments = ()
+            else:
                 self._embedded_arguments = ()
 
         return self._embedded_arguments
@@ -142,7 +151,10 @@ class KeywordMatcher:
             return False
 
         if self.embedded_arguments:
-            return self.embedded_arguments.name.match(o) is not None
+            if get_robot_version() >= (5, 1):
+                return self.embedded_arguments.match(o) is not None
+            else:
+                return self.embedded_arguments.name.match(o) is not None
 
         return self.normalized_name == str(normalize(o))
 
@@ -714,57 +726,11 @@ def update_python_path_and_env(
 ) -> None:
     os.chdir(Path(working_dir))
 
-    # if pythonpath is not None:
-    #     for p in pythonpath:
-    #         absolute_path = str(Path(p).absolute())
-    #         if absolute_path not in sys.path:
-    #             sys.path.insert(0, absolute_path)
-
-    # if environment:
-    #     for k, v in environment.items():
-    #         os.environ[k] = v
-
-
-__PRELOADED_MODULES: Optional[Set[ModuleType]] = None
-
 
 def _update_env(
     working_dir: str = ".", pythonpath: Optional[List[str]] = None, environment: Optional[Dict[str, str]] = None
 ) -> None:
-    # import gc
-
-    # unload_preloaded_modules()
-
-    # file = Path(__file__).resolve()
-    # top = file.parents[3]
-    # for p in filter(lambda v: path_is_relative_to(v, top), sys.path.copy()):
-    #     sys.path.remove(p)
-
-    # importlib.invalidate_caches()
-
-    # gc.collect()
-
     update_python_path_and_env(working_dir, pythonpath, environment)
-
-
-def unload_preloaded_modules() -> None:
-    global __PRELOADED_MODULES
-
-    if __PRELOADED_MODULES is None:
-        try:
-            __import__("robot.libraries.BuiltIn")
-        except ImportError:
-            pass
-
-        __PRELOADED_MODULES = set(sys.modules.values())
-    else:
-        for m in (f for f in set(sys.modules.values()) - __PRELOADED_MODULES if not f.__name__.startswith("robot.")):
-            try:
-                importlib.reload(m)
-            except (SystemExit, KeyboardInterrupt):
-                raise
-            except BaseException:
-                pass
 
 
 def get_module_spec(module_name: str) -> Optional[ModuleSpec]:

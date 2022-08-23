@@ -689,7 +689,8 @@ class Namespace:
     async def get_libraries_matchers(self) -> Dict[KeywordMatcher, LibraryEntry]:
         if self._libraries_matchers is None:
             self._libraries_matchers = {
-                KeywordMatcher(v.alias or v.name or v.import_name): v for v in (await self.get_libraries()).values()
+                KeywordMatcher(v.alias or v.name or v.import_name, False): v
+                for v in (await self.get_libraries()).values()
             }
         return self._libraries_matchers
 
@@ -701,7 +702,8 @@ class Namespace:
     async def get_resources_matchers(self) -> Dict[KeywordMatcher, ResourceEntry]:
         if self._resources_matchers is None:
             self._resources_matchers = {
-                KeywordMatcher(v.alias or v.name or v.import_name): v for v in (await self.get_resources()).values()
+                KeywordMatcher(v.alias or v.name or v.import_name, False): v
+                for v in (await self.get_resources()).values()
             }
         return self._resources_matchers
 
@@ -1528,11 +1530,11 @@ class Namespace:
         return self._finder
 
     @_logger.call(condition=lambda self, name: self._finder is not None and name not in self._finder._cache)
-    async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
+    async def find_keyword(self, name: Optional[str], raise_keyword_error: bool = True) -> Optional[KeywordDoc]:
         if self._finder is not None:
-            return await self._finder.find_keyword(name)
+            return await self._finder.find_keyword(name, raise_keyword_error)
 
-        return await (await self.get_finder()).find_keyword(name)
+        return await (await self.get_finder()).find_keyword(name, raise_keyword_error)
 
 
 class DiagnosticsEntry(NamedTuple):
@@ -1556,7 +1558,7 @@ class KeywordFinder:
     def reset_diagnostics(self) -> None:
         self.diagnostics = []
 
-    async def find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
+    async def find_keyword(self, name: Optional[str], raise_keyword_error: bool = False) -> Optional[KeywordDoc]:
         try:
             self.reset_diagnostics()
 
@@ -1566,13 +1568,21 @@ class KeywordFinder:
                 self.diagnostics = cached[1]
                 return cached[0]
             else:
-                result = await self._find_keyword(name)
-                if result is None:
-                    self.diagnostics.append(
-                        DiagnosticsEntry(
-                            f"No keyword with name {repr(name)} found.", DiagnosticSeverity.ERROR, "KeywordError"
+                try:
+                    result = await self._find_keyword(name)
+                    if result is None:
+                        self.diagnostics.append(
+                            DiagnosticsEntry(
+                                f"No keyword with name {repr(name)} found.", DiagnosticSeverity.ERROR, "KeywordError"
+                            )
                         )
-                    )
+                except KeywordError as e:
+                    if raise_keyword_error:
+                        raise
+
+                    result = None
+                    self.diagnostics.append(DiagnosticsEntry(str(e), DiagnosticSeverity.ERROR, "KeywordError"))
+
                 self._cache[name] = (result, self.diagnostics)
 
                 return result

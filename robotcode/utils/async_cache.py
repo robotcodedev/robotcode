@@ -48,8 +48,8 @@ class AsyncSimpleLRUCache:
                 entry.data = await func(*args, **kwargs)
                 entry.has_data = True
 
-                async with self.lock:
-                    if self._order is not None and self.max_items is not None:
+                if self._order is not None and self.max_items is not None:
+                    async with self.lock:
                         self._order.insert(0, key)
 
                         if len(self._order) > self.max_items:

@@ -160,7 +160,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             )
 
             if isinstance(node, Statement) and isinstance(node, KeywordCall) and node.keyword:
-                kw_doc = await self.namespace.find_keyword(node.keyword)
+                kw_doc = await self.finder.find_keyword(node.keyword)
                 if kw_doc is not None and kw_doc.longname in ["BuiltIn.Comment"]:
                     severity = DiagnosticSeverity.HINT
 
