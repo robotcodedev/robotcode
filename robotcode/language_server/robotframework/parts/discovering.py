@@ -294,7 +294,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             try:
                 config = await self.get_config(workspace_folder)
                 rpa_mode = config.get_rpa_mode() if config is not None else None
-                languages = config.languages if config is not None else None
+                languages = await self.parent.documents_cache.get_workspace_languages(workspace_folder)
 
                 if paths is None and config is not None:
                     paths = config.paths

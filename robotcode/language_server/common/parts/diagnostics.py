@@ -108,7 +108,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             )
 
     @async_tasking_event_iterator
-    async def collect(sender, document: TextDocument, full: bool) -> DiagnosticsResult:  # NOSONAR
+    async def collect(sender, document: TextDocument) -> DiagnosticsResult:  # NOSONAR
         ...
 
     @async_tasking_event
@@ -150,9 +150,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                         await self.on_workspace_loaded(self)
 
     async def get_document_diagnostics(self, document: TextDocument) -> RelatedFullDocumentDiagnosticReport:
-        # if self.collect_full_diagnostics:
-        return await document.get_cache(self.__get_full_document_diagnostics)
-        # return await document.get_cache(self.__get_document_diagnostics)
+        return await document.get_cache(self.__get_document_diagnostics)
 
     async def __get_document_diagnostics(self, document: TextDocument) -> RelatedFullDocumentDiagnosticReport:
         await self.ensure_workspace_loaded()
@@ -160,29 +158,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         diagnostics: List[Diagnostic] = []
 
         async for result_any in self.collect(
-            self,
-            document,
-            full=False,
-            callback_filter=language_id_filter(document),
-            return_exceptions=True,
-        ):
-            result = cast(DiagnosticsResult, result_any)
-
-            if isinstance(result, BaseException):
-                if not isinstance(result, asyncio.CancelledError):
-                    self._logger.exception(result, exc_info=result)
-            else:
-                diagnostics.extend(result.diagnostics or [])
-
-        return RelatedFullDocumentDiagnosticReport(items=diagnostics, result_id=str(uuid.uuid4()))
-
-    async def __get_full_document_diagnostics(self, document: TextDocument) -> RelatedFullDocumentDiagnosticReport:
-        await self.ensure_workspace_loaded()
-
-        diagnostics: List[Diagnostic] = []
-
-        async for result_any in self.collect(
-            self, document, full=True, callback_filter=language_id_filter(document), return_exceptions=True
+            self, document, callback_filter=language_id_filter(document), return_exceptions=True
         ):
             result = cast(DiagnosticsResult, result_any)
 
@@ -289,6 +265,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             ) as progress:
 
                 async def _task(doc: TextDocument) -> None:
+                    if doc.opened_in_editor:
+                        return
+
                     if await self.get_analysis_progress_mode(doc.uri) == AnalysisProgressMode.DETAILED:
                         path = doc.uri.to_path()
                         folder = self.parent.workspace.get_workspace_folder(doc.uri)

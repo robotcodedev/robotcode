@@ -496,26 +496,63 @@ class ModelHelperMixin:
     BDD_TOKEN = re.compile(r"^(Given|When|Then|And|But)$", flags=re.IGNORECASE)
 
     @classmethod
-    def strip_bdd_prefix(cls, token: Token) -> Token:
+    def strip_bdd_prefix(cls, namespace: Namespace, token: Token) -> Token:
         from robot.parsing.lexer import Token as RobotToken
 
-        bdd_match = cls.BDD_TOKEN_REGEX.match(token.value)
-        if bdd_match:
-            bdd_len = len(bdd_match.group(1))
+        if get_robot_version() < (5, 1):
+            bdd_match = cls.BDD_TOKEN_REGEX.match(token.value)
+            if bdd_match:
+                bdd_len = len(bdd_match.group(1))
 
-            token = RobotToken(
-                token.type,
-                token.value[bdd_len + 1 :],
-                token.lineno,
-                token.col_offset + bdd_len + 1,
-                token.error,
-            )
-        return token
+                token = RobotToken(
+                    token.type,
+                    token.value[bdd_len + 1 :],
+                    token.lineno,
+                    token.col_offset + bdd_len + 1,
+                    token.error,
+                )
+            return token
+        else:
+            parts = token.value.split(maxsplit=1)
+            if len(parts) < 2:
+                return token
+
+            prefix, _ = parts
+            if prefix.title() in (
+                namespace.languages.bdd_prefixes
+                if namespace.languages is not None
+                else {"Given ", "When ", "Then ", "And ", "But "}
+            ):
+                bdd_len = len(prefix)
+                token = RobotToken(
+                    token.type,
+                    token.value[bdd_len + 1 :],
+                    token.lineno,
+                    token.col_offset + bdd_len + 1,
+                    token.error,
+                )
+
+            return token
 
     @classmethod
-    def is_bdd_token(cls, token: Token) -> bool:
-        bdd_match = cls.BDD_TOKEN.match(token.value)
-        return bool(bdd_match)
+    def is_bdd_token(cls, namespace: Namespace, token: Token) -> bool:
+        if get_robot_version() < (5, 1):
+            bdd_match = cls.BDD_TOKEN.match(token.value)
+            return bool(bdd_match)
+        else:
+            parts = token.value.split(maxsplit=1)
+            if len(parts) < 2:
+                return False
+
+            prefix, _ = parts
+            if prefix.title() in (
+                namespace.languages.bdd_prefixes
+                if namespace.languages is not None
+                else {"Given ", "When ", "Then ", "And ", "But "}
+            ):
+                return True
+
+            return False
 
     @classmethod
     async def get_keyword_definition_at_token(cls, namespace: Namespace, token: Token) -> Optional[KeywordDoc]:

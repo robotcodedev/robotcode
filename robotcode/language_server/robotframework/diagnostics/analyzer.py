@@ -306,7 +306,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             if not allow_variables and not is_not_variable_token(keyword_token):
                 return None
 
-            keyword_token = self.strip_bdd_prefix(keyword_token)
+            keyword_token = self.strip_bdd_prefix(self.namespace, keyword_token)
             kw_range = range_from_token(keyword_token)
 
             if keyword is not None:

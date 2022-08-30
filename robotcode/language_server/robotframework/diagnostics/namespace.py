@@ -41,6 +41,7 @@ from ...common.lsp_types import (
     Range,
 )
 from ...common.text_document import TextDocument
+from ..languages import Languages
 from ..utils.ast_utils import (
     Token,
     range_from_node,
@@ -51,6 +52,7 @@ from ..utils.ast_utils import (
 from ..utils.async_ast import AsyncVisitor
 from ..utils.match import eq
 from ..utils.variables import BUILTIN_VARIABLES
+from ..utils.version import get_robot_version
 from .entities import (
     ArgumentDefinition,
     BuiltInVariableDefinition,
@@ -547,6 +549,7 @@ class Namespace:
         invalidated_callback: Callable[[Namespace], None],
         document: Optional[TextDocument] = None,
         document_type: Optional[DocumentType] = None,
+        languages: Optional[Languages] = None,
     ) -> None:
         super().__init__()
 
@@ -557,6 +560,7 @@ class Namespace:
         self.invalidated_callback = invalidated_callback
         self._document = weakref.ref(document) if document is not None else None
         self.document_type: Optional[DocumentType] = document_type
+        self.languages = languages
 
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
         self._libraries_matchers: Optional[Dict[KeywordMatcher, LibraryEntry]] = None
@@ -1769,9 +1773,22 @@ class KeywordFinder:
         )
 
     async def _get_bdd_style_keyword(self, name: str) -> Optional[KeywordDoc]:
-        lower = name.lower()
-        for prefix in ["given ", "when ", "then ", "and ", "but "]:
-            if lower.startswith(prefix):
-                return await self._find_keyword(name[len(prefix) :])  # noqa: E203
+        if get_robot_version() < (5, 1):
+            lower = name.lower()
+            for prefix in ["given ", "when ", "then ", "and ", "but "]:
+                if lower.startswith(prefix):
+                    return await self._find_keyword(name[len(prefix) :])  # noqa: E203
+            return None
 
-        return None
+        else:
+            parts = name.split(maxsplit=1)
+            if len(parts) < 2:
+                return None
+            prefix, keyword = parts
+            if prefix.title() in (
+                self.namespace.languages.bdd_prefixes
+                if self.namespace.languages is not None
+                else {"Given ", "When ", "Then ", "And ", "But "}
+            ):
+                return await self._find_keyword(keyword)
+            return None

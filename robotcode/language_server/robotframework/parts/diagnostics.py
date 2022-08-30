@@ -57,10 +57,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @threaded()
     @_logger.call
-    async def collect_namespace_diagnostics(self, sender: Any, document: TextDocument, full: bool) -> DiagnosticsResult:
-        return await document.get_cache(self._collect_namespace_diagnostics, full)
-
-    async def _collect_namespace_diagnostics(self, document: TextDocument, full: bool) -> DiagnosticsResult:
+    async def collect_namespace_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         try:
             namespace = await self.parent.documents_cache.get_namespace(document)
             if namespace is None:
@@ -126,10 +123,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @threaded()
     @_logger.call
-    async def collect_token_errors(self, sender: Any, document: TextDocument, full: bool) -> DiagnosticsResult:
-        return await document.get_cache(self._collect_token_errors, full)
-
-    async def _collect_token_errors(self, document: TextDocument, full: bool) -> DiagnosticsResult:
+    async def collect_token_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         from robot.errors import VariableError
         from robot.parsing.lexer.tokens import Token
 
@@ -195,11 +189,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @threaded()
     @_logger.call
-    async def collect_model_errors(self, sender: Any, document: TextDocument, full: bool) -> DiagnosticsResult:
-        return await document.get_cache(self._collect_model_errors, full)
-
-    async def _collect_model_errors(self, document: TextDocument, full: bool) -> DiagnosticsResult:
-
+    async def collect_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         from ..utils.ast_utils import HasError, HasErrors
         from ..utils.async_ast import iter_nodes
 
@@ -247,18 +237,15 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @threaded()
     @_logger.call
-    async def collect_unused_references(self, sender: Any, document: TextDocument, full: bool) -> DiagnosticsResult:
+    async def collect_unused_references(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         config = await self.parent.workspace.get_configuration(AnalysisConfig, document.uri)
 
-        if not full or not config.find_unused_references:
+        if not config.find_unused_references:
             return DiagnosticsResult(self.collect_unused_references, [])
 
-        return await document.get_cache(self._collect_unused_references, full)
+        return await self._collect_unused_references(document)
 
-    async def _collect_unused_references(self, document: TextDocument, full: bool) -> DiagnosticsResult:
-        if not full:
-            return DiagnosticsResult(self.collect_unused_references, [])
-
+    async def _collect_unused_references(self, document: TextDocument) -> DiagnosticsResult:
         try:
             namespace = await self.parent.documents_cache.get_namespace(document)
             if namespace is None:

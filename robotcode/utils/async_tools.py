@@ -570,8 +570,8 @@ class Event:
         return f"<{res[1:-1]} [{extra}]>"
 
     def is_set(self) -> bool:
-        with self._lock:
-            return self._value
+        # with self._lock:
+        return self._value
 
     def set(self) -> None:
         with self._lock:

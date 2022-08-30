@@ -11,8 +11,11 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Union,
     cast,
 )
+
+from robotcode.language_server.common.lsp_types import MessageType
 
 from ....utils.async_tools import (
     Lock,
@@ -33,6 +36,7 @@ from ..utils.version import get_robot_version
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
+from ..languages import Languages
 from .protocol_part import RobotLanguageServerProtocolPart
 
 
@@ -47,23 +51,69 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         self._imports_managers_lock = Lock()
         self._imports_managers: weakref.WeakKeyDictionary[WorkspaceFolder, ImportsManager] = weakref.WeakKeyDictionary()
         self._default_imports_manager: Optional[ImportsManager] = None
+        self._workspace_languages: weakref.WeakKeyDictionary[WorkspaceFolder, Languages] = weakref.WeakKeyDictionary()
 
-    async def get_languages(self, document: TextDocument) -> Optional[List[str]]:
+    async def get_workspace_languages(self, document_or_uri: Union[TextDocument, Uri, str]) -> Optional[Languages]:
         if get_robot_version() < (5, 1):
             return None
 
-        folder = self.parent.workspace.get_workspace_folder(document.uri)
+        from robot.conf.languages import Languages as RobotLanguages
+
+        uri: Union[Uri, str]
+
+        if isinstance(document_or_uri, TextDocument):
+            uri = document_or_uri.uri
+        else:
+            uri = document_or_uri
+
+        folder = self.parent.workspace.get_workspace_folder(uri)
         if folder is None:
             return None
 
-        config = await self.parent.workspace.get_configuration(RobotConfig, folder.uri)
+        result = self._workspace_languages.get(folder, None)
+        if result is None:
+            config = await self.parent.workspace.get_configuration(RobotConfig, folder.uri)
 
-        lang = config.languages
+            languages = config.languages
 
-        if isinstance(lang, List) and len(lang) == 0:
-            lang = None
+            if isinstance(languages, List) and len(languages) == 0:
+                languages = None
+            if languages is None:
+                return None
 
-        return lang
+            result = RobotLanguages()
+            for lang in languages:
+                try:
+                    result.add_language(lang)
+                except ValueError as e:
+                    self.parent.window.show_message(
+                        f"Language configuration is not valid: {e}"
+                        "\nPlease check your 'robotcode.robot.language' configuration.",
+                        MessageType.ERROR,
+                    )
+
+            self._workspace_languages[folder] = result
+
+        return cast(Languages, RobotLanguages(result.languages))
+
+    async def build_languages_from_model(self, document: TextDocument, model: ast.AST) -> Optional[Languages]:
+        if get_robot_version() < (5, 1):
+            return None
+
+        from robot.conf.languages import Languages as RobotLanguages
+        from robot.parsing.model.blocks import File
+
+        workspace_langs = await self.get_workspace_languages(document)
+
+        return cast(
+            Languages,
+            RobotLanguages(
+                [
+                    *(workspace_langs.languages if workspace_langs else []),
+                    *(model.languages if isinstance(model, File) else []),
+                ]
+            ),
+        )
 
     async def get_document_type(self, document: TextDocument) -> DocumentType:
         return await document.get_cache(self.__get_document_type)
@@ -152,7 +202,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
             return robot.api.get_init_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
 
     async def __get_general_tokens_data_only(self, document: TextDocument) -> List[Token]:
-        lang = await self.get_languages(document)
+        lang = await self.get_workspace_languages(document)
 
         def get(text: str) -> List[Token]:
             with io.StringIO(text) as content:
@@ -161,7 +211,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         return await self.__get_tokens_internal(document, get)
 
     async def __get_general_tokens(self, document: TextDocument) -> List[Token]:
-        lang = await self.get_languages(document)
+        lang = await self.get_workspace_languages(document)
 
         def get(text: str) -> List[Token]:
             with io.StringIO(text) as content:
@@ -184,7 +234,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         return await document.get_cache(self.__get_resource_tokens)
 
     async def __get_resource_tokens_data_only(self, document: TextDocument) -> List[Token]:
-        lang = await self.get_languages(document)
+        lang = await self.get_workspace_languages(document)
 
         def get(text: str) -> List[Token]:
             with io.StringIO(text) as content:
@@ -195,7 +245,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         return await self.__get_tokens_internal(document, get)
 
     async def __get_resource_tokens(self, document: TextDocument) -> List[Token]:
-        lang = await self.get_languages(document)
+        lang = await self.get_workspace_languages(document)
 
         def get(text: str) -> List[Token]:
             with io.StringIO(text) as content:
@@ -209,7 +259,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         return await document.get_cache(self.__get_init_tokens)
 
     async def __get_init_tokens_data_only(self, document: TextDocument) -> List[Token]:
-        lang = await self.get_languages(document)
+        lang = await self.get_workspace_languages(document)
 
         def get(text: str) -> List[Token]:
             with io.StringIO(text) as content:
@@ -218,7 +268,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         return await self.__get_tokens_internal(document, get)
 
     async def __get_init_tokens(self, document: TextDocument) -> List[Token]:
-        lang = await self.get_languages(document)
+        lang = await self.get_workspace_languages(document)
 
         def get(text: str) -> List[Token]:
             with io.StringIO(text) as content:
@@ -352,7 +402,10 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         def invalidate(namespace: Namespace) -> None:
             create_sub_task(self.__invalidate_namespace(namespace))
 
-        return Namespace(imports_manager, model, str(document.uri.to_path()), invalidate, document, document_type)
+        languages = await self.build_languages_from_model(document, model)
+        return Namespace(
+            imports_manager, model, str(document.uri.to_path()), invalidate, document, document_type, languages
+        )
 
     async def default_imports_manager(self) -> ImportsManager:
         async with self._imports_managers_lock:

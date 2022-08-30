@@ -91,6 +91,7 @@ class RobotSemTokenTypes(Enum):
     ESCAPE = "escape"
     NAMESPACE = "namespace"
     ERROR = "error"
+    CONFIG = "config"
 
 
 class RobotSemTokenModifiers(Enum):
@@ -205,6 +206,17 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 }
             )
 
+        if get_robot_version() >= (5, 1):
+            definition.update(
+                {
+                    frozenset(
+                        {
+                            RobotToken.CONFIG,
+                        }
+                    ): (RobotSemTokenTypes.CONFIG, None),
+                }
+            )
+
         result: Dict[str, Tuple[Enum, Optional[Set[Enum]]]] = {}
         for k, v in definition.items():
             for e in k:
@@ -301,10 +313,24 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             elif token.type in [RobotToken.KEYWORD, ROBOT_KEYWORD_INNER] or (
                 token.type == RobotToken.NAME and isinstance(node, (Fixture, Template, TestTemplate))
             ):
+                bdd_len = 0
 
-                bdd_match = cls.BDD_TOKEN_REGEX.match(token.value)
-                if bdd_match:
-                    bdd_len = len(bdd_match.group(1))
+                if get_robot_version() < (5, 1):
+                    bdd_match = cls.BDD_TOKEN_REGEX.match(token.value)
+                    if bdd_match:
+                        bdd_len = len(bdd_match.group(1))
+                else:
+                    parts = token.value.split(maxsplit=1)
+                    if len(parts) == 2:
+                        prefix, _ = parts
+                        if prefix.title() in (
+                            namespace.languages.bdd_prefixes
+                            if namespace.languages is not None
+                            else {"Given ", "When ", "Then ", "And ", "But "}
+                        ):
+                            bdd_len = len(prefix)
+
+                if bdd_len > 0:
                     yield SemTokenInfo.from_token(
                         token, RobotSemTokenTypes.BDD_PREFIX, sem_mod, token.col_offset, bdd_len
                     )
@@ -687,7 +713,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                         if kw_token is not None:
                             kw: Optional[str] = None
 
-                            for _, name in iter_over_keyword_names_and_owners(self.strip_bdd_prefix(kw_token).value):
+                            for _, name in iter_over_keyword_names_and_owners(
+                                self.strip_bdd_prefix(namespace, kw_token).value
+                            ):
                                 if name is not None:
                                     matcher = KeywordMatcher(name)
                                     if matcher in ALL_RUN_KEYWORDS_MATCHERS:

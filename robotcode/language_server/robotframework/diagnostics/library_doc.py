@@ -245,8 +245,6 @@ class ArgumentSpec:
     defaults: Any
     types: Any
 
-    __robot_arguments: Optional[Any] = field(default=None, compare=False)
-
     @staticmethod
     def from_robot_argument_spec(spec: Any) -> ArgumentSpec:
         return ArgumentSpec(
@@ -274,7 +272,7 @@ class ArgumentSpec:
             ArgumentSpec as RobotArgumentSpec,
         )
 
-        if self.__robot_arguments is None:
+        if not hasattr(self, "__robot_arguments"):
             self.__robot_arguments = RobotArgumentSpec(
                 self.name,
                 self.type,
@@ -317,7 +315,9 @@ class KeywordDoc(SourceEntity):
     args_to_process: Optional[int] = field(default=None, compare=False)
     deprecated: bool = field(default=False, compare=False)
     arguments: Optional[ArgumentSpec] = field(default=None, compare=False)
-    argument_definitions: Optional[List[ArgumentDefinition]] = field(default=None, compare=False)
+    argument_definitions: Optional[List[ArgumentDefinition]] = field(
+        default=None, compare=False, repr=False, hash=False
+    )
 
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
@@ -476,11 +476,9 @@ class KeywordStore:
     source_type: Optional[str] = None
     keywords: List[KeywordDoc] = field(default_factory=list)
 
-    __matchers: Optional[Dict[KeywordMatcher, KeywordDoc]] = None
-
     @property
     def _matchers(self) -> Dict[KeywordMatcher, KeywordDoc]:
-        if self.__matchers is None:
+        if not hasattr(self, "__matchers"):
             self.__matchers = {KeywordMatcher(v.name): v for v in self.keywords}
         return self.__matchers
 

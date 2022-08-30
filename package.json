@@ -163,7 +163,11 @@
           ],
           "error": [
             "invalid.illegal.robotframework"
+          ],
+          "config": [
+            "comment.line.configuration.robotframework"
           ]
+
         }
       }
     ],
