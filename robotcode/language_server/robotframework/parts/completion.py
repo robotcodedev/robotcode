@@ -12,6 +12,7 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
+    Iterable,
     Iterator,
     List,
     Optional,
@@ -47,7 +48,7 @@ from ..diagnostics.library_doc import (
     KeywordDoc,
     KeywordMatcher,
 )
-from ..diagnostics.namespace import Namespace
+from ..diagnostics.namespace import DocumentType, Namespace
 from ..utils.ast_utils import (
     HasTokens,
     Token,
@@ -66,6 +67,9 @@ if TYPE_CHECKING:
 
 from .protocol_part import RobotLanguageServerProtocolPart
 
+DEFAULT_SECTIONS_STYLE = "*** {name}s ***"
+DEFAULT_SECTIONS_STYLE_NEW = "*** {name} ***"
+
 
 class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
@@ -79,9 +83,10 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
     async def get_section_style(self, document: TextDocument) -> str:
         if (folder := self.parent.workspace.get_workspace_folder(document.uri)) is not None:
             config = await self.parent.workspace.get_configuration(SyntaxConfig, folder.uri)
-            return config.section_style or DEFAULT_SECTIONS_STYLE
+            if config.section_style is not None:
+                return config.section_style
 
-        return DEFAULT_SECTIONS_STYLE
+        return DEFAULT_SECTIONS_STYLE if get_robot_version() < (5, 1) else DEFAULT_SECTIONS_STYLE_NEW
 
     @language_id("robotframework")
     @trigger_characters(
@@ -143,9 +148,8 @@ _CompleteMethod = Callable[
 ]
 
 SECTIONS = ["Test Case", "Setting", "Variable", "Keyword", "Comment", "Task"]
-DEFAULT_SECTIONS_STYLE = "*** {name}s ***"
 
-SETTINGS = [
+SUITE_SETTINGS = [
     "Documentation",
     "Metadata",
     "Suite Setup",
@@ -164,6 +168,7 @@ SETTINGS = [
     "Task Template",
     "Task Timeout",
 ]
+
 
 TESTCASE_SETTINGS = ["Documentation", "Tags", "Setup", "Teardown", "Template", "Timeout"]
 KEYWORD_SETTINGS = ["Documentation", "Tags", "Arguments", "Return", "Teardown", "Timeout"]
@@ -345,12 +350,21 @@ class CompletionCollector(ModelHelperMixin):
 
         return completion_item
 
-    async def create_section_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+    async def create_headers_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+        if self.namespace.languages is None:
+            headers: Iterable[str] = SECTIONS
+        else:
+            headers = self.namespace.languages.headers.keys()
+
         return [
             CompletionItem(
                 label=s[0],
                 kind=CompletionItemKind.CLASS,
                 detail="Section",
+                # this is to get the english version in the documentation
+                documentation=self.namespace.languages.headers.get(s[1])
+                if self.namespace.languages is not None
+                else None,
                 sort_text=f"100_{s[1]}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(
@@ -360,7 +374,7 @@ class CompletionCollector(ModelHelperMixin):
                 if range is not None
                 else None,
             )
-            for s in ((self.section_style.format(name=k), k) for k in SECTIONS)
+            for s in ((self.section_style.format(name=k), k) for k in headers)
         ]
 
     async def create_environment_variables_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
@@ -415,6 +429,25 @@ class CompletionCollector(ModelHelperMixin):
         ]
 
     async def create_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+        from robot.parsing.lexer.settings import (
+            InitFileSettings,
+            ResourceFileSettings,
+            TestCaseFileSettings,
+        )
+
+        doc_type = await self.parent.documents_cache.get_document_type(self.document)
+
+        settings_class = TestCaseFileSettings
+        if doc_type == DocumentType.RESOURCE:
+            settings_class = ResourceFileSettings
+        elif doc_type == DocumentType.INIT:
+            settings_class = InitFileSettings
+
+        settings = {*settings_class.names, *settings_class.aliases.keys()}
+
+        if self.namespace.languages is not None:
+            settings = {k for k, v in self.namespace.languages.settings.items() if v in settings}
+
         return [
             CompletionItem(
                 label=setting,
@@ -424,7 +457,7 @@ class CompletionCollector(ModelHelperMixin):
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=range, new_text=setting) if range is not None else None,
             )
-            for setting in SETTINGS
+            for setting in settings
         ]
 
     async def create_keyword_snippet_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
@@ -442,6 +475,13 @@ class CompletionCollector(ModelHelperMixin):
         ]
 
     async def create_testcase_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+        from robot.parsing.lexer.settings import TestCaseSettings
+
+        settings = {*TestCaseSettings.names, *TestCaseSettings.aliases.keys()}
+
+        if self.namespace.languages is not None:
+            settings = {k for k, v in self.namespace.languages.settings.items() if v in settings}
+
         return [
             CompletionItem(
                 label=f"[{setting}]",
@@ -451,10 +491,17 @@ class CompletionCollector(ModelHelperMixin):
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=range, new_text=f"[{setting}]") if range is not None else None,
             )
-            for setting in TESTCASE_SETTINGS
+            for setting in settings
         ]
 
     async def create_keyword_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+        from robot.parsing.lexer.settings import KeywordSettings
+
+        settings = {*KeywordSettings.names, *KeywordSettings.aliases.keys()}
+
+        if self.namespace.languages is not None:
+            settings = {k for k, v in self.namespace.languages.settings.items() if v in settings}
+
         return [
             CompletionItem(
                 label=f"[{setting}]",
@@ -464,7 +511,7 @@ class CompletionCollector(ModelHelperMixin):
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=range, new_text=f"[{setting}]") if range is not None else None,
             )
-            for setting in KEYWORD_SETTINGS
+            for setting in settings
         ]
 
     def get_keyword_snipped_text(self, kw: KeywordDoc, in_template: bool) -> str:
@@ -739,7 +786,7 @@ class CompletionCollector(ModelHelperMixin):
                     and (position.is_in_range(r))
                     and (only_stars or value.startswith("*") or position.character == 0)
                 ):
-                    return await self.create_section_completion_items(r)
+                    return await self.create_headers_completion_items(r)
                 elif len(statement_node.tokens) > 1 and only_stars:
                     r1 = range_from_token(statement_node.tokens[1])
                     ws = whitespace_at_begin_of_token(statement_node.tokens[1])
@@ -747,10 +794,10 @@ class CompletionCollector(ModelHelperMixin):
                         r1.end.character = r1.start.character + ws
                         if position.is_in_range(r1):
                             r.end = r1.end
-                            return await self.create_section_completion_items(r)
+                            return await self.create_headers_completion_items(r)
 
         elif position.character == 0:
-            return await self.create_section_completion_items(None)
+            return await self.create_headers_completion_items(None)
 
         if len(nodes_at_position) > 1 and isinstance(nodes_at_position[0], HasTokens):
             node = nodes_at_position[0]
@@ -1261,6 +1308,10 @@ class CompletionCollector(ModelHelperMixin):
         import_token = import_node.get_token(RobotToken.LIBRARY)
         if import_token is None:
             return []
+
+        if position.is_in_range(range_from_token(import_token)):
+            return []
+
         import_token_index = import_node.tokens.index(import_token)
 
         async def complete_import() -> Optional[List[CompletionItem]]:
@@ -1507,6 +1558,10 @@ class CompletionCollector(ModelHelperMixin):
         import_token = import_node.get_token(Token.RESOURCE)
         if import_token is None:
             return []
+
+        if position.is_in_range(range_from_token(import_token)):
+            return []
+
         import_token_index = import_node.tokens.index(import_token)
 
         if len(import_node.tokens) > import_token_index + 2:
@@ -1606,8 +1661,13 @@ class CompletionCollector(ModelHelperMixin):
 
         import_node = cast(VariablesImport, node)
         import_token = import_node.get_token(Token.VARIABLES)
+
         if import_token is None:
             return []
+
+        if position.is_in_range(range_from_token(import_token)):
+            return []
+
         import_token_index = import_node.tokens.index(import_token)
 
         if len(import_node.tokens) > import_token_index + 2:

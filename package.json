@@ -416,8 +416,8 @@
           },
           "robotcode.syntax.sectionStyle": {
             "type": "string",
-            "default": "*** {name}s ***",
-            "description": "Defines the section style format.",
+            "default": null,
+            "description": "Defines the section style format. If not defined ```*** section ***``` is used.",
             "scope": "resource"
           },
           "robotcode.run.openReportAfterRun": {

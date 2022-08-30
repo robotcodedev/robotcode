@@ -48,7 +48,7 @@ class RobotConfig(ConfigBase):
 @config_section("robotcode.syntax")
 @dataclass
 class SyntaxConfig(ConfigBase):
-    section_style: str = "*** {name}s ***"
+    section_style: Optional[str] = None
 
 
 @config_section("robotcode.robocop")
