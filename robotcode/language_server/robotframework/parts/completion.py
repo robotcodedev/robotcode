@@ -149,30 +149,6 @@ _CompleteMethod = Callable[
 
 SECTIONS = ["Test Case", "Setting", "Variable", "Keyword", "Comment", "Task"]
 
-SUITE_SETTINGS = [
-    "Documentation",
-    "Metadata",
-    "Suite Setup",
-    "Suite Teardown",
-    "Test Setup",
-    "Test Teardown",
-    "Test Template",
-    "Test Timeout",
-    "Force Tags",
-    "Default Tags",
-    "Library",
-    "Resource",
-    "Variables",
-    "Task Setup",
-    "Task Teardown",
-    "Task Template",
-    "Task Timeout",
-]
-
-
-TESTCASE_SETTINGS = ["Documentation", "Tags", "Setup", "Teardown", "Template", "Timeout"]
-KEYWORD_SETTINGS = ["Documentation", "Tags", "Arguments", "Return", "Teardown", "Timeout"]
-
 
 __snippets: Optional[Dict[str, List[str]]] = None
 
