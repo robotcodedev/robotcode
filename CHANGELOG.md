@@ -2,10 +2,14 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- some fixes in analysing and highlightning
+
 ##  0.13.4
+
 - none so far
+
 ##  0.13.3
 
 - Highlight localized robot files (RobotFramework >= 5.1)
