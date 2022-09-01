@@ -166,6 +166,9 @@
           ],
           "config": [
             "comment.line.configuration.robotframework"
+          ],
+          "namedArgument": [
+            "variable.parameter.function-call.robotframework"
           ]
         }
       }

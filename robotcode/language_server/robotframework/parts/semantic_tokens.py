@@ -93,6 +93,7 @@ class RobotSemTokenTypes(Enum):
     NAMESPACE = "namespace"
     ERROR = "error"
     CONFIG = "config"
+    NAMED_ARGUMENT = "namedArgument"
 
 
 class RobotSemTokenModifiers(Enum):
@@ -178,7 +179,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             frozenset({RobotToken.VARIABLE, RobotToken.ASSIGN}): (RobotSemTokenTypes.VARIABLE, None),
             frozenset({RobotToken.KEYWORD}): (RobotSemTokenTypes.KEYWORD, None),
             frozenset({ROBOT_KEYWORD_INNER}): (RobotSemTokenTypes.KEYWORD_INNER, None),
-            frozenset({ROBOT_NAMED_ARGUMENT}): (RobotSemTokenTypes.VARIABLE, None),
+            frozenset({ROBOT_NAMED_ARGUMENT}): (RobotSemTokenTypes.NAMED_ARGUMENT, None),
             frozenset({ROBOT_OPERATOR}): (SemanticTokenTypes.OPERATOR, None),
             frozenset({RobotToken.NAME}): (RobotSemTokenTypes.NAME, None),
             frozenset({RobotToken.CONTINUATION}): (RobotSemTokenTypes.CONTINUATION, None),
@@ -254,6 +255,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     ) -> AsyncGenerator[SemTokenInfo, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import (
+            Arguments,
             Documentation,
             Fixture,
             LibraryImport,
@@ -283,7 +285,13 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                     if last_index >= 0:
                         yield SemTokenInfo(token.lineno, col_offset, 2, RobotSemTokenTypes.VARIABLE_BEGIN, sem_mod)
 
-                        yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset + 2, last_index - 2)
+                        yield SemTokenInfo.from_token(
+                            token,
+                            SemanticTokenTypes.PARAMETER if isinstance(node, Arguments) else sem_type,
+                            sem_mod,
+                            col_offset + 2,
+                            last_index - 2,
+                        )
 
                         yield SemTokenInfo(
                             token.lineno, col_offset + last_index, 1, RobotSemTokenTypes.VARIABLE_END, sem_mod
