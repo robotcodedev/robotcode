@@ -94,7 +94,6 @@ exclude = '''
     | build
     | dist
     | out
-    | robotcode/external
     | playground
   )/
 )
@@ -146,6 +145,5 @@ exclude = [
   "build",
   "dist",
   "out",
-  "robotcode/external",
   "playground",
 ]

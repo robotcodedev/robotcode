@@ -129,7 +129,9 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         from ..utils.version import get_robot_version
 
         if get_robot_version() >= (5, 1):
-            from robot.running.builder.settings import Defaults as TestDefaults
+            from robot.running.builder.settings import (
+                Defaults as TestDefaults,  # pyright: reportMissingImports=false
+            )
         else:
             from robot.running.builder.testsettings import TestDefaults
 

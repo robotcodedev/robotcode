@@ -37,6 +37,7 @@ from ...common.text_document import TextDocument
 from ..diagnostics.library_doc import (
     ALL_RUN_KEYWORDS_MATCHERS,
     BUILTIN_LIBRARY_NAME,
+    KeywordArgumentKind,
     KeywordDoc,
     KeywordMatcher,
     LibraryDoc,
@@ -663,7 +664,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                     if kw_doc is None:
                         kw_doc = await namespace.find_keyword(kw_token.value)
 
-                    if kw_doc and any(v for v in kw_doc.args if v.name == name):
+                    if kw_doc and any(
+                        v for v in kw_doc.args if v.kind == KeywordArgumentKind.VAR_NAMED or v.name == name
+                    ):
                         length = len(name)
                         yield RobotToken(ROBOT_NAMED_ARGUMENT, name, token.lineno, token.col_offset), node
 
