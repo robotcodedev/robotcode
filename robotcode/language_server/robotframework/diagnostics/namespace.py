@@ -856,7 +856,6 @@ class Namespace:
 
         return self._global_variables
 
-    @_logger.call
     async def yield_variables(
         self,
         nodes: Optional[List[ast.AST]] = None,
@@ -906,7 +905,6 @@ class Namespace:
             if v.has_value
         }
 
-    @_logger.call
     async def get_variable_matchers(
         self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
     ) -> Dict[VariableMatcher, VariableDefinition]:
@@ -945,7 +943,6 @@ class Namespace:
 
         return None
 
-    @_logger.call
     async def _import_imports(
         self,
         imports: Iterable[Import],

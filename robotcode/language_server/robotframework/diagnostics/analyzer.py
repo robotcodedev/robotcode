@@ -240,20 +240,33 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             self.node_stack = self.node_stack[:-1]
 
     @staticmethod
+    async def get_ignored_lines(document: TextDocument) -> List[int]:
+        return await document.get_cache(Analyzer.__get_ignored_lines)
+
+    @staticmethod
+    async def __get_ignored_lines(document: TextDocument) -> List[int]:
+        result = []
+        lines = await document.get_lines()
+        for line_no, line in enumerate(lines):
+
+            comment = EXTRACT_COMMENT_PATTERN.match(line)
+            if comment and comment.group("comment"):
+                for match in ROBOTCODE_PATTERN.finditer(comment.group("comment")):
+
+                    if match.group("rule") == "ignore":
+                        result.append(line_no)
+
+        return result
+
+    @staticmethod
     async def should_ignore(document: Optional[TextDocument], range: Range) -> bool:
         import builtins
 
         if document is not None:
-            lines = await document.get_lines()
+            lines = await Analyzer.get_ignored_lines(document)
             for line_no in builtins.range(range.start.line, range.end.line + 1):
-                line = lines[line_no]
-
-                comment = EXTRACT_COMMENT_PATTERN.match(line)
-                if comment and comment.group("comment"):
-                    for match in ROBOTCODE_PATTERN.finditer(comment.group("comment")):
-
-                        if match.group("rule") == "ignore":
-                            return True
+                if line_no in lines:
+                    return True
 
         return False
 
