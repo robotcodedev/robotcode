@@ -34,6 +34,7 @@ from ..utils.ast_utils import (
     tokenize_variables,
 )
 from ..utils.async_ast import AsyncVisitor
+from ..utils.version import get_robot_version
 from .entities import VariableDefinition, VariableNotFoundDefinition
 from .library_doc import KeywordDoc, is_embedded_keyword
 from .namespace import DIAGNOSTICS_SOURCE_NAME, KeywordFinder, Namespace
@@ -319,7 +320,14 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             if not allow_variables and not is_not_variable_token(keyword_token):
                 return None
 
-            keyword_token = self.strip_bdd_prefix(self.namespace, keyword_token)
+            if (
+                await self.namespace.find_keyword(
+                    keyword_token.value, raise_keyword_error=False, handle_bdd_style=False
+                )
+                is None
+            ):
+                keyword_token = self.strip_bdd_prefix(self.namespace, keyword_token)
+
             kw_range = range_from_token(keyword_token)
 
             if keyword is not None:
@@ -702,7 +710,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 range=range_from_node_or_token(value, value.get_token(RobotToken.ASSIGN)),
                 message="Keyword name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
-                code="KeywordError",
+                code="KeywordNameEmpty",
             )
         else:
             await self._analyze_keyword_call(
@@ -733,7 +741,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 range=range_from_node_or_token(testcase, name_token),
                 message="Test case name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
-                code="KeywordError",
+                code="TestCaseNameEmpty",
             )
 
         self.current_testcase_or_keyword_name = testcase.name
@@ -764,7 +772,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     range=range_from_node_or_token(keyword, name_token),
                     message="Keyword cannot have both normal and embedded arguments.",
                     severity=DiagnosticSeverity.ERROR,
-                    code="KeywordError",
+                    code="KeywordNormalAndEmbbededError",
                 )
         else:
             name_token = cast(KeywordName, keyword.header).get_token(RobotToken.KEYWORD_NAME)
@@ -772,7 +780,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 range=range_from_node_or_token(keyword, name_token),
                 message="Keyword name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
-                code="KeywordError",
+                code="KeywordNameEmpty",
             )
 
         self.current_testcase_or_keyword_name = keyword.name
@@ -836,3 +844,23 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 )
 
         await self.generic_visit(node)
+
+    async def visit_Tags(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Tags
+
+        if get_robot_version() >= (5, 1):
+            tags = cast(Tags, node)
+
+            for tag in tags.get_tokens(RobotToken.ARGUMENT):
+                if tag.value and tag.value.startswith("-"):
+                    await self.append_diagnostics(
+                        range=range_from_node_or_token(node, tag),
+                        message=f"Settings tags starting with a hyphen using the '[Tags]' setting "
+                        f"is deprecated. In Robot Framework 5.2 this syntax will be used "
+                        f"for removing tags. Escape '{tag.value}' like '\\{tag.value}' to use the "
+                        f"literal value and to avoid this warning.",
+                        severity=DiagnosticSeverity.WARNING,
+                        tags=[DiagnosticTag.Deprecated],
+                        code="DeprecatedHyphenTag",
+                    )

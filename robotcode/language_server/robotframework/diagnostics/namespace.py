@@ -1531,11 +1531,14 @@ class Namespace:
         return self._finder
 
     @_logger.call(condition=lambda self, name: self._finder is not None and name not in self._finder._cache)
-    async def find_keyword(self, name: Optional[str], raise_keyword_error: bool = True) -> Optional[KeywordDoc]:
-        if self._finder is not None:
-            return await self._finder.find_keyword(name, raise_keyword_error)
+    async def find_keyword(
+        self, name: Optional[str], *, raise_keyword_error: bool = True, handle_bdd_style: bool = True
+    ) -> Optional[KeywordDoc]:
+        finder = self._finder if self._finder is not None else await self.get_finder()
 
-        return await (await self.get_finder()).find_keyword(name, raise_keyword_error)
+        return await finder.find_keyword(
+            name, raise_keyword_error=raise_keyword_error, handle_bdd_style=handle_bdd_style
+        )
 
 
 class DiagnosticsEntry(NamedTuple):
@@ -1554,16 +1557,21 @@ class KeywordFinder:
         self.namespace = namespace
         self.diagnostics: List[DiagnosticsEntry] = []
         self.self_library_doc: Optional[LibraryDoc] = None
-        self._cache: Dict[Optional[str], Tuple[Optional[KeywordDoc], List[DiagnosticsEntry]]] = {}
+        self._cache: Dict[Tuple[Optional[str], bool], Tuple[Optional[KeywordDoc], List[DiagnosticsEntry]]] = {}
+        self.handle_bdd_style = True
 
     def reset_diagnostics(self) -> None:
         self.diagnostics = []
 
-    async def find_keyword(self, name: Optional[str], raise_keyword_error: bool = False) -> Optional[KeywordDoc]:
+    async def find_keyword(
+        self, name: Optional[str], *, raise_keyword_error: bool = False, handle_bdd_style: bool = True
+    ) -> Optional[KeywordDoc]:
         try:
             self.reset_diagnostics()
 
-            cached = self._cache.get(name, None)
+            self.handle_bdd_style = handle_bdd_style
+
+            cached = self._cache.get((name, self.handle_bdd_style), None)
 
             if cached is not None:
                 self.diagnostics = cached[1]
@@ -1584,7 +1592,7 @@ class KeywordFinder:
                     result = None
                     self.diagnostics.append(DiagnosticsEntry(str(e), DiagnosticSeverity.ERROR, "KeywordError"))
 
-                self._cache[name] = (result, self.diagnostics)
+                self._cache[(name, self.handle_bdd_style)] = (result, self.diagnostics)
 
                 return result
         except CancelSearchError:
@@ -1609,7 +1617,7 @@ class KeywordFinder:
         if not result:
             result = await self._get_implicit_keyword(name)
 
-        if not result:
+        if not result and self.handle_bdd_style:
             result = await self._get_bdd_style_keyword(name)
 
         return result

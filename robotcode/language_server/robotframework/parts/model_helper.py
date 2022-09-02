@@ -19,7 +19,7 @@ from typing import (
 
 from ...common.lsp_types import Position
 from ..diagnostics.entities import VariableDefinition, VariableNotFoundDefinition
-from ..diagnostics.library_doc import KeywordDoc, KeywordError
+from ..diagnostics.library_doc import KeywordDoc
 from ..diagnostics.namespace import LibraryEntry, Namespace
 from ..utils.ast_utils import (
     Token,
@@ -184,21 +184,18 @@ class ModelHelperMixin:
         analyse_run_keywords: bool = True,
     ) -> Optional[Tuple[Optional[KeywordDoc], Token]]:
 
-        try:
-            keyword_doc = await namespace.find_keyword(keyword_name)
-            if keyword_doc is None:
-                return None
+        keyword_doc = await namespace.find_keyword(keyword_name, raise_keyword_error=False)
+        if keyword_doc is None:
+            return None
 
-            if position.is_in_range(range_from_token(keyword_token)):
-                return keyword_doc, keyword_token
-            elif analyse_run_keywords:
-                return (
-                    await cls.get_run_keyword_keyworddoc_and_token_from_position(
-                        keyword_doc, argument_tokens, namespace, position
-                    )
-                )[0]
-        except KeywordError:
-            pass
+        if position.is_in_range(range_from_token(keyword_token)):
+            return keyword_doc, keyword_token
+        elif analyse_run_keywords:
+            return (
+                await cls.get_run_keyword_keyworddoc_and_token_from_position(
+                    keyword_doc, argument_tokens, namespace, position
+                )
+            )[0]
 
         return None
 

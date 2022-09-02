@@ -2,11 +2,14 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Extensive adjustments for multiple language support for RobotFramework 5.1, BDD prefixes now works correctly for mixed languages
+- New deprecated message for tags that start with hyphen, RF 5.1
+
 ##  0.13.5
 
-- some fixes in analysing and highlightning
+- Some fixes in analysing and highlightning
 
 ##  0.13.4
 

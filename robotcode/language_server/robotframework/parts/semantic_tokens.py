@@ -322,36 +322,37 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             elif token.type in [RobotToken.KEYWORD, ROBOT_KEYWORD_INNER] or (
                 token.type == RobotToken.NAME and isinstance(node, (Fixture, Template, TestTemplate))
             ):
-                bdd_len = 0
+                if await namespace.find_keyword(token.value, raise_keyword_error=False, handle_bdd_style=False) is None:
+                    bdd_len = 0
 
-                if get_robot_version() < (5, 1):
-                    bdd_match = cls.BDD_TOKEN_REGEX.match(token.value)
-                    if bdd_match:
-                        bdd_len = len(bdd_match.group(1))
-                else:
-                    parts = token.value.split(maxsplit=1)
-                    if len(parts) == 2:
-                        prefix, _ = parts
-                        if prefix.title() in (
-                            namespace.languages.bdd_prefixes
-                            if namespace.languages is not None
-                            else {"Given ", "When ", "Then ", "And ", "But "}
-                        ):
-                            bdd_len = len(prefix)
+                    if get_robot_version() < (5, 1):
+                        bdd_match = cls.BDD_TOKEN_REGEX.match(token.value)
+                        if bdd_match:
+                            bdd_len = len(bdd_match.group(1))
+                    else:
+                        parts = token.value.split(maxsplit=1)
+                        if len(parts) == 2:
+                            prefix, _ = parts
+                            if prefix.title() in (
+                                namespace.languages.bdd_prefixes
+                                if namespace.languages is not None
+                                else {"Given ", "When ", "Then ", "And ", "But "}
+                            ):
+                                bdd_len = len(prefix)
 
-                if bdd_len > 0:
-                    yield SemTokenInfo.from_token(
-                        token, RobotSemTokenTypes.BDD_PREFIX, sem_mod, token.col_offset, bdd_len
-                    )
-                    yield SemTokenInfo.from_token(token, sem_type, sem_mod, token.col_offset + bdd_len, 1)
+                    if bdd_len > 0:
+                        yield SemTokenInfo.from_token(
+                            token, RobotSemTokenTypes.BDD_PREFIX, sem_mod, token.col_offset, bdd_len
+                        )
+                        yield SemTokenInfo.from_token(token, sem_type, sem_mod, token.col_offset + bdd_len, 1)
 
-                    token = RobotToken(
-                        token.type,
-                        token.value[bdd_len + 1 :],
-                        token.lineno,
-                        token.col_offset + bdd_len + 1,
-                        token.error,
-                    )
+                        token = RobotToken(
+                            token.type,
+                            token.value[bdd_len + 1 :],
+                            token.lineno,
+                            token.col_offset + bdd_len + 1,
+                            token.error,
+                        )
 
                 if col_offset is None:
                     col_offset = token.col_offset

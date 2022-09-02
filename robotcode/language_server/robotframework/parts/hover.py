@@ -266,7 +266,11 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         if result is not None:
             keyword_doc, keyword_token = result
 
-            keyword_token = self.strip_bdd_prefix(namespace, keyword_token)
+            if (
+                await namespace.find_keyword(keyword_token.value, raise_keyword_error=False, handle_bdd_style=False)
+                is None
+            ):
+                keyword_token = self.strip_bdd_prefix(namespace, keyword_token)
 
             lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
 
@@ -316,7 +320,11 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         if result is not None:
             keyword_doc, keyword_token = result
 
-            keyword_token = self.strip_bdd_prefix(namespace, keyword_token)
+            if (
+                await namespace.find_keyword(keyword_token.value, raise_keyword_error=False, handle_bdd_style=False)
+                is None
+            ):
+                keyword_token = self.strip_bdd_prefix(namespace, keyword_token)
 
             lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
 
@@ -356,7 +364,11 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             if namespace is None:
                 return None
 
-            keyword_token = self.strip_bdd_prefix(namespace, keyword_token)
+            if (
+                await namespace.find_keyword(keyword_token.value, raise_keyword_error=False, handle_bdd_style=False)
+                is None
+            ):
+                keyword_token = self.strip_bdd_prefix(namespace, keyword_token)
 
             if position.is_in_range(range_from_token(keyword_token)):
                 keyword_doc = await namespace.find_keyword(template_node.value)
