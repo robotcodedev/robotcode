@@ -2,7 +2,9 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
+## [Unreleased]
+- none so far
+##  0.13.7
 
 - Don't explicitly set suites to failed if there is an empty failed message
   - fixes [#76](https://github.com/d-biehl/robotcode/issues/76)
