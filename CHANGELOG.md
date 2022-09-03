@@ -2,8 +2,11 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Don't explicitly set suites to failed if there is an empty failed message
+  - fixes [#76](https://github.com/d-biehl/robotcode/issues/76)
+
 ##  0.13.6
 
 - Extensive adjustments for multiple language support for RobotFramework 5.1, BDD prefixes now works correctly for mixed languages

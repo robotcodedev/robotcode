@@ -889,6 +889,7 @@ export class TestControllerManager {
 
       run.appendOutput(
         style(`${event.level}: ${event.message.replaceAll("\n", "\r\n")}` + "\r\n"),
+        // location,
         undefined,
         event.itemId !== undefined ? this.findTestItemById(event.itemId) : undefined
       );
