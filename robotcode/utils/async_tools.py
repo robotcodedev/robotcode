@@ -540,10 +540,11 @@ async def async_lock(lock: threading.RLock) -> AsyncGenerator[None, None]:
     start_time = time.monotonic()
     locked = lock.acquire(blocking=False)
     while not locked:
-        if time.monotonic() - start_time >= 10:
-            raise RuntimeError("Timeout waiting for lock")
+        if time.monotonic() - start_time >= 20:
+            raise TimeoutError("Timeout waiting for lock")
 
         await asyncio.sleep(0.001)
+
         locked = lock.acquire(blocking=False)
     try:
         yield
@@ -600,7 +601,7 @@ class Event:
                                 fut._loop.call_soon_threadsafe(s, fut, done)
 
                                 if not done.wait(120):
-                                    raise RuntimeError("Callback timeout")
+                                    raise TimeoutError("Callback timeout")
 
     def clear(self) -> None:
         with self._lock:
@@ -664,7 +665,7 @@ class Semaphore:
                                 waiter._loop.call_soon_threadsafe(s, waiter, done)
 
                                 if not done.wait(120):
-                                    raise RuntimeError("Callback timeout")
+                                    raise TimeoutError("Callback timeout")
 
                         else:
                             raise RuntimeError("Loop is not running.")
