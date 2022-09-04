@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 from ..configuration import RoboCopConfig
+from ..utils.version import create_version_from_str
 from .protocol_part import RobotLanguageServerProtocolPart
 
 
@@ -68,11 +69,13 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         workspace_folder: WorkspaceFolder,
         extension_config: RoboCopConfig,
     ) -> List[Diagnostic]:
+        from robocop import __version__
         from robocop.config import Config
         from robocop.rules import RuleSeverity
         from robocop.run import Robocop
         from robocop.utils.misc import is_suite_templated
 
+        robocop_version = create_version_from_str(__version__)
         result: List[Diagnostic] = []
 
         await check_canceled()
@@ -93,13 +96,23 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
             class MyRobocop(Robocop):
                 async def run_check(self, ast_model, filename, source=None):  # type: ignore
+
                     await check_canceled()
+
+                    if robocop_version >= (2, 4):
+                        from robocop.utils import DisablersFinder
+
+                        disablers = DisablersFinder(filename=filename, source=source)
+
+                    else:
+                        self.register_disablers(filename, source)
+                        disablers = self.disabler
+
+                    if disablers.file_disabled:
+                        return []
 
                     found_issues = []  # type: ignore
 
-                    self.register_disablers(filename, source)
-                    if self.disabler.file_disabled:
-                        return []
                     templated = is_suite_templated(ast_model)
 
                     for checker in self.checkers:
@@ -113,7 +126,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         found_issues += [
                             issue
                             for issue in checker.scan_file(ast_model, filename, source, templated)
-                            if not self.disabler.is_rule_disabled(issue)
+                            if not disablers.is_rule_disabled(issue)
                         ]
 
                     return found_issues

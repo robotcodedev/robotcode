@@ -2,8 +2,10 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Support for Robocop >= 2.4
+
 ##  0.13.7
 
 - Don't explicitly set suites to failed if there is an empty failed message
