@@ -23,7 +23,6 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_chain, async_chain_iterator, async_next
-from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id, trigger_characters
 from ...common.lsp_types import (
@@ -103,7 +102,6 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
     )
     # @all_commit_characters(['\n'])
     @language_id("robotframework")
-    @threaded()
     @_logger.call
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[CompletionContext]
@@ -123,10 +121,8 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         )
 
     @language_id("robotframework")
-    @threaded()
     @_logger.call
     async def resolve(self, sender: Any, completion_item: CompletionItem) -> CompletionItem:
-
         if completion_item.data is not None:
             document_uri = completion_item.data.get("document_uri", None)
             if document_uri is not None:

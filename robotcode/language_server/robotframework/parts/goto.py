@@ -16,7 +16,6 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_next
-from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.decorators import language_id
@@ -72,7 +71,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     @language_id("robotframework")
-    @threaded()
     @_logger.call
     async def collect_definition(
         self, sender: Any, document: TextDocument, position: Position
@@ -80,7 +78,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return await self.collect(document, position, CollectType.DEFINITION)
 
     @language_id("robotframework")
-    @threaded()
     @_logger.call
     async def collect_implementation(
         self, sender: Any, document: TextDocument, position: Position

@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
-from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import FoldingRange
@@ -24,7 +23,6 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
         parent.folding_ranges.collect.add(self.collect)
 
     @language_id("robotframework")
-    @threaded()
     @_logger.call
     async def collect(self, sender: Any, document: TextDocument) -> Optional[List[FoldingRange]]:
 

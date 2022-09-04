@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import DocumentHighlight, DocumentHighlightKind, Position
@@ -24,7 +23,6 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
         parent.document_highlight.collect.add(self.collect)
 
     @language_id("robotframework")
-    @threaded()
     @_logger.call
     async def collect(
         self,

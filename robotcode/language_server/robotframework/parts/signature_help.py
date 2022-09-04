@@ -14,7 +14,6 @@ from typing import (
     cast,
 )
 
-from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id, retrigger_characters, trigger_characters
 from ...common.lsp_types import (
@@ -71,7 +70,6 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         return None
 
     @language_id("robotframework")
-    @threaded()
     @trigger_characters([" ", "\t"])
     @retrigger_characters([" ", "\t"])
     @_logger.call

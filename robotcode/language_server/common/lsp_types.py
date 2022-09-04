@@ -1998,6 +1998,7 @@ class SemanticTokenTypes(Enum):
     NUMBER = "number"
     REGEXP = "regexp"
     OPERATOR = "operator"
+    DECORATOR = "decorator"
 
     def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()

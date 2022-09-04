@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, cast
 
-from ....utils.async_tools import create_sub_task, threaded
+from ....utils.async_tools import create_sub_task
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import CodeLens, Command
@@ -38,7 +38,6 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         await self.parent.code_lens.refresh()
 
     @language_id("robotframework")
-    @threaded()
     async def collect(self, sender: Any, document: TextDocument) -> Optional[List[CodeLens]]:
 
         from ..utils.async_ast import AsyncVisitor
@@ -91,7 +90,6 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)
 
     @language_id("robotframework")
-    @threaded()
     async def resolve(self, sender: Any, code_lens: CodeLens) -> Optional[CodeLens]:
         if code_lens.data is None:
             return code_lens

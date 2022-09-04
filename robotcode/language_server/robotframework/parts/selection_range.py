@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import Position, SelectionRange
@@ -30,7 +29,6 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
 
         parent.selection_range.collect.add(self.collect)
 
-    @threaded()
     @language_id("robotframework")
     @_logger.call
     async def collect(

@@ -6,7 +6,6 @@ import os
 import re
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
-from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import (
@@ -61,7 +60,6 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         return await self.parent.workspace.get_configuration(RoboTidyConfig, folder.uri)
 
     @language_id("robotframework")
-    @threaded()
     @_logger.call
     async def format(
         self, sender: Any, document: TextDocument, options: FormattingOptions, **further_options: Any

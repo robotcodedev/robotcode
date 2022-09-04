@@ -4,7 +4,6 @@ import ast
 import itertools
 from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 
-from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import DocumentSymbol, SymbolInformation, SymbolKind
@@ -31,7 +30,6 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
         parent.document_symbols.collect.add(self.collect)
 
     @language_id("robotframework")
-    @threaded()
     @_logger.call
     async def collect(
         self, sender: Any, document: TextDocument

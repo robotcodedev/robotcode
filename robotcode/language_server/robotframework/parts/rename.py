@@ -16,7 +16,6 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_next
-from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import (
@@ -81,7 +80,6 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         return None
 
     @language_id("robotframework")
-    @threaded()
     @_logger.call
     async def collect(
         self,
@@ -114,7 +112,6 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         return None
 
     @language_id("robotframework")
-    @threaded()
     @_logger.call
     async def collect_prepare(
         self,

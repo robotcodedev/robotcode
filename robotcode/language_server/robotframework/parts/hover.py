@@ -15,7 +15,6 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_next
-from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import Hover, MarkupContent, MarkupKind, Position
@@ -62,7 +61,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         return None
 
-    @threaded()
     @language_id("robotframework")
     @_logger.call
     async def collect(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:

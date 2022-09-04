@@ -21,7 +21,6 @@ from typing import (
 )
 
 from ....utils.async_itertools import async_dropwhile, async_takewhile
-from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.lsp_types import (
@@ -833,7 +832,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         )
 
     @language_id("robotframework")
-    @threaded()
     @_logger.call
     async def collect_full(
         self, sender: Any, document: TextDocument, **kwargs: Any
@@ -841,7 +839,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         return await self.collect_threading(document, None)
 
     @language_id("robotframework")
-    @threaded()
     @_logger.call
     async def collect_range(
         self, sender: Any, document: TextDocument, range: Range, **kwargs: Any
@@ -849,7 +846,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         return await self.collect_threading(document, range)
 
     @language_id("robotframework")
-    @threaded()
     @_logger.call
     async def collect_full_delta(
         self, sender: Any, document: TextDocument, previous_result_id: str, **kwargs: Any
