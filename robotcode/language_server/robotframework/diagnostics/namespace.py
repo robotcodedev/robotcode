@@ -1431,11 +1431,12 @@ class Namespace:
                     current_time = time.monotonic()
                     self._logger.debug("start collecting keywords")
                     try:
+                        i = 0
+
                         await self.ensure_initialized()
 
                         result: Dict[KeywordMatcher, KeywordDoc] = {}
 
-                        i = 0
                         async for doc in self.iter_all_keywords():
                             i += 1
                             result[KeywordMatcher(doc.name)] = doc

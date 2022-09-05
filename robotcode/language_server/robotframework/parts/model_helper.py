@@ -493,6 +493,41 @@ class ModelHelperMixin:
     BDD_TOKEN = re.compile(r"^(Given|When|Then|And|But)$", flags=re.IGNORECASE)
 
     @classmethod
+    def split_bdd_prefix(cls, namespace: Namespace, token: Token) -> Tuple[Optional[Token], Optional[Token]]:
+        from robot.parsing.lexer import Token as RobotToken
+
+        bdd_token = None
+
+        parts = token.value.split(maxsplit=1)
+        if len(parts) < 1:
+            return None, token
+
+        prefix = parts[0]
+        if prefix.title() in (
+            namespace.languages.bdd_prefixes
+            if namespace.languages is not None
+            else {"Given ", "When ", "Then ", "And ", "But "}
+        ):
+            bdd_len = len(prefix)
+            bdd_token = RobotToken(
+                token.type,
+                token.value[:bdd_len],
+                token.lineno,
+                token.col_offset,
+                token.error,
+            )
+
+            token = RobotToken(
+                token.type,
+                token.value[bdd_len + 1 :],
+                token.lineno,
+                token.col_offset + bdd_len + 1,
+                token.error,
+            )
+
+        return bdd_token, token
+
+    @classmethod
     def strip_bdd_prefix(cls, namespace: Namespace, token: Token) -> Token:
         from robot.parsing.lexer import Token as RobotToken
 
@@ -514,7 +549,7 @@ class ModelHelperMixin:
             if len(parts) < 2:
                 return token
 
-            prefix, _ = parts
+            prefix = parts[0]
             if prefix.title() in (
                 namespace.languages.bdd_prefixes
                 if namespace.languages is not None
@@ -538,10 +573,11 @@ class ModelHelperMixin:
             return bool(bdd_match)
         else:
             parts = token.value.split(maxsplit=1)
-            if len(parts) < 2:
+            if len(parts) < 1:
                 return False
 
-            prefix, _ = parts
+            prefix = parts[0]
+
             if prefix.title() in (
                 namespace.languages.bdd_prefixes
                 if namespace.languages is not None

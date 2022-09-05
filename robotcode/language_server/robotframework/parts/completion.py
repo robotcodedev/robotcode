@@ -466,6 +466,24 @@ class CompletionCollector(ModelHelperMixin):
             for setting in settings
         ]
 
+    async def create_bdd_prefix_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+        prefixes = {"Given", "When", "Then", "And", "But"}
+
+        if self.namespace.languages is not None:
+            prefixes.update(self.namespace.languages.bdd_prefixes)
+
+        return [
+            CompletionItem(
+                label=prefix,
+                kind=CompletionItemKind.UNIT,
+                detail="BDD Prefix",
+                sort_text=f"080_{prefix}",
+                insert_text_format=InsertTextFormat.PLAINTEXT,
+                text_edit=TextEdit(range=range, new_text=f"{prefix} ") if range is not None else None,
+            )
+            for prefix in prefixes
+        ]
+
     async def create_keyword_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
         from robot.parsing.lexer.settings import KeywordSettings
 
@@ -521,12 +539,29 @@ class CompletionCollector(ModelHelperMixin):
         add_reserverd: bool = True,
         add_none: bool = False,
         in_template: bool = False,
+        add_bdd_prefixes: bool = True,
     ) -> List[CompletionItem]:
         result: List[CompletionItem] = []
         if self.document is None:
             return []
 
         r: Optional[Range] = None
+
+        has_bdd = False
+        bdd_token = None
+
+        if token is not None:
+            old_token = token
+            bdd_token, token = self.split_bdd_prefix(self.namespace, token)
+
+            if token is not None and token.value == "":
+                token = None
+
+            if bdd_token is not None and position.character > range_from_token(bdd_token).end.character:
+                has_bdd = True
+
+            if not has_bdd and token is None:
+                token = old_token
 
         if token is not None:
             r = range_from_token(token)
@@ -706,6 +741,11 @@ class CompletionCollector(ModelHelperMixin):
                     insert_text_format=InsertTextFormat.PLAINTEXT,
                     text_edit=TextEdit(range=r, new_text="NONE"),
                 )
+            )
+
+        if add_bdd_prefixes and not has_bdd:
+            result += await self.create_bdd_prefix_completion_items(
+                range_from_token(token) if token is not None else None
             )
 
         if add_reserverd:
@@ -934,8 +974,6 @@ class CompletionCollector(ModelHelperMixin):
             if len(statement_node.tokens) > index:
                 token = statement_node.tokens[index]
 
-                token = self.strip_bdd_prefix(self.namespace, token)
-
                 r = range_from_token(token)
                 if position.is_in_range(r):
                     return await create_items(in_assign, in_template, r, token, position)
@@ -952,7 +990,7 @@ class CompletionCollector(ModelHelperMixin):
                             in_assign,
                             in_template,
                             r,
-                            None if self.is_bdd_token(self.namespace, token) else token,
+                            token,
                             position,
                         )
 
@@ -1080,7 +1118,7 @@ class CompletionCollector(ModelHelperMixin):
             r = range_from_token(token)
             if position.is_in_range(r):
                 return await self.create_keyword_completion_items(
-                    None if self.is_bdd_token(self.namespace, token) else token,
+                    token,
                     position,
                     add_reserverd=False,
                     add_none=True,
@@ -1096,7 +1134,7 @@ class CompletionCollector(ModelHelperMixin):
             r.end.character += 1
             if position.is_in_range(r):
                 return await self.create_keyword_completion_items(
-                    None if self.is_bdd_token(self.namespace, token) else token,
+                    token,
                     position,
                     add_reserverd=False,
                     add_none=True,
@@ -1223,7 +1261,7 @@ class CompletionCollector(ModelHelperMixin):
             r.end.character += 1
             if position.is_in_range(r):
                 return await self.create_keyword_completion_items(
-                    None if self.is_bdd_token(self.namespace, token) else token,
+                    token,
                     position,
                     add_reserverd=False,
                     add_none=True,
