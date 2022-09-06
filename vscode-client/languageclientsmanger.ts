@@ -136,7 +136,7 @@ export class LanguageClientsManager {
     this.clients.clear();
 
     for (const client of clients) {
-      promises.push(client.stop(10000));
+      promises.push(client.stop(5000));
     }
 
     return Promise.all(promises).then(
@@ -501,7 +501,7 @@ export class LanguageClientsManager {
         this.clients.delete(workspaceFolder.uri.toString());
 
         if (client) {
-          await client.stop(10000);
+          await client.stop(5000);
           await sleep(500);
         }
       } else {
