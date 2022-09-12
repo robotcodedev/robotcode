@@ -5,6 +5,11 @@ All notable changes to the "robotcode" extension will be documented in this file
 ## [Unreleased]
 
 - Support for Robocop >= 2.4
+- Rework handling of launching and debugging tests
+  - fixes [#54](https://github.com/d-biehl/robotcode/issues/54)
+  - a launch configuration can now have a `purpose`:
+    - `test`: Use this configuration when running or debugging tests.
+    - `default`: Use this configuration as default for all other configurations.
 
 ##  0.13.7
 

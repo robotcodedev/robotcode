@@ -49,7 +49,7 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
 
   // eslint-disable-next-line class-methods-use-this
   async _resolveDebugConfiguration(
-    _folder: vscode.WorkspaceFolder | undefined,
+    folder: vscode.WorkspaceFolder | undefined,
     debugConfiguration: vscode.DebugConfiguration,
     token?: vscode.CancellationToken
   ): Promise<vscode.DebugConfiguration> {
@@ -71,23 +71,23 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
       }
     }
 
-    return debugConfiguration;
-  }
-
-  resolveDebugConfigurationWithSubstitutedVariables(
-    folder: vscode.WorkspaceFolder | undefined,
-    debugConfiguration: vscode.DebugConfiguration,
-    _token?: vscode.CancellationToken
-  ): vscode.ProviderResult<vscode.DebugConfiguration> {
-    return this._resolveDebugConfigurationWithSubstitutedVariablesAsync(folder, debugConfiguration, _token);
-  }
-
-  async _resolveDebugConfigurationWithSubstitutedVariablesAsync(
-    folder: vscode.WorkspaceFolder | undefined,
-    debugConfiguration: vscode.DebugConfiguration,
-    _token?: vscode.CancellationToken
-  ): Promise<vscode.DebugConfiguration> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+
+    const template = config.get("debug.defaultConfiguration", {});
+
+    const defaultLaunchConfig =
+      vscode.workspace
+        .getConfiguration("launch", folder)
+        ?.get<{ [Key: string]: unknown }[]>("configurations")
+        ?.find(
+          (v) =>
+            v?.type === "robotcode" &&
+            (v?.purpose === "default" || (Array.isArray(v?.purpose) && v?.purpose?.indexOf("default") > -1))
+        ) ?? {};
+
+    console.log(defaultLaunchConfig);
+
+    debugConfiguration = { ...template, ...defaultLaunchConfig, ...debugConfiguration };
 
     try {
       if (path.isAbsolute(debugConfiguration.target)) {
@@ -101,6 +101,7 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
 
     debugConfiguration.robotPythonPath = [
       ...config.get<string[]>("robot.pythonPath", []),
+      ...(Array.isArray(defaultLaunchConfig?.robotPythonPath) ? defaultLaunchConfig.robotPythonPath : []),
       ...(debugConfiguration.robotPythonPath ?? []),
     ];
 
@@ -108,16 +109,19 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
 
     debugConfiguration.variableFiles = [
       ...config.get<string[]>("robot.variableFiles", []),
+      ...(Array.isArray(defaultLaunchConfig?.variableFiles) ? defaultLaunchConfig.variableFiles : []),
       ...(debugConfiguration.variableFiles ?? []),
     ];
 
     debugConfiguration.variables = {
       ...config.get<{ [Key: string]: unknown }>("robot.variables", {}),
+      ...(Array.isArray(defaultLaunchConfig?.variables) ? defaultLaunchConfig.variables : []),
       ...(debugConfiguration.variables ?? {}),
     };
 
     debugConfiguration.env = {
       ...config.get<{ [Key: string]: unknown }>("robot.env", {}),
+      ...(defaultLaunchConfig?.env ?? {}),
       ...(debugConfiguration.env ?? {}),
     };
 
@@ -157,9 +161,7 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
       }
     }
 
-    const template = config.get("debug.defaultConfiguration", {});
-
-    return { ...template, ...debugConfiguration };
+    return debugConfiguration;
   }
 }
 
@@ -344,13 +346,23 @@ export class DebugManager {
 
       args.push(`robotcode.debugger.modifiers.ExcludedByLongName${separator}${excluded.join(separator)}`);
     }
-    const template = config.get("debug.defaultConfiguration", {});
+
+    const testLaunchConfig =
+      vscode.workspace
+        .getConfiguration("launch", folder)
+        ?.get<{ [Key: string]: unknown }[]>("configurations")
+        ?.find(
+          (v) =>
+            v?.type === "robotcode" &&
+            (v?.purpose === "test" || (Array.isArray(v?.purpose) && v?.purpose?.indexOf("test") > -1))
+        ) ?? {};
+
     const paths = config.get("robot.paths", []);
 
     await vscode.debug.startDebugging(
       folder,
       {
-        ...template,
+        ...testLaunchConfig,
         ...{
           type: "robotcode",
           name: "RobotCode: Run Tests",
@@ -379,26 +391,34 @@ export class DebugManager {
       options &&
       options.port
     ) {
-      await vscode.debug.startDebugging(
-        session.workspaceFolder,
-        {
-          ...session.configuration.pythonConfiguration,
-          ...{
-            type: "python",
-            name: `Python ${session.name}`,
-            request: "attach",
-            connect: {
-              port: options.port,
-            },
+      let pythonConfiguration = session.configuration.pythonConfiguration ?? {};
+
+      if (typeof pythonConfiguration === "string" || pythonConfiguration instanceof String) {
+        pythonConfiguration =
+          vscode.workspace
+            .getConfiguration("launch", session.workspaceFolder)
+            ?.get<{ [Key: string]: unknown }[]>("configurations")
+            ?.find((v) => v?.type === "python" && v?.name === pythonConfiguration) ?? {};
+      }
+
+      const debugConfiguration = {
+        ...pythonConfiguration,
+        ...{
+          type: "python",
+          name: `Python ${session.name}`,
+          request: "attach",
+          connect: {
+            port: options.port,
           },
         },
-        {
-          parentSession: session,
-          compact: true,
-          lifecycleManagedByParent: false,
-          consoleMode: vscode.DebugConsoleMode.MergeWithParent,
-        }
-      );
+      };
+
+      await vscode.debug.startDebugging(session.workspaceFolder, debugConfiguration, {
+        parentSession: session,
+        compact: true,
+        lifecycleManagedByParent: false,
+        consoleMode: vscode.DebugConsoleMode.MergeWithParent,
+      });
     }
   }
 

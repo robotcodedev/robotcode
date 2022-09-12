@@ -51,7 +51,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "Only Partial IntelliSense with RobotCode is supported. Cannot execute Python with untrusted files."
+      "description": "Only Partial IntelliSense is supported."
     },
     "virtualWorkspaces": {
       "supported": "limited",
@@ -611,6 +611,9 @@
                 "default": "${workspaceFolder}"
               },
               "env": {
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object",
                 "description": "Environment variables defined as a key value pair.",
                 "default": []
@@ -654,7 +657,10 @@
                 "default": false
               },
               "pythonConfiguration": {
-                "type": "object",
+                "type": [
+                  "object",
+                  "string"
+                ],
                 "description": "Defines a template for the python launch configuration.",
                 "default": {}
               },
@@ -723,6 +729,32 @@
                 ],
                 "description": "Specifies robot execution mode.",
                 "default": "default"
+              },
+              "purpose": {
+                "type": [
+                  "array",
+                  "string"
+                ],
+                "enum": [
+                  "default",
+                  "test"
+                ],
+                "enumDescriptions": [
+                  "Use this configuration as default for all other configurations.",
+                  "Use this configuration when running or debugging tests."
+                ],
+                "default": [],
+                "description": "Defines what purpose this configuration has.",
+                "items": {
+                  "enum": [
+                    "default",
+                    "test"
+                  ],
+                  "enumDescriptions": [
+                    "Use this configuration as default for all other configurations.",
+                    "Use this configuration when running or debugging tests."
+                  ]
+                }
               }
             }
           }
@@ -741,6 +773,25 @@
             "request": "launch",
             "cwd": "${workspaceFolder}",
             "target": "."
+          },
+          {
+            "name": "RobotCode: Default",
+            "type": "robotcode",
+            "request": "launch",
+            "purpose": "default",
+            "presentation": {
+              "hidden": true
+            },
+            "pythonConfiguration": "RobotCode: Debug"
+          },
+          {
+            "name": "RobotCode: Python",
+            "type": "python",
+            "request": "attach",
+            "presentation": {
+              "hidden": true
+            },
+            "justMyCode": false
           }
         ],
         "configurationSnippets": [
@@ -764,6 +815,32 @@
               "request": "launch",
               "cwd": "^\"\\${workspaceFolder}\"",
               "target": "."
+            }
+          },
+          {
+            "label": "RobotCode: Test",
+            "description": "Run or debug tests from test explorer.",
+            "body": {
+              "name": "RobotCode: Test",
+              "type": "robotcode",
+              "request": "launch",
+              "presentation": {
+                "hidden": true
+              },
+              "purpose": "test"
+            }
+          },
+          {
+            "label": "RobotCode: Default",
+            "description": "Default configuration.",
+            "body": {
+              "name": "RobotCode: Default",
+              "type": "robotcode",
+              "request": "launch",
+              "presentation": {
+                "hidden": true
+              },
+              "purpose": "default"
             }
           }
         ]
