@@ -1,5 +1,5 @@
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core>=1.2.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
@@ -54,31 +54,32 @@ python = "^3.8"
 robotframework = { version = "~4.1.0", allow-prereleases = false }
 
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 isort = "*"
 mypy = "*"
 flake8 = "*"
 black = "*"
 pep8-naming = "*"
 debugpy = "*"
-pytest = "*"
-pytest-asyncio = "*"
-pytest-cov = "*"
-coverage = "*"
 coloredlogs = "*"
-robotremoteserver = "*"
-Cython = "*"
-robotframework-robocop = "*"
-robotframework-tidy = "*"
-PyYAML = "*"
-types-PyYAML = "*"
-snakeviz = "*"
-pytest-regressions = "*"
-pytest-html = "^3.1.1"
 GitPython = "^3.1.27"
 semantic-version = "^2.9.0"
 pre-commit = "^2.17.0"
 
+[tool.poetry.group.test.dependencies]
+robotremoteserver = "*"
+pytest-regressions = "*"
+pytest-html = "^3.1.1"
+pytest = "*"
+pytest-asyncio = "*"
+pytest-cov = "*"
+coverage = "*"
+
+[tool.poetry.group.toolsupport.dependencies]
+PyYAML = "*"
+types-PyYAML = "*"
+robotframework-robocop = "*"
+robotframework-tidy = "*"
 
 [tool.black]
 line-length = 120
