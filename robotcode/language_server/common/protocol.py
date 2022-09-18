@@ -38,6 +38,7 @@ from .lsp_types import (
     UnregistrationParams,
     WorkspaceFolder,
 )
+from .parts.code_action import CodeActionProtocolPart
 from .parts.code_lens import CodeLensProtocolPart
 from .parts.completion import CompletionProtocolPart
 from .parts.declaration import DeclarationProtocolPart
@@ -91,6 +92,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     selection_range = ProtocolPartDescriptor(SelectionRangeProtocolPart)
     rename = ProtocolPartDescriptor(RenameProtocolPart)
     inline_value = ProtocolPartDescriptor(InlineValueProtocolPart)
+    code_action = ProtocolPartDescriptor(CodeActionProtocolPart)
 
     name: Optional[str] = None
     short_name: Optional[str] = None

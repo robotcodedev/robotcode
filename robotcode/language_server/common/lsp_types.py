@@ -397,21 +397,19 @@ class DocumentSymbolClientCapabilities(Model):
     label_support: Optional[bool] = None
 
 
-CodeActionKind = str
-
-
-class CodeActionKinds(Enum):
+class CodeActionKinds:
     EMPTY = ""
     QUICKFIX = "quickfix"
     REFACTOR = "refactor"
-    REFACTOREXTRACT = "refactor.extract"
-    REFACTORINLINE = "refactor.inline"
-    REFACTORREWRITE = "refactor.rewrite"
+    REFACTOR_EXTRACT = "refactor.extract"
+    REFACTOR_INLINE = "refactor.inline"
+    REFACTOR_REWRITE = "refactor.rewrite"
     SOURCE = "source"
-    SOURCEORGANIZEIMPORTS = "source.organizeImports"
+    SOURCE_ORGANIZE_IMPORTS = "source.organizeImports"
+    SOURCE_FIX_ALL = "source.fixAll"
 
-    def __repr__(self) -> str:  # pragma: no cover
-        return super().__str__()
+
+CodeActionKind = str
 
 
 @dataclass(repr=False)
@@ -1100,6 +1098,17 @@ class DiagnosticRegistrationOptions(TextDocumentRegistrationOptions, StaticRegis
 
 
 @dataclass(repr=False)
+class _CodeActionOptions(Model):
+    code_action_kinds: Optional[List[CodeActionKind]] = None
+    resolve_provider: Optional[bool] = None
+
+
+@dataclass(repr=False)
+class CodeActionOptions(WorkDoneProgressOptions, _CodeActionOptions):
+    pass
+
+
+@dataclass(repr=False)
 class ServerCapabilities(Model):
     position_encoding: Optional[PositionEncodingKind] = None
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None] = None
@@ -1112,7 +1121,7 @@ class ServerCapabilities(Model):
     references_provider: Union[bool, ReferenceOptions, None] = None
     document_highlight_provider: Union[bool, DocumentHighlightOptions, None] = None
     document_symbol_provider: Union[bool, DocumentSymbolOptions, None] = None
-    # TODO code_action_provider: Union[bool, CodeActionOptions] = None
+    code_action_provider: Union[bool, CodeActionOptions, None] = None
     code_lens_provider: Optional[CodeLensOptions] = None
     # TODO document_link_provider: Optional[DocumentLinkOptions] = None
     # TODO color_provider: Union[bool, DocumentColorOptions, DocumentColorRegistrationOptions, None] = None
@@ -2318,3 +2327,44 @@ class WorkspaceDiagnosticReportPartialResult(Model):
 @dataclass(repr=False)
 class WorkspaceDiagnosticReport(Model):
     items: List[WorkspaceDocumentDiagnosticReport]
+
+
+@dataclass(repr=False)
+class _CodeActionParams(Model):
+    text_document: TextDocumentIdentifier
+    range: Range
+    context: CodeActionContext
+
+
+@dataclass(repr=False)
+class CodeActionParams(WorkDoneProgressParams, PartialResultParams, _CodeActionParams):
+    pass
+
+
+class CodeActionTriggerKind(IntEnum):
+    INVOKED = 1
+    AUTOMATIC = 2
+
+
+@dataclass(repr=False)
+class CodeActionContext(Model):
+    diagnostics: List[Diagnostic]
+    only: Optional[List[CodeActionKind]] = None
+    trigger_kind: Optional[CodeActionTriggerKind] = None
+
+
+@dataclass(repr=False)
+class CodeActionDisabled:
+    reason: str
+
+
+@dataclass(repr=False)
+class CodeAction:
+    title: str
+    kind: Optional[CodeActionKind] = None
+    diagnostics: Optional[List[Diagnostic]] = None
+    is_preferred: Optional[bool] = None
+    disabled: Optional[CodeActionDisabled] = None
+    edit: Optional[WorkspaceEdit] = None
+    command: Optional[Command] = None
+    data: Any = None

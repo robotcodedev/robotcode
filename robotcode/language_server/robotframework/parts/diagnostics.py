@@ -45,19 +45,24 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         parent.diagnostics.collect.add(self.collect_namespace_diagnostics)
 
-        parent.diagnostics.collect.add(self.collect_unused_references)
+        parent.diagnostics.collect.add(self.collect_unused_keyword_references)
+        parent.diagnostics.collect.add(self.collect_unused_variable_references)
 
-        parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
+        parent.diagnostics.collect_document_has_diagnostics.add(self.collect_document_has_diagnostics)
 
     @language_id("robotframework")
-    async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
-        await self.parent.diagnostics.cancel_document_diagnostics(document)
-        await self.parent.diagnostics.cancel_workspace_diagnostics()
+    @_logger.call
+    async def collect_document_has_diagnostics(self, sender: Any, document: TextDocument) -> bool:
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        return namespace is None or await namespace.is_initialized() and await namespace.is_analyzed()
 
     @language_id("robotframework")
     @threaded()
     @_logger.call
     async def collect_namespace_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+        return await document.get_cache(self._collect_namespace_diagnostics)
+
+    async def _collect_namespace_diagnostics(self, document: TextDocument) -> DiagnosticsResult:
         try:
             namespace = await self.parent.documents_cache.get_namespace(document)
             if namespace is None:
@@ -124,6 +129,9 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @threaded()
     @_logger.call
     async def collect_token_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+        return await document.get_cache(self._collect_token_errors)
+
+    async def _collect_token_errors(self, document: TextDocument) -> DiagnosticsResult:
         from robot.errors import VariableError
         from robot.parsing.lexer.tokens import Token
 
@@ -190,6 +198,9 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @threaded()
     @_logger.call
     async def collect_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+        return await document.get_cache(self._collect_model_errors)
+
+    async def _collect_model_errors(self, document: TextDocument) -> DiagnosticsResult:
         from ..utils.ast_utils import HasError, HasErrors
         from ..utils.async_ast import iter_nodes
 
@@ -237,19 +248,22 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @threaded()
     @_logger.call
-    async def collect_unused_references(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    async def collect_unused_keyword_references(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+        if not self.parent.diagnostics.workspace_loaded_event.is_set():
+            return DiagnosticsResult(self.collect_unused_keyword_references, None)
+
         config = await self.parent.workspace.get_configuration(AnalysisConfig, document.uri)
 
         if not config.find_unused_references:
-            return DiagnosticsResult(self.collect_unused_references, [])
+            return DiagnosticsResult(self.collect_unused_keyword_references, [])
 
-        return await self._collect_unused_references(document)
+        return await self._collect_unused_keyword_references(document)
 
-    async def _collect_unused_references(self, document: TextDocument) -> DiagnosticsResult:
+    async def _collect_unused_keyword_references(self, document: TextDocument) -> DiagnosticsResult:
         try:
             namespace = await self.parent.documents_cache.get_namespace(document)
             if namespace is None:
-                return DiagnosticsResult(self.collect_unused_references, None)
+                return DiagnosticsResult(self.collect_unused_keyword_references, None)
 
             result: List[Diagnostic] = []
             for kw in (await namespace.get_library_doc()).keywords.values():
@@ -266,6 +280,54 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     )
 
+            return DiagnosticsResult(self.collect_unused_keyword_references, result)
+        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            return DiagnosticsResult(
+                self.collect_unused_keyword_references,
+                [
+                    Diagnostic(
+                        range=Range(
+                            start=Position(
+                                line=0,
+                                character=0,
+                            ),
+                            end=Position(
+                                line=len(await document.get_lines()),
+                                character=len((await document.get_lines())[-1] or ""),
+                            ),
+                        ),
+                        message=f"Fatal: can't collect unused keyword references '{e}' ({type(e).__qualname__})",
+                        severity=DiagnosticSeverity.ERROR,
+                        source=self.source_name,
+                        code=type(e).__qualname__,
+                    )
+                ],
+            )
+
+    @language_id("robotframework")
+    @threaded()
+    @_logger.call
+    async def collect_unused_variable_references(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+        if not self.parent.diagnostics.workspace_loaded_event.is_set():
+            return DiagnosticsResult(self.collect_unused_keyword_references, None)
+
+        config = await self.parent.workspace.get_configuration(AnalysisConfig, document.uri)
+
+        if not config.find_unused_references:
+            return DiagnosticsResult(self.collect_unused_keyword_references, [])
+
+        return await self._collect_unused_variable_references(document)
+
+    async def _collect_unused_variable_references(self, document: TextDocument) -> DiagnosticsResult:
+        try:
+            namespace = await self.parent.documents_cache.get_namespace(document)
+            if namespace is None:
+                return DiagnosticsResult(self.collect_unused_keyword_references, None)
+
+            result: List[Diagnostic] = []
+
             for var in (await namespace.get_variable_references()).keys():
                 references = await self.parent.robot_references.find_variable_references(document, var, False)
                 if not references and not await Analyzer.should_ignore(document, var.name_range):
@@ -281,12 +343,12 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     )
 
-            return DiagnosticsResult(self.collect_unused_references, result)
+            return DiagnosticsResult(self.collect_unused_keyword_references, result)
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             return DiagnosticsResult(
-                self.collect_unused_references,
+                self.collect_unused_keyword_references,
                 [
                     Diagnostic(
                         range=Range(
@@ -299,7 +361,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                                 character=len((await document.get_lines())[-1] or ""),
                             ),
                         ),
-                        message=f"Fatal: can't collect unused references '{e}' ({type(e).__qualname__})",
+                        message=f"Fatal: can't collect unused variable references '{e}' ({type(e).__qualname__})",
                         severity=DiagnosticSeverity.ERROR,
                         source=self.source_name,
                         code=type(e).__qualname__,

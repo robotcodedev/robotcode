@@ -27,6 +27,11 @@ def trigger_characters(characters: List[str]) -> Callable[[_F], _F]:
 
 
 @runtime_checkable
+class HasTriggerCharacters(Protocol):
+    __trigger_characters__: List[str]
+
+
+@runtime_checkable
 class HasRetriggerCharacters(Protocol):
     __retrigger_characters__: str
 
@@ -37,11 +42,6 @@ def retrigger_characters(characters: List[str]) -> Callable[[_F], _F]:
         return func
 
     return decorator
-
-
-@runtime_checkable
-class HasTriggerCharacters(Protocol):
-    __trigger_characters__: List[str]
 
 
 def all_commit_characters(characters: List[str]) -> Callable[[_F], _F]:
@@ -55,6 +55,19 @@ def all_commit_characters(characters: List[str]) -> Callable[[_F], _F]:
 @runtime_checkable
 class HasAllCommitCharacters(Protocol):
     __all_commit_characters__: List[str]
+
+
+def code_action_kinds(characters: List[str]) -> Callable[[_F], _F]:
+    def decorator(func: _F) -> _F:
+        setattr(func, "__code_action_kinds__", characters)
+        return func
+
+    return decorator
+
+
+@runtime_checkable
+class HasCodeActionKinds(Protocol):
+    __code_action_kinds__: List[str]
 
 
 def language_id_filter(language_id_or_document: Union[str, TextDocument]) -> Callable[[Any], bool]:

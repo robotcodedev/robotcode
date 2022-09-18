@@ -43,10 +43,6 @@ __all__ = [
     "AsyncTaskingEvent",
     "async_tasking_event_iterator",
     "async_tasking_event",
-    "AsyncThreadingEventIterator",
-    "AsyncThreadingEvent",
-    "async_threading_event_iterator",
-    "async_threading_event",
     "check_canceled",
     "run_in_thread",
     "run_coroutine_in_thread",
@@ -203,7 +199,7 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
         callback_filter: Optional[Callable[[_TCallable], bool]] = None,
         threaded: Optional[bool] = True,
         **kwargs: Any,
-    ) -> AsyncIterator[Union[_TResult, BaseException]]:
+    ) -> AsyncGenerator[Union[_TResult, BaseException], None]:
         def _done(f: asyncio.Future[_TResult]) -> None:
             if result_callback is not None:
                 try:
@@ -232,18 +228,7 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
         for a in asyncio.as_completed(awaitables):
             try:
                 yield await a
-            except asyncio.CancelledError:
-                for f in awaitables:
-                    if not f.done():
-                        f.cancel()
-                        try:
-                            yield await a
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except BaseException:
-                            pass
 
-                raise
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
@@ -254,7 +239,7 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
 
 
 class AsyncTaskingEventIterator(AsyncTaskingEventResultIteratorBase[_TCallable, _TResult]):
-    def __call__(self, *args: Any, **kwargs: Any) -> AsyncIterator[Union[_TResult, BaseException]]:
+    def __call__(self, *args: Any, **kwargs: Any) -> AsyncGenerator[Union[_TResult, BaseException], None]:
         return self._notify(*args, **kwargs)
 
 
@@ -268,145 +253,6 @@ def _get_name_prefix(descriptor: AsyncEventDescriptorBase[Any, Any, Any]) -> str
 class AsyncTaskingEvent(AsyncTaskingEventResultIteratorBase[_TCallable, _TResult]):
     async def __call__(self, *args: Any, **kwargs: Any) -> List[Union[_TResult, BaseException]]:
         return [a async for a in self._notify(*args, **kwargs)]
-
-
-class AsyncThreadingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallable, _TResult]):
-    __executor: Optional[ThreadPoolExecutor] = None
-
-    def __init__(self, *, thread_name_prefix: Optional[str] = None) -> None:
-        super().__init__()
-        self.__executor = None
-        self.__thread_name_prefix = thread_name_prefix or type(self).__qualname__
-
-    def __del__(self) -> None:
-        if self.__executor:
-            self.__executor.shutdown(False)
-
-    def _run_in_asyncio_thread(
-        self,
-        executor: ThreadPoolExecutor,
-        coro: Union[asyncio.Future[_TResult], Awaitable[_TResult]],
-        method_name: Optional[str] = None,
-    ) -> asyncio.Future[_TResult]:
-        def run(loop: asyncio.AbstractEventLoop) -> None:
-            if method_name is not None:
-                threading.current_thread().name = (
-                    self.__thread_name_prefix() if callable(self.__thread_name_prefix) else self.__thread_name_prefix
-                ) + f"->{method_name}(...)"
-
-            asyncio.set_event_loop(loop)
-            try:
-                loop.run_forever()
-            finally:
-                loop.close()
-
-        loop = asyncio.new_event_loop()
-
-        # loop.set_debug(True)
-
-        executor.submit(run, loop)
-
-        result = asyncio.wrap_future(asyncio.run_coroutine_threadsafe(coro, loop=loop))
-
-        def stop_loop(t: asyncio.Future[_TResult]) -> None:
-            async def loop_stop() -> bool:
-                loop.stop()
-                return True
-
-            asyncio.run_coroutine_threadsafe(loop_stop(), loop=loop)
-
-        result.add_done_callback(stop_loop)
-        return result
-
-    async def _notify(  # type: ignore
-        self,
-        *args: Any,
-        result_callback: Optional[Callable[[Optional[_TResult], Optional[BaseException]], Any]] = None,
-        executor: Optional[ThreadPoolExecutor] = None,
-        return_exceptions: Optional[bool] = True,
-        callback_filter: Optional[Callable[[_TCallable], bool]] = None,
-        **kwargs: Any,
-    ) -> AsyncGenerator[Union[_TResult, BaseException], None]:
-        def _done(f: asyncio.Future[_TResult]) -> None:
-            if result_callback is not None:
-                try:
-                    result_callback(f.result(), f.exception())
-                except (SystemExit, KeyboardInterrupt):
-                    raise
-                except BaseException as e:
-                    result_callback(None, e)
-
-        if executor is None:
-            if AsyncThreadingEventResultIteratorBase.__executor is None:
-                AsyncThreadingEventResultIteratorBase.__executor = ThreadPoolExecutor(
-                    thread_name_prefix=self.__thread_name_prefix()
-                    if callable(self.__thread_name_prefix)
-                    else self.__thread_name_prefix
-                )
-            executor = AsyncThreadingEventResultIteratorBase.__executor
-
-        awaitables: List[asyncio.Future[_TResult]] = []
-        for method in filter(
-            lambda x: callback_filter(x) if callback_filter is not None else True,
-            set(self),
-        ):
-            if method is not None:
-                future = self._run_in_asyncio_thread(
-                    executor,
-                    ensure_coroutine(method)(*args, **kwargs),
-                    method.__qualname__,
-                )
-                if result_callback is not None:
-                    future.add_done_callback(_done)
-                awaitables.append(future)
-
-        for a in asyncio.as_completed(awaitables):
-            try:
-                yield await a
-            except asyncio.CancelledError:
-                for f in awaitables:
-                    if not f.done():
-                        f.cancel()
-                        try:
-                            yield await a
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except BaseException:
-                            pass
-                raise
-            except (SystemExit, KeyboardInterrupt):
-                raise
-            except BaseException as e:
-                if return_exceptions:
-                    yield e
-                else:
-                    raise
-
-
-class AsyncThreadingEventIterator(AsyncThreadingEventResultIteratorBase[_TCallable, _TResult]):
-    def __call__(self, *args: Any, **kwargs: Any) -> AsyncIterator[Union[_TResult, BaseException]]:
-        return self._notify(*args, **kwargs)
-
-
-class async_threading_event_iterator(  # noqa: N801
-    AsyncEventDescriptorBase[_TCallable, Any, AsyncThreadingEventIterator[_TCallable, Any]]
-):
-    def __init__(self, _func: _TCallable) -> None:
-        super().__init__(
-            _func, AsyncThreadingEventIterator[_TCallable, Any], thread_name_prefix=lambda: _get_name_prefix(self)
-        )
-
-
-class AsyncThreadingEvent(AsyncThreadingEventResultIteratorBase[_TCallable, _TResult]):
-    async def __call__(self, *args: Any, **kwargs: Any) -> List[Union[_TResult, BaseException]]:
-        return [a async for a in self._notify(*args, **kwargs)]
-
-
-class async_threading_event(  # noqa: N801
-    AsyncEventDescriptorBase[_TCallable, Any, AsyncThreadingEvent[_TCallable, Any]]
-):
-    def __init__(self, _func: _TCallable) -> None:
-        super().__init__(_func, AsyncThreadingEvent[_TCallable, Any], thread_name_prefix=lambda: _get_name_prefix(self))
 
 
 class async_tasking_event_iterator(  # noqa: N801
@@ -471,7 +317,7 @@ def run_coroutine_in_thread(
     canceled = False
     result: Optional[asyncio.Future[_T]] = None
 
-    async def create_inner_task() -> _T:
+    async def create_inner_task(coro: Callable[..., Coroutine[Any, Any, _T]], *args: Any, **kwargs: Any) -> _T:
         nonlocal inner_task
 
         ct = asyncio.current_task()
@@ -479,7 +325,7 @@ def run_coroutine_in_thread(
         old_name = threading.current_thread().getName()
         threading.current_thread().setName(coro.__qualname__)
         try:
-            callback_added_event.wait(5)
+            callback_added_event.wait(600)
 
             if ct is not None and result is not None:
                 _running_tasks[result].children.add(ct)
@@ -494,12 +340,15 @@ def run_coroutine_in_thread(
         finally:
             threading.current_thread().setName(old_name)
 
-    def run() -> _T:
+    def run(coro: Callable[..., Coroutine[Any, Any, _T]], *args: Any, **kwargs: Any) -> _T:
         loop = asyncio.new_event_loop()
+
         try:
             asyncio.set_event_loop(loop)
 
-            return loop.run_until_complete(create_inner_task())
+            t = loop.create_task(create_inner_task(coro, *args, **kwargs), name=coro.__qualname__)
+
+            return loop.run_until_complete(t)
         finally:
             try:
                 running_tasks = asyncio.all_tasks(loop)
@@ -512,7 +361,7 @@ def run_coroutine_in_thread(
                 loop.close()
 
     cti = get_current_future_info()
-    result = run_in_thread(run)
+    result = run_in_thread(run, coro, *args, **kwargs)
 
     _running_tasks[result] = FutureInfo(result)
     if cti is not None:
@@ -523,8 +372,8 @@ def run_coroutine_in_thread(
 
         canceled = task.cancelled()
 
-        if task.cancelled() and inner_task is not None and not inner_task.done():
-            inner_task._loop.call_soon_threadsafe(inner_task.cancel)
+        if canceled and inner_task is not None and not inner_task.done():
+            inner_task.get_loop().call_soon_threadsafe(inner_task.cancel)
 
     result.add_done_callback(done)
 
@@ -666,9 +515,6 @@ class Semaphore:
 
                                 if not done.wait(120):
                                     raise TimeoutError("Callback timeout")
-
-                        else:
-                            raise RuntimeError("Loop is not running.")
 
     def locked(self) -> bool:
         with self._lock:

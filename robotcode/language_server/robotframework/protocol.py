@@ -16,6 +16,7 @@ from ..common.lsp_types import InitializeError, Model
 from ..common.parts.document_symbols import symbol_information_label
 from ..common.protocol import LanguageServerProtocol
 from .configuration import RobotConfig
+from .parts.code_action import RobotCodeActionProtocolPart
 from .parts.codelens import RobotCodeLensProtocolPart
 from .parts.completion import RobotCompletionProtocolPart
 from .parts.debugging_utils import RobotDebuggingUtilsProtocolPart
@@ -93,7 +94,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     robot_selection_range = ProtocolPartDescriptor(RobotSelectionRangeProtocolPart)
     robot_rename = ProtocolPartDescriptor(RobotRenameProtocolPart)
     robot_inline_value = ProtocolPartDescriptor(RobotInlineValueProtocolPart)
-
+    robot_code_action = ProtocolPartDescriptor(RobotCodeActionProtocolPart)
     robot_workspace = ProtocolPartDescriptor(RobotWorkspaceProtocolPart)
 
     robot_discovering = ProtocolPartDescriptor(DiscoveringProtocolPart)

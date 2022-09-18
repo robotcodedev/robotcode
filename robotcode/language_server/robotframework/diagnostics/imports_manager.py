@@ -705,20 +705,14 @@ class ImportsManager:
         from robot.variables.search import contains_variable
 
         if contains_variable(name, "$@&%"):
-            return await asyncio.wait_for(
-                asyncio.get_running_loop().run_in_executor(
-                    # self.process_pool,
-                    None,
-                    find_library,
-                    name,
-                    str(self.folder.to_path()),
-                    base_dir,
-                    self.config.python_path if self.config is not None else None,
-                    self.config.env if self.config is not None else None,
-                    self.config.variables if self.config is not None else None,
-                    variables,
-                ),
-                FIND_FILE_TIME_OUT,
+            return find_library(
+                name,
+                str(self.folder.to_path()),
+                base_dir,
+                self.config.python_path if self.config is not None else None,
+                self.config.env if self.config is not None else None,
+                self.config.variables if self.config is not None else None,
+                variables,
             )
 
         if name in STDLIBS:
@@ -743,21 +737,15 @@ class ImportsManager:
         from robot.variables.search import contains_variable
 
         if contains_variable(name, "$@&%"):
-            return await asyncio.wait_for(
-                asyncio.get_running_loop().run_in_executor(
-                    # self.process_pool,
-                    None,
-                    find_file,
-                    name,
-                    str(self.folder.to_path()),
-                    base_dir,
-                    self.config.python_path if self.config is not None else None,
-                    self.config.env if self.config is not None else None,
-                    self.config.variables if self.config is not None else None,
-                    variables,
-                    file_type,
-                ),
-                FIND_FILE_TIME_OUT,
+            return find_file(
+                name,
+                str(self.folder.to_path()),
+                base_dir,
+                self.config.python_path if self.config is not None else None,
+                self.config.env if self.config is not None else None,
+                self.config.variables if self.config is not None else None,
+                variables,
+                file_type,
             )
 
         return str(find_file_ex(name, base_dir, self.python_path, file_type))
@@ -770,20 +758,14 @@ class ImportsManager:
         from robot.variables.search import contains_variable
 
         if contains_variable(name, "$@&%"):
-            return await asyncio.wait_for(
-                asyncio.get_running_loop().run_in_executor(
-                    # self.process_pool,
-                    None,
-                    find_variables,
-                    name,
-                    str(self.folder.to_path()),
-                    base_dir,
-                    self.config.python_path if self.config is not None else None,
-                    self.config.env if self.config is not None else None,
-                    self.config.variables if self.config is not None else None,
-                    variables,
-                ),
-                FIND_FILE_TIME_OUT,
+            return find_variables(
+                name,
+                str(self.folder.to_path()),
+                base_dir,
+                self.config.python_path if self.config is not None else None,
+                self.config.env if self.config is not None else None,
+                self.config.variables if self.config is not None else None,
+                variables,
             )
 
         if get_robot_version() >= (5, 0):
@@ -1100,84 +1082,53 @@ class ImportsManager:
     async def complete_library_import(
         self, name: Optional[str], base_dir: str = ".", variables: Optional[Dict[str, Any]] = None
     ) -> Optional[List[CompleteResult]]:
-        result = await asyncio.wait_for(
-            asyncio.get_running_loop().run_in_executor(
-                # self.process_pool,
-                None,
-                complete_library_import,
-                name,
-                str(self.folder.to_path()),
-                base_dir,
-                self.config.python_path if self.config is not None else None,
-                self.config.env if self.config is not None else None,
-                self.config.variables if self.config is not None else None,
-                variables,
-            ),
-            COMPLETE_LIBRARY_IMPORT_TIME_OUT,
+        return complete_library_import(
+            name,
+            str(self.folder.to_path()),
+            base_dir,
+            self.config.python_path if self.config is not None else None,
+            self.config.env if self.config is not None else None,
+            self.config.variables if self.config is not None else None,
+            variables,
         )
-
-        return result
 
     async def complete_resource_import(
         self, name: Optional[str], base_dir: str = ".", variables: Optional[Dict[str, Any]] = None
     ) -> Optional[List[CompleteResult]]:
-        result = await asyncio.wait_for(
-            asyncio.get_running_loop().run_in_executor(
-                # self.process_pool,
-                None,
-                complete_resource_import,
-                name,
-                str(self.folder.to_path()),
-                base_dir,
-                self.config.python_path if self.config is not None else None,
-                self.config.env if self.config is not None else None,
-                self.config.variables if self.config is not None else None,
-                variables,
-            ),
-            COMPLETE_RESOURCE_IMPORT_TIME_OUT,
+        return complete_resource_import(
+            name,
+            str(self.folder.to_path()),
+            base_dir,
+            self.config.python_path if self.config is not None else None,
+            self.config.env if self.config is not None else None,
+            self.config.variables if self.config is not None else None,
+            variables,
         )
-
-        return result
 
     async def complete_variables_import(
         self, name: Optional[str], base_dir: str = ".", variables: Optional[Dict[str, Any]] = None
     ) -> Optional[List[CompleteResult]]:
-        result = await asyncio.wait_for(
-            asyncio.get_running_loop().run_in_executor(
-                # self.process_pool,
-                None,
-                complete_variables_import,
-                name,
-                str(self.folder.to_path()),
-                base_dir,
-                self.config.python_path if self.config is not None else None,
-                self.config.env if self.config is not None else None,
-                self.config.variables if self.config is not None else None,
-                variables,
-            ),
-            COMPLETE_VARIABLES_IMPORT_TIME_OUT,
-        )
 
-        return result
+        return complete_variables_import(
+            name,
+            str(self.folder.to_path()),
+            base_dir,
+            self.config.python_path if self.config is not None else None,
+            self.config.env if self.config is not None else None,
+            self.config.variables if self.config is not None else None,
+            variables,
+        )
 
     async def resolve_variable(
         self, name: str, base_dir: str = ".", variables: Optional[Dict[str, Any]] = None, ignore_errors: bool = True
     ) -> Any:
-        result = await asyncio.wait_for(
-            asyncio.get_running_loop().run_in_executor(
-                # self.process_pool,
-                None,
-                resolve_variable,
-                name,
-                str(self.folder.to_path()),
-                base_dir,
-                self.config.python_path if self.config is not None else None,
-                self.config.env if self.config is not None else None,
-                self.config.variables if self.config is not None else None,
-                variables,
-                ignore_errors,
-            ),
-            COMPLETE_VARIABLES_IMPORT_TIME_OUT,
+        return resolve_variable(
+            name,
+            str(self.folder.to_path()),
+            base_dir,
+            self.config.python_path if self.config is not None else None,
+            self.config.env if self.config is not None else None,
+            self.config.variables if self.config is not None else None,
+            variables,
+            ignore_errors,
         )
-
-        return result

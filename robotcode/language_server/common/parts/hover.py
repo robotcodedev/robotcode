@@ -10,6 +10,7 @@ from ..decorators import language_id_filter
 from ..has_extend_capabilities import HasExtendCapabilities
 from ..lsp_types import (
     Hover,
+    HoverOptions,
     HoverParams,
     Position,
     ServerCapabilities,
@@ -36,7 +37,7 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect):
-            capabilities.hover_provider = True
+            capabilities.hover_provider = HoverOptions(work_done_progress=True)
 
     @rpc_method(name="textDocument/hover", param_type=HoverParams)
     @threaded()

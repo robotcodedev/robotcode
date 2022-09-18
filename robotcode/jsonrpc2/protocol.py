@@ -695,6 +695,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 ensure_coroutine(e.method)(*params[0], **params[1]),
                 name=message.method,
             )
+
         with self._received_request_lock:
             self._received_request[message.id] = ReceivedRequestEntry(task, message, e.cancelable)
 
