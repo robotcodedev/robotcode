@@ -4,10 +4,12 @@ import ast
 import asyncio
 import enum
 import itertools
+import logging
 import time
 import weakref
 from collections import OrderedDict
 from dataclasses import dataclass, field
+from itertools import chain
 from pathlib import Path
 from typing import (
     Any,
@@ -25,7 +27,7 @@ from typing import (
     cast,
 )
 
-from ....utils.async_itertools import as_async_iterable, async_chain
+from ....utils.async_itertools import as_async_iterable
 from ....utils.async_tools import Lock
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
@@ -180,7 +182,7 @@ class BlockVariableVisitor(AsyncVisitor):
     async def visit_KeywordName(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordName
-        from robot.variables.search import VariableSearcher
+        from robot.variables.search import search_variable
 
         from ..parts.model_helper import ModelHelperMixin
 
@@ -196,8 +198,8 @@ class BlockVariableVisitor(AsyncVisitor):
                 tokenize_variables(name_token, identifiers="$", ignore_errors=True),
             ):
                 if variable_token.value:
-                    searcher = VariableSearcher("$", ignore_errors=True)
-                    match = searcher.search(variable_token.value)
+
+                    match = search_variable(variable_token.value, "$", ignore_errors=True)
                     if match.base is None:
                         continue
                     name = match.base.split(":", 1)[0]
@@ -635,6 +637,10 @@ class Namespace:
                 await self.invalidate()
                 break
 
+    async def is_initialized(self) -> bool:
+        async with self._initialize_lock:
+            return self._initialized
+
     @_logger.call
     async def invalidate(self) -> None:
         async with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
@@ -738,7 +744,7 @@ class Namespace:
         diagnostics: List[Diagnostic] = []
         import_entries: OrderedDict[Import, LibraryEntry] = OrderedDict()
 
-    @_logger.call
+    @_logger.call(condition=lambda self: not self._initialized)
     async def ensure_initialized(self) -> bool:
         if not self._initialized:
             async with self._initialize_lock:
@@ -797,7 +803,9 @@ class Namespace:
                         await self._reset_global_variables()
 
                         self._initialized = True
-                    except BaseException:
+                    except BaseException as e:
+                        if not isinstance(e, asyncio.CancelledError):
+                            self._logger.exception(e, level=logging.DEBUG)
                         await self.invalidate()
                         raise
 
@@ -872,7 +880,7 @@ class Namespace:
         )
         test_or_keyword = test_or_keyword_nodes[0] if test_or_keyword_nodes else None
 
-        async for var in async_chain(
+        for var in chain(
             *[
                 (
                     await BlockVariableVisitor(
@@ -887,7 +895,6 @@ class Namespace:
             ],
             await self.get_global_variables(),
         ):
-
             if var.matcher not in yielded.keys():
                 yielded[var.matcher] = var
 
@@ -980,6 +987,7 @@ class Namespace:
                             message=f"Imported library '{value.name}' contains no keywords.",
                             severity=DiagnosticSeverity.WARNING,
                             source=DIAGNOSTICS_SOURCE_NAME,
+                            code="LibraryContainsNoKeywords",
                         )
                 elif isinstance(value, ResourceImport):
                     if value.name is None:
@@ -1002,6 +1010,7 @@ class Namespace:
                                 ]
                                 if value.source
                                 else None,
+                                code="PossibleCircularImport",
                             )
                     else:
                         result = await self._get_resource_entry(
@@ -1026,6 +1035,7 @@ class Namespace:
                                 message=f"Imported resource file '{value.name}' is empty.",
                                 severity=DiagnosticSeverity.WARNING,
                                 source=DIAGNOSTICS_SOURCE_NAME,
+                                code="ResourceEmpty",
                             )
 
                 elif isinstance(value, VariablesImport):
@@ -1081,6 +1091,7 @@ class Namespace:
                                     for err in result.library_doc.errors
                                     if err.source is not None
                                 ],
+                                code="ImportContainsErrors",
                             )
                         for err in filter(lambda e: e.source is None, result.library_doc.errors):
                             await self.append_diagnostics(
@@ -1164,6 +1175,7 @@ class Namespace:
                                         message="Recursive resource import.",
                                         severity=DiagnosticSeverity.INFORMATION,
                                         source=DIAGNOSTICS_SOURCE_NAME,
+                                        code="RecursiveImport",
                                     )
                                 elif (
                                     already_imported_resources is not None
@@ -1185,6 +1197,7 @@ class Namespace:
                                         ]
                                         if already_imported_resources.import_source
                                         else None,
+                                        code="ResourceAlreadyImported",
                                     )
 
                     elif isinstance(entry, VariablesEntry):
@@ -1216,6 +1229,7 @@ class Namespace:
                                 ]
                                 if already_imported_variables[0].import_source
                                 else None,
+                                code="VariablesAlreadyImported",
                             )
 
                         if (entry.alias or entry.name or entry.import_name) not in self._variables:
@@ -1240,6 +1254,7 @@ class Namespace:
                                 ]
                                 if entry.import_source
                                 else None,
+                                code="LibraryOverridesBuiltIn",
                             )
                             continue
 
@@ -1267,6 +1282,7 @@ class Namespace:
                                 ]
                                 if already_imported_library[0].import_source
                                 else None,
+                                code="LibraryAlreadyImported",
                             )
 
                         if (entry.alias or entry.name or entry.import_name) not in self._libraries:
@@ -1471,7 +1487,11 @@ class Namespace:
             Diagnostic(range, message, severity, code, code_description, source, tags, related_information, data)
         )
 
-    @_logger.call
+    async def is_analyzed(self) -> bool:
+        async with self._analyze_lock:
+            return self._analyzed
+
+    @_logger.call(condition=lambda self: not self._analyzed)
     async def _analyze(self) -> None:
         import time
 
@@ -1531,7 +1551,7 @@ class Namespace:
             self._finder = KeywordFinder(self)
         return self._finder
 
-    @_logger.call(condition=lambda self, name: self._finder is not None and name not in self._finder._cache)
+    @_logger.call(condition=lambda self, name, **kwargs: self._finder is not None and name not in self._finder._cache)
     async def find_keyword(
         self, name: Optional[str], *, raise_keyword_error: bool = True, handle_bdd_style: bool = True
     ) -> Optional[KeywordDoc]:
@@ -1560,6 +1580,9 @@ class KeywordFinder:
         self.self_library_doc: Optional[LibraryDoc] = None
         self._cache: Dict[Tuple[Optional[str], bool], Tuple[Optional[KeywordDoc], List[DiagnosticsEntry]]] = {}
         self.handle_bdd_style = True
+        self._all_keywords: Optional[List[LibraryEntry]] = None
+        self._resource_keywords: Optional[List[ResourceEntry]] = None
+        self._library_keywords: Optional[List[LibraryEntry]] = None
 
     def reset_diagnostics(self) -> None:
         self.diagnostics = []
@@ -1660,9 +1683,13 @@ class KeywordFinder:
         return found[0][1] if found else None
 
     async def find_keywords(self, owner_name: str, name: str) -> Sequence[Tuple[LibraryEntry, KeywordDoc]]:
+        if self._all_keywords is None:
+            self._all_keywords = [
+                v for v in chain(self.namespace._libraries.values(), self.namespace._resources.values())
+            ]
         return [
             (v, v.library_doc.keywords[name])
-            async for v in async_chain(self.namespace._libraries.values(), self.namespace._resources.values())
+            for v in self._all_keywords
             if eq(v.alias or v.name, owner_name) and name in v.library_doc.keywords
         ]
 
@@ -1683,10 +1710,11 @@ class KeywordFinder:
         return result
 
     async def _get_keyword_from_resource_files(self, name: str) -> Optional[KeywordDoc]:
+        if self._resource_keywords is None:
+            self._resource_keywords = [v for v in chain(self.namespace._resources.values())]
+
         found: List[Tuple[LibraryEntry, KeywordDoc]] = [
-            (v, v.library_doc.keywords[name])
-            async for v in async_chain(self.namespace._resources.values())
-            if name in v.library_doc.keywords
+            (v, v.library_doc.keywords[name]) for v in self._resource_keywords if name in v.library_doc.keywords
         ]
         if not found:
             return None
@@ -1716,11 +1744,9 @@ class KeywordFinder:
         return entries
 
     async def _get_keyword_from_libraries(self, name: str) -> Optional[KeywordDoc]:
-        found = [
-            (v, v.library_doc.keywords[name])
-            async for v in async_chain(self.namespace._libraries.values())
-            if name in v.library_doc.keywords
-        ]
+        if self._library_keywords is None:
+            self._library_keywords = [v for v in chain(self.namespace._libraries.values())]
+        found = [(v, v.library_doc.keywords[name]) for v in self._library_keywords if name in v.library_doc.keywords]
         if not found:
             return None
         if len(found) > 1:

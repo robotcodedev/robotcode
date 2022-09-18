@@ -1,12 +1,31 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple, TypeVar, cast
 
 from ...common.lsp_types import Position, Range
 from ..utils.ast_utils import Token, range_from_token
 
 if TYPE_CHECKING:
     from .library_doc import KeywordDoc
+
+_F = TypeVar("_F", bound=Callable[..., Any])
+
+
+_NOT_SET = object()
+
+
+def single_call(func: _F) -> _F:
+    name = f"__A_{func.__name__}__result"
+
+    def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+
+        result = self.__dict__.get(name, _NOT_SET)
+        if result is _NOT_SET:
+            result = func(self, *args, **kwargs)
+            self.__dict__[name] = result
+        return result
+
+    return cast(_F, wrapper)
 
 
 @dataclass
@@ -24,6 +43,7 @@ class SourceEntity:
             end=Position(line=self.end_line_no - 1, character=self.end_col_offset),
         )
 
+    @single_call
     def __hash__(self) -> int:
         return hash((self.line_no, self.col_offset, self.end_line_no, self.end_col_offset, self.source))
 
@@ -52,6 +72,7 @@ class LibraryImport(Import):
     args: Tuple[str, ...] = ()
     alias: Optional[str] = None
 
+    @single_call
     def __hash__(self) -> int:
         return hash(
             (
@@ -65,6 +86,7 @@ class LibraryImport(Import):
 
 @dataclass
 class ResourceImport(Import):
+    @single_call
     def __hash__(self) -> int:
         return hash(
             (
@@ -78,6 +100,7 @@ class ResourceImport(Import):
 class VariablesImport(Import):
     args: Tuple[str, ...] = ()
 
+    @single_call
     def __hash__(self) -> int:
         return hash(
             (
@@ -94,14 +117,13 @@ class InvalidVariableError(Exception):
 
 class VariableMatcher:
     def __init__(self, name: str) -> None:
-        from robot.variables.search import VariableSearcher
+        from robot.variables.search import search_variable
 
         from ..utils.match import normalize
 
         self.name = name
 
-        searcher = VariableSearcher("$@&%", ignore_errors=True)
-        match = searcher.search(name)
+        match = search_variable(name, "$@&%", ignore_errors=True)
 
         if match.base is None:
             raise InvalidVariableError(f"Invalid variable '{name}'")
@@ -112,13 +134,12 @@ class VariableMatcher:
 
     def __eq__(self, o: object) -> bool:
         from robot.utils.normalizing import normalize
-        from robot.variables.search import VariableSearcher
+        from robot.variables.search import search_variable
 
         if isinstance(o, VariableMatcher):
             return o.normalized_name == self.normalized_name
         elif isinstance(o, str):
-            searcher = VariableSearcher("$@&%", ignore_errors=True)
-            match = searcher.search(o)
+            match = search_variable(o, "$@&%", ignore_errors=True)
             base = match.base
             normalized = str(normalize(base))
             return self.normalized_name == normalized
@@ -165,6 +186,7 @@ class VariableDefinition(SourceEntity):
             self.__matcher = VariableMatcher(self.name)
         return self.__matcher
 
+    @single_call
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type, self.range, self.source))
 
@@ -193,6 +215,7 @@ class VariableDefinition(SourceEntity):
 class LocalVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.LOCAL_VARIABLE
 
+    @single_call
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type, self.range, self.source))
 
@@ -202,6 +225,7 @@ class BuiltInVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.BUILTIN_VARIABLE
     resolvable: bool = True
 
+    @single_call
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type))
 
@@ -211,6 +235,7 @@ class CommandLineVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.COMMAND_LINE_VARIABLE
     resolvable: bool = True
 
+    @single_call
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type))
 
@@ -220,6 +245,7 @@ class ArgumentDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.ARGUMENT
     keyword_doc: Optional["KeywordDoc"] = None
 
+    @single_call
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type, self.range, self.source))
 
@@ -228,6 +254,7 @@ class ArgumentDefinition(VariableDefinition):
 class ImportedVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.IMPORTED_VARIABLE
 
+    @single_call
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type, self.source))
 
@@ -237,6 +264,7 @@ class EnvironmentVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.ENVIRONMENT_VARIABLE
     resolvable: bool = True
 
+    @single_call
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type))
 
@@ -246,5 +274,6 @@ class VariableNotFoundDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.VARIABLE_NOT_FOUND
     resolvable: bool = False
 
+    @single_call
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type))
