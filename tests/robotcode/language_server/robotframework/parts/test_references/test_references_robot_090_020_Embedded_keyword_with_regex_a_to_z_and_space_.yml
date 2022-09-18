@@ -1,7 +1,7 @@
 data: !GeneratedTestData
-  character: 4
+  character: 20
   line: 90
-  name: Embedded keyword with regex a to z an space
+  name: Embedded keyword with regex a to z and space
 result:
 - !Location
   range:

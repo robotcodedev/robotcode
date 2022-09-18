@@ -89,7 +89,7 @@ fifth
     add bananas to pocket    # robotcode: ignore
 #   ^^^^^^^^^^^^^^^^^^^^^  Invalid Embedded keyword with regex a to z ignored
     add bananas and apples to pocket
-#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Embedded keyword with regex a to z an space
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Embedded keyword with regex a to z and space
     add bananas and apples to pocket
 
 *** Keywords ***
