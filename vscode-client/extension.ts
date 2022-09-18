@@ -30,7 +30,12 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
     languageClientManger,
     debugManager,
     testControllerManger,
-
+    vscode.commands.registerCommand("robotcode.showDocumentation", async (url: string) => {
+      await vscode.commands.executeCommand("simpleBrowser.api.open", url, {
+        preserveFocus: true,
+        viewColumn: vscode.ViewColumn.Beside,
+      });
+    }),
     vscode.window.registerTerminalLinkProvider({
       provideTerminalLinks(terminalContext: vscode.TerminalLinkContext, _token: vscode.CancellationToken) {
         const line = terminalContext.line.trimEnd();
@@ -52,11 +57,27 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
 
         return [];
       },
-      handleTerminalLink(link: TerminalLink) {
-        vscode.env.openExternal(vscode.Uri.file(link.path)).then(
-          () => undefined,
-          () => undefined
-        );
+      async handleTerminalLink(link: TerminalLink) {
+        let livePreviewResult = false;
+        try {
+          const ex = vscode.extensions.getExtension("ms-vscode.live-server");
+          if (ex) {
+            await ex.activate();
+            if ((await vscode.commands.getCommands()).includes("livePreview.start.preview.atFile")) {
+              await vscode.commands.executeCommand("livePreview.start.preview.atFile", vscode.Uri.file(link.path));
+              livePreviewResult = true;
+            }
+          }
+        } catch {
+          livePreviewResult = false;
+        }
+
+        if (!livePreviewResult) {
+          vscode.env.openExternal(vscode.Uri.file(link.path)).then(
+            () => undefined,
+            () => undefined
+          );
+        }
       },
     })
   );

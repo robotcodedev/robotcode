@@ -370,6 +370,22 @@
             "default": "default",
             "scope": "resource"
           },
+          "robotcode.run.openOutputAfterRun": {
+            "type": "string",
+            "enum": [
+              "none",
+              "report",
+              "log"
+            ],
+            "enumDescriptions": [
+              "Do not open anyting",
+              "Open the report html file.",
+              "Open the log.html file."
+            ],
+            "default": "none",
+            "description": "Defines if the report or log file should be opened after a run.",
+            "scope": "resource"
+          },
           "robotcode.debug.defaultConfiguration": {
             "type": "object",
             "default": {},
@@ -425,13 +441,7 @@
           "robotcode.syntax.sectionStyle": {
             "type": "string",
             "default": null,
-            "description": "Defines the section style format. If not defined ```*** section ***``` is used.",
-            "scope": "resource"
-          },
-          "robotcode.run.openReportAfterRun": {
-            "type": "boolean",
-            "default": false,
-            "description": "Defines if the report should be opened after a run.",
+            "markdownDescription": "Defines the section style format. If not defined ```*** section ***``` is used.",
             "scope": "resource"
           },
           "robotcode.robocop.enabled": {
@@ -764,6 +774,21 @@
                     "Use this configuration when running or debugging tests."
                   ]
                 }
+              },
+              "openOutputAfterRun": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "report",
+                  "log"
+                ],
+                "enumDescriptions": [
+                  "Do not open anyting",
+                  "Open the report html file.",
+                  "Open the log.html file."
+                ],
+                "default": "none",
+                "description": "Defines if the report or log file should be opened after a run."
               }
             }
           }
