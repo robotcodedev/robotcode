@@ -155,6 +155,8 @@ class LinkFormatter:
             content = self._get_image(content, link)
         elif self._is_image(link):
             return self._get_image(link, content)
+        if link.startswith("\\#"):
+            link = link.lower()
         return self._get_link(link, content)
 
     def remove_link(self, text: str) -> str:

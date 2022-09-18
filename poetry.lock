@@ -117,6 +117,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "docutils"
+version = "0.19"
+description = "Docutils -- Python Documentation Utilities"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+
+[[package]]
 name = "filelock"
 version = "3.8.0"
 description = "A platform independent file lock."
@@ -675,6 +683,14 @@ optional = false
 python-versions = ">=3.7"
 
 [[package]]
+name = "types-docutils"
+version = "0.19.1"
+description = "Typing stubs for docutils"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "types-PyYAML"
 version = "6.0.11"
 description = "Typing stubs for PyYAML"
@@ -710,7 +726,7 @@ testing = ["coverage (>=6.2)", "coverage-enable-subprocess (>=1)", "flaky (>=3.7
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "3a7812d864d9d8e90e7082fb11fe321fabb4edf8db82fe9e1c8bfca2be395ea1"
+content-hash = "695b1d33cb7ef3e2abf6b588f7c3ec6727e5b2c8edb686c89fc892814d814b97"
 
 [metadata.files]
 attrs = [
@@ -837,6 +853,10 @@ debugpy = [
 distlib = [
     {file = "distlib-0.3.6-py2.py3-none-any.whl", hash = "sha256:f35c4b692542ca110de7ef0bea44d73981caeb34ca0b9b6b2e6d7790dda8f80e"},
     {file = "distlib-0.3.6.tar.gz", hash = "sha256:14bad2d9b04d3a36127ac97f30b12a19268f211063d8f8ee4f47108896e11b46"},
+]
+docutils = [
+    {file = "docutils-0.19-py3-none-any.whl", hash = "sha256:5e1de4d849fee02c63b040a4a3fd567f4ab104defd8a5511fbbc24a8a017efbc"},
+    {file = "docutils-0.19.tar.gz", hash = "sha256:33995a6753c30b7f577febfc2c50411fec6aac7f7ffeb7c4cfe5991072dcf9e6"},
 ]
 filelock = [
     {file = "filelock-3.8.0-py3-none-any.whl", hash = "sha256:617eb4e5eedc82fc5f47b6d61e4d11cb837c56cb4544e39081099fa17ad109d4"},
@@ -1119,6 +1139,10 @@ toml = [
 tomli = [
     {file = "tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
+]
+types-docutils = [
+    {file = "types-docutils-0.19.1.tar.gz", hash = "sha256:7df133b87105af410fc6a992030a70ee9f5a2c2636c5afe7e0de285eb9fdb015"},
+    {file = "types_docutils-0.19.1-py3-none-any.whl", hash = "sha256:6b110b17ba4bfbde765b69acca6a6da373094d99a5a3bce1d5a8c9d29b293d89"},
 ]
 types-PyYAML = [
     {file = "types-PyYAML-6.0.11.tar.gz", hash = "sha256:7f7da2fd11e9bc1e5e9eb3ea1be84f4849747017a59fc2eee0ea34ed1147c2e0"},

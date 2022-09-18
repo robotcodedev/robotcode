@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import (
     AbstractSet,
     Any,
+    Callable,
     ClassVar,
     Dict,
     Iterable,
@@ -23,6 +24,7 @@ from typing import (
     NamedTuple,
     Optional,
     Tuple,
+    TypeVar,
     Union,
     cast,
 )
@@ -37,6 +39,7 @@ from .entities import (
     ImportedVariableDefinition,
     SourceEntity,
     VariableDefinition,
+    single_call,
 )
 
 RUN_KEYWORD_NAMES = [
@@ -86,7 +89,24 @@ RESOURCE_FILE_EXTENSION = ".resource"
 
 ALLOWED_RESOURCE_FILE_EXTENSIONS = [ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION]
 ALLOWED_VARIABLES_FILE_EXTENSIONS = [".py", ".yml", ".yaml"]
-DEFAULT_DOC_FORMAT = "ROBOT"
+ROBOT_DOC_FORMAT = "ROBOT"
+REST_DOC_FORMAT = "REST"
+
+_F = TypeVar("_F", bound=Callable[..., Any])
+
+
+def convert_from_rest(text: str) -> str:
+    try:
+        from docutils.core import publish_parts
+
+        parts = publish_parts(text, writer_name="html5", settings_overrides={"syntax_highlight": "none"})
+
+        return str(parts["html_body"])
+
+    except ImportError:
+        pass
+
+    return text
 
 
 def is_embedded_keyword(name: str) -> bool:
@@ -158,6 +178,7 @@ class KeywordMatcher:
 
         return self.normalized_name == str(normalize(o))
 
+    @single_call
     def __hash__(self) -> int:
         return hash(
             (self.embedded_arguments.name, tuple(self.embedded_arguments.args))
@@ -307,7 +328,7 @@ class KeywordDoc(SourceEntity):
     longname: Optional[str] = None
     is_embedded: bool = False
     errors: Optional[List[Error]] = field(default=None, compare=False)
-    doc_format: str = DEFAULT_DOC_FORMAT
+    doc_format: str = ROBOT_DOC_FORMAT
     is_error_handler: bool = False
     error_handler_message: Optional[str] = field(default=None, compare=False)
     is_initializer: bool = False
@@ -373,41 +394,48 @@ class KeywordDoc(SourceEntity):
                 ),
             )
 
-    def to_markdown(self, add_signature: bool = True, header_level: int = 0) -> str:
-        if self.doc_format == DEFAULT_DOC_FORMAT:
-            return MarkDownFormatter().format(self.get_full_doc(add_signature=add_signature, header_level=header_level))
+    def to_markdown(self, add_signature: bool = True, header_level: int = 0, add_type: bool = True) -> str:
+        result = ""
 
-        return self.doc
+        if add_signature:
+            result += self._get_signature(header_level, add_type)
 
-    def get_full_doc(self, add_signature: bool = True, header_level: int = 0) -> str:
-        if self.doc_format == DEFAULT_DOC_FORMAT:
-            result = ""
+        if self.doc:
+            if result:
+                result += "\n\n"
 
-            if add_signature:
-                result += self._get_signature(header_level)
+            result += f"##{'#'*header_level} Documentation:\n\n"
 
-            if self.doc:
-                if result:
-                    result += "\n\n"
-
-                result += f"\n=={'='*header_level} Documentation: =={'='*header_level}\n\n"
-
+            if self.doc_format == ROBOT_DOC_FORMAT:
+                result += MarkDownFormatter().format(self.doc)
+            elif self.doc_format == REST_DOC_FORMAT:
+                result += convert_from_rest(self.doc)
+            else:
                 result += self.doc
 
-            return result
+        return result
 
-        return self.doc
+    def _get_signature(self, header_level: int, add_type: bool = True) -> str:
+        if add_type:
+            result = f"\n\n#{'#'*header_level} {'Library' if self.is_initializer else 'Keyword'} *{self.name}*"
+        else:
+            if not self.is_initializer:
+                result = f"\n\n#{'#'*header_level} {self.name}"
 
-    def _get_signature(self, header_level: int) -> str:
-        result = (
-            f"\n\n={'='*header_level} "
-            f"{'Library' if self.is_initializer else 'Keyword'} *{self.name}* "
-            f"={'='*header_level}\n"
-        )
         if self.args:
-            result += f"\n=={'='*header_level} Arguments: =={'='*header_level}\n"
+
+            result += f"\n##{'#'*header_level} Arguments: \n\n"
+
+            result += "\n| | | | |"
+            result += "\n|:--- | --:|:--|:---|"
+            bs = "\\"
             for a in self.args:
-                result += f"\n| {str(a)}"
+                result += (
+                    f"\n| {str(a.name)}"
+                    f"| {'=' if a.default_value is not None else ''}"
+                    f"| {str(a.default_value) if a.default_value is not None else ''}"
+                    f"| {' or '.join(f'{bs}<{s}>' for s in a.types) if a.types is not None else ''}|"
+                )
 
         return result
 
@@ -444,6 +472,7 @@ class KeywordDoc(SourceEntity):
     def is_run_keywords(self) -> bool:
         return self.libname == BUILTIN_LIBRARY_NAME and self.name == RUN_KEYWORDS_NAME
 
+    @single_call
     def __hash__(self) -> int:
         return hash(
             (
@@ -549,7 +578,7 @@ class LibraryDoc:
     type: str = "LIBRARY"
     scope: str = "TEST"
     named_args: bool = True
-    doc_format: str = DEFAULT_DOC_FORMAT
+    doc_format: str = ROBOT_DOC_FORMAT
     source: Optional[str] = None
     line_no: int = -1
     end_line_no: int = -1
@@ -582,20 +611,51 @@ class LibraryDoc:
         )
 
     def to_markdown(self, add_signature: bool = True, only_doc: bool = True) -> str:
-        result = ""
+        with io.StringIO(newline="\n") as result:
 
-        if add_signature and any(v for v in self.inits.values() if v.args):
-            result += "\n\n---\n".join(i.to_markdown() for i in self.inits.values())
+            def write_lines(*args: str) -> None:
+                result.writelines(i + "\n" for i in args)
 
-        if result:
-            result += "\n\n---\n"
-        result += (
-            MarkDownFormatter().format(self.get_full_doc(only_doc))
-            if self.doc_format == DEFAULT_DOC_FORMAT
-            else self.doc
-        )
+            if add_signature and any(v for v in self.inits.values() if v.args):
+                for i in self.inits.values():
+                    write_lines(i.to_markdown(), "", "---")
 
-        return result
+            write_lines(f"# {(self.type.capitalize()) if self.type else 'Unknown'} *{self.name}*", "", "")
+
+            if self.version or self.scope:
+                write_lines(
+                    "|  |  |",
+                    "| :--- | :--- |",
+                )
+
+                if self.version:
+                    write_lines(f"| **Library Version:** | {self.version} |")
+                if self.scope:
+                    write_lines(f"| **Library Scope:** | {self.scope} |")
+
+                write_lines("", "")
+
+            if self.doc:
+
+                write_lines("## Introduction", "")
+
+                if self.doc_format == ROBOT_DOC_FORMAT:
+                    doc = MarkDownFormatter().format(self.doc)
+
+                    if "%TOC%" in doc:
+                        doc = self._add_toc(doc, only_doc)
+
+                    result.write(doc)
+
+                elif self.doc_format == REST_DOC_FORMAT:
+                    result.write(convert_from_rest(self.doc))
+                else:
+                    result.write(self.doc)
+
+            if not only_doc:
+                result.write(self._get_doc_for_keywords())
+
+            return self._link_inline_links(result.getvalue())
 
     @property
     def source_or_origin(self) -> Optional[str]:
@@ -618,49 +678,23 @@ class LibraryDoc:
         re.VERBOSE,
     )
 
-    _headers: ClassVar[re.Pattern] = re.compile(r"^(={1,5})\s+(\S.*?)\s+\1$", re.MULTILINE)  # type: ignore
+    _headers: ClassVar[re.Pattern] = re.compile(r"^(#{2,5})\s+(\S.*)$", re.MULTILINE)  # type: ignore
 
-    def _process_inline_links(self, text: str) -> str:
+    def _link_inline_links(self, text: str) -> str:
         headers = [v.group(2) for v in self._headers.finditer(text)]
 
         def repl(m: re.Match) -> str:  # type: ignore
             if m.group(2) in headers:
-                return f"[#{str(m.group(2)).replace(' ', '-')}|{str(m.group(2))}]"
+                return f"[{str(m.group(2))}](#{str(m.group(2)).lower().replace(' ', '-')})"
             return str(m.group(0))
 
         return str(self._inline_link.sub(repl, text))
-
-    def get_full_doc(self, only_doc: bool = True) -> str:
-        if self.doc_format == DEFAULT_DOC_FORMAT:
-
-            result = f"= {(self.type[0].upper()+self.type[1:].lower()) if self.type else 'Unknown'} *{self.name}* =\n"
-
-            if self.version:
-                result += f"\n| **Library Version:** | {self.version} |"
-            if self.scope:
-                result += f"\n| **Library Scope:** | {self.scope} |"
-
-            if "%TOC%" in self.doc:
-                doc = self._add_toc(self.doc)
-            else:
-                doc = self.doc
-
-            if doc:
-                result += "\n== Introduction ==\n\n"
-                result += doc
-
-            if not only_doc:
-                result += self._get_doc_for_keywords()
-
-            return self._process_inline_links(result)
-
-        return self.doc
 
     def _get_doc_for_keywords(self) -> str:
         result = ""
         if any(v for v in self.inits.values() if v.args):
             result += "\n---\n\n"
-            result += "\n== Importing == \n\n"
+            result += "\n## Importing\n\n"
 
             first = True
 
@@ -669,11 +703,11 @@ class LibraryDoc:
                     result += "\n---\n"
                 first = False
 
-                result += "\n" + kw.get_full_doc()
+                result += "\n" + kw.to_markdown(add_type=False)
 
         if self.keywords:
             result += "\n---\n\n"
-            result += "\n== Keywords == \n\n"
+            result += "\n## Keywords\n\n"
 
             first = True
 
@@ -682,7 +716,7 @@ class LibraryDoc:
                     result += "\n---\n"
                 first = False
 
-                result += "\n" + kw.get_full_doc(header_level=2)
+                result += "\n" + kw.to_markdown(header_level=2, add_type=False)
         return result
 
     def _add_toc(self, doc: str, only_doc: bool = True) -> str:
@@ -690,17 +724,17 @@ class LibraryDoc:
         return "\n".join(line if line.strip() != "%TOC%" else toc for line in doc.splitlines())
 
     def _create_toc(self, doc: str, only_doc: bool = True) -> str:
-        entries = re.findall(r"^\s*=\s+(.+?)\s+=\s*$", doc, flags=re.MULTILINE)
+        entries = re.findall(r"^##\s+(.+)", doc, flags=re.MULTILINE)
 
         if not only_doc:
-            if self.inits:
+            if any(v for v in self.inits.values() if v.args):
                 entries.append("Importing")
             if self.keywords:
                 entries.append("Keywords")
             # TODO if self.data_types:
             #    entries.append("Data types")
 
-        return "\n".join(f"- `{entry}`" for entry in entries)
+        return "\n".join(f"- [{entry}](#{entry.lower().replace(' ', '-')})" for entry in entries)
 
 
 @dataclass
@@ -851,8 +885,8 @@ class MessageAndTraceback(NamedTuple):
     traceback: List[Traceback]
 
 
-__RE_MESSAGE = re.compile("^Traceback.*$", re.MULTILINE)
-__RE_TRACEBACK = re.compile('^ +File +"(.*)", +line +([0-9]+).*$', re.MULTILINE)
+__RE_MESSAGE = re.compile(r"^Traceback.*$", re.MULTILINE)
+__RE_TRACEBACK = re.compile(r'^ +File +"(.*)", +line +(\d+).*$', re.MULTILINE)
 
 
 def get_message_and_traceback_from_exception_text(text: str) -> MessageAndTraceback:
@@ -1220,7 +1254,7 @@ def get_library_doc(
                 libdoc.doc = str(lib.doc)
                 libdoc.version = str(lib.version)
                 libdoc.scope = str(lib.scope)
-                libdoc.doc_format = str(lib.doc_format) or DEFAULT_DOC_FORMAT
+                libdoc.doc_format = str(lib.doc_format) or ROBOT_DOC_FORMAT
                 libdoc.has_listener = lib.has_listener
 
                 libdoc.inits = KeywordStore(
@@ -1239,7 +1273,7 @@ def get_library_doc(
                             libname=libdoc.name,
                             libtype=libdoc.type,
                             longname=f"{libdoc.name}.{kw[0].name}",
-                            doc_format=str(lib.doc_format) or DEFAULT_DOC_FORMAT,
+                            doc_format=str(lib.doc_format) or ROBOT_DOC_FORMAT,
                             is_initializer=True,
                             arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
                         )
@@ -1281,7 +1315,7 @@ def get_library_doc(
                             libtype=libdoc.type,
                             longname=f"{libdoc.name}.{kw[0].name}",
                             is_embedded=is_embedded_keyword(kw[0].name),
-                            doc_format=str(lib.doc_format) or DEFAULT_DOC_FORMAT,
+                            doc_format=str(lib.doc_format) or ROBOT_DOC_FORMAT,
                             is_error_handler=kw[1].is_error_handler,
                             error_handler_message=kw[1].error_handler_message,
                             is_registered_run_keyword=RUN_KW_REGISTER.is_run_keyword(libdoc.name, kw[0].name),
