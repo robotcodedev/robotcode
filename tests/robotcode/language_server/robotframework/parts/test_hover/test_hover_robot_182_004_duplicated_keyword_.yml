@@ -5,7 +5,7 @@ data: !GeneratedTestData
 result: !Hover
   contents:
     kind: !MarkupKind 'MARKDOWN'
-    value: '## Resource *duplicated*'
+    value: '# Resource *duplicated*'
   range:
     end:
       character: 14

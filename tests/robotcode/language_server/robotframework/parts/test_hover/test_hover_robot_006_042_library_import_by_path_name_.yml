@@ -5,7 +5,7 @@ data: !GeneratedTestData
 result: !Hover
   contents:
     kind: !MarkupKind 'MARKDOWN'
-    value: '## Library *myvariables*'
+    value: '# Library *myvariables*'
   range:
     end:
       character: 49
