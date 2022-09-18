@@ -59,12 +59,14 @@ class LibDocRequestHandler(SimpleHTTPRequestHandler):
                     self.end_headers()
 
                     def calc_md() -> str:
-                        return (
-                            libdoc.to_markdown(add_signature=False, only_doc=False)
-                            .replace("\\", "\\")
-                            .replace("`", "\\`")
-                            .replace("$", "\\$")
+                        tt = str.maketrans(
+                            {
+                                "\\": "\\\\",
+                                "`": "\\`",
+                                "$": "\\$",
+                            }
                         )
+                        return libdoc.to_markdown(add_signature=False, only_doc=False).translate(tt)
 
                     data = f"""\
 <!doctype html>

@@ -417,10 +417,12 @@ class KeywordDoc(SourceEntity):
 
     def _get_signature(self, header_level: int, add_type: bool = True) -> str:
         if add_type:
-            result = f"\n\n#{'#'*header_level} {'Library' if self.is_initializer else 'Keyword'} *{self.name}*"
+            result = f"#{'#'*header_level} {'Library' if self.is_initializer else 'Keyword'} *{self.name}*"
         else:
             if not self.is_initializer:
                 result = f"\n\n#{'#'*header_level} {self.name}"
+            else:
+                result = ""
 
         if self.args:
 
