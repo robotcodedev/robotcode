@@ -15,7 +15,7 @@ _NOT_SET = object()
 
 
 def single_call(func: _F) -> _F:
-    name = f"__A_{func.__name__}__result"
+    name = f"__single_result_{func.__name__}__"
 
     def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
 

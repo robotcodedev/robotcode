@@ -340,6 +340,8 @@ class KeywordDoc(SourceEntity):
         default=None, compare=False, repr=False, hash=False
     )
 
+    parent: Optional[LibraryDoc] = None
+
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
 
@@ -394,7 +396,7 @@ class KeywordDoc(SourceEntity):
                 ),
             )
 
-    def to_markdown(self, add_signature: bool = True, header_level: int = 0, add_type: bool = True) -> str:
+    def to_markdown(self, add_signature: bool = True, header_level: int = 2, add_type: bool = True) -> str:
         result = ""
 
         if add_signature:
@@ -417,10 +419,10 @@ class KeywordDoc(SourceEntity):
 
     def _get_signature(self, header_level: int, add_type: bool = True) -> str:
         if add_type:
-            result = f"#{'#'*header_level} {'Library' if self.is_initializer else 'Keyword'} *{self.name}*"
+            result = f"#{'#'*header_level} {'Library' if self.is_initializer else 'Keyword'} *{self.name}*\n"
         else:
             if not self.is_initializer:
-                result = f"\n\n#{'#'*header_level} {self.name}"
+                result = f"\n\n#{'#'*header_level} {self.name}\n"
             else:
                 result = ""
 
@@ -575,7 +577,7 @@ class ModuleSpec:
 @dataclass
 class LibraryDoc:
     name: str = ""
-    doc: str = ""
+    doc: str = field(default="", compare=False)
     version: str = ""
     type: str = "LIBRARY"
     scope: str = "TEST"
@@ -591,6 +593,21 @@ class LibraryDoc:
     python_path: Optional[List[str]] = None
     stdout: Optional[str] = field(default=None, compare=False)
     has_listener: Optional[bool] = None
+
+    @single_call
+    def __hash__(self) -> int:
+        return hash(
+            (
+                self.name,
+                self.source,
+                self.line_no,
+                self.end_line_no,
+                self.version,
+                self.type,
+                self.scope,
+                self.doc_format,
+            )
+        )
 
     @property
     def is_deprecated(self) -> bool:
@@ -612,7 +629,7 @@ class LibraryDoc:
             ),
         )
 
-    def to_markdown(self, add_signature: bool = True, only_doc: bool = True) -> str:
+    def to_markdown(self, add_signature: bool = True, only_doc: bool = True, header_level: int = 2) -> str:
         with io.StringIO(newline="\n") as result:
 
             def write_lines(*args: str) -> None:
@@ -620,9 +637,11 @@ class LibraryDoc:
 
             if add_signature and any(v for v in self.inits.values() if v.args):
                 for i in self.inits.values():
-                    write_lines(i.to_markdown(), "", "---")
+                    write_lines(i.to_markdown(header_level=header_level), "", "---")
 
-            write_lines(f"# {(self.type.capitalize()) if self.type else 'Unknown'} *{self.name}*", "", "")
+            write_lines(
+                f"#{'#'*header_level} {(self.type.capitalize()) if self.type else 'Unknown'} *{self.name}*", "", ""
+            )
 
             if self.version or self.scope:
                 write_lines(
@@ -639,7 +658,7 @@ class LibraryDoc:
 
             if self.doc:
 
-                write_lines("## Introduction", "")
+                write_lines(f"##{'#'*header_level} Introduction", "")
 
                 if self.doc_format == ROBOT_DOC_FORMAT:
                     doc = MarkDownFormatter().format(self.doc)
@@ -655,7 +674,7 @@ class LibraryDoc:
                     result.write(self.doc)
 
             if not only_doc:
-                result.write(self._get_doc_for_keywords())
+                result.write(self._get_doc_for_keywords(header_level=header_level))
 
             return self._link_inline_links(result.getvalue())
 
@@ -680,23 +699,23 @@ class LibraryDoc:
         re.VERBOSE,
     )
 
-    _headers: ClassVar[re.Pattern] = re.compile(r"^(#{2,5})\s+(\S.*)$", re.MULTILINE)  # type: ignore
+    _headers: ClassVar[re.Pattern] = re.compile(r"^(#{2,9})\s+(\S.*)$", re.MULTILINE)  # type: ignore
 
     def _link_inline_links(self, text: str) -> str:
         headers = [v.group(2) for v in self._headers.finditer(text)]
 
         def repl(m: re.Match) -> str:  # type: ignore
             if m.group(2) in headers:
-                return f"[{str(m.group(2))}](#{str(m.group(2)).lower().replace(' ', '-')})"
+                return f"[{str(m.group(2))}](\\#{str(m.group(2)).lower().replace(' ', '-')})"
             return str(m.group(0))
 
         return str(self._inline_link.sub(repl, text))
 
-    def _get_doc_for_keywords(self) -> str:
+    def _get_doc_for_keywords(self, header_level: int = 2) -> str:
         result = ""
         if any(v for v in self.inits.values() if v.args):
             result += "\n---\n\n"
-            result += "\n## Importing\n\n"
+            result += f"\n##{'#'*header_level} Importing\n\n"
 
             first = True
 
@@ -709,7 +728,7 @@ class LibraryDoc:
 
         if self.keywords:
             result += "\n---\n\n"
-            result += "\n## Keywords\n\n"
+            result += f"\n##{'#'*header_level} Keywords\n\n"
 
             first = True
 
@@ -718,7 +737,7 @@ class LibraryDoc:
                     result += "\n---\n"
                 first = False
 
-                result += "\n" + kw.to_markdown(header_level=2, add_type=False)
+                result += "\n" + kw.to_markdown(header_level=header_level, add_type=False)
         return result
 
     def _add_toc(self, doc: str, only_doc: bool = True) -> str:
@@ -1102,6 +1121,21 @@ def find_library(
     )[0]
 
 
+def get_robot_library_html_doc_str(name: str, working_dir: str = ".", base_dir: str = ".") -> str:
+    from robot.libdocpkg import LibraryDocumentation
+    from robot.libdocpkg.htmlwriter import LibdocHtmlWriter
+
+    _update_env(working_dir)
+
+    robot_libdoc = LibraryDocumentation(name)
+    robot_libdoc.convert_docs_to_html()
+    with io.StringIO() as output:
+        writer = LibdocHtmlWriter()
+        writer.write(robot_libdoc, output)
+
+        return output.getvalue()
+
+
 def get_library_doc(
     name: str,
     args: Optional[Tuple[Any, ...]] = None,
@@ -1278,6 +1312,7 @@ def get_library_doc(
                             doc_format=str(lib.doc_format) or ROBOT_DOC_FORMAT,
                             is_initializer=True,
                             arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
+                            parent=libdoc,
                         )
                         for kw in [
                             (KeywordDocBuilder().build_keyword(k), k) for k in [KeywordWrapper(lib.init, source)]
@@ -1326,6 +1361,7 @@ def get_library_doc(
                             arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments)
                             if not kw[1].is_error_handler
                             else None,
+                            parent=libdoc,
                         )
                         for kw in [
                             (KeywordDocBuilder().build_keyword(k), k)

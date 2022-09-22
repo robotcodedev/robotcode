@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import contextlib
-import io
 import socket
 import threading
+import traceback
+from concurrent.futures import ProcessPoolExecutor
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 from urllib.parse import parse_qs, urlparse
 
 from ....utils.logging import LoggingDescriptor
-from ....utils.net import find_free_port
+from ....utils.net import check_free_port
 from ...common.decorators import code_action_kinds, language_id
 from ...common.lsp_types import (
     CodeAction,
@@ -20,14 +21,61 @@ from ...common.lsp_types import (
     Range,
 )
 from ...common.text_document import TextDocument
-from ..diagnostics.library_doc import get_library_doc
+from ..diagnostics.library_doc import get_library_doc, get_robot_library_html_doc_str
+from ..diagnostics.namespace import LibraryEntry
 from ..utils.ast_utils import Token, get_node_at_position
 from .model_helper import ModelHelperMixin
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol  # pragma: no cover
 
+from string import Template
+
 from .protocol_part import RobotLanguageServerProtocolPart
+
+HTML_ERROR_TEMPLATE = Template(
+    """\n
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>${type}: ${message}</title>
+</head>
+<body>
+  <div id="content">
+    <h1>
+        ${type}: ${message}
+    </h1>
+    <pre>
+${stacktrace}
+    </pre>
+  </div>
+
+</body>
+</html>
+"""
+)
+
+MARKDOWN_TEMPLATE = Template(
+    """\
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>${name}</title>
+</head>
+<body>
+  <template type="markdown" id="markdown-content">${content}</template>
+  <div id="content"></div>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    document.getElementById('content').innerHTML =
+      marked.parse(document.getElementById('markdown-content').content.textContent, {gfm: true});
+  </script>
+</body>
+</html>
+"""
+)
 
 
 class LibDocRequestHandler(SimpleHTTPRequestHandler):
@@ -40,78 +88,59 @@ class LibDocRequestHandler(SimpleHTTPRequestHandler):
         self._logger.error("%s - %s\n" % (self.address_string(), format % args))
 
     def do_GET(self) -> None:  # noqa: N802
-        from robot.errors import DataError
-        from robot.libdocpkg import LibraryDocumentation
-        from robot.libdocpkg.htmlwriter import LibdocHtmlWriter
 
         query = parse_qs(urlparse(self.path).query)
         name = n[0] if (n := query.get("name", [])) else None
+        args = n[0] if (n := query.get("args", [])) else None
+        basedir = n[0] if (n := query.get("basedir", [])) else None
         type_ = n[0] if (n := query.get("type", [])) else None
 
         if name:
-            if type_ in ["md", "markdown"]:
-                try:
+            try:
+                if type_ in ["md", "markdown"]:
+                    libdoc = get_library_doc(
+                        name, tuple(args.split("::") if args else ()), base_dir=basedir if basedir else "."
+                    )
 
-                    libdoc = get_library_doc(name)
+                    def calc_md() -> str:
+                        tt = str.maketrans({"<": "&lt;", ">": "&gt;"})
+                        return libdoc.to_markdown(add_signature=False, only_doc=False, header_level=0).translate(tt)
+
+                    data = MARKDOWN_TEMPLATE.substitute(content=calc_md(), name=name)
 
                     self.send_response(200)
                     self.send_header("Content-type", "text/html")
                     self.end_headers()
 
-                    def calc_md() -> str:
-                        tt = str.maketrans(
-                            {
-                                "\\": "\\\\",
-                                "`": "\\`",
-                                "$": "\\$",
-                            }
-                        )
-                        return libdoc.to_markdown(add_signature=False, only_doc=False).translate(tt)
-
-                    data = f"""\
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>{name}</title>
-</head>
-<body>
-  <div id="content"></div>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script>
-    document.getElementById('content').innerHTML =
-      marked.parse(`{calc_md()}`, {{gfm: true}});
-  </script>
-</body>
-</html>
-    """
                     self.wfile.write(bytes(data, "utf-8"))
-
-                except DataError as e:
-                    self.send_response(404)
-                    self.send_header("Content-type", "text/html")
-                    self.end_headers()
-
-                    self.wfile.write(bytes(str(e), "utf-8"))
-            else:
-                try:
-                    robot_libdoc = LibraryDocumentation(name)
-                    robot_libdoc.convert_docs_to_html()
-                    with io.StringIO() as output:
-                        writer = LibdocHtmlWriter()
-                        writer.write(robot_libdoc, output)
+                else:
+                    with ProcessPoolExecutor(max_workers=1) as executor:
+                        result = executor.submit(
+                            get_robot_library_html_doc_str,
+                            name + ("::" + args if args else ""),
+                            base_dir=basedir if basedir else ".",
+                        ).result(10)
 
                         self.send_response(200)
                         self.send_header("Content-type", "text/html")
                         self.end_headers()
 
-                        self.wfile.write(bytes(output.getvalue(), "utf-8"))
-                except DataError as e:
-                    self.send_response(404)
-                    self.send_header("Content-type", "text/html")
-                    self.end_headers()
+                        self.wfile.write(bytes(result, "utf-8"))
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                self.send_response(404)
+                self.send_header("Content-type", "text/html")
+                self.end_headers()
 
-                    self.wfile.write(bytes(str(e), "utf-8"))
+                self.wfile.write(
+                    bytes(
+                        HTML_ERROR_TEMPLATE.substitute(
+                            type=type(e).__qualname__, message=str(e), stacktrace="".join(traceback.format_exc())
+                        ),
+                        "utf-8",
+                    )
+                )
 
         else:
             super().do_GET()
@@ -137,7 +166,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         self._documentation_server: Optional[ThreadingHTTPServer] = None
         self._documentation_server_lock = threading.RLock()
-        self._documentation_server_port = find_free_port()
+        self._documentation_server_port = check_free_port(3000)
 
     async def initialized(self, sender: Any) -> None:
         self._ensure_http_server_started()
@@ -189,6 +218,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         if isinstance(node, (LibraryImport, ResourceImport)):
 
+            args = f"&args={'::'.join(node.args)}" if isinstance(node, LibraryImport) and node.args else ""
             return [
                 CodeAction(
                     "Open Documentation",
@@ -196,7 +226,11 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     command=Command(
                         "Open Documentation",
                         "robotcode.showDocumentation",
-                        [f"http://localhost:{self._documentation_server_port}/?name={node.name}"],
+                        [
+                            f"http://localhost:{self._documentation_server_port}/?name={node.name}"
+                            f"{args}"
+                            f"&basedir={document.uri.to_path().parent}"
+                        ],
                     ),
                 )
             ]
@@ -212,7 +246,31 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
             if result is not None:
                 kw_doc, _ = result
+
                 if kw_doc is not None:
+                    entry: Optional[LibraryEntry] = None
+
+                    if kw_doc.libtype == "LIBRARY":
+                        entry = next(
+                            (v for v in (await namespace.get_libraries()).values() if v.library_doc == kw_doc.parent),
+                            None,
+                        )
+
+                    elif kw_doc.libtype == "RESOURCE":
+                        entry = next(
+                            (v for v in (await namespace.get_resources()).values() if v.library_doc == kw_doc.parent),
+                            None,
+                        )
+
+                        self_libdoc = await namespace.get_library_doc()
+                        if entry is None and self_libdoc == kw_doc.parent:
+
+                            entry = LibraryEntry(self_libdoc.name, str(document.uri.to_path().name), self_libdoc)
+
+                    if entry is None:
+                        return None
+
+                    args = f"&args={'::'.join(entry.args)}" if entry.args else ""
                     return [
                         CodeAction(
                             "Open Documentation",
@@ -222,7 +280,9 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                                 "robotcode.showDocumentation",
                                 [
                                     f"http://localhost:{self._documentation_server_port}"
-                                    f"/?name={kw_doc.libname}#{kw_doc.name}"
+                                    f"/?name={entry.import_name}#{kw_doc.name}"
+                                    f"{args}"
+                                    f"&basedir={document.uri.to_path().parent}"
                                 ],
                             ),
                         )

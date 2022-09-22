@@ -18,11 +18,13 @@ from typing import (
     Optional,
     Tuple,
     Type,
+    TypedDict,
     Union,
     cast,
 )
 
-from ....utils.async_itertools import async_chain, async_chain_iterator, async_next
+from ....utils.async_itertools import async_chain, async_chain_iterator
+from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ...common.decorators import language_id, trigger_characters
 from ...common.lsp_types import (
@@ -102,6 +104,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
     )
     # @all_commit_characters(['\n'])
     @language_id("robotframework")
+    @threaded()
     @_logger.call
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[CompletionContext]
@@ -121,6 +124,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         )
 
     @language_id("robotframework")
+    @threaded()
     @_logger.call
     async def resolve(self, sender: Any, completion_item: CompletionItem) -> CompletionItem:
         if completion_item.data is not None:
@@ -197,6 +201,26 @@ def get_reserved_keywords() -> List[str]:
     return __reserved_keywords
 
 
+class CompletionItemData(TypedDict):
+    document_uri: str
+    type: str
+    name: str
+
+
+class CompletionKeywordData(CompletionItemData):
+    libname: Optional[str]
+    hash: str
+    id: str
+
+
+class CompletionItemImportData(CompletionItemData):
+    import_name: str
+    args: Tuple[Any, ...]
+    alias: Optional[str]
+    hash: str
+    id: str
+
+
 class CompletionCollector(ModelHelperMixin):
     _logger = LoggingDescriptor()
 
@@ -256,22 +280,70 @@ class CompletionCollector(ModelHelperMixin):
         return result
 
     async def resolve(self, completion_item: CompletionItem) -> CompletionItem:
-        if completion_item.data is not None:
-            document_uri = completion_item.data.get("document_uri", None)
+        data = cast(CompletionItemData, completion_item.data)
+
+        if data is not None:
+            document_uri = data.get("document_uri", None)
             if document_uri is not None:
                 document = await self.parent.documents.get(document_uri)
-                if document is not None and (type := completion_item.data.get("type", None)) is not None:
-                    if type in [
+                if document is not None and (comp_type := data.get("type", None)) is not None:
+                    if comp_type in [
                         CompleteResultKind.MODULE.name,
                         CompleteResultKind.MODULE_INTERNAL.name,
                         CompleteResultKind.FILE.name,
                     ]:
-                        import_name = completion_item.data.get("import_name", None)
-                        args = tuple(completion_item.data.get("args", ()))
-                        alias = completion_item.data.get("alias", None)
-                        if import_name is not None:
+                        if (lib_id := data.get("id", None)) is not None:
                             try:
-                                lib_doc = await self.namespace.get_imported_library_libdoc(import_name, args, alias)
+                                lib_doc = next(
+                                    (
+                                        ld.library_doc
+                                        for ld in (await self.namespace.get_libraries()).values()
+                                        if str(id(ld.library_doc)) == lib_id
+                                    ),
+                                    None,
+                                )
+                                if lib_doc is not None:
+                                    completion_item.documentation = MarkupContent(
+                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown(False)
+                                    )
+
+                            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                                raise
+                            except BaseException as e:
+                                completion_item.documentation = MarkupContent(
+                                    kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
+                                )
+                        elif (name := data.get("name", None)) is not None:
+                            try:
+                                lib_doc = await self.namespace.imports_manager.get_libdoc_for_library_import(
+                                    name,
+                                    (),
+                                    str(document.uri.to_path().parent),
+                                    variables=await self.namespace.get_resolvable_variables(),
+                                )
+
+                                if lib_doc is not None:
+                                    completion_item.documentation = MarkupContent(
+                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown(False)
+                                    )
+
+                            except (SystemExit, KeyboardInterrupt):
+                                raise
+                            except BaseException:
+                                pass
+
+                    elif comp_type in [CompleteResultKind.RESOURCE.name]:
+
+                        if (res_id := data.get("id", None)) is not None:
+                            try:
+                                lib_doc = next(
+                                    (
+                                        ld.library_doc
+                                        for ld in (await self.namespace.get_resources()).values()
+                                        if str(id(ld.library_doc)) == res_id
+                                    ),
+                                    None,
+                                )
 
                                 if lib_doc is not None:
                                     completion_item.documentation = MarkupContent(
@@ -284,29 +356,30 @@ class CompletionCollector(ModelHelperMixin):
                                 completion_item.documentation = MarkupContent(
                                     kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
                                 )
-                    elif type in [CompleteResultKind.RESOURCE.name]:
-                        import_name = completion_item.data.get("import_name", None)
-                        if import_name is not None:
+
+                        elif (name := data.get("name", None)) is not None:
                             try:
-                                lib_doc = await self.namespace.get_imported_resource_libdoc(import_name)
+                                lib_doc = await self.namespace.imports_manager.get_libdoc_for_resource_import(
+                                    name,
+                                    str(document.uri.to_path().parent),
+                                    variables=await self.namespace.get_resolvable_variables(),
+                                )
 
                                 if lib_doc is not None:
                                     completion_item.documentation = MarkupContent(
-                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown()
+                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown(False)
                                     )
 
-                            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                            except (SystemExit, KeyboardInterrupt):
                                 raise
-                            except BaseException as e:
-                                completion_item.documentation = MarkupContent(
-                                    kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
-                                )
-                    elif type in [CompleteResultKind.KEYWORD.name]:
-                        id = completion_item.data.get("id", None)
-                        if id is not None:
+                            except BaseException:
+                                pass
+                    elif comp_type in [CompleteResultKind.KEYWORD.name]:
+                        kw_id = data.get("id", None)
+                        if kw_id is not None:
                             try:
-                                kw_doc = await async_next(
-                                    (kw async for kw in self.namespace.iter_all_keywords() if hash(kw) == id),
+                                kw_doc = next(
+                                    (kw for kw in await self.namespace.get_keywords() if str(id(kw)) == kw_id),
                                     None,
                                 )
 
@@ -612,13 +685,14 @@ class CompletionCollector(ModelHelperMixin):
                                     )
                                     if r is not None
                                     else None,
-                                    data={
-                                        "document_uri": str(self.document.uri),
-                                        "type": CompleteResultKind.KEYWORD.name,
-                                        "libname": kw.libname,
-                                        "name": kw.name,
-                                        "id": hash(kw),
-                                    },
+                                    data=CompletionKeywordData(
+                                        document_uri=str(self.document.uri),
+                                        type=CompleteResultKind.KEYWORD.name,
+                                        libname=kw.libname,
+                                        name=kw.name,
+                                        hash=str(hash(kw)),
+                                        id=str(id(kw)),
+                                    ),
                                 )
                             )
 
@@ -651,13 +725,14 @@ class CompletionCollector(ModelHelperMixin):
                                             if not kw.is_embedded
                                             else self.get_keyword_snipped_text(kw, in_template),
                                         ),
-                                        data={
-                                            "document_uri": str(self.document.uri),
-                                            "type": CompleteResultKind.KEYWORD.name,
-                                            "libname": kw.libname,
-                                            "name": kw.name,
-                                            "id": hash(kw),
-                                        },
+                                        data=CompletionKeywordData(
+                                            document_uri=str(self.document.uri),
+                                            type=CompleteResultKind.KEYWORD.name,
+                                            libname=kw.libname,
+                                            name=kw.name,
+                                            hash=str(hash(kw)),
+                                            id=str(id(kw)),
+                                        ),
                                     )
                                 )
 
@@ -682,13 +757,14 @@ class CompletionCollector(ModelHelperMixin):
                         range=r,
                         new_text=kw.name if not kw.is_embedded else self.get_keyword_snipped_text(kw, in_template),
                     ),
-                    data={
-                        "document_uri": str(self.document.uri),
-                        "type": CompleteResultKind.KEYWORD.name,
-                        "libname": kw.libname,
-                        "name": kw.name,
-                        "id": hash(kw),
-                    },
+                    data=CompletionKeywordData(
+                        document_uri=str(self.document.uri),
+                        type=CompleteResultKind.KEYWORD.name,
+                        libname=kw.libname,
+                        name=kw.name,
+                        hash=str(hash(kw)),
+                        id=str(id(kw)),
+                    ),
                 )
             )
 
@@ -702,14 +778,16 @@ class CompletionCollector(ModelHelperMixin):
                     deprecated=v.library_doc.is_deprecated,
                     insert_text_format=InsertTextFormat.PLAINTEXT,
                     text_edit=TextEdit(range=r, new_text=k),
-                    data={
-                        "document_uri": str(self.document.uri),
-                        "type": CompleteResultKind.MODULE.name,
-                        "name": v.name,
-                        "import_name": v.import_name,
-                        "args": v.args,
-                        "alias": v.alias,
-                    },
+                    data=CompletionItemImportData(
+                        document_uri=str(self.document.uri),
+                        type=CompleteResultKind.MODULE.name,
+                        name=v.name,
+                        import_name=v.import_name,
+                        args=v.args,
+                        alias=v.alias,
+                        id=str(id(v.library_doc)),
+                        hash=str(hash(v.library_doc)),
+                    ),
                 )
             )
 
@@ -723,12 +801,16 @@ class CompletionCollector(ModelHelperMixin):
                     sort_text=f"030_{v.name}",
                     insert_text_format=InsertTextFormat.PLAINTEXT,
                     text_edit=TextEdit(range=r, new_text=v.name),
-                    data={
-                        "document_uri": str(self.document.uri),
-                        "type": CompleteResultKind.RESOURCE.name,
-                        "name": k,
-                        "import_name": v.import_name,
-                    },
+                    data=CompletionItemImportData(
+                        document_uri=str(self.document.uri),
+                        type=CompleteResultKind.RESOURCE.name,
+                        name=k,
+                        import_name=v.import_name,
+                        args=(),
+                        alias=None,
+                        id=str(id(v.library_doc)),
+                        hash=str(hash(v.library_doc)),
+                    ),
                 )
             )
 
@@ -1370,8 +1452,6 @@ class CompletionCollector(ModelHelperMixin):
                 else None
             )
 
-            sep = text_before_position[last_separator_index] if last_separator_index < len(text_before_position) else ""
-
             try:
                 complete_list = await self.namespace.imports_manager.complete_library_import(
                     first_part if first_part else None,
@@ -1405,11 +1485,11 @@ class CompletionCollector(ModelHelperMixin):
                     sort_text=f"030_{e}",
                     insert_text_format=InsertTextFormat.PLAINTEXT,
                     text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
-                    data={
-                        "document_uri": str(self.document.uri),
-                        "type": e.kind.name,
-                        "name": ((first_part + sep) if first_part is not None else "") + e.label,
-                    },
+                    data=CompletionItemData(
+                        document_uri=str(self.document.uri),
+                        type=e.kind.name,
+                        name=((first_part) if first_part is not None else "") + e.label,
+                    ),
                 )
                 for e in complete_list
             ]
@@ -1500,11 +1580,11 @@ class CompletionCollector(ModelHelperMixin):
                             filter_text=e.name,
                             insert_text_format=InsertTextFormat.PLAINTEXT,
                             text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
-                            data={
-                                "document_uri": str(self.document.uri),
-                                "type": "Argument",
-                                "name": e,
-                            },
+                            data=CompletionItemData(
+                                document_uri=str(self.document.uri),
+                                type="Argument",
+                                name=e.name,
+                            ),
                         )
                         for i, e in enumerate(init.args)
                         if e.kind
@@ -1646,11 +1726,11 @@ class CompletionCollector(ModelHelperMixin):
                 sort_text=f"030_{e}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
-                data={
-                    "document_uri": str(self.document.uri),
-                    "type": e.kind.name,
-                    "name": ((first_part) if first_part is not None else "") + e.label,
-                },
+                data=CompletionItemData(
+                    document_uri=str(self.document.uri),
+                    type=e.kind.name,
+                    name=((first_part) if first_part is not None else "") + e.label,
+                ),
             )
             for e in complete_list
         ]
@@ -1752,11 +1832,11 @@ class CompletionCollector(ModelHelperMixin):
                 sort_text=f"030_{e}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
-                data={
-                    "document_uri": str(self.document.uri),
-                    "type": e.kind.name,
-                    "name": ((first_part) if first_part is not None else "") + e.label,
-                },
+                data=CompletionItemData(
+                    document_uri=str(self.document.uri),
+                    type=e.kind.name,
+                    name=((first_part) if first_part is not None else "") + e.label,
+                ),
             )
             for e in complete_list
         ]

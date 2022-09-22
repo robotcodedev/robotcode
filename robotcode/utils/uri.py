@@ -42,7 +42,16 @@ class Uri(Mapping[str, str]):
         ...
 
     @overload
-    def __init__(self, *, scheme: str, netloc: str, path: str, params: str, query: str, fragment: str):
+    def __init__(
+        self,
+        *,
+        scheme: Optional[str] = None,
+        netloc: Optional[str] = None,
+        path: Optional[str] = None,
+        params: Optional[str] = None,
+        query: Optional[str] = None,
+        fragment: Optional[str] = None,
+    ):
         ...
 
     def __init__(

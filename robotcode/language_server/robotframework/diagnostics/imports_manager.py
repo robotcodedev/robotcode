@@ -360,13 +360,17 @@ class _ResourcesEntry(_ImportEntry):
         return self._document
 
     async def get_namespace(self) -> Namespace:
-        return await self.parent.parent_protocol.documents_cache.get_resource_namespace(await self.get_document())
+        async with self._lock:
+            return await self._get_namespace()
+
+    async def _get_namespace(self) -> Namespace:
+        return await self.parent.parent_protocol.documents_cache.get_resource_namespace(await self._get_document())
 
     async def get_libdoc(self) -> LibraryDoc:
         if self._lib_doc is None:
             async with self._lock:
                 if self._lib_doc is None:
-                    self._lib_doc = await (await self.get_namespace()).get_library_doc()
+                    self._lib_doc = await (await self._get_namespace()).get_library_doc()
         return self._lib_doc
 
 
@@ -945,6 +949,7 @@ class ImportsManager:
                     end_line_no=-1,
                     libname=libdoc.name,
                     libtype=libdoc.type,
+                    longname=f"{libdoc.name}.{kw[0].name}",
                     is_embedded=is_embedded_keyword(kw[0].name),
                     errors=getattr(kw[1], "errors") if hasattr(kw[1], "errors") else None,
                     is_error_handler=isinstance(kw[1], UserErrorHandler),
@@ -952,6 +957,7 @@ class ImportsManager:
                     if isinstance(kw[1], UserErrorHandler)
                     else None,
                     arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
+                    parent=libdoc,
                 )
                 for kw in [(KeywordDocBuilder(resource=True).build_keyword(lw), lw) for lw in lib.handlers]
             ],

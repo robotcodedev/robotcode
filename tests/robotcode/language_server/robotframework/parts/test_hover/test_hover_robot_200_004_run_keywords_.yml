@@ -5,7 +5,7 @@ data: !GeneratedTestData
 result: !Hover
   contents:
     kind: !MarkupKind 'MARKDOWN'
-    value: '# Keyword *Run Keywords*'
+    value: '### Keyword *Run Keywords*'
   range:
     end:
       character: 16

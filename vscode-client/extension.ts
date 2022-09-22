@@ -31,6 +31,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
     debugManager,
     testControllerManger,
     vscode.commands.registerCommand("robotcode.showDocumentation", async (url: string) => {
+      // await vscode.env.openExternal(vscode.Uri.parse(url));
       await vscode.commands.executeCommand("simpleBrowser.api.open", url, {
         preserveFocus: true,
         viewColumn: vscode.ViewColumn.Beside,

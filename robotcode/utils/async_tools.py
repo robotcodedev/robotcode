@@ -322,26 +322,23 @@ def run_coroutine_in_thread(
 
         ct = asyncio.current_task()
 
-        old_name = threading.current_thread().getName()
-        threading.current_thread().setName(coro.__qualname__)
-        try:
-            callback_added_event.wait(600)
+        callback_added_event.wait(600)
 
-            if ct is not None and result is not None:
-                _running_tasks[result].children.add(ct)
+        if ct is not None and result is not None:
+            _running_tasks[result].children.add(ct)
 
-            inner_task = create_sub_task(coro(*args, **kwargs))
+        inner_task = create_sub_task(coro(*args, **kwargs))
 
-            if canceled:
-                inner_task.cancel()
+        if canceled:
+            inner_task.cancel()
 
-            return await inner_task
-
-        finally:
-            threading.current_thread().setName(old_name)
+        return await inner_task
 
     def run(coro: Callable[..., Coroutine[Any, Any, _T]], *args: Any, **kwargs: Any) -> _T:
         loop = asyncio.new_event_loop()
+
+        old_name = threading.current_thread().getName()
+        threading.current_thread().setName(coro.__qualname__)
 
         try:
             asyncio.set_event_loop(loop)
@@ -359,6 +356,7 @@ def run_coroutine_in_thread(
             finally:
                 asyncio.set_event_loop(None)
                 loop.close()
+                threading.current_thread().setName(old_name)
 
     cti = get_current_future_info()
     result = run_in_thread(run, coro, *args, **kwargs)
