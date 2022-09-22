@@ -2,8 +2,11 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Correct analysing of "Run Keyword If"
+  - fixes [#80](https://github.com/d-biehl/robotcode/issues/80)
+
 ##  0.13.8
 
 - Support for Robocop >= 2.4

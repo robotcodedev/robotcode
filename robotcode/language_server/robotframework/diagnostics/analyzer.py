@@ -611,38 +611,40 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             while argument_tokens:
                 if argument_tokens[0].value == "ELSE" and len(argument_tokens) > 1:
 
+                    kwt = argument_tokens[1]
+                    argument_tokens = argument_tokens[2:]
+
+                    args = skip_args()
+
                     result = await self._analyze_keyword_call(
-                        unescape(argument_tokens[1].value),
+                        unescape(kwt.value),
                         node,
-                        argument_tokens[1],
-                        argument_tokens[2:],
+                        kwt,
+                        args,
                         analyse_run_keywords=False,
                     )
 
-                    argument_tokens = argument_tokens[2:]
-
                     if result is not None and result.is_any_run_keyword():
                         argument_tokens = await self._analyse_run_keyword(result, node, argument_tokens)
-
-                    skip_args()
 
                     break
                 elif argument_tokens[0].value == "ELSE IF" and len(argument_tokens) > 2:
 
+                    kwt = argument_tokens[2]
+                    argument_tokens = argument_tokens[3:]
+
+                    args = skip_args()
+
                     result = await self._analyze_keyword_call(
-                        unescape(argument_tokens[2].value),
+                        unescape(kwt.value),
                         node,
-                        argument_tokens[2],
-                        argument_tokens[3:],
+                        kwt,
+                        args,
                         analyse_run_keywords=False,
                     )
 
-                    argument_tokens = argument_tokens[3:]
-
                     if result is not None and result.is_any_run_keyword():
                         argument_tokens = await self._analyse_run_keyword(result, node, argument_tokens)
-
-                    skip_args()
                 else:
                     break
 
