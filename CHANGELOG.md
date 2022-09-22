@@ -2,7 +2,9 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
+## [Unreleased]
+- none so far
+##  0.13.8
 
 - Support for Robocop >= 2.4
 - Rework handling of launching and debugging tests
