@@ -10,6 +10,15 @@ All notable changes to the "robotcode" extension will be documented in this file
   - a launch configuration can now have a `purpose`:
     - `test`: Use this configuration when running or debugging tests.
     - `default`: Use this configuration as default for all other configurations.
+- Finetuning libdoc generation and code completion
+  - support for reST documentions
+    - `docutils` needs to be installed
+    - show documentations at library and resource import completions
+- Experimental support for Source action `Open Documentation`
+  - left click on a resource or library import, select Source Action and then "Open Documentation"
+  - a browser opens left of the document and shows the full documentation of the library
+  - works also an keyword calls
+  - Tip: bind "Source Action..." to a keyboard short cut, i.e <kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>.</kbd>
 
 ##  0.13.7
 
