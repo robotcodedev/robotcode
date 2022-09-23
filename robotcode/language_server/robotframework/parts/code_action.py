@@ -280,9 +280,10 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                                 "robotcode.showDocumentation",
                                 [
                                     f"http://localhost:{self._documentation_server_port}"
-                                    f"/?name={entry.import_name}#{kw_doc.name}"
+                                    f"/?name={entry.import_name}"
                                     f"{args}"
                                     f"&basedir={document.uri.to_path().parent}"
+                                    f"#{kw_doc.name}"
                                 ],
                             ),
                         )
