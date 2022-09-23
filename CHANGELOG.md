@@ -2,8 +2,10 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Correct reporting of loading built-in modules errors
+
 ##  0.13.9
 
 - Correct analysing of "Run Keyword If"

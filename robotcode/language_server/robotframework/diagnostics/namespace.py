@@ -1057,7 +1057,7 @@ class Namespace:
 
                 if top_level and result is not None:
                     if result.library_doc.source is not None and result.library_doc.errors:
-                        if any(err.source for err in result.library_doc.errors):
+                        if any(err.source and Path(err.source).is_absolute() for err in result.library_doc.errors):
                             await self.append_diagnostics(
                                 range=value.range,
                                 message="Import definition contains errors.",
@@ -1093,7 +1093,9 @@ class Namespace:
                                 ],
                                 code="ImportContainsErrors",
                             )
-                        for err in filter(lambda e: e.source is None, result.library_doc.errors):
+                        for err in filter(
+                            lambda e: e.source is None or not Path(e.source).is_absolute(), result.library_doc.errors
+                        ):
                             await self.append_diagnostics(
                                 range=value.range,
                                 message=err.message,
