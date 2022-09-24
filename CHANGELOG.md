@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 - none so far
+##  0.13.11
+
+- none so far
+
 ##  0.13.10
 
 - Correct reporting of loading built-in modules errors
