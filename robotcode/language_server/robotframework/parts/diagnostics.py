@@ -48,13 +48,12 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         parent.diagnostics.collect.add(self.collect_unused_keyword_references)
         parent.diagnostics.collect.add(self.collect_unused_variable_references)
 
-        parent.diagnostics.collect_document_has_diagnostics.add(self.collect_document_has_diagnostics)
+        parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_document_has_diagnostics(self, sender: Any, document: TextDocument) -> bool:
-        namespace = await self.parent.documents_cache.get_namespace(document)
-        return namespace is None or await namespace.is_initialized() and await namespace.is_analyzed()
+    async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
+        await self.parent.diagnostics.force_refresh_document(document)
 
     @language_id("robotframework")
     @threaded()
@@ -311,12 +310,12 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @_logger.call
     async def collect_unused_variable_references(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         if not self.parent.diagnostics.workspace_loaded_event.is_set():
-            return DiagnosticsResult(self.collect_unused_keyword_references, None)
+            return DiagnosticsResult(self.collect_unused_variable_references, None)
 
         config = await self.parent.workspace.get_configuration(AnalysisConfig, document.uri)
 
         if not config.find_unused_references:
-            return DiagnosticsResult(self.collect_unused_keyword_references, [])
+            return DiagnosticsResult(self.collect_unused_variable_references, [])
 
         return await self._collect_unused_variable_references(document)
 
@@ -324,7 +323,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         try:
             namespace = await self.parent.documents_cache.get_namespace(document)
             if namespace is None:
-                return DiagnosticsResult(self.collect_unused_keyword_references, None)
+                return DiagnosticsResult(self.collect_unused_variable_references, None)
 
             result: List[Diagnostic] = []
 
@@ -343,12 +342,12 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     )
 
-            return DiagnosticsResult(self.collect_unused_keyword_references, result)
+            return DiagnosticsResult(self.collect_unused_variable_references, result)
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             return DiagnosticsResult(
-                self.collect_unused_keyword_references,
+                self.collect_unused_variable_references,
                 [
                     Diagnostic(
                         range=Range(

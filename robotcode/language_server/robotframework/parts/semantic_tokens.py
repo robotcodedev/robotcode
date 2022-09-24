@@ -137,6 +137,13 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         # parent.semantic_tokens.collect_range.add(self.collect_range)
         # parent.semantic_tokens.collect_full_delta.add(self.collect_full_delta)
 
+        parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
+
+    @language_id("robotframework")
+    @_logger.call
+    async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
+        await self.parent.semantic_tokens.workspace_refresh()
+
     @classmethod
     def generate_mapping(cls) -> Dict[str, Tuple[Enum, Optional[Set[Enum]]]]:
         from robot.parsing.lexer.tokens import Token as RobotToken

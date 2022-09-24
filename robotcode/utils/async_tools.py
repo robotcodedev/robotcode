@@ -322,6 +322,9 @@ def run_coroutine_in_thread(
 
         ct = asyncio.current_task()
 
+        loop = asyncio.get_event_loop()
+        loop.slow_callback_duration = 10
+
         callback_added_event.wait(600)
 
         if ct is not None and result is not None:
@@ -335,28 +338,33 @@ def run_coroutine_in_thread(
         return await inner_task
 
     def run(coro: Callable[..., Coroutine[Any, Any, _T]], *args: Any, **kwargs: Any) -> _T:
-        loop = asyncio.new_event_loop()
 
         old_name = threading.current_thread().getName()
         threading.current_thread().setName(coro.__qualname__)
-
         try:
-            asyncio.set_event_loop(loop)
-
-            t = loop.create_task(create_inner_task(coro, *args, **kwargs), name=coro.__qualname__)
-
-            return loop.run_until_complete(t)
+            return asyncio.run(create_inner_task(coro, *args, **kwargs))
         finally:
-            try:
-                running_tasks = asyncio.all_tasks(loop)
-                if running_tasks:
-                    loop.run_until_complete(asyncio.gather(*running_tasks, return_exceptions=True))
+            threading.current_thread().setName(old_name)
 
-                loop.run_until_complete(loop.shutdown_asyncgens())
-            finally:
-                asyncio.set_event_loop(None)
-                loop.close()
-                threading.current_thread().setName(old_name)
+        # loop = asyncio.new_event_loop()
+
+        # try:
+        #     asyncio.set_event_loop(loop)
+
+        #     t = loop.create_task(create_inner_task(coro, *args, **kwargs), name=coro.__qualname__)
+
+        #     return loop.run_until_complete(t)
+        # finally:
+        #     try:
+        #         running_tasks = asyncio.all_tasks(loop)
+        #         if running_tasks:
+        #             loop.run_until_complete(asyncio.gather(*running_tasks, return_exceptions=True))
+
+        #         loop.run_until_complete(loop.shutdown_asyncgens())
+        #     finally:
+        #         asyncio.set_event_loop(None)
+        #         loop.close()
+        #         threading.current_thread().setName(old_name)
 
     cti = get_current_future_info()
     result = run_in_thread(run, coro, *args, **kwargs)

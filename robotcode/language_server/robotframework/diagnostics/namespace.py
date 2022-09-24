@@ -342,8 +342,6 @@ class BlockVariableVisitor(AsyncVisitor):
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import InlineIfHeader
 
-        # TODO  analyze "Set Local/Global/Suite Variable"
-
         n = cast(InlineIfHeader, node)
 
         for assign_token in n.get_tokens(RobotToken.ASSIGN):

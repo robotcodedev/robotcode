@@ -166,7 +166,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         self._documentation_server: Optional[ThreadingHTTPServer] = None
         self._documentation_server_lock = threading.RLock()
-        self._documentation_server_port = check_free_port(3000)
+        self._documentation_server_port = 0
 
     async def initialized(self, sender: Any) -> None:
         self._ensure_http_server_started()
@@ -178,6 +178,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 self._documentation_server = None
 
     def _run_server(self) -> None:
+        self._documentation_server_port = check_free_port(3100)
         with DualStackServer(("", self._documentation_server_port), LibDocRequestHandler) as server:
             self._documentation_server = server
             try:
