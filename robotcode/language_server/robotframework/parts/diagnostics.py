@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 from ....utils.async_tools import check_canceled, threaded
 from ....utils.logging import LoggingDescriptor
+from ....utils.uri import Uri
 from ...common.decorators import language_id
 from ...common.lsp_types import (
     Diagnostic,
@@ -19,6 +20,7 @@ from ...common.text_document import TextDocument
 from ..configuration import AnalysisConfig
 from ..diagnostics.analyzer import Analyzer
 from ..diagnostics.entities import ArgumentDefinition
+from ..diagnostics.namespace import Namespace
 from ..utils.ast_utils import (
     HeaderAndBodyBlock,
     Token,
@@ -52,8 +54,23 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
-        await self.parent.diagnostics.force_refresh_document(document)
+    async def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
+        if namespace.document is not None:
+            refresh = namespace.document.opened_in_editor
+
+            await self.parent.diagnostics.force_refresh_document(namespace.document, False)
+
+            if await namespace.is_initialized():
+                resources = (await namespace.get_resources()).values()
+                for r in resources:
+                    if r.library_doc.source:
+                        doc = await self.parent.documents.get(Uri.from_path(r.library_doc.source).normalized())
+                        if doc is not None:
+                            refresh |= doc.opened_in_editor
+                            await self.parent.diagnostics.force_refresh_document(doc, False)
+
+            if refresh:
+                await self.parent.diagnostics.refresh()
 
     @language_id("robotframework")
     @threaded()

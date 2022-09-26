@@ -141,7 +141,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
     @language_id("robotframework")
     @_logger.call
-    async def namespace_invalidated(self, sender: Any, document: TextDocument) -> None:
+    async def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
         await self.parent.semantic_tokens.workspace_refresh()
 
     @classmethod

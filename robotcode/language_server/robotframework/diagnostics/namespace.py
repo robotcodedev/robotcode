@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import (
     Any,
     AsyncGenerator,
-    Callable,
     Dict,
     Iterable,
     List,
@@ -28,7 +27,7 @@ from typing import (
 )
 
 from ....utils.async_itertools import as_async_iterable
-from ....utils.async_tools import Lock
+from ....utils.async_tools import Lock, async_event
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.lsp_types import (
@@ -130,6 +129,11 @@ class VariablesVisitor(AsyncVisitor):
             if name.endswith("="):
                 name = name[:-1].rstrip()
 
+            has_value = bool(variable.value)
+            value = tuple(
+                s.replace("${CURDIR}", str(Path(self.source).parent).replace("\\", "\\\\")) for s in variable.value
+            )
+
             self._results.append(
                 VariableDefinition(
                     name=variable.name,
@@ -141,9 +145,9 @@ class VariablesVisitor(AsyncVisitor):
                     end_line_no=variable.lineno,
                     end_col_offset=variable.end_col_offset,
                     source=self.source,
-                    has_value=bool(variable.value),
+                    has_value=has_value,
                     resolvable=True,
-                    value=variable.value,
+                    value=value,
                 )
             )
 
@@ -546,7 +550,6 @@ class Namespace:
         imports_manager: ImportsManager,
         model: ast.AST,
         source: str,
-        invalidated_callback: Callable[[Namespace], None],
         document: Optional[TextDocument] = None,
         document_type: Optional[DocumentType] = None,
         languages: Optional[Languages] = None,
@@ -557,7 +560,6 @@ class Namespace:
 
         self.model = model
         self.source = source
-        self.invalidated_callback = invalidated_callback
         self._document = weakref.ref(document) if document is not None else None
         self.document_type: Optional[DocumentType] = document_type
         self.languages = languages
@@ -597,6 +599,22 @@ class Namespace:
         self.imports_manager.libraries_changed.add(self.libraries_changed)
         self.imports_manager.resources_changed.add(self.resources_changed)
         self.imports_manager.variables_changed.add(self.variables_changed)
+
+    @async_event
+    async def has_invalidated(sender) -> None:  # NOSONAR
+        ...
+
+    @async_event
+    async def has_initialized(sender) -> None:  # NOSONAR
+        ...
+
+    @async_event
+    async def has_imports_changed(sender) -> None:  # NOSONAR
+        ...
+
+    @async_event
+    async def has_analysed(sender) -> None:  # NOSONAR
+        ...
 
     @property
     def document(self) -> Optional[TextDocument]:
@@ -663,7 +681,7 @@ class Namespace:
 
             await self._reset_global_variables()
 
-        self.invalidated_callback(self)
+        await self.has_invalidated(self)
 
     @_logger.call
     async def get_diagnostisc(self) -> List[Diagnostic]:
@@ -744,7 +762,9 @@ class Namespace:
 
     @_logger.call(condition=lambda self: not self._initialized)
     async def ensure_initialized(self) -> bool:
+
         if not self._initialized:
+            imports_changed = False
             async with self._initialize_lock:
                 if not self._initialized:
                     try:
@@ -760,6 +780,8 @@ class Namespace:
                             if old_imports is None:
                                 self.document.set_data(Namespace, imports)
                             elif old_imports != imports:
+                                imports_changed = True
+
                                 new_imports = []
                                 for e in old_imports:
                                     if e in imports:
@@ -801,11 +823,18 @@ class Namespace:
                         await self._reset_global_variables()
 
                         self._initialized = True
+
                     except BaseException as e:
                         if not isinstance(e, asyncio.CancelledError):
                             self._logger.exception(e, level=logging.DEBUG)
                         await self.invalidate()
                         raise
+
+            if self._initialized:
+                await self.has_initialized(self)
+
+                if imports_changed:
+                    await self.has_imports_changed(self)
 
         return self._initialized
 
@@ -1532,6 +1561,7 @@ class Namespace:
                                     source=DIAGNOSTICS_SOURCE_NAME,
                                     code=err.type_name,
                                 )
+
                     except asyncio.CancelledError:
                         canceled = True
                         self._logger.debug("analyzing canceled")
@@ -1544,6 +1574,8 @@ class Namespace:
                             if self._analyzed
                             else f"end analyzed {self.document} failed in {time.monotonic() - start_time}s"
                         )
+
+            await self.has_analysed(self)
 
     async def get_finder(self) -> KeywordFinder:
         if self._finder is None:

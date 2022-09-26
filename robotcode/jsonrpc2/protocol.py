@@ -592,16 +592,25 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 res = None
                 if message.result is not None:
                     res = from_dict(message.result, entry.result_type)
-                if entry.future._loop == asyncio.get_running_loop():
+                if entry.future.get_loop() == asyncio.get_running_loop():
                     entry.future.set_result(res)
                 else:
-                    if entry.future._loop.is_running():
+                    if entry.future.get_loop().is_running():
 
-                        def s(f: asyncio.Future[Any], r: Any) -> None:
-                            if not f.done():
-                                f.set_result(r)
+                        def set_result(f: asyncio.Future[Any], r: Any, ev: threading.Event) -> None:
+                            try:
+                                if not f.done() and f.get_loop().is_running():
+                                    f.set_result(r)
+                            finally:
+                                ev.set()
 
-                        entry.future._loop.call_soon_threadsafe(s, entry.future, res)
+                        done = threading.Event()
+
+                        entry.future.get_loop().call_soon_threadsafe(set_result, entry.future, res, done)
+
+                        if not done.wait(120):
+                            raise TimeoutError("Can't set response result")
+
                     else:
                         self._logger.warning("Response loop is not running.")
 
@@ -609,10 +618,11 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             raise
         except BaseException as e:
             if not entry.future.done():
-                if entry.future._loop == asyncio.get_running_loop():
+                if entry.future.get_loop() == asyncio.get_running_loop():
                     entry.future.set_exception(e)
                 else:
-                    entry.future._loop.call_soon_threadsafe(entry.future.set_exception, e)
+                    if entry.future.get_loop().is_running():
+                        entry.future.get_loop().call_soon_threadsafe(entry.future.set_exception, e)
 
     @_logger.call
     async def handle_error(self, message: JsonRPCError) -> None:

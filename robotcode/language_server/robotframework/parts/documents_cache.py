@@ -17,12 +17,7 @@ from typing import (
 
 from robotcode.language_server.common.lsp_types import MessageType
 
-from ....utils.async_tools import (
-    Lock,
-    async_tasking_event,
-    check_canceled_sync,
-    create_sub_task,
-)
+from ....utils.async_tools import Lock, async_tasking_event, check_canceled_sync
 from ....utils.uri import Uri
 from ...common.decorators import language_id_filter
 from ...common.parts.workspace import WorkspaceFolder
@@ -370,18 +365,27 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         return await self.__get_namespace_for_document_type(document, DocumentType.GENERAL)
 
     @async_tasking_event
-    async def namespace_invalidated(sender, document: TextDocument) -> None:  # NOSONAR
+    async def namespace_invalidated(sender, namespace: Namespace) -> None:  # NOSONAR
         ...
 
-    async def __invalidate_namespace(self, namespace: Namespace) -> None:
-        document = namespace.document
+    async def __invalidate_namespace(self, sender: Namespace) -> None:
+        document = sender.document
         if document is not None:
             await document.invalidate_cache()
 
             await self.namespace_invalidated(
                 self,
-                document,
+                sender,
                 callback_filter=language_id_filter(document),
+            )
+
+    async def __document_cache_invalidate(self, sender: TextDocument) -> None:
+        namespace: Optional[Namespace] = sender.get_cache_value(self.__get_namespace)
+        if namespace is not None:
+            await self.namespace_invalidated(
+                self,
+                namespace,
+                callback_filter=language_id_filter(sender),
             )
 
     async def __get_namespace_for_document_type(
@@ -401,13 +405,15 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         imports_manager = await self.get_imports_manager(document)
 
-        def invalidate(namespace: Namespace) -> None:
-            create_sub_task(self.__invalidate_namespace(namespace))
-
         languages = await self.build_languages_from_model(document, model)
-        return Namespace(
-            imports_manager, model, str(document.uri.to_path()), invalidate, document, document_type, languages
-        )
+
+        result = Namespace(imports_manager, model, str(document.uri.to_path()), document, document_type, languages)
+        result.has_invalidated.add(self.__invalidate_namespace)
+        result.has_imports_changed.add(self.__invalidate_namespace)
+
+        document.cache_invalidate.add(self.__document_cache_invalidate)
+
+        return result
 
     async def default_imports_manager(self) -> ImportsManager:
         async with self._imports_managers_lock:

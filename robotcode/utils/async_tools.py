@@ -438,7 +438,7 @@ class Event:
                     fut = self._waiters.popleft()
 
                     if not fut.done():
-                        if fut._loop == asyncio.get_running_loop():
+                        if fut.get_loop() == asyncio.get_running_loop():
                             if not fut.done():
                                 fut.set_result(True)
                         else:
@@ -453,10 +453,10 @@ class Event:
                             if not fut.done():
                                 done = threading.Event()
 
-                                fut._loop.call_soon_threadsafe(s, fut, done)
+                                fut.get_loop().call_soon_threadsafe(s, fut, done)
 
                                 if not done.wait(120):
-                                    raise TimeoutError("Callback timeout")
+                                    raise TimeoutError("Callback timeout.")
 
     def clear(self) -> None:
         with self._lock:
@@ -501,15 +501,15 @@ class Semaphore:
                 waiter = self._waiters.popleft()
 
                 if not waiter.done():
-                    if waiter._loop == asyncio.get_running_loop():
+                    if waiter.get_loop() == asyncio.get_running_loop():
                         if not waiter.done():
                             waiter.set_result(True)
                     else:
-                        if waiter._loop.is_running():
+                        if waiter.get_loop().is_running():
 
-                            def s(w: asyncio.Future[Any], ev: threading.Event) -> None:
+                            def set_result(w: asyncio.Future[Any], ev: threading.Event) -> None:
                                 try:
-                                    if w._loop.is_running() and not w.done():
+                                    if w.get_loop().is_running() and not w.done():
                                         w.set_result(True)
                                 finally:
                                     ev.set()
@@ -517,20 +517,23 @@ class Semaphore:
                             if not waiter.done():
                                 done = threading.Event()
 
-                                waiter._loop.call_soon_threadsafe(s, waiter, done)
+                                waiter.get_loop().call_soon_threadsafe(set_result, waiter, done)
 
                                 if not done.wait(120):
-                                    raise TimeoutError("Callback timeout")
+                                    raise TimeoutError("Callback timeout.")
 
     def locked(self) -> bool:
         with self._lock:
             return self._value == 0
 
     async def acquire(self, timeout: Optional[float] = None) -> bool:
-        while self._value <= 0:
-            fut = create_sub_future()
+        while True:
             async with async_lock(self._lock):
+                if self._value > 0:
+                    break
+                fut = create_sub_future()
                 self._waiters.append(fut)
+
             try:
                 await asyncio.wait_for(fut, timeout)
             except asyncio.TimeoutError:
@@ -574,7 +577,7 @@ class BoundedSemaphore(Semaphore):
         await super().release()
 
 
-class Lock:
+class NewLock:
     def __init__(self) -> None:
         self._block = BoundedSemaphore(value=1)
 
@@ -600,7 +603,7 @@ class Lock:
         await self.release()
 
 
-class OldLock:
+class Lock:
     """Threadsafe version of an async Lock."""
 
     def __init__(self) -> None:
@@ -672,8 +675,6 @@ class OldLock:
             if self._waiters is None or len(self._waiters) == 0:
                 if self._locked:
                     self._locked = False
-                else:
-                    raise RuntimeError(f"Lock is not acquired ({len(self._waiters) if self._waiters else 0} waiters).")
 
         await self._wake_up_next()
 
@@ -689,16 +690,26 @@ class OldLock:
             if fut in self._waiters:
                 self._waiters.remove(fut)
 
-        def s() -> None:
-            if not fut.done():
-                fut.set_result(True)
-
-        if fut._loop == asyncio.get_running_loop():
+        if fut.get_loop() == asyncio.get_running_loop():
             if not fut.done():
                 fut.set_result(True)
         else:
-            if fut._loop.is_running():
-                fut._loop.call_soon_threadsafe(s)
+            if fut.get_loop().is_running():
+
+                def set_result(w: asyncio.Future[Any], ev: threading.Event) -> None:
+                    try:
+                        if w.get_loop().is_running() and not w.done():
+                            w.set_result(True)
+                    finally:
+                        ev.set()
+
+                if not fut.done():
+                    done = threading.Event()
+
+                    fut.get_loop().call_soon_threadsafe(set_result, fut, done)
+
+                    if not done.wait(120):
+                        raise TimeoutError("Callback timeout.")
 
 
 class FutureInfo:
@@ -713,10 +724,10 @@ class FutureInfo:
             for t in self.children.copy():
                 if not t.done() and not t.cancelled():
 
-                    if t._loop == asyncio.get_running_loop():
+                    if t.get_loop() == asyncio.get_running_loop():
                         t.cancel()
                     else:
-                        t._loop.call_soon_threadsafe(t.cancel)
+                        t.get_loop().call_soon_threadsafe(t.cancel)
 
     def canceled(self) -> bool:
         task = self.task()

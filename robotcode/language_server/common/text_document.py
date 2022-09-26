@@ -6,7 +6,7 @@ import io
 import weakref
 from typing import Any, Awaitable, Callable, Dict, List, Optional, TypeVar, Union, cast
 
-from ...utils.async_tools import Lock, create_sub_task
+from ...utils.async_tools import Lock, async_event, create_sub_task
 from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
 from .lsp_types import DocumentUri, Range
@@ -90,7 +90,7 @@ class TextDocument:
     async def apply_none_change(self) -> None:
         async with self._lock:
             self._lines = None
-            self._invalidate_cache()
+            await self._invalidate_cache()
 
     @_logger.call
     async def apply_full_change(self, version: Optional[int], text: Optional[str], *, save: bool = False) -> None:
@@ -102,7 +102,7 @@ class TextDocument:
                 self._lines = None
             if save:
                 self._orig_text = self._text
-            self._invalidate_cache()
+            await self._invalidate_cache()
 
     @_logger.call
     async def apply_incremental_change(self, version: Optional[int], range: Range, text: str) -> None:
@@ -138,7 +138,7 @@ class TextDocument:
                     self._text = new_text.getvalue()
             finally:
                 self._lines = None
-                self._invalidate_cache()
+                await self._invalidate_cache()
 
     def __get_lines(self) -> List[str]:
         if self._lines is None:
@@ -152,21 +152,31 @@ class TextDocument:
                 return self.__get_lines()
         return self._lines
 
-    def _invalidate_cache(self) -> None:
+    @async_event
+    async def cache_invalidate(sender) -> None:  # NOSONAR
+        ...
+
+    @async_event
+    async def cache_invalidated(sender) -> None:  # NOSONAR
+        ...
+
+    async def _invalidate_cache(self) -> None:
+        await self.cache_invalidate(self)
         self._cache.clear()
+        await self.cache_invalidated(self)
 
     @_logger.call
     async def invalidate_cache(self) -> None:
         async with self._lock:
-            self._invalidate_cache()
+            await self._invalidate_cache()
 
-    def _invalidate_data(self) -> None:
+    async def _invalidate_data(self) -> None:
         self._data.clear()
 
     @_logger.call
     async def invalidate_data(self) -> None:
         async with self._lock:
-            self._invalidate_data()
+            await self._invalidate_data()
 
     async def __remove_cache_entry_safe(self, _ref: Any) -> None:
         async with self._lock:
@@ -184,6 +194,19 @@ class TextDocument:
             reference = weakref.ref(entry, self.__remove_cache_entry if add_remove else None)
 
         return reference
+
+    def get_cache_value(
+        self,
+        entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]],
+    ) -> Optional[_T]:
+
+        reference = self.__get_cache_reference(entry)
+
+        e = self._cache.get(reference, None)
+        if e is None:
+            return None
+
+        return cast(Optional[_T], e.data)
 
     async def get_cache(
         self,
@@ -216,12 +239,12 @@ class TextDocument:
     def get_data(self, key: Any, default: Optional[_T] = None) -> _T:
         return self._data.get(key, default)
 
-    def _clear(self) -> None:
+    async def _clear(self) -> None:
         self._lines = None
-        self._invalidate_cache()
-        self._invalidate_data()
+        await self._invalidate_cache()
+        await self._invalidate_data()
 
     @_logger.call
     async def clear(self) -> None:
         async with self._lock:
-            self._clear()
+            await self._clear()

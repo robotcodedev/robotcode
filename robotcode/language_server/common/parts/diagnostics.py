@@ -31,6 +31,7 @@ from ..lsp_types import (
     ErrorCodes,
     PreviousResultId,
     ProgressToken,
+    PublishDiagnosticsParams,
     RelatedFullDocumentDiagnosticReport,
     RelatedUnchangedDocumentDiagnosticReport,
     ServerCapabilities,
@@ -226,15 +227,16 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                         await self.on_workspace_loaded(self)
                         await self.force_refresh_all()
 
-    async def force_refresh_all(self) -> None:
+    async def force_refresh_all(self, refresh: bool = True) -> None:
         for doc in self.parent.documents.documents:
             self.get_diagnostics_data(doc).force = True
 
-        await self.refresh()
+        if refresh:
+            await self.refresh()
 
-    async def force_refresh_document(self, document: TextDocument) -> None:
+    async def force_refresh_document(self, document: TextDocument, refresh: bool = True) -> None:
         self.get_diagnostics_data(document).force = True
-        if document.opened_in_editor:
+        if refresh and document.opened_in_editor:
             await self.refresh()
 
     @_logger.call
@@ -262,8 +264,20 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                     if result.diagnostics is not None:
                         collected_keys.append(result.key)
 
-                    if document.opened_in_editor:
-                        await self.refresh()
+                    # if document.opened_in_editor:
+                    #     await self.refresh()
+
+                    if data.entries:
+                        self.parent.send_notification(
+                            "textDocument/publishDiagnostics",
+                            PublishDiagnosticsParams(
+                                uri=document.document_uri,
+                                version=document._version,
+                                diagnostics=[
+                                    e for e in itertools.chain(*(i for i in data.entries.values() if i is not None))
+                                ],
+                            ),
+                        )
 
         except asyncio.CancelledError:
             self._logger.debug(lambda: f"_get_diagnostics cancelled for {document}")
@@ -292,8 +306,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
                 task = data.task
 
-                data = DiagnosticsData()
-                document.set_data(self, data)
+                data.force = False
 
                 if task is not None and not task.done():
                     self._logger.debug(lambda: f"try to cancel diagnostics for {document}")
@@ -309,23 +322,22 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                 def done(t: asyncio.Task[Any]) -> None:
 
                     self._logger.debug(lambda: f"diagnostics for {document} {'canceled' if t.cancelled() else 'ended'}")
-                    try:
-                        t.result()
-                    except asyncio.CancelledError:
-                        pass
-                    except (SystemExit, KeyboardInterrupt):
-                        raise
-                    except BaseException as e:
-                        self._logger.exception(e)
+                    if t.done() and not t.cancelled():
+                        ex = t.exception()
+
+                        if ex is None or isinstance(ex, asyncio.CancelledError):
+                            return
 
                 data.task.add_done_callback(done)
 
             if data.id == previous_result_id:
                 return RelatedUnchangedDocumentDiagnosticReport(result_id=data.id)
 
-            return RelatedFullDocumentDiagnosticReport(
-                list(itertools.chain(*(e for e in data.entries.values() if e is not None))), result_id=data.id
-            )
+            # return RelatedFullDocumentDiagnosticReport(
+            #     list(itertools.chain(*(e for e in data.entries.values() if e is not None))), result_id=data.id
+            # )
+
+            return RelatedFullDocumentDiagnosticReport([], result_id=data.id)
         except asyncio.CancelledError:
             self._logger.debug("canceled _text_document_diagnostic")
             raise
