@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Any, AsyncGenerator, Iterable, List, Union, cast
+from typing import Any, AsyncGenerator, Iterable, Sequence, Union, cast
 
 
 def _glob_pattern_to_re(pattern: str) -> str:
@@ -84,8 +84,8 @@ def globmatches(pattern: str, path: Union[Path, str, os.PathLike[Any]]) -> bool:
 
 async def iter_files(
     path: Union[Path, str, os.PathLike[str]],
-    patterns: Union[List[Union[Pattern, str]], Pattern, str, None] = None,
-    ignore_patterns: Union[List[Union[Pattern, str]], Pattern, str, None] = None,
+    patterns: Union[Sequence[Union[Pattern, str]], Pattern, str, None] = None,
+    ignore_patterns: Union[Sequence[Union[Pattern, str]], Pattern, str, None] = None,
     *,
     absolute: bool = False,
     _base_path: Union[Path, str, os.PathLike[str], None] = None,
@@ -99,12 +99,12 @@ async def iter_files(
         if not isinstance(_base_path, Path):
             path = Path(_base_path)
 
-    if patterns is not None and not isinstance(patterns, (set, list, tuple)):
+    if patterns is not None and isinstance(patterns, (str, Pattern)):
         patterns = [patterns]
     if patterns is not None:
         patterns = list(map(lambda p: p if isinstance(p, Pattern) else Pattern(p), patterns))
 
-    if ignore_patterns is not None and not isinstance(ignore_patterns, (set, list, tuple)):
+    if ignore_patterns is not None and isinstance(ignore_patterns, (str, Pattern)):
         ignore_patterns = [ignore_patterns]
     if ignore_patterns is not None:
         ignore_patterns = list(map(lambda p: p if isinstance(p, Pattern) else Pattern(p), ignore_patterns))

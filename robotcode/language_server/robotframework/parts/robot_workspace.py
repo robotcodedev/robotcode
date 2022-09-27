@@ -66,7 +66,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                     async for f in iter_files(
                         folder.uri.to_path(),
                         f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}",
-                        ignore_patterns=config.workspace.exclude_patterns or [],  # type: ignore
+                        ignore_patterns=config.workspace.exclude_patterns or [],
                         absolute=True,
                     )
                 ]
