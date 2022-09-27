@@ -5,6 +5,7 @@ import inspect
 import json
 import re
 import threading
+import time
 import weakref
 from abc import ABC, abstractmethod
 from collections import OrderedDict
@@ -608,8 +609,13 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
                         entry.future.get_loop().call_soon_threadsafe(set_result, entry.future, res, done)
 
-                        if not done.wait(120):
-                            raise TimeoutError("Can't set response result")
+                        start = time.monotonic()
+                        while not done.is_set():
+
+                            if time.monotonic() - start > 120:
+                                raise TimeoutError("Can't set future result.")
+
+                            await asyncio.sleep(0.001)
 
                     else:
                         self._logger.warning("Response loop is not running.")

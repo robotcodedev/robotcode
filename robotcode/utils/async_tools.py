@@ -7,6 +7,7 @@ import contextvars
 import functools
 import inspect
 import threading
+import time
 import weakref
 from collections import deque
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -443,7 +444,7 @@ class Event:
                                 fut.set_result(True)
                         else:
 
-                            def s(w: asyncio.Future[Any], ev: threading.Event) -> None:
+                            def set_result(w: asyncio.Future[Any], ev: threading.Event) -> None:
                                 try:
                                     if not w.done():
                                         w.set_result(True)
@@ -453,7 +454,7 @@ class Event:
                             if not fut.done():
                                 done = threading.Event()
 
-                                fut.get_loop().call_soon_threadsafe(s, fut, done)
+                                fut.get_loop().call_soon_threadsafe(set_result, fut, done)
 
                                 if not done.wait(120):
                                     raise TimeoutError("Callback timeout.")
@@ -519,8 +520,13 @@ class Semaphore:
 
                                 waiter.get_loop().call_soon_threadsafe(set_result, waiter, done)
 
-                                if not done.wait(120):
-                                    raise TimeoutError("Callback timeout.")
+                                start = time.monotonic()
+                                while not done.is_set():
+
+                                    if time.monotonic() - start > 120:
+                                        raise TimeoutError("Can't set future result.")
+
+                                    await asyncio.sleep(0.001)
 
     def locked(self) -> bool:
         with self._lock:
@@ -708,8 +714,16 @@ class Lock:
 
                     fut.get_loop().call_soon_threadsafe(set_result, fut, done)
 
-                    if not done.wait(120):
-                        raise TimeoutError("Callback timeout.")
+                    start = time.monotonic()
+                    while not done.is_set():
+
+                        if time.monotonic() - start > 120:
+                            raise TimeoutError("Can't set future result.")
+
+                        await asyncio.sleep(0.001)
+
+                    # if not done.wait(120):
+                    #     raise TimeoutError("Callback timeout.")
 
 
 class FutureInfo:

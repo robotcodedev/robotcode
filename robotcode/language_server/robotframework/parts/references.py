@@ -116,9 +116,13 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         result: List[Location] = []
 
+        # tasks = []
         for doc in self.parent.documents.documents:
             if doc.language_id == "robotframework":
                 result.extend(await func(doc, *args, **kwargs))
+                # tasks.append(run_coroutine_in_thread(func, doc, *args, **kwargs))
+
+        # result = await asyncio.gather(*tasks)
 
         return result
 
