@@ -435,10 +435,10 @@ class KeywordDoc(SourceEntity):
             bs = "\\"
             for a in self.args:
                 result += (
-                    f"\n| {str(a.name)}"
+                    f"\n| `{str(a.name)}`"
                     f"| {'=' if a.default_value is not None else ''}"
-                    f"| {str(a.default_value) if a.default_value is not None else ''}"
-                    f"| {' or '.join(f'{bs}<{s}>' for s in a.types) if a.types is not None else ''}|"
+                    f"| {f'`{str(a.default_value)}`' if a.default_value is not None else ''}"
+                    f"| {' or '.join(f'`{bs}<{s}>`' for s in a.types) if a.types is not None else ''} |"
                 )
 
         return result
