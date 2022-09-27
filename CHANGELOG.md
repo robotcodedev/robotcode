@@ -2,7 +2,9 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
+## [Unreleased]
+- none so far
+##  0.13.13
 
 - add colors to debug console
 - fix resolving of ${CURDIR} in variables
