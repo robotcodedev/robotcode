@@ -7,7 +7,7 @@ import traceback
 from concurrent.futures import ProcessPoolExecutor
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
-from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
 from urllib.parse import parse_qs, urlparse
 
 from ....utils.logging import LoggingDescriptor
@@ -21,8 +21,12 @@ from ...common.lsp_types import (
     Range,
 )
 from ...common.text_document import TextDocument
-from ..diagnostics.library_doc import get_library_doc, get_robot_library_html_doc_str
-from ..diagnostics.namespace import LibraryEntry
+from ..diagnostics.library_doc import (
+    get_library_doc,
+    get_robot_library_html_doc_str,
+    resolve_robot_variables,
+)
+from ..diagnostics.namespace import LibraryEntry, Namespace
 from ..utils.ast_utils import Token, get_node_at_position
 from .model_helper import ModelHelperMixin
 
@@ -219,7 +223,10 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         if isinstance(node, (LibraryImport, ResourceImport)):
 
-            args = f"&args={'::'.join(node.args)}" if isinstance(node, LibraryImport) and node.args else ""
+            url = await self.build_url(
+                node.name, node.args if isinstance(node, LibraryImport) else (), document, namespace
+            )
+
             return [
                 CodeAction(
                     "Open Documentation",
@@ -227,11 +234,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     command=Command(
                         "Open Documentation",
                         "robotcode.showDocumentation",
-                        [
-                            f"http://localhost:{self._documentation_server_port}/?name={node.name}"
-                            f"{args}"
-                            f"&basedir={document.uri.to_path().parent}"
-                        ],
+                        [url],
                     ),
                 )
             ]
@@ -271,7 +274,8 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     if entry is None:
                         return None
 
-                    args = f"&args={'::'.join(entry.args)}" if entry.args else ""
+                    url = await self.build_url(entry.import_name, entry.args, document, namespace, kw_doc.name)
+
                     return [
                         CodeAction(
                             "Open Documentation",
@@ -279,15 +283,47 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                             command=Command(
                                 "Open Documentation",
                                 "robotcode.showDocumentation",
-                                [
-                                    f"http://localhost:{self._documentation_server_port}"
-                                    f"/?name={entry.import_name}"
-                                    f"{args}"
-                                    f"&basedir={document.uri.to_path().parent}"
-                                    f"#{kw_doc.name}"
-                                ],
+                                [url],
                             ),
                         )
                     ]
 
         return None
+
+    async def build_url(
+        self,
+        name: str,
+        args: Tuple[Any, ...],
+        document: TextDocument,
+        namespace: Namespace,
+        target: Optional[str] = None,
+    ) -> str:
+
+        base_dir = str(document.uri.to_path().parent)
+
+        robot_variables = resolve_robot_variables(
+            str(namespace.imports_manager.folder.to_path()),
+            base_dir,
+            variables=await namespace.get_resolvable_variables(),
+        )
+        try:
+            name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=False)
+
+            args = tuple(robot_variables.replace_string(v.replace("\\", "\\\\"), ignore_errors=False) for v in args)
+
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException:
+            pass
+
+        url_args = f"&args={'::'.join(args)}" if args else ""
+
+        url = (
+            f"http://localhost:{self._documentation_server_port}"
+            f"/?name={name}"
+            f"{url_args}"
+            f"&basedir={base_dir}"
+            f"{'#{target}' if target else ''}"
+        )
+
+        return url
