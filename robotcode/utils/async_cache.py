@@ -40,8 +40,8 @@ class AsyncSimpleLRUCache:
     async def get(self, func: Callable[..., Awaitable[_T]], *args: Any, **kwargs: Any) -> _T:
         key = self._make_key(*args, **kwargs)
 
-        async with self.lock:
-            entry = self._cache[key]
+        # async with self.lock:
+        entry = self._cache[key]
 
         async with entry.lock:
             if not entry.has_data:

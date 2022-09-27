@@ -217,15 +217,15 @@ class TextDocument:
 
         reference = self.__get_cache_reference(entry)
 
-        async with self._lock:
-            e = self._cache[reference]
+        # async with self._lock:
+        e = self._cache[reference]
 
         async with e.lock:
             if not e.has_data:
                 e.data = await entry(self, *args, **kwargs)
                 e.has_data = True
 
-            return cast(_T, e.data)
+        return cast(_T, e.data)
 
     @_logger.call
     async def remove_cache_entry(
