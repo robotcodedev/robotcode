@@ -577,11 +577,12 @@ class Debugger:
                 self,
                 OutputEvent(
                     body=OutputEventBody(
-                        output=f"{(type +' ') if type else ''}{name}\n",
+                        output=f"\u001b[38;5;14m{(type +' ') if type else ''}\u001b[0m{name}\n",
                         category=OutputCategory.CONSOLE,
-                        group=OutputGroup.STARTCOLLAPSED,
+                        group=OutputGroup.START,
                         source=Source(path=source) if source else None,
-                        line=line_no,
+                        line=line_no if source is not None else None,
+                        column=0 if source is not None else None,
                     )
                 ),
             )
@@ -906,9 +907,21 @@ class Debugger:
 
         return StackTraceResult(frames, len(self.stack_frames))
 
+    MESSAGE_COLORS = {
+        "INFO": "\u001b[38;5;2m",
+        "WARN": "\u001b[38;5;3m",
+        "ERROR": "\u001b[38;5;1m",
+        "TRACE": "\u001b[38;5;4m",
+        "FAIL": "\u001b[38;5;5m\u001b[1m",
+        "DEBUG": "\u001b[38;5;8m",
+    }
+
     def log_message(self, message: Dict[str, Any]) -> None:
+        level = message["level"]
+        msg = message["message"]
+
         if message["level"] == "FAIL":
-            self.last_fail_message = message["message"]
+            self.last_fail_message = msg
 
         current_frame = self.full_stack_frames[0] if self.full_stack_frames else None
         source = Source(path=current_frame.source) if current_frame else None
@@ -919,7 +932,8 @@ class Debugger:
                 self,
                 OutputEvent(
                     body=OutputEventBody(
-                        output="LOG> {timestamp} {level}: {message}\n".format(**message),
+                        output=f"\u001b[38;5;237m{message['timestamp'].split(' ', 1)[1]}"
+                        f" {self.MESSAGE_COLORS.get(level, '')}{level}\u001b[0m: {msg}\n",
                         category=OutputCategory.CONSOLE,
                         source=source,
                         line=line if line is not None else 0,
@@ -930,11 +944,15 @@ class Debugger:
 
     def message(self, message: Dict[str, Any]) -> None:
         if self.output_messages:
+            level = message["level"]
+            msg = message["message"]
+
             self.send_event(
                 self,
                 OutputEvent(
                     body=OutputEventBody(
-                        output="MSG> {timestamp} {level}: {message}\n".format(**message),
+                        output=f"\u001b[38;5;237m{message['timestamp'].split(' ', 1)[1]}"
+                        f" {self.MESSAGE_COLORS.get(level, '')}{level}\u001b[0m: {msg}\n",
                         category="messages",
                     )
                 ),
