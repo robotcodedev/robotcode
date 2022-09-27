@@ -129,6 +129,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
         self.parent.on_initialized.add(self.initialized)
 
+        self.parent.documents.did_close.add(self.on_did_close)
+
         self.in_get_workspace_diagnostics = Event(True)
 
     async def initialized(self, sender: Any) -> None:
@@ -238,6 +240,36 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         self.get_diagnostics_data(document).force = True
         if refresh and document.opened_in_editor:
             await self.refresh()
+
+    @_logger.call
+    async def on_did_close(self, sender: Any, document: TextDocument) -> None:
+        if await self.get_diagnostics_mode(document.uri) == DiagnosticsMode.WORKSPACE:
+            return
+
+        try:
+            data = self.get_diagnostics_data(document)
+            if data.task is not None and not data.task.done():
+                self._logger.debug(lambda: f"try to cancel diagnostics for {document}")
+
+                e = threading.Event()
+
+                def done(t: asyncio.Task[Any]) -> None:
+                    e.set()
+
+                data.task.add_done_callback(done)
+                data.task.get_loop().call_soon_threadsafe(data.task.cancel)
+
+                e.wait(120)
+
+        finally:
+            self.parent.send_notification(
+                "textDocument/publishDiagnostics",
+                PublishDiagnosticsParams(
+                    uri=document.document_uri,
+                    version=document._version,
+                    diagnostics=[],
+                ),
+            )
 
     @_logger.call
     async def _get_diagnostics_for_document(self, document: TextDocument, data: DiagnosticsData) -> None:
