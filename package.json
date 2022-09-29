@@ -542,6 +542,16 @@
             "type": "boolean",
             "default": false,
             "description": "Enable/disable references CodeLens for RobotFramework files."
+          },
+          "robotcode.documentationServer.startPort": {
+            "type": "integer",
+            "default": 3100,
+            "description": "Defines the start port for the documentation server. If the port is free, this port is used, otherwise a free port is searched for."
+          },
+          "robotcode.documentationServer.endPort": {
+            "type": "integer",
+            "default": 3199,
+            "description": "Defines the endport for searching a free port for the documentation server."
           }
         }
       }

@@ -82,6 +82,13 @@ class AnalysisConfig(ConfigBase):
     find_unused_references: bool = False
 
 
+@config_section("robotcode.documentationServer")
+@dataclass
+class DocumentationServerConfig(ConfigBase):
+    start_port: int = 3100
+    end_port: int = 3199
+
+
 @config_section("robotcode")
 @dataclass
 class RobotCodeConfig(ConfigBase):
@@ -90,3 +97,4 @@ class RobotCodeConfig(ConfigBase):
     syntax: SyntaxConfig = field(default_factory=SyntaxConfig)
     workspace: WorkspaceConfig = field(default_factory=WorkspaceConfig)
     analysis: AnalysisConfig = field(default_factory=AnalysisConfig)
+    documentation_server: DocumentationServerConfig = field(default_factory=DocumentationServerConfig)

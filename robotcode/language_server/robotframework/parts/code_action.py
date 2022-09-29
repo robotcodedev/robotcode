@@ -22,6 +22,7 @@ from ...common.lsp_types import (
     Range,
 )
 from ...common.text_document import TextDocument
+from ..configuration import DocumentationServerConfig
 from ..diagnostics.library_doc import (
     get_library_doc,
     get_robot_library_html_doc_str,
@@ -174,7 +175,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self._documentation_server_port = 0
 
     async def initialized(self, sender: Any) -> None:
-        self._ensure_http_server_started()
+        await self._ensure_http_server_started()
 
     async def shutdown(self, sender: Any) -> None:
         with self._documentation_server_lock:
@@ -182,8 +183,11 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 self._documentation_server.shutdown()
                 self._documentation_server = None
 
-    def _run_server(self) -> None:
-        self._documentation_server_port = find_free_port(3100, 3200)
+    def _run_server(self, start_port: int, end_port: int) -> None:
+
+        self._documentation_server_port = find_free_port(start_port, end_port)
+
+        self._logger.info(f"Start documentation server on port {self._documentation_server_port}")
 
         with DualStackServer(("127.0.0.1", self._documentation_server_port), LibDocRequestHandler) as server:
             self._documentation_server = server
@@ -193,10 +197,17 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 self._documentation_server = None
                 raise
 
-    def _ensure_http_server_started(self) -> None:
+    async def _ensure_http_server_started(self) -> None:
+        config = await self.parent.workspace.get_configuration(DocumentationServerConfig)
+
         with self._documentation_server_lock:
             if self._documentation_server is None:
-                self._server_thread = Thread(name="documentation_server", target=self._run_server, daemon=True)
+                self._server_thread = Thread(
+                    name="documentation_server",
+                    target=self._run_server,
+                    args=(config.start_port, config.end_port),
+                    daemon=True,
+                )
                 self._server_thread.start()
 
     @language_id("robotframework")
@@ -221,7 +232,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         node = await get_node_at_position(model, range.start)
 
-        self._ensure_http_server_started()
+        await self._ensure_http_server_started()
 
         if isinstance(node, (LibraryImport, ResourceImport)):
 

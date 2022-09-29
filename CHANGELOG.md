@@ -2,8 +2,10 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Documentation server now works also in remote and web versions of VSCode like [gitpod.io](https://gitpod.io/) and [GitHub CodeSpaces](https://github.com/features/codespaces)
+
 ##  0.13.13
 
 - add colors to debug console
