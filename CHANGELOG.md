@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 - none so far
+##  0.13.15
+
+- none so far
+
 ##  0.13.14
 
 - Documentation server now works also in remote and web versions of VSCode like [gitpod.io](https://gitpod.io/) and [GitHub CodeSpaces](https://github.com/features/codespaces)
