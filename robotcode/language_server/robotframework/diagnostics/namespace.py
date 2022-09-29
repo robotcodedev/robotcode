@@ -600,6 +600,8 @@ class Namespace:
         self.imports_manager.resources_changed.add(self.resources_changed)
         self.imports_manager.variables_changed.add(self.variables_changed)
 
+        self._in_initialize = False
+
     @async_event
     async def has_invalidated(sender) -> None:  # NOSONAR
         ...
@@ -678,6 +680,7 @@ class Namespace:
             self._variable_references = {}
 
             self._finder = None
+            self._in_initialize = False
 
             await self._reset_global_variables()
 
@@ -767,6 +770,12 @@ class Namespace:
             imports_changed = False
             async with self._initialize_lock:
                 if not self._initialized:
+
+                    if self._in_initialize:
+                        self._logger.critical(f"already initialized {self.document}")
+
+                    self._in_initialize = True
+
                     try:
                         self._logger.debug(f"ensure_initialized -> initialize {self.document}")
 
@@ -834,6 +843,8 @@ class Namespace:
 
                         await self.invalidate()
                         raise
+                    finally:
+                        self._in_initialize = False
 
             if self._initialized:
                 await self.has_initialized(self)

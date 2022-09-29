@@ -583,7 +583,7 @@ class BoundedSemaphore(Semaphore):
         await super().release()
 
 
-class NewLock:
+class Lock:
     def __init__(self) -> None:
         self._block = BoundedSemaphore(value=1)
 
@@ -609,7 +609,7 @@ class NewLock:
         await self.release()
 
 
-class Lock:
+class OldLock:
     """Threadsafe version of an async Lock."""
 
     def __init__(self) -> None:
@@ -638,7 +638,6 @@ class Lock:
         while not b:
             await asyncio.sleep(0)
             b = self._lock.acquire(blocking=False)
-
         try:
             yield None
         finally:
