@@ -1172,7 +1172,7 @@ class Namespace:
 
             return result, variables
 
-        current_time = time.time()
+        current_time = time.monotonic()
         self._logger.debug(lambda: f"start imports for {self.document if top_level else source}")
         try:
 
@@ -1335,7 +1335,7 @@ class Namespace:
         finally:
             self._logger.debug(
                 lambda: "end import imports for "
-                + f"{self.document if top_level else source} in {time.time() - current_time}s"
+                + f"{self.document if top_level else source} in {time.monotonic() - current_time}s"
             )
 
     async def _import_default_libraries(self, variables: Optional[Dict[str, Any]] = None) -> None:

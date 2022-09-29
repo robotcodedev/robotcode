@@ -451,12 +451,12 @@ class LoggingDescriptor:
                     start_time: float = 0
                     end_time: float = 0
                     if timed:
-                        start_time = time.time()
+                        start_time = time.monotonic()
 
                     result = real_func(*real_args, **wrapper_kwargs)
 
                     if timed:
-                        end_time = time.time()
+                        end_time = time.monotonic()
 
                 except BaseException as e:
                     ex = e

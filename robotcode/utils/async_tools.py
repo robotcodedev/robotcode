@@ -396,7 +396,7 @@ async def async_lock(lock: threading.RLock) -> AsyncGenerator[None, None]:
     start_time = time.monotonic()
     locked = lock.acquire(blocking=False)
     while not locked:
-        if time.monotonic() - start_time >= 20:
+        if time.monotonic() - start_time >= 1800:
             raise TimeoutError("Timeout waiting for lock")
 
         await asyncio.sleep(0.001)

@@ -25,6 +25,11 @@ def main() -> None:
             re.compile(r"(\!\[.*?\]\()(\.)(/[^\)]*?)(\))"),
             rf"""\g<1>{tag_base}\g<3>\g<4>""",
         )
+        replace_in_file(
+            Path("CHANGELOG.md"),
+            re.compile(r"(\!\[.*?\]\()(\.)(/[^\)]*?)(\))"),
+            rf"""\g<1>{tag_base}\g<3>\g<4>""",
+        )
 
 
 if __name__ == "__main__":
