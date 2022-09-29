@@ -1127,6 +1127,11 @@ def get_robot_library_html_doc_str(name: str, working_dir: str = ".", base_dir: 
 
     _update_env(working_dir)
 
+    if Path(name).suffix.lower() in ALLOWED_RESOURCE_FILE_EXTENSIONS:
+        name = find_file(name, working_dir, base_dir)
+    elif Path(name).suffix.lower() in ALLOWED_LIBRARY_FILE_EXTENSIONS:
+        name = find_file(name, working_dir, base_dir, file_type="Library")
+
     robot_libdoc = LibraryDocumentation(name)
     robot_libdoc.convert_docs_to_html()
     with io.StringIO() as output:
