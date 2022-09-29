@@ -15,9 +15,18 @@ def main() -> None:
 
     vsix_path = Path(dist_path, f"robotcode-{current_version}.vsix")
 
-    run(f"npx vsce publish -i {vsix_path}", shell=True)
-    run(f"npx ovsx publish {vsix_path}", shell=True)
-    run(f"poetry publish --username {os.environ['PYPI_USERNAME']} --password {os.environ['PYPI_PASSWORD']}", shell=True)
+    print("publish to vscode marketplace...")
+    run(f"npx vsce publish -i {vsix_path}", shell=True, timeout=600)
+
+    print("publish to openVSX...")
+    run(f"npx ovsx publish {vsix_path}", shell=True, timeout=600)
+
+    print("publish to PyPi...")
+    run(
+        f"poetry publish --username {os.environ['PYPI_USERNAME']} --password {os.environ['PYPI_PASSWORD']}",
+        shell=True,
+        timeout=600,
+    )
 
 
 if __name__ == "__main__":
