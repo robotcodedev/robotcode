@@ -434,8 +434,14 @@ class KeywordDoc(SourceEntity):
             result += "\n|:--- | --:|:--|:---|"
 
             for a in self.args:
+                prefix = ""
+                if a.kind == KeywordArgumentKind.VAR_POSITIONAL:
+                    prefix = "*"
+                elif a.kind == KeywordArgumentKind.VAR_NAMED:
+                    prefix = "**"
+
                 result += (
-                    f"\n| `{str(a.name)}`"
+                    f"\n| `{prefix}{str(a.name)}`"
                     f"| {'=' if a.default_value is not None else ''}"
                     f"| {f'`{str(a.default_value)}`' if a.default_value else ''}"
                     f"| {' or '.join(f'`<{s}>`' for s in a.types) if a.types is not None else ''} |"
