@@ -1,8 +1,21 @@
 import os
+import subprocess
+import sys
 from pathlib import Path
-from subprocess import run
+from typing import Any
 
 from scripts.tools import get_version
+
+
+def run(title: str, *args: Any, **kwargs: Any) -> None:
+    try:
+        print(f"running {title}")
+        subprocess.run(*args, **kwargs)
+    except (SystemExit, KeyboardInterrupt):
+        raise
+    except BaseException as e:
+        print(f"{title} failed: {e}", file=sys.stderr)
+        pass
 
 
 def main() -> None:
@@ -15,14 +28,10 @@ def main() -> None:
 
     vsix_path = Path(dist_path, f"robotcode-{current_version}.vsix")
 
-    print("publish to vscode marketplace...")
-    run(f"npx vsce publish -i {vsix_path}", shell=True, timeout=600)
-
-    print("publish to openVSX...")
-    run(f"npx ovsx publish {vsix_path}", shell=True, timeout=600)
-
-    print("publish to PyPi...")
+    run("npx vsce publish", f"npx vsce publish -i {vsix_path}", shell=True, timeout=600)
+    run("npx ovsx publish", f"npx ovsx publish {vsix_path}", shell=True, timeout=600)
     run(
+        "poetry publish",
         f"poetry publish --username {os.environ['PYPI_USERNAME']} --password {os.environ['PYPI_PASSWORD']}",
         shell=True,
         timeout=600,
