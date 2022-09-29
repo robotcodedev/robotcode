@@ -6,19 +6,23 @@ import threading
 import traceback
 import urllib.parse
 from concurrent.futures import ProcessPoolExecutor
+from dataclasses import dataclass
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
 from urllib.parse import parse_qs, urlparse
 
+from ....jsonrpc2.protocol import rpc_method
 from ....utils.logging import LoggingDescriptor
 from ....utils.net import find_free_port
+from ....utils.uri import Uri
 from ...common.decorators import code_action_kinds, language_id
 from ...common.lsp_types import (
     CodeAction,
     CodeActionContext,
     CodeActionKinds,
     Command,
+    Model,
     Range,
 )
 from ...common.text_document import TextDocument
@@ -38,6 +42,12 @@ if TYPE_CHECKING:
 from string import Template
 
 from .protocol_part import RobotLanguageServerProtocolPart
+
+
+@dataclass(repr=False)
+class ConvertUriParams(Model):
+    uri: str
+
 
 HTML_ERROR_TEMPLATE = Template(
     """\n
@@ -337,3 +347,17 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         url = f"{base_url}" f"/?&{params}" f"{f'#{target}' if target else ''}"
 
         return url
+
+    @rpc_method(name="robot/documentationServer/convertUri", param_type=ConvertUriParams)
+    @_logger.call
+    async def _convert_uri(self, uri: str, *args: Any, **kwargs: Any) -> Optional[str]:
+        real_uri = Uri(uri)
+
+        folder = self.parent.workspace.get_workspace_folder(real_uri)
+
+        if folder:
+            path = real_uri.to_path().relative_to(folder.uri.to_path())
+
+            return f"http://localhost:{self._documentation_server_port}/{path}"
+
+        return None

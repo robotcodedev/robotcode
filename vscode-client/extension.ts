@@ -60,26 +60,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         return [];
       },
       async handleTerminalLink(link: TerminalLink) {
-        let livePreviewResult = false;
-        try {
-          const ex = vscode.extensions.getExtension("ms-vscode.live-server");
-          if (ex) {
-            await ex.activate();
-            if ((await vscode.commands.getCommands()).includes("livePreview.start.preview.atFile")) {
-              await vscode.commands.executeCommand("livePreview.start.preview.atFile", vscode.Uri.file(link.path));
-              livePreviewResult = true;
-            }
-          }
-        } catch {
-          livePreviewResult = false;
-        }
-
-        if (!livePreviewResult) {
-          vscode.env.openExternal(vscode.Uri.file(link.path)).then(
-            () => undefined,
-            () => undefined
-          );
-        }
+        await languageClientManger.openUriInDocumentationView(vscode.Uri.file(link.path));
       },
     })
   );

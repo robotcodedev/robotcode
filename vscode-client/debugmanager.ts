@@ -8,29 +8,6 @@ import { CONFIG_SECTION } from "./config";
 import { LanguageClientsManager, toVsCodeRange } from "./languageclientsmanger";
 import { WeakValueSet } from "./utils";
 
-async function openPreviewOrExternal(uri: vscode.Uri) {
-  let livePreviewResult = false;
-  try {
-    const ex = vscode.extensions.getExtension("ms-vscode.live-server");
-    if (ex) {
-      await ex.activate();
-      if ((await vscode.commands.getCommands()).includes("livePreview.start.preview.atFile")) {
-        await vscode.commands.executeCommand("livePreview.start.preview.atFile", uri);
-        livePreviewResult = true;
-      }
-    }
-  } catch {
-    livePreviewResult = false;
-  }
-
-  if (!livePreviewResult) {
-    vscode.env.openExternal(uri).then(
-      () => undefined,
-      () => undefined
-    );
-  }
-}
-
 const DEBUG_ADAPTER_DEFAULT_TCP_PORT = 6611;
 const DEBUG_ADAPTER_DEFAULT_HOST = "127.0.0.1";
 
@@ -285,12 +262,7 @@ export class DebugManager {
               break;
             }
             case "robotExited": {
-              await DebugManager.OnRobotExited(
-                event.session,
-                event.body.outputFile,
-                event.body.logFile,
-                event.body.reportFile
-              );
+              await this.OnRobotExited(event.session, event.body.outputFile, event.body.logFile, event.body.reportFile);
               break;
             }
           }
@@ -446,16 +418,16 @@ export class DebugManager {
     }
   }
 
-  private static async OnRobotExited(
+  private async OnRobotExited(
     session: vscode.DebugSession,
     _outputFile?: string,
     logFile?: string,
     reportFile?: string
   ): Promise<void> {
     if (session.configuration?.openOutputAfterRun === "report" && reportFile) {
-      await openPreviewOrExternal(vscode.Uri.file(reportFile));
+      await this.languageClientsManager.openUriInDocumentationView(vscode.Uri.file(reportFile));
     } else if (session.configuration?.openOutputAfterRun === "log" && logFile) {
-      await openPreviewOrExternal(vscode.Uri.file(logFile));
+      await this.languageClientsManager.openUriInDocumentationView(vscode.Uri.file(logFile));
     }
   }
 }

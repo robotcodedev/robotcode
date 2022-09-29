@@ -618,6 +618,45 @@ export class LanguageClientsManager {
     );
   }
 
+  public async openUriInDocumentationView(uri: vscode.Uri): Promise<void> {
+    const doc_uri = await this.convertToDocumententationUri(uri);
+    if (doc_uri) {
+      await vscode.commands.executeCommand("robotcode.showDocumentation", doc_uri.toString(true));
+    } else {
+      vscode.env.openExternal(uri).then(
+        () => undefined,
+        () => undefined
+      );
+    }
+  }
+
+  public async convertToDocumententationUri(
+    uri: vscode.Uri,
+    token?: vscode.CancellationToken
+  ): Promise<vscode.Uri | undefined> {
+    const client = await this.getLanguageClientForResource(uri);
+
+    if (!client) return;
+
+    return (
+      (token
+        ? vscode.Uri.parse(
+            await client.sendRequest<string>(
+              "robot/documentationServer/convertUri",
+              {
+                uri: uri.toString(),
+              },
+              token
+            )
+          )
+        : vscode.Uri.parse(
+            await client.sendRequest<string>("robot/documentationServer/convertUri", {
+              uri: uri.toString(),
+            })
+          )) ?? undefined
+    );
+  }
+
   public async getEvaluatableExpression(
     document: vscode.TextDocument,
     position: Position,
