@@ -827,6 +827,11 @@ class Namespace:
                     except BaseException as e:
                         if not isinstance(e, asyncio.CancelledError):
                             self._logger.exception(e, level=logging.DEBUG)
+
+                        if self.document is not None:
+                            self.document.remove_data(Namespace)
+                            self.document.remove_data(Namespace.DataEntry)
+
                         await self.invalidate()
                         raise
 

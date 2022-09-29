@@ -108,8 +108,8 @@ class Uri(Mapping[str, str]):
         invalid characters and semantics. Will *not* look at the scheme of this URI.
         """
         # scheme://netloc/path;parameters?query#fragment
-        netloc = parse.unquote(self._parts.netloc)
-        path = parse.unquote(self._parts.path)
+        netloc = parse.unquote(self.netloc)
+        path = parse.unquote(self.path)
 
         if self._parts.scheme != "file":
             raise InvalidUriError(f"Invalid URI scheme '{str(self)}'.")

@@ -134,7 +134,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
     ) -> TextDocument:
         uri = Uri.from_path(path).normalized()
 
-        result = await self.parent.documents.get(uri)
+        result = await self.get(uri)
         if result is not None:
             return result
 

@@ -236,6 +236,9 @@ class TextDocument:
     def set_data(self, key: Any, data: Any) -> None:
         self._data[key] = data
 
+    def remove_data(self, key: Any) -> None:
+        self._data.pop(key)
+
     def get_data(self, key: Any, default: Optional[_T] = None) -> _T:
         return self._data.get(key, default)
 

@@ -242,6 +242,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             await self.refresh()
 
     @_logger.call
+    @threaded()
     async def on_did_close(self, sender: Any, document: TextDocument) -> None:
         if await self.get_diagnostics_mode(document.uri) == DiagnosticsMode.WORKSPACE:
             return

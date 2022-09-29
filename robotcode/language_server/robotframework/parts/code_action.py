@@ -4,6 +4,7 @@ import contextlib
 import socket
 import threading
 import traceback
+import urllib.parse
 from concurrent.futures import ProcessPoolExecutor
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
@@ -11,7 +12,7 @@ from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
 from urllib.parse import parse_qs, urlparse
 
 from ....utils.logging import LoggingDescriptor
-from ....utils.net import check_free_port
+from ....utils.net import find_free_port
 from ...common.decorators import code_action_kinds, language_id
 from ...common.lsp_types import (
     CodeAction,
@@ -182,8 +183,9 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 self._documentation_server = None
 
     def _run_server(self) -> None:
-        self._documentation_server_port = check_free_port(3100)
-        with DualStackServer(("", self._documentation_server_port), LibDocRequestHandler) as server:
+        self._documentation_server_port = find_free_port(3100, 3200)
+
+        with DualStackServer(("127.0.0.1", self._documentation_server_port), LibDocRequestHandler) as server:
             self._documentation_server = server
             try:
                 server.serve_forever()
@@ -316,14 +318,11 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         except BaseException:
             pass
 
-        url_args = f"&args={'::'.join(args)}" if args else ""
+        url_args = "::".join(args) if args else ""
 
-        url = (
-            f"http://localhost:{self._documentation_server_port}"
-            f"/?name={name}"
-            f"{url_args}"
-            f"&basedir={base_dir}"
-            f"{'#{target}' if target else ''}"
-        )
+        base_url = f"http://localhost:{self._documentation_server_port}"
+        params = urllib.parse.urlencode({"name": name, "args": url_args, "basedir": base_dir})
+
+        url = f"{base_url}" f"/?&{params}" f"{f'#{target}' if target else ''}"
 
         return url

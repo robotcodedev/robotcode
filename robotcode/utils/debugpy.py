@@ -1,5 +1,5 @@
 from .logging import LoggingDescriptor
-from .net import check_free_port
+from .net import find_free_port
 
 _logger = LoggingDescriptor(name=__name__)
 
@@ -38,7 +38,7 @@ def start_debugpy(port: int, wait_for_client: bool) -> bool:
     if is_debugpy_installed():
         import debugpy
 
-        real_port = check_free_port(port)
+        real_port = find_free_port(port)
         if real_port != port:
             _logger.warning(f"start debugpy session on port {real_port}")
         debugpy.listen(real_port)

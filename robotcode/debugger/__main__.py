@@ -86,10 +86,10 @@ async def start_debugpy_async(
 ) -> None:
     from ..utils.async_tools import run_coroutine_from_thread_async
     from ..utils.debugpy import enable_debugpy, wait_for_debugpy_connected
-    from ..utils.net import check_free_port
+    from ..utils.net import find_free_port
     from .dap_types import Event
 
-    port = check_free_port(debugpy_port)
+    port = find_free_port(debugpy_port)
     if port != debugpy_port:
         _logger.warning(f"start debugpy session on port {port}")
 
