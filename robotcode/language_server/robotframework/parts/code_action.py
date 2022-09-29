@@ -229,6 +229,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         from robot.parsing.lexer import Token as RobotToken
         from robot.parsing.model.statements import (
+            Fixture,
             KeywordCall,
             LibraryImport,
             ResourceImport,
@@ -262,10 +263,10 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 )
             ]
 
-        if isinstance(node, (KeywordCall)):
+        if isinstance(node, (KeywordCall, Fixture)):
             result = await self.get_keyworddoc_and_token_from_position(
-                node.keyword,
-                cast(Token, node.get_token(RobotToken.KEYWORD)),
+                node.keyword if isinstance(node, KeywordCall) else node.name,
+                cast(Token, node.get_token(RobotToken.KEYWORD if isinstance(node, KeywordCall) else RobotToken.NAME)),
                 [cast(Token, t) for t in node.get_tokens(RobotToken.ARGUMENT)],
                 namespace,
                 range.start,
