@@ -359,6 +359,6 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         if folder:
             path = real_uri.to_path().relative_to(folder.uri.to_path())
 
-            return f"http://localhost:{self._documentation_server_port}/{path}"
+            return f"http://localhost:{self._documentation_server_port}/{path.as_posix()}"
 
         return None

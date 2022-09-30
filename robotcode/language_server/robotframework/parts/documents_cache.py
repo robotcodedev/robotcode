@@ -222,7 +222,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         get: Callable[[str], List[Token]],
     ) -> List[Token]:
 
-        return get(await document.text())
+        return get(document.text)
 
     async def get_resource_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
         if data_only:

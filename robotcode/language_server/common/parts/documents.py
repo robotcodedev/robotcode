@@ -258,7 +258,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
 
                 self._documents[uri] = document
             else:
-                text_changed = await document.text() != normalized_text
+                text_changed = document.text != normalized_text
                 if text_changed:
                     await document.apply_full_change(text_document.version, normalized_text)
 
@@ -326,7 +326,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
             if text is not None:
                 normalized_text = self._normalize_line_endings(text)
 
-                text_changed = await document.text() != normalized_text
+                text_changed = document.text != normalized_text
                 if text_changed:
                     await document.save(None, text)
                     create_sub_task(
