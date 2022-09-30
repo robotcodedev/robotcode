@@ -261,7 +261,7 @@ put this to the `settings.json`
             }
         }
     ]
-}
+},
 
 "editor.semanticTokenColorCustomizations": {
     "rules": {

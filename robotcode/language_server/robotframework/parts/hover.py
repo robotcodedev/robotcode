@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import reprlib
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -113,7 +114,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
                 if variable.has_value or variable.resolvable:
                     try:
-                        value = repr(
+                        value = reprlib.repr(
                             await namespace.imports_manager.resolve_variable(
                                 variable.name,
                                 str(document.uri.to_path().parent),

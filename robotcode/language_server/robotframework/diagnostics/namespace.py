@@ -810,6 +810,7 @@ class Namespace:
                             self._diagnostics = data_entry.diagnostics.copy()
                             self._import_entries = data_entry.import_entries.copy()
                         else:
+
                             variables = await self.get_resolvable_variables()
 
                             await self._import_default_libraries(variables)

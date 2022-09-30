@@ -2,8 +2,11 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Support for simple values (number, bool, str) from variable and yaml files
+- Shortened representation of variable values in hover
+
 ##  0.13.16
 
 - none so far

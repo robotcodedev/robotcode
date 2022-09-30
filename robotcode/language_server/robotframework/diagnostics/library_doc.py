@@ -1029,8 +1029,12 @@ def resolve_robot_variables(
 
     if variables is not None:
 
-        vars = [_Variable(k, v) for k, v in variables.items() if v is not None]
+        vars = [_Variable(k, v) for k, v in variables.items() if v is not None and not isinstance(v, NativeValue)]
         result.set_from_variable_table(vars)
+
+        for k2, v2 in variables.items():
+            if isinstance(v2, NativeValue):
+                result[k2] = v2.value
 
         result.resolve_delayed()
 
@@ -1455,6 +1459,20 @@ def find_variables(
         )
 
 
+# @dataclass
+class NativeValue:
+    __slots__ = ["value"]
+
+    def __init__(self, value: Any) -> None:
+        self.value = value
+
+    def __repr__(self) -> str:
+        return repr(self.value)
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+
 def get_variables_doc(
     name: str,
     args: Optional[Tuple[Any, ...]] = None,
@@ -1513,9 +1531,19 @@ def get_variables_doc(
 
             vars: List[VariableDefinition] = [
                 ImportedVariableDefinition(
-                    1, 0, 1, 0, source or (module_spec.origin if module_spec is not None else None) or "", var[0], None
+                    1,
+                    0,
+                    1,
+                    0,
+                    source or (module_spec.origin if module_spec is not None else None) or "",
+                    name,
+                    None,
+                    value=NativeValue(value)
+                    if isinstance(value, (int, float, bool, str, set, tuple, dict, list))
+                    else None,
+                    has_value=isinstance(value, (int, float, bool, str, set, tuple, dict, list)),
                 )
-                for var in importer.import_variables(import_name, args)
+                for name, value in importer.import_variables(import_name, args)
             ]
 
             return VariablesDoc(

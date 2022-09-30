@@ -4,6 +4,7 @@ import ast
 import asyncio
 import os
 import sys
+import threading
 import weakref
 from abc import ABC, abstractmethod
 from collections import OrderedDict
@@ -473,9 +474,12 @@ class ImportsManager:
         self.parent_protocol.documents.did_create_uri.add(self._do_imports_changed)
         self.parent_protocol.documents.did_change.add(self.resource_document_changed)
         self._command_line_variables: Optional[List[VariableDefinition]] = None
+        self._command_line_variables_lock = Lock()
 
         self._python_path: Optional[List[str]] = None
+        self._python_path_lock = threading.RLock()
         self._environment: Optional[Mapping[str, str]] = None
+        self._environment_lock = threading.RLock()
 
         self._library_files_cache = AsyncSimpleLRUCache()
         self._resource_files_cache = AsyncSimpleLRUCache()
@@ -483,57 +487,61 @@ class ImportsManager:
 
     @property
     def environment(self) -> Mapping[str, str]:
-        if self._environment is None:
-            self._environment = dict(os.environ)
+        with self._environment_lock:
+            if self._environment is None:
+                self._environment = dict(os.environ)
 
-            self._environment.update(self.config.env)
+                self._environment.update(self.config.env)
 
-        return self._environment
+            return self._environment
 
     @property
     def python_path(self) -> List[str]:
-        if self._python_path is None:
-            self._python_path = sys.path
+        with self._python_path_lock:
+            if self._python_path is None:
+                self._python_path = sys.path
 
-            file = Path(__file__).resolve()
-            top = file.parents[3]
-            for p in filter(lambda v: path_is_relative_to(v, top), sys.path.copy()):
-                self._python_path.remove(p)
+                file = Path(__file__).resolve()
+                top = file.parents[3]
+                for p in filter(lambda v: path_is_relative_to(v, top), sys.path.copy()):
+                    self._python_path.remove(p)
 
-        for p in self.config.python_path:
-            absolute_path = str(Path(p).absolute())
-            if absolute_path not in self._python_path:
-                self._python_path.insert(0, absolute_path)
+            for p in self.config.python_path:
+                absolute_path = str(Path(p).absolute())
+                if absolute_path not in self._python_path:
+                    self._python_path.insert(0, absolute_path)
 
-        return self._python_path or []
+            return self._python_path
 
     @_logger.call
     async def get_command_line_variables(self) -> List[VariableDefinition]:
         from robot.utils.text import split_args_from_name_or_path
 
-        if self._command_line_variables is None:
-            if self.config is None:
-                self._command_line_variables = []
-            else:
-                self._command_line_variables = [
-                    CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=(v,))
-                    for k, v in self.config.variables.items()
-                ]
-                for variable_file in self.config.variable_files:
-                    name, args = split_args_from_name_or_path(variable_file)
-                    try:
-                        lib_doc = await self.get_libdoc_for_variables_import(
-                            name, tuple(args), str(self.folder.to_path()), self
-                        )
-                        if lib_doc is not None:
-                            self._command_line_variables += lib_doc.variables
+        async with self._command_line_variables_lock:
+            if self._command_line_variables is None:
 
-                    except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                        raise
-                    except BaseException as e:
-                        self._logger.exception(e)
+                if self.config is None:
+                    self._command_line_variables = []
+                else:
+                    self._command_line_variables = [
+                        CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=(v,))
+                        for k, v in self.config.variables.items()
+                    ]
+                    for variable_file in self.config.variable_files:
+                        name, args = split_args_from_name_or_path(variable_file)
+                        try:
+                            lib_doc = await self.get_libdoc_for_variables_import(
+                                name, tuple(args), str(self.folder.to_path()), self
+                            )
+                            if lib_doc is not None:
+                                self._command_line_variables += lib_doc.variables
 
-        return self._command_line_variables
+                        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                            raise
+                        except BaseException as e:
+                            self._logger.exception(e)
+
+            return self._command_line_variables
 
     @async_tasking_event
     async def libraries_changed(sender, libraries: List[LibraryDoc]) -> None:  # NOSONAR

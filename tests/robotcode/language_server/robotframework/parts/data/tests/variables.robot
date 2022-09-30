@@ -1,7 +1,8 @@
 *** Settings ***
 Suite Teardown      Run Keywords    Log    ${SUITE STATUS}    AND    Log    ${SUITE MESSAGE} ${TEST NAME}   AND    Log Variables
 Test Setup    Log    ${TEST NAME}
-
+Variables    myvariables.py
+Variables    testvars.yml
 
 *** Variables ***
 ${pre_full_name}    ${PREV TEST NAME}_${PREV TEST STATUS}
@@ -181,3 +182,5 @@ a keyword with kwonly separator
 
 dummy
     a keyword with kwonly separator  a   scope=1  keywords=1
+
+*** Test Cases ***
