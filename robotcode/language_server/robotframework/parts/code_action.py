@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import socket
 import threading
@@ -33,7 +34,8 @@ from ..diagnostics.library_doc import (
     resolve_robot_variables,
 )
 from ..diagnostics.namespace import LibraryEntry, Namespace
-from ..utils.ast_utils import Token, get_node_at_position
+from ..utils.ast_utils import Token, get_node_at_position, range_from_token
+from ..utils.version import get_robot_version
 from .model_helper import ModelHelperMixin
 
 if TYPE_CHECKING:
@@ -240,10 +242,40 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             return None
 
         model = await self.parent.documents_cache.get_model(document, False)
-
         node = await get_node_at_position(model, range.start)
 
-        await self._ensure_http_server_started()
+        if get_robot_version() >= (5, 1):
+            from robot.conf.languages import En, Languages
+            from robot.parsing.model.statements import Config
+
+            if isinstance(node, Config):
+                for token in node.get_tokens(RobotToken.CONFIG):
+                    config, lang = token.value.split(":", 1)
+
+                    if config.lower() == "language" and lang and range.start in range_from_token(token):
+                        try:
+                            languages = Languages(lang)
+                            language = next((v for v in languages.languages if v is not En), None)
+                        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                            raise
+                        except BaseException:
+                            language = None
+
+                        if language is not None:
+
+                            return [
+                                CodeAction(
+                                    f"Translate Suite to {language.name}",
+                                    kind=CodeActionKinds.SOURCE + ".openDocumentation",
+                                    command=Command(
+                                        f"Translate Suite to {lang}",
+                                        "robotcode.translateSuite",
+                                        [document.document_uri, lang],
+                                    ),
+                                )
+                            ]
+                        else:
+                            return None
 
         if isinstance(node, (LibraryImport, ResourceImport)):
 

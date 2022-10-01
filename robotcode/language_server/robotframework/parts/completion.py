@@ -68,8 +68,8 @@ if TYPE_CHECKING:
 
 from .protocol_part import RobotLanguageServerProtocolPart
 
-DEFAULT_SECTIONS_STYLE = "*** {name}s ***"
-DEFAULT_SECTIONS_STYLE_NEW = "*** {name} ***"
+DEFAULT_HEADER_STYLE = "*** {name}s ***"
+DEFAULT_HEADER_STYLE_51 = "*** {name} ***"
 
 
 class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
@@ -81,13 +81,13 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         parent.completion.collect.add(self.collect)
         parent.completion.resolve.add(self.resolve)
 
-    async def get_section_style(self, document: TextDocument) -> str:
+    async def get_header_style(self, document: TextDocument) -> str:
         if (folder := self.parent.workspace.get_workspace_folder(document.uri)) is not None:
             config = await self.parent.workspace.get_configuration(SyntaxConfig, folder.uri)
-            if config.section_style is not None:
-                return config.section_style
+            if config.header_style is not None:
+                return config.header_style
 
-        return DEFAULT_SECTIONS_STYLE if get_robot_version() < (5, 1) else DEFAULT_SECTIONS_STYLE_NEW
+        return DEFAULT_HEADER_STYLE if get_robot_version() < (5, 1) else DEFAULT_HEADER_STYLE_51
 
     @language_id("robotframework")
     @trigger_characters(
@@ -117,7 +117,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         model = await self.parent.documents_cache.get_model(document, False)
 
         return await CompletionCollector(
-            self.parent, document, model, namespace, await self.get_section_style(document)
+            self.parent, document, model, namespace, await self.get_header_style(document)
         ).collect(
             position,
             context,
@@ -136,7 +136,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
                     model = await self.parent.documents_cache.get_model(document, False)
                     if namespace is not None:
                         return await CompletionCollector(
-                            self.parent, document, model, namespace, await self.get_section_style(document)
+                            self.parent, document, model, namespace, await self.get_header_style(document)
                         ).resolve(completion_item)
 
         return completion_item
@@ -147,7 +147,7 @@ _CompleteMethod = Callable[
     Awaitable[Optional[Optional[List[CompletionItem]]]],
 ]
 
-SECTIONS = ["Test Case", "Setting", "Variable", "Keyword", "Comment", "Task"]
+HEADERS = ["Test Case", "Setting", "Variable", "Keyword", "Comment", "Task"]
 
 
 __snippets: Optional[Dict[str, List[str]]] = None
@@ -230,10 +230,10 @@ class CompletionCollector(ModelHelperMixin):
         document: TextDocument,
         model: ast.AST,
         namespace: Namespace,
-        section_style: str,
+        header_style: str,
     ) -> None:
         self.parent = parent
-        self.section_style = section_style
+        self.header_style = header_style
         self.document = document
         self.model = model
         self.namespace = namespace
@@ -397,15 +397,15 @@ class CompletionCollector(ModelHelperMixin):
 
     async def create_headers_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
         if self.namespace.languages is None:
-            headers: Iterable[str] = SECTIONS
+            headers: Iterable[str] = HEADERS
         else:
-            headers = self.namespace.languages.headers.keys()
+            headers = itertools.chain(*(lang.headers for lang in self.namespace.languages))
 
         return [
             CompletionItem(
                 label=s[0],
                 kind=CompletionItemKind.CLASS,
-                detail="Section",
+                detail="Header",
                 # this is to get the english version in the documentation
                 documentation=self.namespace.languages.headers.get(s[1])
                 if self.namespace.languages is not None
@@ -419,7 +419,7 @@ class CompletionCollector(ModelHelperMixin):
                 if range is not None
                 else None,
             )
-            for s in ((self.section_style.format(name=k), k) for k in headers)
+            for s in ((self.header_style.format(name=k), k) for k in headers)
         ]
 
     async def create_environment_variables_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:

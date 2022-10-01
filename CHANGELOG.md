@@ -2,8 +2,11 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Correct naming for setting `robotcode.syntax.sectionStyle` to `robotcode.syntax.headerStyle`
+- Filter singular header forms for robotframework >= 6
+
 ##  0.13.18
 
 - none so far

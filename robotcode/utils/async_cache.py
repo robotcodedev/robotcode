@@ -31,9 +31,9 @@ class AsyncSimpleLRUCache:
 
     async def has(self, *args: Any, **kwargs: Any) -> bool:
         key = self._make_key(*args, **kwargs)
-        async with self.lock:
-            if key in self._cache:
-                return self._cache[key].has_data
+
+        if key in self._cache:
+            return self._cache[key].has_data
 
         return False
 
