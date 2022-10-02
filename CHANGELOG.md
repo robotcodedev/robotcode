@@ -2,7 +2,9 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
+## [Unreleased]
+- none so far
+##  0.13.19
 
 - Add a the setting `robotcode.completion.filterDefaultLanguage` to filter english language in completion, if there is another language defined for workspace or in file
 - Correct naming for setting `robotcode.syntax.sectionStyle` to `robotcode.completion.headerStyle`
