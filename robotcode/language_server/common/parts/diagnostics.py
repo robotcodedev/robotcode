@@ -288,7 +288,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
                 if isinstance(result_any, BaseException):
                     if not isinstance(result_any, asyncio.CancelledError):
-                        self._logger.exception(result_any)
+                        self._logger.exception(result_any, exc_info=result_any)
                 else:
                     result = cast(DiagnosticsResult, result_any)
 
