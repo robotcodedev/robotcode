@@ -11,6 +11,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Tuple,
     Union,
     cast,
 )
@@ -93,23 +94,28 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         return cast(Languages, RobotLanguages(result.languages))
 
-    async def build_languages_from_model(self, document: TextDocument, model: ast.AST) -> Optional[Languages]:
+    async def build_languages_from_model(
+        self, document: TextDocument, model: ast.AST
+    ) -> Tuple[Optional[Languages], Optional[Languages]]:
         if get_robot_version() < (5, 1):
-            return None
+            return (None, None)
 
         from robot.conf.languages import Languages as RobotLanguages
         from robot.parsing.model.blocks import File
 
         workspace_langs = await self.get_workspace_languages(document)
 
-        return cast(
-            Languages,
-            RobotLanguages(
-                [
-                    *(workspace_langs.languages if workspace_langs else []),
-                    *(model.languages if isinstance(model, File) else []),
-                ]
+        return (
+            cast(
+                Languages,
+                RobotLanguages(
+                    [
+                        *(workspace_langs.languages if workspace_langs else []),
+                        *(model.languages if isinstance(model, File) else []),
+                    ]
+                ),
             ),
+            workspace_langs,
         )
 
     async def get_document_type(self, document: TextDocument) -> DocumentType:
@@ -405,9 +411,11 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         imports_manager = await self.get_imports_manager(document)
 
-        languages = await self.build_languages_from_model(document, model)
+        languages, workspace_languages = await self.build_languages_from_model(document, model)
 
-        result = Namespace(imports_manager, model, str(document.uri.to_path()), document, document_type, languages)
+        result = Namespace(
+            imports_manager, model, str(document.uri.to_path()), document, document_type, languages, workspace_languages
+        )
         result.has_invalidated.add(self.__invalidate_namespace)
         result.has_imports_changed.add(self.__invalidate_namespace)
 

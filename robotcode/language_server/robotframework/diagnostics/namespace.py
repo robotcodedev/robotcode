@@ -553,6 +553,7 @@ class Namespace:
         document: Optional[TextDocument] = None,
         document_type: Optional[DocumentType] = None,
         languages: Optional[Languages] = None,
+        workspace_languages: Optional[Languages] = None,
     ) -> None:
         super().__init__()
 
@@ -563,6 +564,7 @@ class Namespace:
         self._document = weakref.ref(document) if document is not None else None
         self.document_type: Optional[DocumentType] = document_type
         self.languages = languages
+        self.workspace_languages = workspace_languages
 
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
         self._libraries_matchers: Optional[Dict[KeywordMatcher, LibraryEntry]] = None

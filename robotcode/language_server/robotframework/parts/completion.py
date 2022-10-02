@@ -41,7 +41,7 @@ from ...common.lsp_types import (
     TextEdit,
 )
 from ...common.text_document import TextDocument
-from ..configuration import SyntaxConfig
+from ..configuration import CompletionConfig
 from ..diagnostics.entities import VariableDefinitionType
 from ..diagnostics.library_doc import (
     CompleteResultKind,
@@ -81,11 +81,15 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         parent.completion.collect.add(self.collect)
         parent.completion.resolve.add(self.resolve)
 
-    async def get_header_style(self, document: TextDocument) -> str:
+    async def get_config(self, document: TextDocument) -> CompletionConfig:
         if (folder := self.parent.workspace.get_workspace_folder(document.uri)) is not None:
-            config = await self.parent.workspace.get_configuration(SyntaxConfig, folder.uri)
-            if config.header_style is not None:
-                return config.header_style
+            return await self.parent.workspace.get_configuration(CompletionConfig, folder.uri)
+
+        return CompletionConfig()
+
+    async def get_header_style(self, config: CompletionConfig) -> str:
+        if config.header_style is not None:
+            return config.header_style
 
         return DEFAULT_HEADER_STYLE if get_robot_version() < (5, 1) else DEFAULT_HEADER_STYLE_51
 
@@ -116,8 +120,10 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
 
         model = await self.parent.documents_cache.get_model(document, False)
 
+        config = await self.get_config(document)
+
         return await CompletionCollector(
-            self.parent, document, model, namespace, await self.get_header_style(document)
+            self.parent, document, model, namespace, await self.get_header_style(config), config
         ).collect(
             position,
             context,
@@ -135,8 +141,10 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
                     namespace = await self.parent.documents_cache.get_namespace(document)
                     model = await self.parent.documents_cache.get_model(document, False)
                     if namespace is not None:
+                        config = await self.get_config(document)
+
                         return await CompletionCollector(
-                            self.parent, document, model, namespace, await self.get_header_style(document)
+                            self.parent, document, model, namespace, await self.get_header_style(config), config
                         ).resolve(completion_item)
 
         return completion_item
@@ -231,12 +239,14 @@ class CompletionCollector(ModelHelperMixin):
         model: ast.AST,
         namespace: Namespace,
         header_style: str,
+        config: CompletionConfig,
     ) -> None:
         self.parent = parent
         self.header_style = header_style
         self.document = document
         self.model = model
         self.namespace = namespace
+        self.config = config
 
     async def _find_methods(self, cls: Type[Any]) -> AsyncGenerator[_CompleteMethod, None]:
         if cls is ast.AST:
@@ -399,7 +409,16 @@ class CompletionCollector(ModelHelperMixin):
         if self.namespace.languages is None:
             headers: Iterable[str] = HEADERS
         else:
-            headers = itertools.chain(*(lang.headers for lang in self.namespace.languages))
+            languages = self.namespace.languages.languages
+
+            if (
+                self.config.filter_default_language
+                and len(self.namespace.languages.languages) > 1
+                and self.config.filter_default_language
+            ):
+                languages = [v for v in languages if v.code != "en"]
+
+            headers = itertools.chain(*(lang.headers.keys() for lang in languages))
 
         return [
             CompletionItem(
@@ -419,7 +438,7 @@ class CompletionCollector(ModelHelperMixin):
                 if range is not None
                 else None,
             )
-            for s in ((self.header_style.format(name=k), k) for k in headers)
+            for s in ((self.header_style.format(name=k), k) for k in (v.title() for v in headers))
         ]
 
     async def create_environment_variables_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
@@ -491,13 +510,27 @@ class CompletionCollector(ModelHelperMixin):
         settings = {*settings_class.names, *settings_class.aliases.keys()}
 
         if self.namespace.languages is not None:
-            settings = {k for k, v in self.namespace.languages.settings.items() if v in settings}
+
+            if self.config.filter_default_language and len(self.namespace.languages.languages) > 1:
+                languages = self.namespace.languages.languages
+
+                if self.config.filter_default_language:
+                    languages = [v for v in languages if v.code != "en"]
+
+                items: Iterable[Tuple[str, str]] = itertools.chain(*(lang.settings.items() for lang in languages))
+            else:
+                items = self.namespace.languages.settings.items()
+
+            settings = {k.title() for k, v in items if v in settings}
 
         return [
             CompletionItem(
                 label=setting,
                 kind=CompletionItemKind.KEYWORD,
                 detail="Setting",
+                documentation=self.namespace.languages.settings.get(setting)
+                if self.namespace.languages is not None
+                else None,
                 sort_text=f"090_{setting}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
                 text_edit=TextEdit(range=range, new_text=setting) if range is not None else None,
@@ -525,12 +558,26 @@ class CompletionCollector(ModelHelperMixin):
         settings = {*TestCaseSettings.names, *TestCaseSettings.aliases.keys()}
 
         if self.namespace.languages is not None:
-            settings = {k for k, v in self.namespace.languages.settings.items() if v in settings}
+
+            if self.config.filter_default_language and len(self.namespace.languages.languages) > 1:
+                languages = self.namespace.languages.languages
+
+                if self.config.filter_default_language:
+                    languages = [v for v in languages if v.code != "en"]
+
+                items: Iterable[Tuple[str, str]] = itertools.chain(*(lang.settings.items() for lang in languages))
+            else:
+                items = self.namespace.languages.settings.items()
+
+            settings = {k.title() for k, v in items if v in settings}
 
         return [
             CompletionItem(
                 label=f"[{setting}]",
                 kind=CompletionItemKind.KEYWORD,
+                documentation=self.namespace.languages.settings.get(setting)
+                if self.namespace.languages is not None
+                else None,
                 detail="Setting",
                 sort_text=f"070_{setting}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,
@@ -563,12 +610,26 @@ class CompletionCollector(ModelHelperMixin):
         settings = {*KeywordSettings.names, *KeywordSettings.aliases.keys()}
 
         if self.namespace.languages is not None:
-            settings = {k for k, v in self.namespace.languages.settings.items() if v in settings}
+
+            if self.config.filter_default_language and len(self.namespace.languages.languages) > 1:
+                languages = self.namespace.languages.languages
+
+                if self.config.filter_default_language:
+                    languages = [v for v in languages if v.code != "en"]
+
+                items: Iterable[Tuple[str, str]] = itertools.chain(*(lang.settings.items() for lang in languages))
+            else:
+                items = self.namespace.languages.settings.items()
+
+            settings = {k.title() for k, v in items if v in settings}
 
         return [
             CompletionItem(
                 label=f"[{setting}]",
                 kind=CompletionItemKind.KEYWORD,
+                documentation=self.namespace.languages.settings.get(setting)
+                if self.namespace.languages is not None
+                else None,
                 detail="Setting",
                 sort_text=f"070_{setting}",
                 insert_text_format=InsertTextFormat.PLAINTEXT,

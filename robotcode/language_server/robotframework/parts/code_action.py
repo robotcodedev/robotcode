@@ -61,9 +61,9 @@ HTML_ERROR_TEMPLATE = Template(
 </head>
 <body>
   <div id="content">
-    <h1>
+    <h3>
         ${type}: ${message}
-    </h1>
+    </h3>
     <pre>
 ${stacktrace}
     </pre>

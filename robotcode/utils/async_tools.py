@@ -544,6 +544,9 @@ class Semaphore:
                 await asyncio.wait_for(fut, timeout)
             except asyncio.TimeoutError:
                 return False
+            except (SystemExit, KeyboardInterrupt):
+                raise
+
             except BaseException:
                 if not fut.done():
                     fut.cancel()
@@ -735,8 +738,7 @@ class FutureInfo:
     def _done(self, future: asyncio.Future[Any]) -> None:
         if future.cancelled():
             for t in self.children.copy():
-                if not t.done() and not t.cancelled():
-
+                if not t.done() and not t.cancelled() and t.get_loop().is_running():
                     if t.get_loop() == asyncio.get_running_loop():
                         t.cancel()
                     else:
@@ -775,12 +777,12 @@ def create_sub_task(
             result = loop.create_task(coro, name=name)
         else:
 
-            async def s(
+            async def create_task(
                 lo: asyncio.AbstractEventLoop, c: Coroutine[Any, Any, _T], n: Optional[str]
             ) -> asyncio.Task[_T]:
                 return create_sub_task(c, name=n, loop=lo)
 
-            return asyncio.run_coroutine_threadsafe(s(loop, coro, name), loop=loop).result()
+            return asyncio.run_coroutine_threadsafe(create_task(loop, coro, name), loop=loop).result()
     else:
         result = asyncio.create_task(coro, name=name)
 

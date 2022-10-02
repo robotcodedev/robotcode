@@ -45,9 +45,10 @@ class RobotConfig(ConfigBase):
         return None
 
 
-@config_section("robotcode.syntax")
+@config_section("robotcode.completion")
 @dataclass
-class SyntaxConfig(ConfigBase):
+class CompletionConfig(ConfigBase):
+    filter_default_language: bool = True
     header_style: Optional[str] = None
 
 
@@ -94,7 +95,7 @@ class DocumentationServerConfig(ConfigBase):
 class RobotCodeConfig(ConfigBase):
     language_server: LanguageServerConfig = field(default_factory=LanguageServerConfig)
     robot: RobotConfig = field(default_factory=RobotConfig)
-    syntax: SyntaxConfig = field(default_factory=SyntaxConfig)
+    syntax: CompletionConfig = field(default_factory=CompletionConfig)
     workspace: WorkspaceConfig = field(default_factory=WorkspaceConfig)
     analysis: AnalysisConfig = field(default_factory=AnalysisConfig)
     documentation_server: DocumentationServerConfig = field(default_factory=DocumentationServerConfig)

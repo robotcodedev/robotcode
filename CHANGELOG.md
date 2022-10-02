@@ -4,7 +4,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
-- Correct naming for setting `robotcode.syntax.sectionStyle` to `robotcode.syntax.headerStyle`
+- Add a the setting `robotcode.completion.filterDefaultLanguage` to filter english language in completion, if there is another language defined for workspace or in file
+- Correct naming for setting `robotcode.syntax.sectionStyle` to `robotcode.completion.headerStyle`
 - Filter singular header forms for robotframework >= 6
 
 ##  0.13.18

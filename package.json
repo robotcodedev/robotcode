@@ -438,12 +438,6 @@
             "description": "Default setting for where to launch the debug target: internal console, integrated terminal, or external terminal.",
             "scope": "resource"
           },
-          "robotcode.syntax.headerStyle": {
-            "type": "string",
-            "default": null,
-            "markdownDescription": "Defines the header style format. If not defined ```*** {name} ***``` is used.",
-            "scope": "resource"
-          },
           "robotcode.robocop.enabled": {
             "type": "boolean",
             "default": true,
@@ -552,6 +546,18 @@
             "type": "integer",
             "default": 3199,
             "description": "Defines the endport for searching a free port for the documentation server."
+          },
+          "robotcode.completion.filterDefaultLanguage": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Filter default language (English) for completion if there is another language defined.",
+            "scope": "resource"
+          },
+          "robotcode.completion.headerStyle": {
+            "type": "string",
+            "default": null,
+            "markdownDescription": "Defines the header style format. If not defined ```*** {name} ***``` is used.",
+            "scope": "resource"
           }
         }
       }
