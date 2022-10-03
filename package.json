@@ -500,10 +500,11 @@
           "robotcode.analysis.progressMode": {
             "type": "string",
             "enum": [
+              "off",
               "simple",
               "detailed"
             ],
-            "default": "simple",
+            "default": "off",
             "enumDescriptions": [
               "Show only simple progress messages.",
               "Show detailed progress messages. Displays the filenames that are currently being analyzed."

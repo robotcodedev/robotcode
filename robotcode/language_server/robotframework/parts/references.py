@@ -107,6 +107,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def _find_references_in_workspace(
         self,
         document: TextDocument,
+        stop_at_first: bool,
         func: Callable[..., Coroutine[None, None, List[Location]]],
         *args: Any,
         **kwargs: Any,
@@ -120,6 +121,9 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         for doc in self.parent.documents.documents:
             if doc.language_id == "robotframework":
                 result.extend(await func(doc, *args, **kwargs))
+                if result and stop_at_first:
+                    break
+
                 # tasks.append(run_coroutine_in_thread(func, doc, *args, **kwargs))
 
         # result = await asyncio.gather(*tasks)
@@ -159,14 +163,22 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         return await self._variable_reference_cache.has(document, variable, include_declaration)
 
     async def find_variable_references(
-        self, document: TextDocument, variable: VariableDefinition, include_declaration: bool = True
+        self,
+        document: TextDocument,
+        variable: VariableDefinition,
+        include_declaration: bool = True,
+        stop_at_first: bool = False,
     ) -> List[Location]:
         return await self._variable_reference_cache.get(
-            self._find_variable_references, document, variable, include_declaration
+            self._find_variable_references, document, variable, include_declaration, stop_at_first
         )
 
     async def _find_variable_references(
-        self, document: TextDocument, variable: VariableDefinition, include_declaration: bool = True
+        self,
+        document: TextDocument,
+        variable: VariableDefinition,
+        include_declaration: bool = True,
+        stop_at_first: bool = False,
     ) -> List[Location]:
         result = []
 
@@ -178,7 +190,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         else:
             result.extend(
                 await self._find_references_in_workspace(
-                    document, self.find_variable_references_in_file, variable, False
+                    document, stop_at_first, self.find_variable_references_in_file, variable, False
                 )
             )
         return result
@@ -262,14 +274,14 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         return await self._keyword_reference_cache.has(document, kw_doc, include_declaration)
 
     async def find_keyword_references(
-        self, document: TextDocument, kw_doc: KeywordDoc, include_declaration: bool = True
+        self, document: TextDocument, kw_doc: KeywordDoc, include_declaration: bool = True, stop_at_first: bool = False
     ) -> List[Location]:
         return await self._keyword_reference_cache.get(
-            self._find_keyword_references, document, kw_doc, include_declaration
+            self._find_keyword_references, document, kw_doc, include_declaration, stop_at_first
         )
 
     async def _find_keyword_references(
-        self, document: TextDocument, kw_doc: KeywordDoc, include_declaration: bool = True
+        self, document: TextDocument, kw_doc: KeywordDoc, include_declaration: bool = True, stop_at_first: bool = False
     ) -> List[Location]:
 
         namespace = await self.parent.documents_cache.get_namespace(document)
@@ -303,7 +315,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         result.extend(
             await self._find_references_in_workspace(
-                document, self.find_keyword_references_in_file, kw_doc, lib_doc, False
+                document, stop_at_first, self.find_keyword_references_in_file, kw_doc, lib_doc, False
             )
         )
 
@@ -354,7 +366,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 return None
 
             return await self._find_references_in_workspace(
-                document, self._find_library_import_references_in_file, library_doc
+                document, False, self._find_library_import_references_in_file, library_doc
             )
 
         return None
@@ -399,7 +411,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 return None
 
             return await self._find_references_in_workspace(
-                document, self._find_resource_import_references_in_file, library_doc
+                document, False, self._find_resource_import_references_in_file, library_doc
             )
 
         return None
@@ -443,7 +455,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 return None
 
             return await self._find_references_in_workspace(
-                document, self._find_variables_import_references_in_file, library_doc
+                document, False, self._find_variables_import_references_in_file, library_doc
             )
 
         return None
@@ -487,7 +499,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
     async def find_tag_references(self, document: TextDocument, tag: str) -> List[Location]:
         return await self._find_references_in_workspace(
-            document, self.find_tag_references_in_file, normalize(tag), True
+            document, False, self.find_tag_references_in_file, normalize(tag), True
         )
 
     async def references_ForceTags(  # noqa: N802

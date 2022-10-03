@@ -77,8 +77,8 @@ class WorkspaceConfig(ConfigBase):
 @dataclass
 class AnalysisConfig(ConfigBase):
     diagnostic_mode: DiagnosticsMode = DiagnosticsMode.OPENFILESONLY
-    progress_mode: AnalysisProgressMode = AnalysisProgressMode.SIMPLE
-    max_project_file_count: int = 1000
+    progress_mode: AnalysisProgressMode = AnalysisProgressMode.OFF
+    max_project_file_count: int = 5000
     references_code_lens: bool = False
     find_unused_references: bool = False
 

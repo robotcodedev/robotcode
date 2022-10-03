@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import itertools
 import threading
+import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
@@ -33,7 +34,6 @@ from ..lsp_types import (
     ProgressToken,
     PublishDiagnosticsParams,
     RelatedFullDocumentDiagnosticReport,
-    RelatedUnchangedDocumentDiagnosticReport,
     ServerCapabilities,
     TextDocumentIdentifier,
     WorkspaceDiagnosticParams,
@@ -55,6 +55,7 @@ class DiagnosticsMode(Enum):
 
 
 class AnalysisProgressMode(Enum):
+    OFF = "off"
     SIMPLE = "simple"
     DETAILED = "detailed"
 
@@ -117,11 +118,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         self._workspace_load_lock = Lock()
         self._workspace_loaded = False
 
-        self._current_document_tasks: Dict[
-            TextDocument, asyncio.Task[Optional[RelatedFullDocumentDiagnosticReport]]
-        ] = {}
-
-        self._current_workspace_task: Optional[asyncio.Task[WorkspaceDiagnosticReport]] = None
+        self._workspace_diagnostics_task: Optional[asyncio.Task[Any]] = None
 
         self._diagnostics_loop: Optional[asyncio.AbstractEventLoop] = None
         self._diagnostics_loop_lock = threading.RLock()
@@ -129,12 +126,16 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
         self.parent.on_initialized.add(self.initialized)
 
+        self.parent.on_exit.add(self.cancel_workspace_diagnostics_task)
+
         self.parent.documents.did_close.add(self.on_did_close)
 
         self.in_get_workspace_diagnostics = Event(True)
 
     async def initialized(self, sender: Any) -> None:
         self._ensure_diagnostics_thread_started()
+
+        self._workspace_diagnostics_task = create_sub_task(self.run_workspace_diagnostics(), loop=self.diagnostics_loop)
 
     @property
     def diagnostics_loop(self) -> asyncio.AbstractEventLoop:
@@ -260,7 +261,12 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                 data.task.add_done_callback(done)
                 data.task.get_loop().call_soon_threadsafe(data.task.cancel)
 
-                e.wait(120)
+                start = time.monotonic()
+                while not e.is_set():
+                    if time.monotonic() - start > 120:
+                        break
+
+                    await asyncio.sleep(0.001)
 
         finally:
             self.parent.send_notification(
@@ -272,11 +278,109 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                 ),
             )
 
+    async def cancel_workspace_diagnostics_task(self, sender: Any) -> None:
+        if self._workspace_diagnostics_task is not None:
+            self._workspace_diagnostics_task.get_loop().call_soon_threadsafe(self._workspace_diagnostics_task.cancel)
+
     @_logger.call
-    async def _get_diagnostics_for_document(self, document: TextDocument, data: DiagnosticsData) -> None:
+    async def run_workspace_diagnostics(self) -> None:
+        self._logger.debug("start workspace diagnostics loop")
+        await self.ensure_workspace_loaded()
+
+        while True:
+            try:
+
+                documents = [
+                    doc
+                    for doc in self.parent.documents.documents
+                    if (data := self.get_diagnostics_data(doc)).force
+                    or doc.version != data.version
+                    or data.task is None
+                ]
+
+                if len(documents) == 0:
+                    await asyncio.sleep(1)
+                    continue
+
+                done_something = False
+
+                async with self.parent.window.progress(
+                    "Analyse workspace", cancellable=False, current=0, max=len(documents) + 1, start=False
+                ) as progress:
+                    for i, document in enumerate(documents):
+                        if document.opened_in_editor:
+                            continue
+
+                        done_something = True
+
+                        analysis_mode = await self.get_analysis_progress_mode(document.uri)
+
+                        if analysis_mode == AnalysisProgressMode.DETAILED:
+                            progress.begin()
+                            path = document.uri.to_path()
+                            folder = self.parent.workspace.get_workspace_folder(document.uri)
+                            if folder is None:
+                                name = path
+                            else:
+                                name = path.relative_to(folder.uri.to_path())
+
+                            progress.report(f"Analyse {name}", current=i + 1)
+                        elif analysis_mode == AnalysisProgressMode.SIMPLE:
+                            progress.begin()
+                            progress.report(current=i + 1)
+
+                        await self.create_document_diagnostics_task(
+                            document, False, await self.get_diagnostics_mode(document.uri) == DiagnosticsMode.WORKSPACE
+                        )
+
+                if not done_something:
+                    await asyncio.sleep(1)
+            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                raise
+            except BaseException as e:
+                self._logger.exception(f"Error in workspace diagnostics loop: {e}", exc_info=e)
+
+    def create_document_diagnostics_task(
+        self, document: TextDocument, debounce: bool = True, send_diagnostics: bool = True
+    ) -> asyncio.Task[Any]:
+        def done(t: asyncio.Task[Any]) -> None:
+            self._logger.debug(lambda: f"diagnostics for {document} {'canceled' if t.cancelled() else 'ended'}")
+            if t.done() and not t.cancelled():
+                ex = t.exception()
+
+                if ex is None or isinstance(ex, asyncio.CancelledError):
+                    return
+
+        data = self.get_diagnostics_data(document)
+
+        if data.force or document.version != data.version or data.task is None:
+            task = data.task
+
+            data.force = False
+
+            if task is not None and not task.done():
+                self._logger.debug(lambda: f"try to cancel diagnostics for {document}")
+                task.get_loop().call_soon_threadsafe(task.cancel)
+
+            data.version = document.version
+            data.task = create_sub_task(
+                self._get_diagnostics_for_document(document, data, debounce, send_diagnostics),
+                loop=self.diagnostics_loop,
+                name=f"diagnostics ${document.uri}",
+            )
+
+            data.task.add_done_callback(done)
+
+        return data.task
+
+    @_logger.call
+    async def _get_diagnostics_for_document(
+        self, document: TextDocument, data: DiagnosticsData, debounce: bool = True, send_diagnostics: bool = True
+    ) -> None:
         self._logger.debug(lambda: f"Get diagnostics for {document}")
 
-        await asyncio.sleep(0.75)
+        if debounce:
+            await asyncio.sleep(0.75)
 
         collected_keys: List[Any] = []
         try:
@@ -297,20 +401,18 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                     if result.diagnostics is not None:
                         collected_keys.append(result.key)
 
-                    # if document.opened_in_editor:
-                    #     await self.refresh()
-
                     if data.entries:
-                        self.parent.send_notification(
-                            "textDocument/publishDiagnostics",
-                            PublishDiagnosticsParams(
-                                uri=document.document_uri,
-                                version=document._version,
-                                diagnostics=[
-                                    e for e in itertools.chain(*(i for i in data.entries.values() if i is not None))
-                                ],
-                            ),
-                        )
+                        if send_diagnostics:
+                            self.parent.send_notification(
+                                "textDocument/publishDiagnostics",
+                                PublishDiagnosticsParams(
+                                    uri=document.document_uri,
+                                    version=document._version,
+                                    diagnostics=[
+                                        e for e in itertools.chain(*(i for i in data.entries.values() if i is not None))
+                                    ],
+                                ),
+                            )
 
         except asyncio.CancelledError:
             self._logger.debug(lambda: f"_get_diagnostics cancelled for {document}")
@@ -333,44 +435,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             if document is None:
                 raise JsonRPCErrorException(ErrorCodes.SERVER_CANCELLED, f"Document {text_document!r} not found.")
 
-            data = self.get_diagnostics_data(document)
+            self.create_document_diagnostics_task(document)
 
-            if data.force or document.version != data.version or data.task is None:
-
-                task = data.task
-
-                data.force = False
-
-                if task is not None and not task.done():
-                    self._logger.debug(lambda: f"try to cancel diagnostics for {document}")
-                    task.get_loop().call_soon_threadsafe(task.cancel)
-
-                data.version = document.version
-                data.task = create_sub_task(
-                    self._get_diagnostics_for_document(document, data),
-                    loop=self.diagnostics_loop,
-                    name=f"diagnostics ${text_document}",
-                )
-
-                def done(t: asyncio.Task[Any]) -> None:
-
-                    self._logger.debug(lambda: f"diagnostics for {document} {'canceled' if t.cancelled() else 'ended'}")
-                    if t.done() and not t.cancelled():
-                        ex = t.exception()
-
-                        if ex is None or isinstance(ex, asyncio.CancelledError):
-                            return
-
-                data.task.add_done_callback(done)
-
-            if data.id == previous_result_id:
-                return RelatedUnchangedDocumentDiagnosticReport(result_id=data.id)
-
-            # return RelatedFullDocumentDiagnosticReport(
-            #     list(itertools.chain(*(e for e in data.entries.values() if e is not None))), result_id=data.id
-            # )
-
-            return RelatedFullDocumentDiagnosticReport([], result_id=data.id)
+            return RelatedFullDocumentDiagnosticReport([])
         except asyncio.CancelledError:
             self._logger.debug("canceled _text_document_diagnostic")
             raise
@@ -397,191 +464,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
     ) -> WorkspaceDiagnosticReport:
         self._logger.debug("workspace/diagnostic")
 
-        # async def _get_diagnostics() -> WorkspaceDiagnosticReport:
-        #     result: List[WorkspaceDocumentDiagnosticReport] = []
-
-        #     for doc in self.parent.documents.documents:
-        #         doc_result = await self.get_document_diagnostics(doc)
-
-        #         if doc_result.result_id is not None and any(
-        #             p
-        #             for p in previous_result_ids
-        #             if p.value == doc_result.result_id and Uri(p.uri).normalized() == doc.uri
-        #         ):
-        #             result.append(
-        #                 WorkspaceUnchangedDocumentDiagnosticReport(doc.document_uri, doc.version,
-        #                   doc_result.result_id)
-        #             )
-        #         else:
-        #             result.append(
-        #                 WorkspaceFullDocumentDiagnosticReport(
-        #                     doc.document_uri, doc.version, doc_result.items, doc_result.result_id
-        #                 )
-        #             )
-        #     return WorkspaceDiagnosticReport(items=result)
-
-        # async def _get_partial_diagnostics() -> WorkspaceDiagnosticReport:
-        #     async with self.parent.window.progress(
-        #         "Analyse Workspace",
-        #         progress_token=work_done_token,
-        #         cancellable=False,
-        #     ) as progress:
-
-        #         async def _task(doc: TextDocument) -> None:
-        #             if doc.opened_in_editor:
-        #                 return
-
-        #             if await self.get_analysis_progress_mode(doc.uri) == AnalysisProgressMode.DETAILED:
-        #                 path = doc.uri.to_path()
-        #                 folder = self.parent.workspace.get_workspace_folder(doc.uri)
-        #                 if folder is None:
-        #                     name = path
-        #                 else:
-        #                     name = path.relative_to(folder.uri.to_path())
-
-        #                 progress.report(f"Analyse {name}")
-
-        #             doc_result = await self.get_document_diagnostics(doc)
-
-        #             if doc_result.result_id is not None and any(
-        #                 p
-        #                 for p in previous_result_ids
-        #                 if p.value == doc_result.result_id and Uri(p.uri).normalized() == doc.uri
-        #             ):
-        #                 self.parent.window.send_progress(
-        #                     partial_result_token,
-        #                     WorkspaceDiagnosticReportPartialResult(
-        #                         [
-        #                             WorkspaceUnchangedDocumentDiagnosticReport(
-        #                                 doc.document_uri, doc.version, doc_result.result_id
-        #                             )
-        #                         ]
-        #                     ),
-        #                 )
-        #             else:
-        #                 self.parent.window.send_progress(
-        #                     partial_result_token,
-        #                     WorkspaceDiagnosticReportPartialResult(
-        #                         [
-        #                             WorkspaceFullDocumentDiagnosticReport(
-        #                                 doc.document_uri, doc.version, doc_result.items, doc_result.result_id
-        #                             )
-        #                         ]
-        #                     ),
-        #                 )
-
-        #         for doc in self.parent.documents.documents:
-        #             if await self.get_diagnostics_mode(doc.uri) == DiagnosticsMode.WORKSPACE:
-        #                 await _task(doc)
-
-        #         return WorkspaceDiagnosticReport(items=[])
-
-        # self.in_get_workspace_diagnostics.clear()
-        # try:
-        #     await self.ensure_workspace_loaded()
-
-        #     if self._current_workspace_task is not None:
-        #         self._current_workspace_task.cancel()
-
-        #     task = create_sub_task(_get_diagnostics() if partial_result_token is None else _get_partial_diagnostics())
-        #     self._current_workspace_task = task
-        #     try:
-        #         return await task
-        #     except asyncio.CancelledError:
-        #         self._logger.debug("workspace/diagnostic canceled")
-        #         if self._current_workspace_task is None:
-        #             raise JsonRPCErrorException(
-        #                 ErrorCodes.SERVER_CANCELLED,
-        #                 "ServerCancelled",
-        #                 data=DiagnosticServerCancellationData(True),
-        #             )
-        #         raise
-        #     finally:
-        #         if self._current_workspace_task == task:
-        #             self._current_workspace_task = None
-        #         self._logger.debug("workspace/diagnostic ready")
-        # finally:
-        #     self.in_get_workspace_diagnostics.set()
-        #     await self.on_workspace_diagnostics_ended(self)
-
-        # async def _get_diagnostics() -> WorkspaceDiagnosticReport:
-        #     result: List[WorkspaceDocumentDiagnosticReport] = []
-
-        #     for doc in self.parent.documents.documents:
-        #         doc_result = await self.get_document_diagnostics(doc)
-
-        #         if doc_result.result_id is not None and any(
-        #             p
-        #             for p in previous_result_ids
-        #             if p.value == doc_result.result_id and Uri(p.uri).normalized() == doc.uri
-        #         ):
-        #             result.append(
-        #                 WorkspaceUnchangedDocumentDiagnosticReport(doc.document_uri, doc.version,
-        #                   doc_result.result_id)
-        #             )
-        #         else:
-        #             result.append(
-        #                 WorkspaceFullDocumentDiagnosticReport(
-        #                     doc.document_uri, doc.version, doc_result.items, doc_result.result_id
-        #                 )
-        #             )
-        #     return WorkspaceDiagnosticReport(items=result)
-
-        # async def _get_partial_diagnostics() -> WorkspaceDiagnosticReport:
-        #     async with self.parent.window.progress(
-        #         "Analyse Workspace",
-        #         progress_token=work_done_token,
-        #         cancellable=False,
-        #     ) as progress:
-
-        #         async def _task(doc: TextDocument) -> None:
-        #             if doc.opened_in_editor:
-        #                 return
-
-        #             if await self.get_analysis_progress_mode(doc.uri) == AnalysisProgressMode.DETAILED:
-        #                 path = doc.uri.to_path()
-        #                 folder = self.parent.workspace.get_workspace_folder(doc.uri)
-        #                 if folder is None:
-        #                     name = path
-        #                 else:
-        #                     name = path.relative_to(folder.uri.to_path())
-
-        #                 progress.report(f"Analyse {name}")
-
-        #             doc_result = await self.get_document_diagnostics(doc)
-
-        #             if doc_result.result_id is not None and any(
-        #                 p
-        #                 for p in previous_result_ids
-        #                 if p.value == doc_result.result_id and Uri(p.uri).normalized() == doc.uri
-        #             ):
-        #                 self.parent.window.send_progress(
-        #                     partial_result_token,
-        #                     WorkspaceDiagnosticReportPartialResult(
-        #                         [
-        #                             WorkspaceUnchangedDocumentDiagnosticReport(
-        #                                 doc.document_uri, doc.version, doc_result.result_id
-        #                             )
-        #                         ]
-        #                     ),
-        #                 )
-        #             else:
-        #                 self.parent.window.send_progress(
-        #                     partial_result_token,
-        #                     WorkspaceDiagnosticReportPartialResult(
-        #                         [
-        #                             WorkspaceFullDocumentDiagnosticReport(
-        #                                 doc.document_uri, doc.version, doc_result.items, doc_result.result_id
-        #                             )
-        #                         ]
-        #                     ),
-        #                 )
-
-        #         for doc in self.parent.documents.documents:
-        #             if await self.get_diagnostics_mode(doc.uri) == DiagnosticsMode.WORKSPACE:
-        #                 await _task(doc)
-
-        #
         return WorkspaceDiagnosticReport(items=[])
 
     async def get_analysis_progress_mode(self, uri: Uri) -> AnalysisProgressMode:
@@ -589,7 +471,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             if e is not None:
                 return cast(AnalysisProgressMode, e)
 
-        return AnalysisProgressMode.SIMPLE
+        return AnalysisProgressMode.OFF
 
     async def get_diagnostics_mode(self, uri: Uri) -> DiagnosticsMode:
         for e in await self.on_get_diagnostics_mode(self, uri):

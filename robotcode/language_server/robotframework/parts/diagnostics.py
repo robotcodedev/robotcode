@@ -283,7 +283,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
             result: List[Diagnostic] = []
             for kw in (await namespace.get_library_doc()).keywords.values():
-                references = await self.parent.robot_references.find_keyword_references(document, kw, False)
+                references = await self.parent.robot_references.find_keyword_references(document, kw, False, True)
                 if not references and not await Analyzer.should_ignore(document, kw.name_range):
                     result.append(
                         Diagnostic(
@@ -345,7 +345,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             result: List[Diagnostic] = []
 
             for var in (await namespace.get_variable_references()).keys():
-                references = await self.parent.robot_references.find_variable_references(document, var, False)
+                references = await self.parent.robot_references.find_variable_references(document, var, False, True)
                 if not references and not await Analyzer.should_ignore(document, var.name_range):
                     result.append(
                         Diagnostic(

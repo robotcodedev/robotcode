@@ -37,6 +37,34 @@ class Progress:
         self.ended = False
         self.message = message
         self.max = max
+        self.started = False
+
+    def begin(
+        self,
+        message: Optional[str] = None,
+        current: Optional[int] = None,
+        max: Optional[int] = None,
+        percentage: Optional[int] = None,
+        cancellable: Optional[bool] = None,
+        title: Optional[str] = None,
+    ) -> None:
+        if max is not None:
+            self.max = max
+
+        if self.started:
+            return
+
+        self.parent.progress_begin(
+            self.token,
+            message if message is not None else self.message,
+            int(current * 100 / self.max)
+            if percentage is None and current is not None and self.max is not None
+            else percentage,
+            cancellable,
+            title,
+        )
+
+        self.started = True
 
     def report(
         self,
@@ -47,6 +75,9 @@ class Progress:
         cancellable: Optional[bool] = None,
         title: Optional[str] = None,
     ) -> None:
+        if not self.started:
+            return
+
         if max is not None:
             self.max = max
 
@@ -61,8 +92,9 @@ class Progress:
         )
 
     def end(self, message: Optional[str] = None) -> None:
-        self.parent.progress_end(self.token, message)
-        self.ended = True
+        if not self.ended:
+            self.parent.progress_end(self.token, message)
+            self.ended = True
 
     @property
     def is_canceled(self) -> bool:
@@ -112,21 +144,24 @@ class WindowProtocolPart(LanguageServerProtocolPart):
         cancellable: Optional[bool] = None,
         title: Optional[str] = None,
         *,
+        start: bool = True,
         progress_token: Optional[ProgressToken] = None,
     ) -> AsyncIterator[Progress]:
+
         p = Progress(self, await self.create_progress() if progress_token is None else progress_token, message, max)
-        self.progress_begin(
-            p.token,
-            message,
-            int(current * 100 / max) if percentage is None and current is not None and max else percentage,
-            cancellable,
-            title,
-        )
+        if start:
+            p.begin(
+                message,
+                current=int(current * 100 / max) if percentage is None and current is not None and max else percentage,
+                cancellable=cancellable,
+                percentage=percentage,
+                title=title,
+            )
+
         try:
             yield p
         finally:
-            if not p.ended:
-                self.progress_end(p.token)
+            p.end()
 
     async def create_progress(self) -> Optional[ProgressToken]:
 
