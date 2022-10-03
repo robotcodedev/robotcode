@@ -2,7 +2,9 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
+## [Unreleased]
+- none so far
+##  0.13.20
 
 - Reimplement workspace analysis
 - Optimize the search for unused references
