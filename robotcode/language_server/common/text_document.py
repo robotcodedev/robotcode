@@ -7,7 +7,7 @@ import threading
 import weakref
 from typing import Any, Awaitable, Callable, Dict, List, Optional, TypeVar, Union, cast
 
-from ...utils.async_tools import Lock, async_event, create_sub_task
+from ...utils.async_tools import async_event, create_sub_task
 from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
 from .lsp_types import DocumentUri, Range
@@ -24,7 +24,7 @@ class CacheEntry:
     def __init__(self) -> None:
         self.data: Any = None
         self.has_data: bool = False
-        self.lock: Lock = Lock()
+        self.lock = threading.RLock()
 
 
 class TextDocument:
@@ -216,16 +216,14 @@ class TextDocument:
 
         reference = self.__get_cache_reference(entry)
 
-        # with self._lock:
         e = self._cache[reference]
 
-        if not e.has_data:
-            async with e.lock:
-                if not e.has_data:
-                    e.data = await entry(self, *args, **kwargs)
-                    e.has_data = True
+        with e.lock:
+            if not e.has_data:
+                e.data = await entry(self, *args, **kwargs)
+                e.has_data = True
 
-        return cast(_T, e.data)
+            return cast(_T, e.data)
 
     @_logger.call
     async def remove_cache_entry(

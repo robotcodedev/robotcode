@@ -1,7 +1,6 @@
+import threading
 from collections import defaultdict
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, TypeVar, cast
-
-from .async_tools import Lock
 
 _T = TypeVar("_T")
 
@@ -16,7 +15,7 @@ class CacheEntry:
     def __init__(self) -> None:
         self.data: Any = None
         self.has_data: bool = False
-        self.lock: Lock = Lock()
+        self.lock = threading.RLock()
 
 
 class AsyncSimpleLRUCache:
@@ -27,7 +26,7 @@ class AsyncSimpleLRUCache:
         self._order: Optional[List[Tuple[Any, ...]]] = None
         if self.max_items:
             self._order = []
-        self._lock: Lock = Lock()
+        self._lock = threading.RLock()
 
     async def has(self, *args: Any, **kwargs: Any) -> bool:
         key = self._make_key(*args, **kwargs)
@@ -42,27 +41,26 @@ class AsyncSimpleLRUCache:
 
         entry = self._cache[key]
 
-        if not entry.has_data:
-            async with entry.lock:
-                if not entry.has_data:
-                    entry.data = await func(*args, **kwargs)
-                    entry.has_data = True
+        with entry.lock:
+            if not entry.has_data:
+                entry.data = await func(*args, **kwargs)
+                entry.has_data = True
 
-                    if self._order is not None and self.max_items is not None:
-                        async with self._lock:
-                            self._order.insert(0, key)
+                if self._order is not None and self.max_items is not None:
+                    with self._lock:
+                        self._order.insert(0, key)
 
-                            if len(self._order) > self.max_items:
-                                del self._cache[self._order.pop()]
+                        if len(self._order) > self.max_items:
+                            del self._cache[self._order.pop()]
 
-        return cast(_T, entry.data)
+            return cast(_T, entry.data)
 
     @staticmethod
     def _make_key(*args: Any, **kwargs: Any) -> Tuple[Any, ...]:
         return (tuple(_freeze(v) for v in args), hash(frozenset({k: _freeze(v) for k, v in kwargs.items()})))
 
     async def clear(self) -> None:
-        async with self._lock:
+        with self._lock:
             self._cache.clear()
             if self._order is not None:
                 self._order.clear()

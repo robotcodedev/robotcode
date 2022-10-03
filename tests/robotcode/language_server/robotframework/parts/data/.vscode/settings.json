@@ -31,5 +31,6 @@
     // "robotcode.debug.outputMessages": true
     //"python.analysis.diagnosticMode": "workspace"
     //"robotcode.robot.paths": ["./tests", "./tests1"]
-    "robotcode.analysis.diagnosticMode": "workspace"
+    "robotcode.analysis.diagnosticMode": "workspace",
+    "robotcode.analysis.progressMode": "detailed"
 }
