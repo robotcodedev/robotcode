@@ -340,12 +340,12 @@ def run_coroutine_in_thread(
 
     def run(coro: Callable[..., Coroutine[Any, Any, _T]], *args: Any, **kwargs: Any) -> _T:
 
-        old_name = threading.current_thread().getName()
+        old_name = threading.current_thread().name
         threading.current_thread().setName(coro.__qualname__)
         try:
             return asyncio.run(create_inner_task(coro, *args, **kwargs))
         finally:
-            threading.current_thread().setName(old_name)
+            threading.current_thread().name = old_name
 
         # loop = asyncio.new_event_loop()
 
