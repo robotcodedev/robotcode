@@ -40,6 +40,7 @@ from .lsp_types import (
 )
 from .parts.code_action import CodeActionProtocolPart
 from .parts.code_lens import CodeLensProtocolPart
+from .parts.commands import CommandsProtocolPart
 from .parts.completion import CompletionProtocolPart
 from .parts.declaration import DeclarationProtocolPart
 from .parts.definition import DefinitionProtocolPart
@@ -72,6 +73,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     _logger = LoggingDescriptor()
 
+    commands = ProtocolPartDescriptor(CommandsProtocolPart)
     window = ProtocolPartDescriptor(WindowProtocolPart)
     documents = ProtocolPartDescriptor(TextDocumentProtocolPart)
     diagnostics = ProtocolPartDescriptor(DiagnosticsProtocolPart)

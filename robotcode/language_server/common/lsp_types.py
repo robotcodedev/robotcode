@@ -13,6 +13,9 @@ URI = str
 ProgressToken = Union[str, int]
 
 
+LSPAny = Any
+
+
 class ErrorCodes:
     PARSE_ERROR = -32700
     INVALID_REQUEST = -32600
@@ -978,6 +981,22 @@ class _ExecuteCommandOptions(Model):
 
 @dataclass(repr=False)
 class ExecuteCommandOptions(WorkDoneProgressOptions, _ExecuteCommandOptions):
+    pass
+
+
+@dataclass(repr=False)
+class ExecuteCommandRegistrationOptions(ExecuteCommandOptions):
+    pass
+
+
+@dataclass(repr=False)
+class _ExecuteCommandParams(Model):
+    command: str
+    arguments: Optional[List[LSPAny]] = None
+
+
+@dataclass(repr=False)
+class ExecuteCommandParams(WorkDoneProgressParams, _ExecuteCommandParams):
     pass
 
 
@@ -2368,3 +2387,16 @@ class CodeAction:
     edit: Optional[WorkspaceEdit] = None
     command: Optional[Command] = None
     data: Any = None
+
+
+@dataclass(repr=False)
+class ApplyWorkspaceEditParams(Model):
+    edit: WorkspaceEdit
+    label: Optional[str] = None
+
+
+@dataclass(repr=False)
+class ApplyWorkspaceEditResult(Model):
+    applied: bool
+    failure_reason: Optional[str] = None
+    failed_change: Optional[int] = None

@@ -17,14 +17,28 @@ from ....jsonrpc2.protocol import rpc_method
 from ....utils.logging import LoggingDescriptor
 from ....utils.net import find_free_port
 from ....utils.uri import Uri
-from ...common.decorators import code_action_kinds, language_id
+from ...common.decorators import (
+    code_action_kinds,
+    command,
+    get_command_name,
+    language_id,
+)
 from ...common.lsp_types import (
+    AnnotatedTextEdit,
+    ChangeAnnotation,
     CodeAction,
     CodeActionContext,
     CodeActionKinds,
     Command,
+    CreateFile,
+    DeleteFile,
+    MessageType,
     Model,
+    OptionalVersionedTextDocumentIdentifier,
     Range,
+    RenameFile,
+    TextDocumentEdit,
+    WorkspaceEdit,
 )
 from ...common.text_document import TextDocument
 from ..configuration import DocumentationServerConfig
@@ -186,6 +200,8 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self._documentation_server_lock = threading.RLock()
         self._documentation_server_port = 0
 
+        self.parent.commands.register(self.translate_suite)
+
     async def initialized(self, sender: Any) -> None:
         await self._ensure_http_server_started()
 
@@ -265,11 +281,11 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
                             return [
                                 CodeAction(
-                                    f"Translate Suite to {language.name}",
+                                    f"Translate file to `{language.name}`",
                                     kind=CodeActionKinds.SOURCE + ".openDocumentation",
                                     command=Command(
                                         f"Translate Suite to {lang}",
-                                        "robotcode.translateSuite",
+                                        get_command_name(self.translate_suite),
                                         [document.document_uri, lang],
                                     ),
                                 )
@@ -394,3 +410,87 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             return f"http://localhost:{self._documentation_server_port}/{path.as_posix()}"
 
         return None
+
+    @command("robotcode.translateSuite")
+    async def translate_suite(self, document_uri: str, lang: str) -> None:
+        from robot.conf.languages import Language
+        from robot.parsing.lexer.tokens import Token as RobotToken
+
+        try:
+            language = Language.from_name(lang)
+        except ValueError:
+            self.parent.window.show_message(f"Invalid language {lang}", MessageType.ERROR)
+            return
+
+        document = await self.parent.documents.get(document_uri)
+
+        if document is None:
+            return
+
+        changes: List[Union[TextDocumentEdit, CreateFile, RenameFile, DeleteFile]] = []
+
+        header_translations = {
+            RobotToken.SETTING_HEADER: language.settings_header,
+            RobotToken.VARIABLE_HEADER: language.variables_header,
+            RobotToken.TESTCASE_HEADER: language.test_cases_header,
+            RobotToken.TASK_HEADER: language.tasks_header,
+            RobotToken.KEYWORD_HEADER: language.keywords_header,
+            RobotToken.COMMENT_HEADER: language.comments_header,
+        }
+        settings_translations = {
+            RobotToken.LIBRARY: language.library_setting,
+            RobotToken.DOCUMENTATION: language.documentation_setting,
+            RobotToken.SUITE_SETUP: language.suite_setup_setting,
+            RobotToken.SUITE_TEARDOWN: language.suite_teardown_setting,
+            RobotToken.METADATA: language.metadata_setting,
+            RobotToken.KEYWORD_TAGS: language.keyword_tags_setting,
+            RobotToken.LIBRARY: language.library_setting,
+            RobotToken.RESOURCE: language.resource_setting,
+            RobotToken.VARIABLES: language.variables_setting,
+            RobotToken.SETUP: f"[{language.setup_setting}]",
+            RobotToken.TEARDOWN: f"[{language.teardown_setting}]",
+            RobotToken.TEMPLATE: f"[{language.template_setting}]",
+            RobotToken.TIMEOUT: f"[{language.timeout_setting}]",
+            RobotToken.TAGS: f"[{language.tags_setting}]",
+            RobotToken.ARGUMENTS: f"[{language.arguments_setting}]",
+        }
+
+        for token in await self.parent.documents_cache.get_tokens(document):
+            if token.type in header_translations.keys():
+                changes.append(
+                    TextDocumentEdit(
+                        OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
+                        [
+                            AnnotatedTextEdit(
+                                range_from_token(token),
+                                f"*** { header_translations[token.type]} ***",
+                                annotation_id="translate_settings",
+                            )
+                        ],
+                    )
+                )
+            elif token.type in settings_translations.keys():
+                changes.append(
+                    TextDocumentEdit(
+                        OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
+                        [
+                            AnnotatedTextEdit(
+                                range_from_token(token),
+                                settings_translations[token.type],
+                                annotation_id="translate_settings",
+                            )
+                        ],
+                    )
+                )
+            else:
+                pass
+
+        if not changes:
+            return
+
+        edit = WorkspaceEdit(
+            document_changes=changes,
+            change_annotations={"translate_settings": ChangeAnnotation("Translate Settings", False)},
+        )
+
+        await self.parent.workspace.apply_edit(edit, "Translate")

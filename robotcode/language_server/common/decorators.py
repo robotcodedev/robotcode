@@ -79,3 +79,23 @@ def language_id_filter(language_id_or_document: Union[str, TextDocument]) -> Cal
         )
 
     return filter
+
+
+@runtime_checkable
+class IsCommand(Protocol):
+    __command_name__: List[str]
+
+
+def command(name: str) -> Callable[[_F], _F]:
+    def decorator(func: _F) -> _F:
+        setattr(func, "__command_name__", name)
+        return func
+
+    return decorator
+
+
+def get_command_name(func: _F) -> str:
+    if isinstance(func, IsCommand):
+        return func.__command_name__
+
+    raise TypeError(f"{func} is not a command.")

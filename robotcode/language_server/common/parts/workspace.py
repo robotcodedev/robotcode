@@ -36,6 +36,8 @@ from ....utils.path import path_is_relative_to
 from ....utils.uri import Uri
 from ...common.has_extend_capabilities import HasExtendCapabilities
 from ..lsp_types import (
+    ApplyWorkspaceEditParams,
+    ApplyWorkspaceEditResult,
     ConfigurationItem,
     ConfigurationParams,
     CreateFilesParams,
@@ -482,3 +484,12 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
                 ):
                     await self.parent.unregister_capability(entry.id, "workspace/didChangeWatchedFiles")
                 # TODO: implement own filewatcher if not supported by language server client
+
+    async def apply_edit(self, edit: WorkspaceEdit, label: Optional[str] = None) -> ApplyWorkspaceEditResult:
+        r = await self.parent.send_request_async(
+            "workspace/applyEdit", ApplyWorkspaceEditParams(edit, label), return_type=ApplyWorkspaceEditResult
+        )
+
+        assert r is not None
+
+        return r
