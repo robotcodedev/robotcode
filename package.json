@@ -450,7 +450,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Ignore specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
+            "description": "Include specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
             "scope": "resource"
           },
           "robotcode.robocop.exclude": {
@@ -459,7 +459,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Ignore specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
+            "description": "Exlude specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
             "scope": "resource"
           },
           "robotcode.robocop.configurations": {
