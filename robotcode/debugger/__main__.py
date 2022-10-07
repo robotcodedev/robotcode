@@ -7,7 +7,7 @@ import sys
 import threading
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, List, Optional, cast
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Union, cast
 
 __file__ = os.path.abspath(__file__)
 if __file__.endswith((".pyc", ".pyo")):
@@ -74,7 +74,7 @@ async def _debug_adapter_server_(host: str, port: int) -> None:
         await server.serve()
 
 
-DEFAULT_TIMEOUT = 5.0
+DEFAULT_TIMEOUT = 10.0
 
 
 @_logger.call
@@ -110,6 +110,7 @@ async def start_debugpy_async(
 async def run_robot(
     port: int,
     args: List[str],
+    bind: Union[Sequence[str], str, None] = None,
     no_debug: bool = False,
     wait_for_client: bool = False,
     wait_for_client_timeout: float = DEFAULT_TIMEOUT,
@@ -245,6 +246,13 @@ def main() -> None:
 
     parser.add_argument("--version", action="store_true", help="shows the version and exits")
     parser.add_argument("-p", "--port", default=6612, help="server listen port (tcp)", type=int)
+    parser.add_argument(
+        "-b",
+        "--bind",
+        action="append",
+        help="Specify alternate bind address. If not specified '127.0.0.1' is used",
+        metavar="ADDRESS",
+    )
     parser.add_argument("-w", "--wait-for-client", action="store_true", help="waits for an debug client to connect")
     parser.add_argument(
         "-t",
@@ -277,7 +285,7 @@ def main() -> None:
     )
     parser.add_argument("-d", "--debugpy", action="store_true", help="starts a debugpy session")
     parser.add_argument(
-        "-dp", "--debugpy-port", default=6613, help="sets the port for debugpy session", type=int, metavar="PORT"
+        "-dp", "--debugpy-port", default=5678, help="sets the port for debugpy session", type=int, metavar="PORT"
     )
     parser.add_argument(
         "-dw", "--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect"
@@ -366,6 +374,7 @@ def main() -> None:
         run_robot(
             args.port,
             robot_args,
+            args.bind,
             args.no_debug,
             args.wait_for_client,
             args.wait_for_client_timeout,

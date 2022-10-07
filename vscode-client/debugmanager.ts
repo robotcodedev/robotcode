@@ -71,97 +71,100 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
       }
     }
 
-    const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+    if (debugConfiguration.request === "launch") {
+      const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
-    const template = config.get("debug.defaultConfiguration", {});
+      const template = config.get("debug.defaultConfiguration", {});
 
-    const defaultLaunchConfig =
-      vscode.workspace
-        .getConfiguration("launch", folder)
-        ?.get<{ [Key: string]: unknown }[]>("configurations")
-        ?.find(
-          (v) =>
-            v?.type === "robotcode" &&
-            (v?.purpose === "default" || (Array.isArray(v?.purpose) && v?.purpose?.indexOf("default") > -1))
-        ) ?? {};
+      const defaultLaunchConfig =
+        vscode.workspace
+          .getConfiguration("launch", folder)
+          ?.get<{ [Key: string]: unknown }[]>("configurations")
+          ?.find(
+            (v) =>
+              v?.type === "robotcode" &&
+              (v?.purpose === "default" || (Array.isArray(v?.purpose) && v?.purpose?.indexOf("default") > -1))
+          ) ?? {};
 
-    debugConfiguration = { ...template, ...defaultLaunchConfig, ...debugConfiguration };
+      debugConfiguration = { ...template, ...defaultLaunchConfig, ...debugConfiguration };
 
-    try {
-      if (path.isAbsolute(debugConfiguration.target)) {
-        debugConfiguration.target = path.relative(debugConfiguration.cwd, debugConfiguration.target).toString();
+      try {
+        if (path.isAbsolute(debugConfiguration.target)) {
+          debugConfiguration.target = path.relative(debugConfiguration.cwd, debugConfiguration.target).toString();
+        }
+      } catch {
+        // empty
       }
-    } catch {
-      // empty
-    }
 
-    if (!debugConfiguration.python) debugConfiguration.python = this.pythonManager.getPythonCommand(folder);
+      if (!debugConfiguration.python) debugConfiguration.python = this.pythonManager.getPythonCommand(folder);
 
-    debugConfiguration.robotPythonPath = [
-      ...config.get<string[]>("robot.pythonPath", []),
-      ...(Array.isArray(defaultLaunchConfig?.robotPythonPath) ? defaultLaunchConfig.robotPythonPath : []),
-      ...(debugConfiguration.robotPythonPath ?? []),
-    ];
+      debugConfiguration.robotPythonPath = [
+        ...config.get<string[]>("robot.pythonPath", []),
+        ...(Array.isArray(defaultLaunchConfig?.robotPythonPath) ? defaultLaunchConfig.robotPythonPath : []),
+        ...(debugConfiguration.robotPythonPath ?? []),
+      ];
 
-    debugConfiguration.args = [...config.get<string[]>("robot.args", []), ...(debugConfiguration.args ?? [])];
+      debugConfiguration.args = [...config.get<string[]>("robot.args", []), ...(debugConfiguration.args ?? [])];
 
-    debugConfiguration.variableFiles = [
-      ...config.get<string[]>("robot.variableFiles", []),
-      ...(Array.isArray(defaultLaunchConfig?.variableFiles) ? defaultLaunchConfig.variableFiles : []),
-      ...(debugConfiguration.variableFiles ?? []),
-    ];
+      debugConfiguration.variableFiles = [
+        ...config.get<string[]>("robot.variableFiles", []),
+        ...(Array.isArray(defaultLaunchConfig?.variableFiles) ? defaultLaunchConfig.variableFiles : []),
+        ...(debugConfiguration.variableFiles ?? []),
+      ];
 
-    debugConfiguration.variables = {
-      ...config.get<{ [Key: string]: unknown }>("robot.variables", {}),
-      ...(Array.isArray(defaultLaunchConfig?.variables) ? defaultLaunchConfig.variables : []),
-      ...(debugConfiguration.variables ?? {}),
-    };
+      debugConfiguration.variables = {
+        ...config.get<{ [Key: string]: unknown }>("robot.variables", {}),
+        ...(Array.isArray(defaultLaunchConfig?.variables) ? defaultLaunchConfig.variables : []),
+        ...(debugConfiguration.variables ?? {}),
+      };
 
-    debugConfiguration.env = {
-      ...config.get<{ [Key: string]: unknown }>("robot.env", {}),
-      ...(defaultLaunchConfig?.env ?? {}),
-      ...(debugConfiguration.env ?? {}),
-    };
+      debugConfiguration.env = {
+        ...config.get<{ [Key: string]: unknown }>("robot.env", {}),
+        ...(defaultLaunchConfig?.env ?? {}),
+        ...(debugConfiguration.env ?? {}),
+      };
 
-    debugConfiguration.openOutputAfterRun =
-      debugConfiguration?.openOutputAfterRun ?? config.get<string | undefined>("run.openOutputAfterRun", undefined);
+      debugConfiguration.openOutputAfterRun =
+        debugConfiguration?.openOutputAfterRun ?? config.get<string | undefined>("run.openOutputAfterRun", undefined);
 
-    debugConfiguration.outputDir =
-      debugConfiguration?.outputDir ?? config.get<string | undefined>("robot.outputDir", undefined);
+      debugConfiguration.outputDir =
+        debugConfiguration?.outputDir ?? config.get<string | undefined>("robot.outputDir", undefined);
 
-    debugConfiguration.mode = debugConfiguration?.mode ?? config.get<string | undefined>("robot.mode", undefined);
+      debugConfiguration.mode = debugConfiguration?.mode ?? config.get<string | undefined>("robot.mode", undefined);
 
-    debugConfiguration.languages =
-      debugConfiguration?.languages ?? config.get<string | undefined>("robot.languages", undefined);
+      debugConfiguration.languages =
+        debugConfiguration?.languages ?? config.get<string | undefined>("robot.languages", undefined);
 
-    debugConfiguration.attachPython = debugConfiguration?.attachPython ?? config.get<boolean>("debug.attachPython");
+      debugConfiguration.attachPython = debugConfiguration?.attachPython ?? config.get<boolean>("debug.attachPython");
 
-    debugConfiguration.outputMessages =
-      debugConfiguration?.outputMessages ?? config.get<boolean>("debug.outputMessages");
+      debugConfiguration.outputMessages =
+        debugConfiguration?.outputMessages ?? config.get<boolean>("debug.outputMessages");
 
-    debugConfiguration.outputLog = debugConfiguration?.outputLog ?? config.get<boolean>("debug.outputLog");
+      debugConfiguration.outputLog = debugConfiguration?.outputLog ?? config.get<boolean>("debug.outputLog");
 
-    debugConfiguration.groupOutput = debugConfiguration?.groupOutput ?? config.get<boolean>("debug.groupOutput");
+      debugConfiguration.groupOutput = debugConfiguration?.groupOutput ?? config.get<boolean>("debug.groupOutput");
 
-    if (!debugConfiguration.attachPython || debugConfiguration.noDebug) {
-      debugConfiguration.attachPython = false;
-    }
-
-    if (debugConfiguration.attachPython && !config.get<boolean>("debug.useExternalDebugpy")) {
-      const debugpyPath = await this.pythonManager.pythonExtension?.exports.debug.getDebuggerPackagePath();
-
-      if (debugpyPath) {
-        const env = debugConfiguration.env ?? {};
-        const envPythonPath: string = env.PYTHONPATH || "";
-
-        env.PYTHONPATH = [
-          path.dirname(debugpyPath),
-          ...(envPythonPath ? envPythonPath.split(path.delimiter) : []),
-        ].join(path.delimiter);
-        debugConfiguration.env = env;
+      if (!debugConfiguration.attachPython || debugConfiguration.noDebug) {
+        debugConfiguration.attachPython = false;
       }
-    }
 
+      if (debugConfiguration.attachPython && !config.get<boolean>("debug.useExternalDebugpy")) {
+        const debugpyPath = await this.pythonManager.pythonExtension?.exports.debug.getDebuggerPackagePath();
+
+        if (debugpyPath) {
+          const env = debugConfiguration.env ?? {};
+          const envPythonPath: string = env.PYTHONPATH || "";
+
+          env.PYTHONPATH = [
+            path.dirname(debugpyPath),
+            ...(envPythonPath ? envPythonPath.split(path.delimiter) : []),
+          ].join(path.delimiter);
+          debugConfiguration.env = env;
+        }
+      }
+    } else if (debugConfiguration.request === "attach") {
+      // do nothing
+    }
     return debugConfiguration;
   }
 }
@@ -176,38 +179,46 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, session.workspaceFolder);
 
     const mode = config.get<string>("debugAdapter.mode");
+    if (session.configuration.request === "launch") {
+      switch (mode) {
+        case "stdio": {
+          const pythonCommand = this.pythonManager.getPythonCommand(session.workspaceFolder);
 
-    switch (mode) {
-      case "stdio": {
-        const pythonCommand = this.pythonManager.getPythonCommand(session.workspaceFolder);
+          if (pythonCommand === undefined) {
+            throw new Error("Can't get a valid python command.");
+          }
 
-        if (pythonCommand === undefined) {
-          throw new Error("Can't get a valid python command.");
+          const debugAdapterArgs = config.get<string[]>("debugAdapter.args", []);
+
+          const args: string[] = ["-u", this.pythonManager.pythonDebugAdapterMain, "--mode", "stdio"].concat(
+            debugAdapterArgs
+          );
+
+          const options: vscode.DebugAdapterExecutableOptions = {
+            env: {},
+            cwd: session.workspaceFolder?.uri.fsPath,
+          };
+
+          return new vscode.DebugAdapterExecutable(pythonCommand, args, options);
         }
+        case "tcp": {
+          const port =
+            config.get("debugAdapter.tcpPort", DEBUG_ADAPTER_DEFAULT_TCP_PORT) || DEBUG_ADAPTER_DEFAULT_TCP_PORT;
 
-        const debugAdapterArgs = config.get<string[]>("debugAdapter.args", []);
+          const host = config.get("debugAdapter.host", DEBUG_ADAPTER_DEFAULT_HOST) || DEBUG_ADAPTER_DEFAULT_HOST;
 
-        const args: string[] = ["-u", this.pythonManager.pythonDebugAdapterMain, "--mode", "stdio"].concat(
-          debugAdapterArgs
-        );
-
-        const options: vscode.DebugAdapterExecutableOptions = {
-          env: {},
-          cwd: session.workspaceFolder?.uri.fsPath,
-        };
-
-        return new vscode.DebugAdapterExecutable(pythonCommand, args, options);
+          return new vscode.DebugAdapterServer(port, host);
+        }
+        default:
+          throw new Error("Unsupported Mode.");
       }
-      case "tcp": {
-        const port =
-          config.get("debugAdapter.tcpPort", DEBUG_ADAPTER_DEFAULT_TCP_PORT) || DEBUG_ADAPTER_DEFAULT_TCP_PORT;
-
-        const host = config.get("debugAdapter.host", DEBUG_ADAPTER_DEFAULT_HOST) || DEBUG_ADAPTER_DEFAULT_HOST;
-
-        return new vscode.DebugAdapterServer(port, host);
-      }
-      default:
-        throw new Error("Unsupported Mode.");
+    } else if (session.configuration.request === "attach") {
+      const port = session.configuration.connect?.port ?? session.configuration.port ?? 6612;
+      const host = session.configuration.connect?.host ?? session.configuration.host ?? "127.0.0.1";
+      const server = new vscode.DebugAdapterServer(port, host);
+      return server;
+    } else {
+      throw new Error(`Unsupported request type "${session.configuration.request}"`);
     }
   }
 }

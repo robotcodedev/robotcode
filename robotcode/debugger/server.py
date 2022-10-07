@@ -8,6 +8,8 @@ from ..utils import async_tools
 from ..utils.async_tools import run_coroutine_from_thread
 from ..utils.logging import LoggingDescriptor
 from .dap_types import (
+    AttachRequestArguments,
+    Capabilities,
     ConfigurationDoneArguments,
     ContinueArguments,
     ContinueResponseBody,
@@ -16,9 +18,11 @@ from .dap_types import (
     EvaluateArguments,
     EvaluateResponseBody,
     Event,
+    ExceptionBreakpointsFilter,
     ExitedEvent,
     ExitedEventBody,
     InitializedEvent,
+    InitializeRequestArguments,
     NextArguments,
     PauseArguments,
     ScopesArguments,
@@ -117,6 +121,56 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
 
         return self._connected
 
+    @rpc_method(name="initialize", param_type=InitializeRequestArguments)
+    async def _initialize(self, arguments: InitializeRequestArguments, *args: Any, **kwargs: Any) -> Capabilities:
+        self._initialized = True
+
+        return Capabilities(
+            supports_configuration_done_request=True,
+            supports_conditional_breakpoints=True,
+            supports_hit_conditional_breakpoints=True,
+            support_terminate_debuggee=True,
+            # support_suspend_debuggee=True,
+            supports_evaluate_for_hovers=True,
+            supports_terminate_request=True,
+            supports_log_points=True,
+            supports_set_expression=True,
+            supports_set_variable=True,
+            supports_value_formatting_options=True,
+            exception_breakpoint_filters=[
+                ExceptionBreakpointsFilter(
+                    filter="failed_keyword",
+                    label="Failed Keywords",
+                    description="Breaks on failed keywords",
+                    default=False,
+                ),
+                ExceptionBreakpointsFilter(
+                    filter="uncaught_failed_keyword",
+                    label="Uncaught Failed Keywords",
+                    description="Breaks on uncaught failed keywords",
+                    default=True,
+                ),
+                ExceptionBreakpointsFilter(
+                    filter="failed_test",
+                    label="Failed Test",
+                    description="Breaks on failed tests",
+                    default=False,
+                ),
+                ExceptionBreakpointsFilter(
+                    filter="failed_suite",
+                    label="Failed Suite",
+                    description="Breaks on failed suite",
+                    default=False,
+                ),
+            ],
+            supports_exception_options=True,
+            supports_exception_filter_options=True,
+        )
+
+    @rpc_method(name="attach", param_type=AttachRequestArguments)
+    async def _attach(self, arguments: AttachRequestArguments, *args: Any, **kwargs: Any) -> None:
+        pass
+
     @_logger.call
     async def initialized(self) -> None:
         await self.send_event_async(InitializedEvent())
@@ -173,6 +227,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
     ) -> None:
         self._received_configuration_done = True
         self._received_configuration_done_event.set()
+        Debugger.instance().attached = True
 
     @_logger.call
     async def wait_for_configuration_done(self, timeout: float = 5) -> bool:

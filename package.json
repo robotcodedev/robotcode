@@ -618,6 +618,75 @@
           "robotframework"
         ],
         "configurationAttributes": {
+          "attach": {
+            "properties": {
+              "connect": {
+                "label": "Attach by connecting to debugpy over a socket.",
+                "properties": {
+                  "host": {
+                    "default": "127.0.0.1",
+                    "description": "Hostname or IP address to connect to.",
+                    "type": "string"
+                  },
+                  "port": {
+                    "description": "Port to connect to.",
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "port"
+                ],
+                "type": "object"
+              },
+              "host": {
+                "default": "127.0.0.1",
+                "description": "Hostname or IP address to connect to.",
+                "type": "string"
+              },
+              "pathMappings": {
+                "default": [],
+                "items": {
+                  "label": "Path mapping",
+                  "properties": {
+                    "localRoot": {
+                      "default": "${workspaceFolder}",
+                      "label": "Local source root.",
+                      "type": "string"
+                    },
+                    "remoteRoot": {
+                      "default": "",
+                      "label": "Remote source root.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "localRoot",
+                    "remoteRoot"
+                  ],
+                  "type": "object"
+                },
+                "label": "Path mappings.",
+                "type": "array"
+              },
+              "port": {
+                "description": "Port to connect to.",
+                "type": "number"
+              },
+              "attachPython": {
+                "type": "boolean",
+                "description": "Attach also the python debugger if a robot test starts.",
+                "default": false
+              },
+              "pythonConfiguration": {
+                "type": [
+                  "object",
+                  "string"
+                ],
+                "description": "Defines a template for the python launch configuration.",
+                "default": {}
+              }
+            }
+          },
           "launch": {
             "properties": {
               "target": {
@@ -892,6 +961,38 @@
                 "hidden": true
               },
               "purpose": "default"
+            }
+          },
+          {
+            "label": "RobotCode: Default",
+            "description": "Default configuration.",
+            "body": {
+              "name": "RobotCode: Default",
+              "type": "robotcode",
+              "request": "launch",
+              "presentation": {
+                "hidden": true
+              },
+              "purpose": "default"
+            }
+          },
+          {
+            "label": "RobotCode: Remote-Attach",
+            "description": "Attach to a running remote debug server.",
+            "body": {
+              "name": "RobotCode: Remote-Attach",
+              "type": "robotcode",
+              "request": "attach",
+              "connect": {
+                "host": "localhost",
+                "port": 6612
+              },
+              "pathMappings": [
+                {
+                  "localRoot": "^\"\\${workspaceFolder}\"",
+                  "remoteRoot": "."
+                }
+              ]
             }
           }
         ]

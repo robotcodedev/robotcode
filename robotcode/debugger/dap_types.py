@@ -319,6 +319,27 @@ class InitializeRequest(Request, _InitializeRequest):
 
 
 @dataclass
+class AttachRequestArguments(Model):
+    restart: Optional[Any] = field(default=None, metadata={"alias": "__restart"})
+
+
+@dataclass
+class _AttachRequest(Model):
+    arguments: AttachRequestArguments
+
+
+@dataclass
+class AttachRequest(Request, _AttachRequest):
+    arguments: AttachRequestArguments = field()
+    command: str = "attach"
+
+
+@dataclass
+class AttachResponse(Response):
+    pass
+
+
+@dataclass
 class ExceptionBreakpointsFilter(Model):
     filter: str
     label: str

@@ -242,6 +242,7 @@ class Debugger:
         self.stop_on_entry = False
         self.no_debug = False
         self.terminated = False
+        self.attached = False
 
     @property
     def debug(self) -> bool:
@@ -549,6 +550,7 @@ class Debugger:
             )
         ):
             self.state = State.Paused
+
             self.send_event(
                 self,
                 StoppedEvent(
@@ -565,8 +567,9 @@ class Debugger:
 
     @_logger.call
     def wait_for_running(self) -> None:
-        with self.condition:
-            self.condition.wait_for(lambda: self.state in [State.Running, State.Stopped])
+        if self.attached:
+            with self.condition:
+                self.condition.wait_for(lambda: self.state in [State.Running, State.Stopped])
 
     def start_output_group(self, name: str, attributes: Dict[str, Any], type: Optional[str] = None) -> None:
         if self.group_output:
