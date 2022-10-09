@@ -132,7 +132,7 @@ async def run_robot(
     from .dap_types import Event
     from .debugger import Debugger
 
-    server_future = run_coroutine_in_thread(_debug_adapter_server_, "127.0.0.1", port)
+    server_future = run_coroutine_in_thread(_debug_adapter_server_, bind, port)
 
     server = await wait_for_server()
 

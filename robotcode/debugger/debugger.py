@@ -406,7 +406,7 @@ class Debugger:
         lines: Optional[List[int]] = None,
         source_modified: Optional[bool] = None,
     ) -> List[Breakpoint]:
-        
+
         if self.is_windows_path(source.path or ""):
             path = pathlib.PureWindowsPath(source.path or "")
         else:
@@ -419,7 +419,8 @@ class Debugger:
                 tuple(breakpoints) if breakpoints else (), tuple(lines) if lines else ()
             )
             return [
-                Breakpoint(id=id(v), source=Source(path=str(path)), verified=True, line=v.line) for v in result.breakpoints
+                Breakpoint(id=id(v), source=Source(path=str(path)), verified=True, line=v.line)
+                for v in result.breakpoints
             ]
         else:
             self._logger.error("not supported breakpoint")

@@ -12,8 +12,10 @@ from typing import (
     Generic,
     NamedTuple,
     Optional,
+    Sequence,
     Type,
     TypeVar,
+    Union,
     cast,
 )
 
@@ -52,7 +54,7 @@ class JsonRpcServerMode(Enum):
 
 
 class TcpParams(NamedTuple):
-    host: Optional[str] = None
+    host: Optional[Union[str, Sequence[str]]] = None
     port: int = 0
 
 
