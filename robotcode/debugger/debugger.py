@@ -187,6 +187,11 @@ class HitCountEntry(NamedTuple):
     type: str
 
 
+class PathMapping(NamedTuple):
+    local_root: Optional[str]
+    remote_root: Optional[str]
+
+
 class Debugger:
     __instance = None
     __lock = threading.RLock()
@@ -217,7 +222,7 @@ class Debugger:
         raise RuntimeError(f"Attempt to create a '{cls.__qualname__}' instance outside of instance()")
 
     def __init__(self) -> None:
-        self.breakpoints: Dict[str, BreakpointsEntry] = {}
+        self.breakpoints: Dict[pathlib.PurePath, BreakpointsEntry] = {}
 
         self.exception_breakpoints: Set[ExceptionBreakpointsEntry] = set()
         self.exception_breakpoints.add(
@@ -243,6 +248,7 @@ class Debugger:
         self.no_debug = False
         self.terminated = False
         self.attached = False
+        self.path_mappings: List[PathMapping] = []
 
     @property
     def debug(self) -> bool:
@@ -400,7 +406,11 @@ class Debugger:
         lines: Optional[List[int]] = None,
         source_modified: Optional[bool] = None,
     ) -> List[Breakpoint]:
-        path = str(Path(source.path).resolve()) if source.path else ""
+        
+        if self.is_windows_path(source.path or ""):
+            path = pathlib.PureWindowsPath(source.path or "")
+        else:
+            path = pathlib.PurePath(source.path or "")
 
         if path in self.breakpoints and not breakpoints and not lines:
             self.breakpoints.pop(path)
@@ -409,7 +419,7 @@ class Debugger:
                 tuple(breakpoints) if breakpoints else (), tuple(lines) if lines else ()
             )
             return [
-                Breakpoint(id=id(v), source=Source(path=path), verified=True, line=v.line) for v in result.breakpoints
+                Breakpoint(id=id(v), source=Source(path=str(path)), verified=True, line=v.line) for v in result.breakpoints
             ]
         else:
             self._logger.error("not supported breakpoint")
@@ -475,7 +485,7 @@ class Debugger:
                 self.requested_state = RequestedState.Nothing
 
         if source is not None:
-            source = str(Path(source).resolve())
+            source = self.map_path_to_client(str(Path(source).absolute()))
             if source in self.breakpoints:
                 breakpoints = [v for v in self.breakpoints[source].breakpoints if v.line == line_no]
                 if len(breakpoints) > 0:
@@ -520,7 +530,7 @@ class Debugger:
                                     body=OutputEventBody(
                                         output=message + os.linesep,
                                         category=OutputCategory.CONSOLE,
-                                        source=Source(path=source) if source else None,
+                                        source=Source(path=str(source)) if source else None,
                                         line=line_no,
                                     )
                                 ),
@@ -583,7 +593,7 @@ class Debugger:
                         output=f"\u001b[38;5;14m{(type +' ') if type else ''}\u001b[0m{name}\n",
                         category=OutputCategory.CONSOLE,
                         group=OutputGroup.START,
-                        source=Source(path=source) if source else None,
+                        source=Source(path=str(self.map_path_to_client(source))) if source else None,
                         line=line_no if source is not None else None,
                         column=0 if source is not None else None,
                     )
@@ -602,7 +612,7 @@ class Debugger:
                         output="",
                         category=OutputCategory.CONSOLE,
                         group=OutputGroup.END,
-                        source=Source(path=source) if source else None,
+                        source=Source(path=str(self.map_path_to_client(source))) if source else None,
                         line=line_no,
                     )
                 ),
@@ -864,6 +874,30 @@ class Debugger:
 
         return [Thread(id=main_thread.ident if main_thread.ident else 0, name=main_thread.name or "")]
 
+    WINDOW_PATH_REGEX = re.compile(r"^(([a-z]:[\\/])|(\\\\)).*$", re.RegexFlag.IGNORECASE)
+
+    @classmethod
+    def is_windows_path(cls, path: os.PathLike[str]) -> bool:
+        return bool(cls.WINDOW_PATH_REGEX.fullmatch(str(path)))
+
+    def map_path_to_client(self, path: os.PathLike[str]) -> pathlib.PurePath:
+        if not self.path_mappings:
+            return pathlib.PurePath(path)
+
+        for mapping in self.path_mappings:
+
+            remote_root_path = Path(mapping.remote_root or ".").absolute()
+
+            if Path(path).is_relative_to(remote_root_path):
+                if self.is_windows_path(mapping.local_root):
+                    local_root_path = str(pathlib.PureWindowsPath(mapping.local_root))
+                    return pathlib.PureWindowsPath(path.replace(str(remote_root_path), local_root_path or ""))
+                else:
+                    local_root_path = str(pathlib.PurePath(mapping.local_root))
+                    return pathlib.PurePath(path.replace(str(remote_root_path), local_root_path or ""))
+
+        return path
+
     def get_stack_trace(
         self,
         thread_id: int,
@@ -879,7 +913,7 @@ class Debugger:
 
         def source_from_entry(entry: StackFrameEntry) -> Optional[Source]:
             if entry.source is not None and entry.is_file:
-                return Source(path=entry.source)
+                return Source(path=str(self.map_path_to_client(entry.source)))
             else:
                 return None
 
@@ -927,7 +961,7 @@ class Debugger:
             self.last_fail_message = msg
 
         current_frame = self.full_stack_frames[0] if self.full_stack_frames else None
-        source = Source(path=current_frame.source) if current_frame else None
+        source = Source(path=str(self.map_path_to_client(current_frame.source))) if current_frame else None
         line = current_frame.line if current_frame else None
 
         if self.output_log:

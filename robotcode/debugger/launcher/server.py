@@ -10,6 +10,8 @@ from ...jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
 from ...utils.logging import LoggingDescriptor
 from ..client import DAPClient, DAPClientError
 from ..dap_types import (
+    AttachRequest,
+    AttachRequestArguments,
     Capabilities,
     ConfigurationDoneArguments,
     ConfigurationDoneRequest,
@@ -269,6 +271,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         self, arguments: Optional[ConfigurationDoneArguments] = None, *args: Any, **kwargs: Any
     ) -> None:
         await self.client.protocol.send_request_async(ConfigurationDoneRequest(arguments=arguments))
+        await self.client.protocol.send_request_async(AttachRequest(arguments=AttachRequestArguments()))
 
     @rpc_method(name="disconnect", param_type=DisconnectArguments)
     async def _disconnect(self, arguments: Optional[DisconnectArguments] = None, *args: Any, **kwargs: Any) -> None:

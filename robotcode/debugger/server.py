@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Any, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from ..jsonrpc2.protocol import rpc_method
 from ..jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
@@ -44,7 +44,7 @@ from .dap_types import (
     VariablesArguments,
     VariablesResponseBody,
 )
-from .debugger import Debugger
+from .debugger import Debugger, PathMapping
 from .protocol import DebugAdapterProtocol
 
 TCP_DEFAULT_PORT = 6612
@@ -168,8 +168,23 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         )
 
     @rpc_method(name="attach", param_type=AttachRequestArguments)
-    async def _attach(self, arguments: AttachRequestArguments, *args: Any, **kwargs: Any) -> None:
-        pass
+    async def _attach(
+        self,
+        arguments: AttachRequestArguments,
+        request: Optional[str] = None,
+        type: Optional[str] = None,
+        name: Optional[str] = None,
+        restart: Optional[bool] = None,
+        pathMappings: Optional[List[Dict[str, str]]] = None,  # noqa: N803
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        if pathMappings:
+            Debugger.instance().path_mappings = [
+                PathMapping(local_root=v.get("localRoot", None), remote_root=v.get("remoteRoot", None))
+                for v in pathMappings
+            ]
+        Debugger.instance().attached = True
 
     @_logger.call
     async def initialized(self) -> None:
@@ -227,7 +242,6 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
     ) -> None:
         self._received_configuration_done = True
         self._received_configuration_done_event.set()
-        Debugger.instance().attached = True
 
     @_logger.call
     async def wait_for_configuration_done(self, timeout: float = 5) -> bool:
