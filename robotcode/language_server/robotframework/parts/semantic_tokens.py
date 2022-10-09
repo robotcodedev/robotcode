@@ -241,7 +241,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         return cls.__mapping
 
     ESCAPE_REGEX = re.compile(
-        r"(?P<t>[^\\]+)|(?P<x>\\([^xuU]|x[0-f]{2}|u[0-f]{4}|U[0-f]{8}){0,1})", re.MULTILINE | re.DOTALL
+        r"(?P<t>[^\\]+)|(?P<x>\\([^xuU]|x[0-0a-f]{2}|u[0-9a-f]{4}|U[0-9a-f]{8}){0,1})", re.MULTILINE | re.DOTALL
     )
     BDD_TOKEN_REGEX = re.compile(r"^(Given|When|Then|And|But)\s", flags=re.IGNORECASE)
 
