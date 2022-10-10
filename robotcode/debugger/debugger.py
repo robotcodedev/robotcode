@@ -8,7 +8,7 @@ import threading
 import weakref
 from collections import deque
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import (
     Any,
     Deque,
@@ -182,7 +182,7 @@ class StackFrameEntry:
 
 
 class HitCountEntry(NamedTuple):
-    source: str
+    source: pathlib.PurePath
     line: int
     type: str
 
@@ -408,7 +408,7 @@ class Debugger:
     ) -> List[Breakpoint]:
 
         if self.is_windows_path(source.path or ""):
-            path = pathlib.PureWindowsPath(source.path or "")
+            path: pathlib.PurePath = pathlib.PureWindowsPath(source.path or "")
         else:
             path = pathlib.PurePath(source.path or "")
 
@@ -486,9 +486,9 @@ class Debugger:
                 self.requested_state = RequestedState.Nothing
 
         if source is not None:
-            source = self.map_path_to_client(str(Path(source).absolute()))
-            if source in self.breakpoints:
-                breakpoints = [v for v in self.breakpoints[source].breakpoints if v.line == line_no]
+            source_path = self.map_path_to_client(str(Path(source).absolute()))
+            if source_path in self.breakpoints:
+                breakpoints = [v for v in self.breakpoints[source_path].breakpoints if v.line == line_no]
                 if len(breakpoints) > 0:
                     for point in breakpoints:
                         if point.condition is not None:
@@ -505,7 +505,7 @@ class Debugger:
                                 return
                         if point.hit_condition is not None:
                             hit = False
-                            entry = HitCountEntry(source, line_no, type)
+                            entry = HitCountEntry(source_path, line_no, type)
                             if entry not in self.hit_counts:
                                 self.hit_counts[entry] = 0
                             self.hit_counts[entry] += 1
@@ -531,7 +531,7 @@ class Debugger:
                                     body=OutputEventBody(
                                         output=message + os.linesep,
                                         category=OutputCategory.CONSOLE,
-                                        source=Source(path=str(source)) if source else None,
+                                        source=Source(path=str(source_path)),
                                         line=line_no,
                                     )
                                 ),
@@ -878,24 +878,35 @@ class Debugger:
     WINDOW_PATH_REGEX = re.compile(r"^(([a-z]:[\\/])|(\\\\)).*$", re.RegexFlag.IGNORECASE)
 
     @classmethod
-    def is_windows_path(cls, path: os.PathLike[str]) -> bool:
+    def is_windows_path(cls, path: Union[os.PathLike[str], str]) -> bool:
         return bool(cls.WINDOW_PATH_REGEX.fullmatch(str(path)))
 
-    def map_path_to_client(self, path: os.PathLike[str]) -> pathlib.PurePath:
+    @staticmethod
+    def relative_to(path: pathlib.PurePath, *other: pathlib.PurePath) -> Optional[pathlib.PurePath]:
+        try:
+            return path.relative_to(*other)
+        except ValueError:
+            return None
+
+    def map_path_to_client(self, path: Union[os.PathLike[str], str]) -> pathlib.PurePath:
+        if not isinstance(path, PurePath):
+            path = PurePath(path)
+
         if not self.path_mappings:
-            return pathlib.PurePath(path)
+            return path
 
         for mapping in self.path_mappings:
 
             remote_root_path = Path(mapping.remote_root or ".").absolute()
 
-            if Path(path).is_relative_to(remote_root_path):
+            if (
+                mapping.local_root is not None
+                and (relative_path := self.relative_to(Path(path), remote_root_path)) is not None
+            ):
                 if self.is_windows_path(mapping.local_root):
-                    local_root_path = str(pathlib.PureWindowsPath(mapping.local_root))
-                    return pathlib.PureWindowsPath(path.replace(str(remote_root_path), local_root_path or ""))
+                    return pathlib.PureWindowsPath(mapping.local_root, relative_path)
                 else:
-                    local_root_path = str(pathlib.PurePath(mapping.local_root))
-                    return pathlib.PurePath(path.replace(str(remote_root_path), local_root_path or ""))
+                    return pathlib.PurePath(mapping.local_root, relative_path)
 
         return path
 
@@ -962,7 +973,11 @@ class Debugger:
             self.last_fail_message = msg
 
         current_frame = self.full_stack_frames[0] if self.full_stack_frames else None
-        source = Source(path=str(self.map_path_to_client(current_frame.source))) if current_frame else None
+        source = (
+            Source(path=str(self.map_path_to_client(current_frame.source)))
+            if current_frame and current_frame.source
+            else None
+        )
         line = current_frame.line if current_frame else None
 
         if self.output_log:

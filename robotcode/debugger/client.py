@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 
 from ..jsonrpc2.server import TcpParams
 from ..utils.logging import LoggingDescriptor
@@ -54,9 +54,16 @@ class DAPClient:
         async def wait() -> None:
             while self._protocol is None:
                 try:
+                    if self.tcp_params.host is not None:
+                        if isinstance(self.tcp_params.host, Sequence):
+                            host = self.tcp_params.host[0]
+                        else:
+                            host = self.tcp_params.host
+                    else:
+                        host = "127.0.0.1"
                     self._transport, protocol = await asyncio.get_running_loop().create_connection(
                         self._create_protocol,
-                        host=self.tcp_params.host if self.tcp_params.host is not None else "127.0.0.1",
+                        host=host,
                         port=self.tcp_params.port,
                     )
 

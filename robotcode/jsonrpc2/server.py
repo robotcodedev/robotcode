@@ -54,7 +54,7 @@ class JsonRpcServerMode(Enum):
 
 
 class TcpParams(NamedTuple):
-    host: Optional[Union[str, Sequence[str]]] = None
+    host: Union[str, Sequence[str], None] = None
     port: int = 0
 
 
@@ -203,7 +203,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         self._run_func = run_io_nonblocking
 
     @_logger.call
-    async def start_tcp(self, host: Optional[str] = None, port: int = 0) -> None:
+    async def start_tcp(self, host: Union[str, Sequence[str], None] = None, port: int = 0) -> None:
         self.mode = JsonRpcServerMode.TCP
 
         self._server = await self.loop.create_server(self.create_protocol, host, port, reuse_address=True)
