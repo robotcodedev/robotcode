@@ -38,6 +38,18 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         viewColumn: vscode.ViewColumn.Beside,
       });
     }),
+    vscode.commands.registerCommand("robotcode.getVSCodeTheme", () => {
+      switch (vscode.window.activeColorTheme.kind) {
+        case vscode.ColorThemeKind.Dark:
+        case vscode.ColorThemeKind.HighContrast:
+          return "DARK";
+        case vscode.ColorThemeKind.Light:
+        case vscode.ColorThemeKind.HighContrastLight:
+          return "LIGHT";
+        default:
+          return null;
+      }
+    }),
     vscode.window.registerTerminalLinkProvider({
       provideTerminalLinks(terminalContext: vscode.TerminalLinkContext, _token: vscode.CancellationToken) {
         const line = terminalContext.line.trimEnd();
