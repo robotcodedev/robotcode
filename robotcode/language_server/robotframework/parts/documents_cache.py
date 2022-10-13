@@ -228,7 +228,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         get: Callable[[str], List[Token]],
     ) -> List[Token]:
 
-        return get(document.text)
+        return get(await document.text())
 
     async def get_resource_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
         if data_only:
@@ -442,10 +442,10 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
             else:
                 return await self.default_imports_manager()
 
-        if folder not in self._imports_managers:
-            async with self._imports_managers_lock:
-                if folder not in self._imports_managers:
-                    config = await self.parent.workspace.get_configuration(RobotConfig, folder.uri)
+        async with self._imports_managers_lock:
+            if folder not in self._imports_managers:
+                config = await self.parent.workspace.get_configuration(RobotConfig, folder.uri)
 
-                    self._imports_managers[folder] = ImportsManager(self.parent, folder.uri, config)
-        return self._imports_managers[folder]
+                self._imports_managers[folder] = ImportsManager(self.parent, folder.uri, config)
+
+            return self._imports_managers[folder]

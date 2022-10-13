@@ -240,12 +240,12 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         finally:
             self.node_stack = self.node_stack[:-1]
 
-    @staticmethod
-    async def get_ignored_lines(document: TextDocument) -> List[int]:
-        return await document.get_cache(Analyzer.__get_ignored_lines)
+    # @staticmethod
+    # async def get_ignored_lines(document: TextDocument) -> List[int]:
+    #     return await document.get_cache(Analyzer.__get_ignored_lines)
 
     @staticmethod
-    async def __get_ignored_lines(document: TextDocument) -> List[int]:
+    async def get_ignored_lines(document: TextDocument) -> List[int]:
         result = []
         lines = await document.get_lines()
         for line_no, line in enumerate(lines):

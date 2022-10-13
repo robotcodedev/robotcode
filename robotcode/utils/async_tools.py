@@ -8,6 +8,8 @@ import functools
 import inspect
 import threading
 import time
+import traceback
+import warnings
 import weakref
 from collections import deque
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -412,6 +414,36 @@ async def async_lock(lock: threading.RLock) -> AsyncGenerator[None, None]:
 
 
 class Event:
+    def __init__(self, value: bool = False) -> None:
+        self._event = threading.Event()
+        if value:
+            self._event.set()
+
+    def is_set(self) -> bool:
+        return self._event.is_set()
+
+    def set(self) -> None:
+        self._event.set()
+
+    def clear(self) -> None:
+        self._event.clear()
+
+    async def wait(self, timeout: Optional[float] = None) -> bool:
+        if timeout is not None and timeout > 0:
+            start = time.monotonic()
+        else:
+            start = None
+
+        while not (result := self.is_set()):
+            if start is not None and timeout is not None and (time.monotonic() - start) > timeout:
+                break
+
+            await asyncio.sleep(0)
+
+        return result
+
+
+class OldEvent:
     """Thread safe version of an async Event"""
 
     def __init__(self, value: bool = False) -> None:
@@ -587,6 +619,67 @@ class BoundedSemaphore(Semaphore):
 
 
 class Lock:
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+
+    def locked(self) -> bool:
+        return self._lock.locked()
+
+    def acquire(self, blocking: bool = True, timeout: float = -1) -> bool:
+        return self._lock.acquire(blocking=blocking, timeout=timeout)
+
+    def release(self) -> None:
+        self._lock.release()
+        self._owner_thread: Optional[threading.Thread] = None
+        self._owner_task: Optional[asyncio.Task[Any]] = None
+
+    async def acquire_async(self, blocking: bool = True, timeout: float = -1) -> bool:
+        start = time.monotonic()
+
+        while not (aquired := self.acquire(blocking=False)):
+            if not blocking:
+                return False
+
+            current = time.monotonic() - start
+            if timeout > 0 and current > timeout:
+                break
+
+            if current > 30:
+                tb = traceback.format_stack(self._owner_task.get_stack()[0]) if self._owner_task is not None else ""
+                warnings.warn(
+                    f"locking takes to long {self._owner_thread} {self._owner_task} {tb}",
+                )
+
+            await asyncio.sleep(0)
+
+        self._owner_task = asyncio.current_task()
+        self._owner_thread = threading.current_thread()
+
+        return aquired
+
+    async def release_async(self) -> None:
+        self._lock.release()
+        self._owner_task = None
+        self._owner_thread = None
+
+    def __enter__(self) -> None:
+        self.acquire()
+
+    def __exit__(
+        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
+    ) -> None:
+        self.release()
+
+    async def __aenter__(self) -> None:
+        await self.acquire_async()
+
+    async def __aexit__(
+        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
+    ) -> None:
+        await self.release_async()
+
+
+class NewLock:
     def __init__(self) -> None:
         self._block = BoundedSemaphore(value=1)
 

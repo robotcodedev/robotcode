@@ -661,31 +661,33 @@ class Namespace:
         async with self._initialize_lock:
             return self._initialized
 
+    async def _invalidate(self) -> None:
+        self._initialized = False
+
+        self._libraries = OrderedDict()
+        self._libraries_matchers = None
+        self._resources = OrderedDict()
+        self._resources_matchers = None
+        self._variables = OrderedDict()
+        self._imports = None
+        self._import_entries = OrderedDict()
+        self._own_variables = None
+        self._keywords = None
+        self._library_doc = None
+        self._analyzed = False
+        self._diagnostics = []
+        self._keyword_references = {}
+        self._variable_references = {}
+
+        self._finder = None
+        self._in_initialize = False
+
+        await self._reset_global_variables()
+
     @_logger.call
     async def invalidate(self) -> None:
         async with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
-            self._initialized = False
-
-            self._libraries = OrderedDict()
-            self._libraries_matchers = None
-            self._resources = OrderedDict()
-            self._resources_matchers = None
-            self._variables = OrderedDict()
-            self._imports = None
-            self._import_entries = OrderedDict()
-            self._own_variables = None
-            self._keywords = None
-            self._library_doc = None
-            self._analyzed = False
-            self._diagnostics = []
-            self._keyword_references = {}
-            self._variable_references = {}
-
-            self._finder = None
-            self._in_initialize = False
-
-            await self._reset_global_variables()
-
+            await self._invalidate()
         await self.has_invalidated(self)
 
     @_logger.call
@@ -745,18 +747,17 @@ class Namespace:
 
     @_logger.call
     async def get_library_doc(self) -> LibraryDoc:
-        if self._library_doc is None:
-            async with self._library_doc_lock:
-                if self._library_doc is None:
-                    self._library_doc = await self.imports_manager.get_libdoc_from_model(
-                        self.model,
-                        self.source,
-                        model_type="RESOURCE",
-                        append_model_errors=self.document_type is not None
-                        and self.document_type in [DocumentType.RESOURCE],
-                    )
+        async with self._library_doc_lock:
+            if self._library_doc is None:
+                self._library_doc = await self.imports_manager.get_libdoc_from_model(
+                    self.model,
+                    self.source,
+                    model_type="RESOURCE",
+                    append_model_errors=self.document_type is not None
+                    and self.document_type in [DocumentType.RESOURCE],
+                )
 
-        return self._library_doc
+            return self._library_doc
 
     class DataEntry(NamedTuple):
         libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
@@ -767,93 +768,92 @@ class Namespace:
 
     @_logger.call(condition=lambda self: not self._initialized)
     async def ensure_initialized(self) -> bool:
-
-        if not self._initialized:
+        async with self._initialize_lock:
             imports_changed = False
-            async with self._initialize_lock:
-                if not self._initialized:
 
-                    if self._in_initialize:
-                        self._logger.critical(f"already initialized {self.document}")
+            if not self._initialized:
 
-                    self._in_initialize = True
+                if self._in_initialize:
+                    self._logger.critical(f"already initialized {self.document}")
 
-                    try:
-                        self._logger.debug(f"ensure_initialized -> initialize {self.document}")
+                self._in_initialize = True
 
-                        imports = await self.get_imports()
+                try:
+                    self._logger.debug(f"ensure_initialized -> initialize {self.document}")
 
-                        data_entry: Optional[Namespace.DataEntry] = None
-                        if self.document is not None:
-                            # check or save several data in documents data cache,
-                            # if imports are different, then the data is invalid
-                            old_imports: List[Import] = self.document.get_data(Namespace)
-                            if old_imports is None:
-                                self.document.set_data(Namespace, imports)
-                            elif old_imports != imports:
-                                imports_changed = True
+                    imports = await self.get_imports()
 
-                                new_imports = []
-                                for e in old_imports:
-                                    if e in imports:
-                                        new_imports.append(e)
-                                for e in imports:
-                                    if e not in new_imports:
-                                        new_imports.append(e)
-                                self.document.set_data(Namespace, new_imports)
-                                self.document.set_data(Namespace.DataEntry, None)
-                            else:
-                                data_entry = self.document.get_data(Namespace.DataEntry)
+                    data_entry: Optional[Namespace.DataEntry] = None
+                    if self.document is not None:
+                        # check or save several data in documents data cache,
+                        # if imports are different, then the data is invalid
+                        old_imports: List[Import] = self.document.get_data(Namespace)
+                        if old_imports is None:
+                            self.document.set_data(Namespace, imports)
+                        elif old_imports != imports:
+                            imports_changed = True
 
-                        if data_entry is not None:
-                            self._libraries = data_entry.libraries.copy()
-                            self._resources = data_entry.resources.copy()
-                            self._variables = data_entry.variables.copy()
-                            self._diagnostics = data_entry.diagnostics.copy()
-                            self._import_entries = data_entry.import_entries.copy()
+                            new_imports = []
+                            for e in old_imports:
+                                if e in imports:
+                                    new_imports.append(e)
+                            for e in imports:
+                                if e not in new_imports:
+                                    new_imports.append(e)
+                            self.document.set_data(Namespace, new_imports)
+                            self.document.set_data(Namespace.DataEntry, None)
                         else:
+                            data_entry = self.document.get_data(Namespace.DataEntry)
 
-                            variables = await self.get_resolvable_variables()
+                    if data_entry is not None:
+                        self._libraries = data_entry.libraries.copy()
+                        self._resources = data_entry.resources.copy()
+                        self._variables = data_entry.variables.copy()
+                        self._diagnostics = data_entry.diagnostics.copy()
+                        self._import_entries = data_entry.import_entries.copy()
+                    else:
 
-                            await self._import_default_libraries(variables)
-                            await self._import_imports(
-                                imports, str(Path(self.source).parent), top_level=True, variables=variables
+                        variables = await self.get_resolvable_variables()
+
+                        await self._import_default_libraries(variables)
+                        await self._import_imports(
+                            imports, str(Path(self.source).parent), top_level=True, variables=variables
+                        )
+
+                        if self.document is not None:
+                            self.document.set_data(
+                                Namespace.DataEntry,
+                                Namespace.DataEntry(
+                                    self._libraries.copy(),
+                                    self._resources.copy(),
+                                    self._variables.copy(),
+                                    self._diagnostics.copy(),
+                                    self._import_entries.copy(),
+                                ),
                             )
 
-                            if self.document is not None:
-                                self.document.set_data(
-                                    Namespace.DataEntry,
-                                    Namespace.DataEntry(
-                                        self._libraries.copy(),
-                                        self._resources.copy(),
-                                        self._variables.copy(),
-                                        self._diagnostics.copy(),
-                                        self._import_entries.copy(),
-                                    ),
-                                )
+                    await self._reset_global_variables()
 
-                        await self._reset_global_variables()
+                    self._initialized = True
 
-                        self._initialized = True
+                except BaseException as e:
+                    if not isinstance(e, asyncio.CancelledError):
+                        self._logger.exception(e, level=logging.DEBUG)
 
-                    except BaseException as e:
-                        if not isinstance(e, asyncio.CancelledError):
-                            self._logger.exception(e, level=logging.DEBUG)
+                    if self.document is not None:
+                        self.document.remove_data(Namespace)
+                        self.document.remove_data(Namespace.DataEntry)
 
-                        if self.document is not None:
-                            self.document.remove_data(Namespace)
-                            self.document.remove_data(Namespace.DataEntry)
+                    await self._invalidate()
+                    raise
+                finally:
+                    self._in_initialize = False
 
-                        await self.invalidate()
-                        raise
-                    finally:
-                        self._in_initialize = False
+        if self._initialized:
+            await self.has_initialized(self)
 
-            if self._initialized:
-                await self.has_initialized(self)
-
-                if imports_changed:
-                    await self.has_imports_changed(self)
+            if imports_changed:
+                await self.has_imports_changed(self)
 
         return self._initialized
 
@@ -870,12 +870,11 @@ class Namespace:
 
     @_logger.call
     async def get_own_variables(self) -> List[VariableDefinition]:
-        if self._own_variables is None:
-            async with self._own_variables_lock:
-                if self._own_variables is None:
-                    self._own_variables = await VariablesVisitor().get(self.source, self.model)
+        async with self._own_variables_lock:
+            if self._own_variables is None:
+                self._own_variables = await VariablesVisitor().get(self.source, self.model)
 
-        return self._own_variables
+            return self._own_variables
 
     _builtin_variables: Optional[List[BuiltInVariableDefinition]] = None
 
@@ -895,20 +894,19 @@ class Namespace:
             self._global_variables = None
 
     async def get_global_variables(self) -> List[VariableDefinition]:
-        if self._global_variables is None:
-            async with self._global_variables_lock:
-                if self._global_variables is None:
-                    self._global_variables = list(
-                        itertools.chain(
-                            await self.get_command_line_variables(),
-                            await self.get_own_variables(),
-                            *(e.variables for e in self._resources.values()),
-                            *(e.variables for e in self._variables.values()),
-                            self.get_builtin_variables(),
-                        )
+        async with self._global_variables_lock:
+            if self._global_variables is None:
+                self._global_variables = list(
+                    itertools.chain(
+                        await self.get_command_line_variables(),
+                        await self.get_own_variables(),
+                        *(e.variables for e in self._resources.values()),
+                        *(e.variables for e in self._variables.values()),
+                        self.get_builtin_variables(),
                     )
+                )
 
-        return self._global_variables
+            return self._global_variables
 
     async def yield_variables(
         self,
@@ -1488,31 +1486,30 @@ class Namespace:
 
     @_logger.call
     async def get_keywords(self) -> List[KeywordDoc]:
-        if self._keywords is None:
-            async with self._keywords_lock:
-                if self._keywords is None:
+        async with self._keywords_lock:
+            if self._keywords is None:
 
-                    current_time = time.monotonic()
-                    self._logger.debug("start collecting keywords")
-                    try:
-                        i = 0
+                current_time = time.monotonic()
+                self._logger.debug("start collecting keywords")
+                try:
+                    i = 0
 
-                        await self.ensure_initialized()
+                    await self.ensure_initialized()
 
-                        result: Dict[KeywordMatcher, KeywordDoc] = {}
+                    result: Dict[KeywordMatcher, KeywordDoc] = {}
 
-                        async for doc in self.iter_all_keywords():
-                            i += 1
-                            result[KeywordMatcher(doc.name)] = doc
+                    async for doc in self.iter_all_keywords():
+                        i += 1
+                        result[KeywordMatcher(doc.name)] = doc
 
-                        self._keywords = list(result.values())
-                    finally:
-                        self._logger.debug(
-                            lambda: f"end collecting {len(self._keywords) if self._keywords else 0}"
-                            f" keywords in {time.monotonic()-current_time}s analyze {i} keywords"
-                        )
+                    self._keywords = list(result.values())
+                finally:
+                    self._logger.debug(
+                        lambda: f"end collecting {len(self._keywords) if self._keywords else 0}"
+                        f" keywords in {time.monotonic()-current_time}s analyze {i} keywords"
+                    )
 
-        return self._keywords
+            return self._keywords
 
     async def append_diagnostics(
         self,
@@ -1545,56 +1542,55 @@ class Namespace:
 
         from .analyzer import Analyzer
 
-        if not self._analyzed:
-            async with self._analyze_lock:
-                if not self._analyzed:
-                    canceled = False
+        async with self._analyze_lock:
+            if not self._analyzed:
+                canceled = False
 
-                    self._logger.debug(lambda: f"start analyze {self.document}")
-                    start_time = time.monotonic()
+                self._logger.debug(lambda: f"start analyze {self.document}")
+                start_time = time.monotonic()
 
-                    try:
-                        result = await Analyzer(self.model, self).run()
+                try:
+                    result = await Analyzer(self.model, self).run()
 
-                        self._diagnostics += result.diagnostics
-                        self._keyword_references = result.keyword_references
-                        self._variable_references = result.variable_references
+                    self._diagnostics += result.diagnostics
+                    self._keyword_references = result.keyword_references
+                    self._variable_references = result.variable_references
 
-                        lib_doc = await self.get_library_doc()
+                    lib_doc = await self.get_library_doc()
 
-                        if lib_doc.errors is not None:
-                            for err in lib_doc.errors:
-                                await self.append_diagnostics(
-                                    range=Range(
-                                        start=Position(
-                                            line=((err.line_no - 1) if err.line_no is not None else 0),
-                                            character=0,
-                                        ),
-                                        end=Position(
-                                            line=((err.line_no - 1) if err.line_no is not None else 0),
-                                            character=0,
-                                        ),
+                    if lib_doc.errors is not None:
+                        for err in lib_doc.errors:
+                            await self.append_diagnostics(
+                                range=Range(
+                                    start=Position(
+                                        line=((err.line_no - 1) if err.line_no is not None else 0),
+                                        character=0,
                                     ),
-                                    message=err.message,
-                                    severity=DiagnosticSeverity.ERROR,
-                                    source=DIAGNOSTICS_SOURCE_NAME,
-                                    code=err.type_name,
-                                )
+                                    end=Position(
+                                        line=((err.line_no - 1) if err.line_no is not None else 0),
+                                        character=0,
+                                    ),
+                                ),
+                                message=err.message,
+                                severity=DiagnosticSeverity.ERROR,
+                                source=DIAGNOSTICS_SOURCE_NAME,
+                                code=err.type_name,
+                            )
 
-                    except asyncio.CancelledError:
-                        canceled = True
-                        self._logger.debug("analyzing canceled")
-                        raise
-                    finally:
-                        self._analyzed = not canceled
+                except asyncio.CancelledError:
+                    canceled = True
+                    self._logger.debug("analyzing canceled")
+                    raise
+                finally:
+                    self._analyzed = not canceled
 
-                        self._logger.debug(
-                            lambda: f"end analyzed {self.document} succeed in {time.monotonic() - start_time}s"
-                            if self._analyzed
-                            else f"end analyzed {self.document} failed in {time.monotonic() - start_time}s"
-                        )
+                    self._logger.debug(
+                        lambda: f"end analyzed {self.document} succeed in {time.monotonic() - start_time}s"
+                        if self._analyzed
+                        else f"end analyzed {self.document} failed in {time.monotonic() - start_time}s"
+                    )
 
-            await self.has_analysed(self)
+                await self.has_analysed(self)
 
     async def get_finder(self) -> KeywordFinder:
         if self._finder is None:

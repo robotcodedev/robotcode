@@ -29,6 +29,7 @@ from ...common.lsp_types import (
     CodeAction,
     CodeActionContext,
     CodeActionKinds,
+    CodeActionTriggerKind,
     Command,
     CreateFile,
     DeleteFile,
@@ -201,6 +202,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self._documentation_server_port = 0
 
         self.parent.commands.register(self.translate_suite)
+        self.parent.commands.register(self.comming_soon)
 
     async def initialized(self, sender: Any) -> None:
         await self._ensure_http_server_started()
@@ -239,7 +241,12 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 self._server_thread.start()
 
     @language_id("robotframework")
-    @code_action_kinds([CodeActionKinds.SOURCE + ".openDocumentation"])
+    @code_action_kinds(
+        [
+            f"{CodeActionKinds.SOURCE}.openDocumentation",
+            f"{CodeActionKinds.QUICKFIX}.createKeyword",
+        ]
+    )
     @_logger.call
     async def collect(
         self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
@@ -264,7 +271,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             from robot.conf.languages import En, Languages
             from robot.parsing.model.statements import Config
 
-            if isinstance(node, Config):
+            if context.only and CodeActionKinds.SOURCE in context.only and isinstance(node, Config):
                 for token in node.get_tokens(RobotToken.CONFIG):
                     config, lang = token.value.split(":", 1)
 
@@ -293,23 +300,24 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                         else:
                             return None
 
-        if isinstance(node, (LibraryImport, ResourceImport)):
+        if context.only and isinstance(node, (LibraryImport, ResourceImport)):
 
-            url = await self.build_url(
-                node.name, node.args if isinstance(node, LibraryImport) else (), document, namespace
-            )
-
-            return [
-                CodeAction(
-                    "Open Documentation",
-                    kind=CodeActionKinds.SOURCE + ".openDocumentation",
-                    command=Command(
-                        "Open Documentation",
-                        "robotcode.showDocumentation",
-                        [url],
-                    ),
+            if CodeActionKinds.SOURCE in context.only:
+                url = await self.build_url(
+                    node.name, node.args if isinstance(node, LibraryImport) else (), document, namespace
                 )
-            ]
+
+                return [
+                    CodeAction(
+                        "Open Documentation",
+                        kind=CodeActionKinds.SOURCE + ".openDocumentation",
+                        command=Command(
+                            "Open Documentation",
+                            "robotcode.showDocumentation",
+                            [url],
+                        ),
+                    )
+                ]
 
         if isinstance(node, (KeywordCall, Fixture)):
             result = await self.get_keyworddoc_and_token_from_position(
@@ -320,45 +328,70 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 range.start,
             )
 
+            if result is None and (
+                (context.only and CodeActionKinds.QUICKFIX in context.only)
+                or context.trigger_kind == CodeActionTriggerKind.AUTOMATIC
+            ):
+                return [
+                    CodeAction(
+                        "Create Keyword",
+                        kind=CodeActionKinds.QUICKFIX + ".createKeyword",
+                        command=Command(
+                            "Create Keyword",
+                            "robotcode.commingSoon",
+                        ),
+                    )
+                ]
+
             if result is not None:
                 kw_doc, _ = result
 
                 if kw_doc is not None:
-                    entry: Optional[LibraryEntry] = None
 
-                    if kw_doc.libtype == "LIBRARY":
-                        entry = next(
-                            (v for v in (await namespace.get_libraries()).values() if v.library_doc == kw_doc.parent),
-                            None,
-                        )
+                    if context.only and CodeActionKinds.SOURCE in context.only:
+                        entry: Optional[LibraryEntry] = None
 
-                    elif kw_doc.libtype == "RESOURCE":
-                        entry = next(
-                            (v for v in (await namespace.get_resources()).values() if v.library_doc == kw_doc.parent),
-                            None,
-                        )
+                        if kw_doc.libtype == "LIBRARY":
+                            entry = next(
+                                (
+                                    v
+                                    for v in (await namespace.get_libraries()).values()
+                                    if v.library_doc == kw_doc.parent
+                                ),
+                                None,
+                            )
 
-                        self_libdoc = await namespace.get_library_doc()
-                        if entry is None and self_libdoc == kw_doc.parent:
+                        elif kw_doc.libtype == "RESOURCE":
+                            entry = next(
+                                (
+                                    v
+                                    for v in (await namespace.get_resources()).values()
+                                    if v.library_doc == kw_doc.parent
+                                ),
+                                None,
+                            )
 
-                            entry = LibraryEntry(self_libdoc.name, str(document.uri.to_path().name), self_libdoc)
+                            self_libdoc = await namespace.get_library_doc()
+                            if entry is None and self_libdoc == kw_doc.parent:
 
-                    if entry is None:
-                        return None
+                                entry = LibraryEntry(self_libdoc.name, str(document.uri.to_path().name), self_libdoc)
 
-                    url = await self.build_url(entry.import_name, entry.args, document, namespace, kw_doc.name)
+                        if entry is None:
+                            return None
 
-                    return [
-                        CodeAction(
-                            "Open Documentation",
-                            kind=CodeActionKinds.SOURCE + ".openDocumentation",
-                            command=Command(
+                        url = await self.build_url(entry.import_name, entry.args, document, namespace, kw_doc.name)
+
+                        return [
+                            CodeAction(
                                 "Open Documentation",
-                                "robotcode.showDocumentation",
-                                [url],
-                            ),
-                        )
-                    ]
+                                kind=CodeActionKinds.SOURCE + ".openDocumentation",
+                                command=Command(
+                                    "Open Documentation",
+                                    "robotcode.showDocumentation",
+                                    [url],
+                                ),
+                            )
+                        ]
 
         return None
 
@@ -410,6 +443,10 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             return f"http://localhost:{self._documentation_server_port}/{path.as_posix()}"
 
         return None
+
+    @command("robotcode.commingSoon")
+    async def comming_soon(self) -> None:
+        self.parent.window.show_message("Comming soon... stay tuned ...")
 
     @command("robotcode.translateSuite")
     async def translate_suite(self, document_uri: str, lang: str) -> None:

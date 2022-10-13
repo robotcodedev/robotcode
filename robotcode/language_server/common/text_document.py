@@ -3,11 +3,10 @@ from __future__ import annotations
 import collections
 import inspect
 import io
-import threading
 import weakref
 from typing import Any, Awaitable, Callable, Dict, List, Optional, TypeVar, Union, cast
 
-from ...utils.async_tools import async_event, create_sub_task
+from ...utils.async_tools import Lock, async_event, create_sub_task
 from ...utils.logging import LoggingDescriptor
 from ...utils.uri import Uri
 from .lsp_types import DocumentUri, Range
@@ -24,7 +23,7 @@ class CacheEntry:
     def __init__(self) -> None:
         self.data: Any = None
         self.has_data: bool = False
-        self.lock = threading.RLock()
+        self.lock = Lock()
 
 
 class TextDocument:
@@ -39,7 +38,7 @@ class TextDocument:
     ) -> None:
         super().__init__()
 
-        self._lock = threading.RLock()
+        self._lock = Lock()
         self.document_uri = document_uri
         self.uri = Uri(self.document_uri).normalized()
         self.language_id = language_id
@@ -71,9 +70,11 @@ class TextDocument:
             f")"
         )
 
-    @property
-    def text(self) -> str:
-        with self._lock:
+    def text_sync(self) -> str:
+        return self._text
+
+    async def text(self) -> str:
+        async with self._lock:
             return self._text
 
     async def save(self, version: Optional[int], text: Optional[str]) -> None:
@@ -87,13 +88,13 @@ class TextDocument:
 
     @_logger.call
     async def apply_none_change(self) -> None:
-        with self._lock:
+        async with self._lock:
             self._lines = None
             await self._invalidate_cache()
 
     @_logger.call
     async def apply_full_change(self, version: Optional[int], text: Optional[str], *, save: bool = False) -> None:
-        with self._lock:
+        async with self._lock:
             if version is not None:
                 self._version = version
             if text is not None:
@@ -105,7 +106,7 @@ class TextDocument:
 
     @_logger.call
     async def apply_incremental_change(self, version: Optional[int], range: Range, text: str) -> None:
-        with self._lock:
+        async with self._lock:
             try:
                 if version is not None:
                     self._version = version
@@ -146,10 +147,11 @@ class TextDocument:
         return self._lines
 
     async def get_lines(self) -> List[str]:
-        if self._lines is None:
-            with self._lock:
+        async with self._lock:
+            if self._lines is None:
                 return self.__get_lines()
-        return self._lines
+
+            return self._lines
 
     @async_event
     async def cache_invalidate(sender) -> None:  # NOSONAR
@@ -166,7 +168,7 @@ class TextDocument:
 
     @_logger.call
     async def invalidate_cache(self) -> None:
-        with self._lock:
+        async with self._lock:
             await self._invalidate_cache()
 
     async def _invalidate_data(self) -> None:
@@ -174,11 +176,11 @@ class TextDocument:
 
     @_logger.call
     async def invalidate_data(self) -> None:
-        with self._lock:
+        async with self._lock:
             await self._invalidate_data()
 
     async def __remove_cache_entry_safe(self, _ref: Any) -> None:
-        with self._lock:
+        async with self._lock:
             if _ref in self._cache:
                 self._cache.pop(_ref)
 
@@ -218,7 +220,7 @@ class TextDocument:
 
         e = self._cache[reference]
 
-        with e.lock:
+        async with e.lock:
             if not e.has_data:
                 e.data = await entry(self, *args, **kwargs)
                 e.has_data = True
@@ -250,5 +252,5 @@ class TextDocument:
 
     @_logger.call
     async def clear(self) -> None:
-        with self._lock:
+        async with self._lock:
             await self._clear()

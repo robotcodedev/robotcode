@@ -1131,7 +1131,9 @@ def find_library(
     )[0]
 
 
-def get_robot_library_html_doc_str(name: str, working_dir: str = ".", base_dir: str = ".") -> str:
+def get_robot_library_html_doc_str(
+    name: str, working_dir: str = ".", base_dir: str = ".", theme: Optional[str] = None
+) -> str:
     from robot.libdocpkg import LibraryDocumentation
     from robot.libdocpkg.htmlwriter import LibdocHtmlWriter
 
@@ -1145,7 +1147,10 @@ def get_robot_library_html_doc_str(name: str, working_dir: str = ".", base_dir: 
     robot_libdoc = LibraryDocumentation(name)
     robot_libdoc.convert_docs_to_html()
     with io.StringIO() as output:
-        writer = LibdocHtmlWriter()
+        if get_robot_version() > (6, 0):
+            writer = LibdocHtmlWriter(theme=theme)
+        else:
+            writer = LibdocHtmlWriter()
         writer.write(robot_libdoc, output)
 
         return output.getvalue()

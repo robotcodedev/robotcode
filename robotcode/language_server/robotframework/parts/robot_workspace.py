@@ -63,7 +63,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
             async with self.parent.window.progress("Collect sources", cancellable=False):
                 files = [
                     f
-                    async for f in iter_files(
+                    for f in iter_files(
                         folder.uri.to_path(),
                         f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}",
                         ignore_patterns=config.workspace.exclude_patterns or [],

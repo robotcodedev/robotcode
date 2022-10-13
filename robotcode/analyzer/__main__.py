@@ -18,7 +18,7 @@ exclude_patterns: List[str] = [
 
 
 async def main() -> None:
-    async for f in iter_files(
+    for f in iter_files(
         Path("c:/develop/robot/robotframework"),
         f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}",
         ignore_patterns=exclude_patterns,

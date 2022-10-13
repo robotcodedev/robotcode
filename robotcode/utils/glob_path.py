@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Any, AsyncGenerator, Iterable, Sequence, Union, cast
+from typing import Any, Generator, Iterable, Sequence, Union, cast
 
 
 def _glob_pattern_to_re(pattern: str) -> str:
@@ -82,14 +82,14 @@ def globmatches(pattern: str, path: Union[Path, str, os.PathLike[Any]]) -> bool:
     return Pattern(pattern).matches(path)
 
 
-async def iter_files(
+def iter_files(
     path: Union[Path, str, os.PathLike[str]],
     patterns: Union[Sequence[Union[Pattern, str]], Pattern, str, None] = None,
     ignore_patterns: Union[Sequence[Union[Pattern, str]], Pattern, str, None] = None,
     *,
     absolute: bool = False,
     _base_path: Union[Path, str, os.PathLike[str], None] = None,
-) -> AsyncGenerator[Path, None]:
+) -> Generator[Path, None, None]:
     if not isinstance(path, Path):
         path = Path(path or ".")
 
@@ -115,7 +115,7 @@ async def iter_files(
                 p.matches(f.relative_to(_base_path)) for p in cast(Iterable[Pattern], ignore_patterns)
             ):
                 if f.is_dir():
-                    async for e in iter_files(f, patterns, ignore_patterns, absolute=absolute, _base_path=_base_path):
+                    for e in iter_files(f, patterns, ignore_patterns, absolute=absolute, _base_path=_base_path):
                         yield e
                 elif patterns is None or any(
                     p.matches(str(f.relative_to(_base_path))) for p in cast(Iterable[Pattern], patterns)

@@ -1,6 +1,7 @@
-import threading
 from collections import defaultdict
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, TypeVar, cast
+
+from .async_tools import Lock
 
 _T = TypeVar("_T")
 
@@ -15,7 +16,7 @@ class CacheEntry:
     def __init__(self) -> None:
         self.data: Any = None
         self.has_data: bool = False
-        self.lock = threading.RLock()
+        self.lock = Lock()
 
 
 class AsyncSimpleLRUCache:
@@ -26,7 +27,7 @@ class AsyncSimpleLRUCache:
         self._order: Optional[List[Tuple[Any, ...]]] = None
         if self.max_items:
             self._order = []
-        self._lock = threading.RLock()
+        self._lock = Lock()
 
     async def has(self, *args: Any, **kwargs: Any) -> bool:
         key = self._make_key(*args, **kwargs)
@@ -41,13 +42,13 @@ class AsyncSimpleLRUCache:
 
         entry = self._cache[key]
 
-        with entry.lock:
+        async with entry.lock:
             if not entry.has_data:
                 entry.data = await func(*args, **kwargs)
                 entry.has_data = True
 
                 if self._order is not None and self.max_items is not None:
-                    with self._lock:
+                    async with self._lock:
                         self._order.insert(0, key)
 
                         if len(self._order) > self.max_items:
@@ -60,7 +61,7 @@ class AsyncSimpleLRUCache:
         return (tuple(_freeze(v) for v in args), hash(frozenset({k: _freeze(v) for k, v in kwargs.items()})))
 
     async def clear(self) -> None:
-        with self._lock:
+        async with self._lock:
             self._cache.clear()
             if self._order is not None:
                 self._order.clear()

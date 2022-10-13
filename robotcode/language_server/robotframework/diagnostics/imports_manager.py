@@ -262,14 +262,13 @@ class _LibrariesEntry(_ImportEntry):
             return self._lib_doc is not None
 
     async def get_libdoc(self) -> LibraryDoc:
-        if self._lib_doc is None:
-            async with self._lock:
-                if self._lib_doc is None:
-                    await self._update()
+        async with self._lock:
+            if self._lib_doc is None:
+                await self._update()
 
-                assert self._lib_doc is not None
+            assert self._lib_doc is not None
 
-        return self._lib_doc
+            return self._lib_doc
 
 
 @dataclass()
@@ -344,9 +343,8 @@ class _ResourcesEntry(_ImportEntry):
             return self._document is not None
 
     async def get_document(self) -> TextDocument:
-        if self._document is None:
-            async with self._lock:
-                await self._get_document()
+        async with self._lock:
+            await self._get_document()
 
         assert self._document is not None
 
@@ -368,11 +366,11 @@ class _ResourcesEntry(_ImportEntry):
         return await self.parent.parent_protocol.documents_cache.get_resource_namespace(await self._get_document())
 
     async def get_libdoc(self) -> LibraryDoc:
-        if self._lib_doc is None:
-            async with self._lock:
-                if self._lib_doc is None:
-                    self._lib_doc = await (await self._get_namespace()).get_library_doc()
-        return self._lib_doc
+        async with self._lock:
+            if self._lib_doc is None:
+                self._lib_doc = await (await self._get_namespace()).get_library_doc()
+
+            return self._lib_doc
 
 
 @dataclass()
@@ -446,14 +444,13 @@ class _VariablesEntry(_ImportEntry):
             return self._lib_doc is not None
 
     async def get_libdoc(self) -> VariablesDoc:
-        if self._lib_doc is None:
-            async with self._lock:
-                if self._lib_doc is None:
-                    await self._update()
+        async with self._lock:
+            if self._lib_doc is None:
+                await self._update()
 
-                assert self._lib_doc is not None
+            assert self._lib_doc is not None
 
-        return self._lib_doc
+            return self._lib_doc
 
 
 class ImportsManager:
@@ -833,12 +830,11 @@ class ImportsManager:
 
         entry_key = _LibrariesEntryKey(source, args)
 
-        if entry_key not in self._libaries:
-            async with self._libaries_lock:
-                if entry_key not in self._libaries:
-                    self._libaries[entry_key] = _LibrariesEntry(
-                        name, args, self, _get_libdoc, ignore_reference=sentinel is None
-                    )
+        async with self._libaries_lock:
+            if entry_key not in self._libaries:
+                self._libaries[entry_key] = _LibrariesEntry(
+                    name, args, self, _get_libdoc, ignore_reference=sentinel is None
+                )
 
         entry = self._libaries[entry_key]
 
@@ -1016,10 +1012,9 @@ class ImportsManager:
 
         entry_key = _VariablesEntryKey(source, args)
 
-        if entry_key not in self._variables:
-            async with self._variables_lock:
-                if entry_key not in self._variables:
-                    self._variables[entry_key] = _VariablesEntry(name, args, self, _get_libdoc)
+        async with self._variables_lock:
+            if entry_key not in self._variables:
+                self._variables[entry_key] = _VariablesEntry(name, args, self, _get_libdoc)
 
         entry = self._variables[entry_key]
 
@@ -1050,11 +1045,10 @@ class ImportsManager:
 
         entry_key = _ResourcesEntryKey(source)
 
-        if entry_key not in self._resources:
-            async with self._resources_lock:
+        async with self._resources_lock:
 
-                if entry_key not in self._resources:
-                    self._resources[entry_key] = _ResourcesEntry(name, self, _get_document)
+            if entry_key not in self._resources:
+                self._resources[entry_key] = _ResourcesEntry(name, self, _get_document)
 
         entry = self._resources[entry_key]
 

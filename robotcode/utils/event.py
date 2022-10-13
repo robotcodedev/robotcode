@@ -58,6 +58,9 @@ class EventResultIteratorBase(Generic[_TCallable, _TResult]):
     def __len__(self) -> int:
         return len(self._listeners)
 
+    def __bool__(self) -> bool:
+        return len(self._listeners) > 0
+
     def __iter__(self) -> Iterator[_TCallable]:
         for r in self._listeners:
             c = r()

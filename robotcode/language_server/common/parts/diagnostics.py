@@ -216,19 +216,16 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         ...
 
     async def ensure_workspace_loaded(self) -> None:
-        if not self._workspace_loaded:
-            async with self._workspace_load_lock:
-                if not self._workspace_loaded:
-                    if self.workspace_loaded_event.is_set():
-                        return
-
-                    try:
-                        await self.load_workspace_documents(self)
-                    finally:
-                        self._workspace_loaded = True
-                        self.workspace_loaded_event.set()
-                        await self.on_workspace_loaded(self)
-                        await self.force_refresh_all()
+        async with self._workspace_load_lock:
+            if not self._workspace_loaded and not self.workspace_loaded_event.is_set():
+                self._logger.debug("load workspace documents")
+                try:
+                    await self.load_workspace_documents(self)
+                finally:
+                    self._workspace_loaded = True
+                    self.workspace_loaded_event.set()
+                    await self.on_workspace_loaded(self)
+                    await self.force_refresh_all()
 
     async def force_refresh_all(self, refresh: bool = True) -> None:
         for doc in self.parent.documents.documents:
@@ -293,9 +290,12 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                 documents = [
                     doc
                     for doc in self.parent.documents.documents
-                    if (data := self.get_diagnostics_data(doc)).force
-                    or doc.version != data.version
-                    or data.task is None
+                    if not doc.opened_in_editor
+                    and (
+                        (data := self.get_diagnostics_data(doc)).force
+                        or doc.version != data.version
+                        or data.task is None
+                    )
                 ]
 
                 if len(documents) == 0:
