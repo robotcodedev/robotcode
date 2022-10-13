@@ -1,5 +1,5 @@
 ---
-name: Enhancement
+name: Question
 about: If you have a question how to setup something or getting things running and if you unsure if it's a bug.
 title: '[QUESTION]'
 labels: 'question'
