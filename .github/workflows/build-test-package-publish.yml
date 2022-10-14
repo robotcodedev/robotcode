@@ -170,7 +170,7 @@ jobs:
         run: poetry install --no-interaction
 
       - name: Setup Node.js environment
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: "16"
           cache: 'npm'
@@ -246,7 +246,7 @@ jobs:
         run: poetry install --no-interaction
 
       - name: Setup Node.js environment
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: "16"
           cache: 'npm'
@@ -272,28 +272,25 @@ jobs:
         id: get_release_informations
         run: |
           REL_NOTES="$(poetry run npm run --silent extract-release-notes)"
-          echo "$REL_NOTES"
 
           REL_NOTES="${REL_NOTES//'%'/'%25'}"
           REL_NOTES="${REL_NOTES//$'\n'/'%0A'}"
           REL_NOTES="${REL_NOTES//$'\r'/'%0D'}"
 
-          echo "$REL_NOTES"
-
-          echo "::set-output name=release_notes::$REL_NOTES"
-          echo "::set-output name=is_prelease::$(poetry run npm run --silent is-prerelease)"
+          echo "release_notes=$REL_NOTES" >> $GITHUB_OUTPUT
+          echo "is_prelease=$(poetry run npm run --silent is-prerelease)" >> $GITHUB_OUTPUT
 
       - name: find assets
         id: find_assets
         run: |
-          echo "::set-output name=vsix_file::$(find dist -iname '*.vsix')"
-          echo "::set-output name=vsix_name::$(find dist -iname '*.vsix' -printf '%f\n')"
+          echo "vsix_file=$(find dist -iname '*.vsix')" >> $GITHUB_OUTPUT
+          echo "vsix_name=$(find dist -iname '*.vsix' -printf '%f\n')" >> $GITHUB_OUTPUT
 
-          echo "::set-output name=whl_file::$(find dist -iname '*.whl')"
-          echo "::set-output name=whl_name::$(find dist -iname '*.whl' -printf '%f\n')"
+          echo "whl_file=$(find dist -iname '*.whl')" >> $GITHUB_OUTPUT
+          echo "whl_name=$(find dist -iname '*.whl' -printf '%f\n')" >> $GITHUB_OUTPUT
 
-          echo "::set-output name=tar_gz_file::$(find dist -iname '*.tar.gz')"
-          echo "::set-output name=tar_gz_name::$(find dist -iname '*.tar.gz' -printf '%f\n')"
+          echo "tar_gz_file=$(find dist -iname '*.tar.gz')" >> $GITHUB_OUTPUT
+          echo "tar_gz_name=$(find dist -iname '*.tar.gz' -printf '%f\n')" >> $GITHUB_OUTPUT
 
       - name: create github release
         id: create_release
