@@ -521,7 +521,7 @@ six = ">=1.5"
 
 [[package]]
 name = "pytz"
-version = "2022.4"
+version = "2022.5"
 description = "World timezone definitions, modern and historical"
 category = "dev"
 optional = false
@@ -598,7 +598,7 @@ doc = ["furo", "sphinx", "sphinx-design"]
 
 [[package]]
 name = "robotframework-tidy"
-version = "3.2"
+version = "3.3"
 description = "Code autoformatter for Robot Framework"
 category = "dev"
 optional = false
@@ -607,14 +607,13 @@ python-versions = ">=3.7"
 [package.dependencies]
 click = ">=7.1.2"
 colorama = ">=0.4.3"
-packaging = ">=21.0"
 pathspec = ">=0.9.0,<0.10.0"
 rich-click = "1.4"
 robotframework = ">=4.0"
 tomli = ">=2.0.0"
 
 [package.extras]
-dev = ["coverage", "invoke", "jinja2", "pre-commit", "pyflakes (>=2.4.0,<2.5.0)", "pylama", "pytest"]
+dev = ["coverage", "invoke", "jinja2", "packaging (>=21.0)", "pre-commit", "pyflakes (>=2.4.0,<2.5.0)", "pylama", "pytest"]
 doc = ["furo", "sphinx", "sphinx-copybutton (==0.3.3)", "sphinx-design"]
 
 [[package]]
@@ -639,7 +638,7 @@ doc = ["Sphinx", "sphinx-rtd-theme"]
 
 [[package]]
 name = "setuptools"
-version = "65.4.1"
+version = "65.5.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 category = "dev"
 optional = false
@@ -684,7 +683,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "types-docutils"
-version = "0.19.1"
+version = "0.19.1.1"
 description = "Typing stubs for docutils"
 category = "dev"
 optional = false
@@ -1044,8 +1043,8 @@ python-dateutil = [
     {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
 ]
 pytz = [
-    {file = "pytz-2022.4-py2.py3-none-any.whl", hash = "sha256:2c0784747071402c6e99f0bafdb7da0fa22645f06554c7ae06bf6358897e9c91"},
-    {file = "pytz-2022.4.tar.gz", hash = "sha256:48ce799d83b6f8aab2020e369b627446696619e79645419610b9facd909b3174"},
+    {file = "pytz-2022.5-py2.py3-none-any.whl", hash = "sha256:335ab46900b1465e714b4fda4963d87363264eb662aab5e65da039c25f1f5b22"},
+    {file = "pytz-2022.5.tar.gz", hash = "sha256:c4d88f472f54d615e9cd582a5004d1e5f624854a6a27a6211591c251f22a6914"},
 ]
 pyyaml = [
     {file = "PyYAML-6.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:d4db7c7aef085872ef65a8fd7d6d09a14ae91f691dec3e87ee5ee0539d516f53"},
@@ -1099,8 +1098,8 @@ robotframework-robocop = [
     {file = "robotframework_robocop-2.5.0-py3-none-any.whl", hash = "sha256:ca2a64a753742d1ecfb280ac1b24fc6376b1705872da95e48e1de76c6f20fc8f"},
 ]
 robotframework-tidy = [
-    {file = "robotframework-tidy-3.2.tar.gz", hash = "sha256:7a1366e74ecaa935b4db3fd4a1260bba682055a478bf31e9b2af83f90e180671"},
-    {file = "robotframework_tidy-3.2-py3-none-any.whl", hash = "sha256:6226429fcbc0f95b60c6f147a98154c27929c52285a01faa9a23e336e1b0a14c"},
+    {file = "robotframework-tidy-3.3.tar.gz", hash = "sha256:d06b22f2662b86ad0a0321ce29c71a7e03384edae426d53aaa5934ecc8118730"},
+    {file = "robotframework_tidy-3.3-py3-none-any.whl", hash = "sha256:f57cbf4d98e65eeb171cc41ad49b4d48ec78e6630336a16566838a0470d74c4f"},
 ]
 robotremoteserver = [
     {file = "robotremoteserver-1.1-py2.py3-none-any.whl", hash = "sha256:1d78ebc63738838a638042407c1da472811853892d64498fd89e061f7f15addd"},
@@ -1111,8 +1110,8 @@ semantic-version = [
     {file = "semantic_version-2.10.0.tar.gz", hash = "sha256:bdabb6d336998cbb378d4b9db3a4b56a1e3235701dc05ea2690d9a997ed5041c"},
 ]
 setuptools = [
-    {file = "setuptools-65.4.1-py3-none-any.whl", hash = "sha256:1b6bdc6161661409c5f21508763dc63ab20a9ac2f8ba20029aaaa7fdb9118012"},
-    {file = "setuptools-65.4.1.tar.gz", hash = "sha256:3050e338e5871e70c72983072fe34f6032ae1cdeeeb67338199c2f74e083a80e"},
+    {file = "setuptools-65.5.0-py3-none-any.whl", hash = "sha256:f62ea9da9ed6289bfe868cd6845968a2c854d1427f8548d52cae02a42b4f0356"},
+    {file = "setuptools-65.5.0.tar.gz", hash = "sha256:512e5536220e38146176efb833d4a62aa726b7bbff82cfbc8ba9eaa3996e0b17"},
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
@@ -1131,8 +1130,8 @@ tomli = [
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
 ]
 types-docutils = [
-    {file = "types-docutils-0.19.1.tar.gz", hash = "sha256:7df133b87105af410fc6a992030a70ee9f5a2c2636c5afe7e0de285eb9fdb015"},
-    {file = "types_docutils-0.19.1-py3-none-any.whl", hash = "sha256:6b110b17ba4bfbde765b69acca6a6da373094d99a5a3bce1d5a8c9d29b293d89"},
+    {file = "types-docutils-0.19.1.1.tar.gz", hash = "sha256:be0a51ba1c7dd215d9d2df66d6845e63c1009b4bbf4c5beb87a0d9745cdba962"},
+    {file = "types_docutils-0.19.1.1-py3-none-any.whl", hash = "sha256:a024cada35f0c13cc45eb0b68a102719018a634013690b7fef723bcbfadbd1f1"},
 ]
 types-pyyaml = [
     {file = "types-PyYAML-6.0.12.tar.gz", hash = "sha256:f6f350418125872f3f0409d96a62a5a5ceb45231af5cc07ee0034ec48a3c82fa"},
