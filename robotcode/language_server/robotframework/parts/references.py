@@ -15,7 +15,7 @@ from typing import (
 )
 
 from ....utils.async_cache import AsyncSimpleLRUCache
-from ....utils.async_tools import async_event
+from ....utils.async_tools import async_event, threaded
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.decorators import language_id
@@ -56,6 +56,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def cache_cleared(sender) -> None:  # NOSONAR
         ...
 
+    @threaded()
     async def document_did_change(self, sender: Any, document: TextDocument) -> None:
         await self._keyword_reference_cache.clear()
         await self._variable_reference_cache.clear()

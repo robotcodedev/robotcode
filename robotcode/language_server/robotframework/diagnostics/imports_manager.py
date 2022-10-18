@@ -26,7 +26,7 @@ from typing import (
 )
 
 from ....utils.async_cache import AsyncSimpleLRUCache
-from ....utils.async_tools import Lock, async_tasking_event, create_sub_task
+from ....utils.async_tools import Lock, async_tasking_event, create_sub_task, threaded
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
 from ....utils.uri import Uri
@@ -556,10 +556,12 @@ class ImportsManager:
     async def imports_changed(sender, uri: DocumentUri) -> None:  # NOSONAR
         ...
 
+    @threaded()
     async def _do_imports_changed(self, sender: Any, uri: DocumentUri) -> None:  # NOSONAR
         await self.imports_changed(self, uri)
 
     @language_id("robotframework")
+    @threaded()
     async def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
         resource_changed: List[LibraryDoc] = []
 

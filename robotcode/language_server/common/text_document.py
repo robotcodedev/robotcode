@@ -162,9 +162,9 @@ class TextDocument:
         ...
 
     async def _invalidate_cache(self) -> None:
-        await self.cache_invalidate(self)
+        create_sub_task(self.cache_invalidate(self))
         self._cache.clear()
-        await self.cache_invalidated(self)
+        create_sub_task(self.cache_invalidated(self))
 
     @_logger.call
     async def invalidate_cache(self) -> None:

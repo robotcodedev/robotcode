@@ -53,6 +53,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
 
     @language_id("robotframework")
+    @threaded()
     @_logger.call
     async def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
         if namespace.document is not None:

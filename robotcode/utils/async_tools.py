@@ -618,9 +618,11 @@ class BoundedSemaphore(Semaphore):
         await super().release()
 
 
-class Lock:
+class NewNewLock:
     def __init__(self) -> None:
         self._lock = threading.Lock()
+        self._owner_thread: Optional[threading.Thread] = None
+        self._owner_task: Optional[asyncio.Task[Any]] = None
 
     def locked(self) -> bool:
         return self._lock.locked()
@@ -630,12 +632,11 @@ class Lock:
 
     def release(self) -> None:
         self._lock.release()
-        self._owner_thread: Optional[threading.Thread] = None
-        self._owner_task: Optional[asyncio.Task[Any]] = None
+        self._owner_task = None
+        self._owner_thread = None
 
     async def acquire_async(self, blocking: bool = True, timeout: float = -1) -> bool:
         start = time.monotonic()
-
         while not (aquired := self.acquire(blocking=False)):
             if not blocking:
                 return False
@@ -644,7 +645,7 @@ class Lock:
             if timeout > 0 and current > timeout:
                 break
 
-            if current > 30:
+            if current > 30 and self._owner_task is not None:
                 tb = traceback.format_stack(self._owner_task.get_stack()[0]) if self._owner_task is not None else ""
                 warnings.warn(
                     f"locking takes to long {self._owner_thread} {self._owner_task} {tb}",
@@ -652,15 +653,21 @@ class Lock:
 
             await asyncio.sleep(0)
 
+        try:
+            await asyncio.sleep(0)
+        except asyncio.CancelledError:
+            if aquired:
+                self._lock.release()
+                aquired = False
+            raise
+
         self._owner_task = asyncio.current_task()
         self._owner_thread = threading.current_thread()
 
         return aquired
 
     async def release_async(self) -> None:
-        self._lock.release()
-        self._owner_task = None
-        self._owner_thread = None
+        self.release()
 
     def __enter__(self) -> None:
         self.acquire()
@@ -705,7 +712,7 @@ class NewLock:
         await self.release()
 
 
-class OldLock:
+class Lock:
     """Threadsafe version of an async Lock."""
 
     def __init__(self) -> None:
@@ -732,7 +739,7 @@ class OldLock:
     async def __inner_lock(self) -> AsyncGenerator[Any, None]:
         b = self._lock.acquire(blocking=False)
         while not b:
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.001)
             b = self._lock.acquire(blocking=False)
         try:
             yield None
@@ -816,9 +823,6 @@ class OldLock:
                             raise TimeoutError("Can't set future result.")
 
                         await asyncio.sleep(0.001)
-
-                    # if not done.wait(120):
-                    #     raise TimeoutError("Callback timeout.")
 
 
 class FutureInfo:
