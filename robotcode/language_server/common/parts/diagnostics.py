@@ -360,7 +360,17 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
             if task is not None and not task.done():
                 self._logger.debug(lambda: f"try to cancel diagnostics for {document}")
-                task.get_loop().call_soon_threadsafe(task.cancel)
+
+                async def cancel(t: asyncio.Task[Any]) -> None:
+                    t.cancel()
+                    try:
+                        await t
+                    except asyncio.CancelledError:
+                        pass
+
+                asyncio.run_coroutine_threadsafe(cancel(task), loop=task.get_loop()).result(5)
+
+                # task.get_loop().call_soon_threadsafe(task.cancel)
 
             data.version = document.version
             data.task = create_sub_task(

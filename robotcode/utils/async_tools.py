@@ -413,7 +413,7 @@ async def async_lock(lock: threading.RLock) -> AsyncGenerator[None, None]:
     #     yield
 
 
-class Event:
+class NewEvent:
     def __init__(self, value: bool = False) -> None:
         self._event = threading.Event()
         if value:
@@ -443,7 +443,7 @@ class Event:
         return result
 
 
-class OldEvent:
+class Event:
     """Thread safe version of an async Event"""
 
     def __init__(self, value: bool = False) -> None:
@@ -488,8 +488,14 @@ class OldEvent:
 
                                 fut.get_loop().call_soon_threadsafe(set_result, fut, done)
 
-                                if not done.wait(120):
-                                    raise TimeoutError("Callback timeout.")
+                                start = time.monotonic()
+                                while not done.is_set():
+                                    check_canceled_sync()
+
+                                    if time.monotonic() - start > 120:
+                                        raise TimeoutError("Can't set future result.")
+
+                                    time.sleep(0.001)
 
     def clear(self) -> None:
         with self._lock:
@@ -718,7 +724,7 @@ class Lock:
     def __init__(self) -> None:
         self._waiters: Optional[Deque[asyncio.Future[Any]]] = None
         self._locked = False
-        self._lock = threading.RLock()
+        self._lock = threading.Lock()
 
     async def __aenter__(self) -> None:
         await self.acquire()
@@ -737,16 +743,13 @@ class Lock:
 
     @asynccontextmanager
     async def __inner_lock(self) -> AsyncGenerator[Any, None]:
-        b = self._lock.acquire(blocking=False)
-        while not b:
+        while not (b := self._lock.acquire(blocking=False)):
             await asyncio.sleep(0.001)
-            b = self._lock.acquire(blocking=False)
         try:
             yield None
         finally:
-            self._lock.release()
-        # with self._lock:
-        #     yield None
+            if b:
+                self._lock.release()
 
     @property
     def locked(self) -> bool:
@@ -765,16 +768,12 @@ class Lock:
             self._waiters.append(fut)
 
         try:
-            try:
-                await fut
-            finally:
-                async with self.__inner_lock():
-                    if fut in self._waiters:
-                        self._waiters.remove(fut)
-                    self._locked = True
-        except asyncio.CancelledError:
-            await self._wake_up_next()
-            raise
+            await fut
+        finally:
+            async with self.__inner_lock():
+                if fut in self._waiters:
+                    self._waiters.remove(fut)
+                self._locked = True
 
         return True
 
