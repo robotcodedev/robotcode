@@ -54,6 +54,20 @@
 			"cwd": "${workspaceFolder}",
 		},
 		{
+			"name": "Python: Pytest Some Test",
+			"type": "python",
+			"request": "launch",
+			"module": "pytest",
+			"args": [
+				//"tests/robotcode/language_server/robotframework/parts/test_foldingrange.py"
+				//"tests/robotcode/language_server/robotframework/parts/test_references.py"
+				"tests/robotcode/language_server/robotframework/parts/test_goto.py"
+			],
+			"console": "integratedTerminal",
+			"justMyCode": false,
+			"cwd": "${workspaceFolder}",
+		},
+		{
 			"name": "Python: Pytest All Test Parallel",
 			"type": "python",
 			"request": "launch",

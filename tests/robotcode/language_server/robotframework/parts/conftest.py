@@ -29,8 +29,7 @@ from robotcode.utils.dataclasses import as_dict
 from tests.robotcode.language_server.robotframework.tools import generate_test_id
 
 
-@pytest_asyncio.fixture(scope="module", ids=generate_test_id)
-@pytest.mark.usefixtures("event_loop")
+@pytest_asyncio.fixture(scope="package", ids=generate_test_id)
 async def protocol(request: Any) -> AsyncGenerator[RobotLanguageServerProtocol, None]:
     root_path = Path(Path(__file__).resolve().parent, "data")
 

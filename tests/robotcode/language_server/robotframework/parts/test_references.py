@@ -25,6 +25,7 @@ from ..tools import (
     generate_tests_from_source_document(Path(Path(__file__).parent, "data/tests/references.robot")),
     indirect=["test_document"],
     ids=generate_test_id,
+    scope="module",
 )
 @pytest.mark.usefixtures("protocol")
 @pytest.mark.asyncio

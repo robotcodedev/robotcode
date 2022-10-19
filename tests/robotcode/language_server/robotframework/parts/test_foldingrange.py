@@ -59,6 +59,7 @@ def generate_foldingrange_test_id(params: Any) -> Any:
     ),
     indirect=["protocol", "test_document"],
     ids=generate_foldingrange_test_id,
+    scope="module",
 )
 @pytest.mark.asyncio
 async def test(
