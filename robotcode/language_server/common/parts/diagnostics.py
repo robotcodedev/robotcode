@@ -132,6 +132,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
         self.in_get_workspace_diagnostics = Event(True)
 
+        self.refresh_task: Optional[asyncio.Task[Any]] = None
+
     async def initialized(self, sender: Any) -> None:
         self._ensure_diagnostics_thread_started()
 
@@ -490,7 +492,19 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
         return DiagnosticsMode.OPENFILESONLY
 
-    async def refresh(self) -> None:
+    async def __do_refresh(self, now: bool = False) -> None:
+        if not now:
+            await asyncio.sleep(1)
+
+        await self.__refresh()
+
+    async def refresh(self, now: bool = False) -> None:
+        if self.refresh_task is not None and not self.refresh_task.done():
+            self.refresh_task.get_loop().call_soon_threadsafe(self.refresh_task.cancel)
+
+        self.refresh_task = create_sub_task(self.__do_refresh(now), loop=self.diagnostics_loop)
+
+    async def __refresh(self) -> None:
         if (
             self.parent.client_capabilities
             and self.parent.client_capabilities.workspace

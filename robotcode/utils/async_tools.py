@@ -322,7 +322,7 @@ def run_coroutine_in_thread(
         if ct is not None and result is not None:
             _running_tasks[result].children.add(ct)
 
-        inner_task = create_sub_task(coro(*args, **kwargs))
+        inner_task = create_sub_task(coro(*args, **kwargs), name=coro.__qualname__)
 
         if canceled:
             inner_task.cancel()
@@ -406,7 +406,8 @@ class Event:
                                     check_canceled_sync()
 
                                     if time.monotonic() - start > 120:
-                                        raise TimeoutError("Can't set future result.")
+                                        warnings.warn("Can't set future result.")
+                                        break
 
                                     time.sleep(0.001)
 
@@ -479,6 +480,7 @@ class Lock:
             self._waiters.append(fut)
 
         try:
+            # await asyncio.wait_for(fut, 120)
             await fut
         finally:
             async with self.__inner_lock():
@@ -530,7 +532,8 @@ class Lock:
                     while not done.is_set():
 
                         if time.monotonic() - start > 120:
-                            raise TimeoutError("Can't set future result.")
+                            warnings.warn("Can't set future result.")
+                            break
 
                         await asyncio.sleep(0.001)
         else:

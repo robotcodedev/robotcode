@@ -26,7 +26,7 @@ def get_robot_version() -> Version:
     if _robot_version is None:
         import robot
 
-        return create_version_from_str(robot.get_version())
+        _robot_version = create_version_from_str(robot.get_version())
     return _robot_version
 
 
