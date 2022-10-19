@@ -577,7 +577,7 @@ python-versions = "*"
 
 [[package]]
 name = "robotframework-robocop"
-version = "2.5.0"
+version = "2.6.0"
 description = "Static code analysis tool (linter) for Robot Framework"
 category = "dev"
 optional = false
@@ -598,7 +598,7 @@ doc = ["furo", "sphinx", "sphinx-design"]
 
 [[package]]
 name = "robotframework-tidy"
-version = "3.3"
+version = "3.3.1"
 description = "Code autoformatter for Robot Framework"
 category = "dev"
 optional = false
@@ -1094,12 +1094,12 @@ robotframework = [
     {file = "robotframework-4.1.3.zip", hash = "sha256:d2675cbe3e5a4c90be3ddb61be3b88cc0d6ff503c298ad8f8a78aad14e71e886"},
 ]
 robotframework-robocop = [
-    {file = "robotframework-robocop-2.5.0.tar.gz", hash = "sha256:da40f0a816df4692d705cea3c6764346e9bf90765cb5c3011d63d544faae21e5"},
-    {file = "robotframework_robocop-2.5.0-py3-none-any.whl", hash = "sha256:ca2a64a753742d1ecfb280ac1b24fc6376b1705872da95e48e1de76c6f20fc8f"},
+    {file = "robotframework-robocop-2.6.0.tar.gz", hash = "sha256:a07bbdca112f63f8f45036330bab58522c456545bc68fa0847683fb7d7329b6b"},
+    {file = "robotframework_robocop-2.6.0-py3-none-any.whl", hash = "sha256:d3499876ae78ad0ca184c6786452a2c79b06aecb095567d697ae7df3bfbd6f4b"},
 ]
 robotframework-tidy = [
-    {file = "robotframework-tidy-3.3.tar.gz", hash = "sha256:d06b22f2662b86ad0a0321ce29c71a7e03384edae426d53aaa5934ecc8118730"},
-    {file = "robotframework_tidy-3.3-py3-none-any.whl", hash = "sha256:f57cbf4d98e65eeb171cc41ad49b4d48ec78e6630336a16566838a0470d74c4f"},
+    {file = "robotframework-tidy-3.3.1.tar.gz", hash = "sha256:3f97563a6e01a335905f9ac724ce4c2bb4aac739a39407c2b226f5451a7e95e3"},
+    {file = "robotframework_tidy-3.3.1-py3-none-any.whl", hash = "sha256:d5a20640ff43b9b318b4998e1a68536a36665cbf152e5d7a682b1c26218b82f8"},
 ]
 robotremoteserver = [
     {file = "robotremoteserver-1.1-py2.py3-none-any.whl", hash = "sha256:1d78ebc63738838a638042407c1da472811853892d64498fd89e061f7f15addd"},
