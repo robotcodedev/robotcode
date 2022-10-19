@@ -17,12 +17,7 @@ from ....jsonrpc2.protocol import rpc_method
 from ....utils.logging import LoggingDescriptor
 from ....utils.net import find_free_port
 from ....utils.uri import Uri
-from ...common.decorators import (
-    code_action_kinds,
-    command,
-    get_command_name,
-    language_id,
-)
+from ...common.decorators import code_action_kinds, command, language_id
 from ...common.lsp_types import (
     AnnotatedTextEdit,
     ChangeAnnotation,
@@ -292,7 +287,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                                     kind=CodeActionKinds.SOURCE + ".openDocumentation",
                                     command=Command(
                                         f"Translate Suite to {lang}",
-                                        get_command_name(self.translate_suite),
+                                        self.parent.commands.get_command_name(self.translate_suite),
                                         [document.document_uri, lang],
                                     ),
                                 )
@@ -336,10 +331,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     CodeAction(
                         "Create Keyword",
                         kind=CodeActionKinds.QUICKFIX + ".createKeyword",
-                        command=Command(
-                            "Create Keyword",
-                            "robotcode.commingSoon",
-                        ),
+                        command=Command("Create Keyword", self.parent.commands.get_command_name(self.comming_soon)),
                     )
                 ]
 
