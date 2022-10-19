@@ -91,7 +91,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         if config.header_style is not None:
             return config.header_style
 
-        return DEFAULT_HEADER_STYLE if get_robot_version() < (5, 1) else DEFAULT_HEADER_STYLE_51
+        return DEFAULT_HEADER_STYLE if get_robot_version() < (6, 0) else DEFAULT_HEADER_STYLE_51
 
     @language_id("robotframework")
     @trigger_characters(
@@ -1666,7 +1666,7 @@ class CompletionCollector(ModelHelperMixin):
             if context is None or context.trigger_kind != CompletionTriggerKind.INVOKED:
                 return []
 
-            if get_robot_version() >= (5, 1):
+            if get_robot_version() >= (6, 0):
                 namespace_marker = ["AS", "WITH NAME"]
             else:
                 namespace_marker = ["WITH NAME"]
@@ -1676,7 +1676,7 @@ class CompletionCollector(ModelHelperMixin):
                 if position >= range_from_token(name_token).extend(end_character=2).end:
                     return [
                         CompletionItem(
-                            label="AS" if get_robot_version() >= (5, 1) else "WITH NAME",
+                            label="AS" if get_robot_version() >= (6, 0) else "WITH NAME",
                             kind=CompletionItemKind.KEYWORD,
                             # detail=e.detail,
                             sort_text="03_NAMESPACE_MARKER",

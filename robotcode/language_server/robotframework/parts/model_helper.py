@@ -531,7 +531,7 @@ class ModelHelperMixin:
     def strip_bdd_prefix(cls, namespace: Namespace, token: Token) -> Token:
         from robot.parsing.lexer import Token as RobotToken
 
-        if get_robot_version() < (5, 1):
+        if get_robot_version() < (6, 0):
             bdd_match = cls.BDD_TOKEN_REGEX.match(token.value)
             if bdd_match:
                 bdd_len = len(bdd_match.group(1))
@@ -568,7 +568,7 @@ class ModelHelperMixin:
 
     @classmethod
     def is_bdd_token(cls, namespace: Namespace, token: Token) -> bool:
-        if get_robot_version() < (5, 1):
+        if get_robot_version() < (6, 0):
             bdd_match = cls.BDD_TOKEN.match(token.value)
             return bool(bdd_match)
         else:

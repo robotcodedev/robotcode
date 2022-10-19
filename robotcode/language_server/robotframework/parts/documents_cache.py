@@ -50,7 +50,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         self._workspace_languages: weakref.WeakKeyDictionary[WorkspaceFolder, Languages] = weakref.WeakKeyDictionary()
 
     async def get_workspace_languages(self, document_or_uri: Union[TextDocument, Uri, str]) -> Optional[Languages]:
-        if get_robot_version() < (5, 1):
+        if get_robot_version() < (6, 0):
             return None
 
         from robot.conf.languages import (
@@ -97,7 +97,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     async def build_languages_from_model(
         self, document: TextDocument, model: ast.AST
     ) -> Tuple[Optional[Languages], Optional[Languages]]:
-        if get_robot_version() < (5, 1):
+        if get_robot_version() < (6, 0):
             return (None, None)
 
         from robot.conf.languages import Languages as RobotLanguages
@@ -171,7 +171,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     ) -> Any:
         import robot.api
 
-        if get_robot_version() >= (5, 1):
+        if get_robot_version() >= (6, 0):
             return robot.api.get_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables, lang=lang)
         else:
             return robot.api.get_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
@@ -185,7 +185,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     ) -> Any:
         import robot.api
 
-        if get_robot_version() >= (5, 1):
+        if get_robot_version() >= (6, 0):
             return robot.api.get_resource_tokens(
                 source, data_only=data_only, tokenize_variables=tokenize_variables, lang=lang
             )
@@ -197,7 +197,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     ) -> Any:
         import robot.api
 
-        if get_robot_version() >= (5, 1):
+        if get_robot_version() >= (6, 0):
             return robot.api.get_init_tokens(
                 source, data_only=data_only, tokenize_variables=tokenize_variables, lang=lang
             )

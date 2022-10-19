@@ -267,7 +267,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         model = await self.parent.documents_cache.get_model(document, False)
         node = await get_node_at_position(model, range.start)
 
-        if get_robot_version() >= (5, 1):
+        if get_robot_version() >= (6, 0):
             from robot.conf.languages import En, Languages
             from robot.parsing.model.statements import Config
 

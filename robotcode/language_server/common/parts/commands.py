@@ -46,7 +46,7 @@ class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
     @rpc_method(name="workspace/executeCommand", param_type=ExecuteCommandParams)
     @threaded()
-    async def _text_document_code_lens(
+    async def _workspace_execute_command(
         self, command: str, arguments: Optional[List[LSPAny]], *args: Any, **kwargs: Any
     ) -> Optional[LSPAny]:
         self._logger.info(f"execute command {command}")

@@ -114,7 +114,7 @@ def is_embedded_keyword(name: str) -> bool:
     from robot.running.arguments.embedded import EmbeddedArguments
 
     try:
-        if get_robot_version() >= (5, 1):
+        if get_robot_version() >= (6, 0):
             if EmbeddedArguments.from_name(name):
                 return True
         else:
@@ -149,7 +149,7 @@ class KeywordMatcher:
         if self._embedded_arguments is None:
             if self._can_have_embedded:
                 try:
-                    if get_robot_version() >= (5, 1):
+                    if get_robot_version() >= (6, 0):
                         self._embedded_arguments = EmbeddedArguments.from_name(self.name)
                     else:
                         self._embedded_arguments = EmbeddedArguments(self.name)
@@ -171,7 +171,7 @@ class KeywordMatcher:
             return False
 
         if self.embedded_arguments:
-            if get_robot_version() >= (5, 1):
+            if get_robot_version() >= (6, 0):
                 return self.embedded_arguments.match(o) is not None
             else:
                 return self.embedded_arguments.name.match(o) is not None

@@ -851,7 +851,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Tags
 
-        if get_robot_version() >= (5, 1):
+        if get_robot_version() >= (6, 0):
             tags = cast(Tags, node)
 
             for tag in tags.get_tokens(RobotToken.ARGUMENT):

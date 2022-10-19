@@ -1852,7 +1852,7 @@ class KeywordFinder:
         )
 
     async def _get_bdd_style_keyword(self, name: str) -> Optional[KeywordDoc]:
-        if get_robot_version() < (5, 1):
+        if get_robot_version() < (6, 0):
             lower = name.lower()
             for prefix in ["given ", "when ", "then ", "and ", "but "]:
                 if lower.startswith(prefix):

@@ -214,7 +214,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 }
             )
 
-        if get_robot_version() >= (5, 1):
+        if get_robot_version() >= (6, 0):
             definition.update(
                 {
                     frozenset(
@@ -331,7 +331,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 if await namespace.find_keyword(token.value, raise_keyword_error=False, handle_bdd_style=False) is None:
                     bdd_len = 0
 
-                    if get_robot_version() < (5, 1):
+                    if get_robot_version() < (6, 0):
                         bdd_match = cls.BDD_TOKEN_REGEX.match(token.value)
                         if bdd_match:
                             bdd_len = len(bdd_match.group(1))

@@ -128,7 +128,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
         from ..utils.version import get_robot_version
 
-        if get_robot_version() >= (5, 1):
+        if get_robot_version() >= (6, 0):
             from robot.running.builder.settings import (
                 Defaults as TestDefaults,  # pyright: reportMissingImports=false
             )
@@ -165,7 +165,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                     defaults = TestDefaults()
                 if model is None:
                     try:
-                        if get_robot_version() >= (5, 1):
+                        if get_robot_version() >= (6, 0):
                             model = get_model(
                                 self._get_source(source),
                                 data_only=True,
@@ -238,7 +238,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
             def build(self, *paths: str) -> TestSuite:
                 structure = SuiteStructureBuilder(self.included_extensions, self.included_suites).build(paths)
-                if get_robot_version() >= (5, 1):
+                if get_robot_version() >= (6, 0):
                     parser = MySuiteStructureParserWithLang(
                         self.included_extensions, self.rpa, self.lang, self.process_curdir
                     )
@@ -329,7 +329,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
                     valid_paths = [i for i in normalize_paths(paths)]
 
-                    if get_robot_version() >= (5, 1):
+                    if get_robot_version() >= (6, 0):
                         builder = MyTestSuiteBuilder(
                             included_suites=suites if suites else None, rpa=rpa_mode, lang=languages
                         )
@@ -362,7 +362,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     ]
                 else:
-                    if get_robot_version() >= (5, 1):
+                    if get_robot_version() >= (6, 0):
                         builder = MyTestSuiteBuilder(
                             included_suites=suites if suites else None, rpa=rpa_mode, lang=languages
                         )
