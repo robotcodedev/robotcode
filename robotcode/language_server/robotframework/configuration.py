@@ -48,7 +48,7 @@ class RobotConfig(ConfigBase):
 @config_section("robotcode.completion")
 @dataclass
 class CompletionConfig(ConfigBase):
-    filter_default_language: bool = True
+    filter_default_language: bool = False
     header_style: Optional[str] = None
 
 

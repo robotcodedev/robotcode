@@ -550,7 +550,7 @@
           },
           "robotcode.completion.filterDefaultLanguage": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "markdownDescription": "Filter default language (English) for completion if there is another language defined.",
             "scope": "resource"
           },
