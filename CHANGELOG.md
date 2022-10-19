@@ -2,8 +2,12 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Support for Robocop >= 2.6
+- Support for Tidy >= 3.3
+- Speed improvements
+
 ##  0.13.22
 
 - none so far
