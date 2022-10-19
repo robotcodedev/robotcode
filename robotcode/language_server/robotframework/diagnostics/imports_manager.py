@@ -3,8 +3,6 @@ from __future__ import annotations
 import ast
 import asyncio
 import os
-import sys
-import threading
 import weakref
 from abc import ABC, abstractmethod
 from collections import OrderedDict
@@ -473,10 +471,8 @@ class ImportsManager:
         self._command_line_variables: Optional[List[VariableDefinition]] = None
         self._command_line_variables_lock = Lock()
 
-        self._python_path: Optional[List[str]] = None
-        self._python_path_lock = threading.RLock()
-        self._environment: Optional[Mapping[str, str]] = None
-        self._environment_lock = threading.RLock()
+        self._environment = dict(os.environ)
+        self._environment.update(self.config.env)
 
         self._library_files_cache = AsyncSimpleLRUCache()
         self._resource_files_cache = AsyncSimpleLRUCache()
@@ -484,31 +480,7 @@ class ImportsManager:
 
     @property
     def environment(self) -> Mapping[str, str]:
-        with self._environment_lock:
-            if self._environment is None:
-                self._environment = dict(os.environ)
-
-                self._environment.update(self.config.env)
-
-            return self._environment
-
-    @property
-    def python_path(self) -> List[str]:
-        with self._python_path_lock:
-            if self._python_path is None:
-                self._python_path = sys.path
-
-                file = Path(__file__).resolve()
-                top = file.parents[3]
-                for p in filter(lambda v: path_is_relative_to(v, top), sys.path.copy()):
-                    self._python_path.remove(p)
-
-            for p in self.config.python_path:
-                absolute_path = str(Path(p).absolute())
-                if absolute_path not in self._python_path:
-                    self._python_path.insert(0, absolute_path)
-
-            return self._python_path
+        return self._environment
 
     @_logger.call
     async def get_command_line_variables(self) -> List[VariableDefinition]:
@@ -720,8 +692,6 @@ class ImportsManager:
                 name,
                 str(self.folder.to_path()),
                 base_dir,
-                self.config.python_path if self.config is not None else None,
-                self.config.env if self.config is not None else None,
                 self.config.variables if self.config is not None else None,
                 variables,
             )
@@ -732,7 +702,7 @@ class ImportsManager:
             result = name
 
         if is_library_by_path(result):
-            result = find_file_ex(result, base_dir, self.python_path, "Library")
+            result = find_file_ex(result, base_dir, "Library")
 
         return result
 
@@ -752,14 +722,12 @@ class ImportsManager:
                 name,
                 str(self.folder.to_path()),
                 base_dir,
-                self.config.python_path if self.config is not None else None,
-                self.config.env if self.config is not None else None,
                 self.config.variables if self.config is not None else None,
                 variables,
                 file_type,
             )
 
-        return str(find_file_ex(name, base_dir, self.python_path, file_type))
+        return str(find_file_ex(name, base_dir, file_type))
 
     async def find_variables(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
         return await self._variables_files_cache.get(self.__find_variables, name, base_dir, variables)
@@ -773,8 +741,6 @@ class ImportsManager:
                 name,
                 str(self.folder.to_path()),
                 base_dir,
-                self.config.python_path if self.config is not None else None,
-                self.config.env if self.config is not None else None,
                 self.config.variables if self.config is not None else None,
                 variables,
             )
@@ -782,11 +748,11 @@ class ImportsManager:
         if get_robot_version() >= (5, 0):
 
             if is_variables_by_path(name):
-                return str(find_file_ex(name, base_dir, self.python_path, "Library"))
+                return str(find_file_ex(name, base_dir, "Library"))
 
             return name
 
-        return str(find_file_ex(name, base_dir, self.python_path, "Library"))
+        return str(find_file_ex(name, base_dir, "Library"))
 
     @_logger.call
     async def get_libdoc_for_library_import(
@@ -815,8 +781,6 @@ class ImportsManager:
                         args,
                         str(self.folder.to_path()),
                         base_dir,
-                        self.config.python_path if self.config is not None else None,
-                        self.config.env if self.config is not None else None,
                         self.config.variables if self.config is not None else None,
                         variables,
                     ),
@@ -998,8 +962,6 @@ class ImportsManager:
                         args,
                         str(self.folder.to_path()),
                         base_dir,
-                        self.config.python_path if self.config is not None else None,
-                        self.config.env if self.config is not None else None,
                         self.config.variables if self.config is not None else None,
                         variables,
                     ),
@@ -1096,8 +1058,6 @@ class ImportsManager:
             name,
             str(self.folder.to_path()),
             base_dir,
-            self.config.python_path if self.config is not None else None,
-            self.config.env if self.config is not None else None,
             self.config.variables if self.config is not None else None,
             variables,
         )
@@ -1109,8 +1069,6 @@ class ImportsManager:
             name,
             str(self.folder.to_path()),
             base_dir,
-            self.config.python_path if self.config is not None else None,
-            self.config.env if self.config is not None else None,
             self.config.variables if self.config is not None else None,
             variables,
         )
@@ -1123,22 +1081,15 @@ class ImportsManager:
             name,
             str(self.folder.to_path()),
             base_dir,
-            self.config.python_path if self.config is not None else None,
-            self.config.env if self.config is not None else None,
             self.config.variables if self.config is not None else None,
             variables,
         )
 
-    async def resolve_variable(
-        self, name: str, base_dir: str = ".", variables: Optional[Dict[str, Any]] = None, ignore_errors: bool = True
-    ) -> Any:
+    def resolve_variable(self, name: str, base_dir: str = ".", variables: Optional[Dict[str, Any]] = None) -> Any:
         return resolve_variable(
             name,
             str(self.folder.to_path()),
             base_dir,
-            self.config.python_path if self.config is not None else None,
-            self.config.env if self.config is not None else None,
             self.config.variables if self.config is not None else None,
             variables,
-            ignore_errors,
         )

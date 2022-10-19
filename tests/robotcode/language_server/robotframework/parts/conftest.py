@@ -56,22 +56,23 @@ async def protocol(request: Any) -> AsyncGenerator[RobotLanguageServerProtocol, 
             workspace_folders=[WorkspaceFolder(name="test workspace", uri=root_path.as_uri())],
             client_info=ClientInfo(name="TestClient", version="1.0.0"),
         )
-        await protocol._initialized(InitializedParams())
-        await protocol.workspace._workspace_did_change_configuration(
-            {
-                cast(HasConfigSection, RobotCodeConfig).__config_section__: as_dict(
-                    RobotCodeConfig(
-                        robot=RobotConfig(
-                            python_path=["./lib", "./resources"],
-                            env={"ENV_VAR": "1"},
-                            variables={
-                                "CMD_VAR": "1",
-                            },
-                        )
+
+        protocol.workspace.settings = {
+            cast(HasConfigSection, RobotCodeConfig).__config_section__: as_dict(
+                RobotCodeConfig(
+                    robot=RobotConfig(
+                        python_path=["./lib", "./resources"],
+                        env={"ENV_VAR": "1"},
+                        variables={
+                            "CMD_VAR": "1",
+                        },
                     )
                 )
-            }
-        )
+            )
+        }
+
+        await protocol._initialized(InitializedParams())
+
         yield protocol
     finally:
         await protocol._shutdown()

@@ -780,16 +780,8 @@ def is_variables_by_path(path: str) -> bool:
     return path.lower().endswith((".py", ".yml", ".yaml", "/", os.sep))
 
 
-def update_python_path_and_env(
-    working_dir: str = ".", pythonpath: Optional[List[str]] = None, environment: Optional[Dict[str, str]] = None
-) -> None:
+def _update_env(working_dir: str = ".") -> None:
     os.chdir(Path(working_dir))
-
-
-def _update_env(
-    working_dir: str = ".", pythonpath: Optional[List[str]] = None, environment: Optional[Dict[str, str]] = None
-) -> None:
-    update_python_path_and_env(working_dir, pythonpath, environment)
 
 
 def get_module_spec(module_name: str) -> Optional[ModuleSpec]:
@@ -1045,15 +1037,12 @@ def resolve_variable(
     name: str,
     working_dir: str = ".",
     base_dir: str = ".",
-    pythonpath: Optional[List[str]] = None,
-    environment: Optional[Dict[str, str]] = None,
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
-    ignore_errors: bool = True,
 ) -> Any:
     from robot.variables.finders import VariableFinder
 
-    update_python_path_and_env(working_dir, pythonpath, environment)
+    _update_env(working_dir)
 
     robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
@@ -1086,8 +1075,6 @@ def _find_library_internal(
     name: str,
     working_dir: str = ".",
     base_dir: str = ".",
-    pythonpath: Optional[List[str]] = None,
-    environment: Optional[Dict[str, str]] = None,
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Tuple[str, Any]:
@@ -1096,7 +1083,7 @@ def _find_library_internal(
     from robot.libraries import STDLIBS
     from robot.utils.robotpath import find_file as robot_find_file
 
-    _update_env(working_dir, pythonpath, environment)
+    _update_env(working_dir)
 
     robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
@@ -1120,15 +1107,11 @@ def find_library(
     name: str,
     working_dir: str = ".",
     base_dir: str = ".",
-    pythonpath: Optional[List[str]] = None,
-    environment: Optional[Dict[str, str]] = None,
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> str:
 
-    return _find_library_internal(
-        name, working_dir, base_dir, pythonpath, environment, command_line_variables, variables
-    )[0]
+    return _find_library_internal(name, working_dir, base_dir, command_line_variables, variables)[0]
 
 
 def get_robot_library_html_doc_str(
@@ -1161,8 +1144,6 @@ def get_library_doc(
     args: Optional[Tuple[Any, ...]] = None,
     working_dir: str = ".",
     base_dir: str = ".",
-    pythonpath: Optional[List[str]] = None,
-    environment: Optional[Dict[str, str]] = None,
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> LibraryDoc:
@@ -1212,8 +1193,6 @@ def get_library_doc(
             name,
             working_dir=working_dir,
             base_dir=base_dir,
-            pythonpath=pythonpath,
-            environment=environment,
             command_line_variables=command_line_variables,
             variables=variables,
         )
@@ -1413,15 +1392,13 @@ def _find_variables_internal(
     name: str,
     working_dir: str = ".",
     base_dir: str = ".",
-    pythonpath: Optional[List[str]] = None,
-    environment: Optional[Dict[str, str]] = None,
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Tuple[str, Any]:
     from robot.errors import DataError
     from robot.utils.robotpath import find_file as robot_find_file
 
-    _update_env(working_dir, pythonpath, environment)
+    _update_env(working_dir)
 
     robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
@@ -1442,22 +1419,16 @@ def find_variables(
     name: str,
     working_dir: str = ".",
     base_dir: str = ".",
-    pythonpath: Optional[List[str]] = None,
-    environment: Optional[Dict[str, str]] = None,
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> str:
     if get_robot_version() >= (5, 0):
-        return _find_variables_internal(
-            name, working_dir, base_dir, pythonpath, environment, command_line_variables, variables
-        )[0]
+        return _find_variables_internal(name, working_dir, base_dir, command_line_variables, variables)[0]
     else:
         return find_file(
             name,
             working_dir,
             base_dir,
-            pythonpath,
-            environment,
             command_line_variables,
             variables,
             file_type="Variables",
@@ -1483,8 +1454,6 @@ def get_variables_doc(
     args: Optional[Tuple[Any, ...]] = None,
     working_dir: str = ".",
     base_dir: str = ".",
-    pythonpath: Optional[List[str]] = None,
-    environment: Optional[Dict[str, str]] = None,
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> VariablesDoc:
@@ -1499,9 +1468,7 @@ def get_variables_doc(
     try:
         with _std_capture() as std_capturer:
 
-            import_name = find_variables(
-                name, working_dir, base_dir, pythonpath, environment, command_line_variables, variables
-            )
+            import_name = find_variables(name, working_dir, base_dir, command_line_variables, variables)
 
             if import_name.lower().endswith((".yaml", ".yml")):
                 source = import_name
@@ -1585,8 +1552,6 @@ def find_file(
     name: str,
     working_dir: str = ".",
     base_dir: str = ".",
-    pythonpath: Optional[List[str]] = None,
-    environment: Optional[Dict[str, str]] = None,
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
     file_type: str = "Resource",
@@ -1594,7 +1559,7 @@ def find_file(
     from robot.errors import DataError
     from robot.utils.robotpath import find_file as robot_find_file
 
-    _update_env(working_dir, pythonpath, environment)
+    _update_env(working_dir)
 
     robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
     try:
@@ -1649,6 +1614,9 @@ def iter_module_names(name: Optional[str] = None) -> Iterator[str]:
             yield e.name
 
 
+NOT_WANTED_FILE_EXTENSIONS = [".dist-info"]
+
+
 def iter_modules_from_python_path(path: Optional[str] = None) -> Iterator[CompleteResult]:
     allow_modules = True if not path or not ("/" in path or os.sep in path) else False
     allow_files = True if not path or "/" in path or os.sep in path else False
@@ -1667,7 +1635,7 @@ def iter_modules_from_python_path(path: Optional[str] = None) -> Iterator[Comple
                     f.is_file()
                     and f.suffix in ALLOWED_LIBRARY_FILE_EXTENSIONS
                     or f.is_dir()
-                    and f.suffix not in [".dist-info"]
+                    and f.suffix not in NOT_WANTED_FILE_EXTENSIONS
                 ):
                     if f.is_dir():
                         yield CompleteResult(f.name, CompleteResultKind.MODULE)
@@ -1683,13 +1651,11 @@ def complete_library_import(
     name: Optional[str],
     working_dir: str = ".",
     base_dir: str = ".",
-    pythonpath: Optional[List[str]] = None,
-    environment: Optional[Dict[str, str]] = None,
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Optional[List[CompleteResult]]:
 
-    _update_env(working_dir, pythonpath, environment)
+    _update_env(working_dir)
 
     result: List[CompleteResult] = []
 
@@ -1739,7 +1705,7 @@ def iter_resources_from_python_path(path: Optional[str] = None) -> Iterator[Comp
                     f.is_file()
                     and f.suffix in ALLOWED_RESOURCE_FILE_EXTENSIONS
                     or f.is_dir()
-                    and f.suffix not in [".dist-info"]
+                    and f.suffix not in NOT_WANTED_FILE_EXTENSIONS
                 ):
                     yield CompleteResult(
                         f.name, CompleteResultKind.RESOURCE if f.is_file() else CompleteResultKind.FOLDER
@@ -1750,13 +1716,11 @@ def complete_resource_import(
     name: Optional[str],
     working_dir: str = ".",
     base_dir: str = ".",
-    pythonpath: Optional[List[str]] = None,
-    environment: Optional[Dict[str, str]] = None,
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Optional[List[CompleteResult]]:
 
-    _update_env(working_dir, pythonpath, environment)
+    _update_env(working_dir)
 
     result: List[CompleteResult] = []
 
@@ -1805,7 +1769,7 @@ def iter_variables_from_python_path(path: Optional[str] = None) -> Iterator[Comp
                         f.is_file()
                         and f.suffix in ALLOWED_VARIABLES_FILE_EXTENSIONS
                         or f.is_dir()
-                        and f.suffix not in [".dist-info"]
+                        and f.suffix not in NOT_WANTED_FILE_EXTENSIONS
                     ):
                         if f.is_dir():
                             yield CompleteResult(f.name, CompleteResultKind.MODULE)
@@ -1828,7 +1792,7 @@ def iter_variables_from_python_path(path: Optional[str] = None) -> Iterator[Comp
                         f.is_file()
                         and f.suffix in ALLOWED_VARIABLES_FILE_EXTENSIONS
                         or f.is_dir()
-                        and f.suffix not in [".dist-info"]
+                        and f.suffix not in NOT_WANTED_FILE_EXTENSIONS
                     ):
                         yield CompleteResult(
                             f.name, CompleteResultKind.VARIABLES if f.is_file() else CompleteResultKind.FOLDER
@@ -1839,13 +1803,11 @@ def complete_variables_import(
     name: Optional[str],
     working_dir: str = ".",
     base_dir: str = ".",
-    pythonpath: Optional[List[str]] = None,
-    environment: Optional[Dict[str, str]] = None,
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Optional[List[CompleteResult]]:
 
-    _update_env(working_dir, pythonpath, environment)
+    _update_env(working_dir)
 
     result: List[CompleteResult] = []
 

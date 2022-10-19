@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from os import PathLike
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 
 def find_file(
@@ -11,13 +11,12 @@ def find_file(
     basedir: Union[Path, PathLike[str], str] = ".",
     file_type: Optional[str] = None,
 ) -> str:
-    return find_file_ex(path, basedir, None, file_type)
+    return find_file_ex(path, basedir, file_type)
 
 
 def find_file_ex(
     path: Union[Path, PathLike[str], str],
     basedir: Union[Path, PathLike[str], str] = ".",
-    python_path: Optional[List[str]] = None,
     file_type: Optional[str] = None,
 ) -> str:
     from robot.errors import DataError
@@ -26,7 +25,7 @@ def find_file_ex(
     if path.is_absolute():
         ret = _find_absolute_path(path)
     else:
-        ret = _find_relative_path(path, basedir, python_path)
+        ret = _find_relative_path(path, basedir)
     if ret:
         return str(ret)
     default = file_type or "File"
@@ -49,10 +48,9 @@ def _find_absolute_path(path: Union[Path, PathLike[str], str]) -> Optional[str]:
 def _find_relative_path(
     path: Union[Path, PathLike[str], str],
     basedir: Union[Path, PathLike[str], str],
-    python_path: Optional[List[str]] = None,
 ) -> Optional[str]:
 
-    for base in [basedir, *(python_path if python_path is not None else sys.path)]:
+    for base in [basedir, *sys.path]:
         if not base:
             continue
         base_path = Path(base)

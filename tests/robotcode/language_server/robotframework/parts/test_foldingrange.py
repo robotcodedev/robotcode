@@ -68,6 +68,6 @@ async def test(
     data: GeneratedTestData,
 ) -> None:
 
-    result = await protocol.robot_folding_ranges.collect(protocol.robot_goto, test_document)
+    result = await protocol.robot_folding_ranges.collect(protocol.robot_folding_ranges, test_document)
 
     data_regression.check({"data": data, "result": result})

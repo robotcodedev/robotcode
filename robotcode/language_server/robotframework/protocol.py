@@ -2,7 +2,7 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from ..._version import __version__
 from ...jsonrpc2.protocol import (
@@ -129,7 +129,12 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         if initialization_options is not None:
             self.options = from_dict(initialization_options, Options)
 
+        self.workspace.did_change_configuration.add(self._on_did_change_configuration)
+
         self._logger.debug(f"initialized with {repr(self.options)}")
+
+    async def _on_did_change_configuration(self, sender: Any, settings: Dict[str, Any]) -> None:
+        pass
 
     async def _on_initialized(self, sender: Any) -> None:
         for folder in self.workspace.workspace_folders:

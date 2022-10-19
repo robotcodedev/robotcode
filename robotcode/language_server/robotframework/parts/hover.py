@@ -115,11 +115,10 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 if variable.has_value or variable.resolvable:
                     try:
                         value = reprlib.repr(
-                            await namespace.imports_manager.resolve_variable(
+                            namespace.imports_manager.resolve_variable(
                                 variable.name,
                                 str(document.uri.to_path().parent),
                                 await namespace.get_resolvable_variables(nodes, position),
-                                False,
                             )
                         )
                     except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
@@ -168,11 +167,10 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
                 if variable.has_value or variable.resolvable:
                     try:
-                        value = await namespace.imports_manager.resolve_variable(
+                        value = namespace.imports_manager.resolve_variable(
                             variable.name,
                             str(document.uri.to_path().parent),
                             await namespace.get_resolvable_variables(nodes, position),
-                            False,
                         )
                     except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                         raise
@@ -220,11 +218,10 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
                 if variable.has_value or variable.resolvable:
                     try:
-                        value = await namespace.imports_manager.resolve_variable(
+                        value = namespace.imports_manager.resolve_variable(
                             variable.name,
                             str(document.uri.to_path().parent),
                             await namespace.get_resolvable_variables(nodes, position),
-                            False,
                         )
                     except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                         raise
