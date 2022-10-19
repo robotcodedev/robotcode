@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
-import contextlib
 import contextvars
 import functools
 import inspect
 import threading
 import time
-import traceback
 import warnings
 import weakref
 from collections import deque
@@ -285,9 +283,6 @@ def check_canceled_sync() -> bool:
     return True
 
 
-# __threadpool_executor = ThreadPoolExecutor(thread_name_prefix="sub_asyncio")
-
-
 def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyncio.Future[_T]:
     global __tread_pool_executor
 
@@ -295,12 +290,6 @@ def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyn
 
     ctx = contextvars.copy_context()
     func_call = functools.partial(ctx.run, func, *args, **kwargs)
-
-    # return cast(
-    #     "asyncio.Future[_T]",
-    #     # loop.run_in_executor(__threadpool_executor, cast(Callable[..., _T], func_call)),
-    #     loop.run_in_executor(None, cast(Callable[..., _T], func_call)),
-    # )
 
     executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sub_asyncio")
     try:
@@ -341,33 +330,9 @@ def run_coroutine_in_thread(
         return await inner_task
 
     def run(coro: Callable[..., Coroutine[Any, Any, _T]], *args: Any, **kwargs: Any) -> _T:
-
-        old_name = threading.current_thread().name
         threading.current_thread().name = coro.__qualname__
-        try:
-            return asyncio.run(create_inner_task(coro, *args, **kwargs))
-        finally:
-            threading.current_thread().name = old_name
 
-        # loop = asyncio.new_event_loop()
-
-        # try:
-        #     asyncio.set_event_loop(loop)
-
-        #     t = loop.create_task(create_inner_task(coro, *args, **kwargs), name=coro.__qualname__)
-
-        #     return loop.run_until_complete(t)
-        # finally:
-        #     try:
-        #         running_tasks = asyncio.all_tasks(loop)
-        #         if running_tasks:
-        #             loop.run_until_complete(asyncio.gather(*running_tasks, return_exceptions=True))
-
-        #         loop.run_until_complete(loop.shutdown_asyncgens())
-        #     finally:
-        #         asyncio.set_event_loop(None)
-        #         loop.close()
-        #         threading.current_thread().setName(old_name)
+        return asyncio.run(create_inner_task(coro, *args, **kwargs))
 
     cti = get_current_future_info()
     result = run_in_thread(run, coro, *args, **kwargs)
@@ -389,58 +354,6 @@ def run_coroutine_in_thread(
     callback_added_event.set()
 
     return result
-
-
-@contextlib.asynccontextmanager
-async def async_lock(lock: threading.RLock) -> AsyncGenerator[None, None]:
-    import time
-
-    start_time = time.monotonic()
-    locked = lock.acquire(blocking=False)
-    while not locked:
-        if time.monotonic() - start_time >= 1800:
-            raise TimeoutError("Timeout waiting for lock")
-
-        await asyncio.sleep(0.001)
-
-        locked = lock.acquire(blocking=False)
-    try:
-        yield
-    finally:
-        if locked:
-            lock.release()
-    # with lock:
-    #     yield
-
-
-class NewEvent:
-    def __init__(self, value: bool = False) -> None:
-        self._event = threading.Event()
-        if value:
-            self._event.set()
-
-    def is_set(self) -> bool:
-        return self._event.is_set()
-
-    def set(self) -> None:
-        self._event.set()
-
-    def clear(self) -> None:
-        self._event.clear()
-
-    async def wait(self, timeout: Optional[float] = None) -> bool:
-        if timeout is not None and timeout > 0:
-            start = time.monotonic()
-        else:
-            start = None
-
-        while not (result := self.is_set()):
-            if start is not None and timeout is not None and (time.monotonic() - start) > timeout:
-                break
-
-            await asyncio.sleep(0)
-
-        return result
 
 
 class Event:
@@ -514,208 +427,6 @@ class Event:
             return True
         except asyncio.TimeoutError:
             return False
-
-
-class Semaphore:
-    """Thread safe version of a Semaphore"""
-
-    def __init__(self, value: int = 1) -> None:
-        if value < 0:
-            raise ValueError("Semaphore initial value must be >= 0")
-        self._value = value
-        self._waiters: Deque[asyncio.Future[Any]] = deque()
-
-        self._lock = threading.RLock()
-
-    def __repr__(self) -> str:
-        res = super().__repr__()
-        extra = "locked" if self.locked() else f"unlocked, value:{self._value}"
-        if self._waiters:
-            extra = f"{extra}, waiters:{len(self._waiters)}"
-        return f"<{res[1:-1]} [{extra}]>"
-
-    async def _wake_up_next(self) -> None:
-        async with async_lock(self._lock):
-            while self._waiters:
-                waiter = self._waiters.popleft()
-
-                if not waiter.done():
-                    if waiter.get_loop() == asyncio.get_running_loop():
-                        if not waiter.done():
-                            waiter.set_result(True)
-                    else:
-                        if waiter.get_loop().is_running():
-
-                            def set_result(w: asyncio.Future[Any], ev: threading.Event) -> None:
-                                try:
-                                    if w.get_loop().is_running() and not w.done():
-                                        w.set_result(True)
-                                finally:
-                                    ev.set()
-
-                            if not waiter.done():
-                                done = threading.Event()
-
-                                waiter.get_loop().call_soon_threadsafe(set_result, waiter, done)
-
-                                start = time.monotonic()
-                                while not done.is_set():
-
-                                    if time.monotonic() - start > 120:
-                                        raise TimeoutError("Can't set future result.")
-
-                                    await asyncio.sleep(0.001)
-
-    def locked(self) -> bool:
-        with self._lock:
-            return self._value == 0
-
-    async def acquire(self, timeout: Optional[float] = None) -> bool:
-        while True:
-            async with async_lock(self._lock):
-                if self._value > 0:
-                    break
-                fut = create_sub_future()
-                self._waiters.append(fut)
-
-            try:
-                await asyncio.wait_for(fut, timeout)
-            except asyncio.TimeoutError:
-                return False
-            except (SystemExit, KeyboardInterrupt):
-                raise
-
-            except BaseException:
-                if not fut.done():
-                    fut.cancel()
-                if self._value > 0 and not fut.cancelled():
-                    await self._wake_up_next()
-
-                raise
-
-        async with async_lock(self._lock):
-            self._value -= 1
-
-        return True
-
-    async def release(self) -> None:
-        self._value += 1
-        await self._wake_up_next()
-
-    async def __aenter__(self) -> None:
-        await self.acquire()
-
-    async def __aexit__(
-        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
-    ) -> None:
-        await self.release()
-
-
-class BoundedSemaphore(Semaphore):
-    """Thread safe version of a BoundedSemaphore"""
-
-    def __init__(self, value: int = 1) -> None:
-        self._bound_value = value
-        super().__init__(value)
-
-    async def release(self) -> None:
-        if self._value >= self._bound_value:
-            raise ValueError("BoundedSemaphore released too many times")
-        await super().release()
-
-
-class NewNewLock:
-    def __init__(self) -> None:
-        self._lock = threading.Lock()
-        self._owner_thread: Optional[threading.Thread] = None
-        self._owner_task: Optional[asyncio.Task[Any]] = None
-
-    def locked(self) -> bool:
-        return self._lock.locked()
-
-    def acquire(self, blocking: bool = True, timeout: float = -1) -> bool:
-        return self._lock.acquire(blocking=blocking, timeout=timeout)
-
-    def release(self) -> None:
-        self._lock.release()
-        self._owner_task = None
-        self._owner_thread = None
-
-    async def acquire_async(self, blocking: bool = True, timeout: float = -1) -> bool:
-        start = time.monotonic()
-        while not (aquired := self.acquire(blocking=False)):
-            if not blocking:
-                return False
-
-            current = time.monotonic() - start
-            if timeout > 0 and current > timeout:
-                break
-
-            if current > 30 and self._owner_task is not None:
-                tb = traceback.format_stack(self._owner_task.get_stack()[0]) if self._owner_task is not None else ""
-                warnings.warn(
-                    f"locking takes to long {self._owner_thread} {self._owner_task} {tb}",
-                )
-
-            await asyncio.sleep(0)
-
-        try:
-            await asyncio.sleep(0)
-        except asyncio.CancelledError:
-            if aquired:
-                self._lock.release()
-                aquired = False
-            raise
-
-        self._owner_task = asyncio.current_task()
-        self._owner_thread = threading.current_thread()
-
-        return aquired
-
-    async def release_async(self) -> None:
-        self.release()
-
-    def __enter__(self) -> None:
-        self.acquire()
-
-    def __exit__(
-        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
-    ) -> None:
-        self.release()
-
-    async def __aenter__(self) -> None:
-        await self.acquire_async()
-
-    async def __aexit__(
-        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
-    ) -> None:
-        await self.release_async()
-
-
-class NewLock:
-    def __init__(self) -> None:
-        self._block = BoundedSemaphore(value=1)
-
-    def __repr__(self) -> str:
-        return "<%s _block=%s>" % (self.__class__.__name__, self._block)
-
-    async def acquire(self, timeout: Optional[float] = None) -> bool:
-        return await self._block.acquire(timeout)
-
-    async def release(self) -> None:
-        await self._block.release()
-
-    @property
-    def locked(self) -> bool:
-        return self._block.locked()
-
-    async def __aenter__(self) -> None:
-        await self.acquire()
-
-    async def __aexit__(
-        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
-    ) -> None:
-        await self.release()
 
 
 class Lock:
@@ -797,11 +508,11 @@ class Lock:
             if fut in self._waiters:
                 self._waiters.remove(fut)
 
-        if fut.get_loop() == asyncio.get_running_loop():
-            if not fut.done():
-                fut.set_result(True)
-        else:
-            if fut.get_loop().is_running():
+        if fut.get_loop().is_running() and not fut.get_loop().is_closed():
+            if fut.get_loop() == asyncio.get_running_loop():
+                if not fut.done():
+                    fut.set_result(True)
+            else:
 
                 def set_result(w: asyncio.Future[Any], ev: threading.Event) -> None:
                     try:
@@ -822,6 +533,9 @@ class Lock:
                             raise TimeoutError("Can't set future result.")
 
                         await asyncio.sleep(0.001)
+        else:
+            warnings.warn(f"Future {repr(fut)} loop is closed")
+            await self._wake_up_next()
 
 
 class FutureInfo:
