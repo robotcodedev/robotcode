@@ -12,6 +12,18 @@ class TerminalLink extends vscode.TerminalLink {
 
 let languageClientManger: LanguageClientsManager;
 
+function getDocTheme(): string {
+  switch (vscode.window.activeColorTheme.kind) {
+    case vscode.ColorThemeKind.Dark:
+    case vscode.ColorThemeKind.HighContrast:
+      return "dark";
+    case vscode.ColorThemeKind.Light:
+    case vscode.ColorThemeKind.HighContrastLight:
+    default:
+      return "light";
+  }
+}
+
 export async function activateAsync(context: vscode.ExtensionContext): Promise<void> {
   const outputChannel = vscode.window.createOutputChannel("RobotCode");
 
@@ -31,24 +43,15 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
     debugManager,
     testControllerManger,
     vscode.commands.registerCommand("robotcode.showDocumentation", async (url: string) => {
+      if (url.indexOf("&theme=%24%7Btheme%7D") > 0) {
+        url = url.replace("%24%7Btheme%7D", getDocTheme());
+      }
       const uri = vscode.Uri.parse(url);
       const external_uri = await vscode.env.asExternalUri(uri);
       await vscode.commands.executeCommand("simpleBrowser.api.open", external_uri.toString(true), {
         preserveFocus: true,
         viewColumn: vscode.ViewColumn.Beside,
       });
-    }),
-    vscode.commands.registerCommand("robotcode.getVSCodeTheme", () => {
-      switch (vscode.window.activeColorTheme.kind) {
-        case vscode.ColorThemeKind.Dark:
-        case vscode.ColorThemeKind.HighContrast:
-          return "DARK";
-        case vscode.ColorThemeKind.Light:
-        case vscode.ColorThemeKind.HighContrastLight:
-          return "LIGHT";
-        default:
-          return null;
-      }
     }),
     vscode.window.registerTerminalLinkProvider({
       provideTerminalLinks(terminalContext: vscode.TerminalLinkContext, _token: vscode.CancellationToken) {

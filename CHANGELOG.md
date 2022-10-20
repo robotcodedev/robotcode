@@ -2,8 +2,11 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- The code action "Show documentation" now works for all positions where a keyword can be used or defined
+- The code action "Show documentation" now respects the theme activated in VSCode. (dark, light)
+
 ##  0.13.23
 
 - Support for Robocop >= 2.6

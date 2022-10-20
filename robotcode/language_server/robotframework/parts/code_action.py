@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import socket
 import threading
@@ -19,22 +18,13 @@ from ....utils.net import find_free_port
 from ....utils.uri import Uri
 from ...common.decorators import code_action_kinds, command, language_id
 from ...common.lsp_types import (
-    AnnotatedTextEdit,
-    ChangeAnnotation,
     CodeAction,
     CodeActionContext,
     CodeActionKinds,
     CodeActionTriggerKind,
     Command,
-    CreateFile,
-    DeleteFile,
-    MessageType,
     Model,
-    OptionalVersionedTextDocumentIdentifier,
     Range,
-    RenameFile,
-    TextDocumentEdit,
-    WorkspaceEdit,
 )
 from ...common.text_document import TextDocument
 from ..configuration import DocumentationServerConfig
@@ -45,7 +35,6 @@ from ..diagnostics.library_doc import (
 )
 from ..diagnostics.namespace import LibraryEntry, Namespace
 from ..utils.ast_utils import Token, get_node_at_position, range_from_token
-from ..utils.version import get_robot_version
 from .model_helper import ModelHelperMixin
 
 if TYPE_CHECKING:
@@ -122,6 +111,7 @@ class LibDocRequestHandler(SimpleHTTPRequestHandler):
         args = n[0] if (n := query.get("args", [])) else None
         basedir = n[0] if (n := query.get("basedir", [])) else None
         type_ = n[0] if (n := query.get("type", [])) else None
+        theme = n[0] if (n := query.get("theme", [])) else None
 
         if name:
             try:
@@ -147,6 +137,7 @@ class LibDocRequestHandler(SimpleHTTPRequestHandler):
                             get_robot_library_html_doc_str,
                             name + ("::" + args if args else ""),
                             base_dir=basedir if basedir else ".",
+                            theme=theme,
                         ).result(10)
 
                         self.send_response(200)
@@ -182,6 +173,10 @@ class DualStackServer(ThreadingHTTPServer):
         return super().server_bind()
 
 
+CODEACTIONKINDS_SOURCE_OPENDOCUMENTATION = f"{CodeActionKinds.SOURCE}.openDocumentation"
+CODEACTIONKINDS_QUICKFIX_CREATEKEYWORD = f"{CodeActionKinds.QUICKFIX}.createKeyword"
+
+
 class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     _logger = LoggingDescriptor()
 
@@ -196,7 +191,6 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self._documentation_server_lock = threading.RLock()
         self._documentation_server_port = 0
 
-        self.parent.commands.register(self.translate_suite)
         self.parent.commands.register(self.comming_soon)
 
     async def initialized(self, sender: Any) -> None:
@@ -238,8 +232,8 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     @language_id("robotframework")
     @code_action_kinds(
         [
-            f"{CodeActionKinds.SOURCE}.openDocumentation",
-            f"{CodeActionKinds.QUICKFIX}.createKeyword",
+            CODEACTIONKINDS_SOURCE_OPENDOCUMENTATION,
+            CODEACTIONKINDS_QUICKFIX_CREATEKEYWORD,
         ]
     )
     @_logger.call
@@ -251,8 +245,11 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         from robot.parsing.model.statements import (
             Fixture,
             KeywordCall,
+            KeywordName,
             LibraryImport,
             ResourceImport,
+            Template,
+            TestTemplate,
         )
 
         namespace = await self.parent.documents_cache.get_namespace(document)
@@ -262,61 +259,25 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         model = await self.parent.documents_cache.get_model(document, False)
         node = await get_node_at_position(model, range.start)
 
-        if get_robot_version() >= (6, 0):
-            from robot.conf.languages import En, Languages
-            from robot.parsing.model.statements import Config
-
-            if context.only and CodeActionKinds.SOURCE in context.only and isinstance(node, Config):
-                for token in node.get_tokens(RobotToken.CONFIG):
-                    config, lang = token.value.split(":", 1)
-
-                    if config.lower() == "language" and lang and range.start in range_from_token(token):
-                        try:
-                            languages = Languages(lang)
-                            language = next((v for v in languages.languages if v is not En), None)
-                        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                            raise
-                        except BaseException:
-                            language = None
-
-                        if language is not None:
-
-                            return [
-                                CodeAction(
-                                    f"Translate file to `{language.name}`",
-                                    kind=CodeActionKinds.SOURCE + ".openDocumentation",
-                                    command=Command(
-                                        f"Translate Suite to {lang}",
-                                        self.parent.commands.get_command_name(self.translate_suite),
-                                        [document.document_uri, lang],
-                                    ),
-                                )
-                            ]
-                        else:
-                            return None
-
         if context.only and isinstance(node, (LibraryImport, ResourceImport)):
-
-            if CodeActionKinds.SOURCE in context.only:
+            if CodeActionKinds.SOURCE in context.only and range in range_from_token(node.get_token(RobotToken.NAME)):
                 url = await self.build_url(
                     node.name, node.args if isinstance(node, LibraryImport) else (), document, namespace
                 )
 
-                return [
-                    CodeAction(
-                        "Open Documentation",
-                        kind=CodeActionKinds.SOURCE + ".openDocumentation",
-                        command=Command(
-                            "Open Documentation",
-                            "robotcode.showDocumentation",
-                            [url],
-                        ),
-                    )
-                ]
+                return [self.open_documentation_code_action(url)]
 
-        if isinstance(node, (KeywordCall, Fixture)):
+        if isinstance(node, (KeywordCall, Fixture, TestTemplate, Template)):
+            # only source actions
+            if range.start != range.end:
+                return None
+
             result = await self.get_keyworddoc_and_token_from_position(
-                node.keyword if isinstance(node, KeywordCall) else node.name,
+                node.value
+                if isinstance(node, (TestTemplate, Template))
+                else node.keyword
+                if isinstance(node, KeywordCall)
+                else node.name,
                 cast(Token, node.get_token(RobotToken.KEYWORD if isinstance(node, KeywordCall) else RobotToken.NAME)),
                 [cast(Token, t) for t in node.get_tokens(RobotToken.ARGUMENT)],
                 namespace,
@@ -373,19 +334,27 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
                         url = await self.build_url(entry.import_name, entry.args, document, namespace, kw_doc.name)
 
-                        return [
-                            CodeAction(
-                                "Open Documentation",
-                                kind=CodeActionKinds.SOURCE + ".openDocumentation",
-                                command=Command(
-                                    "Open Documentation",
-                                    "robotcode.showDocumentation",
-                                    [url],
-                                ),
-                            )
-                        ]
+                        return [self.open_documentation_code_action(url)]
+
+        if isinstance(node, KeywordName):
+            name_token = node.get_token(RobotToken.KEYWORD_NAME)
+            if name_token and range in range_from_token(name_token):
+                url = await self.build_url(str(document.uri.to_path().name), (), document, namespace, name_token.value)
+
+                return [self.open_documentation_code_action(url)]
 
         return None
+
+    def open_documentation_code_action(self, url: str) -> CodeAction:
+        return CodeAction(
+            "Open Documentation",
+            kind=CODEACTIONKINDS_SOURCE_OPENDOCUMENTATION,
+            command=Command(
+                "Open Documentation",
+                "robotcode.showDocumentation",
+                [url],
+            ),
+        )
 
     async def build_url(
         self,
@@ -395,12 +364,18 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         namespace: Namespace,
         target: Optional[str] = None,
     ) -> str:
+        base_dir = document.uri.to_path().parent
 
-        base_dir = str(document.uri.to_path().parent)
+        workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
+        if workspace_folder is not None:
+            try:
+                base_dir = base_dir.relative_to(workspace_folder.uri.to_path())
+            except ValueError:
+                pass
 
         robot_variables = resolve_robot_variables(
             str(namespace.imports_manager.folder.to_path()),
-            base_dir,
+            str(base_dir),
             variables=await namespace.get_resolvable_variables(),
         )
         try:
@@ -416,11 +391,9 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         url_args = "::".join(args) if args else ""
 
         base_url = f"http://localhost:{self._documentation_server_port}"
-        params = urllib.parse.urlencode({"name": name, "args": url_args, "basedir": base_dir})
+        params = urllib.parse.urlencode({"name": name, "args": url_args, "basedir": str(base_dir), "theme": "${theme}"})
 
-        url = f"{base_url}" f"/?&{params}" f"{f'#{target}' if target else ''}"
-
-        return url
+        return f"{base_url}/?&{params}{f'#{target}' if target else ''}"
 
     @rpc_method(name="robot/documentationServer/convertUri", param_type=ConvertUriParams)
     @_logger.call
@@ -439,87 +412,3 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     @command("robotcode.commingSoon")
     async def comming_soon(self) -> None:
         self.parent.window.show_message("Comming soon... stay tuned ...")
-
-    @command("robotcode.translateSuite")
-    async def translate_suite(self, document_uri: str, lang: str) -> None:
-        from robot.conf.languages import Language
-        from robot.parsing.lexer.tokens import Token as RobotToken
-
-        try:
-            language = Language.from_name(lang)
-        except ValueError:
-            self.parent.window.show_message(f"Invalid language {lang}", MessageType.ERROR)
-            return
-
-        document = await self.parent.documents.get(document_uri)
-
-        if document is None:
-            return
-
-        changes: List[Union[TextDocumentEdit, CreateFile, RenameFile, DeleteFile]] = []
-
-        header_translations = {
-            RobotToken.SETTING_HEADER: language.settings_header,
-            RobotToken.VARIABLE_HEADER: language.variables_header,
-            RobotToken.TESTCASE_HEADER: language.test_cases_header,
-            RobotToken.TASK_HEADER: language.tasks_header,
-            RobotToken.KEYWORD_HEADER: language.keywords_header,
-            RobotToken.COMMENT_HEADER: language.comments_header,
-        }
-        settings_translations = {
-            RobotToken.LIBRARY: language.library_setting,
-            RobotToken.DOCUMENTATION: language.documentation_setting,
-            RobotToken.SUITE_SETUP: language.suite_setup_setting,
-            RobotToken.SUITE_TEARDOWN: language.suite_teardown_setting,
-            RobotToken.METADATA: language.metadata_setting,
-            RobotToken.KEYWORD_TAGS: language.keyword_tags_setting,
-            RobotToken.LIBRARY: language.library_setting,
-            RobotToken.RESOURCE: language.resource_setting,
-            RobotToken.VARIABLES: language.variables_setting,
-            RobotToken.SETUP: f"[{language.setup_setting}]",
-            RobotToken.TEARDOWN: f"[{language.teardown_setting}]",
-            RobotToken.TEMPLATE: f"[{language.template_setting}]",
-            RobotToken.TIMEOUT: f"[{language.timeout_setting}]",
-            RobotToken.TAGS: f"[{language.tags_setting}]",
-            RobotToken.ARGUMENTS: f"[{language.arguments_setting}]",
-        }
-
-        for token in await self.parent.documents_cache.get_tokens(document):
-            if token.type in header_translations.keys():
-                changes.append(
-                    TextDocumentEdit(
-                        OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
-                        [
-                            AnnotatedTextEdit(
-                                range_from_token(token),
-                                f"*** { header_translations[token.type]} ***",
-                                annotation_id="translate_settings",
-                            )
-                        ],
-                    )
-                )
-            elif token.type in settings_translations.keys():
-                changes.append(
-                    TextDocumentEdit(
-                        OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
-                        [
-                            AnnotatedTextEdit(
-                                range_from_token(token),
-                                settings_translations[token.type],
-                                annotation_id="translate_settings",
-                            )
-                        ],
-                    )
-                )
-            else:
-                pass
-
-        if not changes:
-            return
-
-        edit = WorkspaceEdit(
-            document_changes=changes,
-            change_annotations={"translate_settings": ChangeAnnotation("Translate Settings", False)},
-        )
-
-        await self.parent.workspace.apply_edit(edit, "Translate")

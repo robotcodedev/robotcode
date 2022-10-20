@@ -1301,7 +1301,7 @@ class Range(Model):
         return False
 
     def is_in_range(self, range: Range) -> bool:
-        return range.start.is_in_range(self) and range.end.is_in_range(self)
+        return self.start.is_in_range(range) and self.end.is_in_range(range)
 
     def __hash__(self) -> int:
         return hash((self.start, self.end))

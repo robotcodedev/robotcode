@@ -41,7 +41,7 @@ class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         super().__init__(parent)
         self.commands: Dict[str, CommandEntry] = {}
 
-    def register(self, callback: _FUNC_TYPE, name: Optional[str] = None) -> CommandEntry:
+    def register(self, callback: _FUNC_TYPE, name: Optional[str] = None) -> str:
         name = name or get_command_name(callback)
 
         command = f"{self.PREFIX}.{name}"
@@ -51,7 +51,7 @@ class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         else:
             self.commands[command] = CommandEntry(name, callback)
 
-        return self.commands[command]
+        return command
 
     def get_command_name(self, callback: _FUNC_TYPE, name: Optional[str] = None) -> str:
         name = name or get_command_name(callback)
