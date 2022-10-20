@@ -1619,6 +1619,9 @@ class CancelSearchError(Exception):
     pass
 
 
+DEFAULT_BDD_PREFIXES = {"Given ", "When ", "Then ", "And ", "But "}
+
+
 class KeywordFinder:
     def __init__(self, namespace: Namespace) -> None:
         super().__init__()
@@ -1860,14 +1863,15 @@ class KeywordFinder:
             return None
 
         else:
-            parts = name.split(maxsplit=1)
+            parts = name.split()
             if len(parts) < 2:
                 return None
-            prefix, keyword = parts
-            if prefix.title() in (
-                self.namespace.languages.bdd_prefixes
-                if self.namespace.languages is not None
-                else {"Given ", "When ", "Then ", "And ", "But "}
-            ):
-                return await self._find_keyword(keyword)
+            for index in range(1, len(parts)):
+                prefix = " ".join(parts[:index]).title()
+                if prefix.title() in (
+                    self.namespace.languages.bdd_prefixes
+                    if self.namespace.languages is not None
+                    else DEFAULT_BDD_PREFIXES
+                ):
+                    return await self._find_keyword(" ".join(parts[index:]))
             return None

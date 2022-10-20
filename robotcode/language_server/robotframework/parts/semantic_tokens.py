@@ -41,7 +41,12 @@ from ..diagnostics.library_doc import (
     KeywordMatcher,
     LibraryDoc,
 )
-from ..diagnostics.namespace import LibraryEntry, Namespace, ResourceEntry
+from ..diagnostics.namespace import (
+    DEFAULT_BDD_PREFIXES,
+    LibraryEntry,
+    Namespace,
+    ResourceEntry,
+)
 from ..utils import async_ast
 from ..utils.ast_utils import (
     HasTokens,
@@ -336,15 +341,17 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                         if bdd_match:
                             bdd_len = len(bdd_match.group(1))
                     else:
-                        parts = token.value.split(maxsplit=1)
-                        if len(parts) == 2:
-                            prefix, _ = parts
-                            if prefix.title() in (
-                                namespace.languages.bdd_prefixes
-                                if namespace.languages is not None
-                                else {"Given ", "When ", "Then ", "And ", "But "}
-                            ):
-                                bdd_len = len(prefix)
+                        parts = token.value.split()
+                        if len(parts) > 1:
+                            for index in range(1, len(parts)):
+                                prefix = " ".join(parts[:index]).title()
+                                if prefix.title() in (
+                                    namespace.languages.bdd_prefixes
+                                    if namespace.languages is not None
+                                    else DEFAULT_BDD_PREFIXES
+                                ):
+                                    bdd_len = len(prefix)
+                                    break
 
                     if bdd_len > 0:
                         yield SemTokenInfo.from_token(

@@ -20,7 +20,7 @@ from typing import (
 from ...common.lsp_types import Position
 from ..diagnostics.entities import VariableDefinition, VariableNotFoundDefinition
 from ..diagnostics.library_doc import KeywordDoc
-from ..diagnostics.namespace import LibraryEntry, Namespace
+from ..diagnostics.namespace import DEFAULT_BDD_PREFIXES, LibraryEntry, Namespace
 from ..utils.ast_utils import (
     Token,
     is_not_variable_token,
@@ -498,32 +498,32 @@ class ModelHelperMixin:
 
         bdd_token = None
 
-        parts = token.value.split(maxsplit=1)
-        if len(parts) < 1:
+        parts = token.value.split()
+        if len(parts) < 2:
             return None, token
 
-        prefix = parts[0]
-        if prefix.title() in (
-            namespace.languages.bdd_prefixes
-            if namespace.languages is not None
-            else {"Given ", "When ", "Then ", "And ", "But "}
-        ):
-            bdd_len = len(prefix)
-            bdd_token = RobotToken(
-                token.type,
-                token.value[:bdd_len],
-                token.lineno,
-                token.col_offset,
-                token.error,
-            )
+        for index in range(1, len(parts)):
+            prefix = " ".join(parts[:index]).title()
+            if prefix in (
+                namespace.languages.bdd_prefixes if namespace.languages is not None else DEFAULT_BDD_PREFIXES
+            ):
+                bdd_len = len(prefix)
+                bdd_token = RobotToken(
+                    token.type,
+                    token.value[:bdd_len],
+                    token.lineno,
+                    token.col_offset,
+                    token.error,
+                )
 
-            token = RobotToken(
-                token.type,
-                token.value[bdd_len + 1 :],
-                token.lineno,
-                token.col_offset + bdd_len + 1,
-                token.error,
-            )
+                token = RobotToken(
+                    token.type,
+                    token.value[bdd_len + 1 :],
+                    token.lineno,
+                    token.col_offset + bdd_len + 1,
+                    token.error,
+                )
+                break
 
         return bdd_token, token
 
@@ -545,24 +545,24 @@ class ModelHelperMixin:
                 )
             return token
         else:
-            parts = token.value.split(maxsplit=1)
+            parts = token.value.split()
             if len(parts) < 2:
                 return token
 
-            prefix = parts[0]
-            if prefix.title() in (
-                namespace.languages.bdd_prefixes
-                if namespace.languages is not None
-                else {"Given ", "When ", "Then ", "And ", "But "}
-            ):
-                bdd_len = len(prefix)
-                token = RobotToken(
-                    token.type,
-                    token.value[bdd_len + 1 :],
-                    token.lineno,
-                    token.col_offset + bdd_len + 1,
-                    token.error,
-                )
+            for index in range(1, len(parts)):
+                prefix = " ".join(parts[:index]).title()
+                if prefix in (
+                    namespace.languages.bdd_prefixes if namespace.languages is not None else DEFAULT_BDD_PREFIXES
+                ):
+                    bdd_len = len(prefix)
+                    token = RobotToken(
+                        token.type,
+                        token.value[bdd_len + 1 :],
+                        token.lineno,
+                        token.col_offset + bdd_len + 1,
+                        token.error,
+                    )
+                    break
 
             return token
 
@@ -572,18 +572,17 @@ class ModelHelperMixin:
             bdd_match = cls.BDD_TOKEN.match(token.value)
             return bool(bdd_match)
         else:
-            parts = token.value.split(maxsplit=1)
-            if len(parts) < 1:
+            parts = token.value.split()
+            if len(parts) < 2:
                 return False
 
-            prefix = parts[0]
+            for index in range(1, len(parts)):
+                prefix = " ".join(parts[:index]).title()
 
-            if prefix.title() in (
-                namespace.languages.bdd_prefixes
-                if namespace.languages is not None
-                else {"Given ", "When ", "Then ", "And ", "But "}
-            ):
-                return True
+                if prefix.title() in (
+                    namespace.languages.bdd_prefixes if namespace.languages is not None else DEFAULT_BDD_PREFIXES
+                ):
+                    return True
 
             return False
 
