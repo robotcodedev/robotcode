@@ -284,9 +284,9 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifacts: "dist/*"
-        prerelease: ${{ steps.get_release_informations.outputs.is_prelease }}
-        body: ${{ steps.get_release_informations.outputs.release_notes }}
-        token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: ${{ steps.get_release_informations.outputs.is_prelease }}
+          body: ${{ steps.get_release_informations.outputs.release_notes }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: publish vsix and python packages
         run: poetry run npm run publish
