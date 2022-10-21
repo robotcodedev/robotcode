@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 - none so far
+##  0.13.25
+
+- none so far
+
 ##  0.13.24
 
 - The code action "Show documentation" now works for all positions where a keyword can be used or defined
