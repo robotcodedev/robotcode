@@ -173,7 +173,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "16"
-          cache: 'npm'
+          cache: "npm"
           cache-dependency-path: package-lock.json
 
       - name: install node modules
@@ -249,7 +249,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "16"
-          cache: 'npm'
+          cache: "npm"
           cache-dependency-path: package-lock.json
 
       - name: install node modules
@@ -280,62 +280,13 @@ jobs:
           echo "release_notes=$REL_NOTES" >> $GITHUB_OUTPUT
           echo "is_prelease=$(poetry run npm run --silent is-prerelease)" >> $GITHUB_OUTPUT
 
-      - name: find assets
-        id: find_assets
-        run: |
-          echo "vsix_file=$(find dist -iname '*.vsix')" >> $GITHUB_OUTPUT
-          echo "vsix_name=$(find dist -iname '*.vsix' -printf '%f\n')" >> $GITHUB_OUTPUT
-
-          echo "whl_file=$(find dist -iname '*.whl')" >> $GITHUB_OUTPUT
-          echo "whl_name=$(find dist -iname '*.whl' -printf '%f\n')" >> $GITHUB_OUTPUT
-
-          echo "tar_gz_file=$(find dist -iname '*.tar.gz')" >> $GITHUB_OUTPUT
-          echo "tar_gz_name=$(find dist -iname '*.tar.gz' -printf '%f\n')" >> $GITHUB_OUTPUT
-
-      - name: create github release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      - name: create guthub release
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          body: ${{ steps.get_release_informations.outputs.release_notes }}
-          draft: false
-          prerelease: ${{ steps.get_release_informations.outputs.is_prelease }}
-
-      - name: upload vsix asset to github release
-        id: upload-vsix-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ${{ steps.find_assets.outputs.vsix_file }}
-          asset_name: ${{ steps.find_assets.outputs.vsix_name }}
-          asset_content_type: application/vsix
-
-      - name: upload whl asset to github release
-        id: upload-whl-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ${{ steps.find_assets.outputs.whl_file }}
-          asset_name: ${{ steps.find_assets.outputs.whl_name }}
-          asset_content_type: application/whl
-
-      - name: upload tar.gz asset to github release
-        id: upload-tar-gz-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ${{ steps.find_assets.outputs.tar_gz_file }}
-          asset_name: ${{ steps.find_assets.outputs.tar_gz_name }}
-          asset_content_type: application/whl
+          artifacts: "dist/*"
+        prerelease: ${{ steps.get_release_informations.outputs.is_prelease }}
+        body: ${{ steps.get_release_informations.outputs.release_notes }}
+        token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: publish vsix and python packages
         run: poetry run npm run publish
