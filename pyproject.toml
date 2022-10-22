@@ -51,10 +51,11 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-robotframework = { version = "~4.1.0", allow-prereleases = false }
+robotframework = { version = ">=4.1.0"}
 
 
 [tool.poetry.group.dev.dependencies]
+robotframework = { version = "~4.1.0", allow-prereleases = false }
 isort = "*"
 mypy = "*"
 flake8 = "*"
@@ -82,6 +83,10 @@ PyYAML = "*"
 types-PyYAML = "*"
 robotframework-robocop = "*"
 robotframework-tidy = "*"
+
+[tool.poetry.scripts]
+'robotcode.debugger' = 'robotcode.debugger.__main__:main'
+'robotcode.language_server' = 'robotcode.language_server.__main__:main'
 
 [tool.black]
 line-length = 120
@@ -142,11 +147,4 @@ warn_unused_configs = true
 strict = true
 disallow_subclassing_any = false
 ignore_missing_imports = true
-exclude = [
-  "\\.mypy_cache",
-  "\\.venv",
-  "build",
-  "dist",
-  "out",
-  "playground",
-]
+exclude = ["\\.mypy_cache", "\\.venv", "build", "dist", "out", "playground"]
