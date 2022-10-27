@@ -19,6 +19,7 @@ from ..dap_types import (
     DisconnectRequest,
     Event,
     ExceptionBreakpointsFilter,
+    InitializeRequest,
     InitializeRequestArguments,
     LaunchRequestArguments,
     OutputCategory,
@@ -59,6 +60,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         super().__init__()
         self._client: Optional[DAPClient] = None
         self._process: Optional[asyncio.subprocess.Process] = None
+        self._initialize_arguments: Optional[InitializeRequestArguments] = None
 
     @property
     def client(self) -> DAPClient:
@@ -77,6 +79,8 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
 
     @rpc_method(name="initialize", param_type=InitializeRequestArguments)
     async def _initialize(self, arguments: InitializeRequestArguments, *args: Any, **kwargs: Any) -> Capabilities:
+        self._initialize_arguments = arguments
+
         self._initialized = True
 
         return Capabilities(
@@ -264,7 +268,10 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         try:
             await self.client.connect(connect_timeout)
         except asyncio.TimeoutError:
-            raise asyncio.TimeoutError("Can't connect to debug launcher.")
+            raise asyncio.TimeoutError("Can't connect to debug child.")
+
+        if self._initialize_arguments is not None:
+            await self.client.protocol.send_request_async(InitializeRequest(arguments=self._initialize_arguments))
 
     @rpc_method(name="configurationDone", param_type=ConfigurationDoneArguments)
     async def _configuration_done(
@@ -279,16 +286,16 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
             if not self.client.protocol.terminated:
                 await self.client.protocol.send_request_async(DisconnectRequest(arguments=arguments))
         else:
+            self.send_event(Event("disconnectRequested"))
             await self.send_event_async(TerminatedEvent())
 
     @_logger.call
     @rpc_method(name="terminate", param_type=TerminateArguments)
     async def _terminate(self, arguments: Optional[TerminateArguments] = None, *args: Any, **kwargs: Any) -> None:
         if self.client.connected:
-            self.send_event(Event("terminateRequested"))
-
             return await self.client.protocol.send_request_async(TerminateRequest(arguments=arguments))
         else:
+            self.send_event(Event("terminateRequested"))
             await self.send_event_async(TerminatedEvent())
 
     async def handle_unknown_command(self, message: Request) -> Any:

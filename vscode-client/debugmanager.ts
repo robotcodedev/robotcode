@@ -264,6 +264,7 @@ export class DebugManager {
               await DebugManager.OnDebugpyStarted(event.session, event.event, event.body);
               break;
             }
+            case "disconnectRequested":
             case "terminateRequested": {
               for (const s of this._attachedSessions) {
                 if (s.parentSession == event.session) {
@@ -286,9 +287,19 @@ export class DebugManager {
         }
       }),
 
-      vscode.debug.onDidTerminateDebugSession((session) => {
+      vscode.debug.onDidTerminateDebugSession(async (session) => {
         if (this._attachedSessions.has(session)) {
           this._attachedSessions.delete(session);
+          if (session.parentSession?.type === "robotcode") {
+            await vscode.debug.stopDebugging(session.parentSession);
+          }
+        }
+        if (session.configuration.type === "robotcode") {
+          for (const s of this._attachedSessions) {
+            if (s.parentSession == session) {
+              await vscode.debug.stopDebugging(s);
+            }
+          }
         }
       }),
 
@@ -389,7 +400,7 @@ export class DebugManager {
   static async OnDebugpyStarted(
     session: vscode.DebugSession,
     _event: string,
-    options?: { port: number }
+    options?: { port: number; addresses: undefined | string[] | null }
   ): Promise<void> {
     if (
       session.type === "robotcode" &&
@@ -416,9 +427,14 @@ export class DebugManager {
           request: "attach",
           connect: {
             port: options.port,
+            host: options.addresses ? options.addresses[0] : undefined,
           },
         },
       };
+
+      if (session.configuration?.request === "attach" && !debugConfiguration.pathMappings) {
+        debugConfiguration.pathMappings = session.configuration.pathMappings;
+      }
 
       await vscode.debug.startDebugging(session.workspaceFolder, debugConfiguration, {
         parentSession: session,

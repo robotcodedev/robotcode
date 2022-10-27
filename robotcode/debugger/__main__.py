@@ -81,6 +81,7 @@ DEFAULT_TIMEOUT = 10.0
 async def start_debugpy_async(
     server: "DebugAdapterServer",
     debugpy_port: int = 5678,
+    addresses: Union[Sequence[str], str, None] = None,
     wait_for_debugpy_client: bool = False,
     wait_for_client_timeout: float = DEFAULT_TIMEOUT,
 ) -> None:
@@ -93,12 +94,14 @@ async def start_debugpy_async(
     if port != debugpy_port:
         _logger.warning(f"start debugpy session on port {port}")
 
-    if enable_debugpy(port) and await run_coroutine_from_thread_async(
+    if enable_debugpy(port, addresses) and await run_coroutine_from_thread_async(
         server.protocol.wait_for_client, wait_for_client_timeout, loop=server.loop
     ):
         await asyncio.wrap_future(
             asyncio.run_coroutine_threadsafe(
-                server.protocol.send_event_async(Event(event="debugpyStarted", body={"port": port})),
+                server.protocol.send_event_async(
+                    Event(event="debugpyStarted", body={"port": port, "addresses": addresses})
+                ),
                 loop=server.loop,
             )
         )
@@ -110,7 +113,7 @@ async def start_debugpy_async(
 async def run_robot(
     port: int,
     args: List[str],
-    bind: Union[Sequence[str], str, None] = None,
+    addresses: Union[Sequence[str], str, None] = None,
     no_debug: bool = False,
     wait_for_client: bool = False,
     wait_for_client_timeout: float = DEFAULT_TIMEOUT,
@@ -129,10 +132,14 @@ async def run_robot(
         run_coroutine_from_thread_async,
         run_coroutine_in_thread,
     )
+    from ..utils.debugpy import is_debugpy_installed
     from .dap_types import Event
     from .debugger import Debugger
 
-    server_future = run_coroutine_in_thread(_debug_adapter_server_, bind, port)
+    if debugpy and not is_debugpy_installed():
+        print("debugpy not installed.")
+
+    server_future = run_coroutine_in_thread(_debug_adapter_server_, addresses, port)
 
     server = await wait_for_server()
 
@@ -147,7 +154,7 @@ async def run_robot(
             except asyncio.TimeoutError as e:
                 raise ConnectionError("No incomming connection from a debugger client.") from e
 
-        await run_coroutine_from_thread_async(server.protocol.initialized, loop=server.loop)
+            await run_coroutine_from_thread_async(server.protocol.wait_for_initialized, loop=server.loop)
 
         if wait_for_client:
             try:
@@ -160,7 +167,7 @@ async def run_robot(
                 raise ConnectionError("Timeout to get configuration from client.") from e
 
         if debugpy:
-            await start_debugpy_async(server, debugpy_port, wait_for_debugpy_client, wait_for_client_timeout)
+            await start_debugpy_async(server, debugpy_port, addresses, wait_for_debugpy_client, wait_for_client_timeout)
 
         args = [
             "--listener",

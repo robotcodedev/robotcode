@@ -902,7 +902,8 @@
             "presentation": {
               "hidden": true
             },
-            "pythonConfiguration": "RobotCode: Debug"
+            "attachPython": false,
+            "pythonConfiguration": "RobotCode: Python"
           },
           {
             "name": "RobotCode: Python",

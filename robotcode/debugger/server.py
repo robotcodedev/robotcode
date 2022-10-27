@@ -56,11 +56,13 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
     def __init__(self) -> None:
         super().__init__()
 
-        self._initialized = False
         self._connected_event = async_tools.Event()
         self._disconnected_event = async_tools.Event()
         self._connected = False
         self._sigint_signaled = False
+
+        self._initialized = False
+        self._initialized_event = async_tools.Event()
 
         self._exited_lock = async_tools.Lock()
         self._exited = False
@@ -116,6 +118,12 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         return self._connected
 
     @_logger.call
+    async def wait_for_initialized(self, timeout: float = 60) -> bool:
+        await asyncio.wait_for(self._initialized_event.wait(), timeout)
+
+        return self._initialized
+
+    @_logger.call
     async def wait_for_disconnected(self, timeout: float = 60) -> bool:
         await asyncio.wait_for(self._disconnected_event.wait(), timeout)
 
@@ -124,6 +132,9 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
     @rpc_method(name="initialize", param_type=InitializeRequestArguments)
     async def _initialize(self, arguments: InitializeRequestArguments, *args: Any, **kwargs: Any) -> Capabilities:
         self._initialized = True
+
+        if self.loop is not None:
+            self.loop.call_soon(self.initialized)
 
         return Capabilities(
             supports_configuration_done_request=True,
@@ -187,8 +198,9 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         Debugger.instance().attached = True
 
     @_logger.call
-    async def initialized(self) -> None:
-        await self.send_event_async(InitializedEvent())
+    def initialized(self) -> None:
+        self.send_event(InitializedEvent())
+        self._initialized_event.set()
 
     @_logger.call
     async def exit(self, exit_code: int) -> None:
@@ -213,17 +225,25 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
             signal.raise_signal(signal.SIGINT)
             self._sigint_signaled = True
         else:
+            self.send_event(Event("terminateRequested"))
+
             self._logger.info("Send SIGTERM to process")
             signal.raise_signal(signal.SIGTERM)
 
     @rpc_method(name="disconnect", param_type=DisconnectArguments)
     async def _disconnect(self, arguments: Optional[DisconnectArguments] = None, *args: Any, **kwargs: Any) -> None:
+
         if (
-            not (await self.exited)
-            or not (await self.terminated)
-            and (arguments is None or arguments.terminate_debuggee is None or arguments.terminate_debuggee)
+            (not (await self.exited) or not (await self.terminated))
+            and arguments is not None
+            and arguments.terminate_debuggee
         ):
             os._exit(-1)
+        else:
+            await self.send_event_async(Event("disconnectRequested"))
+            await asyncio.sleep(3)
+            Debugger.instance().attached = False
+            Debugger.instance().continue_all()
 
     @rpc_method(name="setBreakpoints", param_type=SetBreakpointsArguments)
     async def _set_breakpoints(

@@ -304,6 +304,11 @@ class Debugger:
             self.condition.notify_all()
 
     @_logger.call
+    def continue_all(self) -> None:
+        if self.main_thread is not None and self.main_thread.ident is not None:
+            self.continue_thread(self.main_thread.ident)
+
+    @_logger.call
     def continue_thread(self, thread_id: int) -> None:
         if self.main_thread is None or thread_id != self.main_thread.ident:
             raise InvalidThreadId(thread_id)
