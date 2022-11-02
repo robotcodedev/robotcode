@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Union
 
 from ..jsonrpc2.protocol import rpc_method
 from ..jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
@@ -72,6 +72,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
 
         self._received_configuration_done_event = async_tools.Event()
         self._received_configuration_done = False
+        self.received_configuration_done_callback: Optional[Callable[[], None]] = None
 
         Debugger.instance().send_event.add(self.on_debugger_send_event)
 
@@ -218,14 +219,15 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
     async def _terminate(self, arguments: Optional[TerminateArguments] = None, *args: Any, **kwargs: Any) -> None:
         import signal
 
-        Debugger.instance().terminate()
-
         if not self._sigint_signaled:
             self._logger.info("Send SIGINT to process")
             signal.raise_signal(signal.SIGINT)
             self._sigint_signaled = True
+            # Debugger.instance().continue_all()
         else:
-            self.send_event(Event("terminateRequested"))
+            await self.send_event_async(Event("terminateRequested"))
+
+            Debugger.instance().terminate()
 
             self._logger.info("Send SIGTERM to process")
             signal.raise_signal(signal.SIGTERM)
@@ -241,9 +243,8 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
             os._exit(-1)
         else:
             await self.send_event_async(Event("disconnectRequested"))
-            await asyncio.sleep(3)
             Debugger.instance().attached = False
-            Debugger.instance().continue_all()
+            Debugger.instance().continue_all(False)
 
     @rpc_method(name="setBreakpoints", param_type=SetBreakpointsArguments)
     async def _set_breakpoints(
@@ -262,6 +263,10 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
     ) -> None:
         self._received_configuration_done = True
         self._received_configuration_done_event.set()
+
+        if self.received_configuration_done_callback is not None:
+
+            self.received_configuration_done_callback()
 
     @_logger.call
     async def wait_for_configuration_done(self, timeout: float = 5) -> bool:

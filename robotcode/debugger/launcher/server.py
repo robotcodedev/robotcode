@@ -262,7 +262,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
             )
 
         else:
-            raise Exception(f'Unknown console type "{console}".')
+            raise ValueError(f'Unknown console type "{console}".')
 
         self.client = DAPClient(self, TcpParams(None, port))
         try:

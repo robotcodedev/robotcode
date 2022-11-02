@@ -86,6 +86,7 @@ class State(Enum):
     Stopped = 0
     Running = 1
     Paused = 2
+    CallKeyword = 3
 
 
 class RequestedState(Enum):
@@ -222,6 +223,8 @@ class Debugger:
         raise RuntimeError(f"Attempt to create a '{cls.__qualname__}' instance outside of instance()")
 
     def __init__(self) -> None:
+        from robot.running.model import Keyword
+
         self.breakpoints: Dict[pathlib.PurePath, BreakpointsEntry] = {}
 
         self.exception_breakpoints: Set[ExceptionBreakpointsEntry] = set()
@@ -247,8 +250,14 @@ class Debugger:
         self.stop_on_entry = False
         self.no_debug = False
         self.terminated = False
+        self.terminated_requested = False
         self.attached = False
         self.path_mappings: List[PathMapping] = []
+
+        self.run_keyword: Optional[Keyword] = None
+        self.run_keyword_event = threading.Event()
+        self.run_keyword_event.set()
+        self.after_run_keyword_event_state: Optional[State] = None
 
     @property
     def debug(self) -> bool:
@@ -279,6 +288,10 @@ class Debugger:
         self._robot_output_file = value
 
     @_logger.call
+    def terminate_requested(self) -> None:
+        self.terminated_requested = True
+
+    @_logger.call
     def terminate(self) -> None:
         self.terminated = True
 
@@ -304,16 +317,23 @@ class Debugger:
             self.condition.notify_all()
 
     @_logger.call
-    def continue_all(self) -> None:
+    def continue_all(self, send_event: bool = True) -> None:
         if self.main_thread is not None and self.main_thread.ident is not None:
-            self.continue_thread(self.main_thread.ident)
+            self.continue_thread(self.main_thread.ident, send_event)
 
     @_logger.call
-    def continue_thread(self, thread_id: int) -> None:
+    def continue_thread(self, thread_id: int, send_event: bool = False) -> None:
         if self.main_thread is None or thread_id != self.main_thread.ident:
             raise InvalidThreadId(thread_id)
 
         with self.condition:
+            if send_event:
+                self.send_event(
+                    self,
+                    ContinuedEvent(
+                        body=ContinuedEventBody(thread_id=self.main_thread.ident, all_threads_continued=True)
+                    ),
+                )
             self.state = State.Running
             self.condition.notify_all()
 
@@ -585,7 +605,12 @@ class Debugger:
     def wait_for_running(self) -> None:
         if self.attached:
             with self.condition:
-                self.condition.wait_for(lambda: self.state in [State.Running, State.Stopped])
+                while True:
+                    self.condition.wait_for(lambda: self.state in [State.Running, State.Stopped, State.CallKeyword])
+
+                    if self.state == State.CallKeyword:
+                        continue
+                    break
 
     def start_output_group(self, name: str, attributes: Dict[str, Any], type: Optional[str] = None) -> None:
         if self.group_output:
@@ -1201,7 +1226,12 @@ class Debugger:
 
                     if splitted:
                         kw = Keyword(name=splitted[0], args=tuple(splitted[1:]), assign=tuple(variables))
+                        old_state = self.state
+                        self.state = State.CallKeyword
+
                         result = kw.run(evaluate_context)
+
+                        self.state = old_state
 
             elif self.IS_VARIABLE_RE.match(expression.strip()):
                 try:

@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import functools
 import logging
 import logging.config
 import os
@@ -7,7 +8,7 @@ import sys
 import threading
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Sequence, Union, cast
 
 __file__ = os.path.abspath(__file__)
 if __file__.endswith((".pyc", ".pyo")):
@@ -65,27 +66,33 @@ async def wait_for_server(timeout: float = 5) -> "DebugAdapterServer":
 
 
 @_logger.call
-async def _debug_adapter_server_(host: str, port: int) -> None:
+async def _debug_adapter_server_(
+    host: str, port: int, on_config_done_callback: Optional[Callable[["DebugAdapterServer"], None]]
+) -> None:
     from ..jsonrpc2.server import TcpParams
     from .server import DebugAdapterServer
 
-    async with DebugAdapterServer(tcp_params=TcpParams(host, port)) as server:
-        set_server(cast(DebugAdapterServer, server))
+    async with DebugAdapterServer(tcp_params=TcpParams(host, port)) as s:
+        server = cast(DebugAdapterServer, s)
+        if on_config_done_callback is not None:
+            server.protocol.received_configuration_done_callback = functools.partial(on_config_done_callback, server)
+        set_server(server)
         await server.serve()
 
 
 DEFAULT_TIMEOUT = 10.0
 
 
+config_done_callback: Optional[Callable[["DebugAdapterServer"], None]] = None
+
+
 @_logger.call
 async def start_debugpy_async(
-    server: "DebugAdapterServer",
     debugpy_port: int = 5678,
     addresses: Union[Sequence[str], str, None] = None,
     wait_for_debugpy_client: bool = False,
     wait_for_client_timeout: float = DEFAULT_TIMEOUT,
 ) -> None:
-    from ..utils.async_tools import run_coroutine_from_thread_async
     from ..utils.debugpy import enable_debugpy, wait_for_debugpy_connected
     from ..utils.net import find_free_port
     from .dap_types import Event
@@ -94,19 +101,17 @@ async def start_debugpy_async(
     if port != debugpy_port:
         _logger.warning(f"start debugpy session on port {port}")
 
-    if enable_debugpy(port, addresses) and await run_coroutine_from_thread_async(
-        server.protocol.wait_for_client, wait_for_client_timeout, loop=server.loop
-    ):
-        await asyncio.wrap_future(
-            asyncio.run_coroutine_threadsafe(
-                server.protocol.send_event_async(
-                    Event(event="debugpyStarted", body={"port": port, "addresses": addresses})
-                ),
-                loop=server.loop,
-            )
-        )
-        if wait_for_debugpy_client:
-            wait_for_debugpy_connected()
+    if enable_debugpy(port, addresses):
+        global config_done_callback
+
+        def connect_debugpy(server: "DebugAdapterServer") -> None:
+
+            server.protocol.send_event(Event(event="debugpyStarted", body={"port": port, "addresses": addresses}))
+
+            if wait_for_debugpy_client:
+                wait_for_debugpy_connected()
+
+        config_done_callback = connect_debugpy
 
 
 @_logger.call
@@ -132,14 +137,17 @@ async def run_robot(
         run_coroutine_from_thread_async,
         run_coroutine_in_thread,
     )
-    from ..utils.debugpy import is_debugpy_installed
+    from ..utils.debugpy import is_debugpy_installed, wait_for_debugpy_connected
     from .dap_types import Event
     from .debugger import Debugger
 
     if debugpy and not is_debugpy_installed():
         print("debugpy not installed.")
 
-    server_future = run_coroutine_in_thread(_debug_adapter_server_, addresses, port)
+    if debugpy:
+        await start_debugpy_async(debugpy_port, addresses, wait_for_debugpy_client, wait_for_client_timeout)
+
+    server_future = run_coroutine_in_thread(_debug_adapter_server_, addresses, port, config_done_callback)
 
     server = await wait_for_server()
 
@@ -166,8 +174,8 @@ async def run_robot(
             except asyncio.TimeoutError as e:
                 raise ConnectionError("Timeout to get configuration from client.") from e
 
-        if debugpy:
-            await start_debugpy_async(server, debugpy_port, addresses, wait_for_debugpy_client, wait_for_client_timeout)
+        if debugpy and wait_for_debugpy_client:
+            wait_for_debugpy_connected()
 
         args = [
             "--listener",
@@ -210,6 +218,8 @@ async def run_robot(
         return exit_code
     except asyncio.CancelledError:
         pass
+    except ConnectionError as e:
+        print(e, file=sys.stderr)
     finally:
         if server.protocol.connected:
             await run_coroutine_from_thread_async(server.protocol.terminate, loop=server.loop)
