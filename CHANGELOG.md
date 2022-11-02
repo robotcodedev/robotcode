@@ -2,8 +2,11 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Remove `--language` argument if using robot < 6
+  - fixes #84
+
 ##  0.13.27
 
 - Remote Debugging

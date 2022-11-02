@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from ...jsonrpc2.protocol import rpc_method
 from ...jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
+from ...language_server.robotframework.utils.version import get_robot_version
 from ...utils.logging import LoggingDescriptor
 from ..client import DAPClient, DAPClientError
 from ..dap_types import (
@@ -191,7 +192,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
 
         run_args += ["--"]
 
-        if languages:
+        if get_robot_version() >= (6, 0) and languages:
             for lang in languages:
                 run_args += ["--language", lang]
 
