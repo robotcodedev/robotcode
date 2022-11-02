@@ -271,13 +271,8 @@ jobs:
       - name: get release informations
         id: get_release_informations
         run: |
-          REL_NOTES="$(poetry run npm run --silent extract-release-notes)"
+          poetry run npm run --silent extract-release-notes > ./auto_relnotes.md
 
-          REL_NOTES="${REL_NOTES//'%'/'%25'}"
-          REL_NOTES="${REL_NOTES//$'\n'/'%0A'}"
-          REL_NOTES="${REL_NOTES//$'\r'/'%0D'}"
-
-          echo "release_notes=$REL_NOTES" >> $GITHUB_OUTPUT
           echo "is_prelease=$(poetry run npm run --silent is-prerelease)" >> $GITHUB_OUTPUT
 
       - name: create guthub release
@@ -285,7 +280,7 @@ jobs:
         with:
           artifacts: "dist/*"
           prerelease: ${{ steps.get_release_informations.outputs.is_prelease }}
-          body: ${{ steps.get_release_informations.outputs.release_notes }}
+          bodyFile: ./auto_relnotes.md
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: publish vsix and python packages
