@@ -275,7 +275,7 @@ jobs:
 
           echo "is_prelease=$(poetry run npm run --silent is-prerelease)" >> $GITHUB_OUTPUT
 
-      - name: create guthub release
+      - name: create github release
         uses: ncipollo/release-action@v1
         with:
           artifacts: "dist/*"
