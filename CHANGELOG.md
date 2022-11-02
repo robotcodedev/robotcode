@@ -2,7 +2,9 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
+## [Unreleased]
+- none so far
+##  0.13.27
 
 - Remote Debugging
   - by installing `robotcode` via pip in your environment, you can now run the `robotcode.debugger` (see `--help` for help) from command line and attach VSCode via a remote launch config
