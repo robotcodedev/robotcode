@@ -11,6 +11,7 @@ from enum import Enum
 from pathlib import Path, PurePath
 from typing import (
     Any,
+    Callable,
     Deque,
     Dict,
     Generator,
@@ -223,8 +224,6 @@ class Debugger:
         raise RuntimeError(f"Attempt to create a '{cls.__qualname__}' instance outside of instance()")
 
     def __init__(self) -> None:
-        from robot.running.model import Keyword
-
         self.breakpoints: Dict[pathlib.PurePath, BreakpointsEntry] = {}
 
         self.exception_breakpoints: Set[ExceptionBreakpointsEntry] = set()
@@ -254,10 +253,12 @@ class Debugger:
         self.attached = False
         self.path_mappings: List[PathMapping] = []
 
-        self.run_keyword: Optional[Keyword] = None
-        self.run_keyword_event = threading.Event()
-        self.run_keyword_event.set()
-        self.after_run_keyword_event_state: Optional[State] = None
+        self._keyword_to_evaluate: Optional[Callable[..., Any]] = None
+        self._evaluated_keyword_result: Any = None
+        self._evaluate_keyword_event = threading.Event()
+        self._evaluate_keyword_event.set()
+        self._after_evaluate_keyword_event = threading.Event()
+        self._after_evaluate_keyword_event.set()
 
     @property
     def debug(self) -> bool:
@@ -604,13 +605,26 @@ class Debugger:
     @_logger.call
     def wait_for_running(self) -> None:
         if self.attached:
-            with self.condition:
-                while True:
+            while True:
+                with self.condition:
                     self.condition.wait_for(lambda: self.state in [State.Running, State.Stopped, State.CallKeyword])
 
-                    if self.state == State.CallKeyword:
-                        continue
-                    break
+                if self.state == State.CallKeyword:
+                    self._evaluated_keyword_result = None
+                    try:
+                        if self._keyword_to_evaluate is not None:
+                            self._evaluated_keyword_result = self._keyword_to_evaluate()
+                            self._keyword_to_evaluate = None
+                    except (SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException as e:
+                        self._evaluated_keyword_result = e
+                    finally:
+                        self._evaluate_keyword_event.set()
+                        self._after_evaluate_keyword_event.wait(60)
+
+                    continue
+                break
 
     def start_output_group(self, name: str, attributes: Dict[str, Any], type: Optional[str] = None) -> None:
         if self.group_output:
@@ -1225,13 +1239,35 @@ class Debugger:
                         variables.append(var)
 
                     if splitted:
-                        kw = Keyword(name=splitted[0], args=tuple(splitted[1:]), assign=tuple(variables))
-                        old_state = self.state
-                        self.state = State.CallKeyword
 
-                        result = kw.run(evaluate_context)
+                        def run_kw() -> Any:
+                            kw = Keyword(name=splitted[0], args=tuple(splitted[1:]), assign=tuple(variables))
+                            return kw.run(evaluate_context)
 
-                        self.state = old_state
+                        with self.condition:
+                            self._keyword_to_evaluate = run_kw
+                            self._evaluated_keyword_result = None
+
+                            self._evaluate_keyword_event.clear()
+                            self._after_evaluate_keyword_event.clear()
+
+                            old_state = self.state
+                            self.state = State.CallKeyword
+                            self.condition.notify_all()
+
+                        try:
+                            self._evaluate_keyword_event.wait(60)
+                        finally:
+                            result = self._evaluated_keyword_result
+
+                            with self.condition:
+                                self._keyword_to_evaluate = None
+                                self._evaluated_keyword_result = None
+
+                                self.state = old_state
+                                self.condition.notify_all()
+
+                                self._after_evaluate_keyword_event.set()
 
             elif self.IS_VARIABLE_RE.match(expression.strip()):
                 try:
