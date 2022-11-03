@@ -172,7 +172,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
 
         return None
 
-    async def workspace_refresh(self) -> None:
+    async def refresh(self) -> None:
         if (
             self.parent.client_capabilities is not None
             and self.parent.client_capabilities.workspace is not None

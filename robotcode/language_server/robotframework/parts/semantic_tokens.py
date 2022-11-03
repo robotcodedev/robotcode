@@ -147,7 +147,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     @language_id("robotframework")
     @_logger.call
     async def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
-        await self.parent.semantic_tokens.workspace_refresh()
+        await self.parent.semantic_tokens.refresh()
 
     @classmethod
     def generate_mapping(cls) -> Dict[str, Tuple[Enum, Optional[Set[Enum]]]]:
@@ -702,7 +702,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             yield token, node
 
     @_logger.call
-    async def collect(
+    async def _collect_internal(
         self,
         model: ast.AST,
         range: Optional[Range],
@@ -818,7 +818,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         return SemanticTokens(data=data)
 
     @_logger.call
-    async def collect_threading(
+    async def _collect(
         self, document: TextDocument, range: Optional[Range]
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
 
@@ -836,7 +836,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             None,
         )
 
-        return await self.collect(
+        return await self._collect_internal(
             model,
             range,
             namespace,
@@ -850,14 +850,14 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     async def collect_full(
         self, sender: Any, document: TextDocument, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        return await self.collect_threading(document, None)
+        return await self._collect(document, None)
 
     @language_id("robotframework")
     @_logger.call
     async def collect_range(
         self, sender: Any, document: TextDocument, range: Range, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        return await self.collect_threading(document, range)
+        return await self._collect(document, range)
 
     @language_id("robotframework")
     @_logger.call
