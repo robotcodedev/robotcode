@@ -950,7 +950,7 @@ def test_really_complex_data() -> None:
                             SymbolKind.TYPEPARAMETER,
                         ]
                     ),
-                    tag_support=WorkspaceSymbolClientCapabilitiesTagSupport(value_set=[SymbolTag.Deprecated]),
+                    tag_support=WorkspaceSymbolClientCapabilitiesTagSupport(value_set=[SymbolTag.DEPRECATED]),
                 ),
                 execute_command=ExecuteCommandClientCapabilities(dynamic_registration=True),
                 workspace_folders=True,
@@ -980,7 +980,7 @@ def test_really_complex_data() -> None:
                         deprecated_support=True,
                         preselect_support=True,
                         tag_support=CompletionClientCapabilitiesCompletionItemTagSupport(
-                            value_set=[CompletionItemTag.Deprecated]
+                            value_set=[CompletionItemTag.DEPRECATED]
                         ),
                         insert_replace_support=True,
                         resolve_support=CompletionClientCapabilitiesCompletionItemResolveSupport(
@@ -1074,7 +1074,7 @@ def test_really_complex_data() -> None:
                         ]
                     ),
                     hierarchical_document_symbol_support=True,
-                    tag_support=DocumentSymbolClientCapabilitiesTagSupport(value_set=[SymbolTag.Deprecated]),
+                    tag_support=DocumentSymbolClientCapabilitiesTagSupport(value_set=[SymbolTag.DEPRECATED]),
                     label_support=True,
                 ),
                 code_action=CodeActionClientCapabilities(

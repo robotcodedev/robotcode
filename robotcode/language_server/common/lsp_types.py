@@ -204,14 +204,14 @@ class MarkupKind(Enum):
 
 
 class CompletionItemTag(IntEnum):
-    Deprecated = 1
+    DEPRECATED = 1
 
     def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
 
 
 class SymbolTag(IntEnum):
-    Deprecated = 1
+    DEPRECATED = 1
 
     def __repr__(self) -> str:  # pragma: no cover
         return super().__str__()
@@ -1128,6 +1128,21 @@ class CodeActionOptions(WorkDoneProgressOptions, _CodeActionOptions):
 
 
 @dataclass(repr=False)
+class _InlayHintOptions(Model):
+    resolve_provider: Optional[bool] = None
+
+
+@dataclass(repr=False)
+class InlayHintOptions(WorkDoneProgressOptions, _InlayHintOptions):
+    pass
+
+
+@dataclass(repr=False)
+class InlayHintRegistrationOptions(InlayHintOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions):
+    pass
+
+
+@dataclass(repr=False)
 class ServerCapabilities(Model):
     position_encoding: Optional[PositionEncodingKind] = None
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None] = None
@@ -1160,7 +1175,7 @@ class ServerCapabilities(Model):
 
     # TODO typeHierarchyProvider?: boolean | TypeHierarchyOptions | TypeHierarchyRegistrationOptions;
     inline_value_provider: Union[bool, InlineValueOptions, InlineValueRegistrationOptions, None] = None
-    # TODO inlayHintProvider?: boolean | InlayHintOptions | InlayHintRegistrationOptions;
+    inlay_hint_provider: Union[bool, InlayHintOptions, InlayHintRegistrationOptions, None] = None
     diagnostic_provider: Union[DiagnosticOptions, DiagnosticRegistrationOptions, None] = None
 
     workspace_symbol_provider: Union[bool, WorkspaceSymbolOptions, None] = None
@@ -2400,3 +2415,42 @@ class ApplyWorkspaceEditResult(Model):
     applied: bool
     failure_reason: Optional[str] = None
     failed_change: Optional[int] = None
+
+
+@dataclass(repr=False)
+class _InlayHintParams(Model):
+    text_document: TextDocumentIdentifier
+    range: Range
+
+
+@dataclass(repr=False)
+class InlayHintParams(WorkDoneProgressParams, _InlayHintParams):
+    pass
+
+
+@dataclass(repr=False)
+class InlayHintLabelPart(Model):
+    value: str
+    tooltip: Union[str, MarkupContent]
+    location: Optional[Location] = None
+    command: Optional[Command] = None
+
+
+class InlayHintKind(IntEnum):
+    TYPE = 1
+    PARAMETER = 2
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return super().__str__()
+
+
+@dataclass(repr=False)
+class InlayHint(Model):
+    position: Position
+    label: Union[str, List[InlayHintLabelPart]]
+    kind: Optional[InlayHintKind] = None
+    text_edits: Optional[List[TextEdit]] = None
+    tooltip: Union[str, MarkupContent, None] = None
+    padding_left: Optional[bool] = None
+    padding_right: Optional[bool] = None
+    data: LSPAny = None

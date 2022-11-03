@@ -75,7 +75,8 @@
     "configurationDefaults": {
       "[robotframework]": {
         "editor.wordBasedSuggestions": false,
-        "editor.semanticHighlighting.enabled": true
+        "editor.semanticHighlighting.enabled": true,
+        "editor.inlayHints.enabled": "offUnlessPressed"
       }
     },
     "semanticTokenModifiers": [
@@ -558,6 +559,18 @@
             "type": "string",
             "default": null,
             "markdownDescription": "Defines the header style format. If not defined ```*** {name} ***``` is used.",
+            "scope": "resource"
+          },
+          "robotcode.inlayHints.parameterNames": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Enable/disable inlay hints for parameter names.",
+            "scope": "resource"
+          },
+          "robotcode.inlayHints.namespaces": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Enable/disable inlay hints for namespaces.",
             "scope": "resource"
           }
         }

@@ -90,6 +90,13 @@ class DocumentationServerConfig(ConfigBase):
     end_port: int = 3199
 
 
+@config_section("robotcode.inlayHints")
+@dataclass
+class InlayHintsConfig(ConfigBase):
+    parameter_names: bool = True
+    namespaces: bool = True
+
+
 @config_section("robotcode")
 @dataclass
 class RobotCodeConfig(ConfigBase):
@@ -99,3 +106,4 @@ class RobotCodeConfig(ConfigBase):
     workspace: WorkspaceConfig = field(default_factory=WorkspaceConfig)
     analysis: AnalysisConfig = field(default_factory=AnalysisConfig)
     documentation_server: DocumentationServerConfig = field(default_factory=DocumentationServerConfig)
+    inlay_hints: InlayHintsConfig = field(default_factory=InlayHintsConfig)

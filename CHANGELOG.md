@@ -2,8 +2,12 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Implement inlay hints for import namespaces and parameter names
+  - by default inlay hints for robotcode are only showed if you press <kbd>CONTROL</kbd>+<kbd>ALT</kbd>
+  - there are 2 new settings
+    `robotcode.inlayHints.parameterNames` and `robotcode.inlayHints.namespaces` where you can enable/disable the inline hints
 ##  0.13.28
 
 - Remove `--language` argument if using robot < 6

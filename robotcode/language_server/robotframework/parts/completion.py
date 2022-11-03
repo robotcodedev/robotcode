@@ -645,6 +645,7 @@ class CompletionCollector(ModelHelperMixin):
             return kw.name
 
         result = ""
+        after: Optional[str] = None
         for index, (before, variable, after) in enumerate(
             VariableIterator(kw.name, identifiers="$", ignore_errors=True)
         ):
@@ -661,7 +662,8 @@ class CompletionCollector(ModelHelperMixin):
 
             result += "}"
 
-        result += after
+        if after:
+            result += after
 
         return result
 
