@@ -637,6 +637,7 @@ export class TestControllerManager {
     if (included.size === 0) return;
 
     const run = this.testController.createTestRun(request);
+    let run_started = false;
 
     token.onCancellationRequested(async (_) => {
       for (const e of this.testRuns.keys()) {
@@ -667,7 +668,7 @@ export class TestControllerManager {
       }
 
       if (includedItems.length === 1 && includedItems[0] === workspaceItem && excluded.size === 0) {
-        await DebugManager.runTests(workspace, [], [], [], runId, options, dryRun);
+        run_started = run_started || (await DebugManager.runTests(workspace, [], [], [], runId, options, dryRun));
       } else {
         const includedInWs = testItems
           .map((i) => {
@@ -714,17 +715,23 @@ export class TestControllerManager {
           suiteName = workspaceRobotItem.children[0].longname;
         }
 
-        await DebugManager.runTests(
-          workspace,
-          Array.from(suites),
-          includedInWs,
-          excludedInWs,
-          runId,
-          options,
-          dryRun,
-          suiteName
-        );
+        run_started =
+          run_started ||
+          (await DebugManager.runTests(
+            workspace,
+            Array.from(suites),
+            includedInWs,
+            excludedInWs,
+            runId,
+            options,
+            dryRun,
+            suiteName
+          ));
       }
+    }
+
+    if (!run_started) {
+      run.end();
     }
   }
 

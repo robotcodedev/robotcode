@@ -2,8 +2,10 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Connection to the debugger stabilized.
+
 ##  0.14.0
 
 - Implement inlay hints for import namespaces and parameter names

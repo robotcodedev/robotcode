@@ -441,6 +441,7 @@ class RunInTerminalRequestArguments(Model):
     env: Optional[Dict[str, Optional[str]]] = None
     kind: Optional[RunInTerminalKind] = None
     title: Optional[str] = None
+    args_can_be_interpreted_by_shell: Optional[bool] = None
 
 
 @dataclass

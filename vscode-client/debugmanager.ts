@@ -188,8 +188,11 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
             throw new Error("Can't get a valid python command.");
           }
 
-          const debugAdapterArgs = config.get<string[]>("debugAdapter.args", []);
+          let debugAdapterArgs = config.get<string[]>("debugAdapter.args", []);
 
+          if (session.configuration.launcherArgs) {
+            debugAdapterArgs = [...debugAdapterArgs, ...session.configuration.launcherArgs];
+          }
           const args: string[] = ["-u", this.pythonManager.pythonDebugAdapterMain, "--mode", "stdio"].concat(
             debugAdapterArgs
           );
@@ -334,7 +337,7 @@ export class DebugManager {
     options?: vscode.DebugSessionOptions,
     dryRun?: boolean,
     topLevelSuiteName?: string
-  ): Promise<void> {
+  ): Promise<boolean> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
     const args = [];
@@ -377,7 +380,7 @@ export class DebugManager {
 
     const paths = config.get("robot.paths", []);
 
-    await vscode.debug.startDebugging(
+    return vscode.debug.startDebugging(
       folder,
       {
         ...testLaunchConfig,
@@ -401,7 +404,7 @@ export class DebugManager {
     session: vscode.DebugSession,
     _event: string,
     options?: { port: number; addresses: undefined | string[] | null }
-  ): Promise<void> {
+  ): Promise<boolean> {
     if (
       session.type === "robotcode" &&
       !session.configuration.noDebug &&
@@ -436,13 +439,14 @@ export class DebugManager {
         debugConfiguration.pathMappings = session.configuration.pathMappings;
       }
 
-      await vscode.debug.startDebugging(session.workspaceFolder, debugConfiguration, {
+      return vscode.debug.startDebugging(session.workspaceFolder, debugConfiguration, {
         parentSession: session,
         compact: true,
         lifecycleManagedByParent: false,
         consoleMode: vscode.DebugConsoleMode.MergeWithParent,
       });
     }
+    return false;
   }
 
   private async OnRobotExited(

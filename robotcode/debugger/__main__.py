@@ -8,7 +8,17 @@ import sys
 import threading
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Sequence, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    List,
+    NoReturn,
+    Optional,
+    Sequence,
+    Union,
+    cast,
+)
 
 __file__ = os.path.abspath(__file__)
 if __file__.endswith((".pyc", ".pyo")):
@@ -254,8 +264,17 @@ def get_log_handler(logfile: str) -> logging.FileHandler:
     return handler
 
 
+class ArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> NoReturn:
+        from gettext import gettext as _
+
+        self.print_usage(sys.stderr)
+        args = {"prog": self.prog, "message": message}
+        self.exit(252, _("%(prog)s: error: %(message)s\n") % args)
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(
+    parser = ArgumentParser(
         description="RobotCode Debugger",
         prog=__package__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

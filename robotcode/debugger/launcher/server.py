@@ -142,6 +142,8 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         robotPythonPath: Optional[List[str]] = None,  # noqa: N803
         launcherArgs: Optional[List[str]] = None,  # noqa: N803
         launcherTimeout: Optional[int] = None,  # noqa: N803
+        debuggerArgs: Optional[List[str]] = None,  # noqa: N803
+        debuggerTimeout: Optional[int] = None,  # noqa: N803
         attachPython: Optional[bool] = False,  # noqa: N803
         variables: Optional[Dict[str, Any]] = None,
         outputDir: Optional[str] = None,
@@ -159,7 +161,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
     ) -> None:
         from ...utils.net import find_free_port
 
-        connect_timeout = launcherTimeout or 5
+        connect_timeout = launcherTimeout or 10
 
         port = find_free_port()
 
@@ -168,7 +170,11 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         run_args = [python, "-u", str(launcher)]
 
         run_args += ["-p", str(port)]
-        run_args += ["-w", "-t", str(connect_timeout)]
+
+        run_args += ["-w"]
+
+        if debuggerTimeout is not None:
+            run_args += ["-t", str(debuggerTimeout)]
 
         if no_debug:
             run_args += ["-n"]
@@ -188,7 +194,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         if stopOnEntry:
             run_args += ["-soe"]
 
-        run_args += launcherArgs or []
+        run_args += debuggerArgs or []
 
         run_args += ["--"]
 
@@ -269,7 +275,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         try:
             await self.client.connect(connect_timeout)
         except asyncio.TimeoutError:
-            raise asyncio.TimeoutError("Can't connect to debug child.")
+            raise asyncio.TimeoutError("Can't connect to debugger.")
 
         if self._initialize_arguments is not None:
             await self.client.protocol.send_request_async(InitializeRequest(arguments=self._initialize_arguments))

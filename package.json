@@ -805,13 +805,23 @@
               },
               "launcherArgs": {
                 "type": "array",
-                "description": "Command line arguments passed to launcher.",
+                "description": "Extra command line arguments passed to launcher.",
                 "default": []
               },
               "launcherTimeout": {
                 "type": "number",
-                "description": "Timeout to connect to the debuggee.",
-                "default": 5
+                "description": "Timeout the launcher waits for the debuggee.",
+                "default": 10
+              },
+              "debuggerArgs": {
+                "type": "array",
+                "description": "Extra command line arguments passed to debugger.",
+                "default": []
+              },
+              "debuggerTimeout": {
+                "type": "number",
+                "description": "Timeout the debugger waits for a client connection.",
+                "default": 10
               },
               "outputDir": {
                 "type": "string",
