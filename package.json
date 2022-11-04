@@ -70,6 +70,9 @@
     "theme": "dark",
     "color": "#111111"
   },
+  "sponsor": {
+    "url": "https://github.com/sponsors/d-biehl"
+  },
   "main": "./out/extension.js",
   "contributes": {
     "configurationDefaults": {

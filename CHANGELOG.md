@@ -2,8 +2,10 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Add sponsor to package
+
 ##  0.14.1
 
 - Connection to the debugger stabilized.
