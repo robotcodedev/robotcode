@@ -283,6 +283,9 @@ def check_canceled_sync() -> bool:
     return True
 
 
+# __executor = ThreadPoolExecutor(thread_name_prefix="global_sub_asyncio")
+
+
 def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyncio.Future[_T]:
     global __tread_pool_executor
 
@@ -290,6 +293,11 @@ def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyn
 
     ctx = contextvars.copy_context()
     func_call = functools.partial(ctx.run, func, *args, **kwargs)
+
+    # return cast(
+    #     "asyncio.Future[_T]",
+    #     loop.run_in_executor(__executor, cast(Callable[..., _T], func_call)),
+    # )
 
     executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sub_asyncio")
     try:
@@ -396,20 +404,19 @@ class Event:
                                 finally:
                                     ev.set()
 
-                            if not fut.done():
-                                done = threading.Event()
+                            done = threading.Event()
 
-                                fut.get_loop().call_soon_threadsafe(set_result, fut, done)
+                            fut.get_loop().call_soon_threadsafe(set_result, fut, done)
 
-                                start = time.monotonic()
-                                while not done.is_set():
-                                    check_canceled_sync()
+                            start = time.monotonic()
+                            while not done.is_set():
+                                check_canceled_sync()
 
-                                    if time.monotonic() - start > 120:
-                                        warnings.warn("Can't set future result.")
-                                        break
+                                if time.monotonic() - start > 120:
+                                    warnings.warn("Can't set future result.")
+                                    break
 
-                                    time.sleep(0.001)
+                                time.sleep(0.001)
 
     def clear(self) -> None:
         with self._lock:
@@ -455,13 +462,15 @@ class Lock:
 
     @asynccontextmanager
     async def __inner_lock(self) -> AsyncGenerator[Any, None]:
-        while not (b := self._lock.acquire(blocking=False)):
-            await asyncio.sleep(0.001)
-        try:
+        # while not (b := self._lock.acquire(blocking=False)):
+        #     await asyncio.sleep(0)
+        # try:
+        #     yield None
+        # finally:
+        #     if b:
+        #         self._lock.release()
+        with self._lock:
             yield None
-        finally:
-            if b:
-                self._lock.release()
 
     @property
     def locked(self) -> bool:
@@ -480,8 +489,15 @@ class Lock:
             self._waiters.append(fut)
 
         try:
-            # await asyncio.wait_for(fut, 120)
+
+            def aaa() -> None:
+                warnings.warn(f"Lock takes to long {threading.current_thread()}")
+
+            h = fut.get_loop().call_later(320, aaa)
+
             await fut
+
+            h.cancel()
         finally:
             async with self.__inner_lock():
                 if fut in self._waiters:
@@ -535,7 +551,7 @@ class Lock:
                             warnings.warn("Can't set future result.")
                             break
 
-                        await asyncio.sleep(0.001)
+                        await asyncio.sleep(0)
         else:
             warnings.warn(f"Future {repr(fut)} loop is closed")
             await self._wake_up_next()
@@ -634,39 +650,6 @@ def create_sub_future(loop: Optional[asyncio.AbstractEventLoop] = None) -> async
         ct.children.add(result)
 
     return result
-
-
-class _FutureHolder(Generic[_T]):
-    def __init__(self, cfuture: concurrent.futures.Future[_T]):
-        self.cfuture = cfuture
-        self.afuture = wrap_sub_future(cfuture)
-
-
-def spawn_coroutine_from_thread(
-    func: Callable[..., Coroutine[Any, Any, _T]],
-    *args: Any,
-    loop: Optional[asyncio.AbstractEventLoop] = None,
-    **kwargs: Any,
-) -> concurrent.futures.Future[_T]:
-    if loop is None:
-        loop = asyncio.get_running_loop()
-
-    result = _FutureHolder(asyncio.run_coroutine_threadsafe(func(*args), loop))
-    return result.cfuture
-
-
-def run_coroutine_from_thread(
-    func: Callable[..., Coroutine[Any, Any, _T]],
-    *args: Any,
-    loop: Optional[asyncio.AbstractEventLoop] = None,
-    **kwargs: Any,
-) -> _T:
-    if loop is None:
-        loop = asyncio.get_running_loop()
-
-    result = _FutureHolder(asyncio.run_coroutine_threadsafe(func(*args), loop))
-
-    return result.cfuture.result()
 
 
 def run_coroutine_from_thread_as_future(

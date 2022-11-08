@@ -1686,7 +1686,7 @@ def complete_library_import(
                 CompleteResult(str(f.name), CompleteResultKind.FILE if f.is_file() else CompleteResultKind.FOLDER)
                 for f in path.iterdir()
                 if not f.name.startswith(("_", "."))
-                and (f.is_dir() or (f.is_file and f.suffix in ALLOWED_LIBRARY_FILE_EXTENSIONS))
+                and (f.is_dir() or (f.is_file() and f.suffix in ALLOWED_LIBRARY_FILE_EXTENSIONS))
             ]
 
     return list(set(result))
@@ -1744,7 +1744,7 @@ def complete_resource_import(
                 CompleteResult(str(f.name), CompleteResultKind.RESOURCE if f.is_file() else CompleteResultKind.FOLDER)
                 for f in path.iterdir()
                 if not f.name.startswith(("_", "."))
-                and (f.is_dir() or (f.is_file and f.suffix in ALLOWED_RESOURCE_FILE_EXTENSIONS))
+                and (f.is_dir() or (f.is_file() and f.suffix in ALLOWED_RESOURCE_FILE_EXTENSIONS))
             ]
 
     return list(set(result))
@@ -1831,7 +1831,7 @@ def complete_variables_import(
                 CompleteResult(str(f.name), CompleteResultKind.VARIABLES if f.is_file() else CompleteResultKind.FOLDER)
                 for f in path.iterdir()
                 if not f.name.startswith(("_", "."))
-                and (f.is_dir() or (f.is_file and f.suffix in ALLOWED_VARIABLES_FILE_EXTENSIONS))
+                and (f.is_dir() or (f.is_file() and f.suffix in ALLOWED_VARIABLES_FILE_EXTENSIONS))
             ]
 
     return list(set(result))

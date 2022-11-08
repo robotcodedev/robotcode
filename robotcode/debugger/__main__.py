@@ -66,7 +66,7 @@ def set_server(value: "DebugAdapterServer") -> None:
 async def wait_for_server(timeout: float = 5) -> "DebugAdapterServer":
     async def wait() -> None:
         while get_server() is None:
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.005)
 
     await asyncio.wait_for(wait(), timeout)
 

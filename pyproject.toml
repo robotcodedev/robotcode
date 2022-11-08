@@ -52,7 +52,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-robotframework = { version = ">=4.1.0"}
+robotframework = { version = ">=4.1.0" }
 
 
 [tool.poetry.group.dev.dependencies]
@@ -147,5 +147,24 @@ warn_return_any = true
 warn_unused_configs = true
 strict = true
 disallow_subclassing_any = false
+#ignore_missing_imports = true
+exclude = [
+  "\\.mypy_cache",
+  "\\.venv",
+  "build",
+  "dist",
+  "out",
+  "playground",
+  "scripts",
+]
+
+[[tool.mypy.overrides]]
+module = [
+  "robot.*",
+  "robotremoteserver.*",
+  "debugpy.*",
+  "coloredlogs.*",
+  "robotidy.*",
+  "robocop.*",
+]
 ignore_missing_imports = true
-exclude = ["\\.mypy_cache", "\\.venv", "build", "dist", "out", "playground"]

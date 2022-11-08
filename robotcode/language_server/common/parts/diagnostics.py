@@ -190,11 +190,11 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             )
 
     @async_tasking_event_iterator
-    async def collect(sender, document: TextDocument) -> DiagnosticsResult:  # NOSONAR
+    async def collect(sender, document: TextDocument) -> Optional[DiagnosticsResult]:  # NOSONAR
         ...
 
     @async_tasking_event
-    async def load_workspace_documents(sender) -> List[WorkspaceDocumentsResult]:  # NOSONAR
+    async def load_workspace_documents(sender) -> Optional[List[WorkspaceDocumentsResult]]:  # NOSONAR
         ...
 
     @async_tasking_event
@@ -405,6 +405,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                 if isinstance(result_any, BaseException):
                     if not isinstance(result_any, asyncio.CancelledError):
                         self._logger.exception(result_any, exc_info=result_any)
+                elif result_any is None:
+                    continue
                 else:
                     result = cast(DiagnosticsResult, result_any)
 

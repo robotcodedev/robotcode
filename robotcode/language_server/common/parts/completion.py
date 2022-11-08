@@ -45,7 +45,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         ...
 
     @async_tasking_event
-    async def resolve(sender, completion_item: CompletionItem) -> CompletionItem:  # NOSONAR
+    async def resolve(sender, completion_item: CompletionItem) -> Optional[CompletionItem]:  # NOSONAR
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:

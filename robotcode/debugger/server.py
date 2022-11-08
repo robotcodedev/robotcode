@@ -5,7 +5,6 @@ from typing import Any, Callable, Dict, List, Literal, Optional, Union
 from ..jsonrpc2.protocol import rpc_method
 from ..jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
 from ..utils import async_tools
-from ..utils.async_tools import run_coroutine_from_thread
 from ..utils.logging import LoggingDescriptor
 from .dap_types import (
     AttachRequestArguments,
@@ -78,7 +77,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
 
     def on_debugger_send_event(self, sender: Any, event: Event) -> None:
         if self._loop is not None:
-            run_coroutine_from_thread(self.send_event_async, event, loop=self._loop)
+            asyncio.run_coroutine_threadsafe(self.send_event_async(event), loop=self._loop)
 
     @property
     def connected(self) -> bool:

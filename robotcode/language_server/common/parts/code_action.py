@@ -41,7 +41,7 @@ class CodeActionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         ...
 
     @async_tasking_event
-    async def resolve(sender, code_action: CodeAction) -> CodeAction:  # NOSONAR
+    async def resolve(sender, code_action: CodeAction) -> Optional[CodeAction]:  # NOSONAR
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:

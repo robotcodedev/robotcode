@@ -615,7 +615,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                             if time.monotonic() - start > 120:
                                 raise TimeoutError("Can't set future result.")
 
-                            await asyncio.sleep(0.001)
+                            await asyncio.sleep(0)
 
                     else:
                         self._logger.warning(f"Response {entry:r} loop is not running.")

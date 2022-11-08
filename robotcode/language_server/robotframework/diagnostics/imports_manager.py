@@ -487,12 +487,13 @@ class ImportsManager:
         from robot.utils.text import split_args_from_name_or_path
 
         async with self._command_line_variables_lock:
-            if self._command_line_variables is None:
 
+            if self._command_line_variables is None:
+                command_line_vars: List[VariableDefinition] = []
                 if self.config is None:
                     self._command_line_variables = []
                 else:
-                    self._command_line_variables = [
+                    command_line_vars = [
                         CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=(v,))
                         for k, v in self.config.variables.items()
                     ]
@@ -503,14 +504,16 @@ class ImportsManager:
                                 name, tuple(args), str(self.folder.to_path()), self
                             )
                             if lib_doc is not None:
-                                self._command_line_variables += lib_doc.variables
+                                command_line_vars += lib_doc.variables
 
                         except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                             raise
                         except BaseException as e:
                             self._logger.exception(e)
 
-            return self._command_line_variables
+                        self._command_line_variables = command_line_vars
+
+            return self._command_line_variables or []
 
     @async_tasking_event
     async def libraries_changed(sender, libraries: List[LibraryDoc]) -> None:  # NOSONAR
@@ -533,7 +536,6 @@ class ImportsManager:
         await self.imports_changed(self, uri)
 
     @language_id("robotframework")
-    @threaded()
     async def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
         resource_changed: List[LibraryDoc] = []
 
