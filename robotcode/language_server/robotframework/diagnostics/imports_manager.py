@@ -490,6 +490,7 @@ class ImportsManager:
 
             if self._command_line_variables is None:
                 command_line_vars: List[VariableDefinition] = []
+
                 if self.config is None:
                     self._command_line_variables = []
                 else:
@@ -511,7 +512,7 @@ class ImportsManager:
                         except BaseException as e:
                             self._logger.exception(e)
 
-                        self._command_line_variables = command_line_vars
+                self._command_line_variables = command_line_vars
 
             return self._command_line_variables or []
 
