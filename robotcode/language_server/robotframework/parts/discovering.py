@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Iterator, List, Optional, cast
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_tools import run_coroutine_in_thread
+from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.lsp_types import (
@@ -62,7 +62,7 @@ class FindTestCasesVisitor(AsyncVisitor):
     async def get(self, source: DocumentUri, model: ast.AST, base_name: Optional[str]) -> List[TestItem]:
         self._results: List[TestItem] = []
         self.source = source
-        self.path = Uri(source).to_path().resolve()
+        self.path = Uri(source).to_path()
         self.base_name = base_name
         await self.visit(model)
         return self._results
@@ -111,8 +111,15 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
         return await self.parent.workspace.get_configuration(RobotConfig, folder.uri)
 
-    async def _get_tests_from_workspace(
-        self, workspace_folder: str, paths: Optional[List[str]], suites: Optional[List[str]]
+    @rpc_method(name="robot/discovering/getTestsFromWorkspace", param_type=GetAllTestsParams)
+    @threaded()
+    async def get_tests_from_workspace(
+        self,
+        workspace_folder: str,
+        paths: Optional[List[str]],
+        suites: Optional[List[str]],
+        *args: Any,
+        **kwargs: Any,
     ) -> List[TestItem]:
 
         from robot.output.logger import LOGGER
@@ -138,7 +145,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         def get_document_text(source: str) -> str:
             if self.parent._loop:
                 doc = self.parent.documents.get_sync(Uri.from_path(source).normalized())
-                if doc is not None and doc.opened_in_editor:
+                if doc is not None:
                     return doc.text_sync()
 
             return source
@@ -258,8 +265,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 children.append(
                     TestItem(
                         type="test",
-                        id=f"{Path(test.source).resolve() if test.source is not None else ''};"
-                        f"{test.longname};{test.lineno}",
+                        id=f"{test.source if test.source is not None else ''};" f"{test.longname};{test.lineno}",
                         label=test.name,
                         longname=test.longname,
                         uri=str(Uri.from_path(test.source)) if test.source else None,
@@ -276,7 +282,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
             return TestItem(
                 type="suite",
-                id=f"{Path(suite.source).resolve() if suite.source is not None else ''};{suite.longname}",
+                id=f"{suite.source if suite.source is not None else ''};{suite.longname}",
                 label=suite.name,
                 longname=suite.longname,
                 uri=str(Uri.from_path(suite.source)) if suite.source else None,
@@ -342,7 +348,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                     return [
                         TestItem(
                             type="workspace",
-                            id=str(Path.cwd().resolve()),
+                            id=str(Path.cwd()),
                             label=Path.cwd().name,
                             longname=Path.cwd().name,
                             uri=str(Uri.from_path(Path.cwd())),
@@ -375,44 +381,30 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 return [
                     TestItem(
                         type="error",
-                        id=str(Uri.from_path(Path.cwd().resolve())),
+                        id=str(Uri.from_path(Path.cwd())),
                         longname="error",
                         label=Path.cwd().name,
                         error=str(e),
                     )
                 ]
 
-    @rpc_method(name="robot/discovering/getTestsFromWorkspace", param_type=GetAllTestsParams)
-    @_logger.call
-    async def get_tests_from_workspace(
-        self,
-        workspace_folder: str,
-        paths: Optional[List[str]],
-        suites: Optional[List[str]],
-        *args: Any,
-        **kwargs: Any,
-    ) -> List[TestItem]:
-        return await run_coroutine_in_thread(self._get_tests_from_workspace, workspace_folder, paths, suites)
-
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
-    @_logger.call
+    @threaded()
     async def get_tests_from_document(
         self, text_document: TextDocumentIdentifier, base_name: Optional[str], *args: Any, **kwargs: Any
     ) -> List[TestItem]:
-        async def run() -> List[TestItem]:
-            try:
-                return await FindTestCasesVisitor().get(
-                    text_document.uri,
-                    await self.parent.documents_cache.get_model(
-                        await self.parent.documents.get_or_open_document(
-                            Uri(text_document.uri).to_path(), language_id="robotframework"
-                        )
-                    ),
-                    base_name,
-                )
-            except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
-                raise
-            except BaseException:
-                return []
 
-        return await run_coroutine_in_thread(run)
+        try:
+            return await FindTestCasesVisitor().get(
+                text_document.uri,
+                await self.parent.documents_cache.get_model(
+                    await self.parent.documents.get_or_open_document(
+                        Uri(text_document.uri).to_path(), language_id="robotframework"
+                    )
+                ),
+                base_name,
+            )
+        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException:
+            return []

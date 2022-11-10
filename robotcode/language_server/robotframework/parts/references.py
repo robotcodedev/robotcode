@@ -56,6 +56,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def cache_cleared(sender) -> None:  # NOSONAR
         ...
 
+    @language_id("robotframework")
     @threaded()
     async def document_did_change(self, sender: Any, document: TextDocument) -> None:
         await self._keyword_reference_cache.clear()

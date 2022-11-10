@@ -370,7 +370,10 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                     except asyncio.CancelledError:
                         pass
 
-                asyncio.run_coroutine_threadsafe(cancel(task), loop=task.get_loop()).result(5)
+                try:
+                    asyncio.run_coroutine_threadsafe(cancel(task), loop=task.get_loop()).result(600)
+                except TimeoutError as e:
+                    raise RuntimeError("Can't cancel diagnostics task.") from e
 
                 # task.get_loop().call_soon_threadsafe(task.cancel)
 

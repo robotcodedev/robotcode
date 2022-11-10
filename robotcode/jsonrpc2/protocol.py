@@ -717,6 +717,12 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
         def done(t: asyncio.Task[Any]) -> None:
             try:
+                if not t.cancelled():
+                    ex = t.exception()
+                    if ex is not None:
+                        self._logger.exception(ex, exc_info=ex)
+                        raise JsonRPCErrorException(JsonRPCErrors.INTERNAL_ERROR, f"{type(ex).__name__}: {ex}") from ex
+
                 self.send_response(message.id, t.result())
             except asyncio.CancelledError:
                 self._logger.debug(f"request message {repr(message)} canceled")

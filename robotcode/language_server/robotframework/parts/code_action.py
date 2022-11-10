@@ -138,7 +138,7 @@ class LibDocRequestHandler(SimpleHTTPRequestHandler):
                             name + ("::" + args if args else ""),
                             base_dir=basedir if basedir else ".",
                             theme=theme,
-                        ).result(10)
+                        ).result(600)
 
                         self.send_response(200)
                         self.send_header("Content-type", "text/html")

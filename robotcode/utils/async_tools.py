@@ -11,7 +11,6 @@ import warnings
 import weakref
 from collections import deque
 from concurrent.futures.thread import ThreadPoolExecutor
-from contextlib import asynccontextmanager
 from types import TracebackType
 from typing import (
     Any,
@@ -380,8 +379,8 @@ class Event:
         return f"<{res[1:-1]} [{extra}]>"
 
     def is_set(self) -> bool:
-        # with self._lock:
-        return self._value
+        with self._lock:
+            return self._value
 
     def set(self) -> None:
         with self._lock:
@@ -443,7 +442,7 @@ class Lock:
     def __init__(self) -> None:
         self._waiters: Optional[Deque[asyncio.Future[Any]]] = None
         self._locked = False
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     async def __aenter__(self) -> None:
         await self.acquire()
@@ -451,7 +450,7 @@ class Lock:
     async def __aexit__(
         self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
     ) -> None:
-        await self.release()
+        self.release()
 
     def __repr__(self) -> str:
         res = super().__repr__()
@@ -460,24 +459,12 @@ class Lock:
             extra = f"{extra}, waiters:{len(self._waiters)}"
         return f"<{res[1:-1]} [{extra}]>"
 
-    @asynccontextmanager
-    async def __inner_lock(self) -> AsyncGenerator[Any, None]:
-        # while not (b := self._lock.acquire(blocking=False)):
-        #     await asyncio.sleep(0)
-        # try:
-        #     yield None
-        # finally:
-        #     if b:
-        #         self._lock.release()
-        with self._lock:
-            yield None
-
     @property
     def locked(self) -> bool:
         return self._locked
 
     async def acquire(self) -> bool:
-        async with self.__inner_lock():
+        with self._lock:
             if not self._locked and (self._waiters is None or all(w.cancelled() for w in self._waiters)):
                 self._locked = True
                 return True
@@ -489,42 +476,49 @@ class Lock:
             self._waiters.append(fut)
 
         try:
+            try:
 
-            def aaa() -> None:
-                warnings.warn(f"Lock takes to long {threading.current_thread()}")
+                def aaa() -> None:
+                    warnings.warn(f"Lock takes to long {threading.current_thread()}")
 
-            h = fut.get_loop().call_later(320, aaa)
+                h = fut.get_loop().call_later(60, aaa)
 
-            await fut
+                await fut
 
-            h.cancel()
-        finally:
-            async with self.__inner_lock():
-                if fut in self._waiters:
+                h.cancel()
+            finally:
+                with self._lock:
                     self._waiters.remove(fut)
-                self._locked = True
+        except asyncio.CancelledError:
+            with self._lock:
+                if not self._locked:
+                    self._wake_up_first()
+                raise
+
+        with self._lock:
+            self._locked = True
 
         return True
 
-    async def release(self) -> None:
-        async with self.__inner_lock():
-            if self._waiters is None or len(self._waiters) == 0:
-                if self._locked:
-                    self._locked = False
+    def release(self) -> None:
+        with self._lock:
+            wake_up = False
+            if self._locked:
+                self._locked = False
+                wake_up = True
 
-        await self._wake_up_next()
+        if wake_up:
+            self._wake_up_first()
 
-    async def _wake_up_next(self) -> None:
+    def _wake_up_first(self) -> None:
         if not self._waiters:
             return
 
-        async with self.__inner_lock():
+        with self._lock:
             try:
                 fut = next(iter(self._waiters))
             except StopIteration:
                 return
-            if fut in self._waiters:
-                self._waiters.remove(fut)
 
         if fut.get_loop().is_running() and not fut.get_loop().is_closed():
             if fut.get_loop() == asyncio.get_running_loop():
@@ -551,10 +545,12 @@ class Lock:
                             warnings.warn("Can't set future result.")
                             break
 
-                        await asyncio.sleep(0)
+                        time.sleep(0.001)
         else:
             warnings.warn(f"Future {repr(fut)} loop is closed")
-            await self._wake_up_next()
+            with self._lock:
+                self._waiters.remove(fut)
+            self._wake_up_first()
 
 
 class FutureInfo:
