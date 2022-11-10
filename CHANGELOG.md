@@ -2,8 +2,10 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Correct resolving paths for test execution
+
 ##  0.14.3
 
 - Optimize locking
