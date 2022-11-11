@@ -201,14 +201,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
     async def on_workspace_loaded(sender) -> None:  # NOSONAR
         ...
 
-    @async_tasking_event
-    async def on_workspace_diagnostics_ended(sender) -> None:  # NOSONAR
-        ...
-
-    @async_tasking_event
-    async def on_document_diagnostics_ended(sender) -> None:  # NOSONAR
-        ...
-
     @async_event
     async def on_get_analysis_progress_mode(sender, uri: Uri) -> Optional[AnalysisProgressMode]:  # NOSONAR
         ...

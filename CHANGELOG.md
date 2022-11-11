@@ -2,8 +2,10 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+## [Unreleased]
+
+- Optimize reference code lenses.
+
 ##  0.14.4
 
 - Correct resolving paths for test execution

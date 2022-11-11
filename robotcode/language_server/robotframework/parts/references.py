@@ -273,7 +273,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def has_cached_keyword_references(
         self, document: TextDocument, kw_doc: KeywordDoc, include_declaration: bool = True
     ) -> bool:
-        return await self._keyword_reference_cache.has(document, kw_doc, include_declaration)
+        return await self._keyword_reference_cache.has(document, kw_doc, include_declaration, False)
 
     async def find_keyword_references(
         self, document: TextDocument, kw_doc: KeywordDoc, include_declaration: bool = True, stop_at_first: bool = False

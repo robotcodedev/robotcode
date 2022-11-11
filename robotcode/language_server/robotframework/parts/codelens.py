@@ -31,8 +31,6 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         self._running_task: Set[Tuple[TextDocument, KeywordDoc]] = set()
 
         parent.diagnostics.on_workspace_loaded.add(self.codelens_refresh)
-        parent.diagnostics.on_document_diagnostics_ended.add(self.codelens_refresh)
-        parent.diagnostics.on_workspace_diagnostics_ended.add(self.codelens_refresh)
 
     async def codelens_refresh(self, sender: Any) -> None:  # NOSONAR
         await self.parent.code_lens.refresh()
@@ -141,7 +139,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
 
                     key = (document, kw_doc)
                     if key not in self._running_task:
-                        task = create_sub_task(find_refs(), loop=self.parent.loop)
+                        task = create_sub_task(find_refs(), loop=self.parent.diagnostics.diagnostics_loop)
 
                         def done(task: Any) -> None:
                             self._running_task.remove(key)
