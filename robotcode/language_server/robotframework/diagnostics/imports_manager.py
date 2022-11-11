@@ -626,16 +626,19 @@ class ImportsManager:
 
     def __remove_library_entry(self, entry_key: _LibrariesEntryKey, entry: _LibrariesEntry, now: bool = False) -> None:
         async def remove(k: _LibrariesEntryKey, e: _LibrariesEntry) -> None:
-            if len(e.references) == 0 or now:
-                self._logger.debug(lambda: f"Remove Library Entry {k}")
-                async with self._libaries_lock:
-                    if len(e.references) == 0:
-                        e1 = self._libaries.get(k, None)
-                        if e1 == e:
-                            self._libaries.pop(k, None)
+            try:
+                if len(e.references) == 0 or now:
+                    self._logger.debug(lambda: f"Remove Library Entry {k}")
+                    async with self._libaries_lock:
+                        if len(e.references) == 0:
+                            e1 = self._libaries.get(k, None)
+                            if e1 == e:
+                                self._libaries.pop(k, None)
 
-                            await e.invalidate()
-                self._logger.debug(lambda: f"Library Entry {k} removed")
+                                await e.invalidate()
+                    self._logger.debug(lambda: f"Library Entry {k} removed")
+            finally:
+                await self._library_files_cache.clear()
 
         try:
             if asyncio.get_running_loop():
@@ -645,20 +648,24 @@ class ImportsManager:
 
     def __remove_resource_entry(self, entry_key: _ResourcesEntryKey, entry: _ResourcesEntry, now: bool = False) -> None:
         async def remove(k: _ResourcesEntryKey, e: _ResourcesEntry) -> None:
-            if len(e.references) == 0 or now:
-                self._logger.debug(lambda: f"Remove Resource Entry {k}")
-                async with self._resources_lock:
-                    if len(e.references) == 0:
-                        e1 = self._resources.get(k, None)
-                        if e1 == e:
-                            self._resources.pop(k, None)
+            try:
+                if len(e.references) == 0 or now:
+                    self._logger.debug(lambda: f"Remove Resource Entry {k}")
+                    async with self._resources_lock:
+                        if len(e.references) == 0 or now:
+                            e1 = self._resources.get(k, None)
+                            if e1 == e:
+                                self._resources.pop(k, None)
 
-                            await e.invalidate()
-                self._logger.debug(lambda: f"Resource Entry {k} removed")
+                                await e.invalidate()
+                    self._logger.debug(lambda: f"Resource Entry {k} removed")
+            finally:
+                await self._resource_files_cache.clear()
 
         try:
             if asyncio.get_running_loop():
                 create_sub_task(remove(entry_key, entry))
+
         except RuntimeError:
             pass
 
@@ -666,16 +673,19 @@ class ImportsManager:
         self, entry_key: _VariablesEntryKey, entry: _VariablesEntry, now: bool = False
     ) -> None:
         async def remove(k: _VariablesEntryKey, e: _VariablesEntry) -> None:
-            if len(e.references) == 0 or now:
-                self._logger.debug(lambda: f"Remove Variables Entry {k}")
-                async with self._variables_lock:
-                    if len(e.references) == 0:
-                        e1 = self._variables.get(k, None)
-                        if e1 == e:
-                            self._variables.pop(k, None)
+            try:
+                if len(e.references) == 0 or now:
+                    self._logger.debug(lambda: f"Remove Variables Entry {k}")
+                    async with self._variables_lock:
+                        if len(e.references) == 0:
+                            e1 = self._variables.get(k, None)
+                            if e1 == e:
+                                self._variables.pop(k, None)
 
-                            await e.invalidate()
-                self._logger.debug(lambda: f"Variables Entry {k} removed")
+                                await e.invalidate()
+                    self._logger.debug(lambda: f"Variables Entry {k} removed")
+            finally:
+                await self._variables_files_cache.clear()
 
         try:
             if asyncio.get_running_loop():

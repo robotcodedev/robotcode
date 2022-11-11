@@ -90,6 +90,9 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                             current=i,
                         )
 
+                        if not f.exists():
+                            continue
+
                         document = await self.parent.documents.get_or_open_document(f, "robotframework")
 
                         if not document.opened_in_editor:
