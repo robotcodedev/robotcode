@@ -4,7 +4,8 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
-- Optimize reference code lenses.
+- Optimize reference handling.
+  - This allows updating references when creating and deleting files, if necessary.
 
 ##  0.14.4
 

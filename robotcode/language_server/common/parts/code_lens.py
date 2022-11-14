@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_tools import async_tasking_event, threaded
+from ....utils.async_tools import async_tasking_event, create_sub_task, threaded
 from ....utils.logging import LoggingDescriptor
 from ..decorators import language_id_filter
 from ..has_extend_capabilities import HasExtendCapabilities
@@ -29,6 +30,7 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)
+        self.refresh_task: Optional[asyncio.Task[Any]] = None
 
     @async_tasking_event
     async def collect(sender, document: TextDocument) -> Optional[List[CodeLens]]:  # NOSONAR
@@ -86,7 +88,19 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
         return params
 
-    async def refresh(self) -> None:
+    async def __do_refresh(self, now: bool = False) -> None:
+        if not now:
+            await asyncio.sleep(1)
+
+        await self.__refresh()
+
+    async def refresh(self, now: bool = False) -> None:
+        if self.refresh_task is not None and not self.refresh_task.done():
+            self.refresh_task.get_loop().call_soon_threadsafe(self.refresh_task.cancel)
+
+        self.refresh_task = create_sub_task(self.__do_refresh(now), loop=self.parent.diagnostics.diagnostics_loop)
+
+    async def __refresh(self) -> None:
         if not (
             self.parent.client_capabilities is not None
             and self.parent.client_capabilities.workspace is not None

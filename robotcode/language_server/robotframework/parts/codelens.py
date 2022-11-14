@@ -31,7 +31,9 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         self._running_task: Set[Tuple[TextDocument, KeywordDoc]] = set()
 
         parent.diagnostics.on_workspace_loaded.add(self.codelens_refresh)
+        parent.robot_references.cache_cleared.add(self.codelens_refresh)
 
+    @language_id("robotframework")
     async def codelens_refresh(self, sender: Any) -> None:  # NOSONAR
         await self.parent.code_lens.refresh()
 
@@ -123,13 +125,6 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
                     async def find_refs() -> None:
                         if document is None or kw_doc is None:
                             return
-
-                        # await run_coroutine_in_thread(
-                        #     self.parent.robot_references.find_keyword_references,
-                        #     document,
-                        #     kw_doc,
-                        #     include_declaration=False,
-                        # )
 
                         await self.parent.robot_references.find_keyword_references(
                             document, kw_doc, include_declaration=False

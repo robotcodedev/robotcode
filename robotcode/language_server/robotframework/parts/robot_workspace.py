@@ -6,8 +6,9 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from ....utils.async_tools import Event, threaded
 from ....utils.glob_path import iter_files
 from ....utils.logging import LoggingDescriptor
-from ....utils.uri import Uri
+from ....utils.uri import InvalidUriError, Uri
 from ...common.decorators import language_id
+from ...common.lsp_types import FileChangeType, FileEvent, WatchKind
 from ...common.parts.diagnostics import (
     AnalysisProgressMode,
     DiagnosticsMode,
@@ -35,7 +36,26 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         self.parent.diagnostics.load_workspace_documents.add(self._load_workspace_documents)
         self.parent.diagnostics.on_get_diagnostics_mode.add(self.on_get_diagnostics_mode)
         self.parent.diagnostics.on_get_analysis_progress_mode.add(self.on_get_analysis_progress_mode)
+        self.parent.on_initialized.add(self.on_initialized)
         self.workspace_loaded = Event()
+
+    async def on_initialized(self, sender: Any) -> None:
+        await self.parent.workspace.add_file_watcher(
+            self.on_file_changed, f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}", WatchKind.CREATE
+        )
+
+    async def on_file_changed(self, sender: Any, files: List[FileEvent]) -> None:  #
+        for fe in [f for f in files if f.type == FileChangeType.CREATED]:
+            doc_uri = Uri(fe.uri)
+            try:
+                path = doc_uri.to_path()
+                if path.suffix in [ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION]:
+                    document = await self.parent.documents.get_or_open_document(path, "robotframework")
+                    if not document.opened_in_editor:
+                        await (await self.parent.documents_cache.get_namespace(document)).ensure_initialized()
+
+            except InvalidUriError:
+                pass
 
     @language_id("robotframework")
     async def _on_read_document_text(self, sender: Any, uri: Uri) -> Optional[str]:

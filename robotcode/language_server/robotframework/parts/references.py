@@ -19,10 +19,21 @@ from ....utils.async_tools import async_event, threaded
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.decorators import language_id
-from ...common.lsp_types import Location, Position, ReferenceContext
+from ...common.lsp_types import (
+    FileEvent,
+    Location,
+    Position,
+    ReferenceContext,
+    WatchKind,
+)
 from ...common.text_document import TextDocument
 from ..diagnostics.entities import LocalVariableDefinition, VariableDefinition
-from ..diagnostics.library_doc import KeywordDoc, LibraryDoc
+from ..diagnostics.library_doc import (
+    RESOURCE_FILE_EXTENSION,
+    ROBOT_FILE_EXTENSION,
+    KeywordDoc,
+    LibraryDoc,
+)
 from ..utils.ast_utils import (
     HasTokens,
     get_nodes_at_position,
@@ -47,18 +58,34 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
-        parent.references.collect.add(self.collect)
-        parent.documents.did_change.add(self.document_did_change)
         self._keyword_reference_cache = AsyncSimpleLRUCache(max_items=None)
         self._variable_reference_cache = AsyncSimpleLRUCache(max_items=None)
+
+        parent.on_initialized.add(self.on_initialized)
+
+        parent.references.collect.add(self.collect)
+        parent.documents.did_change.add(self.document_did_change)
 
     @async_event
     async def cache_cleared(sender) -> None:  # NOSONAR
         ...
 
+    async def on_initialized(self, sender: Any) -> None:
+        await self.parent.workspace.add_file_watcher(
+            self.on_file_changed,
+            f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}",
+            WatchKind.CREATE | WatchKind.DELETE,
+        )
+
+    async def on_file_changed(self, sender: Any, files: List[FileEvent]) -> None:
+        await self.clear_cache()
+
     @language_id("robotframework")
     @threaded()
     async def document_did_change(self, sender: Any, document: TextDocument) -> None:
+        await self.clear_cache()
+
+    async def clear_cache(self) -> None:
         await self._keyword_reference_cache.clear()
         await self._variable_reference_cache.clear()
 
