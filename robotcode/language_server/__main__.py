@@ -22,7 +22,7 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
 
     try:
         sys.path.remove(str(parent))
-    except ValueError:  # Already removed
+    except ValueError:
         pass
 
     __package__ = "robotcode.language_server"
