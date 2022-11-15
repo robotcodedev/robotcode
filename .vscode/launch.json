@@ -168,7 +168,6 @@
 				"--mode",
 				"tcp",
 				"--log",
-				"--log-colored",
 				"--log-level",
 				"TRACE",
 				//"--log-json-rpc-data",

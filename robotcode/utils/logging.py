@@ -181,7 +181,7 @@ class LoggingDescriptor:
         **kwargs: Any,
     ) -> None:
         if self.is_enabled_for(level) and condition is not None and condition() or condition is None:
-            self.logger.log(level, msg() if callable(msg) else msg, *args, stacklevel=stacklevel, **kwargs)
+            return self.logger.log(level, msg() if callable(msg) else msg, *args, stacklevel=stacklevel, **kwargs)
 
     def debug(
         self,
@@ -191,7 +191,7 @@ class LoggingDescriptor:
         stacklevel: int = 3,
         **kwargs: Any,
     ) -> None:
-        self.log(logging.DEBUG, msg, condition, *args, stacklevel=stacklevel, **kwargs)
+        return self.log(logging.DEBUG, msg, condition, *args, stacklevel=stacklevel, **kwargs)
 
     def info(
         self,
@@ -201,7 +201,7 @@ class LoggingDescriptor:
         stacklevel: int = 3,
         **kwargs: Any,
     ) -> None:
-        self.log(logging.INFO, msg, condition, *args, stacklevel=stacklevel, **kwargs)
+        return self.log(logging.INFO, msg, condition, *args, stacklevel=stacklevel, **kwargs)
 
     def warning(
         self,
@@ -211,7 +211,7 @@ class LoggingDescriptor:
         stacklevel: int = 3,
         **kwargs: Any,
     ) -> None:
-        self.log(logging.WARNING, msg, condition, *args, stacklevel=stacklevel, **kwargs)
+        return self.log(logging.WARNING, msg, condition, *args, stacklevel=stacklevel, **kwargs)
 
     def error(
         self,
@@ -221,7 +221,7 @@ class LoggingDescriptor:
         stacklevel: int = 3,
         **kwargs: Any,
     ) -> None:
-        self.log(logging.ERROR, msg, condition, *args, stacklevel=stacklevel, **kwargs)
+        return self.log(logging.ERROR, msg, condition, *args, stacklevel=stacklevel, **kwargs)
 
     def trace(
         self,
@@ -231,7 +231,7 @@ class LoggingDescriptor:
         stacklevel: int = 3,
         **kwargs: Any,
     ) -> None:
-        self.log(TRACE, msg, condition, *args, stacklevel=stacklevel, **kwargs)
+        return self.log(TRACE, msg, condition, *args, stacklevel=stacklevel, **kwargs)
 
     def exception(
         self,
@@ -248,7 +248,7 @@ class LoggingDescriptor:
             s = type(msg).__qualname__
             if sm:
                 s += ": " + sm
-            self.log(
+            return self.log(
                 logging.ERROR if level is None else level,
                 s,
                 condition,
@@ -258,7 +258,7 @@ class LoggingDescriptor:
                 **kwargs,
             )
         else:
-            self.log(
+            return self.log(
                 logging.ERROR if level is None else level,
                 msg,
                 condition,
@@ -276,7 +276,7 @@ class LoggingDescriptor:
         stacklevel: int = 3,
         **kwargs: Any,
     ) -> None:
-        self.log(logging.CRITICAL, msg, condition, *args, stacklevel=stacklevel, **kwargs)
+        return self.log(logging.CRITICAL, msg, condition, *args, stacklevel=stacklevel, **kwargs)
 
     def is_enabled_for(self, level: int) -> bool:
         return self.logger.isEnabledFor(level)

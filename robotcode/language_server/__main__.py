@@ -6,7 +6,7 @@ import pathlib
 import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 __file__ = os.path.abspath(__file__)
 if __file__.endswith((".pyc", ".pyo")):
@@ -112,7 +112,6 @@ def create_parser() -> argparse.ArgumentParser:
     )
     result.add_argument("--debug-asyncio", action="store_true", help="enable async io debugging messages")
     result.add_argument("--log-asyncio", action="store_true", help="show asyncio log messages")
-    result.add_argument("--log-colored", action="store_true", help="colored output for logs")
     result.add_argument("--log-config", default=None, help="reads logging configuration from file", metavar="FILE")
     result.add_argument("--log-file", default=None, help="enables logging to file", metavar="FILE")
     result.add_argument("--log-level", default="WARNING", help="sets the overall log level", metavar="LEVEL")
@@ -128,29 +127,13 @@ def create_parser() -> argparse.ArgumentParser:
     return result
 
 
-def init_colored_logs(log_level: Any) -> bool:
-    try:
-        import coloredlogs
-
-        coloredlogs.install(level=log_level)
-    except ImportError:
-        return False
-
-    return True
-
-
 DEFAULT_LOG_LEVEL = logging.ERROR
 
 
 def init_logging(args: argparse.Namespace) -> None:
     log_level = logging._checkLevel(args.log_level) if args.log else logging.WARNING  # type: ignore
 
-    log_initialized = False
-    if args.log_colored:
-        log_initialized = init_colored_logs(log_level)
-
-    if not log_initialized:
-        logging.basicConfig(level=log_level, format="%(name)s:%(levelname)s: %(message)s")
+    logging.basicConfig(level=log_level, format="%(name)s:%(levelname)s: %(message)s")
 
     if args.log_file is not None:
         _logger.logger.addHandler(get_log_handler(args.log_file))

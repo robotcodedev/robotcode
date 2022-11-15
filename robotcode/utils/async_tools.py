@@ -481,7 +481,7 @@ class Lock:
                 def aaa() -> None:
                     warnings.warn(f"Lock takes to long {threading.current_thread()}")
 
-                h = fut.get_loop().call_later(60, aaa)
+                h = fut.get_loop().call_later(120, aaa)
 
                 await fut
 

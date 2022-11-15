@@ -311,7 +311,6 @@ def main() -> None:
     parser.add_argument("-n", "--no-debug", action="store_true", help="disable debugging")
     parser.add_argument("--debug-asyncio", action="store_true", help="enable async io debugging messages")
     parser.add_argument("--log-asyncio", action="store_true", help="show asyncio log messages")
-    parser.add_argument("--log-colored", action="store_true", help="colored output for logs")
     parser.add_argument("--log-config", default=None, help="reads logging configuration from file", metavar="FILE")
     parser.add_argument("--log-file", default=None, help="enables logging to file", metavar="FILE")
     parser.add_argument("--log-level", default="WARNING", help="sets the overall log level", metavar="LEVEL")
@@ -378,18 +377,7 @@ def main() -> None:
         else:
             log_level = logging._checkLevel(args.log_level) if args.log else logging.WARNING  # type: ignore
 
-            log_initialized = False
-            if args.log_colored:
-                try:
-                    import coloredlogs
-
-                    coloredlogs.install(level=log_level)
-                    log_initialized = True
-                except ImportError:
-                    pass
-
-            if not log_initialized:
-                logging.basicConfig(level=log_level, format="%(name)s:%(levelname)s: %(message)s")
+            logging.basicConfig(level=log_level, format="%(name)s:%(levelname)s: %(message)s")
 
             if args.log_file is not None:
                 _logger.logger.addHandler(get_log_handler(args.log_file))
