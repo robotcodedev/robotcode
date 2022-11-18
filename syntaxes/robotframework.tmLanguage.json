@@ -45,7 +45,7 @@
           "name": "keyword.control.settings.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "end": "^(?!\\s*\\.\\.\\.)",
       "patterns": [
         {
@@ -70,7 +70,7 @@
           "name": "keyword.control.settings.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "end": "^(?!\\s*\\.\\.\\.)",
       "patterns": [
         {
@@ -99,7 +99,7 @@
         }
       },
       "end": "^(?!\\s*\\.\\.\\.)",
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -152,7 +152,7 @@
         }
       },
       "end": "^(?!\\s*\\.\\.\\.)",
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -180,7 +180,7 @@
           "name": "keyword.control.settings.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -240,7 +240,7 @@
           "name": "keyword.operator.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "end": "^(?!\\s*\\.\\.\\.)",
       "patterns": [
         {
@@ -435,7 +435,7 @@
           "name": "keyword.control.flow.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -462,7 +462,7 @@
           "name": "keyword.operator.for.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "end": "^(?!\\s*\\.\\.\\.)",
       "patterns": [
         {
@@ -491,7 +491,7 @@
           "name": "keyword.control.flow.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -516,7 +516,7 @@
           "name": "keyword.control.flow.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -538,7 +538,7 @@
           "name": "keyword.control.flow.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -563,7 +563,7 @@
           "name": "keyword.control.flow.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -585,7 +585,7 @@
           "name": "keyword.control.flow.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -610,7 +610,7 @@
           "name": "keyword.control.flow.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -635,7 +635,7 @@
           "name": "keyword.control.flow.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -662,7 +662,7 @@
           "name": "keyword.operator.for.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "end": "^(?!\\s*\\.\\.\\.)",
       "patterns": [
         {
@@ -691,7 +691,7 @@
           "name": "keyword.control.flow.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -826,7 +826,7 @@
           "name": "keyword.control.settings.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -860,7 +860,7 @@
         }
       },
       "end": "^(?!\\s*\\.\\.\\.)",
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -890,7 +890,7 @@
           "name": "keyword.control.settings.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "end": "^(?!\\s*\\.\\.\\.)",
       "patterns": [
         {
@@ -919,7 +919,7 @@
           "name": "keyword.control.settings.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -962,7 +962,7 @@
           "name": "variable.function.keyword-call.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "patterns": [
         {
           "include": "#escape"
@@ -1051,7 +1051,7 @@
           "name": "keyword.operator.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "end": "(?= {2,}| ?\\t ?|$)",
       "patterns": [
         {
@@ -1089,7 +1089,7 @@
           "name": "meta.keyword.robotframework"
         }
       },
-      "contentName": "meta.argument.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "end": "^(?!\\s*\\.\\.\\.)",
       "patterns": [
         {
