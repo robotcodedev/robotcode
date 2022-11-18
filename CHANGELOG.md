@@ -4,6 +4,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ## [Unreleased]
 
+- Improve analysing, find references and renaming of environment variables
 - Optimize reference handling.
   - This allows updating references when creating and deleting files, if necessary.
 
