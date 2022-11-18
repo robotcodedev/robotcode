@@ -264,6 +264,8 @@ class EnvironmentVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.ENVIRONMENT_VARIABLE
     resolvable: bool = True
 
+    default_value: Any = field(default=None, compare=False)
+
     @single_call
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type))

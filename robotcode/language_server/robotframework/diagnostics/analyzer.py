@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import itertools
+import os
 import re
 from collections import defaultdict
 from dataclasses import dataclass
@@ -35,7 +36,11 @@ from ..utils.ast_utils import (
 )
 from ..utils.async_ast import AsyncVisitor
 from ..utils.version import get_robot_version
-from .entities import VariableDefinition, VariableNotFoundDefinition
+from .entities import (
+    EnvironmentVariableDefinition,
+    VariableDefinition,
+    VariableNotFoundDefinition,
+)
 from .library_doc import KeywordDoc, is_embedded_keyword
 from .namespace import DIAGNOSTICS_SOURCE_NAME, KeywordFinder, Namespace
 
@@ -194,6 +199,17 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                     code="VariableNotFound",
                                 )
                             else:
+                                if isinstance(var, EnvironmentVariableDefinition) and var.default_value is None:
+                                    env_name = var.name[2:-1]
+                                    if os.environ.get(env_name, None) is None:
+                                        await self.append_diagnostics(
+                                            range=range_from_token(var_token),
+                                            message=f"Environment variable '{var.name}' not found.",
+                                            severity=severity,
+                                            source=DIAGNOSTICS_SOURCE_NAME,
+                                            code="EnvirommentVariableNotFound",
+                                        )
+
                                 if self.namespace.document is not None:
                                     var_range = range_from_token(var_token)
                                     if var.name_range != var_range:

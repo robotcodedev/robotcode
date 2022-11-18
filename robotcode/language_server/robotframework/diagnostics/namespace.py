@@ -976,7 +976,10 @@ class Namespace:
         await self.ensure_initialized()
 
         if name[:2] == "%{" and name[-1] == "}":
-            return EnvironmentVariableDefinition(0, 0, 0, 0, "", name, None)
+            var_name, _, default_value = name[2:-1].partition("=")
+            return EnvironmentVariableDefinition(
+                0, 0, 0, 0, "", f"%{{{var_name}}}", None, default_value=default_value or None
+            )
 
         try:
             matcher = VariableMatcher(name)
