@@ -211,7 +211,12 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                         )
 
                                 if self.namespace.document is not None:
-                                    var_range = range_from_token(var_token)
+                                    if isinstance(var, EnvironmentVariableDefinition):
+                                        var_token.value, _, _ = var_token.value.partition("=")
+
+                                        var_range = range_from_token(var_token)
+                                    else:
+                                        var_range = range_from_token(var_token)
                                     if var.name_range != var_range:
                                         self._variable_references[var].add(
                                             Location(self.namespace.document.document_uri, var_range)

@@ -163,6 +163,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
                     "Only references are renamed and you have to rename the variable definition yourself."
                 )
             elif var.type == VariableDefinitionType.ENVIRONMENT_VARIABLE:
+                token.value, _, _ = token.value.partition("=")
                 self.parent.window.show_message(
                     "You are about to rename an environment variable. "
                     "Only references are renamed and you have to rename the variable definition yourself."
