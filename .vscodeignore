@@ -18,6 +18,7 @@ vscode-client
 
 
 # python
+.venv
 .flake8
 mypy.ini
 log.ini
