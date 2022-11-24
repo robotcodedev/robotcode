@@ -3,13 +3,13 @@ name: build_test_package_publish
 on:
   push:
     branches:
-      - main
+      - $default-branch
     tags:
       - "v*"
 
   pull_request:
     branches:
-      - main
+      - $default-branch
 
   workflow_dispatch:
 
