@@ -6,7 +6,7 @@ build-backend = "poetry.core.masonry.api"
 name = "robotcode"
 version = "0.14.5"
 description = "Language server, debugger and tools for Robot Framework"
-authors = ["Daniel Biehl <daniel.biehl@imbus.de>"]
+authors = ["Daniel Biehl <dbiehlo@live.de>"]
 homepage = 'https://github.com/d-biehl/robotcode'
 repository = 'https://github.com/d-biehl/robotcode'
 readme = "README.md"
@@ -51,7 +51,7 @@ classifiers = [
 
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.8.1"
 robotframework = { version = ">=4.1.0" }
 
 
@@ -122,7 +122,7 @@ asyncio_mode = "auto"
 profile = "black"
 src_paths = ["robotcode", "tests"]
 skip_gitignore = true
-skip = ['external']
+skip = ['external', '.venv']
 
 [tool.coverage.run]
 omit = ["*tests*"]
