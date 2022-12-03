@@ -116,8 +116,8 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
     async def get_tests_from_workspace(
         self,
         workspace_folder: str,
-        paths: Optional[List[str]],
-        suites: Optional[List[str]],
+        paths: Optional[List[str]] = None,
+        suites: Optional[List[str]] = None,
         *args: Any,
         **kwargs: Any,
     ) -> List[TestItem]:
