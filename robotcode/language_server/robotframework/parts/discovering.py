@@ -5,7 +5,7 @@ import asyncio
 from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Iterator, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Iterator, List, Optional, cast
 
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_tools import threaded
@@ -121,26 +121,11 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         *args: Any,
         **kwargs: Any,
     ) -> List[TestItem]:
-
         from robot.output.logger import LOGGER
-        from robot.parsing import get_model
-        from robot.parsing.suitestructure import SuiteStructureBuilder
         from robot.running import TestCase, TestSuite
-        from robot.running.builder.builders import (
-            NoInitFileDirectoryParser,
-            RobotParser,
-            SuiteStructureParser,
-            TestSuiteBuilder,
-        )
+        from robot.running.builder.builders import RobotParser, TestSuiteBuilder
 
         from ..utils.version import get_robot_version
-
-        if get_robot_version() >= (6, 0):
-            from robot.running.builder.settings import (
-                Defaults as TestDefaults,  # pyright: reportMissingImports=false
-            )
-        else:
-            from robot.running.builder.testsettings import TestDefaults
 
         def get_document_text(source: str) -> str:
             if self.parent._loop:
@@ -150,112 +135,16 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
             return source
 
-        class MyRobotParser(RobotParser):
-            def _get_source(self, source: str) -> Any:
-                return get_document_text(source)
+        def get_source(self: Any, source: str) -> str:
+            return get_document_text(source)
 
-            def _build(
-                self,
-                suite: TestSuite,
-                source: str,
-                defaults: TestDefaults,
-                model: Optional[ast.AST] = None,
-                get_model: Callable[..., Any] = get_model,
-            ) -> TestSuite:
+        RobotParser._get_source = get_source
 
-                from robot.running.builder.transformers import (
-                    SettingsBuilder,
-                    SuiteBuilder,
-                )
+        def _validate_test_counts(self: Any, suite: TestSuite, multisource: bool = False) -> None:
+            # we don't need this
+            pass
 
-                if defaults is None:
-                    defaults = TestDefaults()
-                if model is None:
-                    try:
-                        if get_robot_version() >= (6, 0):
-                            model = get_model(
-                                self._get_source(source),
-                                data_only=True,
-                                curdir=self._get_curdir(source),
-                                lang=self.lang,
-                            )
-                        else:
-                            model = get_model(self._get_source(source), data_only=True, curdir=self._get_curdir(source))
-                    except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
-                        raise
-                    except BaseException:
-                        pass
-
-                if model is None:
-                    return suite
-
-                SettingsBuilder(suite, defaults).visit(model)
-                SuiteBuilder(suite, defaults).visit(model)
-                suite.rpa = self._get_rpa_mode(model)
-                return suite
-
-        class MyRestParser(MyRobotParser):
-            def _get_source(self, source: str) -> Any:
-                from robot.utils import read_rest_data
-                from robot.utils.filereader import FileReader
-
-                with FileReader(source) as reader:
-                    return read_rest_data(reader)
-
-        class MySuiteStructureParserWithLang(SuiteStructureParser):
-            def _get_parsers(self, extensions: List[str], lang: Any, process_curdir: bool) -> RobotParser:
-                robot_parser = MyRobotParser(lang, process_curdir)
-                rest_parser = MyRestParser(lang, process_curdir)
-                parsers = {
-                    None: NoInitFileDirectoryParser(),
-                    "robot": robot_parser,
-                    "rst": rest_parser,
-                    "rest": rest_parser,
-                }
-                for ext in extensions:
-                    if ext not in parsers:
-                        parsers[ext] = robot_parser
-                return parsers
-
-            def _validate_execution_mode(self, suite: Any) -> None:
-                super()._validate_execution_mode(suite)
-
-        class MySuiteStructureParser(SuiteStructureParser):
-            def _get_parsers(self, extensions: List[str], process_curdir: bool) -> RobotParser:
-                robot_parser = MyRobotParser(process_curdir)
-                rest_parser = MyRestParser(process_curdir)
-                parsers = {
-                    None: NoInitFileDirectoryParser(),
-                    "robot": robot_parser,
-                    "rst": rest_parser,
-                    "rest": rest_parser,
-                }
-                for ext in extensions:
-                    if ext not in parsers:
-                        parsers[ext] = robot_parser
-                return parsers
-
-            def _validate_execution_mode(self, suite: Any) -> None:
-                super()._validate_execution_mode(suite)
-
-        class MyTestSuiteBuilder(TestSuiteBuilder):
-            def _validate_test_counts(self, suite: TestSuite, multisource: bool = False) -> None:
-                # we don't need this
-                pass
-
-            def build(self, *paths: str) -> TestSuite:
-                structure = SuiteStructureBuilder(self.included_extensions, self.included_suites).build(paths)
-                if get_robot_version() >= (6, 0):
-                    parser = MySuiteStructureParserWithLang(
-                        self.included_extensions, self.rpa, self.lang, self.process_curdir
-                    )
-                else:
-                    parser = MySuiteStructureParser(self.included_extensions, self.rpa, self.process_curdir)
-                suite = parser.parse(structure)
-                if not self.included_suites and not self.allow_empty_suite:
-                    self._validate_test_counts(suite, multisource=len(paths) > 1)
-                suite.remove_empty_suites(preserve_direct_children=len(paths) > 1)
-                return suite
+        TestSuiteBuilder._validate_test_counts = _validate_test_counts
 
         def generate(suite: TestSuite) -> TestItem:
             children: List[TestItem] = []
@@ -337,11 +226,13 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                     valid_paths = [i for i in normalize_paths(paths)]
 
                     if get_robot_version() >= (6, 0):
-                        builder = MyTestSuiteBuilder(
-                            included_suites=suites if suites else None, rpa=rpa_mode, lang=languages
+                        builder = TestSuiteBuilder(
+                            included_suites=suites if suites else None,
+                            rpa=rpa_mode,
+                            lang=languages,
                         )
                     else:
-                        builder = MyTestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
+                        builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
 
                     suite: Optional[TestSuite] = builder.build(*valid_paths) if valid_paths else None
                     suite_item = [generate(suite)] if suite else []
@@ -370,11 +261,13 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                     ]
                 else:
                     if get_robot_version() >= (6, 0):
-                        builder = MyTestSuiteBuilder(
-                            included_suites=suites if suites else None, rpa=rpa_mode, lang=languages
+                        builder = TestSuiteBuilder(
+                            included_suites=suites if suites else None,
+                            rpa=rpa_mode,
+                            lang=languages,
                         )
                     else:
-                        builder = MyTestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
+                        builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
                     return [generate(builder.build(str(workspace_path)))]
             except (SystemExit, KeyboardInterrupt):
                 raise
