@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
-from ..._version import __version__
+from ...__version__ import __version__
 from ...jsonrpc2.protocol import (
     JsonRPCErrorException,
     JsonRPCErrors,

@@ -2,8 +2,8 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
-## [Unreleased]
-- none so far
+<!--next-version-placeholder-->
+
 ##  0.14.5
 
 - Improve analysing, find references and renaming of environment variables

@@ -63,16 +63,17 @@ flake8 = "*"
 black = "*"
 pep8-naming = "*"
 debugpy = "*"
-GitPython = "^3.1.27"
-semantic-version = "^2.9.0"
-pre-commit = "^2.17.0"
-docutils = "^0.19"
-types-docutils = "^0.19.1"
+GitPython = "*"
+semantic-version = "*"
+pre-commit = "*"
+docutils = "*"
+types-docutils = "*"
+python-semantic-release = "*"
 
 [tool.poetry.group.test.dependencies]
 robotremoteserver = "*"
 pytest-regressions = "*"
-pytest-html = "^3.1.1"
+pytest-html = "*"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
@@ -87,6 +88,21 @@ robotframework-tidy = "*"
 [tool.poetry.scripts]
 'robotcode.debugger' = 'robotcode.debugger.__main__:main'
 'robotcode.language_server' = 'robotcode.language_server.__main__:main'
+
+[tool.semantic_release]
+version_variable = [
+  "robotcode/__version__.py:__version__",
+]
+version_toml = [
+  "pyproject.toml:tool.poetry.version"
+]
+version_pattern = [
+  'package.json:"version": "{version}"'
+]
+branch = "main"
+upload_to_pypi = true
+upload_to_release = true
+build_command = "pip install poetry && poetry build"
 
 [tool.black]
 line-length = 120

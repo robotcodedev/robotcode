@@ -27,7 +27,7 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
 
     __package__ = "robotcode.language_server"
 
-from .._version import __version__
+from ..__version__ import __version__
 from ..utils.debugpy import start_debugpy
 from ..utils.logging import LoggingDescriptor
 

@@ -39,7 +39,7 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
 
     __package__ = "robotcode.debugger"
 
-from .._version import __version__
+from ..__version__ import __version__
 from ..utils.logging import LoggingDescriptor
 
 _logger = LoggingDescriptor(name=__package__)
