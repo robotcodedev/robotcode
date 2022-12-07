@@ -330,6 +330,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         argument_tokens: List[Token],
         analyse_run_keywords: bool = True,
         allow_variables: bool = False,
+        ignore_errors_if_contains_variables: bool = False,
     ) -> Optional[KeywordDoc]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Template, TestTemplate
@@ -371,13 +372,14 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
             result = await self.finder.find_keyword(keyword)
 
-            for e in self.finder.diagnostics:
-                await self.append_diagnostics(
-                    range=kw_range,
-                    message=e.message,
-                    severity=e.severity,
-                    code=e.code,
-                )
+            if not ignore_errors_if_contains_variables or is_not_variable_token(keyword_token):
+                for e in self.finder.diagnostics:
+                    await self.append_diagnostics(
+                        range=kw_range,
+                        message=e.message,
+                        severity=e.severity,
+                        code=e.code,
+                    )
 
             if result is not None:
                 if self.namespace.document is not None:
@@ -544,22 +546,27 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         if keyword_doc is None or not keyword_doc.is_any_run_keyword():
             return argument_tokens
 
-        if keyword_doc.is_run_keyword() and len(argument_tokens) > 0 and is_not_variable_token(argument_tokens[0]):
+        if keyword_doc.is_run_keyword() and len(argument_tokens) > 0:
             await self._analyze_keyword_call(
-                unescape(argument_tokens[0].value), node, argument_tokens[0], argument_tokens[1:]
+                unescape(argument_tokens[0].value),
+                node,
+                argument_tokens[0],
+                argument_tokens[1:],
+                allow_variables=True,
+                ignore_errors_if_contains_variables=True,
             )
 
             return argument_tokens[1:]
-        elif (
-            keyword_doc.is_run_keyword_with_condition()
-            and len(argument_tokens) > (cond_count := keyword_doc.run_keyword_condition_count())
-            and is_not_variable_token(argument_tokens[cond_count])
+        elif keyword_doc.is_run_keyword_with_condition() and len(argument_tokens) > (
+            cond_count := keyword_doc.run_keyword_condition_count()
         ):
             await self._analyze_keyword_call(
                 unescape(argument_tokens[cond_count].value),
                 node,
                 argument_tokens[cond_count],
                 argument_tokens[cond_count + 1 :],
+                allow_variables=True,
+                ignore_errors_if_contains_variables=True,
             )
             return argument_tokens[cond_count + 1 :]
         elif keyword_doc.is_run_keywords():
@@ -577,9 +584,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     )
                     continue
 
-                if not is_not_variable_token(t):
-                    continue
-
                 and_token = next((e for e in argument_tokens if e.value == "AND"), None)
                 args = []
                 if and_token is not None:
@@ -590,7 +594,14 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     args = argument_tokens
                     argument_tokens = []
 
-                await self._analyze_keyword_call(unescape(t.value), node, t, args)
+                await self._analyze_keyword_call(
+                    unescape(t.value),
+                    node,
+                    t,
+                    args,
+                    allow_variables=True,
+                    ignore_errors_if_contains_variables=True,
+                )
 
             return []
 
@@ -620,14 +631,15 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
                 args = skip_args()
 
-                if is_not_variable_token(kwt):
-                    await self._analyze_keyword_call(
-                        unescape(kwt.value),
-                        node,
-                        kwt,
-                        args,
-                        analyse_run_keywords=False,
-                    )
+                await self._analyze_keyword_call(
+                    unescape(kwt.value),
+                    node,
+                    kwt,
+                    args,
+                    analyse_run_keywords=False,
+                    allow_variables=True,
+                    ignore_errors_if_contains_variables=True,
+                )
 
             while argument_tokens:
                 if argument_tokens[0].value == "ELSE" and len(argument_tokens) > 1:
@@ -682,12 +694,16 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         if (
             keyword_token is not None
-            and is_not_variable_token(keyword_token)
             and keyword_token.value is not None
             and keyword_token.value.upper() not in ("", "NONE")
         ):
             await self._analyze_keyword_call(
-                value.name, value, keyword_token, [cast(Token, e) for e in value.get_tokens(RobotToken.ARGUMENT)]
+                value.name,
+                value,
+                keyword_token,
+                [cast(Token, e) for e in value.get_tokens(RobotToken.ARGUMENT)],
+                allow_variables=True,
+                ignore_errors_if_contains_variables=True,
             )
 
         await self.generic_visit(node)

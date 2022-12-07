@@ -492,7 +492,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     ) -> AsyncGenerator[SemTokenInfo, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
-        if token.type in {*RobotToken.ALLOW_VARIABLES}:
+        if token.type in {RobotToken.ARGUMENT, RobotToken.TESTCASE_NAME, RobotToken.KEYWORD_NAME}:
 
             for sub_token in self._tokenize_variables(
                 token,
