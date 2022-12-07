@@ -582,21 +582,21 @@
     "commands": [
       {
         "title": "Run Current File",
-        "category": "robotcode",
+        "category": "RobotCode",
         "command": "robotcode.runCurrentFile",
         "enablement": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder",
         "icon": "$(run)"
       },
       {
         "title": "Debug Current File",
-        "category": "robotcode",
+        "category": "RobotCode",
         "command": "robotcode.debugCurrentFile",
         "enablement": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder",
         "icon": "$(debug-alt)"
       },
       {
         "title": "Restart Language Servers",
-        "category": "robotcode",
+        "category": "RobotCode",
         "command": "robotcode.restartLanguageServers"
       }
     ],
