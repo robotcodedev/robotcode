@@ -100,8 +100,8 @@ version_pattern = [
   'package.json:"version": "{version}"'
 ]
 branch = "main"
-upload_to_pypi = true
-upload_to_release = true
+upload_to_pypi = false
+upload_to_release = false
 build_command = "pip install poetry && poetry build"
 
 [tool.black]
