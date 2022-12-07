@@ -23,7 +23,6 @@ from ..diagnostics.library_doc import KeywordDoc
 from ..diagnostics.namespace import DEFAULT_BDD_PREFIXES, LibraryEntry, Namespace
 from ..utils.ast_utils import (
     Token,
-    is_not_variable_token,
     iter_over_keyword_names_and_owners,
     range_from_token,
     strip_variable_token,
@@ -46,16 +45,14 @@ class ModelHelperMixin:
         if keyword_doc is None or not keyword_doc.is_any_run_keyword():
             return None, argument_tokens
 
-        if keyword_doc.is_run_keyword() and len(argument_tokens) > 0 and is_not_variable_token(argument_tokens[0]):
+        if keyword_doc.is_run_keyword() and len(argument_tokens) > 0:
             result = await cls.get_keyworddoc_and_token_from_position(
                 unescape(argument_tokens[0].value), argument_tokens[0], argument_tokens[1:], namespace, position
             )
 
             return result, argument_tokens[1:]
-        elif (
-            keyword_doc.is_run_keyword_with_condition()
-            and len(argument_tokens) > (cond_count := keyword_doc.run_keyword_condition_count())
-            and is_not_variable_token(argument_tokens[1])
+        elif keyword_doc.is_run_keyword_with_condition() and len(argument_tokens) > (
+            cond_count := keyword_doc.run_keyword_condition_count()
         ):
             result = await cls.get_keyworddoc_and_token_from_position(
                 unescape(argument_tokens[cond_count].value),
@@ -107,11 +104,7 @@ class ModelHelperMixin:
                         break
                     argument_tokens = argument_tokens[1:]
 
-            inner_keyword_doc = (
-                await namespace.find_keyword(argument_tokens[1].value)
-                if is_not_variable_token(argument_tokens[1])
-                else None
-            )
+            inner_keyword_doc = await namespace.find_keyword(argument_tokens[1].value, raise_keyword_error=False)
 
             if position.is_in_range(range_from_token(argument_tokens[1])):
                 return (inner_keyword_doc, argument_tokens[1]), argument_tokens[2:]

@@ -51,7 +51,6 @@ from ..utils import async_ast
 from ..utils.ast_utils import (
     HasTokens,
     Token,
-    is_not_variable_token,
     iter_over_keyword_names_and_owners,
     token_in_range,
 )
@@ -545,7 +544,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                     builtin_library_doc,
                     libraries_matchers,
                     resources_matchers,
-                    await namespace.find_keyword(unescape(token.value)) if is_not_variable_token(token) else None,
+                    await namespace.find_keyword(unescape(token.value), raise_keyword_error=False),
                     RobotToken(ROBOT_KEYWORD_INNER, token.value, token.lineno, token.col_offset, token.error),
                     arguments[1:],
                     node,
@@ -567,7 +566,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                         builtin_library_doc,
                         libraries_matchers,
                         resources_matchers,
-                        await namespace.find_keyword(unescape(token.value)) if is_not_variable_token(token) else None,
+                        await namespace.find_keyword(unescape(token.value), raise_keyword_error=False),
                         RobotToken(ROBOT_KEYWORD_INNER, token.value, token.lineno, token.col_offset, token.error),
                         arguments[1:],
                         node,
@@ -607,7 +606,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                         builtin_library_doc,
                         libraries_matchers,
                         resources_matchers,
-                        await namespace.find_keyword(unescape(token.value)) if is_not_variable_token(token) else None,
+                        await namespace.find_keyword(unescape(token.value), raise_keyword_error=False),
                         RobotToken(ROBOT_KEYWORD_INNER, token.value, token.lineno, token.col_offset, token.error),
                         args,
                         node,
@@ -647,11 +646,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                                 arguments = arguments[1:]
                             continue
 
-                        inner_kw_doc = (
-                            await namespace.find_keyword(unescape(token.value))
-                            if is_not_variable_token(token)
-                            else None
-                        )
+                        inner_kw_doc = await namespace.find_keyword(unescape(token.value), raise_keyword_error=False)
 
                         if inner_kw_doc is not None and inner_kw_doc.is_run_keyword_if():
                             yield RobotToken(
