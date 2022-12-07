@@ -593,6 +593,11 @@
         "command": "robotcode.debugCurrentFile",
         "enablement": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder",
         "icon": "$(debug-alt)"
+      },
+      {
+        "title": "Restart Language Servers",
+        "category": "robotcode",
+        "command": "robotcode.restartLanguageServers"
       }
     ],
     "menus": {

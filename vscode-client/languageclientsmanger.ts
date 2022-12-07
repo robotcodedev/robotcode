@@ -125,7 +125,8 @@ export class LanguageClientsManager {
         },
       },
       vscode.workspace.onDidChangeWorkspaceFolders(async (_event) => this.refresh()),
-      vscode.workspace.onDidOpenTextDocument(async (document) => this.getLanguageClientForDocument(document))
+      vscode.workspace.onDidOpenTextDocument(async (document) => this.getLanguageClientForDocument(document)),
+      vscode.commands.registerCommand("robotcode.restartLanguageServers", async () => await this.restart())
     );
   }
 
