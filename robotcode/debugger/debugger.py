@@ -1184,7 +1184,7 @@ class Debugger:
 
         return list(result.values())
 
-    IS_VARIABLE_RE = re.compile(r"^[$@&%]\{.*\}$")
+    IS_VARIABLE_RE = re.compile(r"^[$@&%]\{.*\}(\[[^\]]*\])?$")
     IS_VARIABLE_ASSIGNMENT_RE = re.compile(r"^[$@&%]\{.*\}=?$")
     SPLIT_LINE = re.compile(r"(?= {2,}| ?\t)\s*")
     CURRDIR = re.compile(r"(?i)\$\{CURDIR\}")
@@ -1200,7 +1200,7 @@ class Debugger:
         from robot.running.context import EXECUTION_CONTEXTS
         from robot.running.model import Keyword
         from robot.variables.evaluation import evaluate_expression
-        from robot.variables.finders import VariableFinder
+        from robot.variables.replacer import VariableReplacer
 
         if not expression:
             return EvaluateResult(result="")
@@ -1271,7 +1271,7 @@ class Debugger:
 
             elif self.IS_VARIABLE_RE.match(expression.strip()):
                 try:
-                    result = VariableFinder(vars.store).find(expression)
+                    result = VariableReplacer(vars.store).replace_scalar(expression)
                 except VariableError:
                     if context is not None and (
                         isinstance(context, EvaluateArgumentContext)
