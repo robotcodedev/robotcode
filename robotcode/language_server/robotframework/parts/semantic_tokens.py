@@ -82,6 +82,7 @@ class RobotSemTokenTypes(Enum):
     KEYWORD_NAME = "keywordName"
     CONTROL_FLOW = "controlFlow"
     ARGUMENT = "argument"
+    EMBEDDED_ARGUMENT = "embeddedArgument"
     VARIABLE = "variable"
     KEYWORD = "keywordCall"
     KEYWORD_INNER = "keywordCallInner"
@@ -400,18 +401,48 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                         1,
                         SemanticTokenTypes.OPERATOR,
                     )
-                # if builtin_library_doc is not None and KeywordMatcher(kw) in builtin_library_doc.keywords:
-                #     doc = await namespace.find_keyword(token.value)
-                #     if (
-                #         doc is not None
-                #         and doc.libname == cls.BUILTIN_MATCHER
-                #         and KeywordMatcher(doc.name) == KeywordMatcher(kw)
-                #     ):
-                #         if not sem_mod:
-                #             sem_mod = set()
-                #         sem_mod.add(RobotSemTokenModifiers.BUILTIN)
 
-                yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset + kw_index, len(kw))
+                if builtin_library_doc is not None and kw in builtin_library_doc.keywords:
+                    doc = await namespace.find_keyword(token.value)
+                    if (
+                        doc is not None
+                        and doc.libname == cls.BUILTIN_MATCHER
+                        and KeywordMatcher(doc.name) == KeywordMatcher(kw)
+                    ):
+                        if not sem_mod:
+                            sem_mod = set()
+                        sem_mod.add(RobotSemTokenModifiers.BUILTIN)
+
+                kw_doc = await namespace.find_keyword(token.value, raise_keyword_error=False)
+                if kw_doc is not None and kw_doc.is_embedded:
+                    if get_robot_version() >= (6, 0):
+                        m = kw_doc.matcher.embedded_arguments.match(kw)
+                    else:
+                        m = kw_doc.matcher.embedded_arguments.name.match(kw)
+
+                    if m and m.lastindex is not None:
+                        start, end = m.span(0)
+                        for i in range(1, m.lastindex + 1):
+                            arg_start, arg_end = m.span(i)
+                            yield SemTokenInfo.from_token(
+                                token, sem_type, sem_mod, col_offset + kw_index + start, arg_start - start
+                            )
+                            yield SemTokenInfo.from_token(
+                                token,
+                                RobotSemTokenTypes.EMBEDDED_ARGUMENT,
+                                sem_mod,
+                                col_offset + kw_index + arg_start,
+                                arg_end - arg_start,
+                            )
+                            start = arg_end + 1
+
+                        if start < end:
+                            yield SemTokenInfo.from_token(
+                                token, sem_type, sem_mod, col_offset + kw_index + start, end - start
+                            )
+
+                else:
+                    yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset + kw_index, len(kw))
             elif token.type == RobotToken.NAME and isinstance(node, (LibraryImport, ResourceImport, VariablesImport)):
                 yield SemTokenInfo.from_token(token, RobotSemTokenTypes.NAMESPACE, sem_mod, col_offset, length)
             elif get_robot_version() >= (5, 0) and token.type == RobotToken.OPTION:
@@ -462,13 +493,12 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     ) -> AsyncGenerator[SemTokenInfo, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
-        if token.type in {*RobotToken.ALLOW_VARIABLES, RobotToken.KEYWORD, ROBOT_KEYWORD_INNER}:
+        if token.type in {*RobotToken.ALLOW_VARIABLES}:
 
             for sub_token in self._tokenize_variables(
                 token,
                 ignore_errors=True,
                 identifiers="$" if token.type == RobotToken.KEYWORD_NAME else "$@&%",
-                extra_types={ROBOT_KEYWORD_INNER},
             ):
                 async for e in self.generate_sem_sub_tokens(
                     namespace, builtin_library_doc, libraries_matchers, resources_matchers, sub_token, node

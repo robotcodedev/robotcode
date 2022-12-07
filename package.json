@@ -131,6 +131,9 @@
           "argument": [
             "string.unquoted.argument.robotframework"
           ],
+          "embeddedArgument": [
+            "string.unquoted.embeddedArgument.robotframework"
+          ],
           "variable": [
             "variable.other.readwrite.robotframework"
           ],
