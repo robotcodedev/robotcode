@@ -4,6 +4,13 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.15.0 (2022-12-07)
+### Feature
+* Simplifying implementation of discovering of tests ([`c8abfae`](https://github.com/d-biehl/robotcode/commit/c8abfae067b3ae98b7330bdacb8027d184df4297))
+
+### Fix
+* Debugger now also supports dictionary expressions ([`f80cbd9`](https://github.com/d-biehl/robotcode/commit/f80cbd9ea9c91ebbe2b4f0cba20cfd6fb2d830a1))
+
 ##  0.14.5
 
 - Improve analysing, find references and renaming of environment variables
