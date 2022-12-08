@@ -80,6 +80,104 @@
         "editor.wordBasedSuggestions": false,
         "editor.semanticHighlighting.enabled": true,
         "editor.inlayHints.enabled": "offUnlessPressed"
+      },
+      "editor.tokenColorCustomizations": {
+        "textMateRules": [
+          {
+            "scope": "comment.line.configuration.robotframework",
+            "settings": {
+              "fontStyle": "bold"
+            }
+          },
+          {
+            "scope": "variable.function.keyword-call.inner.robotframework",
+            "settings": {
+              "fontStyle": "italic"
+            }
+          },
+          {
+            "scope": "string.unquoted.embeddedArgument.robotframework",
+            "settings": {
+              "fontStyle": "italic"
+            }
+          },
+          {
+            "scope": "variable.function.keyword-call.robotframework",
+            "settings": {
+            }
+          },
+          {
+            "scope": "entity.name.function.testcase.name.robotframework",
+            "settings": {
+              "fontStyle": "bold underline"
+            }
+          },
+          {
+            "scope": "entity.name.function.keyword.name.robotframework",
+            "settings": {
+              "fontStyle": "italic underline"
+            }
+          },
+          {
+            "scope": "variable.other.readwrite.robotframework",
+            "settings": {
+            }
+          },
+          {
+            "scope": "keyword.control.import.robotframework",
+            "settings": {
+              "fontStyle": "italic"
+            }
+          },
+          {
+            "scope": "keyword.other.header.setting.robotframework",
+            "settings": {
+              "fontStyle": "bold underline"
+            }
+          },
+          {
+            "scope": "keyword.other.header.variable.robotframework",
+            "settings": {
+              "fontStyle": "bold underline"
+            }
+          },
+          {
+            "scope": "keyword.other.header.testcase.robotframework",
+            "settings": {
+              "fontStyle": "bold underline"
+            }
+          },
+          {
+            "scope": "keyword.other.header.keyword.robotframework",
+            "settings": {
+              "fontStyle": "bold underline"
+            }
+          },
+          {
+            "scope": "keyword.other.header.setting.robotframework",
+            "settings": {
+              "fontStyle": "bold underline"
+            }
+          },
+          {
+            "scope": "keyword.other.header.comment.robotframework",
+            "settings": {
+              "fontStyle": "bold italic underline"
+            }
+          },
+          {
+            "scope": "constant.character.escape.robotframework",
+            "settings": {
+            }
+          }
+        ]
+      },
+      "editor.semanticTokenColorCustomizations": {
+        "rules": {
+          "*.documentation:robotframework": {
+            "fontStyle": "italic"
+          }
+        }
       }
     },
     "semanticTokenModifiers": [
