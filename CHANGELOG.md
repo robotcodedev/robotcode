@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.17.0 (2022-12-08)
+### Feature
+* **vscode:** Add configuration defaults for `editor.tokenColorCustomizations` and `editor.semanticTokenColorCustomizations` ([`ce927d9`](https://github.com/d-biehl/robotcode/commit/ce927d98565be3d481927cea64b8db630cde43d3))
+
 ## v0.16.0 (2022-12-08)
 ### Feature
 * **vscode:** Provide better coloring in the debug console. ([`c5de757`](https://github.com/d-biehl/robotcode/commit/c5de757ad132fb06a07be80d39c512568a18aa08))
