@@ -4,6 +4,18 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.16.0 (2022-12-08)
+### Feature
+* **vscode:** Provide better coloring in the debug console. ([`c5de757`](https://github.com/d-biehl/robotcode/commit/c5de757ad132fb06a07be80d39c512568a18aa08))
+* **robotlangserver:** Highlight dictionary keys and values with different colors ([`9596540`](https://github.com/d-biehl/robotcode/commit/9596540bfdf2e027c1a1963a2c8b3ae81d42485a))
+* **robotlangserver:** Optimization of the analysis of keywords with embedded arguments ([`0995a2e`](https://github.com/d-biehl/robotcode/commit/0995a2ee73561162b823d43c5e8077a8daa28053))
+* **robotlangserver:** Highlight embedded arguments ([`d8b23e4`](https://github.com/d-biehl/robotcode/commit/d8b23e45951e660baea327b3534026da9ee27286))
+* **vscode:** Add new command `Restart Language Server` ([`2b4c9c6`](https://github.com/d-biehl/robotcode/commit/2b4c9c6b90520234e4277364563c37e979c2f409))
+
+### Fix
+* **robotlangserver:** Try to hover, goto, ... for keyword with variables in names ([`ec2c444`](https://github.com/d-biehl/robotcode/commit/ec2c44457d936431e62fcdb9cb5ef7ca941e3e8b))
+* **vscode:** Capitalize commands categories ([`b048ca4`](https://github.com/d-biehl/robotcode/commit/b048ca4a5fc3379ff4107ccfeebcbceac2785dd9))
+
 ## v0.15.1 (2022-12-07)
 
 
