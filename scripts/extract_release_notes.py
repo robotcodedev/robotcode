@@ -9,7 +9,7 @@ def main() -> None:
 
     changelog = Path("CHANGELOG.md").read_text()
 
-    regex = re.compile(rf"^\#\#\s*({version})(?P<text>.*?)^\#\#\s+", re.MULTILINE | re.DOTALL)
+    regex = re.compile(rf"^\#\#\s*v({version})[^\n]*?\n(?P<text>.*?)^\#\#\s+", re.MULTILINE | re.DOTALL)
 
     for match in regex.finditer(changelog):
         print(match.group("text").strip())
