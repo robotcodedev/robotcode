@@ -325,8 +325,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 for g in cls.ESCAPE_REGEX.finditer(token.value):
                     yield SemTokenInfo.from_token(
                         token,
-                        sem_info[0] if g.group("x") is None or g.end() - g.start() == 1 else RobotSemTokenTypes.ESCAPE,
-                        sem_info[1],
+                        sem_type if g.group("x") is None or g.end() - g.start() == 1 else RobotSemTokenTypes.ESCAPE,
+                        sem_mod,
                         col_offset + g.start(),
                         g.end() - g.start(),
                     )
@@ -491,8 +491,25 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         resources_matchers: Dict[KeywordMatcher, ResourceEntry],
     ) -> AsyncGenerator[SemTokenInfo, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Variable
+        from robot.utils.escaping import split_from_equals
 
         if token.type in {RobotToken.ARGUMENT, RobotToken.TESTCASE_NAME, RobotToken.KEYWORD_NAME}:
+
+            if isinstance(node, Variable) and token.type == RobotToken.ARGUMENT and node.name and node.name[0] == "&":
+                name, value = split_from_equals(token.value)
+                if value is not None:
+                    length = len(name)
+
+                    yield SemTokenInfo.from_token(
+                        RobotToken(ROBOT_NAMED_ARGUMENT, name, token.lineno, token.col_offset),
+                        RobotSemTokenTypes.NAMED_ARGUMENT,
+                    )
+                    yield SemTokenInfo.from_token(
+                        RobotToken(ROBOT_OPERATOR, "=", token.lineno, token.col_offset + length),
+                        SemanticTokenTypes.OPERATOR,
+                    )
+                    token = RobotToken(token.type, value, token.lineno, token.col_offset + length + 1, token.error)
 
             for sub_token in self._tokenize_variables(
                 token,
