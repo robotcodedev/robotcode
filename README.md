@@ -195,6 +195,12 @@ put this to the `settings.json`
             }
         },
         {
+            "scope": "string.unquoted.embeddedArgument.robotframework",
+            "settings": {
+                "fontStyle": "italic"
+            }
+        },
+        {
             "scope": "entity.name.function.testcase.name.robotframework",
             "settings": {
                 "fontStyle": "bold underline"
