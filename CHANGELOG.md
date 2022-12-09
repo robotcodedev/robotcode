@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.17.2 (2022-12-09)
+### Fix
+* **vscode:** Enhance tmLanguage to support thing  like variables, assignments,... better ([`ec3fce0`](https://github.com/d-biehl/robotcode/commit/ec3fce062019ba8fa9fcdea2480d6e5be69fccf5))
+
 ## v0.17.1 (2022-12-08)
 
 
