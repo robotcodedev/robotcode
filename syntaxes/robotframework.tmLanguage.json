@@ -205,6 +205,9 @@
   },
   "patterns": [
     {
+      "include": "#comment"
+    },
+    {
       "include": "#header"
     },
     {
@@ -221,9 +224,6 @@
     },
     {
       "include": "#returning_keyword_call"
-    },
-    {
-      "include": "#comment"
     }
   ],
 
