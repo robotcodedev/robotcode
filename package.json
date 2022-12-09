@@ -90,7 +90,7 @@
             }
           },
           {
-            "scope": "variable.function.keyword-call.inner.robotframework",
+            "scope": "entity.name.function.keyword-call.keyword-call.inner.robotframework",
             "settings": {
               "fontStyle": "italic"
             }
@@ -102,20 +102,20 @@
             }
           },
           {
-            "scope": "variable.function.keyword-call.robotframework",
+            "scope": "entity.name.function.keyword-call.keyword-call.robotframework",
             "settings": {
             }
           },
           {
             "scope": "entity.name.function.testcase.name.robotframework",
             "settings": {
-              "fontStyle": "bold underline"
+              "fontStyle": "bold italic"
             }
           },
           {
             "scope": "entity.name.function.keyword.name.robotframework",
             "settings": {
-              "fontStyle": "italic underline"
+              "fontStyle": "bold italic"
             }
           },
           {
@@ -236,13 +236,14 @@
             "variable.other.readwrite.robotframework"
           ],
           "keywordCall": [
-            "variable.function.keyword-call.robotframework"
+            "entity.name.function.keyword-call.robotframework"
+
           ],
           "keywordCallInner": [
-            "variable.function.keyword-call.inner.robotframework"
+            "entity.name.function.keyword-call.inner.robotframework"
           ],
           "nameCall": [
-            "variable.function.keyword-call.robotframework"
+            "entity.name.function.keyword-call.robotframework"
           ],
           "bddPrefix": [
             "keyword.modifier.bdd-prefix.robotframework"

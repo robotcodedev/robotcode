@@ -124,7 +124,7 @@
       "end": "^(?!\\s*\\.\\.\\.)",
       "beginCaptures": {
         "1": {
-          "name": "variable.function.keyword-call.robotframework"
+          "name": "entity.name.function.keyword-call.robotframework"
         }
       },
       "patterns": [
@@ -164,7 +164,7 @@
           ]
         },
         "2": {
-          "name": "variable.function.keyword-call.robotframework"
+          "name": "entity.name.function.keyword-call.robotframework"
         }
       },
       "end": "^(?!\\s*\\.\\.\\.)",
