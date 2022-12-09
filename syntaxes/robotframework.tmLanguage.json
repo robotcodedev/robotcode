@@ -1,40 +1,233 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
 
-  "patterns": [
-    {
-      "match": "(^\\*\\*\\*.*?\\*\\*\\*)|((?<=^\\|)\\s+\\*\\*\\*.*?\\*\\*\\*)",
-      "name": "keyword.other.header.robotframework"
+  "repository": {
+    "header": {
+      "name": "keyword.other.header.robotframework",
+      "match": "(^\\*\\*\\*.*?\\*\\*\\*)|((?<=^\\|)\\s+\\*\\*\\*.*?\\*\\*\\*)"
     },
-    {
+    "variable_setting": {
+      "name": "meta.variable.assign.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
+      "begin": "^(?:([$@&%]\\{)(.+?}*)(\\})( ?=)?)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.operator.robotframework"
+        },
+        "2": {
+          "name": "variable.other.readwrite.robotframework"
+        },
+        "3": {
+          "name": "keyword.operator.robotframework"
+        },
+        "4": {
+          "name": "keyword.operator.robotframework"
+        }
+      },
+      "end": "^(?!\\s*\\.\\.\\.)",
+      "patterns": [
+        {
+          "include": "#escape"
+        },
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#line_continuation"
+        },
+        {
+          "include": "#variables"
+        }
+      ]
+    },
+    "variables": {
+      "name": "meta.variables.robotframework",
+      "match": "(?i)(?:(?:(?<!^)(?<!\\\\)|(?<=\\\\\\\\))([$@&%]\\{)(?:((?:\\d+\\.?\\d*)|(?:0x[/da-f]+)|(?:0o[0-7]+)|(?:0b[01]+))|(true|false|none|null|empty|space|/|:|\\\\n)|((.+?}*)))(\\})(?:(\\[)(?:(\\d+)|(.*?))?(\\]))?)",
+      "captures": {
+        "1": {
+          "name": "keyword.operator.robotframework"
+        },
+        "2": {
+          "name": "constant.numeric.robotframework"
+        },
+        "3": {
+          "name": "constant.language.robotframework"
+        },
+        "4": {
+          "name": "constant.other.robotframework"
+        },
+        "5": {
+          "name": "variable.other.robotframework"
+        },
+        "6": {
+          "name": "keyword.operator.robotframework"
+        },
+        "7": {
+          "name": "keyword.operator.robotframework"
+        },
+        "8": {
+          "name": "constant.numeric.robotframework"
+        },
+        "9": {
+          "name": "meta.variable.as.key.robotframework",
+          "patterns": [
+            {
+              "include": "#variables"
+            }
+          ]
+        },
+        "10": {
+          "name": "keyword.operator.robotframework"
+        }
+      }
+    },
+    "comment": {
+      "name": "comment.robotframework",
+      "match": "(?:^ *|\\t+| {2,})(#.*)$",
+      "captures": {
+        "1": {
+          "name": "comment.line.robotframework"
+        }
+      }
+    },
+    "setting": {
+      "contentName": "string.unquoted.argument.robotframework",
+      "begin": "(?i)^(\\S+( \\S+)*)(?= {2}| ?\\t| ?$)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.settings.robotframework"
+        }
+      },
+      "end": "^(?!\\s*\\.\\.\\.)",
+      "patterns": [
+        {
+          "include": "#escape"
+        },
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#variables"
+        },
+        {
+          "include": "#line_continuation"
+        }
+      ]
+    },
+    "testcase_settings": {
       "match": "\\[.*?\\]",
       "name": "keyword.control.settings.robotframework"
     },
-    {
-      "match": "(\\$\\{.*?\\})|(@\\{.*?\\})|(%\\{.*?\\})|(&\\{.*?\\})",
-      "name": "variable.other.readwrite.robotframework"
-    },
-    {
-      "begin": "((^\\s*)|(\\s\\s)|\\t)(?<!\\\\)#",
-      "end": "$",
-      "name": "comment.line.robotframework"
-    },
-    {
-      "begin": "(^[^ \\t\\*\\n\\|]+)|((?<=^\\|)\\s+[^ \\t\\*\\n\\|]+)",
-      "end": "\\s{2}|\\t|$|\\s+(?=\\|)",
-      "name": "entity.name.function.testcase.name.robotframework"
-    },
-    {
+    "keyword_call": {
+      "contentName": "string.unquoted.argument.robotframework",
       "begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(.*?)(?= {2,}| ?\\t ?| ?$)",
       "end": "^(?!\\s*\\.\\.\\.)",
       "beginCaptures": {
         "1": {
           "name": "variable.function.keyword-call.robotframework"
         }
-      }
+      },
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#variables"
+        },
+        {
+          "include": "#line_continuation"
+        }
+      ]
+    },
+    "returning_keyword_call": {
+      "contentName": "meta.returning.keyword.content.robotframework",
+      "begin": "^(?=(?: {2,}| ?\\t ?)+(?:(?=[$@&])))(?:\\s)",
+      "end": "^(?!\\s*\\.\\.\\.)",
+      "patterns": [
+        {
+          "include": "#returning_keyword"
+        }
+      ],
+      "name": "meta.returning.keyword.call.robotframework"
+    },
+    "returning_keyword": {
+      "contentName": "string.unquoted.argument.robotframework",
+      "name": "meta.returning.keyword.robotframework",
+      "begin": "(?<=\\s)(?=\\s*(?:(?=[$@&])))((?:\\s)*(?:[$&@]{(?:.*?)}(?:\\[.*?\\])?(?: ?=?\\s*))*)(.*?)(?: {2,}| ?\\t ?|$)",
+      "beginCaptures": {
+        "1": {
+          "name": "variable.other.readwrite.robotframework",
+          "patterns": [
+            {
+              "include": "#variable_assignment_from_kw"
+            }
+          ]
+        },
+        "2": {
+          "name": "variable.function.keyword-call.robotframework"
+        }
+      },
+      "end": "^(?!\\s*\\.\\.\\.)",
+      "patterns": [
+        {
+          "include": "#variables"
+        },
+        {
+          "include": "#line_continuation"
+        },
+        {
+          "include": "#comment"
+        }
+      ]
+    },
+    "variable_assignment_from_kw": {
+      "contentName": "meta.variable.assignment.keyword.content.robotframework",
+      "begin": "(?<=^\\s)(?:\\s*)(?=[$@&])",
+      "end": "(?:( ?=)|(?: {2,}| ?\\t+ ?| ?$)(?![#$@& \\n\\r]|\\.\\.\\.)|^(?=\\.\\.\\.)( {2,}| ?\\t+ ?| ?$)(?![#$@&]))",
+      "endCaptures": {
+        "1": {
+          "name": "keyword.operator.robotframework"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#line_continuation"
+        },
+        {
+          "include": "#comment"
+        }
+      ]
+    },
+    "line_continuation": {
+      "match": "^(\\s*\\.\\.\\.)(?: {2,}| ?\\t+| ?$)(?!ELSE)",
+      "name": "keyword.operator.robotframework"
+    }
+  },
+  "patterns": [
+    {
+      "include": "#header"
+    },
+    {
+      "include": "#variable_setting"
+    },
+    {
+      "include": "#setting"
+    },
+    {
+      "include": "#testcase_settings"
+    },
+    {
+      "include": "#keyword_call"
+    },
+    {
+      "include": "#returning_keyword_call"
+    },
+    {
+      "include": "#comment"
     }
   ],
 
+  "uuid": "a7fae509-bc8d-451e-b5fc-a47feb9d2a9e",
   "fileTypes": ["robotframework"],
   "name": "Robot Framework",
   "scopeName": "source.robotframework"
