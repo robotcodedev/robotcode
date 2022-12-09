@@ -19,7 +19,7 @@ from typing import (
 
 from ...common.lsp_types import Position
 from ..diagnostics.entities import VariableDefinition, VariableNotFoundDefinition
-from ..diagnostics.library_doc import KeywordDoc
+from ..diagnostics.library_doc import KeywordDoc, LibraryDoc
 from ..diagnostics.namespace import DEFAULT_BDD_PREFIXES, LibraryEntry, Namespace
 from ..utils.ast_utils import (
     Token,
@@ -580,12 +580,12 @@ class ModelHelperMixin:
             return False
 
     @classmethod
-    async def get_keyword_definition_at_token(cls, namespace: Namespace, token: Token) -> Optional[KeywordDoc]:
-        return await cls.get_keyword_definition_at_line(namespace, token.value, token.lineno)
+    def get_keyword_definition_at_token(cls, library_doc: LibraryDoc, token: Token) -> Optional[KeywordDoc]:
+        return cls.get_keyword_definition_at_line(library_doc, token.value, token.lineno)
 
     @classmethod
-    async def get_keyword_definition_at_line(cls, namespace: Namespace, value: str, line: int) -> Optional[KeywordDoc]:
+    def get_keyword_definition_at_line(cls, library_doc: LibraryDoc, value: str, line: int) -> Optional[KeywordDoc]:
         return next(
-            (k for k in (await namespace.get_library_doc()).keywords.get_all(value) if k.line_no == line),
+            (k for k in library_doc.keywords.get_all(value) if k.line_no == line),
             None,
         )

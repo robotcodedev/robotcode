@@ -110,7 +110,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         line = code_lens.data["line"]
 
         if self.parent.diagnostics.workspace_loaded_event.is_set():
-            kw_doc = await self.get_keyword_definition_at_line(namespace, name, line)
+            kw_doc = self.get_keyword_definition_at_line(await namespace.get_library_doc(), name, line)
 
             if kw_doc is not None and not kw_doc.is_error_handler:
                 if not await self.parent.robot_references.has_cached_keyword_references(

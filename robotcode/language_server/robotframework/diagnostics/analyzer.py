@@ -69,6 +69,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         self._diagnostics: List[Diagnostic] = []
         self._keyword_references: Dict[KeywordDoc, Set[Location]] = defaultdict(set)
         self._variable_references: Dict[VariableDefinition, Set[Location]] = defaultdict(set)
+        self._ignored_lines: Optional[List[int]] = None
 
     async def run(self) -> AnalyzerResult:
         self._diagnostics = []
@@ -280,15 +281,28 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         return result
 
+    @classmethod
+    async def should_ignore(cls, document: Optional[TextDocument], range: Range) -> bool:
+        return cls.__should_ignore(await cls.get_ignored_lines(document) if document is not None else [], range)
+
+    async def _get_ignored_lines(self) -> List[int]:
+        if self._ignored_lines is None:
+            self._ignored_lines = (
+                await Analyzer.get_ignored_lines(self.namespace.document) if self.namespace.document is not None else []
+            )
+
+        return self._ignored_lines
+
+    async def _should_ignore(self, range: Range) -> bool:
+        return self.__should_ignore(await self._get_ignored_lines(), range)
+
     @staticmethod
-    async def should_ignore(document: Optional[TextDocument], range: Range) -> bool:
+    def __should_ignore(lines: List[int], range: Range) -> bool:
         import builtins
 
-        if document is not None:
-            lines = await Analyzer.get_ignored_lines(document)
-            for line_no in builtins.range(range.start.line, range.end.line + 1):
-                if line_no in lines:
-                    return True
+        for line_no in builtins.range(range.start.line, range.end.line + 1):
+            if line_no in lines:
+                return True
 
         return False
 
@@ -305,7 +319,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         data: Optional[Any] = None,
     ) -> None:
 
-        if await self.should_ignore(self.namespace.document, range):
+        if await self._should_ignore(range):
             return
 
         self._diagnostics.append(
@@ -799,7 +813,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         if keyword.name:
             name_token = cast(KeywordName, keyword.header).get_token(RobotToken.KEYWORD_NAME)
-            kw_doc = await self.get_keyword_definition_at_token(self.namespace, name_token)
+            kw_doc = self.get_keyword_definition_at_token(await self.namespace.get_library_doc(), name_token)
 
             if kw_doc is not None and kw_doc not in self._keyword_references:
                 self._keyword_references[kw_doc] = set()

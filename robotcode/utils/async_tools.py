@@ -10,7 +10,7 @@ import time
 import warnings
 import weakref
 from collections import deque
-from concurrent.futures.thread import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from types import TracebackType
 from typing import (
     Any,
@@ -286,8 +286,6 @@ def check_canceled_sync() -> bool:
 
 
 def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyncio.Future[_T]:
-    global __tread_pool_executor
-
     loop = asyncio.get_running_loop()
 
     ctx = contextvars.copy_context()

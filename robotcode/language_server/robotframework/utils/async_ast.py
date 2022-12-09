@@ -1,10 +1,10 @@
 import ast
-from typing import Any, AsyncGenerator, Callable, Optional, Type, cast
+from typing import Any, AsyncGenerator, Callable, Generator, Optional, Type, cast
 
 __all__ = ["iter_fields", "iter_child_nodes", "AsyncVisitor", "walk"]
 
 
-async def iter_fields(node: ast.AST) -> AsyncGenerator[Any, None]:
+def iter_fields(node: ast.AST) -> Generator[Any, None, None]:
     """
     Yield a tuple of ``(fieldname, value)`` for each field in ``node._fields``
     that is present on *node*.
@@ -16,12 +16,12 @@ async def iter_fields(node: ast.AST) -> AsyncGenerator[Any, None]:
             pass
 
 
-async def iter_child_nodes(node: ast.AST) -> AsyncGenerator[ast.AST, None]:
+def iter_child_nodes(node: ast.AST) -> Generator[ast.AST, None, None]:
     """
     Yield all direct child nodes of *node*, that is, all fields that are nodes
     and all items of fields that are lists of nodes.
     """
-    async for _name, field in iter_fields(node):
+    for _name, field in iter_fields(node):
         if isinstance(field, ast.AST):
             yield field
         elif isinstance(field, list):
@@ -36,12 +36,12 @@ async def walk(node: ast.AST) -> AsyncGenerator[ast.AST, None]:
     todo = deque([node])
     while todo:
         node = todo.popleft()
-        todo.extend([e async for e in iter_child_nodes(node)])
+        todo.extend([e for e in iter_child_nodes(node)])
         yield node
 
 
 async def iter_nodes(node: ast.AST) -> AsyncGenerator[ast.AST, None]:
-    async for _name, value in iter_fields(node):
+    for _name, value in iter_fields(node):
         if isinstance(value, list):
             for item in value:
                 if isinstance(item, ast.AST):
@@ -79,10 +79,26 @@ class AsyncVisitor(VisitorFinder):
 
     async def generic_visit(self, node: ast.AST) -> None:
         """Called if no explicit visitor function exists for a node."""
-        async for field, value in iter_fields(node):
+        for _, value in iter_fields(node):
             if isinstance(value, list):
                 for item in value:
                     if isinstance(item, ast.AST):
                         await self.visit(item)
             elif isinstance(value, ast.AST):
                 await self.visit(value)
+
+
+class Visitor(VisitorFinder):
+    def visit(self, node: ast.AST) -> None:
+        visitor = self._find_visitor(type(node)) or self.generic_visit
+        visitor(node)
+
+    def generic_visit(self, node: ast.AST) -> None:
+        """Called if no explicit visitor function exists for a node."""
+        for field, value in iter_fields(node):
+            if isinstance(value, list):
+                for item in value:
+                    if isinstance(item, ast.AST):
+                        self.visit(item)
+            elif isinstance(value, ast.AST):
+                self.visit(value)

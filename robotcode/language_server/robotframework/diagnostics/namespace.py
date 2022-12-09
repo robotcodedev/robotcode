@@ -50,7 +50,7 @@ from ..utils.ast_utils import (
     strip_variable_token,
     tokenize_variables,
 )
-from ..utils.async_ast import AsyncVisitor
+from ..utils.async_ast import Visitor
 from ..utils.match import eq
 from ..utils.variables import BUILTIN_VARIABLES
 from ..utils.version import get_robot_version
@@ -97,20 +97,20 @@ class NameSpaceError(Exception):
     pass
 
 
-class VariablesVisitor(AsyncVisitor):
-    async def get(self, source: str, model: ast.AST) -> List[VariableDefinition]:
+class VariablesVisitor(Visitor):
+    def get(self, source: str, model: ast.AST) -> List[VariableDefinition]:
         self._results: List[VariableDefinition] = []
         self.source = source
-        await self.visit(model)
+        self.visit(model)
         return self._results
 
-    async def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.model.blocks import VariableSection
 
         if isinstance(node, VariableSection):
-            await self.generic_visit(node)
+            self.generic_visit(node)
 
-    async def visit_Variable(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_Variable(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Variable
         from robot.variables import search_variable
@@ -152,12 +152,12 @@ class VariablesVisitor(AsyncVisitor):
             )
 
 
-class BlockVariableVisitor(AsyncVisitor):
+class BlockVariableVisitor(Visitor):
     def __init__(
-        self, namespace: Namespace, source: str, position: Optional[Position] = None, in_args: bool = True
+        self, library_doc: LibraryDoc, source: str, position: Optional[Position] = None, in_args: bool = True
     ) -> None:
         super().__init__()
-        self.namespace = namespace
+        self.library_doc = library_doc
         self.source = source
         self.position = position
         self.in_args = in_args
@@ -165,25 +165,25 @@ class BlockVariableVisitor(AsyncVisitor):
         self._results: Dict[str, VariableDefinition] = {}
         self.current_kw_doc: Optional[KeywordDoc] = None
 
-    async def get(self, model: ast.AST) -> List[VariableDefinition]:
+    def get(self, model: ast.AST) -> List[VariableDefinition]:
 
         self._results = {}
 
-        await self.visit(model)
+        self.visit(model)
 
         return list(self._results.values())
 
-    async def visit(self, node: ast.AST) -> None:
+    def visit(self, node: ast.AST) -> None:
         if self.position is None or self.position >= range_from_node(node).start:
-            return await super().visit(node)
+            return super().visit(node)
 
-    async def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
         try:
-            await self.generic_visit(node)
+            self.generic_visit(node)
         finally:
             self.current_kw_doc = None
 
-    async def visit_KeywordName(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_KeywordName(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordName
         from robot.variables.search import search_variable
@@ -194,7 +194,8 @@ class BlockVariableVisitor(AsyncVisitor):
         name_token = cast(Token, n.get_token(RobotToken.KEYWORD_NAME))
 
         if name_token is not None and name_token.value:
-            keyword = await ModelHelperMixin.get_keyword_definition_at_token(self.namespace, name_token)
+
+            keyword = ModelHelperMixin.get_keyword_definition_at_token(self.library_doc, name_token)
             self.current_kw_doc = keyword
 
             for variable_token in filter(
@@ -236,7 +237,7 @@ class BlockVariableVisitor(AsyncVisitor):
             None,
         )
 
-    async def visit_Arguments(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_Arguments(self, node: ast.AST) -> None:  # noqa: N802
         from robot.errors import VariableError
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Arguments
@@ -280,7 +281,7 @@ class BlockVariableVisitor(AsyncVisitor):
         if self.current_kw_doc is not None:
             self.current_kw_doc.argument_definitions = argument_definitions
 
-    async def visit_ExceptHeader(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_ExceptHeader(self, node: ast.AST) -> None:  # noqa: N802
         from robot.errors import VariableError
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import ExceptHeader
@@ -306,7 +307,7 @@ class BlockVariableVisitor(AsyncVisitor):
             except VariableError:
                 pass
 
-    async def visit_KeywordCall(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_KeywordCall(self, node: ast.AST) -> None:  # noqa: N802
         from robot.errors import VariableError
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordCall
@@ -341,7 +342,7 @@ class BlockVariableVisitor(AsyncVisitor):
             except VariableError:
                 pass
 
-    async def visit_InlineIfHeader(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_InlineIfHeader(self, node: ast.AST) -> None:  # noqa: N802
         from robot.errors import VariableError
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import InlineIfHeader
@@ -374,7 +375,7 @@ class BlockVariableVisitor(AsyncVisitor):
             except VariableError:
                 pass
 
-    async def visit_ForHeader(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_ForHeader(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import ForHeader
 
@@ -394,20 +395,20 @@ class BlockVariableVisitor(AsyncVisitor):
                 )
 
 
-class ImportVisitor(AsyncVisitor):
-    async def get(self, source: str, model: ast.AST) -> List[Import]:
+class ImportVisitor(Visitor):
+    def get(self, source: str, model: ast.AST) -> List[Import]:
         self._results: List[Import] = []
         self.source = source
-        await self.visit(model)
+        self.visit(model)
         return self._results
 
-    async def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.model.blocks import SettingSection
 
         if isinstance(node, SettingSection):
-            await self.generic_visit(node)
+            self.generic_visit(node)
 
-    async def visit_LibraryImport(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_LibraryImport(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import LibraryImport as RobotLibraryImport
 
@@ -440,7 +441,7 @@ class ImportVisitor(AsyncVisitor):
             )
         )
 
-    async def visit_ResourceImport(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_ResourceImport(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import ResourceImport as RobotResourceImport
 
@@ -470,7 +471,7 @@ class ImportVisitor(AsyncVisitor):
             )
         )
 
-    async def visit_VariablesImport(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_VariablesImport(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import (
             VariablesImport as RobotVariablesImport,
@@ -864,7 +865,7 @@ class Namespace:
     @_logger.call
     async def get_imports(self) -> List[Import]:
         if self._imports is None:
-            self._imports = await ImportVisitor().get(self.source, self.model)
+            self._imports = ImportVisitor().get(self.source, self.model)
 
         return self._imports
 
@@ -872,7 +873,7 @@ class Namespace:
     async def get_own_variables(self) -> List[VariableDefinition]:
         async with self._own_variables_lock:
             if self._own_variables is None:
-                self._own_variables = await VariablesVisitor().get(self.source, self.model)
+                self._own_variables = VariablesVisitor().get(self.source, self.model)
 
             return self._own_variables
 
@@ -927,8 +928,8 @@ class Namespace:
         for var in chain(
             *[
                 (
-                    await BlockVariableVisitor(
-                        self,
+                    BlockVariableVisitor(
+                        await self.get_library_doc(),
                         self.source,
                         position,
                         isinstance(test_or_keyword_nodes[-1], Arguments) if nodes else False,
