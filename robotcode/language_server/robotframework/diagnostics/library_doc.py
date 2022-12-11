@@ -518,7 +518,7 @@ class KeywordStore:
     @property
     def _matchers(self) -> Dict[KeywordMatcher, KeywordDoc]:
         if not hasattr(self, "__matchers"):
-            self.__matchers = {KeywordMatcher(v.name): v for v in self.keywords}
+            self.__matchers = {v.matcher: v for v in self.keywords}
         return self.__matchers
 
     def __getitem__(self, key: str) -> "KeywordDoc":
@@ -562,6 +562,9 @@ class KeywordStore:
 
     def values(self) -> AbstractSet[KeywordDoc]:
         return {v for v in self.keywords}
+
+    def __iter__(self) -> Iterator[KeywordDoc]:
+        return self.keywords.__iter__()
 
     def get(self, key: str, default: Optional[KeywordDoc] = None) -> Optional[KeywordDoc]:
         try:

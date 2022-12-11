@@ -589,8 +589,9 @@ class Namespace:
         self._keyword_references: Dict[KeywordDoc, Set[Location]] = {}
         self._variable_references: Dict[VariableDefinition, Set[Location]] = {}
 
+        self._imported_keywords: Optional[List[KeywordDoc]] = None
+        self._imported_keywords_lock = Lock()
         self._keywords: Optional[List[KeywordDoc]] = None
-
         self._keywords_lock = Lock()
 
         # TODO: how to get the search order from model
@@ -673,6 +674,7 @@ class Namespace:
         self._imports = None
         self._import_entries = OrderedDict()
         self._own_variables = None
+        self._imported_keywords = None
         self._keywords = None
         self._library_doc = None
         self._analyzed = False
@@ -766,6 +768,7 @@ class Namespace:
         variables: OrderedDict[str, VariablesEntry] = OrderedDict()
         diagnostics: List[Diagnostic] = []
         import_entries: OrderedDict[Import, LibraryEntry] = OrderedDict()
+        imported_keywords: Optional[List[KeywordDoc]] = None
 
     @_logger.call(condition=lambda self: not self._initialized)
     async def ensure_initialized(self) -> bool:
@@ -812,8 +815,10 @@ class Namespace:
                         self._variables = data_entry.variables.copy()
                         self._diagnostics = data_entry.diagnostics.copy()
                         self._import_entries = data_entry.import_entries.copy()
+                        self._imported_keywords = (
+                            data_entry.imported_keywords.copy() if data_entry.imported_keywords else None
+                        )
                     else:
-
                         variables = await self.get_resolvable_variables()
 
                         await self._import_default_libraries(variables)
@@ -830,6 +835,7 @@ class Namespace:
                                     self._variables.copy(),
                                     self._diagnostics.copy(),
                                     self._import_entries.copy(),
+                                    self._imported_keywords.copy() if self._imported_keywords else None,
                                 ),
                             )
 
@@ -1475,6 +1481,18 @@ class Namespace:
             None,
         )
 
+    async def get_imported_keywords(self) -> List[KeywordDoc]:
+        async with self._imported_keywords_lock:
+            if self._imported_keywords is None:
+                self._imported_keywords = list(
+                    itertools.chain(
+                        *(e.library_doc.keywords for e in self._libraries.values()),
+                        *(e.library_doc.keywords for e in self._resources.values()),
+                    )
+                )
+
+            return self._imported_keywords
+
     @_logger.call
     async def iter_all_keywords(self) -> AsyncGenerator[KeywordDoc, None]:
         import itertools
@@ -1482,9 +1500,8 @@ class Namespace:
         libdoc = await self.get_library_doc()
 
         for doc in itertools.chain(
-            *(e.library_doc.keywords.values() for e in self._libraries.values()),
-            *(e.library_doc.keywords.values() for e in self._resources.values()),
-            libdoc.keywords.values() if libdoc is not None else [],
+            await self.get_imported_keywords(),
+            libdoc.keywords if libdoc is not None else [],
         ):
             yield doc
 
@@ -1504,10 +1521,13 @@ class Namespace:
 
                     async for doc in self.iter_all_keywords():
                         i += 1
-                        result[KeywordMatcher(doc.name)] = doc
+                        result[doc.matcher] = doc
 
                     self._keywords = list(result.values())
-                finally:
+                except BaseException:
+                    self._logger.debug("Canceled collecting keywords ")
+                    raise
+                else:
                     self._logger.debug(
                         lambda: f"end collecting {len(self._keywords) if self._keywords else 0}"
                         f" keywords in {time.monotonic()-current_time}s analyze {i} keywords"

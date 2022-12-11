@@ -403,11 +403,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
                 if builtin_library_doc is not None and kw in builtin_library_doc.keywords:
                     doc = await namespace.find_keyword(token.value)
-                    if (
-                        doc is not None
-                        and doc.libname == cls.BUILTIN_MATCHER
-                        and KeywordMatcher(doc.name) == KeywordMatcher(kw)
-                    ):
+                    if doc is not None and doc.libname == cls.BUILTIN_MATCHER and doc.matcher == kw:
                         if not sem_mod:
                             sem_mod = set()
                         sem_mod.add(RobotSemTokenModifiers.BUILTIN)
