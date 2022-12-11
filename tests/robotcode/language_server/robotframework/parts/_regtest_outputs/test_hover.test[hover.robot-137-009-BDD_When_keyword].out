@@ -1,0 +1,16 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 9
+  line: 137
+  name: BDD When keyword
+result: !!python/object:robotcode.language_server.common.lsp_types.Hover
+  contents: !!python/object:robotcode.language_server.common.lsp_types.MarkupContent
+    kind: !!python/object/apply:robotcode.language_server.common.lsp_types.MarkupKind
+    - markdown
+    value: '### Keyword *Log*'
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 12
+      line: 137
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 9
+      line: 137

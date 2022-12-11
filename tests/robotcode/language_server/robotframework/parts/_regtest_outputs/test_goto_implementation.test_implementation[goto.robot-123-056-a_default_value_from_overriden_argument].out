@@ -1,0 +1,28 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 56
+  line: 123
+  name: a default value from overriden argument
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.LocationLink
+  origin_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 61
+      line: 123
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 55
+      line: 123
+  target_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 37
+      line: 123
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 28
+      line: 123
+  target_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 36
+      line: 123
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 30
+      line: 123
+  target_uri: goto.robot

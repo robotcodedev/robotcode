@@ -1,0 +1,16 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 53
+  line: 12
+  name: resource import by path name
+result: !!python/object:robotcode.language_server.common.lsp_types.Hover
+  contents: !!python/object:robotcode.language_server.common.lsp_types.MarkupContent
+    kind: !!python/object/apply:robotcode.language_server.common.lsp_types.MarkupKind
+    - markdown
+    value: '### Resource *firstresource*'
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 63
+      line: 12
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 18
+      line: 12

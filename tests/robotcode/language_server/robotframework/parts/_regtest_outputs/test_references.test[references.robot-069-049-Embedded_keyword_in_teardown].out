@@ -1,0 +1,41 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 49
+  line: 69
+  name: Embedded keyword in teardown
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.Location
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 44
+      line: 67
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 15
+      line: 67
+  uri: tests/references.robot
+- !!python/object:robotcode.language_server.common.lsp_types.Location
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 50
+      line: 69
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 18
+      line: 69
+  uri: tests/references.robot
+- !!python/object:robotcode.language_server.common.lsp_types.Location
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 34
+      line: 72
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 4
+      line: 72
+  uri: tests/references.robot
+- !!python/object:robotcode.language_server.common.lsp_types.Location
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 20
+      line: 95
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 95
+  uri: tests/references.robot

@@ -1,0 +1,33 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 18
+  line: 2
+  name: Variable in library import path
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+  kind: &id001 !!python/object/apply:robotcode.language_server.common.lsp_types.DocumentHighlightKind
+  - 1
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 24
+      line: 2
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 18
+      line: 2
+- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+  kind: *id001
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 24
+      line: 4
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 18
+      line: 4
+- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+  kind: *id001
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 24
+      line: 6
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 18
+      line: 6

@@ -1,0 +1,16 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 43
+  line: 225
+  name: a default value
+result: !!python/object:robotcode.language_server.common.lsp_types.Hover
+  contents: !!python/object:robotcode.language_server.common.lsp_types.MarkupContent
+    kind: !!python/object/apply:robotcode.language_server.common.lsp_types.MarkupKind
+    - markdown
+    value: (variable) ${A VAR}
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 44
+      line: 225
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 39
+      line: 225

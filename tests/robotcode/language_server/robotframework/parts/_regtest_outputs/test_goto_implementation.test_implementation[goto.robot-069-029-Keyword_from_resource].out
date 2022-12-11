@@ -1,0 +1,28 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 29
+  line: 69
+  name: Keyword from resource
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.LocationLink
+  origin_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 30
+      line: 69
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 4
+      line: 69
+  target_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 26
+      line: 4
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 4
+  target_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 26
+      line: 4
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 4
+  target_uri: firstresource.resource

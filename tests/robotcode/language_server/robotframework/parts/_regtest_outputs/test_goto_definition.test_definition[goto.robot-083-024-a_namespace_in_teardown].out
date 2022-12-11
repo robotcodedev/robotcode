@@ -1,0 +1,22 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 24
+  line: 83
+  name: a namespace in teardown
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.LocationLink
+  origin_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 25
+      line: 83
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 18
+      line: 83
+  target_range: &id001 !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 0
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 0
+  target_selection_range: *id001
+  target_uri: BuiltIn.py

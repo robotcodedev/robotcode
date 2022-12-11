@@ -1,0 +1,16 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 19
+  line: 75
+  name: Command line variable
+result: !!python/object:robotcode.language_server.common.lsp_types.Hover
+  contents: !!python/object:robotcode.language_server.common.lsp_types.MarkupContent
+    kind: !!python/object/apply:robotcode.language_server.common.lsp_types.MarkupKind
+    - markdown
+    value: (command line variable) ${CMD_VAR}
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 20
+      line: 75
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 13
+      line: 75

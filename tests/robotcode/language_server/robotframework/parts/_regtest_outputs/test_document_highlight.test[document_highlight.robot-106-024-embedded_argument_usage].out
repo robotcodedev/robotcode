@@ -1,0 +1,24 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 24
+  line: 106
+  name: embedded argument usage
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+  kind: &id001 !!python/object/apply:robotcode.language_server.common.lsp_types.DocumentHighlightKind
+  - 1
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 12
+      line: 104
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 6
+      line: 104
+- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+  kind: *id001
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 25
+      line: 106
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 19
+      line: 106

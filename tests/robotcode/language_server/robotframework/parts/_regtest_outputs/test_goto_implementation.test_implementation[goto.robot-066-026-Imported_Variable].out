@@ -1,0 +1,28 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 26
+  line: 66
+  name: Imported Variable
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.LocationLink
+  origin_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 27
+      line: 66
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 13
+      line: 66
+  target_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 0
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 0
+  target_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 0
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 0
+  target_uri: myvariables.py

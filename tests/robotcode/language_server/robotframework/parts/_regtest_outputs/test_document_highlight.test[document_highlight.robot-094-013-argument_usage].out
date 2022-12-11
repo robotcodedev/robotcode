@@ -1,0 +1,51 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 13
+  line: 94
+  name: argument usage
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+  kind: &id001 !!python/object/apply:robotcode.language_server.common.lsp_types.DocumentHighlightKind
+  - 1
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 30
+      line: 88
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 29
+      line: 88
+- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+  kind: *id001
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 48
+      line: 88
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 47
+      line: 88
+- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+  kind: *id001
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 14
+      line: 94
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 13
+      line: 94
+- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+  kind: *id001
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 52
+      line: 99
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 51
+      line: 99
+- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+  kind: *id001
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 48
+      line: 101
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 47
+      line: 101

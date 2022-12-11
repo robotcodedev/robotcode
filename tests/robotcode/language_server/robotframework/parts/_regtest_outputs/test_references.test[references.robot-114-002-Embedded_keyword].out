@@ -1,0 +1,14 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 2
+  line: 114
+  name: Embedded keyword
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.Location
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 33
+      line: 114
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 114
+  uri: tests/references.robot

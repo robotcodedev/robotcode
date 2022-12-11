@@ -1,0 +1,28 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 6
+  line: 22
+  name: List Var declaration
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.LocationLink
+  origin_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 10
+      line: 22
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 2
+      line: 22
+  target_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 26
+      line: 22
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 22
+  target_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 10
+      line: 22
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 2
+      line: 22
+  target_uri: goto.robot

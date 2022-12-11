@@ -2,7 +2,8 @@ import dataclasses
 from pathlib import Path
 
 import pytest
-from pytest_regressions.data_regression import DataRegressionFixture
+import yaml
+from pytest_regtest import RegTestFixture
 
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
@@ -12,7 +13,7 @@ from robotcode.language_server.robotframework.protocol import (
 @pytest.mark.usefixtures("protocol")
 @pytest.mark.asyncio
 async def test_workspace_discovery(
-    data_regression: DataRegressionFixture,
+    regtest: RegTestFixture,
     protocol: RobotLanguageServerProtocol,
 ) -> None:
     from robotcode.language_server.robotframework.parts.discovering import TestItem
@@ -35,10 +36,15 @@ async def test_workspace_discovery(
         )
 
     result = await protocol.robot_discovering.get_tests_from_workspace(Path(Path(__file__).parent, "data").as_uri())
-    data_regression.check(
-        {
-            "result": sorted((split(v) for v in result), key=lambda v: (v.uri, v.range.start, v.range.end))
-            if result
-            else result,
-        }
+    regtest.write(
+        yaml.dump(
+            {
+                "result": sorted(
+                    (split(v) for v in result),
+                    key=lambda v: (v.uri, v.range.start, v.range.end) if v.range is not None else (v.uri, None, None),
+                )
+                if result
+                else result,
+            }
+        )
     )

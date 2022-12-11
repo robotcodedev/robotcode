@@ -1,0 +1,5 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 3
+  line: 78
+  name: Spaces
+result: null

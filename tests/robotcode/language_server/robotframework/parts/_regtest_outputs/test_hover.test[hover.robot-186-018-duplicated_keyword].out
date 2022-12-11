@@ -1,0 +1,5 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 18
+  line: 186
+  name: duplicated keyword
+result: null

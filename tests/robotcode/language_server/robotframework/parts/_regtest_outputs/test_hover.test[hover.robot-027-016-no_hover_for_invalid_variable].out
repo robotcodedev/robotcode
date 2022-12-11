@@ -1,0 +1,5 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 16
+  line: 27
+  name: no hover for invalid variable
+result: null

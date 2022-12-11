@@ -1,0 +1,75 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 1
+  line: 38
+  name: Comment Start
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.FoldingRange
+  collapsed_text: null
+  end_character: 1
+  end_line: 4
+  kind: section
+  start_character: 0
+  start_line: 0
+- !!python/object:robotcode.language_server.common.lsp_types.FoldingRange
+  collapsed_text: null
+  end_character: 1
+  end_line: 30
+  kind: section
+  start_character: 0
+  start_line: 5
+- !!python/object:robotcode.language_server.common.lsp_types.FoldingRange
+  collapsed_text: null
+  end_character: 1
+  end_line: 30
+  kind: testcase
+  start_character: 0
+  start_line: 8
+- !!python/object:robotcode.language_server.common.lsp_types.FoldingRange
+  collapsed_text: null
+  end_character: 8
+  end_line: 28
+  kind: for
+  start_character: 0
+  start_line: 12
+- !!python/object:robotcode.language_server.common.lsp_types.FoldingRange
+  collapsed_text: null
+  end_character: 12
+  end_line: 23
+  kind: if
+  start_character: 0
+  start_line: 14
+- !!python/object:robotcode.language_server.common.lsp_types.FoldingRange
+  collapsed_text: null
+  end_character: 35
+  end_line: 22
+  kind: if
+  start_character: 0
+  start_line: 17
+- !!python/object:robotcode.language_server.common.lsp_types.FoldingRange
+  collapsed_text: null
+  end_character: 35
+  end_line: 22
+  kind: if
+  start_character: 0
+  start_line: 20
+- !!python/object:robotcode.language_server.common.lsp_types.FoldingRange
+  collapsed_text: null
+  end_character: 1
+  end_line: 37
+  kind: section
+  start_character: 0
+  start_line: 31
+- !!python/object:robotcode.language_server.common.lsp_types.FoldingRange
+  collapsed_text: null
+  end_character: 1
+  end_line: 37
+  kind: keyword
+  start_character: 0
+  start_line: 34
+- !!python/object:robotcode.language_server.common.lsp_types.FoldingRange
+  collapsed_text: null
+  end_character: 15
+  end_line: 45
+  kind: comment
+  start_character: 0
+  start_line: 38

@@ -2,7 +2,8 @@ from pathlib import Path
 from typing import Optional
 
 import pytest
-from pytest_regressions.data_regression import DataRegressionFixture
+import yaml
+from pytest_regtest import RegTestFixture
 
 from robotcode.language_server.common.lsp_types import Hover, MarkupContent, Position
 from robotcode.language_server.common.text_document import TextDocument
@@ -27,7 +28,7 @@ from ..tools import (
 @pytest.mark.usefixtures("protocol")
 @pytest.mark.asyncio
 async def test(
-    data_regression: DataRegressionFixture,
+    regtest: RegTestFixture,
     protocol: RobotLanguageServerProtocol,
     test_document: TextDocument,
     data: GeneratedTestData,
@@ -46,4 +47,4 @@ async def test(
             )
         return hover
 
-    data_regression.check({"data": data, "result": split(result)})
+    regtest.write(yaml.dump({"data": data, "result": split(result)}))

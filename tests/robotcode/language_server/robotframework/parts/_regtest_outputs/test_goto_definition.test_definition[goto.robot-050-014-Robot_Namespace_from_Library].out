@@ -1,0 +1,22 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 14
+  line: 50
+  name: Robot Namespace from Library
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.LocationLink
+  origin_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 15
+      line: 50
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 4
+      line: 50
+  target_range: &id001 !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 29
+      line: 1
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 18
+      line: 1
+  target_selection_range: *id001
+  target_uri: goto.robot

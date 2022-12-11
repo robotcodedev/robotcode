@@ -1,0 +1,24 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 17
+  line: 74
+  name: argument usage
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+  kind: &id001 !!python/object/apply:robotcode.language_server.common.lsp_types.DocumentHighlightKind
+  - 1
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 26
+      line: 69
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 21
+      line: 69
+- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+  kind: *id001
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 18
+      line: 74
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 13
+      line: 74

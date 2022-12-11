@@ -1,0 +1,5 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 14
+  line: 86
+  name: Ambiguous Embedded keyword with regex a to z
+result: null

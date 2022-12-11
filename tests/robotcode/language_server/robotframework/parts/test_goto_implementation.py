@@ -2,7 +2,8 @@ from pathlib import Path
 from typing import List, Union, cast
 
 import pytest
-from pytest_regressions.data_regression import DataRegressionFixture
+import yaml
+from pytest_regtest import RegTestFixture
 
 from robotcode.language_server.common.lsp_types import Location, LocationLink, Position
 from robotcode.language_server.common.text_document import TextDocument
@@ -51,7 +52,7 @@ def split(
 @pytest.mark.usefixtures("protocol")
 @pytest.mark.asyncio
 async def test_implementation(
-    data_regression: DataRegressionFixture,
+    regtest: RegTestFixture,
     protocol: RobotLanguageServerProtocol,
     test_document: TextDocument,
     data: GeneratedTestData,
@@ -63,4 +64,4 @@ async def test_implementation(
         Position(line=data.line, character=data.character),
     )
 
-    data_regression.check({"data": data, "result": split(result)})
+    regtest.write(yaml.dump({"data": data, "result": split(result)}))

@@ -1,0 +1,5 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 54
+  line: 123
+  name: a default value from overriden argument
+result: null

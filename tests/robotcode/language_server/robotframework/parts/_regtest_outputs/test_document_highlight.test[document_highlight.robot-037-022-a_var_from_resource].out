@@ -1,0 +1,15 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 22
+  line: 37
+  name: a var from resource
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+  kind: !!python/object/apply:robotcode.language_server.common.lsp_types.DocumentHighlightKind
+  - 1
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 31
+      line: 37
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 13
+      line: 37

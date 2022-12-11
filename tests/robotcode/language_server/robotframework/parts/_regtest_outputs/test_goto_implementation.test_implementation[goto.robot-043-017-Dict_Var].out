@@ -1,0 +1,28 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 17
+  line: 43
+  name: Dict Var
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.LocationLink
+  origin_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 21
+      line: 43
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 13
+      line: 43
+  target_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 34
+      line: 24
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 24
+  target_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 10
+      line: 24
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 2
+      line: 24
+  target_uri: goto.robot

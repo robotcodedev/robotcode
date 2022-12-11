@@ -1,0 +1,5 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 21
+  line: 130
+  name: BDD Then in Teardown
+result: null

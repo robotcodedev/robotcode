@@ -1,0 +1,32 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 44
+  line: 13
+  name: Variable in library params
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.Location
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 45
+      line: 13
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 38
+      line: 13
+  uri: tests/references.robot
+- !!python/object:robotcode.language_server.common.lsp_types.Location
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 9
+      line: 24
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 2
+      line: 24
+  uri: tests/references.robot
+- !!python/object:robotcode.language_server.common.lsp_types.Location
+  range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 44
+      line: 62
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 37
+      line: 62
+  uri: tests/references.robot

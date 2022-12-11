@@ -1,0 +1,28 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 42
+  line: 27
+  name: var usage
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.LocationLink
+  origin_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 49
+      line: 27
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 42
+      line: 27
+  target_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 34
+      line: 24
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 24
+  target_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 10
+      line: 24
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 2
+      line: 24
+  target_uri: goto.robot

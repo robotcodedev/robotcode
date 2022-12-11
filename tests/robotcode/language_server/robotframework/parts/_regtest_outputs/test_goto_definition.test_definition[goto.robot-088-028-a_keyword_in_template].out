@@ -1,0 +1,28 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 28
+  line: 88
+  name: a keyword in template
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.LocationLink
+  origin_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 29
+      line: 88
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 26
+      line: 88
+  target_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 2862
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 2861
+  target_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 2862
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 2861
+  target_uri: BuiltIn.py

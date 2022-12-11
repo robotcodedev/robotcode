@@ -1,0 +1,5 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 12
+  line: 70
+  name: FOR loop variable declaration
+result: null

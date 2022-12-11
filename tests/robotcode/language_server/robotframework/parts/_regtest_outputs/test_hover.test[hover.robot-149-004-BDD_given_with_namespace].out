@@ -1,0 +1,5 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 4
+  line: 149
+  name: BDD given with namespace
+result: null

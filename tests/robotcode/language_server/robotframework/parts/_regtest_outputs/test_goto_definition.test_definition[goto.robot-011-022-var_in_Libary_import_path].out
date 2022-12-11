@@ -1,0 +1,28 @@
+data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+  character: 22
+  line: 11
+  name: var in Libary import path
+result:
+- !!python/object:robotcode.language_server.common.lsp_types.LocationLink
+  origin_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 23
+      line: 11
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 20
+      line: 11
+  target_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 11
+      line: 20
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 0
+      line: 20
+  target_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
+    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 5
+      line: 20
+    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      character: 2
+      line: 20
+  target_uri: goto.robot

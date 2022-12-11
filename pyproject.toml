@@ -72,12 +72,12 @@ python-semantic-release = "*"
 
 [tool.poetry.group.test.dependencies]
 robotremoteserver = "*"
-pytest-regressions = "*"
 pytest-html = "*"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
 coverage = "*"
+pytest-regtest = "^1.5.0"
 
 [tool.poetry.group.toolsupport.dependencies]
 PyYAML = "*"
@@ -180,5 +180,6 @@ module = [
   "debugpy.*",
   "robotidy.*",
   "robocop.*",
+  "pytest_regtest.*"
 ]
 ignore_missing_imports = true
