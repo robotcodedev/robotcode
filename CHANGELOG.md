@@ -4,6 +4,15 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.17.3 (2022-12-11)
+### Fix
+* **vscode:** Highlightning comments in text mate mode ([`1c1cb9a`](https://github.com/d-biehl/robotcode/commit/1c1cb9a22a02c89dd604418d883b570a68d199b1))
+* **vscode:** Some tweaks for better highlightning ([`40b7512`](https://github.com/d-biehl/robotcode/commit/40b751223ea77b0c978f9252b3e946c02f9437d6))
+
+### Performance
+* **robotlangserver:** Speedup keyword completion ([`6bcaa22`](https://github.com/d-biehl/robotcode/commit/6bcaa22ab492bad7882f5585ae852be87384f497))
+* **robotlangserver:** Refactor some unnecessary async/await methods ([`0f8c134`](https://github.com/d-biehl/robotcode/commit/0f8c1349f9bcdeb817f28247afc11c076c9747d0))
+
 ## v0.17.2 (2022-12-09)
 ### Fix
 * **vscode:** Enhance tmLanguage to support thing  like variables, assignments,... better ([`ec3fce0`](https://github.com/d-biehl/robotcode/commit/ec3fce062019ba8fa9fcdea2480d6e5be69fccf5))
