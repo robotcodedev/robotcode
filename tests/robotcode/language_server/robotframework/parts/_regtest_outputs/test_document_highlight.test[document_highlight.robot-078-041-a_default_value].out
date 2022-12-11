@@ -1,78 +1,77 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 41
   line: 78
   name: a default value
 result:
-- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
-  kind: &id001 !!python/object/apply:robotcode.language_server.common.lsp_types.DocumentHighlightKind
-  - 1
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !DocumentHighlight
+  kind: &id001 !DocumentHighlightKind 'TEXT'
+  range:
+    end:
       character: 7
       line: 18
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 2
       line: 18
-- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+- !DocumentHighlight
   kind: *id001
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 43
       line: 26
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 38
       line: 26
-- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+- !DocumentHighlight
   kind: *id001
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 54
       line: 28
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 49
       line: 28
-- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+- !DocumentHighlight
   kind: *id001
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 21
       line: 30
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 16
       line: 30
-- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+- !DocumentHighlight
   kind: *id001
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 32
       line: 32
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 27
       line: 32
-- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+- !DocumentHighlight
   kind: *id001
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 40
       line: 34
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 35
       line: 34
-- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+- !DocumentHighlight
   kind: *id001
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 35
       line: 69
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 30
       line: 69
-- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+- !DocumentHighlight
   kind: *id001
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 44
       line: 78
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 39
       line: 78

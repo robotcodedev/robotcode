@@ -1,32 +1,32 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 13
   line: 41
   name: a var from resource
 result:
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 20
       line: 1
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 2
       line: 1
   uri: resources/firstresource.resource
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 31
       line: 37
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 13
       line: 37
   uri: tests/document_highlight.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 31
       line: 41
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 13
       line: 41
   uri: tests/references.robot

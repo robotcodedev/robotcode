@@ -1,41 +1,41 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 37
   line: 3
   name: a custom library with path
 result:
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 47
       line: 2
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 16
       line: 2
   uri: tests/document_highlight.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 49
       line: 4
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 18
       line: 4
   uri: tests/goto.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 49
       line: 6
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 18
       line: 6
   uri: tests/hover.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 47
       line: 3
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 16
       line: 3
   uri: tests/references.robot

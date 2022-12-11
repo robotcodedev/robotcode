@@ -1,4 +1,4 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 4
   line: 88
   name: Invalid Embedded keyword with regex a to z ignored

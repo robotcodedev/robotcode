@@ -1,41 +1,41 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 8
   line: 60
   name: Keyword reassignment with equals sign
 result:
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 12
       line: 57
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 6
       line: 57
   uri: tests/references.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 31
       line: 59
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 25
       line: 59
   uri: tests/references.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 12
       line: 60
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 6
       line: 60
   uri: tests/references.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 31
       line: 62
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 25
       line: 62
   uri: tests/references.robot

@@ -1,4 +1,4 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 21
   line: 180
   name: duplicated keyword

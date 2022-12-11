@@ -1,4 +1,4 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 18
   line: 130
   name: BDD Then in Teardown

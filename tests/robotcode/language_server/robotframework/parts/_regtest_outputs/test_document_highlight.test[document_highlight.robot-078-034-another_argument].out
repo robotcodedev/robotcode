@@ -1,24 +1,23 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 34
   line: 78
   name: another argument
 result:
-- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
-  kind: &id001 !!python/object/apply:robotcode.language_server.common.lsp_types.DocumentHighlightKind
-  - 1
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !DocumentHighlight
+  kind: &id001 !DocumentHighlightKind 'TEXT'
+  range:
+    end:
       character: 35
       line: 78
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 30
       line: 78
-- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+- !DocumentHighlight
   kind: *id001
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 18
       line: 84
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 13
       line: 84

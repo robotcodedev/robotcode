@@ -1,16 +1,15 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 4
   line: 212
   name: simple keyword with extra spaces and parameter
-result: !!python/object:robotcode.language_server.common.lsp_types.Hover
-  contents: !!python/object:robotcode.language_server.common.lsp_types.MarkupContent
-    kind: !!python/object/apply:robotcode.language_server.common.lsp_types.MarkupKind
-    - markdown
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
     value: '### Keyword *Sleep*'
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 13
       line: 212
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 4
       line: 212

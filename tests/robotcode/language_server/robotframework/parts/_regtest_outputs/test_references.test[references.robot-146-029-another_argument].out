@@ -1,23 +1,23 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 29
   line: 146
   name: another argument
 result:
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 30
       line: 146
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 29
       line: 146
   uri: tests/references.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 14
       line: 152
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 13
       line: 152
   uri: tests/references.robot

@@ -1,16 +1,28 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 15
   line: 98
   name: a simple keyword
 result:
-- !!python/object:robotcode.language_server.common.lsp_types.LocationLink
-  origin_selection_range: &id001 !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !LocationLink
+  origin_selection_range:
+    end:
       character: 16
       line: 98
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 0
       line: 98
-  target_range: *id001
-  target_selection_range: *id001
+  target_range:
+    end:
+      character: 16
+      line: 98
+    start:
+      character: 0
+      line: 98
+  target_selection_range:
+    end:
+      character: 16
+      line: 98
+    start:
+      character: 0
+      line: 98
   target_uri: goto.robot

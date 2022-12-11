@@ -1,16 +1,15 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 43
   line: 87
   name: KeywordCall from resource with Namespace
-result: !!python/object:robotcode.language_server.common.lsp_types.Hover
-  contents: !!python/object:robotcode.language_server.common.lsp_types.MarkupContent
-    kind: !!python/object/apply:robotcode.language_server.common.lsp_types.MarkupKind
-    - markdown
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
     value: '### Keyword *do something in a resource*'
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 44
       line: 87
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 18
       line: 87

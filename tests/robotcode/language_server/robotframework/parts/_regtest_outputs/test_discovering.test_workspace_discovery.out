@@ -1,56 +1,51 @@
 result:
-- !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
+- !TestItem
   children:
-  - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-    children:
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+  - children:
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests.Bddstyle.Testcase 1;17
         label: Testcase 1
         longname: Data.Tests.Bddstyle.Testcase 1
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 16
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 16
         tags: []
         type: test
         uri: tests/bddstyle.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Bddstyle.Testcase 2;18
         label: Testcase 2
         longname: Data.Tests.Bddstyle.Testcase 2
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 17
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 17
         tags: []
         type: test
         uri: tests/bddstyle.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Bddstyle.Testcase 3;19
         label: Testcase 3
         longname: Data.Tests.Bddstyle.Testcase 3
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 18
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 18
         tags: []
@@ -61,49 +56,45 @@ result:
       id: Data.Tests.Bddstyle
       label: Bddstyle
       longname: Data.Tests.Bddstyle
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/bddstyle.robot
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children:
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children: null
+    - children:
+      - children:
+        - children: null
           description: null
           error: null
           id: Data.Tests.Discovery..first test;2
           label: first test
           longname: Data.Tests.Discovery..first test
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 1
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 1
           tags: []
           type: test
           uri: discovery/discovered__.robot
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children: null
+        - children: null
           description: null
           error: null
           id: Data.Tests.Discovery..first test;6
           label: first test
           longname: Data.Tests.Discovery..first test
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 5
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 5
           tags: []
@@ -114,32 +105,29 @@ result:
         id: Data.Tests.Discovery.
         label: ''
         longname: Data.Tests.Discovery.
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 0
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 0
         tags: null
         type: suite
         uri: discovery/discovered__.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children:
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children:
-          - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-            children: null
+      - children:
+        - children:
+          - children: null
             description: null
             error: null
             id: Data.Tests.Discovery.Duplicated.Suite.first test;2
             label: first test
             longname: Data.Tests.Discovery.Duplicated.Suite.first test
-            range: !!python/object:robotcode.language_server.common.lsp_types.Range
-              end: !!python/object:robotcode.language_server.common.lsp_types.Position
+            range:
+              end:
                 character: 0
                 line: 1
-              start: !!python/object:robotcode.language_server.common.lsp_types.Position
+              start:
                 character: 0
                 line: 1
             tags: []
@@ -150,47 +138,44 @@ result:
           id: Data.Tests.Discovery.Duplicated.Suite
           label: Suite
           longname: Data.Tests.Discovery.Duplicated.Suite
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 0
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 0
           tags: null
           type: suite
           uri: duplicated/part1__suite.robot
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children:
-          - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-            children: null
+        - children:
+          - children: null
             description: null
             error: null
             id: Data.Tests.Discovery.Duplicated.Suite.first test;2
             label: first test
             longname: Data.Tests.Discovery.Duplicated.Suite.first test
-            range: !!python/object:robotcode.language_server.common.lsp_types.Range
-              end: !!python/object:robotcode.language_server.common.lsp_types.Position
+            range:
+              end:
                 character: 0
                 line: 1
-              start: !!python/object:robotcode.language_server.common.lsp_types.Position
+              start:
                 character: 0
                 line: 1
             tags: []
             type: test
             uri: duplicated/part2__suite.robot
-          - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-            children: null
+          - children: null
             description: null
             error: null
             id: Data.Tests.Discovery.Duplicated.Suite.second test;5
             label: second test
             longname: Data.Tests.Discovery.Duplicated.Suite.second test
-            range: !!python/object:robotcode.language_server.common.lsp_types.Range
-              end: !!python/object:robotcode.language_server.common.lsp_types.Position
+            range:
+              end:
                 character: 0
                 line: 4
-              start: !!python/object:robotcode.language_server.common.lsp_types.Position
+              start:
                 character: 0
                 line: 4
             tags: []
@@ -201,30 +186,28 @@ result:
           id: Data.Tests.Discovery.Duplicated.Suite
           label: Suite
           longname: Data.Tests.Discovery.Duplicated.Suite
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 0
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 0
           tags: null
           type: suite
           uri: duplicated/part2__suite.robot
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children:
-          - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-            children: null
+        - children:
+          - children: null
             description: null
             error: null
             id: Data.Tests.Discovery.Duplicated.Simple  Suite.first test;2
             label: first test
             longname: Data.Tests.Discovery.Duplicated.Simple  Suite.first test
-            range: !!python/object:robotcode.language_server.common.lsp_types.Range
-              end: !!python/object:robotcode.language_server.common.lsp_types.Position
+            range:
+              end:
                 character: 0
                 line: 1
-              start: !!python/object:robotcode.language_server.common.lsp_types.Position
+              start:
                 character: 0
                 line: 1
             tags: []
@@ -235,30 +218,28 @@ result:
           id: Data.Tests.Discovery.Duplicated.Simple  Suite
           label: Simple  Suite
           longname: Data.Tests.Discovery.Duplicated.Simple  Suite
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 0
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 0
           tags: null
           type: suite
           uri: duplicated/simple%20%20suite.robot
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children:
-          - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-            children: null
+        - children:
+          - children: null
             description: null
             error: null
             id: Data.Tests.Discovery.Duplicated.Simple Suite.first test;2
             label: first test
             longname: Data.Tests.Discovery.Duplicated.Simple Suite.first test
-            range: !!python/object:robotcode.language_server.common.lsp_types.Range
-              end: !!python/object:robotcode.language_server.common.lsp_types.Position
+            range:
+              end:
                 character: 0
                 line: 1
-              start: !!python/object:robotcode.language_server.common.lsp_types.Position
+              start:
                 character: 0
                 line: 1
             tags: []
@@ -269,30 +250,28 @@ result:
           id: Data.Tests.Discovery.Duplicated.Simple Suite
           label: Simple Suite
           longname: Data.Tests.Discovery.Duplicated.Simple Suite
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 0
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 0
           tags: null
           type: suite
           uri: duplicated/simple%20suite.robot
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children:
-          - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-            children: null
+        - children:
+          - children: null
             description: null
             error: null
             id: Data.Tests.Discovery.Duplicated.Simple Suite.first test;2
             label: first test
             longname: Data.Tests.Discovery.Duplicated.Simple Suite.first test
-            range: !!python/object:robotcode.language_server.common.lsp_types.Range
-              end: !!python/object:robotcode.language_server.common.lsp_types.Position
+            range:
+              end:
                 character: 0
                 line: 1
-              start: !!python/object:robotcode.language_server.common.lsp_types.Position
+              start:
                 character: 0
                 line: 1
             tags: []
@@ -303,11 +282,11 @@ result:
           id: Data.Tests.Discovery.Duplicated.Simple Suite
           label: Simple Suite
           longname: Data.Tests.Discovery.Duplicated.Simple Suite
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 0
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 0
           tags: null
@@ -318,32 +297,29 @@ result:
         id: Data.Tests.Discovery.Duplicated
         label: Duplicated
         longname: Data.Tests.Discovery.Duplicated
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 0
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 0
         tags: null
         type: suite
         uri: discovery/duplicated
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children:
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children:
-          - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-            children: null
+      - children:
+        - children:
+          - children: null
             description: null
             error: null
             id: Data.Tests.Discovery.Duplicated.Simple.first test;2
             label: first test
             longname: Data.Tests.Discovery.Duplicated.Simple.first test
-            range: !!python/object:robotcode.language_server.common.lsp_types.Range
-              end: !!python/object:robotcode.language_server.common.lsp_types.Position
+            range:
+              end:
                 character: 0
                 line: 1
-              start: !!python/object:robotcode.language_server.common.lsp_types.Position
+              start:
                 character: 0
                 line: 1
             tags: []
@@ -354,30 +330,28 @@ result:
           id: Data.Tests.Discovery.Duplicated.Simple
           label: Simple
           longname: Data.Tests.Discovery.Duplicated.Simple
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 0
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 0
           tags: null
           type: suite
           uri: duplicated_/simple.robot
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children:
-          - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-            children: null
+        - children:
+          - children: null
             description: null
             error: null
             id: Data.Tests.Discovery.Duplicated.Simple.first test;2
             label: first test
             longname: Data.Tests.Discovery.Duplicated.Simple.first test
-            range: !!python/object:robotcode.language_server.common.lsp_types.Range
-              end: !!python/object:robotcode.language_server.common.lsp_types.Position
+            range:
+              end:
                 character: 0
                 line: 1
-              start: !!python/object:robotcode.language_server.common.lsp_types.Position
+              start:
                 character: 0
                 line: 1
             tags: []
@@ -388,11 +362,11 @@ result:
           id: Data.Tests.Discovery.Duplicated.Simple
           label: Simple
           longname: Data.Tests.Discovery.Duplicated.Simple
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 0
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 0
           tags: null
@@ -403,11 +377,11 @@ result:
         id: Data.Tests.Discovery.Duplicated
         label: Duplicated
         longname: Data.Tests.Discovery.Duplicated
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 0
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 0
         tags: null
@@ -418,98 +392,92 @@ result:
       id: Data.Tests.Discovery
       label: Discovery
       longname: Data.Tests.Discovery
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/discovery
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests.Document Highlight.first;26
         label: first
         longname: Data.Tests.Document Highlight.first
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 25
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 25
         tags: []
         type: test
         uri: tests/document_highlight.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Document Highlight.second;41
         label: second
         longname: Data.Tests.Document Highlight.second
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 40
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 40
         tags: []
         type: test
         uri: tests/document_highlight.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Document Highlight.third;47
         label: third
         longname: Data.Tests.Document Highlight.third
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 46
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 46
         tags: []
         type: test
         uri: tests/document_highlight.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Document Highlight.forth;53
         label: forth
         longname: Data.Tests.Document Highlight.forth
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 52
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 52
         tags: []
         type: test
         uri: tests/document_highlight.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Document Highlight.fifth;62
         label: fifth
         longname: Data.Tests.Document Highlight.fifth
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 61
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 61
         tags: []
@@ -520,30 +488,28 @@ result:
       id: Data.Tests.Document Highlight
       label: Document Highlight
       longname: Data.Tests.Document Highlight
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/document_highlight.robot
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests.Duplicated Resources.first;8
         label: first
         longname: Data.Tests.Duplicated Resources.first
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 7
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 7
         tags: []
@@ -554,30 +520,28 @@ result:
       id: Data.Tests.Duplicated Resources
       label: Duplicated Resources
       longname: Data.Tests.Duplicated Resources
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/duplicated_resources.robot
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests.External Libray.first;6
         label: first
         longname: Data.Tests.External Libray.first
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 5
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 5
         tags: []
@@ -588,49 +552,45 @@ result:
       id: Data.Tests.External Libray
       label: External Libray
       longname: Data.Tests.External Libray
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/external_libray.robot
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children:
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children: null
+    - children:
+      - children:
+        - children: null
           description: null
           error: null
           id: Data.Tests.Extras.Fibonaci.calc fibonaci;2
           label: calc fibonaci
           longname: Data.Tests.Extras.Fibonaci.calc fibonaci
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 1
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 1
           tags: []
           type: test
           uri: extras/fibonaci.robot
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children: null
+        - children: null
           description: null
           error: null
           id: Data.Tests.Extras.Fibonaci.calc fibonaci data;6
           label: calc fibonaci data
           longname: Data.Tests.Extras.Fibonaci.calc fibonaci data
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 5
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 5
           tags: []
@@ -641,11 +601,11 @@ result:
         id: Data.Tests.Extras.Fibonaci
         label: Fibonaci
         longname: Data.Tests.Extras.Fibonaci
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 0
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 0
         tags: null
@@ -656,30 +616,28 @@ result:
       id: Data.Tests.Extras
       label: Extras
       longname: Data.Tests.Extras
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/extras
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests.Foldingrange.First;9
         label: First
         longname: Data.Tests.Foldingrange.First
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 8
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 8
         tags: []
@@ -690,81 +648,76 @@ result:
       id: Data.Tests.Foldingrange
       label: Foldingrange
       longname: Data.Tests.Foldingrange
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/foldingrange.robot
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests.Goto.first;34
         label: first
         longname: Data.Tests.Goto.first
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 33
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 33
         tags: []
         type: test
         uri: tests/goto.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Goto.second;81
         label: second
         longname: Data.Tests.Goto.second
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 80
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 80
         tags: []
         type: test
         uri: tests/goto.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Goto.a templated Test;88
         label: a templated Test
         longname: Data.Tests.Goto.a templated Test
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 87
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 87
         tags: []
         type: test
         uri: tests/goto.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Goto.third;95
         label: third
         longname: Data.Tests.Goto.third
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 94
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 94
         tags: []
@@ -775,166 +728,156 @@ result:
       id: Data.Tests.Goto
       label: Goto
       longname: Data.Tests.Goto
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/goto.robot
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests.Hover.first;52
         label: first
         longname: Data.Tests.Hover.first
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 51
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 51
         tags: []
         type: test
         uri: tests/hover.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Hover.second;92
         label: second
         longname: Data.Tests.Hover.second
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 91
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 91
         tags: []
         type: test
         uri: tests/hover.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Hover.third;100
         label: third
         longname: Data.Tests.Hover.third
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 99
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 99
         tags: []
         type: test
         uri: tests/hover.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Hover.forth;108
         label: forth
         longname: Data.Tests.Hover.forth
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 107
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 107
         tags: []
         type: test
         uri: tests/hover.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Hover.sixth;114
         label: sixth
         longname: Data.Tests.Hover.sixth
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 113
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 113
         tags: []
         type: test
         uri: tests/hover.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Hover.seventh;127
         label: seventh
         longname: Data.Tests.Hover.seventh
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 126
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 126
         tags: []
         type: test
         uri: tests/hover.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Hover.seventh1;164
         label: seventh1
         longname: Data.Tests.Hover.seventh1
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 163
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 163
         tags: []
         type: test
         uri: tests/hover.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Hover.eight;169
         label: eight
         longname: Data.Tests.Hover.eight
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 168
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 168
         tags: []
         type: test
         uri: tests/hover.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Hover.nineth;176
         label: nineth
         longname: Data.Tests.Hover.nineth
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 175
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 175
         tags: []
@@ -945,30 +888,28 @@ result:
       id: Data.Tests.Hover
       label: Hover
       longname: Data.Tests.Hover
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/hover.robot
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests.Playground.first;7
         label: first
         longname: Data.Tests.Playground.first
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 6
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 6
         tags: []
@@ -979,98 +920,92 @@ result:
       id: Data.Tests.Playground
       label: Playground
       longname: Data.Tests.Playground
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/playground.robot
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests.References.first;30
         label: first
         longname: Data.Tests.References.first
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 29
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 29
         tags: []
         type: test
         uri: tests/references.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.References.second;45
         label: second
         longname: Data.Tests.References.second
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 44
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 44
         tags: []
         type: test
         uri: tests/references.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.References.third;51
         label: third
         longname: Data.Tests.References.third
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 50
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 50
         tags: []
         type: test
         uri: tests/references.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.References.forth;57
         label: forth
         longname: Data.Tests.References.forth
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 56
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 56
         tags: []
         type: test
         uri: tests/references.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.References.fifth;67
         label: fifth
         longname: Data.Tests.References.fifth
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 66
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 66
         tags: []
@@ -1081,30 +1016,28 @@ result:
       id: Data.Tests.References
       label: References
       longname: Data.Tests.References
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/references.robot
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests.Remotetest.first;6
         label: first
         longname: Data.Tests.Remotetest.first
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 5
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 5
         tags: []
@@ -1115,30 +1048,28 @@ result:
       id: Data.Tests.Remotetest
       label: Remotetest
       longname: Data.Tests.Remotetest
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/remotetest.robot
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests.Reserved.first;2
         label: first
         longname: Data.Tests.Reserved.first
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 1
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 1
         tags: []
@@ -1149,66 +1080,62 @@ result:
       id: Data.Tests.Reserved
       label: Reserved
       longname: Data.Tests.Reserved
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/reserved.robot
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests.Setup Teardown.first;11
         label: first
         longname: Data.Tests.Setup Teardown.first
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 10
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 10
         tags:
         - hallo
         type: test
         uri: tests/setup_teardown.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Setup Teardown.Second;15
         label: Second
         longname: Data.Tests.Setup Teardown.Second
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 14
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 14
         tags:
         - hallo
         type: test
         uri: tests/setup_teardown.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Setup Teardown.Third;20
         label: Third
         longname: Data.Tests.Setup Teardown.Third
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 19
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 19
         tags:
@@ -1220,50 +1147,46 @@ result:
       id: Data.Tests.Setup Teardown
       label: Setup Teardown
       longname: Data.Tests.Setup Teardown
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/setup_teardown.robot
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children:
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children: null
+    - children:
+      - children:
+        - children: null
           description: null
           error: null
           id: Data.Tests.Tags.First.first;6
           label: first
           longname: Data.Tests.Tags.First.first
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 5
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 5
           tags:
           - no-ci_1
           type: test
           uri: tags/first.robot
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children: null
+        - children: null
           description: null
           error: null
           id: Data.Tests.Tags.First.second;10
           label: second
           longname: Data.Tests.Tags.First.second
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 9
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 9
           tags:
@@ -1275,48 +1198,45 @@ result:
         id: Data.Tests.Tags.First
         label: First
         longname: Data.Tests.Tags.First
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 0
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 0
         tags: null
         type: suite
         uri: tags/first.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children:
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children: null
+      - children:
+        - children: null
           description: null
           error: null
           id: Data.Tests.Tags.Second.first;6
           label: first
           longname: Data.Tests.Tags.Second.first
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 5
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 5
           tags:
           - unknown
           type: test
           uri: tags/second.robot
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children: null
+        - children: null
           description: null
           error: null
           id: Data.Tests.Tags.Second.second;10
           label: second
           longname: Data.Tests.Tags.Second.second
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 9
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 9
           tags:
@@ -1329,32 +1249,29 @@ result:
         id: Data.Tests.Tags.Second
         label: Second
         longname: Data.Tests.Tags.Second
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 0
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 0
         tags: null
         type: suite
         uri: tags/second.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children:
-        - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-          children:
-          - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-            children: null
+      - children:
+        - children:
+          - children: null
             description: null
             error: null
             id: Data.Tests.Tags.Sub.First.first;2
             label: first
             longname: Data.Tests.Tags.Sub.First.first
-            range: !!python/object:robotcode.language_server.common.lsp_types.Range
-              end: !!python/object:robotcode.language_server.common.lsp_types.Position
+            range:
+              end:
                 character: 0
                 line: 1
-              start: !!python/object:robotcode.language_server.common.lsp_types.Position
+              start:
                 character: 0
                 line: 1
             tags:
@@ -1362,18 +1279,17 @@ result:
             - unknown
             type: test
             uri: sub/first.robot
-          - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-            children: null
+          - children: null
             description: null
             error: null
             id: Data.Tests.Tags.Sub.First.second;6
             label: second
             longname: Data.Tests.Tags.Sub.First.second
-            range: !!python/object:robotcode.language_server.common.lsp_types.Range
-              end: !!python/object:robotcode.language_server.common.lsp_types.Position
+            range:
+              end:
                 character: 0
                 line: 5
-              start: !!python/object:robotcode.language_server.common.lsp_types.Position
+              start:
                 character: 0
                 line: 5
             tags:
@@ -1382,18 +1298,17 @@ result:
             - unknown___1
             type: test
             uri: sub/first.robot
-          - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-            children: null
+          - children: null
             description: null
             error: null
             id: Data.Tests.Tags.Sub.First.third;11
             label: third
             longname: Data.Tests.Tags.Sub.First.third
-            range: !!python/object:robotcode.language_server.common.lsp_types.Range
-              end: !!python/object:robotcode.language_server.common.lsp_types.Position
+            range:
+              end:
                 character: 0
                 line: 10
-              start: !!python/object:robotcode.language_server.common.lsp_types.Position
+              start:
                 character: 0
                 line: 10
             tags:
@@ -1406,11 +1321,11 @@ result:
           id: Data.Tests.Tags.Sub.First
           label: First
           longname: Data.Tests.Tags.Sub.First
-          range: !!python/object:robotcode.language_server.common.lsp_types.Range
-            end: !!python/object:robotcode.language_server.common.lsp_types.Position
+          range:
+            end:
               character: 0
               line: 0
-            start: !!python/object:robotcode.language_server.common.lsp_types.Position
+            start:
               character: 0
               line: 0
           tags: null
@@ -1421,11 +1336,11 @@ result:
         id: Data.Tests.Tags.Sub
         label: Sub
         longname: Data.Tests.Tags.Sub
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 0
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 0
         tags: null
@@ -1436,168 +1351,158 @@ result:
       id: Data.Tests.Tags
       label: Tags
       longname: Data.Tests.Tags
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/tags
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates.first;11
         label: first
         longname: Data.Tests.Templates.first
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 10
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 10
         tags:
         - robot:continue-on-failure
         type: test
         uri: tests/templates.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates.second;21
         label: second
         longname: Data.Tests.Templates.second
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 20
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 20
         tags:
         - robot:continue-on-failure
         type: test
         uri: tests/templates.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates.third;27
         label: third
         longname: Data.Tests.Templates.third
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 26
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 26
         tags: []
         type: test
         uri: tests/templates.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates.templated;31
         label: templated
         longname: Data.Tests.Templates.templated
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 30
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 30
         tags: []
         type: test
         uri: tests/templates.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates.templated with embedded;36
         label: templated with embedded
         longname: Data.Tests.Templates.templated with embedded
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 35
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 35
         tags: []
         type: test
         uri: tests/templates.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates.templated with embedded2;40
         label: templated with embedded2
         longname: Data.Tests.Templates.templated with embedded2
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 39
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 39
         tags: []
         type: test
         uri: tests/templates.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates.templated with embedded1;45
         label: templated with embedded1
         longname: Data.Tests.Templates.templated with embedded1
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 44
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 44
         tags: []
         type: test
         uri: tests/templates.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates.templated with embedded3;50
         label: templated with embedded3
         longname: Data.Tests.Templates.templated with embedded3
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 49
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 49
         tags: []
         type: test
         uri: tests/templates.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates.templated with embedded not defined;55
         label: templated with embedded not defined
         longname: Data.Tests.Templates.templated with embedded not defined
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 54
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 54
         tags: []
@@ -1608,166 +1513,156 @@ result:
       id: Data.Tests.Templates
       label: Templates
       longname: Data.Tests.Templates
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/templates.robot
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates2.Invalid User Name;10
         label: Invalid User Name
         longname: Data.Tests.Templates2.Invalid User Name
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 9
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 9
         tags: []
         type: test
         uri: tests/templates2.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates2.Invalid Password;11
         label: Invalid Password
         longname: Data.Tests.Templates2.Invalid Password
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 10
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 10
         tags: []
         type: test
         uri: tests/templates2.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates2.Invalid User Name and Password;12
         label: Invalid User Name and Password
         longname: Data.Tests.Templates2.Invalid User Name and Password
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 11
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 11
         tags: []
         type: test
         uri: tests/templates2.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates2.Empty User Name;13
         label: Empty User Name
         longname: Data.Tests.Templates2.Empty User Name
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 12
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 12
         tags: []
         type: test
         uri: tests/templates2.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates2.Empty Password;14
         label: Empty Password
         longname: Data.Tests.Templates2.Empty Password
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 13
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 13
         tags: []
         type: test
         uri: tests/templates2.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates2.Empty User Name and Password;15
         label: Empty User Name and Password
         longname: Data.Tests.Templates2.Empty User Name and Password
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 14
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 14
         tags: []
         type: test
         uri: tests/templates2.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates2.Template with FOR loop;18
         label: Template with FOR loop
         longname: Data.Tests.Templates2.Template with FOR loop
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 17
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 17
         tags: []
         type: test
         uri: tests/templates2.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates2.Template with FOR and IF;27
         label: Template with FOR and IF
         longname: Data.Tests.Templates2.Template with FOR and IF
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 26
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 26
         tags: []
         type: test
         uri: tests/templates2.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Templates2.Template with FOR and IF invalid;37
         label: Template with FOR and IF invalid
         longname: Data.Tests.Templates2.Template with FOR and IF invalid
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 36
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 36
         tags: []
@@ -1778,251 +1673,236 @@ result:
       id: Data.Tests.Templates2
       label: Templates2
       longname: Data.Tests.Templates2
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
       type: suite
       uri: tests/templates2.robot
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests.Variables.first;16
         label: first
         longname: Data.Tests.Variables.first
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 15
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 15
         tags: []
         type: test
         uri: tests/variables.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Variables.second;50
         label: second
         longname: Data.Tests.Variables.second
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 49
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 49
         tags: []
         type: test
         uri: tests/variables.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Variables.third;58
         label: third
         longname: Data.Tests.Variables.third
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 57
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 57
         tags: []
         type: test
         uri: tests/variables.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Variables.fourth;73
         label: fourth
         longname: Data.Tests.Variables.fourth
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 72
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 72
         tags: []
         type: test
         uri: tests/variables.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Variables.fifth;81
         label: fifth
         longname: Data.Tests.Variables.fifth
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 80
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 80
         tags: []
         type: test
         uri: tests/variables.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Variables.sixth;97
         label: sixth
         longname: Data.Tests.Variables.sixth
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 96
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 96
         tags: []
         type: test
         uri: tests/variables.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Variables.seventh;114
         label: seventh
         longname: Data.Tests.Variables.seventh
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 113
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 113
         tags: []
         type: test
         uri: tests/variables.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Variables.tc;126
         label: tc
         longname: Data.Tests.Variables.tc
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 125
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 125
         tags: []
         type: test
         uri: tests/variables.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Variables.templated;132
         label: templated
         longname: Data.Tests.Variables.templated
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 131
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 131
         tags: []
         type: test
         uri: tests/variables.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Variables.templated with embedded;137
         label: templated with embedded
         longname: Data.Tests.Variables.templated with embedded
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 136
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 136
         tags: []
         type: test
         uri: tests/variables.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Variables.templated with embedded;142
         label: templated with embedded
         longname: Data.Tests.Variables.templated with embedded
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 141
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 141
         tags: []
         type: test
         uri: tests/variables.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Variables.templated with embedded not defined;148
         label: templated with embedded not defined
         longname: Data.Tests.Variables.templated with embedded not defined
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 147
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 147
         tags: []
         type: test
         uri: tests/variables.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Variables.environmentvars;153
         label: environmentvars
         longname: Data.Tests.Variables.environmentvars
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 152
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 152
         tags: []
         type: test
         uri: tests/variables.robot
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+      - children: null
         description: null
         error: null
         id: Data.Tests.Variables.named arguments;156
         label: named arguments
         longname: Data.Tests.Variables.named arguments
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 155
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 155
         tags: []
@@ -2033,11 +1913,11 @@ result:
       id: Data.Tests.Variables
       label: Variables
       longname: Data.Tests.Variables
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
@@ -2048,32 +1928,29 @@ result:
     id: Data.Tests
     label: Tests
     longname: Data.Tests
-    range: !!python/object:robotcode.language_server.common.lsp_types.Range
-      end: !!python/object:robotcode.language_server.common.lsp_types.Position
+    range:
+      end:
         character: 0
         line: 0
-      start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      start:
         character: 0
         line: 0
     tags: null
     type: suite
     uri: data/tests
-  - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-    children:
-    - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-      children:
-      - !!python/object:robotcode.language_server.robotframework.parts.discovering.TestItem
-        children: null
+  - children:
+    - children:
+      - children: null
         description: null
         error: null
         id: Data.Tests1.First.wip1;6
         label: wip1
         longname: Data.Tests1.First.wip1
-        range: !!python/object:robotcode.language_server.common.lsp_types.Range
-          end: !!python/object:robotcode.language_server.common.lsp_types.Position
+        range:
+          end:
             character: 0
             line: 5
-          start: !!python/object:robotcode.language_server.common.lsp_types.Position
+          start:
             character: 0
             line: 5
         tags: []
@@ -2084,11 +1961,11 @@ result:
       id: Data.Tests1.First
       label: First
       longname: Data.Tests1.First
-      range: !!python/object:robotcode.language_server.common.lsp_types.Range
-        end: !!python/object:robotcode.language_server.common.lsp_types.Position
+      range:
+        end:
           character: 0
           line: 0
-        start: !!python/object:robotcode.language_server.common.lsp_types.Position
+        start:
           character: 0
           line: 0
       tags: null
@@ -2099,11 +1976,11 @@ result:
     id: Data.Tests1
     label: Tests1
     longname: Data.Tests1
-    range: !!python/object:robotcode.language_server.common.lsp_types.Range
-      end: !!python/object:robotcode.language_server.common.lsp_types.Position
+    range:
+      end:
         character: 0
         line: 0
-      start: !!python/object:robotcode.language_server.common.lsp_types.Position
+      start:
         character: 0
         line: 0
     tags: null
@@ -2114,11 +1991,11 @@ result:
   id: Data
   label: Data
   longname: Data
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 0
       line: 0
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 0
       line: 0
   tags: null

@@ -1,4 +1,4 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 31
   line: 200
   name: AND

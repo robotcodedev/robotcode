@@ -1,4 +1,4 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 5
   line: 60
   name: Keyword reassignment with equals sign

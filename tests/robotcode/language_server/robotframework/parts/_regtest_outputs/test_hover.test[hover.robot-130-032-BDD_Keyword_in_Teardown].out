@@ -1,16 +1,15 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 32
   line: 130
   name: BDD Keyword in Teardown
-result: !!python/object:robotcode.language_server.common.lsp_types.Hover
-  contents: !!python/object:robotcode.language_server.common.lsp_types.MarkupContent
-    kind: !!python/object/apply:robotcode.language_server.common.lsp_types.MarkupKind
-    - markdown
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
     value: '### Keyword *Log*'
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 34
       line: 130
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 31
       line: 130

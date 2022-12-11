@@ -1,158 +1,158 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 33
   line: 51
   name: template keyword with namespace
 result:
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 0
       line: 2962
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 0
       line: 2961
   uri: libraries/BuiltIn.py
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 37
       line: 12
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 23
       line: 12
   uri: tests/document_highlight.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 28
       line: 14
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 14
       line: 14
   uri: tests/document_highlight.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 29
       line: 26
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 15
       line: 26
   uri: tests/document_highlight.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 40
       line: 28
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 26
       line: 28
   uri: tests/document_highlight.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 18
       line: 32
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 4
       line: 32
   uri: tests/document_highlight.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 26
       line: 34
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 12
       line: 34
   uri: tests/document_highlight.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 32
       line: 41
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 18
       line: 41
   uri: tests/document_highlight.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 40
       line: 47
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 26
       line: 47
   uri: tests/document_highlight.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 37
       line: 16
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 23
       line: 16
   uri: tests/references.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 28
       line: 18
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 14
       line: 18
   uri: tests/references.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 29
       line: 30
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 15
       line: 30
   uri: tests/references.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 40
       line: 32
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 26
       line: 32
   uri: tests/references.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 18
       line: 36
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 4
       line: 36
   uri: tests/references.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 26
       line: 38
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 12
       line: 38
   uri: tests/references.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 32
       line: 45
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 18
       line: 45
   uri: tests/references.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 40
       line: 51
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 26
       line: 51
   uri: tests/references.robot

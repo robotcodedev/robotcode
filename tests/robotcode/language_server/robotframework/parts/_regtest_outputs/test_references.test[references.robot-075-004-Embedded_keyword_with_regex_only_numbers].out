@@ -1,32 +1,32 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 4
   line: 75
   name: Embedded keyword with regex only numbers
 result:
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 25
       line: 75
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 4
       line: 75
   uri: tests/references.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 29
       line: 78
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 4
       line: 78
   uri: tests/references.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 38
       line: 102
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 0
       line: 102
   uri: tests/references.robot

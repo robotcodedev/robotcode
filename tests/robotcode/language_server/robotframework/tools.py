@@ -1,9 +1,14 @@
 import dataclasses
 import re
+from enum import Enum
 from pathlib import Path
 from typing import Any, Generator, Tuple, Union
 
 import pytest
+import yaml
+
+from robotcode.language_server.common.lsp_types import Model
+from robotcode.utils.dataclasses import as_dict
 
 TEST_EXPRESSION_LINE = re.compile(r"^\#\s*(?P<todo>TODO)?\s*(?P<position>\^+)\s+(?P<name>.*)")
 
@@ -56,3 +61,16 @@ def generate_test_id(params: Any) -> Any:
         return params.name
 
     return params
+
+
+def dump_enum(dumper: yaml.Dumper, data: Enum) -> yaml.Node:
+    return dumper.represent_scalar(f"!{type(data).__qualname__}", str(data.name))
+
+
+def dump_model(dumper: yaml.Dumper, data: Any) -> yaml.Node:
+    return dumper.represent_mapping(f"!{type(data).__qualname__}", as_dict(data))
+
+
+yaml.add_multi_representer(Enum, dump_enum)
+yaml.add_multi_representer(Model, dump_model)
+yaml.add_multi_representer(GeneratedTestData, dump_model)

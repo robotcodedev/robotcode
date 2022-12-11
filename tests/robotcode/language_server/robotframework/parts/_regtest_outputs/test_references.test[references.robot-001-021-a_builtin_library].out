@@ -1,41 +1,41 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 21
   line: 1
   name: a builtin library
 result:
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 27
       line: 1
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 16
       line: 1
   uri: tests/document_highlight.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 29
       line: 1
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 18
       line: 1
   uri: tests/goto.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 29
       line: 1
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 18
       line: 1
   uri: tests/hover.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 27
       line: 1
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 16
       line: 1
   uri: tests/references.robot

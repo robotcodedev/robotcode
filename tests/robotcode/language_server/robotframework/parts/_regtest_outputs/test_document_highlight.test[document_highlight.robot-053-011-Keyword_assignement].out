@@ -1,42 +1,41 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 11
   line: 53
   name: Keyword assignement
 result:
-- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
-  kind: &id001 !!python/object/apply:robotcode.language_server.common.lsp_types.DocumentHighlightKind
-  - 1
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !DocumentHighlight
+  kind: &id001 !DocumentHighlightKind 'TEXT'
+  range:
+    end:
       character: 12
       line: 53
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 6
       line: 53
-- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+- !DocumentHighlight
   kind: *id001
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 31
       line: 55
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 25
       line: 55
-- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+- !DocumentHighlight
   kind: *id001
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 12
       line: 56
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 6
       line: 56
-- !!python/object:robotcode.language_server.common.lsp_types.DocumentHighlight
+- !DocumentHighlight
   kind: *id001
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 31
       line: 58
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 25
       line: 58

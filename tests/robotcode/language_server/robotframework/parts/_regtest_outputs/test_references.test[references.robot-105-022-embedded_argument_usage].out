@@ -1,23 +1,23 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 22
   line: 105
   name: embedded argument usage
 result:
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 12
       line: 102
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 6
       line: 102
   uri: tests/references.robot
-- !!python/object:robotcode.language_server.common.lsp_types.Location
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !Location
+  range:
+    end:
       character: 25
       line: 105
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 19
       line: 105
   uri: tests/references.robot

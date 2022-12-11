@@ -1,16 +1,15 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 26
   line: 93
   name: Keyword in Template
-result: !!python/object:robotcode.language_server.common.lsp_types.Hover
-  contents: !!python/object:robotcode.language_server.common.lsp_types.MarkupContent
-    kind: !!python/object/apply:robotcode.language_server.common.lsp_types.MarkupKind
-    - markdown
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
     value: '### Keyword *Log*'
-  range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  range:
+    end:
       character: 29
       line: 93
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 26
       line: 93

@@ -1,22 +1,28 @@
-data: !!python/object:tests.robotcode.language_server.robotframework.tools.GeneratedTestData
+data: !GeneratedTestData
   character: 10
   line: 72
   name: Namespace from resource
 result:
-- !!python/object:robotcode.language_server.common.lsp_types.LocationLink
-  origin_selection_range: !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+- !LocationLink
+  origin_selection_range:
+    end:
       character: 17
       line: 72
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 4
       line: 72
-  target_range: &id001 !!python/object:robotcode.language_server.common.lsp_types.Range
-    end: !!python/object:robotcode.language_server.common.lsp_types.Position
+  target_range:
+    end:
       character: 63
       line: 8
-    start: !!python/object:robotcode.language_server.common.lsp_types.Position
+    start:
       character: 18
       line: 8
-  target_selection_range: *id001
+  target_selection_range:
+    end:
+      character: 63
+      line: 8
+    start:
+      character: 18
+      line: 8
   target_uri: goto.robot
