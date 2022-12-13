@@ -3,7 +3,6 @@
 	// for the documentation about the extensions.json format
 	"recommendations": [
 		"ms-python.python",
-		"ms-python.vscode-pylance",
 		"esbenp.prettier-vscode",
 		"dbaeumer.vscode-eslint",
 		"tamasfe.even-better-toml"
