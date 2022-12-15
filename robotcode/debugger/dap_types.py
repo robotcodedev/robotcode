@@ -250,6 +250,7 @@ class Source(Model):
 
 class OutputCategory(Enum):
     CONSOLE = "console"
+    IMPORTANT = "important"
     STDOUT = "stdout"
     STDERR = "stderr"
     TELEMETRY = "telemetry"
@@ -452,7 +453,7 @@ class _RunInTerminalRequest(Model):
 @dataclass
 class RunInTerminalRequest(Request, _RunInTerminalRequest):
     arguments: RunInTerminalRequestArguments = field()
-    command: str = field(default="runInTerminal", init=False)
+    command: str = field(default="runInTerminal", init=False, metadata={"force_json": True})
 
 
 @dataclass

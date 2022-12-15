@@ -103,8 +103,7 @@
           },
           {
             "scope": "entity.name.function.keyword-call.keyword-call.robotframework",
-            "settings": {
-            }
+            "settings": {}
           },
           {
             "scope": "entity.name.function.testcase.name.robotframework",
@@ -120,8 +119,7 @@
           },
           {
             "scope": "variable.other.readwrite.robotframework",
-            "settings": {
-            }
+            "settings": {}
           },
           {
             "scope": "keyword.control.import.robotframework",
@@ -167,8 +165,7 @@
           },
           {
             "scope": "constant.character.escape.robotframework",
-            "settings": {
-            }
+            "settings": {}
           }
         ]
       },
@@ -237,7 +234,6 @@
           ],
           "keywordCall": [
             "entity.name.function.keyword-call.robotframework"
-
           ],
           "keywordCallInner": [
             "entity.name.function.keyword-call.inner.robotframework"
@@ -625,7 +621,8 @@
               "**/node_modules/**",
               "**/.pytest_cache/**",
               "**/__pycache__/**",
-              "**/.mypy_cache/**"
+              "**/.mypy_cache/**",
+              "**/.robotcode_cache/**"
             ],
             "items": {
               "type": "string"

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import itertools
 import os
+import sys
 import weakref
+import zlib
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from concurrent.futures import ProcessPoolExecutor
@@ -23,8 +26,11 @@ from typing import (
     final,
 )
 
+from ....__version__ import __version__
 from ....utils.async_cache import AsyncSimpleLRUCache
 from ....utils.async_tools import Lock, async_tasking_event, create_sub_task, threaded
+from ....utils.dataclasses import as_json, from_json
+from ....utils.glob_path import iter_files
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
 from ....utils.uri import Uri
@@ -36,13 +42,12 @@ from ..configuration import RobotConfig
 from ..utils.ast_utils import HasError, HasErrors, Token
 from ..utils.async_ast import walk
 from ..utils.robot_path import find_file_ex
-from ..utils.version import get_robot_version
+from ..utils.version import get_robot_version, get_robot_version_str
 from .entities import CommandLineVariableDefinition, VariableDefinition
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
     from .namespace import Namespace
-
 
 from .library_doc import (
     ROBOT_LIBRARY_PACKAGE,
@@ -53,6 +58,8 @@ from .library_doc import (
     KeywordDoc,
     KeywordStore,
     LibraryDoc,
+    LibraryType,
+    ModuleSpec,
     VariablesDoc,
     complete_library_import,
     complete_resource_import,
@@ -61,6 +68,7 @@ from .library_doc import (
     find_library,
     find_variables,
     get_library_doc,
+    get_module_spec,
     get_variables_doc,
     is_embedded_keyword,
     is_library_by_path,
@@ -451,13 +459,54 @@ class _VariablesEntry(_ImportEntry):
             return self._lib_doc
 
 
+@dataclass
+class LibraryMetaData:
+    meta_version: str
+    name: Optional[str]
+    origin: Optional[str]
+    submodule_search_locations: Optional[List[str]]
+    by_path: bool
+
+    mtimes: Optional[Dict[str, int]] = None
+
+    @property
+    def filepath_base(self) -> Path:
+        if self.by_path:
+            if self.origin is not None:
+                p = Path(self.origin)
+
+                return Path(f"{zlib.adler32(str(p.parent).encode('utf-8')):08x}_{p.stem}")
+        else:
+            if self.name is not None:
+                return Path(self.name.replace(".", "/"))
+
+        raise ValueError("Cannot determine filepath base.")
+
+
 class ImportsManager:
     _logger = LoggingDescriptor()
 
     def __init__(self, parent_protocol: RobotLanguageServerProtocol, folder: Uri, config: RobotConfig) -> None:
         super().__init__()
         self.parent_protocol = parent_protocol
+
         self.folder = folder
+        get_robot_version()
+
+        cache_base_path = self.folder.to_path()
+        if isinstance(self.parent_protocol.initialization_options, dict):
+            if "storageUri" in self.parent_protocol.initialization_options:
+                cache_base_path = Uri(self.parent_protocol.initialization_options["storageUri"]).to_path()
+        self._logger.trace(lambda: f"use {cache_base_path} as base for caching")
+
+        self.lib_doc_cache_path = (
+            cache_base_path
+            / ".robotcode_cache"
+            / f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+            / get_robot_version_str()
+            / "libdoc"
+        )
+
         self.config: RobotConfig = config
         self._libaries_lock = Lock()
         self._libaries: OrderedDict[_LibrariesEntryKey, _LibrariesEntry] = OrderedDict()
@@ -693,6 +742,58 @@ class ImportsManager:
         except RuntimeError:
             pass
 
+    async def get_library_meta(
+        self,
+        name: str,
+        base_dir: str = ".",
+        variables: Optional[Dict[str, Optional[Any]]] = None,
+    ) -> Tuple[Optional[LibraryMetaData], str]:
+        try:
+            import_name = await self.find_library(
+                name,
+                base_dir=base_dir,
+                variables=variables,
+            )
+
+            result: Optional[LibraryMetaData] = None
+            module_spec: Optional[ModuleSpec] = None
+            if is_library_by_path(import_name):
+                if (p := Path(import_name)).exists():
+                    result = LibraryMetaData(__version__, p.stem, import_name, None, True)
+            else:
+                module_spec = get_module_spec(import_name)
+                if module_spec is not None and module_spec.origin is not None:
+                    result = LibraryMetaData(
+                        __version__,
+                        module_spec.name,
+                        module_spec.origin,
+                        module_spec.submodule_search_locations,
+                        False,
+                    )
+            if result is not None:
+                if result.origin is not None:
+                    result.mtimes = {result.origin: Path(result.origin).resolve().stat().st_mtime_ns}
+
+                if result.submodule_search_locations:
+                    if result.mtimes is None:
+                        result.mtimes = {}
+                    result.mtimes.update(
+                        {
+                            str(f): f.resolve().stat().st_mtime_ns
+                            for f in itertools.chain(
+                                *(iter_files(loc, "**/*.py") for loc in result.submodule_search_locations)
+                            )
+                        }
+                    )
+
+            return result, import_name
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException:
+            pass
+
+        return None, import_name
+
     async def find_library(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
         return await self._library_files_cache.get(self._find_library, name, base_dir, variables)
 
@@ -776,7 +877,7 @@ class ImportsManager:
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> LibraryDoc:
-        source = await self.find_library(
+        meta, source = await self.get_library_meta(
             name,
             base_dir,
             variables,
@@ -784,6 +885,22 @@ class ImportsManager:
 
         async def _get_libdoc() -> LibraryDoc:
             self._logger.debug(lambda: f"Load Library {source}{repr(args)}")
+            if meta is not None:
+                meta_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
+                if meta_file.exists():
+                    try:
+                        saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
+                        if saved_meta == meta:
+                            return from_json(
+                                Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".spec.json")).read_text(
+                                    "utf-8"
+                                ),
+                                LibraryDoc,
+                            )
+                    except (SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException as e:
+                        self._logger.exception(e)
 
             with ProcessPoolExecutor(max_workers=1) as executor:
                 result = await asyncio.wait_for(
@@ -804,6 +921,18 @@ class ImportsManager:
                     self._logger.warning(
                         lambda: f"stdout captured at loading library {name}{repr(args)}:\n{result.stdout}"
                     )
+                try:
+                    if meta is not None and result.library_type in [LibraryType.CLASS, LibraryType.MODULE]:
+                        meta_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
+                        meta_file.parent.mkdir(parents=True, exist_ok=True)
+                        meta_file.write_text(as_json(meta), "utf-8")
+
+                        spec_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".spec.json"))
+                        spec_file.write_text(as_json(result), "utf-8")
+                except (SystemExit, KeyboardInterrupt):
+                    raise
+                except BaseException as e:
+                    self._logger.exception(e)
 
                 return result
 
@@ -921,9 +1050,9 @@ class ImportsManager:
             keywords=[
                 KeywordDoc(
                     name=kw[0].name,
-                    args=tuple(KeywordArgumentDoc.from_robot(a) for a in kw[0].args),
+                    args=list(KeywordArgumentDoc.from_robot(a) for a in kw[0].args),
                     doc=kw[0].doc,
-                    tags=tuple(kw[0].tags),
+                    tags=list(kw[0].tags),
                     source=kw[0].source,
                     name_token=get_keyword_name_token_from_line(kw[0].lineno),
                     line_no=kw[0].lineno,
@@ -940,7 +1069,7 @@ class ImportsManager:
                     if isinstance(kw[1], UserErrorHandler)
                     else None,
                     arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
-                    parent=libdoc,
+                    parent=libdoc.digest,
                 )
                 for kw in [(KeywordDocBuilder(resource=True).build_keyword(lw), lw) for lw in lib.handlers]
             ],

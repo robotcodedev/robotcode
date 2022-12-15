@@ -103,6 +103,57 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
+        self._patch()
+
+    def _patch(self) -> None:
+        from robot.api.parsing import get_model
+        from robot.running import TestSuite
+        from robot.running.builder.builders import RobotParser, TestSuiteBuilder
+
+        from ..utils.version import get_robot_version
+
+        def get_document_text(source: str) -> str:
+            if self.parent.loop:
+                doc = self.parent.documents.get_sync(Uri.from_path(source).normalized())
+                if doc is not None:
+                    return doc.text_sync()
+
+            return source
+
+        def get_source(self: Any, source: str) -> str:
+            return get_document_text(source)
+
+        RobotParser._get_source = get_source
+
+        orig = RobotParser._build
+
+        def my_get_model_v4(source: str, data_only: bool = False, curdir: Optional[str] = None) -> Any:
+            return get_model(source, data_only, curdir)
+
+        def my_get_model_v6(
+            source: str, data_only: bool = False, curdir: Optional[str] = None, lang: Any = None
+        ) -> Any:
+            return get_model(source, data_only, curdir, lang)
+
+        my_get_model = my_get_model_v4 if get_robot_version() < (6, 0) else my_get_model_v6
+
+        def build(
+            self: Any,
+            suite: TestSuite,
+            source: str,
+            defaults: Any,
+            model: Any = None,
+            get_model: Any = my_get_model,
+        ) -> TestSuite:
+            return orig(self, suite, source, defaults, model, get_model)
+
+        RobotParser._build = build
+
+        def _validate_test_counts(self: Any, suite: TestSuite, multisource: bool = False) -> None:
+            # we don't need this
+            pass
+
+        TestSuiteBuilder._validate_test_counts = _validate_test_counts
 
     async def get_config(self, workspace_uri: str) -> Optional[RobotConfig]:
         folder = self.parent.workspace.get_workspace_folder(workspace_uri)
@@ -123,28 +174,9 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
     ) -> List[TestItem]:
         from robot.output.logger import LOGGER
         from robot.running import TestCase, TestSuite
-        from robot.running.builder.builders import RobotParser, TestSuiteBuilder
+        from robot.running.builder.builders import TestSuiteBuilder
 
         from ..utils.version import get_robot_version
-
-        def get_document_text(source: str) -> str:
-            if self.parent._loop:
-                doc = self.parent.documents.get_sync(Uri.from_path(source).normalized())
-                if doc is not None:
-                    return doc.text_sync()
-
-            return source
-
-        def get_source(self: Any, source: str) -> str:
-            return get_document_text(source)
-
-        RobotParser._get_source = get_source
-
-        def _validate_test_counts(self: Any, suite: TestSuite, multisource: bool = False) -> None:
-            # we don't need this
-            pass
-
-        TestSuiteBuilder._validate_test_counts = _validate_test_counts
 
         def generate(suite: TestSuite) -> TestItem:
             children: List[TestItem] = []

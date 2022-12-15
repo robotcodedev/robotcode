@@ -134,6 +134,7 @@ def __default(o: Any) -> Any:
                     field,
                 )
                 for field in dataclasses.fields(o)
+                if field.init or field.metadata.get("force_json", False)
             )
             if value is not None or field.default == dataclasses.MISSING
         }

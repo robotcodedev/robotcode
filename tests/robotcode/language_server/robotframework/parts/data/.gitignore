@@ -1,3 +1,5 @@
 results
 !lib/
 
+# robotcode
+.robotcode_cache/

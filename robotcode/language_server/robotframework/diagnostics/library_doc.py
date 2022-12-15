@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib
 import importlib.util
 import io
@@ -319,9 +320,9 @@ class ArgumentSpec:
 class KeywordDoc(SourceEntity):
     name: str = ""
     name_token: Optional[Token] = field(default=None, compare=False)
-    args: Tuple[KeywordArgumentDoc, ...] = field(default=(), compare=False)
+    args: List[KeywordArgumentDoc] = field(default_factory=list, compare=False)
     doc: str = field(default="", compare=False)
-    tags: Tuple[str, ...] = ()
+    tags: List[str] = field(default_factory=list)
     type: str = "keyword"
     libname: Optional[str] = None
     libtype: Optional[str] = None
@@ -340,7 +341,7 @@ class KeywordDoc(SourceEntity):
         default=None, compare=False, repr=False, hash=False
     )
 
-    parent: Optional[LibraryDoc] = None
+    parent: Optional[str] = field(default=None, metadata={"nosave": True})
 
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
@@ -500,7 +501,7 @@ class KeywordDoc(SourceEntity):
                 self.is_initializer,
                 self.is_error_handler,
                 self.doc_format,
-                self.tags,
+                tuple(self.tags),
             )
         )
 
@@ -583,13 +584,23 @@ class ModuleSpec:
     submodule_search_locations: Optional[List[str]]
 
 
+class LibraryType(Enum):
+    CLASS = "CLASS"
+    MODULE = "MODULE"
+    HYBRID = "HYBRID"
+    DYNAMIC = "DYNAMIC"
+
+
+ROBOT_DEFAULT_SCOPE = "TEST"
+
+
 @dataclass
 class LibraryDoc:
     name: str = ""
     doc: str = field(default="", compare=False)
     version: str = ""
     type: str = "LIBRARY"
-    scope: str = "TEST"
+    scope: str = ROBOT_DEFAULT_SCOPE
     named_args: bool = True
     doc_format: str = ROBOT_DOC_FORMAT
     source: Optional[str] = None
@@ -602,6 +613,16 @@ class LibraryDoc:
     python_path: Optional[List[str]] = None
     stdout: Optional[str] = field(default=None, compare=False)
     has_listener: Optional[bool] = None
+    library_type: Optional[LibraryType] = None
+    digest: Optional[str] = field(init=False)
+
+    def __post_init__(self) -> None:
+        s = (
+            f"{self.name}|{self.source}|{self.line_no}|"
+            f"{self.end_line_no}|{self.version}|"
+            f"{self.type}|{self.scope}|{self.doc_format}"
+        )
+        self.digest = hashlib.sha224(s.encode("utf-8")).hexdigest()
 
     @single_call
     def __hash__(self) -> int:
@@ -1151,6 +1172,7 @@ def get_library_doc(
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> LibraryDoc:
 
+    import robot.running.testlibraries
     from robot.libdocpkg.robotbuilder import KeywordDocBuilder
     from robot.output import LOGGER
     from robot.output.loggerhelper import AbstractLogger
@@ -1274,6 +1296,7 @@ def get_library_doc(
                     pass
 
         real_source = lib.source if lib is not None else source
+
         libdoc = LibraryDoc(
             name=library_name,
             source=real_source,
@@ -1283,25 +1306,34 @@ def get_library_doc(
             and module_spec.submodule_search_locations is None
             else None,
             python_path=sys.path,
+            line_no=lib.lineno if lib is not None else -1,
+            doc=str(lib.doc) if lib is not None else "",
+            version=str(lib.version) if lib is not None else "",
+            scope=str(lib.scope) if lib is not None else ROBOT_DEFAULT_SCOPE,
+            doc_format=(str(lib.doc_format) or ROBOT_DOC_FORMAT) if lib is not None else ROBOT_DOC_FORMAT,
         )
 
         if lib is not None:
             try:
 
-                libdoc.line_no = lib.lineno
-                libdoc.doc = str(lib.doc)
-                libdoc.version = str(lib.version)
-                libdoc.scope = str(lib.scope)
-                libdoc.doc_format = str(lib.doc_format) or ROBOT_DOC_FORMAT
                 libdoc.has_listener = lib.has_listener
+
+                if isinstance(lib, robot.running.testlibraries._ModuleLibrary):
+                    libdoc.library_type = LibraryType.MODULE
+                elif isinstance(lib, robot.running.testlibraries._ClassLibrary):
+                    libdoc.library_type = LibraryType.CLASS
+                elif isinstance(lib, robot.running.testlibraries._DynamicLibrary):
+                    libdoc.library_type = LibraryType.DYNAMIC
+                elif isinstance(lib, robot.running.testlibraries._HybridLibrary):
+                    libdoc.library_type = LibraryType.HYBRID
 
                 libdoc.inits = KeywordStore(
                     keywords=[
                         KeywordDoc(
                             name=libdoc.name,
-                            args=tuple(KeywordArgumentDoc.from_robot(a) for a in kw[0].args),
+                            args=list(KeywordArgumentDoc.from_robot(a) for a in kw[0].args),
                             doc=kw[0].doc,
-                            tags=tuple(kw[0].tags),
+                            tags=list(kw[0].tags),
                             source=kw[0].source,
                             line_no=kw[0].lineno,
                             col_offset=-1,
@@ -1314,7 +1346,7 @@ def get_library_doc(
                             doc_format=str(lib.doc_format) or ROBOT_DOC_FORMAT,
                             is_initializer=True,
                             arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
-                            parent=libdoc,
+                            parent=libdoc.digest,
                         )
                         for kw in [
                             (KeywordDocBuilder().build_keyword(k), k) for k in [KeywordWrapper(lib.init, source)]
@@ -1342,9 +1374,9 @@ def get_library_doc(
                     keywords=[
                         KeywordDoc(
                             name=kw[0].name,
-                            args=tuple(KeywordArgumentDoc.from_robot(a) for a in kw[0].args),
+                            args=list(KeywordArgumentDoc.from_robot(a) for a in kw[0].args),
                             doc=kw[0].doc,
-                            tags=tuple(kw[0].tags),
+                            tags=list(kw[0].tags),
                             source=kw[0].source,
                             line_no=kw[0].lineno,
                             col_offset=-1,
@@ -1363,7 +1395,7 @@ def get_library_doc(
                             arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments)
                             if not kw[1].is_error_handler
                             else None,
-                            parent=libdoc,
+                            parent=libdoc.digest,
                         )
                         for kw in [
                             (KeywordDocBuilder().build_keyword(k), k)

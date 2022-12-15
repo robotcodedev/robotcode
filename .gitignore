@@ -284,3 +284,6 @@ report.html
 
 # pyenv
 .python-version
+
+# robotcode
+.robotcode_cache/

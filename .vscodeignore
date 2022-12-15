@@ -49,3 +49,5 @@ coverage.xml
 # others
 scripts
 doc
+
+**/.robotcode_cache

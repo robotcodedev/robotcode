@@ -84,7 +84,7 @@ PROTOCOL_VERSION = "2.0"
 
 @dataclass
 class JsonRPCMessage:
-    jsonrpc: str = field(default=PROTOCOL_VERSION, init=False)
+    jsonrpc: str = field(default=PROTOCOL_VERSION, init=False, metadata={"force_json": True})
 
 
 @dataclass

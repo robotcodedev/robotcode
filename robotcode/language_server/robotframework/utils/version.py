@@ -30,6 +30,12 @@ def get_robot_version() -> Version:
     return _robot_version
 
 
+def get_robot_version_str() -> str:
+    import robot
+
+    return str(robot.get_version())
+
+
 def create_version_from_str(version_str: str) -> Version:
     def s_to_i(s: Optional[str]) -> Optional[int]:
         return int(s) if s is not None else None

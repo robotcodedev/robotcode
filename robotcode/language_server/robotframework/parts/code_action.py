@@ -309,7 +309,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                                 (
                                     v
                                     for v in (await namespace.get_libraries()).values()
-                                    if v.library_doc == kw_doc.parent
+                                    if v.library_doc.digest == kw_doc.parent
                                 ),
                                 None,
                             )
@@ -319,13 +319,13 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                                 (
                                     v
                                     for v in (await namespace.get_resources()).values()
-                                    if v.library_doc == kw_doc.parent
+                                    if v.library_doc.digest == kw_doc.parent
                                 ),
                                 None,
                             )
 
                             self_libdoc = await namespace.get_library_doc()
-                            if entry is None and self_libdoc == kw_doc.parent:
+                            if entry is None and self_libdoc.digest == kw_doc.parent:
 
                                 entry = LibraryEntry(self_libdoc.name, str(document.uri.to_path().name), self_libdoc)
 

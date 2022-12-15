@@ -226,6 +226,22 @@ def test_decode_dict(expr: Any, type: Any, expected: str) -> None:
     assert from_json(expr, type) == expected
 
 
+# TRODO: Tuple is not supported yet
+# @pytest.mark.parametrize(
+#     ("expr", "type", "expected"),
+#     [
+#         ("[]", tuple, ()),
+#         ("[1]", tuple, (1)),
+#         # ('{"a": 1}', Dict[str, int], {"a": 1}),
+#         # ('{"a": 1, "b": 2}', Dict[str, int], {"a": 1, "b": 2}),
+#         # ('{"a": 1, "b": null}', Dict[str, Union[int, str, None]], {"a": 1, "b": None}),
+#         # ('{"a": {}, "b": {"a": 2}}', Dict[str, Dict[str, Any]], {"a": {}, "b": {"a": 2}}),
+#     ],
+# )
+# def test_decode_tuple(expr: Any, type: Any, expected: str) -> None:
+#     assert from_json(expr, type) == expected
+
+
 @pytest.mark.parametrize(
     ("expr", "type", "expected"),
     [
