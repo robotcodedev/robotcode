@@ -877,13 +877,20 @@ class ImportsManager:
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> LibraryDoc:
-        meta, source = await self.get_library_meta(
+        source = await self.find_library(
             name,
             base_dir,
             variables,
         )
 
         async def _get_libdoc() -> LibraryDoc:
+
+            meta, source = await self.get_library_meta(
+                name,
+                base_dir,
+                variables,
+            )
+
             self._logger.debug(lambda: f"Load Library {source}{repr(args)}")
             if meta is not None:
                 meta_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
