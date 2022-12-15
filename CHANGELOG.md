@@ -4,6 +4,13 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.18.0 (2022-12-15)
+### Feature
+* **robotlangserver:** Speedup loading of class and module libraries ([`975661c`](https://github.com/d-biehl/robotcode/commit/975661c7d33d2736355be66d7e1b26979ef9b0aa))
+
+### Fix
+* **robotlangserver:** Update libraries when editing not work ([`9adc6c8`](https://github.com/d-biehl/robotcode/commit/9adc6c866d8164a97224bef6a6b21b867355c4ec))
+
 ## v0.17.3 (2022-12-11)
 ### Fix
 * **vscode:** Highlightning comments in text mate mode ([`1c1cb9a`](https://github.com/d-biehl/robotcode/commit/1c1cb9a22a02c89dd604418d883b570a68d199b1))
