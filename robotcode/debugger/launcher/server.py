@@ -235,7 +235,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         if target:
             run_args.append(target)
 
-        if not paths and not target:
+        if target is not None and not paths and not target:
             run_args.append(".")
 
         env = {k: ("" if v is None else str(v)) for k, v in env.items()} if env else {}

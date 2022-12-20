@@ -824,7 +824,7 @@
           "launch": {
             "properties": {
               "target": {
-                "type": "string",
+                "type": ["string", "null"],
                 "description": "The .robot file or a folder containing .robot files to be launched.",
                 "default": "${file}"
               },
