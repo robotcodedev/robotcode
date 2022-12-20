@@ -38,7 +38,7 @@ from ...common.decorators import language_id
 from ...common.lsp_types import DocumentUri, FileChangeType, FileEvent
 from ...common.parts.workspace import FileWatcherEntry, Workspace
 from ...common.text_document import TextDocument
-from ..configuration import RobotConfig
+from ..configuration import CacheSaveLocation, RobotCodeConfig
 from ..utils.ast_utils import HasError, HasErrors, Token
 from ..utils.async_ast import walk
 from ..utils.robot_path import find_file_ex
@@ -486,7 +486,7 @@ class LibraryMetaData:
 class ImportsManager:
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent_protocol: RobotLanguageServerProtocol, folder: Uri, config: RobotConfig) -> None:
+    def __init__(self, parent_protocol: RobotLanguageServerProtocol, folder: Uri, config: RobotCodeConfig) -> None:
         super().__init__()
         self.parent_protocol = parent_protocol
 
@@ -494,9 +494,13 @@ class ImportsManager:
         get_robot_version()
 
         cache_base_path = self.folder.to_path()
-        if isinstance(self.parent_protocol.initialization_options, dict):
-            if "storageUri" in self.parent_protocol.initialization_options:
-                cache_base_path = Uri(self.parent_protocol.initialization_options["storageUri"]).to_path()
+        if (
+            config.analysis.cache.save_location == CacheSaveLocation.WORKSPACE_STORAGE
+            and isinstance(self.parent_protocol.initialization_options, dict)
+            and "storageUri" in self.parent_protocol.initialization_options
+        ):
+            cache_base_path = Uri(self.parent_protocol.initialization_options["storageUri"]).to_path()
+
         self._logger.trace(lambda: f"use {cache_base_path} as base for caching")
 
         self.lib_doc_cache_path = (
@@ -506,8 +510,7 @@ class ImportsManager:
             / get_robot_version_str()
             / "libdoc"
         )
-
-        self.config: RobotConfig = config
+        self.config = config
         self._libaries_lock = Lock()
         self._libaries: OrderedDict[_LibrariesEntryKey, _LibrariesEntry] = OrderedDict()
         self._resources_lock = Lock()
@@ -521,7 +524,7 @@ class ImportsManager:
         self._command_line_variables_lock = Lock()
 
         self._environment = dict(os.environ)
-        self._environment.update(self.config.env)
+        self._environment.update(self.config.robot.env)
 
         self._library_files_cache = AsyncSimpleLRUCache()
         self._resource_files_cache = AsyncSimpleLRUCache()
@@ -540,14 +543,14 @@ class ImportsManager:
             if self._command_line_variables is None:
                 command_line_vars: List[VariableDefinition] = []
 
-                if self.config is None:
+                if self.config.robot is None:
                     self._command_line_variables = []
                 else:
                     command_line_vars = [
                         CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=(v,))
-                        for k, v in self.config.variables.items()
+                        for k, v in self.config.robot.variables.items()
                     ]
-                    for variable_file in self.config.variable_files:
+                    for variable_file in self.config.robot.variable_files:
                         name, args = split_args_from_name_or_path(variable_file)
                         try:
                             lib_doc = await self.get_libdoc_for_variables_import(
@@ -806,7 +809,7 @@ class ImportsManager:
                 name,
                 str(self.folder.to_path()),
                 base_dir,
-                self.config.variables if self.config is not None else None,
+                self.config.robot.variables if self.config.robot is not None else None,
                 variables,
             )
 
@@ -836,7 +839,7 @@ class ImportsManager:
                 name,
                 str(self.folder.to_path()),
                 base_dir,
-                self.config.variables if self.config is not None else None,
+                self.config.robot.variables if self.config.robot is not None else None,
                 variables,
                 file_type,
             )
@@ -855,7 +858,7 @@ class ImportsManager:
                 name,
                 str(self.folder.to_path()),
                 base_dir,
-                self.config.variables if self.config is not None else None,
+                self.config.robot.variables if self.config.robot is not None else None,
                 variables,
             )
 
@@ -918,7 +921,7 @@ class ImportsManager:
                         args,
                         str(self.folder.to_path()),
                         base_dir,
-                        self.config.variables if self.config is not None else None,
+                        self.config.robot.variables if self.config.robot is not None else None,
                         variables,
                     ),
                     LOAD_LIBRARY_TIME_OUT,
@@ -1111,7 +1114,7 @@ class ImportsManager:
                         args,
                         str(self.folder.to_path()),
                         base_dir,
-                        self.config.variables if self.config is not None else None,
+                        self.config.robot.variables if self.config.robot is not None else None,
                         variables,
                     ),
                     LOAD_LIBRARY_TIME_OUT,
@@ -1207,7 +1210,7 @@ class ImportsManager:
             name,
             str(self.folder.to_path()),
             base_dir,
-            self.config.variables if self.config is not None else None,
+            self.config.robot.variables if self.config.robot is not None else None,
             variables,
         )
 
@@ -1218,7 +1221,7 @@ class ImportsManager:
             name,
             str(self.folder.to_path()),
             base_dir,
-            self.config.variables if self.config is not None else None,
+            self.config.robot.variables if self.config.robot is not None else None,
             variables,
         )
 
@@ -1230,7 +1233,7 @@ class ImportsManager:
             name,
             str(self.folder.to_path()),
             base_dir,
-            self.config.variables if self.config is not None else None,
+            self.config.robot.variables if self.config.robot is not None else None,
             variables,
         )
 
@@ -1239,6 +1242,6 @@ class ImportsManager:
             name,
             str(self.folder.to_path()),
             base_dir,
-            self.config.variables if self.config is not None else None,
+            self.config.robot.variables if self.config.robot is not None else None,
             variables,
         )

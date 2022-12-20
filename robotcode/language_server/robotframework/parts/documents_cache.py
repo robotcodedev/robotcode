@@ -23,7 +23,7 @@ from ....utils.uri import Uri
 from ...common.decorators import language_id_filter
 from ...common.parts.workspace import WorkspaceFolder
 from ...common.text_document import TextDocument
-from ..configuration import RobotConfig
+from ..configuration import RobotCodeConfig, RobotConfig
 from ..diagnostics.imports_manager import ImportsManager
 from ..diagnostics.namespace import DocumentType, Namespace
 from ..utils.ast_utils import Token
@@ -429,7 +429,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
                 self._default_imports_manager = ImportsManager(
                     self.parent,
                     Uri(self.parent.workspace.root_uri or "."),
-                    RobotConfig(args=(), python_path=[], env={}, variables={}),
+                    RobotCodeConfig(),
                 )
 
             return self._default_imports_manager
@@ -444,7 +444,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         async with self._imports_managers_lock:
             if folder not in self._imports_managers:
-                config = await self.parent.workspace.get_configuration(RobotConfig, folder.uri)
+                config = await self.parent.workspace.get_configuration(RobotCodeConfig, folder.uri)
 
                 self._imports_managers[folder] = ImportsManager(self.parent, folder.uri, config)
 

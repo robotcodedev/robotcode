@@ -472,6 +472,20 @@
             "default": "default",
             "scope": "resource"
           },
+          "robotcode.analysis.cache.saveLocation": {
+            "type": "string",
+            "enum": [
+              "workspaceStorage",
+              "workspaceFolder"
+            ],
+            "enumDescriptions": [
+              "Save cached data into workspace folder.",
+              "Save cached data into workspace storage."
+            ],
+            "description": "Specifies where cached data is saved.",
+            "default": "workspaceStorage",
+            "scope": "resource"
+          },
           "robotcode.run.openOutputAfterRun": {
             "type": "string",
             "enum": [

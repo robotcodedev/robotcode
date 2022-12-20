@@ -20,10 +20,15 @@ class RpaMode(Enum):
     NORPA = "norpa"
 
 
+class CacheSaveLocation(Enum):
+    WORKSPACE_FOLDER = "workspaceFolder"
+    WORKSPACE_STORAGE = "workspaceStorage"
+
+
 @config_section("robotcode.robot")
 @dataclass
 class RobotConfig(ConfigBase):
-    args: Tuple[str, ...] = field(default_factory=tuple)
+    args: List[str] = field(default_factory=list)
     python_path: List[str] = field(default_factory=list)
     env: Dict[str, str] = field(default_factory=dict)
     variables: Dict[str, Any] = field(default_factory=dict)
@@ -73,6 +78,12 @@ class WorkspaceConfig(ConfigBase):
     exclude_patterns: List[str] = field(default_factory=list)
 
 
+@config_section("robotcode.analysis.cache")
+@dataclass
+class Cache(ConfigBase):
+    save_location: CacheSaveLocation = CacheSaveLocation.WORKSPACE_STORAGE
+
+
 @config_section("robotcode.analysis")
 @dataclass
 class AnalysisConfig(ConfigBase):
@@ -81,6 +92,7 @@ class AnalysisConfig(ConfigBase):
     max_project_file_count: int = 5000
     references_code_lens: bool = False
     find_unused_references: bool = False
+    cache: Cache = field(default_factory=Cache)
 
 
 @config_section("robotcode.documentationServer")
