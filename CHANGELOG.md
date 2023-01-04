@@ -4,6 +4,15 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.19.0 (2023-01-05)
+### Feature
+* New command `Clear Cache and Restart Language Servers` ([`a2ffdc6`](https://github.com/d-biehl/robotcode/commit/a2ffdc6c63150387a0bd7077cb0d31ce80e36076))
+* **debugger:** Possibility to disable the target `.` in a robotcode launch configurations with `null`, to append your own targets in `args` ([`42e528d`](https://github.com/d-biehl/robotcode/commit/42e528d995c63efbdfa6aa3336749f4c92bbc442))
+* **robotlangserver:** New setting `.analysis.cache.saveLocation` where you can specify the location where robotcode saves cached data ([`22526e5`](https://github.com/d-biehl/robotcode/commit/22526e532d4294d84e894c4017a6be55deddd5e7))
+
+### Fix
+* **robotlangserver:** Don't report load workspace progress if progressmode is off ([`6dca5e0`](https://github.com/d-biehl/robotcode/commit/6dca5e0f9e8380dc43f5389f7656c3b054da7ede))
+
 ## v0.18.0 (2022-12-15)
 ### Feature
 * **robotlangserver:** Speedup loading of class and module libraries ([`975661c`](https://github.com/d-biehl/robotcode/commit/975661c7d33d2736355be66d7e1b26979ef9b0aa))
