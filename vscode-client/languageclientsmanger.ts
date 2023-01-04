@@ -126,8 +126,18 @@ export class LanguageClientsManager {
       },
       vscode.workspace.onDidChangeWorkspaceFolders(async (_event) => this.refresh()),
       vscode.workspace.onDidOpenTextDocument(async (document) => this.getLanguageClientForDocument(document)),
-      vscode.commands.registerCommand("robotcode.restartLanguageServers", async () => await this.restart())
+      vscode.commands.registerCommand("robotcode.restartLanguageServers", async () => await this.restart()),
+      vscode.commands.registerCommand("robotcode.clearCacheRestartLanguageServers", async () => {
+        await this.clearCaches();
+        await this.restart();
+      })
     );
+  }
+
+  public async clearCaches(): Promise<void> {
+    for (const client of this.clients.values()) {
+      await client.sendRequest("robot/cache/clear");
+    }
   }
 
   public async stopAllClients(): Promise<boolean> {

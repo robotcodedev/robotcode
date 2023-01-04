@@ -4,6 +4,8 @@ import asyncio
 import time
 from typing import TYPE_CHECKING, Any, List, Optional
 
+from robotcode.jsonrpc2.protocol import rpc_method
+
 from ....utils.async_tools import Event, threaded
 from ....utils.glob_path import iter_files
 from ....utils.logging import LoggingDescriptor
@@ -149,3 +151,9 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
             return result
         finally:
             self._logger.debug(f"Workspace loaded in {time.monotonic() - start}s")
+
+    @rpc_method(name="robot/cache/clear")
+    @threaded()
+    async def get_tests_from_workspace(self) -> None:
+        for folder in self.parent.workspace.workspace_folders:
+            (await self.parent.documents_cache.get_imports_manager_for_workspace_folder(folder)).clear_cache()

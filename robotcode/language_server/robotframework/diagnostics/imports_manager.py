@@ -4,6 +4,7 @@ import ast
 import asyncio
 import itertools
 import os
+import shutil
 import sys
 import weakref
 import zlib
@@ -503,9 +504,10 @@ class ImportsManager:
 
         self._logger.trace(lambda: f"use {cache_base_path} as base for caching")
 
+        self.cache_path = cache_base_path / ".robotcode_cache"
+
         self.lib_doc_cache_path = (
-            cache_base_path
-            / ".robotcode_cache"
+            self.cache_path
             / f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
             / get_robot_version_str()
             / "libdoc"
@@ -533,6 +535,11 @@ class ImportsManager:
     @property
     def environment(self) -> Mapping[str, str]:
         return self._environment
+
+    def clear_cache(self) -> None:
+        if self.cache_path.exists():
+            shutil.rmtree(self.cache_path)
+            self._logger.debug(f"Cleared cache {self.cache_path}")
 
     @_logger.call
     async def get_command_line_variables(self) -> List[VariableDefinition]:
@@ -940,7 +947,7 @@ class ImportsManager:
                         spec_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".spec.json"))
                         spec_file.write_text(as_json(result), "utf-8")
                     else:
-                        self._logger.debug(lambda: f"Skip caching library {name}{args:r}")
+                        self._logger.debug(lambda: f"Skip caching library {name}{repr(args)}")
                 except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException as e:

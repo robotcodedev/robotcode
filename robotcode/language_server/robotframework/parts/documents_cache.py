@@ -16,11 +16,10 @@ from typing import (
     cast,
 )
 
-from robotcode.language_server.common.lsp_types import MessageType
-
 from ....utils.async_tools import Lock, async_tasking_event, check_canceled_sync
 from ....utils.uri import Uri
 from ...common.decorators import language_id_filter
+from ...common.lsp_types import MessageType
 from ...common.parts.workspace import WorkspaceFolder
 from ...common.text_document import TextDocument
 from ..configuration import RobotCodeConfig, RobotConfig
@@ -435,7 +434,12 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
             return self._default_imports_manager
 
     async def get_imports_manager(self, document: TextDocument) -> ImportsManager:
-        folder = self.parent.workspace.get_workspace_folder(document.uri)
+        return await self.get_imports_manager_for_uri(document.uri)
+
+    async def get_imports_manager_for_uri(self, uri: Uri) -> ImportsManager:
+        return await self.get_imports_manager_for_workspace_folder(self.parent.workspace.get_workspace_folder(uri))
+
+    async def get_imports_manager_for_workspace_folder(self, folder: Optional[WorkspaceFolder]) -> ImportsManager:
         if folder is None:
             if len(self.parent.workspace.workspace_folders) == 1:
                 folder = self.parent.workspace.workspace_folders[0]

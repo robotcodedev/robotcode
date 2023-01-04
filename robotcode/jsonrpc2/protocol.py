@@ -618,7 +618,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                             await asyncio.sleep(0)
 
                     else:
-                        self._logger.warning(f"Response {entry:r} loop is not running.")
+                        self._logger.warning(f"Response {repr(entry)} loop is not running.")
 
         except (SystemExit, KeyboardInterrupt):
             raise

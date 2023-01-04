@@ -711,6 +711,11 @@
         "title": "Restart Language Servers",
         "category": "RobotCode",
         "command": "robotcode.restartLanguageServers"
+      },
+      {
+        "title": "Clear Cache and Restart Language Servers",
+        "category": "RobotCode",
+        "command": "robotcode.clearCacheRestartLanguageServers"
       }
     ],
     "menus": {
