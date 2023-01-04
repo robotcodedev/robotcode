@@ -939,6 +939,8 @@ class ImportsManager:
 
                         spec_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".spec.json"))
                         spec_file.write_text(as_json(result), "utf-8")
+                    else:
+                        self._logger.debug(lambda: f"Skip caching library {name}{args:r}")
                 except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException as e:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from ....utils.async_tools import Event, threaded
@@ -74,73 +75,77 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
 
     @threaded()
     async def _load_workspace_documents(self, sender: Any) -> List[WorkspaceDocumentsResult]:
+        start = time.monotonic()
+        try:
 
-        result: List[WorkspaceDocumentsResult] = []
+            result: List[WorkspaceDocumentsResult] = []
 
-        for folder in self.parent.workspace.workspace_folders:
-            config = await self.parent.workspace.get_configuration(RobotCodeConfig, folder.uri)
+            for folder in self.parent.workspace.workspace_folders:
+                config = await self.parent.workspace.get_configuration(RobotCodeConfig, folder.uri)
 
-            async with self.parent.window.progress("Collect sources", cancellable=False):
-                files = [
-                    f
-                    for f in iter_files(
-                        folder.uri.to_path(),
-                        f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}",
-                        ignore_patterns=config.workspace.exclude_patterns or [],
-                        absolute=True,
-                    )
-                ]
+                async with self.parent.window.progress("Collect sources", cancellable=False):
+                    files = [
+                        f
+                        for f in iter_files(
+                            folder.uri.to_path(),
+                            f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}",
+                            ignore_patterns=config.workspace.exclude_patterns or [],
+                            absolute=True,
+                        )
+                    ]
 
-            canceled = False
-            async with self.parent.window.progress(
-                "Load workspace", cancellable=True, current=0, max=len(files), start=False
-            ) as progress:
-                for i, f in enumerate(files):
-                    try:
-                        if progress.is_canceled:
-                            canceled = True
-                            break
+                canceled = False
+                async with self.parent.window.progress(
+                    "Load workspace", cancellable=True, current=0, max=len(files), start=False
+                ) as progress:
+                    for i, f in enumerate(files):
+                        try:
+                            if progress.is_canceled:
+                                canceled = True
+                                break
 
-                        name = f.relative_to(folder.uri.to_path())
+                            name = f.relative_to(folder.uri.to_path())
 
-                        if config.analysis.progress_mode != AnalysisProgressMode.OFF:
-                            progress.begin()
-                            progress.report(
-                                f"Load {str(name)}"
-                                if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
-                                else None,
-                                current=i,
-                            )
-
-                        if not f.exists():
-                            continue
-
-                        document = await self.parent.documents.get_or_open_document(f, "robotframework")
-
-                        if not document.opened_in_editor:
-                            await (await self.parent.documents_cache.get_namespace(document)).ensure_initialized()
-
-                            if config.analysis.diagnostic_mode == DiagnosticsMode.WORKSPACE:
-                                result.append(
-                                    WorkspaceDocumentsResult(
-                                        str(name)
-                                        if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
-                                        else None,
-                                        document,
-                                    )
+                            if config.analysis.progress_mode != AnalysisProgressMode.OFF:
+                                progress.begin()
+                                progress.report(
+                                    f"Load {str(name)}"
+                                    if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
+                                    else None,
+                                    current=i,
                                 )
 
-                    except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                        raise
-                    except BaseException as e:
-                        self._logger.exception(e)
+                            if not f.exists():
+                                continue
 
-        self.workspace_loaded.set()
+                            document = await self.parent.documents.get_or_open_document(f, "robotframework")
 
-        if canceled:
-            return []
+                            if not document.opened_in_editor:
+                                await (await self.parent.documents_cache.get_namespace(document)).ensure_initialized()
 
-        if config.analysis.max_project_file_count > 0 and len(files) > config.analysis.max_project_file_count:
-            result = result[: config.analysis.max_project_file_count]
+                                if config.analysis.diagnostic_mode == DiagnosticsMode.WORKSPACE:
+                                    result.append(
+                                        WorkspaceDocumentsResult(
+                                            str(name)
+                                            if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
+                                            else None,
+                                            document,
+                                        )
+                                    )
 
-        return result
+                        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                            raise
+                        except BaseException as e:
+                            self._logger.exception(e)
+
+            self.workspace_loaded.set()
+
+            if canceled:
+                return []
+
+            if config.analysis.max_project_file_count > 0 and len(files) > config.analysis.max_project_file_count:
+                result = result[: config.analysis.max_project_file_count]
+
+            return result
+        finally:
+            self._logger.debug(f"Workspace loaded in {time.monotonic() - start}s")
