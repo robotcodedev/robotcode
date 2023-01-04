@@ -93,7 +93,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
 
             canceled = False
             async with self.parent.window.progress(
-                "Load workspace", cancellable=True, current=0, max=len(files)
+                "Load workspace", cancellable=True, current=0, max=len(files), start=False
             ) as progress:
                 for i, f in enumerate(files):
                     try:
@@ -103,12 +103,14 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
 
                         name = f.relative_to(folder.uri.to_path())
 
-                        progress.report(
-                            f"Load {str(name)}"
-                            if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
-                            else None,
-                            current=i,
-                        )
+                        if config.analysis.progress_mode != AnalysisProgressMode.OFF:
+                            progress.begin()
+                            progress.report(
+                                f"Load {str(name)}"
+                                if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
+                                else None,
+                                current=i,
+                            )
 
                         if not f.exists():
                             continue
