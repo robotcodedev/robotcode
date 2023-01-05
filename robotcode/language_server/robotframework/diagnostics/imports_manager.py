@@ -152,15 +152,19 @@ class _ImportEntry(ABC):
 class _LibrariesEntry(_ImportEntry):
     def __init__(
         self,
+        parent: ImportsManager,
         name: str,
         args: Tuple[Any, ...],
-        parent: ImportsManager,
-        get_libdoc_coroutine: Callable[[], Coroutine[Any, Any, LibraryDoc]],
+        working_dir: str,
+        base_dir: str,
+        get_libdoc_coroutine: Callable[[str, Tuple[Any, ...], str, str], Coroutine[Any, Any, LibraryDoc]],
         ignore_reference: bool = False,
     ) -> None:
         super().__init__(parent)
         self.name = name
         self.args = args
+        self.working_dir = working_dir
+        self.base_dir = base_dir
         self._get_libdoc_coroutine = get_libdoc_coroutine
         self._lib_doc: Optional[LibraryDoc] = None
         self.ignore_reference = ignore_reference
@@ -211,7 +215,7 @@ class _LibrariesEntry(_ImportEntry):
             return None
 
     async def _update(self) -> None:
-        self._lib_doc = await self._get_libdoc_coroutine()
+        self._lib_doc = await self._get_libdoc_coroutine(self.name, self.args, self.working_dir, self.base_dir)
 
         source_or_origin = (
             self._lib_doc.source
@@ -893,7 +897,7 @@ class ImportsManager:
             variables,
         )
 
-        async def _get_libdoc() -> LibraryDoc:
+        async def _get_libdoc(name: str, args: Tuple[Any, ...], working_dir: str, base_dir: str) -> LibraryDoc:
 
             meta, source = await self.get_library_meta(
                 name,
@@ -926,7 +930,7 @@ class ImportsManager:
                         get_library_doc,
                         name,
                         args,
-                        str(self.folder.to_path()),
+                        working_dir,
                         base_dir,
                         self.config.robot.variables if self.config.robot is not None else None,
                         variables,
@@ -960,7 +964,13 @@ class ImportsManager:
         async with self._libaries_lock:
             if entry_key not in self._libaries:
                 self._libaries[entry_key] = _LibrariesEntry(
-                    name, args, self, _get_libdoc, ignore_reference=sentinel is None
+                    self,
+                    name,
+                    args,
+                    str(self.folder.to_path()),
+                    base_dir,
+                    _get_libdoc,
+                    ignore_reference=sentinel is None,
                 )
 
         entry = self._libaries[entry_key]

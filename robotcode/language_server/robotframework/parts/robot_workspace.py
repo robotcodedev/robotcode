@@ -40,7 +40,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         self.parent.diagnostics.on_get_diagnostics_mode.add(self.on_get_diagnostics_mode)
         self.parent.diagnostics.on_get_analysis_progress_mode.add(self.on_get_analysis_progress_mode)
         self.parent.on_initialized.add(self.on_initialized)
-        self.workspace_loaded = Event()
+        self.documents_loaded = Event()
 
     async def on_initialized(self, sender: Any) -> None:
         await self.parent.workspace.add_file_watcher(
@@ -101,6 +101,22 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                     "Load workspace", cancellable=True, current=0, max=len(files), start=False
                 ) as progress:
                     for i, f in enumerate(files):
+                        await self.parent.documents.get_or_open_document(f, "robotframework")
+
+                        if config.analysis.progress_mode != AnalysisProgressMode.OFF:
+                            name = f.relative_to(folder.uri.to_path())
+
+                            progress.begin()
+                            progress.report(
+                                f"Load {str(name)}"
+                                if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
+                                else None,
+                                current=i,
+                            )
+
+                    self.documents_loaded.set()
+
+                    for i, f in enumerate(files):
                         try:
                             if progress.is_canceled:
                                 canceled = True
@@ -111,7 +127,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                             if config.analysis.progress_mode != AnalysisProgressMode.OFF:
                                 progress.begin()
                                 progress.report(
-                                    f"Load {str(name)}"
+                                    f"Initialize {str(name)}"
                                     if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
                                     else None,
                                     current=i,
@@ -139,8 +155,6 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                             raise
                         except BaseException as e:
                             self._logger.exception(e)
-
-            self.workspace_loaded.set()
 
             if canceled:
                 return []
