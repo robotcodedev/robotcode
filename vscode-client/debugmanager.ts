@@ -361,7 +361,7 @@ export class DebugManager {
 
       const separator = included.find((s) => s.indexOf(":") >= 0) === undefined ? ":" : ";";
 
-      args.push(`robotcode.debugger.modifiers.ByLongName${separator}${included.join(separator)}`);
+      args.push(`robotcode.modifiers.ByLongName${separator}${included.join(separator)}`);
     }
 
     if (excluded.length > 0) {
@@ -369,7 +369,7 @@ export class DebugManager {
 
       const separator = included.find((s) => s.indexOf(":") >= 0) === undefined ? ":" : ";";
 
-      args.push(`robotcode.debugger.modifiers.ExcludedByLongName${separator}${excluded.join(separator)}`);
+      args.push(`robotcode.modifiers.ExcludedByLongName${separator}${excluded.join(separator)}`);
     }
 
     const testLaunchConfig: { [Key: string]: unknown } =
