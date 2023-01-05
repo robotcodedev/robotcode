@@ -156,6 +156,8 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         variableFiles: Optional[List[str]] = None,
         languages: Optional[List[str]] = None,
         arguments: Optional[LaunchRequestArguments] = None,
+        include: Optional[List[str]] = None,
+        exclude: Optional[List[str]] = None,
         *_args: Any,
         **_kwargs: Any,
     ) -> None:
@@ -225,6 +227,14 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         if variables:
             for k, v in variables.items():
                 run_args += ["-v", f"{k}:{v}"]
+
+        if include:
+            for v in include:
+                run_args += ["-i", f"{v}"]
+
+        if exclude:
+            for v in exclude:
+                run_args += ["-e", f"{v}"]
 
         run_args += args or []
 

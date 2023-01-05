@@ -829,7 +829,10 @@
           "launch": {
             "properties": {
               "target": {
-                "type": ["string", "null"],
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "description": "The .robot file or a folder containing .robot files to be launched.",
                 "default": "${file}"
               },
@@ -928,6 +931,22 @@
                   "type": "string"
                 },
                 "description": "Specifies the variable files for robotframework. Corresponds to the '--variablefile' option of robot."
+              },
+              "include": {
+                "type": "array",
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "description": "Specifies the tags that should be included in test run. Corresponds to the '--include' option of robot."
+              },
+              "exclude": {
+                "type": "array",
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "description": "Specifies the tags that should be excluded in test run. Corresponds to the '--excluded' option of robot."
               },
               "launcherArgs": {
                 "type": "array",
