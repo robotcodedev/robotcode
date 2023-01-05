@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.19.1 (2023-01-05)
+### Fix
+* **debugger:** Use default target if there is no target specified in launch config with purpose test ([`f633cc5`](https://github.com/d-biehl/robotcode/commit/f633cc5d27e1ad7ab9cc304d3977540365848211))
+
 ## v0.19.0 (2023-01-05)
 ### Feature
 * New command `Clear Cache and Restart Language Servers` ([`a2ffdc6`](https://github.com/d-biehl/robotcode/commit/a2ffdc6c63150387a0bd7077cb0d31ce80e36076))
