@@ -104,7 +104,11 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
         ...(debugConfiguration.robotPythonPath ?? []),
       ];
 
-      debugConfiguration.args = [...config.get<string[]>("robot.args", []), ...(debugConfiguration.args ?? [])];
+      debugConfiguration.args = [
+        ...config.get<string[]>("robot.args", []),
+        ...(Array.isArray(defaultLaunchConfig?.args) ? defaultLaunchConfig.args : []),
+        ...(debugConfiguration.args ?? []),
+      ];
 
       debugConfiguration.variableFiles = [
         ...config.get<string[]>("robot.variableFiles", []),
@@ -368,7 +372,7 @@ export class DebugManager {
       args.push(`robotcode.debugger.modifiers.ExcludedByLongName${separator}${excluded.join(separator)}`);
     }
 
-    const testLaunchConfig =
+    const testLaunchConfig: { [Key: string]: unknown } =
       vscode.workspace
         .getConfiguration("launch", folder)
         ?.get<{ [Key: string]: unknown }[]>("configurations")
@@ -382,7 +386,7 @@ export class DebugManager {
       testLaunchConfig.target = "";
     }
 
-    const paths = config.get("robot.paths", []);
+    const paths = config.get<Array<string>>("robot.paths", []);
 
     return vscode.debug.startDebugging(
       folder,
@@ -393,9 +397,12 @@ export class DebugManager {
           name: "RobotCode: Run Tests",
           request: "launch",
           cwd: folder?.uri.fsPath,
-          paths: paths,
-          args: args,
-          console: config.get("debug.defaultConsole", "integratedTerminal"),
+          paths: "paths" in testLaunchConfig ? [...(testLaunchConfig.paths as Array<string>), ...paths] : paths,
+          args: "args" in testLaunchConfig ? [...(testLaunchConfig.args as Array<string>), ...args] : args,
+          console:
+            "console" in testLaunchConfig
+              ? testLaunchConfig.console
+              : config.get("debug.defaultConsole", "integratedTerminal"),
           runId: runId,
           dryRun,
         },
