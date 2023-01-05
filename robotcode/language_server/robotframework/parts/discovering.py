@@ -106,7 +106,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         self._patch()
 
     def _patch(self) -> None:
-        from robot.api.parsing import get_model
+        from robot.api.parsing import File, get_model
         from robot.running import TestSuite
         from robot.running.builder.builders import RobotParser, TestSuiteBuilder
 
@@ -128,12 +128,24 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         orig = RobotParser._build
 
         def my_get_model_v4(source: str, data_only: bool = False, curdir: Optional[str] = None) -> Any:
-            return get_model(source, data_only, curdir)
+            try:
+                return get_model(source, data_only, curdir)
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                self._logger.critical(f"Can't parse {source}: {e}")
+                return File(source=source)
 
         def my_get_model_v6(
             source: str, data_only: bool = False, curdir: Optional[str] = None, lang: Any = None
         ) -> Any:
-            return get_model(source, data_only, curdir, lang)
+            try:
+                return get_model(source, data_only, curdir, lang)
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                self._logger.critical(f"Can't parse {source}: {e}")
+                return File(source=source)
 
         my_get_model = my_get_model_v4 if get_robot_version() < (6, 0) else my_get_model_v6
 
