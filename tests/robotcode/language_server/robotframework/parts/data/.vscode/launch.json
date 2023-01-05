@@ -5,47 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "RobotCode: Two Same",
-            "type": "robotcode",
-            "request": "launch",
-            "cwd": "${workspaceFolder}",
-            //"target": "./tests/playground.robot  ./tests/playground.robot"
-            "args": [
-                "./tests/extras",
-                "./tests/extras"
-            ]
-        },
-        {
             "name": "RobotCode: Run Current",
             "type": "robotcode",
             "request": "launch",
             "cwd": "${workspaceFolder}",
-            "target": "${file}",
-            "launcherArgs": [
-                "-d",
-                "-dp",
-                "5678",
-                "-dw"
-            ],
-            //"attachPython": true,
-            "pythonConfiguration": {
-                "justMyCode": false
-            },
-            "env": {
-                "FIRST": "value"
-            }
-        },
-        {
-            "name": "RobotCode: Dry Run Current",
-            "type": "robotcode",
-            "request": "launch",
-            "cwd": "${workspaceFolder}",
-            "target": "${file}",
-            "attachPython": true,
-            "dryRun": true,
-            "pythonConfiguration": {
-                "justMyCode": false
-            }
+            "target": "${file}"
         },
         {
             "name": "RobotCode: Run All",
@@ -53,6 +17,38 @@
             "request": "launch",
             "cwd": "${workspaceFolder}",
             "target": "."
+        },
+        {
+            "name": "RobotCode: Default",
+            "type": "robotcode",
+            "request": "launch",
+            "purpose": "default",
+            "presentation": {
+                "hidden": true
+            },
+            "attachPython": false,
+            "pythonConfiguration": "RobotCode: Python"
+        },
+        {
+            "name": "RobotCode: Default",
+            "type": "robotcode",
+            "request": "launch",
+            "purpose": "test",
+            "presentation": {
+                "hidden": true
+            },
+            "attachPython": false,
+            "pythonConfiguration": "RobotCode: Python",
+            //"target": "asd"
+        },
+        {
+            "name": "RobotCode: Python",
+            "type": "python",
+            "request": "attach",
+            "presentation": {
+                "hidden": true
+            },
+            "justMyCode": false
         }
     ]
 }

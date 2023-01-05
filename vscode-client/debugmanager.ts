@@ -378,6 +378,10 @@ export class DebugManager {
             (v?.purpose === "test" || (Array.isArray(v?.purpose) && v?.purpose?.indexOf("test") > -1))
         ) ?? {};
 
+    if (!("target" in testLaunchConfig)) {
+      testLaunchConfig.target = "";
+    }
+
     const paths = config.get("robot.paths", []);
 
     return vscode.debug.startDebugging(
