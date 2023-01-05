@@ -448,6 +448,13 @@ class KeywordDoc(SourceEntity):
                     f"| {' or '.join(f'`<{s}>`' for s in a.types) if a.types is not None else ''} |"
                 )
 
+        if self.tags:
+            if result:
+                result += "\n\n"
+
+            result += "**Tags**: \n- "
+            result += "\n- ".join(self.tags)
+
         return result
 
     @property
