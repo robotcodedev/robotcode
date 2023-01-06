@@ -5,6 +5,7 @@ import asyncio
 import enum
 import itertools
 import logging
+import re
 import time
 import weakref
 from collections import OrderedDict
@@ -15,6 +16,7 @@ from typing import (
     Any,
     AsyncGenerator,
     Dict,
+    Generator,
     Iterable,
     List,
     NamedTuple,
@@ -79,6 +81,9 @@ from .library_doc import (
 )
 
 DIAGNOSTICS_SOURCE_NAME = "robotcode.namespace"
+
+EXTRACT_COMMENT_PATTERN = re.compile(r".*(?:^ *|\t+| {2,})#(?P<comment>.*)$")
+ROBOTCODE_PATTERN = re.compile(r"(?P<marker>\brobotcode\b)\s*:\s*(?P<rule>\b\w+\b)")
 
 
 class DiagnosticsError(Exception):
@@ -1547,9 +1552,7 @@ class Namespace:
         related_information: Optional[List[DiagnosticRelatedInformation]] = None,
         data: Optional[Any] = None,
     ) -> None:
-        from .analyzer import Analyzer
-
-        if await Analyzer.should_ignore(self.document, range):
+        if await self.should_ignore(self.document, range):
             return
 
         self._diagnostics.append(
@@ -1574,7 +1577,14 @@ class Namespace:
                 start_time = time.monotonic()
 
                 try:
-                    result = await Analyzer(self.model, self).run()
+                    result = await Analyzer(
+                        self.model,
+                        self,
+                        await self.create_finder(),
+                        await self.get_ignored_lines(self.document) if self.document is not None else [],
+                        await self.get_libraries_matchers(),
+                        await self.get_resources_matchers(),
+                    ).run()
 
                     self._diagnostics += result.diagnostics
                     self._keyword_references = result.keyword_references
@@ -1618,9 +1628,13 @@ class Namespace:
 
     async def get_finder(self) -> KeywordFinder:
         if self._finder is None:
-            await self.ensure_initialized()
-            self._finder = KeywordFinder(self)
+
+            self._finder = await self.create_finder()
         return self._finder
+
+    async def create_finder(self) -> KeywordFinder:
+        await self.ensure_initialized()
+        return KeywordFinder(self, await self.get_library_doc())
 
     @_logger.call(condition=lambda self, name, **kwargs: self._finder is not None and name not in self._finder._cache)
     async def find_keyword(
@@ -1628,9 +1642,40 @@ class Namespace:
     ) -> Optional[KeywordDoc]:
         finder = self._finder if self._finder is not None else await self.get_finder()
 
-        return await finder.find_keyword(
-            name, raise_keyword_error=raise_keyword_error, handle_bdd_style=handle_bdd_style
-        )
+        return finder.find_keyword(name, raise_keyword_error=raise_keyword_error, handle_bdd_style=handle_bdd_style)
+
+    @classmethod
+    async def get_ignored_lines(cls, document: TextDocument) -> List[int]:
+        return await document.get_cache(cls.__get_ignored_lines)
+
+    @staticmethod
+    async def __get_ignored_lines(document: TextDocument) -> List[int]:
+        result = []
+        lines = await document.get_lines()
+        for line_no, line in enumerate(lines):
+
+            comment = EXTRACT_COMMENT_PATTERN.match(line)
+            if comment and comment.group("comment"):
+                for match in ROBOTCODE_PATTERN.finditer(comment.group("comment")):
+
+                    if match.group("rule") == "ignore":
+                        result.append(line_no)
+
+        return result
+
+    @classmethod
+    async def should_ignore(cls, document: Optional[TextDocument], range: Range) -> bool:
+        return cls.__should_ignore(await cls.get_ignored_lines(document) if document is not None else [], range)
+
+    @staticmethod
+    def __should_ignore(lines: List[int], range: Range) -> bool:
+        import builtins
+
+        for line_no in builtins.range(range.start.line, range.end.line + 1):
+            if line_no in lines:
+                return True
+
+        return False
 
 
 class DiagnosticsEntry(NamedTuple):
@@ -1647,11 +1692,11 @@ DEFAULT_BDD_PREFIXES = {"Given ", "When ", "Then ", "And ", "But "}
 
 
 class KeywordFinder:
-    def __init__(self, namespace: Namespace) -> None:
-        super().__init__()
+    def __init__(self, namespace: Namespace, library_doc: LibraryDoc) -> None:
         self.namespace = namespace
+        self.self_library_doc = library_doc
+
         self.diagnostics: List[DiagnosticsEntry] = []
-        self.self_library_doc: Optional[LibraryDoc] = None
         self._cache: Dict[Tuple[Optional[str], bool], Tuple[Optional[KeywordDoc], List[DiagnosticsEntry]]] = {}
         self.handle_bdd_style = True
         self._all_keywords: Optional[List[LibraryEntry]] = None
@@ -1661,7 +1706,7 @@ class KeywordFinder:
     def reset_diagnostics(self) -> None:
         self.diagnostics = []
 
-    async def find_keyword(
+    def find_keyword(
         self, name: Optional[str], *, raise_keyword_error: bool = False, handle_bdd_style: bool = True
     ) -> Optional[KeywordDoc]:
         try:
@@ -1676,7 +1721,7 @@ class KeywordFinder:
                 return cached[0]
             else:
                 try:
-                    result = await self._find_keyword(name)
+                    result = self._find_keyword(name)
                     if result is None:
                         self.diagnostics.append(
                             DiagnosticsEntry(
@@ -1696,7 +1741,7 @@ class KeywordFinder:
         except CancelSearchError:
             return None
 
-    async def _find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
+    def _find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
         if not name:
             self.diagnostics.append(
                 DiagnosticsEntry("Keyword name cannot be empty.", DiagnosticSeverity.ERROR, "KeywordError")
@@ -1708,22 +1753,19 @@ class KeywordFinder:
             )
             raise CancelSearchError()
 
-        result = await self._get_keyword_from_self(name)
+        result = self._get_keyword_from_self(name)
         if not result and "." in name:
-            result = await self._get_explicit_keyword(name)
+            result = self._get_explicit_keyword(name)
 
         if not result:
             result = self._get_implicit_keyword(name)
 
         if not result and self.handle_bdd_style:
-            result = await self._get_bdd_style_keyword(name)
+            result = self._get_bdd_style_keyword(name)
 
         return result
 
-    async def _get_keyword_from_self(self, name: str) -> Optional[KeywordDoc]:
-        if self.self_library_doc is None:
-            self.self_library_doc = await self.namespace.get_library_doc()
-
+    def _get_keyword_from_self(self, name: str) -> Optional[KeywordDoc]:
         if get_robot_version() >= (6, 0, 0):
             found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = [
                 (None, v) for v in self.self_library_doc.keywords.get_all(name)
@@ -1758,15 +1800,15 @@ class KeywordFinder:
                 )
                 raise CancelSearchError() from e
 
-    async def _yield_owner_and_kw_names(self, full_name: str) -> AsyncGenerator[Tuple[str, ...], None]:
+    def _yield_owner_and_kw_names(self, full_name: str) -> Generator[Tuple[str, ...], None, None]:
         tokens = full_name.split(".")
         for i in range(1, len(tokens)):
             yield ".".join(tokens[:i]), ".".join(tokens[i:])
 
-    async def _get_explicit_keyword(self, name: str) -> Optional[KeywordDoc]:
+    def _get_explicit_keyword(self, name: str) -> Optional[KeywordDoc]:
         found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = []
-        async for owner_name, kw_name in self._yield_owner_and_kw_names(name):
-            found.extend(await self.find_keywords(owner_name, kw_name))
+        for owner_name, kw_name in self._yield_owner_and_kw_names(name):
+            found.extend(self.find_keywords(owner_name, kw_name))
 
         if get_robot_version() >= (6, 0, 0) and len(found) > 1:
             found = self._select_best_matches(found)
@@ -1783,7 +1825,7 @@ class KeywordFinder:
 
         return found[0][1] if found else None
 
-    async def find_keywords(self, owner_name: str, name: str) -> List[Tuple[LibraryEntry, KeywordDoc]]:
+    def find_keywords(self, owner_name: str, name: str) -> List[Tuple[LibraryEntry, KeywordDoc]]:
         if self._all_keywords is None:
             self._all_keywords = [
                 v for v in chain(self.namespace._libraries.values(), self.namespace._resources.values())
@@ -2011,12 +2053,12 @@ class KeywordFinder:
             f"or '{'' if standard[0] is None else standard[0].alias or standard[0].name}.{standard[1].name}'."
         )
 
-    async def _get_bdd_style_keyword(self, name: str) -> Optional[KeywordDoc]:
+    def _get_bdd_style_keyword(self, name: str) -> Optional[KeywordDoc]:
         if get_robot_version() < (6, 0):
             lower = name.lower()
             for prefix in ["given ", "when ", "then ", "and ", "but "]:
                 if lower.startswith(prefix):
-                    return await self._find_keyword(name[len(prefix) :])  # noqa: E203
+                    return self._find_keyword(name[len(prefix) :])  # noqa: E203
             return None
 
         else:
@@ -2030,5 +2072,5 @@ class KeywordFinder:
                     if self.namespace.languages is not None
                     else DEFAULT_BDD_PREFIXES
                 ):
-                    return await self._find_keyword(" ".join(parts[index:]))
+                    return self._find_keyword(" ".join(parts[index:]))
             return None

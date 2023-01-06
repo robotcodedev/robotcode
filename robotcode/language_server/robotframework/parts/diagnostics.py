@@ -18,7 +18,6 @@ from ...common.lsp_types import (
 from ...common.parts.diagnostics import DiagnosticsResult
 from ...common.text_document import TextDocument
 from ..configuration import AnalysisConfig
-from ..diagnostics.analyzer import Analyzer
 from ..diagnostics.entities import ArgumentDefinition
 from ..diagnostics.namespace import Namespace
 from ..utils.ast_utils import (
@@ -157,7 +156,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             for token in await self.parent.documents_cache.get_tokens(document):
                 await check_canceled()
 
-                if token.type in [Token.ERROR, Token.FATAL_ERROR] and not await Analyzer.should_ignore(
+                if token.type in [Token.ERROR, Token.FATAL_ERROR] and not await Namespace.should_ignore(
                     document, range_from_token(token)
                 ):
                     result.append(self._create_error_from_token(token))
@@ -168,13 +167,14 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         if variable_token == token:
                             break
 
-                        if variable_token.type in [Token.ERROR, Token.FATAL_ERROR] and not await Analyzer.should_ignore(
-                            document, range_from_token(variable_token)
-                        ):
+                        if variable_token.type in [
+                            Token.ERROR,
+                            Token.FATAL_ERROR,
+                        ] and not await Namespace.should_ignore(document, range_from_token(variable_token)):
                             result.append(self._create_error_from_token(variable_token))
 
                 except VariableError as e:
-                    if not await Analyzer.should_ignore(document, range_from_token(token)):
+                    if not await Namespace.should_ignore(document, range_from_token(token)):
                         result.append(
                             Diagnostic(
                                 range=range_from_token(token),
@@ -227,12 +227,12 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             result: List[Diagnostic] = []
             async for node in iter_nodes(model):
                 error = node.error if isinstance(node, HasError) else None
-                if error is not None and not await Analyzer.should_ignore(document, range_from_node(node)):
+                if error is not None and not await Namespace.should_ignore(document, range_from_node(node)):
                     result.append(self._create_error_from_node(node, error))
                 errors = node.errors if isinstance(node, HasErrors) else None
                 if errors is not None:
                     for e in errors:
-                        if not await Analyzer.should_ignore(document, range_from_node(node)):
+                        if not await Namespace.should_ignore(document, range_from_node(node)):
                             result.append(self._create_error_from_node(node, e))
 
             return DiagnosticsResult(self.collect_model_errors, result)
@@ -285,7 +285,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             result: List[Diagnostic] = []
             for kw in (await namespace.get_library_doc()).keywords.values():
                 references = await self.parent.robot_references.find_keyword_references(document, kw, False, True)
-                if not references and not await Analyzer.should_ignore(document, kw.name_range):
+                if not references and not await Namespace.should_ignore(document, kw.name_range):
                     result.append(
                         Diagnostic(
                             range=kw.name_range,
@@ -347,7 +347,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
             for var in (await namespace.get_variable_references()).keys():
                 references = await self.parent.robot_references.find_variable_references(document, var, False, True)
-                if not references and not await Analyzer.should_ignore(document, var.name_range):
+                if not references and not await Namespace.should_ignore(document, var.name_range):
                     result.append(
                         Diagnostic(
                             range=var.name_range,

@@ -4,7 +4,6 @@ import ast
 import asyncio
 import itertools
 import os
-import re
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Union, cast
@@ -20,7 +19,6 @@ from ...common.lsp_types import (
     Position,
     Range,
 )
-from ...common.text_document import TextDocument
 from ..parts.model_helper import ModelHelperMixin
 from ..utils.ast_utils import (
     HasTokens,
@@ -41,11 +39,14 @@ from .entities import (
     VariableDefinition,
     VariableNotFoundDefinition,
 )
-from .library_doc import KeywordDoc, is_embedded_keyword
-from .namespace import DIAGNOSTICS_SOURCE_NAME, KeywordFinder, Namespace
-
-EXTRACT_COMMENT_PATTERN = re.compile(r".*(?:^ *|\t+| {2,})#(?P<comment>.*)$")
-ROBOTCODE_PATTERN = re.compile(r"(?P<marker>\brobotcode\b)\s*:\s*(?P<rule>\b\w+\b)")
+from .library_doc import KeywordDoc, KeywordMatcher, is_embedded_keyword
+from .namespace import (
+    DIAGNOSTICS_SOURCE_NAME,
+    KeywordFinder,
+    LibraryEntry,
+    Namespace,
+    ResourceEntry,
+)
 
 
 @dataclass
@@ -56,20 +57,31 @@ class AnalyzerResult:
 
 
 class Analyzer(AsyncVisitor, ModelHelperMixin):
-    def __init__(self, model: ast.AST, namespace: Namespace) -> None:
+    def __init__(
+        self,
+        model: ast.AST,
+        namespace: Namespace,
+        finder: KeywordFinder,
+        ignored_lines: List[int],
+        libraries_matchers: Dict[KeywordMatcher, LibraryEntry],
+        resources_matchers: Dict[KeywordMatcher, ResourceEntry],
+    ) -> None:
         from robot.parsing.model.statements import Template, TestTemplate
 
         self.model = model
         self.namespace = namespace
+        self.finder = finder
+        self._ignored_lines = ignored_lines
+        self.libraries_matchers = libraries_matchers
+        self.resources_matchers = resources_matchers
+
         self.current_testcase_or_keyword_name: Optional[str] = None
-        self.finder = KeywordFinder(self.namespace)
         self.test_template: Optional[TestTemplate] = None
         self.template: Optional[Template] = None
         self.node_stack: List[ast.AST] = []
         self._diagnostics: List[Diagnostic] = []
         self._keyword_references: Dict[KeywordDoc, Set[Location]] = defaultdict(set)
         self._variable_references: Dict[VariableDefinition, Set[Location]] = defaultdict(set)
-        self._ignored_lines: Optional[List[int]] = None
 
     async def run(self) -> AnalyzerResult:
         self._diagnostics = []
@@ -167,7 +179,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             )
 
             if isinstance(node, Statement) and isinstance(node, KeywordCall) and node.keyword:
-                kw_doc = await self.finder.find_keyword(node.keyword)
+                kw_doc = self.finder.find_keyword(node.keyword)
                 if kw_doc is not None and kw_doc.longname in ["BuiltIn.Comment"]:
                     severity = DiagnosticSeverity.HINT
 
@@ -192,7 +204,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                             return_not_found=True,
                         ):
                             if isinstance(var, VariableNotFoundDefinition):
-                                await self.append_diagnostics(
+                                self.append_diagnostics(
                                     range=range_from_token(var_token),
                                     message=f"Variable '{var.name}' not found.",
                                     severity=severity,
@@ -203,7 +215,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                 if isinstance(var, EnvironmentVariableDefinition) and var.default_value is None:
                                     env_name = var.name[2:-1]
                                     if os.environ.get(env_name, None) is None:
-                                        await self.append_diagnostics(
+                                        self.append_diagnostics(
                                             range=range_from_token(var_token),
                                             message=f"Environment variable '{var.name}' not found.",
                                             severity=severity,
@@ -243,7 +255,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     return_not_found=True,
                 ):
                     if isinstance(var, VariableNotFoundDefinition):
-                        await self.append_diagnostics(
+                        self.append_diagnostics(
                             range=range_from_token(var_token),
                             message=f"Variable '{var.name}' not found.",
                             severity=DiagnosticSeverity.ERROR,
@@ -262,51 +274,16 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         finally:
             self.node_stack = self.node_stack[:-1]
 
-    @staticmethod
-    async def get_ignored_lines(document: TextDocument) -> List[int]:
-        return await document.get_cache(Analyzer.__get_ignored_lines)
-
-    @staticmethod
-    async def __get_ignored_lines(document: TextDocument) -> List[int]:
-        result = []
-        lines = await document.get_lines()
-        for line_no, line in enumerate(lines):
-
-            comment = EXTRACT_COMMENT_PATTERN.match(line)
-            if comment and comment.group("comment"):
-                for match in ROBOTCODE_PATTERN.finditer(comment.group("comment")):
-
-                    if match.group("rule") == "ignore":
-                        result.append(line_no)
-
-        return result
-
-    @classmethod
-    async def should_ignore(cls, document: Optional[TextDocument], range: Range) -> bool:
-        return cls.__should_ignore(await cls.get_ignored_lines(document) if document is not None else [], range)
-
-    async def _get_ignored_lines(self) -> List[int]:
-        if self._ignored_lines is None:
-            self._ignored_lines = (
-                await Analyzer.get_ignored_lines(self.namespace.document) if self.namespace.document is not None else []
-            )
-
-        return self._ignored_lines
-
-    async def _should_ignore(self, range: Range) -> bool:
-        return self.__should_ignore(await self._get_ignored_lines(), range)
-
-    @staticmethod
-    def __should_ignore(lines: List[int], range: Range) -> bool:
+    def _should_ignore(self, range: Range) -> bool:
         import builtins
 
         for line_no in builtins.range(range.start.line, range.end.line + 1):
-            if line_no in lines:
+            if line_no in self._ignored_lines:
                 return True
 
         return False
 
-    async def append_diagnostics(
+    def append_diagnostics(
         self,
         range: Range,
         message: str,
@@ -319,7 +296,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         data: Optional[Any] = None,
     ) -> None:
 
-        if await self._should_ignore(range):
+        if self._should_ignore(range):
             return
 
         self._diagnostics.append(
@@ -356,39 +333,34 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             if not allow_variables and not is_not_variable_token(keyword_token):
                 return None
 
-            if (
-                await self.namespace.find_keyword(
-                    keyword_token.value, raise_keyword_error=False, handle_bdd_style=False
-                )
-                is None
-            ):
+            if self.finder.find_keyword(keyword_token.value, raise_keyword_error=False, handle_bdd_style=False) is None:
                 keyword_token = self.strip_bdd_prefix(self.namespace, keyword_token)
 
             kw_range = range_from_token(keyword_token)
 
             if keyword is not None:
-                libraries_matchers = await self.namespace.get_libraries_matchers()
-                resources_matchers = await self.namespace.get_resources_matchers()
 
                 for lib, name in iter_over_keyword_names_and_owners(keyword):
                     if (
                         lib is not None
-                        and not any(k for k in libraries_matchers.keys() if k == lib)
-                        and not any(k for k in resources_matchers.keys() if k == lib)
+                        and not any(k for k in self.libraries_matchers.keys() if k == lib)
+                        and not any(k for k in self.resources_matchers.keys() if k == lib)
                     ):
                         continue
 
-                    lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(self.namespace, keyword_token)
+                    lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(
+                        self.namespace, keyword_token, self.libraries_matchers, self.resources_matchers
+                    )
                     if lib_entry and kw_namespace:
                         r = range_from_token(keyword_token)
                         r.end.character = r.start.character + len(kw_namespace)
                         kw_range.start.character = r.end.character + 1
 
-            result = await self.finder.find_keyword(keyword)
+            result = self.finder.find_keyword(keyword)
 
             if not ignore_errors_if_contains_variables or is_not_variable_token(keyword_token):
                 for e in self.finder.diagnostics:
-                    await self.append_diagnostics(
+                    self.append_diagnostics(
                         range=kw_range,
                         message=e.message,
                         severity=e.severity,
@@ -400,7 +372,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     self._keyword_references[result].add(Location(self.namespace.document.document_uri, kw_range))
 
                 if result.errors:
-                    await self.append_diagnostics(
+                    self.append_diagnostics(
                         range=kw_range,
                         message="Keyword definition contains errors.",
                         severity=DiagnosticSeverity.ERROR,
@@ -442,7 +414,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     )
 
                 if result.is_deprecated:
-                    await self.append_diagnostics(
+                    self.append_diagnostics(
                         range=kw_range,
                         message=f"Keyword '{result.name}' is deprecated"
                         f"{f': {result.deprecated_message}' if result.deprecated_message else ''}.",
@@ -451,14 +423,14 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         code="DeprecatedKeyword",
                     )
                 if result.is_error_handler:
-                    await self.append_diagnostics(
+                    self.append_diagnostics(
                         range=kw_range,
                         message=f"Keyword definition contains errors: {result.error_handler_message}",
                         severity=DiagnosticSeverity.ERROR,
                         code="KeywordContainsErrors",
                     )
                 if result.is_reserved():
-                    await self.append_diagnostics(
+                    self.append_diagnostics(
                         range=kw_range,
                         message=f"'{result.name}' is a reserved keyword.",
                         severity=DiagnosticSeverity.ERROR,
@@ -467,7 +439,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
                 if get_robot_version() >= (6, 0, 0) and result.is_resource_keyword and result.is_private():
                     if self.namespace.source != result.source:
-                        await self.append_diagnostics(
+                        self.append_diagnostics(
                             range=kw_range,
                             message=f"Keyword '{result.longname}' is private and should only be called by"
                             f" keywords in the same file.",
@@ -487,7 +459,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                         raise
                     except BaseException as e:
-                        await self.append_diagnostics(
+                        self.append_diagnostics(
                             range=Range(
                                 start=kw_range.start,
                                 end=range_from_token(argument_tokens[-1]).end if argument_tokens else kw_range.end,
@@ -500,7 +472,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
-            await self.append_diagnostics(
+            self.append_diagnostics(
                 range=range_from_node_or_token(node, keyword_token),
                 message=str(e),
                 severity=DiagnosticSeverity.ERROR,
@@ -532,7 +504,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         return_not_found=True,
                     ):
                         if isinstance(var, VariableNotFoundDefinition):
-                            await self.append_diagnostics(
+                            self.append_diagnostics(
                                 range=range_from_token(var_token),
                                 message=f"Variable '{var.name}' not found.",
                                 severity=DiagnosticSeverity.ERROR,
@@ -600,7 +572,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 t = argument_tokens[0]
                 argument_tokens = argument_tokens[1:]
                 if t.value == "AND":
-                    await self.append_diagnostics(
+                    self.append_diagnostics(
                         range=range_from_token(t),
                         message=f"Incorrect use of {t.value}.",
                         severity=DiagnosticSeverity.ERROR,
@@ -643,7 +615,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
                 return result
 
-            result = await self.finder.find_keyword(argument_tokens[1].value)
+            result = self.finder.find_keyword(argument_tokens[1].value)
 
             if result is not None and result.is_any_run_keyword():
                 argument_tokens = argument_tokens[2:]
@@ -769,7 +741,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         keyword_token = cast(RobotToken, value.get_token(RobotToken.KEYWORD))
 
         if value.assign and not value.keyword:
-            await self.append_diagnostics(
+            self.append_diagnostics(
                 range=range_from_node_or_token(value, value.get_token(RobotToken.ASSIGN)),
                 message="Keyword name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
@@ -781,7 +753,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             )
 
         if not self.current_testcase_or_keyword_name:
-            await self.append_diagnostics(
+            self.append_diagnostics(
                 range=range_from_node_or_token(value, value.get_token(RobotToken.ASSIGN)),
                 message="Code is unreachable.",
                 severity=DiagnosticSeverity.HINT,
@@ -800,7 +772,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         if not testcase.name:
             name_token = cast(TestCaseName, testcase.header).get_token(RobotToken.TESTCASE_NAME)
-            await self.append_diagnostics(
+            self.append_diagnostics(
                 range=range_from_node_or_token(testcase, name_token),
                 message="Test case name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
@@ -831,7 +803,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             if is_embedded_keyword(keyword.name) and any(
                 isinstance(v, Arguments) and len(v.values) > 0 for v in keyword.body
             ):
-                await self.append_diagnostics(
+                self.append_diagnostics(
                     range=range_from_node_or_token(keyword, name_token),
                     message="Keyword cannot have both normal and embedded arguments.",
                     severity=DiagnosticSeverity.ERROR,
@@ -839,7 +811,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 )
         else:
             name_token = cast(KeywordName, keyword.header).get_token(RobotToken.KEYWORD_NAME)
-            await self.append_diagnostics(
+            self.append_diagnostics(
                 range=range_from_node_or_token(keyword, name_token),
                 message="Keyword name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
@@ -878,7 +850,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             keyword = template.value
             keyword, args = self._format_template(keyword, args)
 
-            result = await self.finder.find_keyword(keyword)
+            result = self.finder.find_keyword(keyword)
             if result is not None:
                 try:
                     if result.arguments is not None:
@@ -891,7 +863,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException as e:
-                    await self.append_diagnostics(
+                    self.append_diagnostics(
                         range=range_from_node(arguments, skip_non_data=True),
                         message=str(e),
                         severity=DiagnosticSeverity.ERROR,
@@ -899,7 +871,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     )
 
             for d in self.finder.diagnostics:
-                await self.append_diagnostics(
+                self.append_diagnostics(
                     range=range_from_node(arguments, skip_non_data=True),
                     message=d.message,
                     severity=d.severity,
@@ -917,7 +889,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
             for tag in tags.get_tokens(RobotToken.ARGUMENT):
                 if tag.value and tag.value.startswith("-"):
-                    await self.append_diagnostics(
+                    self.append_diagnostics(
                         range=range_from_node_or_token(node, tag),
                         message=f"Settings tags starting with a hyphen using the '[Tags]' setting "
                         f"is deprecated. In Robot Framework 5.2 this syntax will be used "

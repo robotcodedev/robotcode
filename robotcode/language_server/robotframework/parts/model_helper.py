@@ -8,6 +8,7 @@ from tokenize import TokenError, generate_tokens
 from typing import (
     Any,
     AsyncGenerator,
+    Dict,
     Generator,
     List,
     Optional,
@@ -19,8 +20,13 @@ from typing import (
 
 from ...common.lsp_types import Position
 from ..diagnostics.entities import VariableDefinition, VariableNotFoundDefinition
-from ..diagnostics.library_doc import KeywordDoc, LibraryDoc
-from ..diagnostics.namespace import DEFAULT_BDD_PREFIXES, LibraryEntry, Namespace
+from ..diagnostics.library_doc import KeywordDoc, KeywordMatcher, LibraryDoc
+from ..diagnostics.namespace import (
+    DEFAULT_BDD_PREFIXES,
+    LibraryEntry,
+    Namespace,
+    ResourceEntry,
+)
 from ..utils.ast_utils import (
     Token,
     iter_over_keyword_names_and_owners,
@@ -193,14 +199,20 @@ class ModelHelperMixin:
         return None
 
     async def get_namespace_info_from_keyword(
-        self, namespace: Namespace, keyword_token: Token
+        self,
+        namespace: Namespace,
+        keyword_token: Token,
+        libraries_matchers: Optional[Dict[KeywordMatcher, LibraryEntry]] = None,
+        resources_matchers: Optional[Dict[KeywordMatcher, ResourceEntry]] = None,
     ) -> Tuple[Optional[LibraryEntry], Optional[str]]:
         lib_entry: Optional[LibraryEntry] = None
 
         kw_namespace: Optional[str] = None
 
-        libraries_matchers = await namespace.get_libraries_matchers()
-        resources_matchers = await namespace.get_resources_matchers()
+        if libraries_matchers is None:
+            libraries_matchers = await namespace.get_libraries_matchers()
+        if resources_matchers is None:
+            resources_matchers = await namespace.get_resources_matchers()
 
         for lib, _ in iter_over_keyword_names_and_owners(keyword_token.value):
             if lib is not None:
