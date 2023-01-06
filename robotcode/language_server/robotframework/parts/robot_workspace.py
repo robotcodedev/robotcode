@@ -100,21 +100,27 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                 async with self.parent.window.progress(
                     "Load workspace", cancellable=True, current=0, max=len(files), start=False
                 ) as progress:
-                    for i, f in enumerate(files):
-                        await self.parent.documents.get_or_open_document(f, "robotframework")
+                    try:
+                        for i, f in enumerate(files):
+                            try:
+                                await self.parent.documents.get_or_open_document(f, "robotframework")
 
-                        if config.analysis.progress_mode != AnalysisProgressMode.OFF:
-                            name = f.relative_to(folder.uri.to_path())
+                                if config.analysis.progress_mode != AnalysisProgressMode.OFF:
+                                    name = f.relative_to(folder.uri.to_path())
 
-                            progress.begin()
-                            progress.report(
-                                f"Load {str(name)}"
-                                if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
-                                else None,
-                                current=i,
-                            )
-
-                    self.documents_loaded.set()
+                                    progress.begin()
+                                    progress.report(
+                                        f"Load {str(name)}"
+                                        if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
+                                        else None,
+                                        current=i,
+                                    )
+                            except (SystemExit, KeyboardInterrupt):
+                                raise
+                            except BaseException as e:
+                                self._logger.critical(f"Can't load document {f}: {e}")
+                    finally:
+                        self.documents_loaded.set()
 
                     for i, f in enumerate(files):
                         try:
@@ -154,7 +160,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                         except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                             raise
                         except BaseException as e:
-                            self._logger.exception(e)
+                            self._logger.critical(f"Can't initialize document {f}: {e}")
 
             if canceled:
                 return []

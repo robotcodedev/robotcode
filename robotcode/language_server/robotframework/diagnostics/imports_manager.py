@@ -424,7 +424,11 @@ class _VariablesEntry(_ImportEntry):
                     continue
 
                 path = uri.to_path()
-                if self._lib_doc.source and path.resolve().samefile(Path(self._lib_doc.source).resolve()):
+                if (
+                    self._lib_doc.source
+                    and path.exists()
+                    and path.resolve().samefile(Path(self._lib_doc.source).resolve())
+                ):
                     await self._invalidate()
 
                     return change.type
