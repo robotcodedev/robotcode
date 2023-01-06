@@ -150,6 +150,15 @@ def as_json(obj: Any, indent: Optional[bool] = None, compact: Optional[bool] = N
     return json.dumps(obj, default=__default, indent=4 if indent else None, separators=(",", ":") if compact else None)
 
 
+def _from_dict_with_name(
+    name: str, value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = None, /, *, strict: bool = False
+) -> _T:
+    try:
+        return from_dict(value, types, strict=strict)
+    except TypeError as e:
+        raise TypeError(f"Can't convert value for '{name}': {e}") from e
+
+
 def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = None, /, *, strict: bool = False) -> _T:
     if types is None:
         return cast(_T, value)
@@ -177,7 +186,7 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
             or (isinstance(value, Sequence) and args and issubclass(origin or t, Sequence))
         ):
             if isinstance(value, Mapping):
-                return cast(_T, {n: from_dict(v, args[1] if args else None) for n, v in value.items()})
+                return cast(_T, {n: _from_dict_with_name(n, v, args[1] if args else None) for n, v in value.items()})
             elif isinstance(value, Sequence) and args:
                 return cast(_T, (origin or t)(from_dict(v, args) for v in value))  # type: ignore
 
@@ -234,9 +243,13 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
             and match_signature is not None
             and match_type_hints is not None
         ):
+
             params: Dict[str, Any] = {
-                k: from_dict(v, match_type_hints[k]) for k, v in match_value.items() if k in match_type_hints
+                k: _from_dict_with_name(k, v, match_type_hints[k])
+                for k, v in match_value.items()
+                if k in match_type_hints
             }
+
             try:
                 return match(**params)
             except TypeError as ex:

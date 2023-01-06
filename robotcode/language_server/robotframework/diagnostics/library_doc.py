@@ -257,7 +257,7 @@ DEPRECATED_PATTERN = re.compile(r"^\*DEPRECATED(?P<message>.*)\*(?P<doc>.*)")
 
 @dataclass
 class ArgumentSpec:
-    name: str
+    name: Optional[str]
     type: str
     positional_only: List[str]
     positional_or_named: List[str]
@@ -376,6 +376,17 @@ class KeywordDoc(SourceEntity):
             return range_from_token(self.name_token)
         else:
             return Range.invalid()
+
+    @single_call
+    def normalized_tags(self) -> List[str]:
+        return [normalize(tag) for tag in self.tags]
+
+    @single_call
+    def is_private(self) -> bool:
+        if get_robot_version() < (6, 0, 0):
+            return False
+
+        return "robot:private" in self.normalized_tags()
 
     @property
     def range(self) -> Range:

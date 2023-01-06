@@ -910,14 +910,21 @@ class ImportsManager:
                 meta_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
                 if meta_file.exists():
                     try:
-                        saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
-                        if saved_meta == meta:
-                            return from_json(
-                                Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".spec.json")).read_text(
-                                    "utf-8"
-                                ),
-                                LibraryDoc,
-                            )
+                        try:
+                            saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
+                            spec_path = None
+                            if saved_meta == meta:
+                                spec_path = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".spec.json"))
+                                return from_json(
+                                    spec_path.read_text("utf-8"),
+                                    LibraryDoc,
+                                )
+                        except (SystemExit, KeyboardInterrupt):
+                            raise
+                        except BaseException as e:
+                            raise RuntimeError(
+                                f"Failed to load library meta data for library {name} from {spec_path}"
+                            ) from e
                     except (SystemExit, KeyboardInterrupt):
                         raise
                     except BaseException as e:
