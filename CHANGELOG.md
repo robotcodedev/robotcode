@@ -4,6 +4,18 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.20.0 (2023-01-06)
+### Feature
+* **robotlangserver:** Implement embedded keyword precedence for RF 6.0, this also speedups keyword analysing ([`f975be8`](https://github.com/d-biehl/robotcode/commit/f975be8d53ac2ef6a0cbcc8d69dbf815e04312e8))
+* **robotlangserver:** Support for robot:private keywords for RF>6.0.0 ([`e24603f`](https://github.com/d-biehl/robotcode/commit/e24603f07319e2730fb59d62e1f8f4bc8c245368))
+* **robotlangserver:** Show keyword tags in keyword documentation ([`c82b60b`](https://github.com/d-biehl/robotcode/commit/c82b60b281c70eb6aa3cb4227a494d1b1f026f12))
+* **debugger:** Add `include` and `exclude` properties to launch configurations ([`f4681eb`](https://github.com/d-biehl/robotcode/commit/f4681ebedffa8f43eda31fadc80e3adc16b9572e))
+
+### Fix
+* **robotlangserver:**  Ignore parsing errors in test discovery ([`470723b`](https://github.com/d-biehl/robotcode/commit/470723b3f064ba496fb59dba600fc099901c0433))
+* **vscode-testexplorer:** Correctly combine args and paths in debug configurations ([`4b7e7d5`](https://github.com/d-biehl/robotcode/commit/4b7e7d527eb209746ffe1d8ae903d44e79a4d4d3))
+* Speedup loading and analysing tests ([`9989edf`](https://github.com/d-biehl/robotcode/commit/9989edf8868ddd3360939b93bbaf395aa939bb85))
+
 ## v0.19.1 (2023-01-05)
 ### Fix
 * **debugger:** Use default target if there is no target specified in launch config with purpose test ([`f633cc5`](https://github.com/d-biehl/robotcode/commit/f633cc5d27e1ad7ab9cc304d3977540365848211))
