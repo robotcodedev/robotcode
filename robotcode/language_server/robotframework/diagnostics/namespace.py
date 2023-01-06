@@ -1713,7 +1713,7 @@ class KeywordFinder:
             result = await self._get_explicit_keyword(name)
 
         if not result:
-            result = await self._get_implicit_keyword(name)
+            result = self._get_implicit_keyword(name)
 
         if not result and self.handle_bdd_style:
             result = await self._get_bdd_style_keyword(name)
@@ -1723,17 +1723,40 @@ class KeywordFinder:
     async def _get_keyword_from_self(self, name: str) -> Optional[KeywordDoc]:
         if self.self_library_doc is None:
             self.self_library_doc = await self.namespace.get_library_doc()
-        try:
-            return self.self_library_doc.keywords.get(name, None)
-        except KeywordError as e:
-            self.diagnostics.append(
-                DiagnosticsEntry(
-                    str(e),
-                    DiagnosticSeverity.ERROR,
-                    "KeywordError",
+
+        if get_robot_version() >= (6, 0, 0):
+            found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = [
+                (None, v) for v in self.self_library_doc.keywords.get_all(name)
+            ]
+            if len(found) > 1:
+                found = self._select_best_matches(found)
+                if len(found) > 1:
+                    self.diagnostics.append(
+                        DiagnosticsEntry(
+                            self._create_multiple_keywords_found_message(name, found, implicit=False),
+                            DiagnosticSeverity.ERROR,
+                            "KeywordError",
+                        )
+                    )
+                    raise CancelSearchError()
+
+            if len(found) == 1:
+                # TODO warning if keyword found is defined in resource and suite
+                return found[0][1]
+
+            return None
+        else:
+            try:
+                return self.self_library_doc.keywords.get(name, None)
+            except KeywordError as e:
+                self.diagnostics.append(
+                    DiagnosticsEntry(
+                        str(e),
+                        DiagnosticSeverity.ERROR,
+                        "KeywordError",
+                    )
                 )
-            )
-            raise CancelSearchError() from e
+                raise CancelSearchError() from e
 
     async def _yield_owner_and_kw_names(self, full_name: str) -> AsyncGenerator[Tuple[str, ...], None]:
         tokens = full_name.split(".")
@@ -1741,9 +1764,13 @@ class KeywordFinder:
             yield ".".join(tokens[:i]), ".".join(tokens[i:])
 
     async def _get_explicit_keyword(self, name: str) -> Optional[KeywordDoc]:
-        found: List[Tuple[LibraryEntry, KeywordDoc]] = []
+        found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = []
         async for owner_name, kw_name in self._yield_owner_and_kw_names(name):
             found.extend(await self.find_keywords(owner_name, kw_name))
+
+        if get_robot_version() >= (6, 0, 0) and len(found) > 1:
+            found = self._select_best_matches(found)
+
         if len(found) > 1:
             self.diagnostics.append(
                 DiagnosticsEntry(
@@ -1756,36 +1783,50 @@ class KeywordFinder:
 
         return found[0][1] if found else None
 
-    async def find_keywords(self, owner_name: str, name: str) -> Sequence[Tuple[LibraryEntry, KeywordDoc]]:
+    async def find_keywords(self, owner_name: str, name: str) -> List[Tuple[LibraryEntry, KeywordDoc]]:
         if self._all_keywords is None:
             self._all_keywords = [
                 v for v in chain(self.namespace._libraries.values(), self.namespace._resources.values())
             ]
-        return [
-            (v, v.library_doc.keywords[name])
-            for v in self._all_keywords
-            if eq(v.alias or v.name, owner_name) and name in v.library_doc.keywords
-        ]
+
+        if get_robot_version() >= (6, 0, 0):
+            result: List[Tuple[LibraryEntry, KeywordDoc]] = []
+            for v in self._all_keywords:
+                if eq(v.alias or v.name, owner_name):
+                    result.extend((v, kw) for kw in v.library_doc.keywords.get_all(name))
+            return result
+        else:
+            result = []
+            for v in self._all_keywords:
+                if eq(v.alias or v.name, owner_name):
+                    kw = v.library_doc.keywords.get(name, None)
+                    if kw is not None:
+                        result.append((v, kw))
+            return result
 
     def _create_multiple_keywords_found_message(
-        self, name: str, found: Sequence[Tuple[LibraryEntry, KeywordDoc]], implicit: bool = True
+        self, name: str, found: Sequence[Tuple[Optional[LibraryEntry], KeywordDoc]], implicit: bool = True
     ) -> str:
+        if any(e[1].is_embedded for e in found):
+            error = f"Multiple keywords matching name '{name}' found"
+        else:
+            error = f"Multiple keywords with name '{name}' found"
 
-        error = "Multiple keywords with name '%s' found" % name
-        if implicit:
-            error += ". Give the full name of the keyword you want to use"
-        names = sorted(f"{e[0].alias or e[0].name}.{e[1].name}" for e in found)
+            if implicit:
+                error += ". Give the full name of the keyword you want to use"
+
+        names = sorted(f"{e[1].name if e[0] is None else f'{e[0].alias or e[0].name}.{e[1].name}'}" for e in found)
         return "\n    ".join([error + ":"] + names)
 
-    async def _get_implicit_keyword(self, name: str) -> Optional[KeywordDoc]:
-        result = await self._get_keyword_from_resource_files(name)
+    def _get_implicit_keyword(self, name: str) -> Optional[KeywordDoc]:
+        result = self._get_keyword_from_resource_files(name)
         if not result:
-            result = await self._get_keyword_from_libraries(name)
+            result = self._get_keyword_from_libraries(name)
         return result
 
     def _prioritize_same_file_or_public(
-        self, entries: List[Tuple[LibraryEntry, KeywordDoc]]
-    ) -> List[Tuple[LibraryEntry, KeywordDoc]]:
+        self, entries: List[Tuple[Optional[LibraryEntry], KeywordDoc]]
+    ) -> List[Tuple[Optional[LibraryEntry], KeywordDoc]]:
 
         matches = [h for h in entries if h[1].source == self.namespace.source]
         if matches:
@@ -1796,8 +1837,8 @@ class KeywordFinder:
         return matches or entries
 
     def _select_best_matches(
-        self, entries: List[Tuple[LibraryEntry, KeywordDoc]]
-    ) -> List[Tuple[LibraryEntry, KeywordDoc]]:
+        self, entries: List[Tuple[Optional[LibraryEntry], KeywordDoc]]
+    ) -> List[Tuple[Optional[LibraryEntry], KeywordDoc]]:
 
         normal = [hand for hand in entries if not hand[1].is_embedded]
         if normal:
@@ -1807,7 +1848,9 @@ class KeywordFinder:
         return matches or entries
 
     def _is_worse_match_than_others(
-        self, candidate: Tuple[LibraryEntry, KeywordDoc], alternatives: List[Tuple[LibraryEntry, KeywordDoc]]
+        self,
+        candidate: Tuple[Optional[LibraryEntry], KeywordDoc],
+        alternatives: List[Tuple[Optional[LibraryEntry], KeywordDoc]],
     ) -> bool:
         for other in alternatives:
             if (
@@ -1819,31 +1862,47 @@ class KeywordFinder:
         return False
 
     def _is_better_match(
-        self, candidate: Tuple[LibraryEntry, KeywordDoc], other: Tuple[LibraryEntry, KeywordDoc]
+        self, candidate: Tuple[Optional[LibraryEntry], KeywordDoc], other: Tuple[Optional[LibraryEntry], KeywordDoc]
     ) -> bool:
         return (
             other[1].matcher.embedded_arguments.match(candidate[1].name) is not None
             and candidate[1].matcher.embedded_arguments.match(other[1].name) is None
         )
 
-    async def _get_keyword_from_resource_files(self, name: str) -> Optional[KeywordDoc]:
+    def _get_keyword_from_resource_files(self, name: str) -> Optional[KeywordDoc]:
         if self._resource_keywords is None:
             self._resource_keywords = [v for v in chain(self.namespace._resources.values())]
 
-        found: List[Tuple[LibraryEntry, KeywordDoc]] = [
-            (v, v.library_doc.keywords[name]) for v in self._resource_keywords if name in v.library_doc.keywords
-        ]
+        if get_robot_version() >= (6, 0, 0):
+            found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = []
+            for v in self._resource_keywords:
+                r = v.library_doc.keywords.get_all(name)
+                if r:
+                    found.extend([(v, k) for k in r])
+        else:
+            found = []
+            for k in self._resource_keywords:
+                s = k.library_doc.keywords.get(name, None)
+                if s is not None:
+                    found.append((k, s))
+
         if not found:
             return None
+
         if get_robot_version() >= (6, 0, 0):
             if len(found) > 1:
                 found = self._prioritize_same_file_or_public(found)
 
-            if len(found) > 1:
-                found = self._select_best_matches(found)
+                if len(found) > 1:
+                    found = self._select_best_matches(found)
 
-        if len(found) > 1:
-            found = await self._get_keyword_based_on_search_order(found)
+                    if len(found) > 1:
+                        found = self._get_keyword_based_on_search_order(found)
+
+        else:
+            if len(found) > 1:
+                found = self._get_keyword_based_on_search_order(found)
+
         if len(found) == 1:
             return found[0][1]
 
@@ -1856,27 +1915,49 @@ class KeywordFinder:
         )
         raise CancelSearchError()
 
-    async def _get_keyword_based_on_search_order(
-        self, entries: List[Tuple[LibraryEntry, KeywordDoc]]
-    ) -> List[Tuple[LibraryEntry, KeywordDoc]]:
+    def _get_keyword_based_on_search_order(
+        self, entries: List[Tuple[Optional[LibraryEntry], KeywordDoc]]
+    ) -> List[Tuple[Optional[LibraryEntry], KeywordDoc]]:
 
         for libname in self.namespace.search_order:
             for e in entries:
-                if eq(libname, e[0].alias or e[0].name):
+                if e[0] is not None and eq(libname, e[0].alias or e[0].name):
                     return [e]
 
         return entries
 
-    async def _get_keyword_from_libraries(self, name: str) -> Optional[KeywordDoc]:
+    def _get_keyword_from_libraries(self, name: str) -> Optional[KeywordDoc]:
         if self._library_keywords is None:
             self._library_keywords = [v for v in chain(self.namespace._libraries.values())]
-        found = [(v, v.library_doc.keywords[name]) for v in self._library_keywords if name in v.library_doc.keywords]
+
+        if get_robot_version() >= (6, 0, 0):
+            found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = []
+            for v in self._library_keywords:
+                r = v.library_doc.keywords.get_all(name)
+                if r:
+                    found.extend([(v, k) for k in r])
+        else:
+            found = []
+
+            for k in self._library_keywords:
+                s = k.library_doc.keywords.get(name, None)
+                if s is not None:
+                    found.append((k, s))
+
         if not found:
             return None
-        if len(found) > 1:
-            found = await self._get_keyword_based_on_search_order(found)
-        if len(found) == 2:
-            found = await self._filter_stdlib_runner(*found)
+
+        if get_robot_version() >= (6, 0, 0):
+            if len(found) > 1:
+                found = self._select_best_matches(found)
+                if len(found) > 1:
+                    found = self._get_keyword_based_on_search_order(found)
+        else:
+            if len(found) > 1:
+                found = self._get_keyword_based_on_search_order(found)
+            if len(found) == 2:
+                found = self._filter_stdlib_runner(*found)
+
         if len(found) == 1:
             return found[0][1]
 
@@ -1889,15 +1970,15 @@ class KeywordFinder:
         )
         raise CancelSearchError()
 
-    async def _filter_stdlib_runner(
-        self, entry1: Tuple[LibraryEntry, KeywordDoc], entry2: Tuple[LibraryEntry, KeywordDoc]
-    ) -> List[Tuple[LibraryEntry, KeywordDoc]]:
+    def _filter_stdlib_runner(
+        self, entry1: Tuple[Optional[LibraryEntry], KeywordDoc], entry2: Tuple[Optional[LibraryEntry], KeywordDoc]
+    ) -> List[Tuple[Optional[LibraryEntry], KeywordDoc]]:
         from robot.libraries import STDLIBS
 
         stdlibs_without_remote = STDLIBS - {"Remote"}
-        if entry1[0].name in stdlibs_without_remote:
+        if entry1[0] is not None and entry1[0].name in stdlibs_without_remote:
             standard, custom = entry1, entry2
-        elif entry2[0].name in stdlibs_without_remote:
+        elif entry2[0] is not None and entry2[0].name in stdlibs_without_remote:
             standard, custom = entry2, entry1
         else:
             return [entry1, entry2]
@@ -1913,19 +1994,21 @@ class KeywordFinder:
         return [custom]
 
     def _create_custom_and_standard_keyword_conflict_warning_message(
-        self, custom: Tuple[LibraryEntry, KeywordDoc], standard: Tuple[LibraryEntry, KeywordDoc]
+        self, custom: Tuple[Optional[LibraryEntry], KeywordDoc], standard: Tuple[Optional[LibraryEntry], KeywordDoc]
     ) -> str:
         custom_with_name = standard_with_name = ""
-        if custom[0].alias is not None:
+        if custom[0] is not None and custom[0].alias is not None:
             custom_with_name = " imported as '%s'" % custom[0].alias
-        if standard[0].alias is not None:
+        if standard[0] is not None and standard[0].alias is not None:
             standard_with_name = " imported as '%s'" % standard[0].alias
         return (
             f"Keyword '{standard[1].name}' found both from a custom test library "
-            f"'{custom[0].name}'{custom_with_name} and a standard library '{standard[1].name}'{standard_with_name}. "
+            f"'{'' if custom[0] is None else custom[0].name}'{custom_with_name} "
+            f"and a standard library '{standard[1].name}'{standard_with_name}. "
             f"The custom keyword is used. To select explicitly, and to get "
-            f"rid of this warning, use either '{custom[0].alias or custom[0].name}.{custom[1].name}' "
-            f"or '{standard[0].alias or standard[0].name}.{standard[1].name}'."
+            f"rid of this warning, use either "
+            f"'{'' if custom[0] is None else custom[0].alias or custom[0].name}.{custom[1].name}' "
+            f"or '{'' if standard[0] is None else standard[0].alias or standard[0].name}.{standard[1].name}'."
         )
 
     async def _get_bdd_style_keyword(self, name: str) -> Optional[KeywordDoc]:
