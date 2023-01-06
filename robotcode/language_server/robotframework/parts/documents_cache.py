@@ -131,7 +131,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         elif suffix == ".resource":
             return DocumentType.RESOURCE
         else:
-            return DocumentType.UNKNOWN
+            return DocumentType.GENERAL
 
     async def get_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
         if data_only:
