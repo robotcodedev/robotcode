@@ -1091,7 +1091,7 @@ class ImportsManager:
                     tags=list(kw[0].tags),
                     source=kw[0].source,
                     name_token=get_keyword_name_token_from_line(kw[0].lineno),
-                    line_no=kw[0].lineno,
+                    line_no=kw[0].lineno if kw[0].lineno is not None else -1,
                     col_offset=-1,
                     end_col_offset=-1,
                     end_line_no=-1,
