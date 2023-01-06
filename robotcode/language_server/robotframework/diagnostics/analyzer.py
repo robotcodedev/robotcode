@@ -465,6 +465,16 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         code="ReservedKeyword",
                     )
 
+                if get_robot_version() >= (6, 0, 0) and result.is_resource_keyword and result.is_private():
+                    if self.namespace.source != result.source:
+                        await self.append_diagnostics(
+                            range=kw_range,
+                            message=f"Keyword '{result.longname}' is private and should only be called by"
+                            f" keywords in the same file.",
+                            severity=DiagnosticSeverity.WARNING,
+                            code="PrivateKeyword",
+                        )
+
                 if not isinstance(node, (Template, TestTemplate)):
                     try:
                         if result.arguments is not None:

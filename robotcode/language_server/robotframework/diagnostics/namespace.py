@@ -1783,6 +1783,49 @@ class KeywordFinder:
             result = await self._get_keyword_from_libraries(name)
         return result
 
+    def _prioritize_same_file_or_public(
+        self, entries: List[Tuple[LibraryEntry, KeywordDoc]]
+    ) -> List[Tuple[LibraryEntry, KeywordDoc]]:
+
+        matches = [h for h in entries if h[1].source == self.namespace.source]
+        if matches:
+            return matches
+
+        matches = [handler for handler in entries if not handler[1].is_private()]
+
+        return matches or entries
+
+    def _select_best_matches(
+        self, entries: List[Tuple[LibraryEntry, KeywordDoc]]
+    ) -> List[Tuple[LibraryEntry, KeywordDoc]]:
+
+        normal = [hand for hand in entries if not hand[1].is_embedded]
+        if normal:
+            return normal
+
+        matches = [hand for hand in entries if not self._is_worse_match_than_others(hand, entries)]
+        return matches or entries
+
+    def _is_worse_match_than_others(
+        self, candidate: Tuple[LibraryEntry, KeywordDoc], alternatives: List[Tuple[LibraryEntry, KeywordDoc]]
+    ) -> bool:
+        for other in alternatives:
+            if (
+                candidate[1] is not other[1]
+                and self._is_better_match(other, candidate)
+                and not self._is_better_match(candidate, other)
+            ):
+                return True
+        return False
+
+    def _is_better_match(
+        self, candidate: Tuple[LibraryEntry, KeywordDoc], other: Tuple[LibraryEntry, KeywordDoc]
+    ) -> bool:
+        return (
+            other[1].matcher.embedded_arguments.match(candidate[1].name) is not None
+            and candidate[1].matcher.embedded_arguments.match(other[1].name) is None
+        )
+
     async def _get_keyword_from_resource_files(self, name: str) -> Optional[KeywordDoc]:
         if self._resource_keywords is None:
             self._resource_keywords = [v for v in chain(self.namespace._resources.values())]
@@ -1792,6 +1835,13 @@ class KeywordFinder:
         ]
         if not found:
             return None
+        if get_robot_version() >= (6, 0, 0):
+            if len(found) > 1:
+                found = self._prioritize_same_file_or_public(found)
+
+            if len(found) > 1:
+                found = self._select_best_matches(found)
+
         if len(found) > 1:
             found = await self._get_keyword_based_on_search_order(found)
         if len(found) == 1:
