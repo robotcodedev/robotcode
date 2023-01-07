@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.21.1 (2023-01-07)
+### Performance
+* Caching of variable imports ([`9d70610`](https://github.com/d-biehl/robotcode/commit/9d70610b27d3e65177d1389197d2da53bee8e73e))
+
 ## v0.21.0 (2023-01-07)
 ### Feature
 * New setting `robotcode.analysis.cache.ignoredLibraries` to define which libraries should never be cached ([`5087c91`](https://github.com/d-biehl/robotcode/commit/5087c912fe2844396c0c2c30222ff215af105731))
