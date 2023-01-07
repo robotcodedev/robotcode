@@ -4,6 +4,16 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.21.0 (2023-01-07)
+### Feature
+* New setting `robotcode.analysis.cache.ignoredLibraries` to define which libraries should never be cached ([`5087c91`](https://github.com/d-biehl/robotcode/commit/5087c912fe2844396c0c2c30222ff215af105731))
+
+### Fix
+* **robotlangserver:** Speedup analyser ([`228ae4e`](https://github.com/d-biehl/robotcode/commit/228ae4e9a50b6cb0ad5ecb824f6b45bcb1476258))
+* Try to handle unknow documents as .robot files to support resources as .txt or .tsv files ([`4fed028`](https://github.com/d-biehl/robotcode/commit/4fed028a42b3705568639469de24615d23152de3))
+* **robotlangserver:** Loading documents hardened ([`eab71f8`](https://github.com/d-biehl/robotcode/commit/eab71f87b3e16eeb34e62a811235e5126b2734cf))
+* Generating keyword specs for keywords with empty lineno ([`60d76aa`](https://github.com/d-biehl/robotcode/commit/60d76aa25c9437d1c3029322d3c576738c0406cb))
+
 ## v0.20.0 (2023-01-06)
 ### Feature
 * **robotlangserver:** Implement embedded keyword precedence for RF 6.0, this also speedups keyword analysing ([`f975be8`](https://github.com/d-biehl/robotcode/commit/f975be8d53ac2ef6a0cbcc8d69dbf815e04312e8))
