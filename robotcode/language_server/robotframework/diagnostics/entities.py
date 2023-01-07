@@ -177,6 +177,7 @@ class VariableDefinition(SourceEntity):
     resolvable: bool = field(default=False, compare=False)
 
     value: Any = field(default=None, compare=False)
+    value_is_native: bool = field(default=False, compare=False)
 
     __matcher: Optional[VariableMatcher] = None
 
@@ -250,9 +251,21 @@ class ArgumentDefinition(VariableDefinition):
         return hash((type(self), self.name, self.type, self.range, self.source))
 
 
+@dataclass(frozen=True, eq=False, repr=False)
+class NativeValue:
+    value: Any
+
+    def __repr__(self) -> str:
+        return repr(self.value)
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+
 @dataclass
 class ImportedVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.IMPORTED_VARIABLE
+    value: Optional[NativeValue] = field(default=None, compare=False)
 
     @single_call
     def __hash__(self) -> int:

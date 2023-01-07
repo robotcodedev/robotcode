@@ -248,7 +248,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
             try:
                 self.send_response(message.seq, message.command, t.result())
             except asyncio.CancelledError:
-                self._logger.info(f"request message {repr(message)} canceled")
+                self._logger.debug(f"request message {repr(message)} canceled")
             except (SystemExit, KeyboardInterrupt):
                 raise
             except DebugAdapterRPCErrorException as ex:

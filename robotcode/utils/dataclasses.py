@@ -143,7 +143,7 @@ def __default(o: Any) -> Any:
     elif isinstance(o, Set):
         return [v for v in o]
     else:
-        raise TypeError(f"Cant' get default value for {repr(o)}")
+        raise TypeError(f"Cant' get default value for {type(o)} with value {repr(o)}")
 
 
 def as_json(obj: Any, indent: Optional[bool] = None, compact: Optional[bool] = None) -> str:

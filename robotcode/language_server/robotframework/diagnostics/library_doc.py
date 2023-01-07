@@ -38,8 +38,8 @@ from ..utils.version import get_robot_version
 from .entities import (
     ArgumentDefinition,
     ImportedVariableDefinition,
+    NativeValue,
     SourceEntity,
-    VariableDefinition,
     single_call,
 )
 
@@ -811,7 +811,7 @@ class VariablesDoc(LibraryDoc):
     type: str = "VARIABLES"
     scope: str = "GLOBAL"
 
-    variables: List[VariableDefinition] = field(default_factory=list)
+    variables: List[ImportedVariableDefinition] = field(default_factory=list)
 
 
 def is_library_by_path(path: str) -> bool:
@@ -1488,20 +1488,6 @@ def find_variables(
         )
 
 
-# @dataclass
-class NativeValue:
-    __slots__ = ["value"]
-
-    def __init__(self, value: Any) -> None:
-        self.value = value
-
-    def __repr__(self) -> str:
-        return repr(self.value)
-
-    def __str__(self) -> str:
-        return str(self.value)
-
-
 def get_variables_doc(
     name: str,
     args: Optional[Tuple[Any, ...]] = None,
@@ -1554,7 +1540,7 @@ def get_variables_doc(
 
                 importer = MyPythonImporter(libcode)
 
-            vars: List[VariableDefinition] = [
+            vars: List[ImportedVariableDefinition] = [
                 ImportedVariableDefinition(
                     1,
                     0,
@@ -1564,9 +1550,10 @@ def get_variables_doc(
                     name,
                     None,
                     value=NativeValue(value)
-                    if isinstance(value, (int, float, bool, str, set, tuple, dict, list))
+                    if value is None or isinstance(value, (int, float, bool, str, dict, list))
                     else None,
-                    has_value=isinstance(value, (int, float, bool, str, set, tuple, dict, list)),
+                    has_value=value is None or isinstance(value, (int, float, bool, str, dict, list)),
+                    value_is_native=value is None or isinstance(value, (int, float, bool, str, dict, list)),
                 )
                 for name, value in importer.import_variables(import_name, args)
             ]

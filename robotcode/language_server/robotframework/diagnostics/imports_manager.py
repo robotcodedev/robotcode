@@ -519,9 +519,17 @@ class ImportsManager:
             / get_robot_version_str()
             / "libdoc"
         )
+        self.variables_doc_cache_path = (
+            self.cache_path
+            / f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+            / get_robot_version_str()
+            / "variables"
+        )
+
         self.config = config
 
         self.ignored_libraries_patters = [Pattern(s) for s in config.analysis.cache.ignored_libraries]
+        self.ignored_variables_patters = [Pattern(s) for s in config.analysis.cache.ignored_variables]
         self._libaries_lock = Lock()
         self._libaries: OrderedDict[_LibrariesEntryKey, _LibrariesEntry] = OrderedDict()
         self._resources_lock = Lock()
@@ -796,9 +804,68 @@ class ImportsManager:
                     or (p.matches(result.origin) if result.origin is not None else False)
                     for p in self.ignored_libraries_patters
                 ):
-                    self._logger.critical(
-                        lambda: f"Ignore library {result.name or ''} {result.origin or ''} for caching."  # type: ignore
+                    self._logger.debug(f"Ignore library {result.name or ''} {result.origin or ''} for caching.")
+                    return None, import_name
+
+                if result.origin is not None:
+                    result.mtimes = {result.origin: Path(result.origin).resolve().stat().st_mtime_ns}
+
+                if result.submodule_search_locations:
+                    if result.mtimes is None:
+                        result.mtimes = {}
+                    result.mtimes.update(
+                        {
+                            str(f): f.resolve().stat().st_mtime_ns
+                            for f in itertools.chain(
+                                *(iter_files(loc, "**/*.py") for loc in result.submodule_search_locations)
+                            )
+                        }
                     )
+
+            return result, import_name
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException:
+            pass
+
+        return None, import_name
+
+    async def get_variables_meta(
+        self,
+        name: str,
+        base_dir: str = ".",
+        variables: Optional[Dict[str, Optional[Any]]] = None,
+    ) -> Tuple[Optional[LibraryMetaData], str]:
+        try:
+            import_name = await self.find_variables(
+                name,
+                base_dir=base_dir,
+                variables=variables,
+            )
+
+            result: Optional[LibraryMetaData] = None
+            module_spec: Optional[ModuleSpec] = None
+            if is_variables_by_path(import_name):
+                if (p := Path(import_name)).exists():
+                    result = LibraryMetaData(__version__, p.stem, import_name, None, True)
+            else:
+                module_spec = get_module_spec(import_name)
+                if module_spec is not None and module_spec.origin is not None:
+                    result = LibraryMetaData(
+                        __version__,
+                        module_spec.name,
+                        module_spec.origin,
+                        module_spec.submodule_search_locations,
+                        False,
+                    )
+
+            if result is not None:
+                if any(
+                    (p.matches(result.name) if result.name is not None else False)
+                    or (p.matches(result.origin) if result.origin is not None else False)
+                    for p in self.ignored_variables_patters
+                ):
+                    self._logger.debug(f"Ignore Variables {result.name or ''} {result.origin or ''} for caching.")
                     return None, import_name
 
                 if result.origin is not None:
@@ -968,11 +1035,17 @@ class ImportsManager:
                 try:
                     if meta is not None:
                         meta_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
-                        meta_file.parent.mkdir(parents=True, exist_ok=True)
-                        meta_file.write_text(as_json(meta), "utf-8")
-
                         spec_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".spec.json"))
-                        spec_file.write_text(as_json(result), "utf-8")
+                        spec_file.parent.mkdir(parents=True, exist_ok=True)
+
+                        try:
+                            spec_file.write_text(as_json(result), "utf-8")
+                        except (SystemExit, KeyboardInterrupt):
+                            raise
+                        except BaseException as e:
+                            raise RuntimeError(f"Cannot write spec file for library '{name}' to '{spec_file}'") from e
+
+                        meta_file.write_text(as_json(meta), "utf-8")
                     else:
                         self._logger.debug(lambda: f"Skip caching library {name}{repr(args)}")
                 except (SystemExit, KeyboardInterrupt):
@@ -1145,7 +1218,38 @@ class ImportsManager:
         )
 
         async def _get_libdoc() -> VariablesDoc:
+            meta, source = await self.get_variables_meta(
+                name,
+                base_dir,
+                variables,
+            )
+
             self._logger.debug(lambda: f"Load variables {source}{repr(args)}")
+            if meta is not None:
+                meta_file = Path(self.variables_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
+                if meta_file.exists():
+                    try:
+                        try:
+                            saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
+                            spec_path = None
+                            if saved_meta == meta:
+                                spec_path = Path(
+                                    self.variables_doc_cache_path, meta.filepath_base.with_suffix(".spec.json")
+                                )
+                                return from_json(
+                                    spec_path.read_text("utf-8"),
+                                    VariablesDoc,
+                                )
+                        except (SystemExit, KeyboardInterrupt):
+                            raise
+                        except BaseException as e:
+                            raise RuntimeError(
+                                f"Failed to load library meta data for library {name} from {spec_path}"
+                            ) from e
+                    except (SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException as e:
+                        self._logger.exception(e)
 
             with ProcessPoolExecutor(max_workers=1) as executor:
                 result = await asyncio.wait_for(
@@ -1166,6 +1270,26 @@ class ImportsManager:
                     self._logger.warning(
                         lambda: f"stdout captured at loading variables {name}{repr(args)}:\n{result.stdout}"
                     )
+
+                try:
+                    if meta is not None:
+                        meta_file = Path(self.variables_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
+                        spec_file = Path(self.variables_doc_cache_path, meta.filepath_base.with_suffix(".spec.json"))
+                        spec_file.parent.mkdir(parents=True, exist_ok=True)
+
+                        try:
+                            spec_file.write_text(as_json(result), "utf-8")
+                        except (SystemExit, KeyboardInterrupt):
+                            raise
+                        except BaseException as e:
+                            raise RuntimeError(f"Cannot write spec file for variables '{name}' to '{spec_file}'") from e
+                        meta_file.write_text(as_json(meta), "utf-8")
+                    else:
+                        self._logger.debug(lambda: f"Skip caching variables {name}{repr(args)}")
+                except (SystemExit, KeyboardInterrupt):
+                    raise
+                except BaseException as e:
+                    self._logger.exception(e)
                 return result
 
         entry_key = _VariablesEntryKey(source, args)

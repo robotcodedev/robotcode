@@ -317,7 +317,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
 
     async def handle_unknown_command(self, message: Request) -> Any:
         if self.connected:
-            self._logger.info("Forward request to client...")
+            self._logger.debug("Forward request to client...")
 
             return await self.client.protocol.send_request_async(message)
 

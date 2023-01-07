@@ -83,6 +83,7 @@ class WorkspaceConfig(ConfigBase):
 class Cache(ConfigBase):
     save_location: CacheSaveLocation = CacheSaveLocation.WORKSPACE_STORAGE
     ignored_libraries: List[str] = field(default_factory=list)
+    ignored_variables: List[str] = field(default_factory=list)
 
 
 @config_section("robotcode.analysis")

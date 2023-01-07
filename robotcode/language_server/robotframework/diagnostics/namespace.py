@@ -28,7 +28,6 @@ from typing import (
     cast,
 )
 
-from ....utils.async_itertools import as_async_iterable
 from ....utils.async_tools import Lock, async_event
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
@@ -62,6 +61,7 @@ from .entities import (
     CommandLineVariableDefinition,
     EnvironmentVariableDefinition,
     Import,
+    ImportedVariableDefinition,
     InvalidVariableError,
     LibraryImport,
     LocalVariableDefinition,
@@ -537,7 +537,7 @@ class ResourceEntry(LibraryEntry):
 
 @dataclass
 class VariablesEntry(LibraryEntry):
-    variables: List[VariableDefinition] = field(default_factory=lambda: [])
+    variables: List[ImportedVariableDefinition] = field(default_factory=lambda: [])
 
 
 class DocumentType(enum.Enum):
@@ -610,6 +610,8 @@ class Namespace:
         self.imports_manager.variables_changed.add(self.variables_changed)
 
         self._in_initialize = False
+
+        self._ignored_lines: Optional[List[int]] = None
 
     @async_event
     async def has_invalidated(sender) -> None:  # NOSONAR
@@ -689,6 +691,7 @@ class Namespace:
 
         self._finder = None
         self._in_initialize = False
+        self._ignored_lines = None
 
         await self._reset_global_variables()
 
@@ -1192,7 +1195,7 @@ class Namespace:
         self._logger.debug(lambda: f"start imports for {self.document if top_level else source}")
         try:
 
-            async for imp in as_async_iterable(imports):
+            for imp in imports:
                 if variables is None:
                     variables = await self.get_resolvable_variables()
 
@@ -1552,7 +1555,7 @@ class Namespace:
         related_information: Optional[List[DiagnosticRelatedInformation]] = None,
         data: Optional[Any] = None,
     ) -> None:
-        if await self.should_ignore(self.document, range):
+        if await self._should_ignore(range):
             return
 
         self._diagnostics.append(
@@ -1666,6 +1669,12 @@ class Namespace:
     @classmethod
     async def should_ignore(cls, document: Optional[TextDocument], range: Range) -> bool:
         return cls.__should_ignore(await cls.get_ignored_lines(document) if document is not None else [], range)
+
+    async def _should_ignore(self, range: Range) -> bool:
+        if self._ignored_lines is None:
+            self._ignored_lines = await self.get_ignored_lines(self.document) if self.document is not None else []
+
+        return self.__should_ignore(self._ignored_lines, range)
 
     @staticmethod
     def __should_ignore(lines: List[int], range: Range) -> bool:

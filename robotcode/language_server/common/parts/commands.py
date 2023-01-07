@@ -67,7 +67,7 @@ class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     async def _workspace_execute_command(
         self, command: str, arguments: Optional[List[LSPAny]], *args: Any, **kwargs: Any
     ) -> Optional[LSPAny]:
-        self._logger.info(f"execute command {command}")
+        self._logger.debug(f"execute command {command}")
 
         entry = self.commands.get(command, None)
         if entry is None or entry.callback is None:

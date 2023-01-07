@@ -206,7 +206,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         self._documentation_server_port = find_free_port(start_port, end_port)
 
-        self._logger.info(f"Start documentation server on port {self._documentation_server_port}")
+        self._logger.debug(f"Start documentation server on port {self._documentation_server_port}")
 
         with DualStackServer(("127.0.0.1", self._documentation_server_port), LibDocRequestHandler) as server:
             self._documentation_server = server

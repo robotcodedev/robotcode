@@ -170,7 +170,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
 
             return result
         finally:
-            self._logger.debug(f"Workspace loaded in {time.monotonic() - start}s")
+            self._logger.info(f"Workspace loaded in {time.monotonic() - start}s")
 
     @rpc_method(name="robot/cache/clear")
     @threaded()

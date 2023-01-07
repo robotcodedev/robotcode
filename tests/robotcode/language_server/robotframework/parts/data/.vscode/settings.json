@@ -13,7 +13,8 @@
         }
     },
     "robotcode.languageServer.args": [
-        //"--debugpy",
+        // "--debugpy",
+        // "--debugpy-wait-for-client"
         // "--log",
         // "--log-all",
         // "--log-level",
