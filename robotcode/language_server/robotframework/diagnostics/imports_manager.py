@@ -31,7 +31,7 @@ from ....__version__ import __version__
 from ....utils.async_cache import AsyncSimpleLRUCache
 from ....utils.async_tools import Lock, async_tasking_event, create_sub_task, threaded
 from ....utils.dataclasses import as_json, from_json
-from ....utils.glob_path import iter_files
+from ....utils.glob_path import Pattern, iter_files
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
 from ....utils.uri import Uri
@@ -59,7 +59,6 @@ from .library_doc import (
     KeywordDoc,
     KeywordStore,
     LibraryDoc,
-    LibraryType,
     ModuleSpec,
     VariablesDoc,
     complete_library_import,
@@ -521,6 +520,8 @@ class ImportsManager:
             / "libdoc"
         )
         self.config = config
+
+        self.ignored_libraries_patters = [Pattern(s) for s in config.analysis.cache.ignored_libraries]
         self._libaries_lock = Lock()
         self._libaries: OrderedDict[_LibrariesEntryKey, _LibrariesEntry] = OrderedDict()
         self._resources_lock = Lock()
@@ -788,7 +789,18 @@ class ImportsManager:
                         module_spec.submodule_search_locations,
                         False,
                     )
+
             if result is not None:
+                if any(
+                    (p.matches(result.name) if result.name is not None else False)
+                    or (p.matches(result.origin) if result.origin is not None else False)
+                    for p in self.ignored_libraries_patters
+                ):
+                    self._logger.critical(
+                        lambda: f"Ignore library {result.name or ''} {result.origin or ''} for caching."  # type: ignore
+                    )
+                    return None, import_name
+
                 if result.origin is not None:
                     result.mtimes = {result.origin: Path(result.origin).resolve().stat().st_mtime_ns}
 
@@ -954,7 +966,7 @@ class ImportsManager:
                         lambda: f"stdout captured at loading library {name}{repr(args)}:\n{result.stdout}"
                     )
                 try:
-                    if meta is not None and result.library_type in [LibraryType.CLASS, LibraryType.MODULE]:
+                    if meta is not None:
                         meta_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
                         meta_file.parent.mkdir(parents=True, exist_ok=True)
                         meta_file.write_text(as_json(meta), "utf-8")

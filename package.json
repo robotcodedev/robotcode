@@ -486,6 +486,17 @@
             "default": "workspaceStorage",
             "scope": "resource"
           },
+          "robotcode.analysis.cache.ignoredLibraries": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": [
+              "Specifies the library names that should not be cached. This is useful if you have a dynamic or hybrid library that has different keywords depending on the arguments. You can specify a glob pattern that matches the library name or the source file. \n\nExamples:\n- `**/mylibfolder/mylib.py`\n- `MyLib`\n- `mylibfolder.mylib.subpackage` \n\nFor robot framework internal libraries, you have to specify the full module name like `robot.libraries.Remote`.\n\nIf you change this setting, you may need to run the command `Robot Code: Clear Cache and Restart Language Servers`."
+            ],
+            "scope": "resource"
+          },
           "robotcode.run.openOutputAfterRun": {
             "type": "string",
             "enum": [

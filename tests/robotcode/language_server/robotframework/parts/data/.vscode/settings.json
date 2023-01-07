@@ -13,7 +13,7 @@
         }
     },
     "robotcode.languageServer.args": [
-        "--debugpy",
+        //"--debugpy",
         // "--log",
         // "--log-all",
         // "--log-level",
@@ -32,5 +32,10 @@
     //"python.analysis.diagnosticMode": "workspace"
     //"robotcode.robot.paths": ["./tests", "./tests1"]
     "robotcode.analysis.diagnosticMode": "workspace",
-    "robotcode.analysis.progressMode": "detailed"
+    "robotcode.analysis.progressMode": "detailed",
+    "robotcode.analysis.cache.saveLocation": "workspaceFolder",
+    "robotcode.analysis.cache.ignoredLibraries": [
+        //"robot.libraries.Remote",
+        "**/lib/alibrary.py"
+    ]
 }

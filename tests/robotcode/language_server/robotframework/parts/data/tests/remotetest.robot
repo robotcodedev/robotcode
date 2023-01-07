@@ -1,5 +1,5 @@
 *** Settings ***
-# Library    Remote    uri=http://127.0.0.1:8270
+Library    Remote    uri=http://127.0.0.1:8270
 
 
 *** Test Cases ***
