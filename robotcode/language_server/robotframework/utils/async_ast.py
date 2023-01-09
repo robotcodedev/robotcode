@@ -1,7 +1,7 @@
 import ast
 from typing import Any, AsyncGenerator, Callable, Generator, Optional, Type, cast
 
-__all__ = ["iter_fields", "iter_child_nodes", "AsyncVisitor", "walk"]
+__all__ = ["iter_fields", "iter_child_nodes", "AsyncVisitor"]
 
 
 def iter_fields(node: ast.AST) -> Generator[Any, None, None]:
@@ -28,16 +28,6 @@ def iter_child_nodes(node: ast.AST) -> Generator[ast.AST, None, None]:
             for item in field:
                 if isinstance(item, ast.AST):
                     yield item
-
-
-async def walk(node: ast.AST) -> AsyncGenerator[ast.AST, None]:
-    from collections import deque
-
-    todo = deque([node])
-    while todo:
-        node = todo.popleft()
-        todo.extend([e for e in iter_child_nodes(node)])
-        yield node
 
 
 async def iter_nodes(node: ast.AST) -> AsyncGenerator[ast.AST, None]:

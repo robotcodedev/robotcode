@@ -15,9 +15,10 @@
     "robotcode.languageServer.args": [
         // "--debugpy",
         // "--debugpy-wait-for-client"
-        // "--log",
-        // "--log-all",
-        // "--log-level",
+        "--log",
+        "--log-all",
+        "--log-level",
+        "INFO"
         // "TRACE",
         // "--log-robotframework",
         // // "--log-language-server"

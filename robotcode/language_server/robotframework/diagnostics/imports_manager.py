@@ -9,6 +9,7 @@ import sys
 import weakref
 import zlib
 from abc import ABC, abstractmethod
+from ast import walk
 from collections import OrderedDict
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
@@ -41,7 +42,6 @@ from ...common.parts.workspace import FileWatcherEntry, Workspace
 from ...common.text_document import TextDocument
 from ..configuration import CacheSaveLocation, RobotCodeConfig
 from ..utils.ast_utils import HasError, HasErrors, Token
-from ..utils.async_ast import walk
 from ..utils.robot_path import find_file_ex
 from ..utils.version import get_robot_version, get_robot_version_str
 from .entities import CommandLineVariableDefinition, VariableDefinition
@@ -1099,7 +1099,7 @@ class ImportsManager:
         errors: List[Error] = []
         keyword_names: List[KeywordName] = []
 
-        async for node in walk(model):
+        for node in walk(model):
             if isinstance(node, KeywordName):
                 keyword_names.append(node)
 
