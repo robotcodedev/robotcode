@@ -99,8 +99,8 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                                 character=0,
                             ),
                             end=Position(
-                                line=len(await document.get_lines()),
-                                character=len((await document.get_lines())[-1] or ""),
+                                line=len(document.get_lines()),
+                                character=len((document.get_lines())[-1] or ""),
                             ),
                         ),
                         message=f"Fatal: can't get namespace diagnostics '{e}' ({type(e).__qualname__})",
@@ -156,7 +156,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             for token in await self.parent.documents_cache.get_tokens(document):
                 await check_canceled()
 
-                if token.type in [Token.ERROR, Token.FATAL_ERROR] and not await Namespace.should_ignore(
+                if token.type in [Token.ERROR, Token.FATAL_ERROR] and not Namespace.should_ignore(
                     document, range_from_token(token)
                 ):
                     result.append(self._create_error_from_token(token))
@@ -170,11 +170,11 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         if variable_token.type in [
                             Token.ERROR,
                             Token.FATAL_ERROR,
-                        ] and not await Namespace.should_ignore(document, range_from_token(variable_token)):
+                        ] and not Namespace.should_ignore(document, range_from_token(variable_token)):
                             result.append(self._create_error_from_token(variable_token))
 
                 except VariableError as e:
-                    if not await Namespace.should_ignore(document, range_from_token(token)):
+                    if not Namespace.should_ignore(document, range_from_token(token)):
                         result.append(
                             Diagnostic(
                                 range=range_from_token(token),
@@ -197,8 +197,8 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                                 character=0,
                             ),
                             end=Position(
-                                line=len(await document.get_lines()),
-                                character=len((await document.get_lines())[-1] or ""),
+                                line=len(document.get_lines()),
+                                character=len((document.get_lines())[-1] or ""),
                             ),
                         ),
                         message=f"Fatal: can't get token diagnostics '{e}' ({type(e).__qualname__})",
@@ -227,12 +227,12 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             result: List[Diagnostic] = []
             async for node in iter_nodes(model):
                 error = node.error if isinstance(node, HasError) else None
-                if error is not None and not await Namespace.should_ignore(document, range_from_node(node)):
+                if error is not None and not Namespace.should_ignore(document, range_from_node(node)):
                     result.append(self._create_error_from_node(node, error))
                 errors = node.errors if isinstance(node, HasErrors) else None
                 if errors is not None:
                     for e in errors:
-                        if not await Namespace.should_ignore(document, range_from_node(node)):
+                        if not Namespace.should_ignore(document, range_from_node(node)):
                             result.append(self._create_error_from_node(node, e))
 
             return DiagnosticsResult(self.collect_model_errors, result)
@@ -250,8 +250,8 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                                 character=0,
                             ),
                             end=Position(
-                                line=len(await document.get_lines()),
-                                character=len((await document.get_lines())[-1] or ""),
+                                line=len(document.get_lines()),
+                                character=len((document.get_lines())[-1] or ""),
                             ),
                         ),
                         message=f"Fatal: can't get model diagnostics '{e}' ({type(e).__qualname__})",
@@ -285,7 +285,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             result: List[Diagnostic] = []
             for kw in (await namespace.get_library_doc()).keywords.values():
                 references = await self.parent.robot_references.find_keyword_references(document, kw, False, True)
-                if not references and not await Namespace.should_ignore(document, kw.name_range):
+                if not references and not Namespace.should_ignore(document, kw.name_range):
                     result.append(
                         Diagnostic(
                             range=kw.name_range,
@@ -311,8 +311,8 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                                 character=0,
                             ),
                             end=Position(
-                                line=len(await document.get_lines()),
-                                character=len((await document.get_lines())[-1] or ""),
+                                line=len(document.get_lines()),
+                                character=len((document.get_lines())[-1] or ""),
                             ),
                         ),
                         message=f"Fatal: can't collect unused keyword references '{e}' ({type(e).__qualname__})",
@@ -347,7 +347,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
             for var in (await namespace.get_variable_references()).keys():
                 references = await self.parent.robot_references.find_variable_references(document, var, False, True)
-                if not references and not await Namespace.should_ignore(document, var.name_range):
+                if not references and not Namespace.should_ignore(document, var.name_range):
                     result.append(
                         Diagnostic(
                             range=var.name_range,
@@ -374,8 +374,8 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                                 character=0,
                             ),
                             end=Position(
-                                line=len(await document.get_lines()),
-                                character=len((await document.get_lines())[-1] or ""),
+                                line=len(document.get_lines()),
+                                character=len((document.get_lines())[-1] or ""),
                             ),
                         ),
                         message=f"Fatal: can't collect unused variable references '{e}' ({type(e).__qualname__})",

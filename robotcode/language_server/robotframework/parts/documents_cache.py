@@ -227,7 +227,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         get: Callable[[str], List[Token]],
     ) -> List[Token]:
 
-        return get(await document.text())
+        return get(document.text())
 
     async def get_resource_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
         if data_only:
@@ -376,7 +376,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     async def __invalidate_namespace(self, sender: Namespace) -> None:
         document = sender.document
         if document is not None:
-            await document.invalidate_cache()
+            document.invalidate_cache()
 
             await self.namespace_invalidated(
                 self,

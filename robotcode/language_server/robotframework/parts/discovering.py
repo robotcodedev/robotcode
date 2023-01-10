@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import time
 from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterator, List, Optional, cast
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_tools import threaded
+from ....utils.async_tools import check_canceled, check_canceled_sync, threaded
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.lsp_types import (
@@ -113,6 +114,8 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         from ..utils.version import get_robot_version
 
         def get_document_text(source: str) -> str:
+            check_canceled_sync()
+
             if self.parent.loop:
                 doc = self.parent.documents.get_sync(Uri.from_path(source).normalized())
                 if doc is not None:
@@ -128,6 +131,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         orig = RobotParser._build
 
         def my_get_model_v4(source: str, data_only: bool = False, curdir: Optional[str] = None) -> Any:
+            check_canceled_sync()
             try:
                 return get_model(source, data_only, curdir)
             except (SystemExit, KeyboardInterrupt):
@@ -139,6 +143,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         def my_get_model_v6(
             source: str, data_only: bool = False, curdir: Optional[str] = None, lang: Any = None
         ) -> Any:
+            check_canceled_sync()
             try:
                 return get_model(source, data_only, curdir, lang)
             except (SystemExit, KeyboardInterrupt):
@@ -157,6 +162,8 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             model: Any = None,
             get_model: Any = my_get_model,
         ) -> TestSuite:
+            check_canceled_sync()
+
             return orig(self, suite, source, defaults, model, get_model)
 
         RobotParser._build = build
@@ -190,8 +197,10 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
         from ..utils.version import get_robot_version
 
-        def generate(suite: TestSuite) -> TestItem:
+        async def generate(suite: TestSuite) -> TestItem:
             children: List[TestItem] = []
+
+            await check_canceled()
 
             test: TestCase
             for test in suite.tests:
@@ -212,7 +221,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 )
 
             for s in suite.suites:
-                children.append(generate(s))
+                children.append(await generate(s))
 
             return TestItem(
                 type="suite",
@@ -232,7 +241,12 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         # await self.parent.diagnostics.ensure_workspace_loaded()
         await self.parent.robot_workspace.documents_loaded.wait()
 
+        start = time.monotonic()
+
+        self._logger.info("Start discovering tests")
+
         workspace_path = Uri(workspace_folder).to_path()
+        canceled = False
         with LOGGER.cache_only:
             try:
                 config = await self.get_config(workspace_folder)
@@ -280,7 +294,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                         builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
 
                     suite: Optional[TestSuite] = builder.build(*valid_paths) if valid_paths else None
-                    suite_item = [generate(suite)] if suite else []
+                    suite_item = [await generate(suite)] if suite else []
 
                     return [
                         TestItem(
@@ -313,10 +327,15 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     else:
                         builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
-                    return [generate(builder.build(str(workspace_path)))]
+                    return [await generate(builder.build(str(workspace_path)))]
             except (SystemExit, KeyboardInterrupt):
                 raise
+            except asyncio.CancelledError:
+                canceled = True
+                self._logger.info("Tests discovery canceled")
+                raise
             except BaseException as e:
+                self._logger.info(f"Failed to discover tests: {e}")
                 return [
                     TestItem(
                         type="error",
@@ -326,6 +345,9 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                         error=str(e),
                     )
                 ]
+            finally:
+                if not canceled:
+                    self._logger.info(f"Tests discovery took {time.monotonic() - start}s")
 
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
     @threaded()

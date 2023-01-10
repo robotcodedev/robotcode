@@ -688,7 +688,6 @@ class Namespace:
         self._diagnostics = []
         self._keyword_references = {}
         self._variable_references = {}
-
         self._finder = None
         self._in_initialize = False
         self._ignored_lines = None
@@ -793,7 +792,7 @@ class Namespace:
                 try:
                     self._logger.debug(f"ensure_initialized -> initialize {self.document}")
 
-                    imports = await self.get_imports()
+                    imports = self.get_imports()
 
                     data_entry: Optional[Namespace.DataEntry] = None
                     if self.document is not None:
@@ -877,7 +876,7 @@ class Namespace:
         return self._initialized
 
     @_logger.call
-    async def get_imports(self) -> List[Import]:
+    def get_imports(self) -> List[Import]:
         if self._imports is None:
             self._imports = ImportVisitor().get(self.source, self.model)
 
@@ -1044,7 +1043,7 @@ class Namespace:
                         and result.library_doc.errors is None
                         and (len(result.library_doc.keywords) == 0 and not bool(result.library_doc.has_listener))
                     ):
-                        await self.append_diagnostics(
+                        self.append_diagnostics(
                             range=value.range,
                             message=f"Imported library '{value.name}' contains no keywords.",
                             severity=DiagnosticSeverity.WARNING,
@@ -1059,7 +1058,7 @@ class Namespace:
 
                     if self.source == source:
                         if parent_import:
-                            await self.append_diagnostics(
+                            self.append_diagnostics(
                                 range=parent_import.range,
                                 message="Possible circular import.",
                                 severity=DiagnosticSeverity.INFORMATION,
@@ -1092,7 +1091,7 @@ class Namespace:
                             and not result.variables
                             and not result.library_doc.keywords
                         ):
-                            await self.append_diagnostics(
+                            self.append_diagnostics(
                                 range=value.range,
                                 message=f"Imported resource file '{value.name}' is empty.",
                                 severity=DiagnosticSeverity.WARNING,
@@ -1120,7 +1119,7 @@ class Namespace:
                 if top_level and result is not None:
                     if result.library_doc.source is not None and result.library_doc.errors:
                         if any(err.source and Path(err.source).is_absolute() for err in result.library_doc.errors):
-                            await self.append_diagnostics(
+                            self.append_diagnostics(
                                 range=value.range,
                                 message="Import definition contains errors.",
                                 severity=DiagnosticSeverity.ERROR,
@@ -1158,7 +1157,7 @@ class Namespace:
                         for err in filter(
                             lambda e: e.source is None or not Path(e.source).is_absolute(), result.library_doc.errors
                         ):
-                            await self.append_diagnostics(
+                            self.append_diagnostics(
                                 range=value.range,
                                 message=err.message,
                                 severity=DiagnosticSeverity.ERROR,
@@ -1167,7 +1166,7 @@ class Namespace:
                             )
                     elif result.library_doc.errors is not None:
                         for err in result.library_doc.errors:
-                            await self.append_diagnostics(
+                            self.append_diagnostics(
                                 range=value.range,
                                 message=err.message,
                                 severity=DiagnosticSeverity.ERROR,
@@ -1179,7 +1178,7 @@ class Namespace:
                 raise
             except BaseException as e:
                 if top_level:
-                    await self.append_diagnostics(
+                    self.append_diagnostics(
                         range=value.range,
                         message=str(e),
                         severity=DiagnosticSeverity.ERROR,
@@ -1224,7 +1223,7 @@ class Namespace:
                                 raise
                             except BaseException as e:
                                 if top_level:
-                                    await self.append_diagnostics(
+                                    self.append_diagnostics(
                                         range=entry.import_range,
                                         message=str(e) or type(entry).__name__,
                                         severity=DiagnosticSeverity.ERROR,
@@ -1234,7 +1233,7 @@ class Namespace:
                         else:
                             if top_level:
                                 if entry.library_doc.source == self.source:
-                                    await self.append_diagnostics(
+                                    self.append_diagnostics(
                                         range=entry.import_range,
                                         message="Recursive resource import.",
                                         severity=DiagnosticSeverity.INFORMATION,
@@ -1245,7 +1244,7 @@ class Namespace:
                                     already_imported_resources is not None
                                     and already_imported_resources.library_doc.source
                                 ):
-                                    await self.append_diagnostics(
+                                    self.append_diagnostics(
                                         range=entry.import_range,
                                         message=f"Resource {entry} already imported.",
                                         severity=DiagnosticSeverity.INFORMATION,
@@ -1277,7 +1276,7 @@ class Namespace:
                             and already_imported_variables
                             and already_imported_variables[0].library_doc.source
                         ):
-                            await self.append_diagnostics(
+                            self.append_diagnostics(
                                 range=entry.import_range,
                                 message=f'Variables "{entry}" already imported.',
                                 severity=DiagnosticSeverity.INFORMATION,
@@ -1301,7 +1300,7 @@ class Namespace:
 
                     elif isinstance(entry, LibraryEntry):
                         if top_level and entry.name == BUILTIN_LIBRARY_NAME and entry.alias is None:
-                            await self.append_diagnostics(
+                            self.append_diagnostics(
                                 range=entry.import_range,
                                 message=f'Library "{entry}" is not imported,'
                                 ' because it would override the "BuiltIn" library.',
@@ -1330,7 +1329,7 @@ class Namespace:
                             and e.args == entry.args
                         ]
                         if top_level and already_imported_library and already_imported_library[0].library_doc.source:
-                            await self.append_diagnostics(
+                            self.append_diagnostics(
                                 range=entry.import_range,
                                 message=f'Library "{entry}" already imported.',
                                 severity=DiagnosticSeverity.INFORMATION,
@@ -1366,7 +1365,7 @@ class Namespace:
             except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
-                await self.append_diagnostics(
+                self.append_diagnostics(
                     range=Range.zero(),
                     message=f"Can't import default library '{library}': {str(e) or type(e).__name__}",
                     severity=DiagnosticSeverity.ERROR,
@@ -1437,7 +1436,7 @@ class Namespace:
             name=library_doc.name,
             import_name=name,
             library_doc=library_doc,
-            imports=await namespace.get_imports(),
+            imports=namespace.get_imports(),
             variables=await namespace.get_own_variables(),
         )
 
@@ -1543,7 +1542,7 @@ class Namespace:
 
             return self._keywords
 
-    async def append_diagnostics(
+    def append_diagnostics(
         self,
         range: Range,
         message: str,
@@ -1555,16 +1554,12 @@ class Namespace:
         related_information: Optional[List[DiagnosticRelatedInformation]] = None,
         data: Optional[Any] = None,
     ) -> None:
-        if await self._should_ignore(range):
+        if self._should_ignore(range):
             return
 
         self._diagnostics.append(
             Diagnostic(range, message, severity, code, code_description, source, tags, related_information, data)
         )
-
-    async def is_analyzed(self) -> bool:
-        async with self._analyze_lock:
-            return self._analyzed
 
     @_logger.call(condition=lambda self: not self._analyzed)
     async def _analyze(self) -> None:
@@ -1584,7 +1579,7 @@ class Namespace:
                         self.model,
                         self,
                         await self.create_finder(),
-                        await self.get_ignored_lines(self.document) if self.document is not None else [],
+                        self.get_ignored_lines(self.document) if self.document is not None else [],
                         await self.get_libraries_matchers(),
                         await self.get_resources_matchers(),
                     ).run()
@@ -1597,7 +1592,7 @@ class Namespace:
 
                     if lib_doc.errors is not None:
                         for err in lib_doc.errors:
-                            await self.append_diagnostics(
+                            self.append_diagnostics(
                                 range=Range(
                                     start=Position(
                                         line=((err.line_no - 1) if err.line_no is not None else 0),
@@ -1648,13 +1643,13 @@ class Namespace:
         return finder.find_keyword(name, raise_keyword_error=raise_keyword_error, handle_bdd_style=handle_bdd_style)
 
     @classmethod
-    async def get_ignored_lines(cls, document: TextDocument) -> List[int]:
-        return await document.get_cache(cls.__get_ignored_lines)
+    def get_ignored_lines(cls, document: TextDocument) -> List[int]:
+        return document.get_cache_sync(cls.__get_ignored_lines)
 
     @staticmethod
-    async def __get_ignored_lines(document: TextDocument) -> List[int]:
+    def __get_ignored_lines(document: TextDocument) -> List[int]:
         result = []
-        lines = await document.get_lines()
+        lines = document.get_lines()
         for line_no, line in enumerate(lines):
 
             comment = EXTRACT_COMMENT_PATTERN.match(line)
@@ -1667,12 +1662,12 @@ class Namespace:
         return result
 
     @classmethod
-    async def should_ignore(cls, document: Optional[TextDocument], range: Range) -> bool:
-        return cls.__should_ignore(await cls.get_ignored_lines(document) if document is not None else [], range)
+    def should_ignore(cls, document: Optional[TextDocument], range: Range) -> bool:
+        return cls.__should_ignore(cls.get_ignored_lines(document) if document is not None else [], range)
 
-    async def _should_ignore(self, range: Range) -> bool:
+    def _should_ignore(self, range: Range) -> bool:
         if self._ignored_lines is None:
-            self._ignored_lines = await self.get_ignored_lines(self.document) if self.document is not None else []
+            self._ignored_lines = self.get_ignored_lines(self.document) if self.document is not None else []
 
         return self.__should_ignore(self._ignored_lines, range)
 

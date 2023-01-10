@@ -121,8 +121,14 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         self._workspace_diagnostics_task: Optional[asyncio.Task[Any]] = None
 
         self._diagnostics_loop: Optional[asyncio.AbstractEventLoop] = None
+        self._single_diagnostics_loop: Optional[asyncio.AbstractEventLoop] = None
+
         self._diagnostics_loop_lock = threading.RLock()
         self._diagnostics_started = threading.Event()
+        self._single_diagnostics_started = threading.Event()
+
+        self._diagnostics_server_thread: Optional[threading.Thread] = None
+        self._single_diagnostics_server_thread: Optional[threading.Thread] = None
 
         self.parent.on_initialized.add(self.initialized)
 
@@ -148,6 +154,15 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
         return self._diagnostics_loop
 
+    @property
+    def single_diagnostics_loop(self) -> asyncio.AbstractEventLoop:
+        if self._single_diagnostics_loop is None:
+            self._ensure_diagnostics_thread_started()
+
+        assert self._single_diagnostics_loop is not None
+
+        return self._single_diagnostics_loop
+
     def _run_diagnostics(self) -> None:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -164,17 +179,39 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             asyncio.set_event_loop(None)
             loop.close()
 
+    def _single_run_diagnostics(self) -> None:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            self._single_diagnostics_loop = loop
+            self._single_diagnostics_started.set()
+
+            loop.slow_callback_duration = 10
+
+            loop.run_forever()
+            _cancel_all_tasks(loop)
+            loop.run_until_complete(loop.shutdown_asyncgens())
+        finally:
+            asyncio.set_event_loop(None)
+            loop.close()
+
     def _ensure_diagnostics_thread_started(self) -> None:
         with self._diagnostics_loop_lock:
             if self._diagnostics_loop is None:
-                self._server_thread = threading.Thread(
+                self._diagnostics_server_thread = threading.Thread(
                     name="diagnostics_worker", target=self._run_diagnostics, daemon=True
                 )
 
-                self._server_thread.start()
+                self._diagnostics_server_thread.start()
 
-                if not self._diagnostics_started.wait(10):
-                    raise RuntimeError("Can't start diagnostics worker thread.")
+                self._single_diagnostics_server_thread = threading.Thread(
+                    name="single_diagnostics_worker", target=self._single_run_diagnostics, daemon=True
+                )
+
+                self._single_diagnostics_server_thread.start()
+
+                if not self._diagnostics_started.wait(10) or not self._single_diagnostics_started.wait(10):
+                    raise RuntimeError("Can't start diagnostics worker threads.")
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if (
@@ -280,7 +317,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
         while True:
             try:
-
                 documents = [
                     doc
                     for doc in self.parent.documents.documents
@@ -296,8 +332,11 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                     await asyncio.sleep(1)
                     continue
 
+                self._logger.info(f"start collecting workspace diagnostics for {len(documents)} documents")
+
                 done_something = False
 
+                start = time.monotonic()
                 async with self.parent.window.progress(
                     "Analyse workspace", cancellable=False, current=0, max=len(documents) + 1, start=False
                 ) as progress:
@@ -324,21 +363,31 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                             progress.report(current=i + 1)
 
                         await self.create_document_diagnostics_task(
-                            document, False, await self.get_diagnostics_mode(document.uri) == DiagnosticsMode.WORKSPACE
+                            document,
+                            False,
+                            False,
+                            await self.get_diagnostics_mode(document.uri) == DiagnosticsMode.WORKSPACE,
                         )
 
                 if not done_something:
                     await asyncio.sleep(1)
+
+                self._logger.info(
+                    f"collecting workspace diagnostics for for {len(documents)} "
+                    f"documents takes {time.monotonic() - start}s"
+                )
+
             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                 raise
             except BaseException as e:
                 self._logger.exception(f"Error in workspace diagnostics loop: {e}", exc_info=e)
 
     def create_document_diagnostics_task(
-        self, document: TextDocument, debounce: bool = True, send_diagnostics: bool = True
+        self, document: TextDocument, single: bool, debounce: bool = True, send_diagnostics: bool = True
     ) -> asyncio.Task[Any]:
         def done(t: asyncio.Task[Any]) -> None:
             self._logger.debug(lambda: f"diagnostics for {document} {'canceled' if t.cancelled() else 'ended'}")
+
             if t.done() and not t.cancelled():
                 ex = t.exception()
 
@@ -372,7 +421,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             data.version = document.version
             data.task = create_sub_task(
                 self._get_diagnostics_for_document(document, data, debounce, send_diagnostics),
-                loop=self.diagnostics_loop,
+                loop=self.single_diagnostics_loop if single else self.diagnostics_loop,
                 name=f"diagnostics ${document.uri}",
             )
 
@@ -444,7 +493,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             if document is None:
                 raise JsonRPCErrorException(ErrorCodes.SERVER_CANCELLED, f"Document {text_document!r} not found.")
 
-            self.create_document_diagnostics_task(document)
+            self.create_document_diagnostics_task(document, True)
 
             return RelatedFullDocumentDiagnosticReport([])
         except asyncio.CancelledError:

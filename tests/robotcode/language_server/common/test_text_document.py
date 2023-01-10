@@ -13,11 +13,11 @@ async def test_apply_full_change_should_work() -> None:
     text = """first"""
     new_text = """changed"""
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert await document.text() == text
+    assert document.text() == text
 
-    await document.apply_full_change(1, new_text)
+    document.apply_full_change(1, new_text)
 
-    assert await document.text() == new_text
+    assert document.text() == new_text
 
 
 @pytest.mark.asyncio
@@ -25,13 +25,13 @@ async def test_apply_apply_incremental_change_at_begining_should_work() -> None:
     text = """first"""
     new_text = """changed"""
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert await document.text() == text
+    assert document.text() == text
 
-    await document.apply_incremental_change(
+    document.apply_incremental_change(
         1, Range(start=Position(line=0, character=0), end=Position(line=0, character=0)), new_text
     )
 
-    assert await document.text() == new_text + text
+    assert document.text() == new_text + text
 
 
 @pytest.mark.asyncio
@@ -40,13 +40,13 @@ async def test_apply_apply_incremental_change_at_end_should_work() -> None:
     new_text = """changed"""
 
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert await document.text() == text
+    assert document.text() == text
 
-    await document.apply_incremental_change(
+    document.apply_incremental_change(
         1, Range(start=Position(line=0, character=len(text)), end=Position(line=0, character=len(text))), new_text
     )
 
-    assert await document.text() == text + new_text
+    assert document.text() == text + new_text
 
 
 @pytest.mark.asyncio
@@ -55,30 +55,30 @@ async def test_save_and_revert_should_work() -> None:
     new_text = """changed"""
 
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert await document.text() == text
+    assert document.text() == text
 
-    assert not await document.revert(None)
+    assert not document.revert(None)
 
-    await document.apply_incremental_change(
+    document.apply_incremental_change(
         2, Range(start=Position(line=0, character=len(text)), end=Position(line=0, character=len(text))), new_text
     )
 
-    assert await document.text() == text + new_text
+    assert document.text() == text + new_text
     assert document.version == 2
 
-    assert await document.revert(None)
-    assert not await document.revert(None)
+    assert document.revert(None)
+    assert not document.revert(None)
 
-    assert await document.text() == text
+    assert document.text() == text
     assert document.version == 1
 
-    await document.apply_incremental_change(
+    document.apply_incremental_change(
         2, Range(start=Position(line=0, character=len(text)), end=Position(line=0, character=len(text))), new_text
     )
 
-    await document.save(None, None)
+    document.save(None, None)
 
-    assert await document.text() == text + new_text
+    assert document.text() == text + new_text
     assert document.version == 2
 
 
@@ -95,13 +95,13 @@ second changed line
 third"""
 
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert await document.text() == text
+    assert document.text() == text
 
-    await document.apply_incremental_change(
+    document.apply_incremental_change(
         1, Range(start=Position(line=1, character=7), end=Position(line=1, character=7)), new_text
     )
 
-    assert await document.text() == expected
+    assert document.text() == expected
 
 
 @pytest.mark.asyncio
@@ -113,13 +113,13 @@ third"""
     new_text = """changed """
 
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert await document.text() == text
+    assert document.text() == text
 
-    await document.apply_incremental_change(
+    document.apply_incremental_change(
         1, Range(start=Position(line=3, character=7), end=Position(line=3, character=8)), new_text
     )
 
-    assert await document.text() == text + new_text
+    assert document.text() == text + new_text
 
 
 @pytest.mark.asyncio
@@ -128,10 +128,10 @@ async def test_apply_apply_incremental_change_with_wrong_range_should_raise_inva
     new_text = """changed"""
 
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert await document.text() == text
+    assert document.text() == text
 
     with pytest.raises(InvalidRangeError):
-        await document.apply_incremental_change(
+        document.apply_incremental_change(
             1, Range(start=Position(line=4, character=len(text)), end=Position(line=0, character=len(text))), new_text
         )
 
@@ -141,11 +141,11 @@ async def test_apply_none_change_should_work() -> None:
     text = """first"""
 
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert await document.text() == text
+    assert document.text() == text
 
-    await document.apply_none_change()
+    document.apply_none_change()
 
-    assert await document.text() == text
+    assert document.text() == text
 
 
 @pytest.mark.asyncio
@@ -157,11 +157,11 @@ third
 """
 
     document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
-    assert await document.text() == text
+    assert document.text() == text
 
-    await document.apply_none_change()
+    document.apply_none_change()
 
-    assert await document.get_lines() == text.splitlines(True)
+    assert document.get_lines() == text.splitlines(True)
 
 
 @pytest.mark.asyncio
@@ -182,12 +182,12 @@ third
     document.set_data(key, data)
 
     assert document.get_data(key) == data
-    await document.clear()
+    document.clear()
     assert document.get_data(key, None) is None
 
     document.set_data(key, data)
     assert document.get_data(key) == data
-    await document.invalidate_data()
+    document.invalidate_data()
     assert document.get_data(key, None) is None
 
 
@@ -217,7 +217,7 @@ third
     prefix = "3"
     assert await document.get_cache(get_data, "data3") == "2data2"
 
-    await document.invalidate_cache()
+    document.invalidate_cache()
 
     assert await document.get_cache(get_data, "data3") == "3data3"
 
@@ -251,7 +251,7 @@ third
     prefix = "3"
     assert await document.get_cache(dummy.get_data, "data3") == "2data2"
 
-    await document.invalidate_cache()
+    document.invalidate_cache()
 
     assert await document.get_cache(dummy.get_data, "data3") == "3data3"
 

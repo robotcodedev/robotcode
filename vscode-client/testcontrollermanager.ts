@@ -54,8 +54,8 @@ class DidChangeEntry {
   public readonly tokenSource: vscode.CancellationTokenSource;
 
   public cancel() {
-    clearTimeout(this.timer);
     this.tokenSource.cancel();
+    clearTimeout(this.timer);
   }
 }
 
@@ -279,7 +279,7 @@ export class TestControllerManager {
       this.didChangedTimer.delete(uri_str);
     }
 
-    const token = new vscode.CancellationTokenSource();
+    const cancelationTokenSource = new vscode.CancellationTokenSource();
 
     this.didChangedTimer.set(
       uri_str,
@@ -290,7 +290,11 @@ export class TestControllerManager {
             this.refresh(item).then(
               () => {
                 if (item?.canResolveChildren && item.children.size === 0) {
-                  this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(document.uri)).then(
+                  this.refreshWorkspace(
+                    vscode.workspace.getWorkspaceFolder(document.uri),
+                    undefined,
+                    cancelationTokenSource.token
+                  ).then(
                     () => undefined,
                     () => undefined
                   );
@@ -299,13 +303,17 @@ export class TestControllerManager {
               () => undefined
             );
           else {
-            this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(document.uri)).then(
+            this.refreshWorkspace(
+              vscode.workspace.getWorkspaceFolder(document.uri),
+              undefined,
+              cancelationTokenSource.token
+            ).then(
               () => undefined,
               () => undefined
             );
           }
         }, 500),
-        token
+        cancelationTokenSource
       )
     );
   }
@@ -325,9 +333,9 @@ export class TestControllerManager {
     return this.testItems.get(id);
   }
 
-  public async refresh(item?: vscode.TestItem): Promise<void> {
+  public async refresh(item?: vscode.TestItem, token?: vscode.CancellationToken): Promise<void> {
     await this.refreshMutex.dispatch(async () => {
-      await this.refreshItem(item);
+      await this.refreshItem(item, token);
     });
   }
 
@@ -504,7 +512,11 @@ export class TestControllerManager {
 
   private readonly refreshFromUriMutex = new Mutex();
 
-  private async refreshWorkspace(workspace?: vscode.WorkspaceFolder, _reason?: string): Promise<void> {
+  private async refreshWorkspace(
+    workspace?: vscode.WorkspaceFolder,
+    _reason?: string,
+    token?: vscode.CancellationToken
+  ): Promise<void> {
     return this.refreshFromUriMutex.dispatch(async () => {
       if (workspace) {
         const entry = this.robotTestItems.get(workspace);
@@ -519,7 +531,7 @@ export class TestControllerManager {
         }
       }
       await sleep(5);
-      await this.refresh();
+      await this.refresh(undefined, token);
     });
   }
 
@@ -537,16 +549,16 @@ export class TestControllerManager {
         this.fileChangeTimer = undefined;
       }
 
-      const token = new vscode.CancellationTokenSource();
+      const cancelationTokenSource = new vscode.CancellationTokenSource();
 
       this.fileChangeTimer = new DidChangeEntry(
         setTimeout(() => {
-          this.refreshWorkspace(workspace, reason).then(
+          this.refreshWorkspace(workspace, reason, cancelationTokenSource.token).then(
             () => undefined,
             () => undefined
           );
         }, 500),
-        token
+        cancelationTokenSource
       );
     } else {
       if (this.fileChangeTimer) {

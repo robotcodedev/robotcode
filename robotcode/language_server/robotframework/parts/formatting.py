@@ -141,7 +141,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             new_lines = self.RE_LINEBREAKS.split(new.text)
 
             result: List[TextEdit] = []
-            matcher = SequenceMatcher(a=await document.get_lines(), b=new_lines, autojunk=False)
+            matcher = SequenceMatcher(a=document.get_lines(), b=new_lines, autojunk=False)
             for code, old_start, old_end, new_start, new_end in matcher.get_opcodes():
                 if code == "insert" or code == "replace":
                     result.append(
@@ -200,9 +200,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 TextEdit(
                     range=Range(
                         start=Position(line=0, character=0),
-                        end=Position(
-                            line=len(await document.get_lines()), character=len((await document.get_lines())[-1])
-                        ),
+                        end=Position(line=len(document.get_lines()), character=len((document.get_lines())[-1])),
                     ),
                     new_text=s.getvalue(),
                 )

@@ -24,12 +24,7 @@ from typing import (
 )
 
 from ....jsonrpc2.protocol import rpc_method
-from ....utils.async_tools import (
-    Lock,
-    async_event,
-    async_tasking_event,
-    create_sub_task,
-)
+from ....utils.async_tools import Lock, async_tasking_event, create_sub_task, threaded
 from ....utils.dataclasses import from_dict
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
@@ -388,11 +383,12 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
             for a in event.added:
                 self._workspace_folders.append(WorkspaceFolder(a.name, Uri(a.uri), a.uri))
 
-    @async_event
+    @async_tasking_event
     async def did_change_watched_files(sender, changes: List[FileEvent]) -> None:  # NOSONAR
         ...
 
     @rpc_method(name="workspace/didChangeWatchedFiles", param_type=DidChangeWatchedFilesParams)
+    @threaded()
     async def _workspace_did_change_watched_files(self, changes: List[FileEvent], *args: Any, **kwargs: Any) -> None:
         changes = [e for e in changes if not e.uri.endswith("/globalStorage")]
         if changes:

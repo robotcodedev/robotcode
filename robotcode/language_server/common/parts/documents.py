@@ -111,7 +111,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
                         loop=self.parent.loop,
                     )
                 elif change.type == FileChangeType.CHANGED:
-                    await document.apply_full_change(
+                    document.apply_full_change(
                         None, await self.read_document_text(document.uri, language_id_filter(document)), save=True
                     )
                     create_sub_task(
@@ -258,9 +258,9 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
 
                 self._documents[uri] = document
             else:
-                text_changed = await document.text() != normalized_text
+                text_changed = document.text() != normalized_text
                 if text_changed:
-                    await document.apply_full_change(text_document.version, normalized_text)
+                    document.apply_full_change(text_document.version, normalized_text)
 
             document.opened_in_editor = True
 
@@ -297,11 +297,11 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
             async with self._lock:
                 self._documents.pop(str(document.uri), None)
 
-            await document.clear()
+            document.clear()
             del document
         else:
             document._version = None
-            if await document.revert(None):
+            if document.revert(None):
                 create_sub_task(
                     self.did_change(self, document, callback_filter=language_id_filter(document)), loop=self.parent.loop
                 )
@@ -326,9 +326,9 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
             if text is not None:
                 normalized_text = self._normalize_line_endings(text)
 
-                text_changed = await document.text() != normalized_text
+                text_changed = document.text() != normalized_text
                 if text_changed:
-                    await document.save(None, text)
+                    document.save(None, text)
                     create_sub_task(
                         self.did_change(self, document, callback_filter=language_id_filter(document)),
                         loop=self.parent.loop,
@@ -367,17 +367,15 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
         )
         for content_change in content_changes:
             if sync_kind is None or sync_kind == TextDocumentSyncKind.NONE:
-                await document.apply_none_change()
+                document.apply_none_change()
             elif sync_kind == TextDocumentSyncKind.FULL and isinstance(
                 content_change, TextDocumentContentTextChangeEvent
             ):
-                await document.apply_full_change(
-                    text_document.version, self._normalize_line_endings(content_change.text)
-                )
+                document.apply_full_change(text_document.version, self._normalize_line_endings(content_change.text))
             elif sync_kind == TextDocumentSyncKind.INCREMENTAL and isinstance(
                 content_change, TextDocumentContentRangeChangeEvent
             ):
-                await document.apply_incremental_change(
+                document.apply_incremental_change(
                     text_document.version, content_change.range, self._normalize_line_endings(content_change.text)
                 )
             else:

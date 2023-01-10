@@ -138,7 +138,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             issues = await analyser.run_check(  # type: ignore
                 await self.parent.documents_cache.get_model(document, False),
                 str(document.uri.to_path()),
-                await document.text(),
+                document.text(),
             )
 
             for issue in issues:

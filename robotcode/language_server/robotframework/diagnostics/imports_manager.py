@@ -613,6 +613,7 @@ class ImportsManager:
         await self.imports_changed(self, uri)
 
     @language_id("robotframework")
+    @threaded()
     async def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
         resource_changed: List[LibraryDoc] = []
 
@@ -1328,7 +1329,6 @@ class ImportsManager:
         entry_key = _ResourcesEntryKey(source)
 
         async with self._resources_lock:
-
             if entry_key not in self._resources:
                 self._resources[entry_key] = _ResourcesEntry(name, self, _get_document)
 
