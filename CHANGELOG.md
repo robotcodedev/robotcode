@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.21.3 (2023-01-10)
+### Fix
+* **robotlangserver:** If a lock takes to long, try to cancel the lock ([`75e9d66`](https://github.com/d-biehl/robotcode/commit/75e9d66572cdcb5cb144e55541b60e44fa102f7f))
+
 ## v0.21.2 (2023-01-10)
 ### Fix
 * Use markdownDescription in settings and launch configurations where needed ([`229a4a6`](https://github.com/d-biehl/robotcode/commit/229a4a6c316da5606c16629617e211ecf1a9a6d4))
