@@ -4,6 +4,13 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.21.2 (2023-01-10)
+### Fix
+* Use markdownDescription in settings and launch configurations where needed ([`229a4a6`](https://github.com/d-biehl/robotcode/commit/229a4a6c316da5606c16629617e211ecf1a9a6d4))
+
+### Performance
+* Massive overall speed improvements ([`aee36d7`](https://github.com/d-biehl/robotcode/commit/aee36d7f8a4924b6c35f7055d5d6fa170db6f5de))
+
 ## v0.21.1 (2023-01-07)
 ### Performance
 * Caching of variable imports ([`9d70610`](https://github.com/d-biehl/robotcode/commit/9d70610b27d3e65177d1389197d2da53bee8e73e))
