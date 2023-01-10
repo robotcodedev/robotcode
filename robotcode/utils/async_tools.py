@@ -462,7 +462,8 @@ class Lock:
             try:
 
                 def aaa(s: Any) -> None:
-                    warnings.warn(f"Lock takes to long {threading.current_thread()}\n{s}")
+                    warnings.warn(f"Lock takes to long {threading.current_thread()}\n{s}, try to cancel...")
+                    fut.cancel()
 
                 h = fut.get_loop().call_later(120, aaa, "".join(traceback.format_stack()))
 
