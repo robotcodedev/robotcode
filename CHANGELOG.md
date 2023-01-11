@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.21.4 (2023-01-11)
+### Fix
+* **robotlangserver:** Remove possible deadlock in Namespace initialization ([`27d781c`](https://github.com/d-biehl/robotcode/commit/27d781c6305643b81904e4bf30b8f64a45ffa9ee))
+
 ## v0.21.3 (2023-01-10)
 ### Fix
 * **robotlangserver:** If a lock takes to long, try to cancel the lock ([`75e9d66`](https://github.com/d-biehl/robotcode/commit/75e9d66572cdcb5cb144e55541b60e44fa102f7f))
