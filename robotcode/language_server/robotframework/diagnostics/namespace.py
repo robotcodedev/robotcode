@@ -779,9 +779,10 @@ class Namespace:
 
     @_logger.call(condition=lambda self: not self._initialized)
     async def ensure_initialized(self) -> bool:
-        async with self._initialize_lock:
-            imports_changed = False
+        run_initialize = False
+        imports_changed = False
 
+        async with self._initialize_lock:
             if not self._initialized:
 
                 if self._in_initialize:
@@ -804,14 +805,7 @@ class Namespace:
                         elif old_imports != imports:
                             imports_changed = True
 
-                            new_imports = []
-                            for e in old_imports:
-                                if e in imports:
-                                    new_imports.append(e)
-                            for e in imports:
-                                if e not in new_imports:
-                                    new_imports.append(e)
-                            self.document.set_data(Namespace, new_imports)
+                            self.document.set_data(Namespace, imports)
                             self.document.set_data(Namespace.DataEntry, None)
                         else:
                             data_entry = self.document.get_data(Namespace.DataEntry)
@@ -849,6 +843,7 @@ class Namespace:
                     await self._reset_global_variables()
 
                     self._initialized = True
+                    run_initialize = True
 
                 except BaseException as e:
                     if not isinstance(e, asyncio.CancelledError):
@@ -863,7 +858,7 @@ class Namespace:
                 finally:
                     self._in_initialize = False
 
-        if self._initialized:
+        if run_initialize:
             await self.has_initialized(self)
 
             if imports_changed:
