@@ -38,5 +38,23 @@
     ["'", "'"],
     ["*", "*"],
     ["_", "_"]
+  ],
+  "onEnterRules": [
+    {
+      "beforeText": "^\\s*#.*",
+      "afterText": ".+$",
+      "action": {
+        "indent": "none",
+        "appendText": "# "
+      }
+    },
+    {
+      "beforeText": "^\\s*[^\\s].*",
+      "afterText": "\\s*[^\\s].*$",
+      "action": {
+        "indent": "none",
+        "appendText": "...    "
+      }
+    }
   ]
 }
