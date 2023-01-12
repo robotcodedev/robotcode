@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.22.0 (2023-01-12)
+### Feature
+* Add onEnter rule to split a long line closes #78 ([`3efe416`](https://github.com/d-biehl/robotcode/commit/3efe4166829bd65a53dc5b5e3d33173c88258b28))
+
 ## v0.21.4 (2023-01-11)
 ### Fix
 * **robotlangserver:** Remove possible deadlock in Namespace initialization ([`27d781c`](https://github.com/d-biehl/robotcode/commit/27d781c6305643b81904e4bf30b8f64a45ffa9ee))
