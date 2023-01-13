@@ -751,7 +751,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
 
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Fixture, KeywordCall
+        from robot.parsing.model.statements import Fixture, KeywordCall, LibraryImport
+        from robot.utils.escaping import split_from_equals
 
         data = []
         last_line = 0
@@ -760,6 +761,44 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         async def get_tokens() -> AsyncGenerator[Tuple[Token, ast.AST], None]:
             async for node in async_ast.iter_nodes(model):
                 if isinstance(node, HasTokens):
+                    if isinstance(node, LibraryImport):
+                        lib_doc = await namespace.get_imported_library_libdoc(node.name, node.args, node.alias)
+                        kw_doc = lib_doc.inits.keywords[0] if lib_doc and lib_doc.inits else None
+                        if lib_doc is not None:
+
+                            for token in node.tokens:
+                                if token.type == RobotToken.ARGUMENT:
+                                    name, value = split_from_equals(token.value)
+                                    if (
+                                        value is not None
+                                        and kw_doc is not None
+                                        and kw_doc.args
+                                        and any(
+                                            v
+                                            for v in kw_doc.args
+                                            if v.kind == KeywordArgumentKind.VAR_NAMED or v.name == name
+                                        )
+                                    ):
+                                        length = len(name)
+                                        yield RobotToken(
+                                            ROBOT_NAMED_ARGUMENT, name, token.lineno, token.col_offset
+                                        ), node
+
+                                        yield RobotToken(
+                                            ROBOT_OPERATOR, "=", token.lineno, token.col_offset + length
+                                        ), node
+                                        yield RobotToken(
+                                            token.type,
+                                            value,
+                                            token.lineno,
+                                            token.col_offset + length + 1,
+                                            token.error,
+                                        ), node
+
+                                        continue
+
+                                yield token, node
+                            continue
                     if isinstance(node, (KeywordCall, Fixture)):
                         kw_token = cast(
                             Token,
