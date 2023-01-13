@@ -4,6 +4,11 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.22.1 (2023-01-13)
+### Fix
+* **robotlangserver:** Resolving imports with arguments in diffent files and folders but with same string representation ie. ${curdir}/blah.py now works correctly ([`8c0517d`](https://github.com/d-biehl/robotcode/commit/8c0517d2c30ad395b121fde841869c994741151d))
+* **robotlangserver:** Generating documentation view with parameters that contains .py at the at does not work ([`8210bd9`](https://github.com/d-biehl/robotcode/commit/8210bd9c8bed94e61b475a2c25dc032c7bdb3d68))
+
 ## v0.22.0 (2023-01-12)
 ### Feature
 * Add onEnter rule to split a long line closes #78 ([`3efe416`](https://github.com/d-biehl/robotcode/commit/3efe4166829bd65a53dc5b5e3d33173c88258b28))
