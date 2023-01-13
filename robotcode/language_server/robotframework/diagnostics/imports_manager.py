@@ -73,6 +73,7 @@ from .library_doc import (
     is_embedded_keyword,
     is_library_by_path,
     is_variables_by_path,
+    resolve_args,
     resolve_variable,
 )
 
@@ -1056,7 +1057,14 @@ class ImportsManager:
 
                 return result
 
-        entry_key = _LibrariesEntryKey(source, args)
+        resolved_args = resolve_args(
+            args,
+            str(self.folder.to_path()),
+            base_dir,
+            self.config.robot.variables if self.config.robot is not None else None,
+            variables,
+        )
+        entry_key = _LibrariesEntryKey(source, resolved_args)
 
         async with self._libaries_lock:
             if entry_key not in self._libaries:
@@ -1293,7 +1301,14 @@ class ImportsManager:
                     self._logger.exception(e)
                 return result
 
-        entry_key = _VariablesEntryKey(source, args)
+        resolved_args = resolve_args(
+            args,
+            str(self.folder.to_path()),
+            base_dir,
+            self.config.robot.variables if self.config.robot is not None else None,
+            variables,
+        )
+        entry_key = _VariablesEntryKey(source, resolved_args)
 
         async with self._variables_lock:
             if entry_key not in self._variables:

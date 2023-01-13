@@ -1468,6 +1468,25 @@ def _find_variables_internal(
     return (result, robot_variables)
 
 
+def resolve_args(
+    args: Tuple[Any, ...],
+    working_dir: str = ".",
+    base_dir: str = ".",
+    command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
+    variables: Optional[Dict[str, Optional[Any]]] = None,
+) -> Tuple[Any, ...]:
+    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
+
+    result = []
+    for arg in args:
+        if isinstance(arg, str):
+            result.append(robot_variables.replace_string(arg, ignore_errors=True))
+        else:
+            result.append(arg)
+
+    return tuple(result)
+
+
 def find_variables(
     name: str,
     working_dir: str = ".",
