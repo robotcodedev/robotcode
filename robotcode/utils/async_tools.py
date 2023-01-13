@@ -466,12 +466,11 @@ class Lock:
                     warnings.warn(f"Lock {self} takes to long {threading.current_thread()}\n, try to cancel...")
                     fut.cancel()
 
-                # h = fut.get_loop().call_later(120, aaa, "".join(traceback.format_stack()))
                 h = fut.get_loop().call_later(120, aaa, fut)
-
-                await fut
-
-                h.cancel()
+                try:
+                    await fut
+                finally:
+                    h.cancel()
             finally:
                 with self._lock:
                     self._waiters.remove(fut)
@@ -539,6 +538,29 @@ class Lock:
             with self._lock:
                 self._waiters.remove(fut)
             self._wake_up_first()
+
+
+class RLock(Lock):
+    def __init__(self) -> None:
+        super().__init__()
+        self._task: Optional[asyncio.Task[Any]] = None
+        self._depth = 0
+
+    async def acquire(self) -> bool:
+        if self._task is None or self._task != asyncio.current_task():
+            await super().acquire()
+            self._task = asyncio.current_task()
+            assert self._depth == 0
+        self._depth += 1
+
+        return True
+
+    def release(self) -> None:
+        if self._depth > 0:
+            self._depth -= 1
+        if self._depth == 0:
+            super().release()
+            self._task = None
 
 
 class FutureInfo:

@@ -238,7 +238,6 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 else None,
             )
 
-        # await self.parent.diagnostics.ensure_workspace_loaded()
         await self.parent.robot_workspace.documents_loaded.wait()
 
         start = time.monotonic()
@@ -247,107 +246,107 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
         workspace_path = Uri(workspace_folder).to_path()
         canceled = False
-        with LOGGER.cache_only:
-            try:
-                config = await self.get_config(workspace_folder)
-                rpa_mode = config.get_rpa_mode() if config is not None else None
-                languages = await self.parent.documents_cache.get_workspace_languages(workspace_folder)
+        LOGGER._cache_only = True
+        try:
+            config = await self.get_config(workspace_folder)
+            rpa_mode = config.get_rpa_mode() if config is not None else None
+            languages = await self.parent.documents_cache.get_workspace_languages(workspace_folder)
 
-                if paths is None and config is not None:
-                    paths = config.paths
+            if paths is None and config is not None:
+                paths = config.paths
 
-                if paths and len(paths):
+            if paths and len(paths):
 
-                    def normalize_paths(paths: List[str]) -> Iterator[str]:
+                def normalize_paths(paths: List[str]) -> Iterator[str]:
 
-                        for path in paths:
+                    for path in paths:
 
-                            p = Path(path)
+                        p = Path(path)
 
-                            if not p.is_absolute():
-                                p = Path(workspace_path, p)
+                        if not p.is_absolute():
+                            p = Path(workspace_path, p)
 
-                            if p.exists():
-                                yield str(p)
+                        if p.exists():
+                            yield str(p)
 
-                    def nonexisting_paths(paths: List[str]) -> Iterator[str]:
+                def nonexisting_paths(paths: List[str]) -> Iterator[str]:
 
-                        for path in paths:
+                    for path in paths:
 
-                            p = Path(path)
+                        p = Path(path)
 
-                            if not p.is_absolute():
-                                p = Path(workspace_path, p)
+                        if not p.is_absolute():
+                            p = Path(workspace_path, p)
 
-                            if not p.exists():
-                                yield str(p)
+                        if not p.exists():
+                            yield str(p)
 
-                    valid_paths = [i for i in normalize_paths(paths)]
+                valid_paths = [i for i in normalize_paths(paths)]
 
-                    if get_robot_version() >= (6, 0):
-                        builder = TestSuiteBuilder(
-                            included_suites=suites if suites else None,
-                            rpa=rpa_mode,
-                            lang=languages,
-                        )
-                    else:
-                        builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
-
-                    suite: Optional[TestSuite] = builder.build(*valid_paths) if valid_paths else None
-                    suite_item = [await generate(suite)] if suite else []
-
-                    return [
-                        TestItem(
-                            type="workspace",
-                            id=str(Path.cwd().resolve()),
-                            label=Path.cwd().name,
-                            longname=Path.cwd().name,
-                            uri=str(Uri.from_path(Path.cwd())),
-                            children=[
-                                *suite_item,
-                                *[
-                                    TestItem(
-                                        type="error",
-                                        id=f"{i};ERROR",
-                                        longname="error",
-                                        label=i,
-                                        error=f"Parsing '{i}' failed: File or directory to does not exist.",
-                                    )
-                                    for i in nonexisting_paths(paths)
-                                ],
-                            ],
-                        )
-                    ]
+                if get_robot_version() >= (6, 0):
+                    builder = TestSuiteBuilder(
+                        included_suites=suites if suites else None,
+                        rpa=rpa_mode,
+                        lang=languages,
+                    )
                 else:
-                    if get_robot_version() >= (6, 0):
-                        builder = TestSuiteBuilder(
-                            included_suites=suites if suites else None,
-                            rpa=rpa_mode,
-                            lang=languages,
-                        )
-                    else:
-                        builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
-                    return [await generate(builder.build(str(workspace_path)))]
-            except (SystemExit, KeyboardInterrupt):
-                raise
-            except asyncio.CancelledError:
-                canceled = True
-                self._logger.info("Tests discovery canceled")
-                raise
-            except BaseException as e:
-                self._logger.info(f"Failed to discover tests: {e}")
+                    builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
+
+                suite: Optional[TestSuite] = builder.build(*valid_paths) if valid_paths else None
+                suite_item = [await generate(suite)] if suite else []
+
                 return [
                     TestItem(
-                        type="error",
-                        id=str(Uri.from_path(Path.cwd().resolve())),
-                        longname="error",
+                        type="workspace",
+                        id=str(Path.cwd().resolve()),
                         label=Path.cwd().name,
-                        error=str(e),
+                        longname=Path.cwd().name,
+                        uri=str(Uri.from_path(Path.cwd())),
+                        children=[
+                            *suite_item,
+                            *[
+                                TestItem(
+                                    type="error",
+                                    id=f"{i};ERROR",
+                                    longname="error",
+                                    label=i,
+                                    error=f"Parsing '{i}' failed: File or directory to does not exist.",
+                                )
+                                for i in nonexisting_paths(paths)
+                            ],
+                        ],
                     )
                 ]
-            finally:
-                if not canceled:
-                    self._logger.info(f"Tests discovery took {time.monotonic() - start}s")
+            else:
+                if get_robot_version() >= (6, 0):
+                    builder = TestSuiteBuilder(
+                        included_suites=suites if suites else None,
+                        rpa=rpa_mode,
+                        lang=languages,
+                    )
+                else:
+                    builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
+                return [await generate(builder.build(str(workspace_path)))]
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except asyncio.CancelledError:
+            canceled = True
+            self._logger.info("Tests discovery canceled")
+            raise
+        except BaseException as e:
+            self._logger.info(f"Failed to discover tests: {e}")
+            return [
+                TestItem(
+                    type="error",
+                    id=str(Uri.from_path(Path.cwd().resolve())),
+                    longname="error",
+                    label=Path.cwd().name,
+                    error=str(e),
+                )
+            ]
+        finally:
+            if not canceled:
+                self._logger.info(f"Tests discovery took {time.monotonic() - start}s")
 
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
     @threaded()

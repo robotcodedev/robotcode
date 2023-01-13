@@ -376,6 +376,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                     f"collecting workspace diagnostics for for {len(documents)} "
                     f"documents takes {time.monotonic() - start}s"
                 )
+                self._logger.info(f"{len(self.parent.documents)} documents loaded")
 
             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                 raise
@@ -415,8 +416,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                     asyncio.run_coroutine_threadsafe(cancel(task), loop=task.get_loop()).result(600)
                 except TimeoutError as e:
                     raise RuntimeError("Can't cancel diagnostics task.") from e
-
-                # task.get_loop().call_soon_threadsafe(task.cancel)
 
             data.version = document.version
             data.task = create_sub_task(
@@ -459,18 +458,17 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                     if result.diagnostics is not None:
                         collected_keys.append(result.key)
 
-                    if data.entries:
-                        if send_diagnostics:
-                            self.parent.send_notification(
-                                "textDocument/publishDiagnostics",
-                                PublishDiagnosticsParams(
-                                    uri=document.document_uri,
-                                    version=document._version,
-                                    diagnostics=[
-                                        e for e in itertools.chain(*(i for i in data.entries.values() if i is not None))
-                                    ],
-                                ),
-                            )
+                    if data.entries and send_diagnostics:
+                        self.parent.send_notification(
+                            "textDocument/publishDiagnostics",
+                            PublishDiagnosticsParams(
+                                uri=document.document_uri,
+                                version=document._version,
+                                diagnostics=[
+                                    e for e in itertools.chain(*(i for i in data.entries.values() if i is not None))
+                                ],
+                            ),
+                        )
 
         except asyncio.CancelledError:
             self._logger.debug(lambda: f"_get_diagnostics cancelled for {document}")
