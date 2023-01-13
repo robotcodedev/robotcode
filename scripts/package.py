@@ -9,11 +9,9 @@ def main() -> None:
     if not dist_path.exists():
         dist_path.mkdir()
 
-    version = get_version()
-
-    pre_release = version.minor % 2 != 0
-
-    run(f"npx vsce package {'--pre-release' if pre_release else ''} -o ./dist", shell=True).check_returncode()
+    run(
+        f"npx vsce package {'--pre-release' if get_version().prerelease else ''} -o ./dist", shell=True
+    ).check_returncode()
 
     run("poetry build", shell=True).check_returncode()
 

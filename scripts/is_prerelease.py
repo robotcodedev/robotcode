@@ -4,10 +4,12 @@ from scripts.tools import get_version
 def main() -> None:
 
     version = get_version()
+    if version.prerelease:
+        preview = 1
+    else:
+        preview = 0
 
-    preview = version.minor % 2 != 0
-
-    print(str(preview).lower())
+    print(preview)
 
 
 if __name__ == "__main__":
