@@ -128,6 +128,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         return None
 
     @rpc_method(name="completionItem/resolve", param_type=CompletionItem)
+    @threaded()
     async def _completion_item_resolve(
         self,
         params: CompletionItem,

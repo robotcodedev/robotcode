@@ -425,6 +425,7 @@ class Lock:
         self._waiters: Optional[Deque[asyncio.Future[Any]]] = None
         self._locked = False
         self._lock = threading.RLock()
+        self._locker: Optional[asyncio.Task[Any]] = None
 
     async def __aenter__(self) -> None:
         await self.acquire()
@@ -439,7 +440,7 @@ class Lock:
         extra = "locked" if self._locked else "unlocked"
         if self._waiters:
             extra = f"{extra}, waiters:{len(self._waiters)}"
-        return f"<{res[1:-1]} [{extra}]>"
+        return f"<{res[1:-1]} [{extra}]> {self._locker}"
 
     @property
     def locked(self) -> bool:
@@ -449,6 +450,7 @@ class Lock:
         with self._lock:
             if not self._locked and (self._waiters is None or all(w.cancelled() for w in self._waiters)):
                 self._locked = True
+                self._locker = asyncio.current_task()
                 return True
 
             if self._waiters is None:
@@ -461,7 +463,7 @@ class Lock:
             try:
 
                 def aaa(fut: asyncio.Future[Any]) -> None:
-                    # warnings.warn(f"Lock takes to long {threading.current_thread()}\n{s}, try to cancel...")
+                    warnings.warn(f"Lock {self} takes to long {threading.current_thread()}\n, try to cancel...")
                     fut.cancel()
 
                 # h = fut.get_loop().call_later(120, aaa, "".join(traceback.format_stack()))
@@ -481,6 +483,7 @@ class Lock:
 
         with self._lock:
             self._locked = True
+            self._locker = asyncio.current_task()
 
         return True
 
@@ -489,6 +492,7 @@ class Lock:
             wake_up = False
             if self._locked:
                 self._locked = False
+                self._locker = None
                 wake_up = True
 
         if wake_up:

@@ -4,7 +4,7 @@ from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from ....jsonrpc2.protocol import JsonRPCErrorException, rpc_method
-from ....utils.async_tools import async_tasking_event
+from ....utils.async_tools import async_tasking_event, threaded
 from ....utils.logging import LoggingDescriptor
 from ..decorators import language_id_filter
 from ..has_extend_capabilities import HasExtendCapabilities
@@ -57,6 +57,7 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         ...
 
     @rpc_method(name="textDocument/rename", param_type=RenameParams)
+    @threaded()
     async def _text_document_rename(
         self,
         text_document: TextDocumentIdentifier,
@@ -105,6 +106,7 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         return result
 
     @rpc_method(name="textDocument/prepareRename", param_type=PrepareRenameParams)
+    @threaded()
     async def _text_document_prepare_rename(
         self,
         text_document: TextDocumentIdentifier,

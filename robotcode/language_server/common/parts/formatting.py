@@ -54,6 +54,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             capabilities.document_range_formatting_provider = DocumentRangeFormattingOptions(work_done_progress=True)
 
     @rpc_method(name="textDocument/formatting", param_type=DocumentFormattingParams)
+    @threaded()
     async def _text_document_formatting(
         self,
         params: DocumentFormattingParams,
