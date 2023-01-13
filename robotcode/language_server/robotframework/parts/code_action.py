@@ -135,7 +135,8 @@ class LibDocRequestHandler(SimpleHTTPRequestHandler):
                     with ProcessPoolExecutor(max_workers=1) as executor:
                         result = executor.submit(
                             get_robot_library_html_doc_str,
-                            name + ("::" + args if args else ""),
+                            name,
+                            args,
                             base_dir=basedir if basedir else ".",
                             theme=theme,
                         ).result(600)
