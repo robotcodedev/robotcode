@@ -4,6 +4,13 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.23.0 (2023-01-13)
+### Feature
+* **robotlangserver:** Highlight named args in library imports ([`63b93af`](https://github.com/d-biehl/robotcode/commit/63b93af853c0b54628e6bf59a6cc54fa77d97c8d))
+
+### Fix
+* **robotlangserver:** Remove possible deadlock in completion ([`3d17699`](https://github.com/d-biehl/robotcode/commit/3d17699587096ca49711ef98bf1273d710cd8335))
+
 ## v0.22.1 (2023-01-13)
 ### Fix
 * **robotlangserver:** Resolving imports with arguments in diffent files and folders but with same string representation ie. ${curdir}/blah.py now works correctly ([`8c0517d`](https://github.com/d-biehl/robotcode/commit/8c0517d2c30ad395b121fde841869c994741151d))
