@@ -1724,7 +1724,9 @@ class KeywordFinder:
                     if result is None:
                         self.diagnostics.append(
                             DiagnosticsEntry(
-                                f"No keyword with name {repr(name)} found.", DiagnosticSeverity.ERROR, "KeywordError"
+                                f"No keyword with name {repr(name)} found.",
+                                DiagnosticSeverity.ERROR,
+                                "KeywordNotFoundError",
                             )
                         )
                 except KeywordError as e:

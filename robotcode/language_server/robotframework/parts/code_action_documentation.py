@@ -16,12 +16,11 @@ from ....jsonrpc2.protocol import rpc_method
 from ....utils.logging import LoggingDescriptor
 from ....utils.net import find_free_port
 from ....utils.uri import Uri
-from ...common.decorators import code_action_kinds, command, language_id
+from ...common.decorators import code_action_kinds, language_id
 from ...common.lsp_types import (
     CodeAction,
     CodeActionContext,
     CodeActionKinds,
-    CodeActionTriggerKind,
     Command,
     Model,
     Range,
@@ -175,10 +174,9 @@ class DualStackServer(ThreadingHTTPServer):
 
 
 CODEACTIONKINDS_SOURCE_OPENDOCUMENTATION = f"{CodeActionKinds.SOURCE}.openDocumentation"
-CODEACTIONKINDS_QUICKFIX_CREATEKEYWORD = f"{CodeActionKinds.QUICKFIX}.createKeyword"
 
 
-class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
@@ -192,7 +190,7 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self._documentation_server_lock = threading.RLock()
         self._documentation_server_port = 0
 
-        self.parent.commands.register(self.comming_soon)
+        self.parent.commands.register_all(self)
 
     async def initialized(self, sender: Any) -> None:
         await self._ensure_http_server_started()
@@ -234,7 +232,6 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     @code_action_kinds(
         [
             CODEACTIONKINDS_SOURCE_OPENDOCUMENTATION,
-            CODEACTIONKINDS_QUICKFIX_CREATEKEYWORD,
         ]
     )
     @_logger.call
@@ -270,8 +267,6 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         if isinstance(node, (KeywordCall, Fixture, TestTemplate, Template)):
             # only source actions
-            if range.start != range.end:
-                return None
 
             result = await self.get_keyworddoc_and_token_from_position(
                 node.value
@@ -285,17 +280,8 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 range.start,
             )
 
-            if result is None and (
-                (context.only and CodeActionKinds.QUICKFIX in context.only)
-                or context.trigger_kind == CodeActionTriggerKind.AUTOMATIC
-            ):
-                return [
-                    CodeAction(
-                        "Create Keyword",
-                        kind=CodeActionKinds.QUICKFIX + ".createKeyword",
-                        command=Command("Create Keyword", self.parent.commands.get_command_name(self.comming_soon)),
-                    )
-                ]
+            if range.start != range.end:
+                return None
 
             if result is not None:
                 kw_doc, _ = result
@@ -409,7 +395,3 @@ class RobotCodeActionProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             return f"http://localhost:{self._documentation_server_port}/{path.as_posix()}"
 
         return None
-
-    @command("robotcode.commingSoon")
-    async def comming_soon(self) -> None:
-        self.parent.window.show_message("Comming soon... stay tuned ...")

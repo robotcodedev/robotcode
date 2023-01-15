@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import inspect
+import typing
 import uuid
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional, cast
 
 from ....jsonrpc2.protocol import JsonRPCErrorException, rpc_method
 from ....utils.async_tools import threaded
+from ....utils.dataclasses import from_dict
 from ....utils.logging import LoggingDescriptor
-from ..decorators import get_command_name
+from ..decorators import IsCommand, get_command_name
 from ..has_extend_capabilities import HasExtendCapabilities
 from ..lsp_types import (
     ErrorCodes,
@@ -53,6 +56,14 @@ class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
         return command
 
+    def register_all(self, instance: object) -> None:
+        all_methods = [
+            getattr(instance, k) for k, v in type(instance).__dict__.items() if callable(v) and not k.startswith("_")
+        ]
+        for method in all_methods:
+            if isinstance(method, IsCommand):
+                self.register(cast(_FUNC_TYPE, method))
+
     def get_command_name(self, callback: _FUNC_TYPE, name: Optional[str] = None) -> str:
         name = name or get_command_name(callback)
 
@@ -73,4 +84,15 @@ class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         if entry is None or entry.callback is None:
             raise JsonRPCErrorException(ErrorCodes.INVALID_PARAMS, f"Command '{command}' unknown.")
 
-        return await entry.callback(*(arguments or ()))
+        signature = inspect.signature(entry.callback)
+        type_hints = list(typing.get_type_hints(entry.callback).values())
+
+        command_args: List[Any] = []
+
+        if arguments:
+            for i, v in enumerate(signature.parameters.values()):
+
+                if i < len(arguments):
+                    command_args.append(from_dict(arguments[i], type_hints[i]))
+
+        return await entry.callback(*command_args)

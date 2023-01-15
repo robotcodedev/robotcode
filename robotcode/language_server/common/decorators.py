@@ -83,7 +83,7 @@ def language_id_filter(language_id_or_document: Union[str, TextDocument]) -> Cal
 
 @runtime_checkable
 class IsCommand(Protocol):
-    __command_name__: List[str]
+    __command_name__: str
 
 
 def command(name: str) -> Callable[[_F], _F]:
