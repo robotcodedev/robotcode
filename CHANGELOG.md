@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.24.0 (2023-01-16)
+### Feature
+* **robotlangserver:** Create undefined keywords in the same file ([`c607c3f`](https://github.com/d-biehl/robotcode/commit/c607c3f10b5d9382285e1bfeffdd81992336bab2))
+
 ## v0.23.0 (2023-01-13)
 ### Feature
 * **robotlangserver:** Highlight named args in library imports ([`63b93af`](https://github.com/d-biehl/robotcode/commit/63b93af853c0b54628e6bf59a6cc54fa77d97c8d))
