@@ -36,17 +36,17 @@ CODEACTIONKINDS_QUICKFIX_CREATEKEYWORD = f"{CodeActionKinds.QUICKFIX}.createKeyw
 
 
 KEYWORD_WITH_ARGS_TEMPLATE = Template(
-    """\n
+    """\
 ${name}
     [Arguments]    ${args}
-    Fail    Not implemented
+    Fail
 """
 )
 
 KEYWORD_TEMPLATE = Template(
-    """\n
+    """\
 ${name}
-    Fail    Not implemented
+    Fail
 """
 )
 
@@ -117,6 +117,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
             TestTemplate,
         )
         from robot.utils.escaping import split_from_equals
+        from robot.variables.search import contains_variable
 
         document = await self.parent.documents.get(document_uri)
         if document is None:
@@ -142,7 +143,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
 
             for t in node.get_tokens(RobotToken.ARGUMENT):
                 name, value = split_from_equals(cast(Token, t).value)
-                if value is not None:
+                if value is not None and not contains_variable(name, "$@&%"):
                     arguments.append(f"${{{name}}}")
                 else:
                     arguments.append(f"${{arg{len(arguments)+1}}}")
@@ -159,10 +160,24 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
             if keyword_section is not None:
                 node_range = range_from_node(keyword_section)
 
-                insert_range = Range(node_range.end, node_range.end)
+                insert_pos = Position(node_range.end.line + 1, 0)
+                insert_range = Range(insert_pos, insert_pos)
+
+                insert_text = f"\n{insert_text}"
             else:
-                insert_text = f"\n\n\n*** Keywords ***\n{insert_text}"
-                doc_pos = Position(len(document.get_lines()), 0)
+                if namespace.languages is None or not namespace.languages.languages:
+                    keywords_text = "Keywords"
+                else:
+                    keywords_text = namespace.languages.languages[-1].keywords_header
+
+                insert_text = f"\n\n*** {keywords_text} ***\n{insert_text}"
+
+                lines = document.get_lines()
+                end_line = len(lines) - 1
+                while end_line >= 0 and not lines[end_line].strip():
+                    end_line -= 1
+                doc_pos = Position(end_line + 1, 0)
+
                 insert_range = Range(doc_pos, doc_pos)
 
             we = WorkspaceEdit(
@@ -176,3 +191,10 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
             )
 
             await self.parent.workspace.apply_edit(we, "Rename Keyword")
+
+            lines = insert_text.rstrip().splitlines()
+            insert_range.start.line += len(lines) - 1
+            insert_range.start.character = 4
+            insert_range.end = Position(insert_range.start.line, insert_range.start.character)
+            insert_range.end.character += len(lines[-1])
+            await self.parent.window.show_document(str(document.uri), take_focus=True, selection=insert_range)
