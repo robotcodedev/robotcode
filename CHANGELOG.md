@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.24.2 (2023-01-20)
+### Fix
+* **robotlangserver:** Retun correct robot framework version test ([`e786b76`](https://github.com/d-biehl/robotcode/commit/e786b76144718b2773ae7d0516a88969e8a6b647))
+
 ## v0.24.1 (2023-01-20)
 ### Fix
 * **robotlangserver:** Robot version string is incorrectly parsed if version has no patch ([`d1afe4d`](https://github.com/d-biehl/robotcode/commit/d1afe4d6f1c10740f6ac850526b1f357653c95d2))
