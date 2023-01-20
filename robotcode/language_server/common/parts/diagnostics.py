@@ -27,6 +27,7 @@ from ..has_extend_capabilities import HasExtendCapabilities
 from ..lsp_types import (
     Diagnostic,
     DiagnosticOptions,
+    DiagnosticServerCancellationData,
     DocumentDiagnosticParams,
     DocumentDiagnosticReport,
     ErrorCodes,
@@ -487,6 +488,11 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         **kwargs: Any,
     ) -> DocumentDiagnosticReport:
         try:
+            if not self.parent.is_initialized:
+                raise JsonRPCErrorException(
+                    ErrorCodes.SERVER_CANCELLED, "Server not initialized.", DiagnosticServerCancellationData(True)
+                )
+
             document = await self.parent.documents.get(text_document.uri)
             if document is None:
                 raise JsonRPCErrorException(ErrorCodes.SERVER_CANCELLED, f"Document {text_document!r} not found.")
