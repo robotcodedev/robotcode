@@ -53,7 +53,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
             try:
                 path = doc_uri.to_path()
                 if path.suffix in [ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION]:
-                    document = await self.parent.documents.get_or_open_document(path, "robotframework")
+                    document = await self.parent.documents.get_or_open_document(path)
                     if not document.opened_in_editor:
                         await (await self.parent.documents_cache.get_namespace(document)).ensure_initialized()
 
@@ -103,7 +103,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                     try:
                         for i, f in enumerate(files):
                             try:
-                                await self.parent.documents.get_or_open_document(f, "robotframework")
+                                await self.parent.documents.get_or_open_document(f)
 
                                 if config.analysis.progress_mode != AnalysisProgressMode.OFF:
                                     name = f.relative_to(folder.uri.to_path())

@@ -1,13 +1,13 @@
-from typing import Any, Callable, List, Protocol, TypeVar, Union, runtime_checkable
+from typing import Any, Callable, List, Protocol, Set, TypeVar, Union, runtime_checkable
 
 from .text_document import TextDocument
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 
-def language_id(id: str) -> Callable[[_F], _F]:
+def language_id(id: str, *ids: str) -> Callable[[_F], _F]:
     def decorator(func: _F) -> _F:
-        setattr(func, "__language_id__", id)
+        setattr(func, "__language_id__", {id, *ids})
         return func
 
     return decorator
@@ -15,7 +15,7 @@ def language_id(id: str) -> Callable[[_F], _F]:
 
 @runtime_checkable
 class HasLanguageId(Protocol):
-    __language_id__: str
+    __language_id__: Set[str]
 
 
 def trigger_characters(characters: List[str]) -> Callable[[_F], _F]:
@@ -72,10 +72,13 @@ class HasCodeActionKinds(Protocol):
 
 def language_id_filter(language_id_or_document: Union[str, TextDocument]) -> Callable[[Any], bool]:
     def filter(c: Any) -> bool:
-        return not isinstance(c, HasLanguageId) or c.__language_id__ == (
-            language_id_or_document.language_id
-            if isinstance(language_id_or_document, TextDocument)
-            else language_id_or_document
+        return not isinstance(c, HasLanguageId) or (
+            (
+                language_id_or_document.language_id
+                if isinstance(language_id_or_document, TextDocument)
+                else language_id_or_document
+            )
+            in c.__language_id__
         )
 
     return filter

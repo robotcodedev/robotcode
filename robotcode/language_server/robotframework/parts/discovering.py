@@ -251,6 +251,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             config = await self.get_config(workspace_folder)
             rpa_mode = config.get_rpa_mode() if config is not None else None
             languages = await self.parent.documents_cache.get_workspace_languages(workspace_folder)
+            parsers = config.parsers if config is not None else None
 
             if paths is None and config is not None:
                 paths = config.paths
@@ -283,7 +284,14 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
                 valid_paths = [i for i in normalize_paths(paths)]
 
-                if get_robot_version() >= (6, 0):
+                if get_robot_version() >= (6, 1):
+                    builder = TestSuiteBuilder(
+                        included_suites=suites if suites else None,
+                        rpa=rpa_mode,
+                        lang=languages,
+                        parsers=parsers,
+                    )
+                elif get_robot_version() >= (6, 0):
                     builder = TestSuiteBuilder(
                         included_suites=suites if suites else None,
                         rpa=rpa_mode,
@@ -318,12 +326,15 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                     )
                 ]
             else:
-                if get_robot_version() >= (6, 0):
+                if get_robot_version() >= (6, 1):
                     builder = TestSuiteBuilder(
                         included_suites=suites if suites else None,
                         rpa=rpa_mode,
                         lang=languages,
+                        parsers=parsers,
                     )
+                elif get_robot_version() >= (6, 0):
+                    builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode, lang=languages)
                 else:
                     builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
                 return [await generate(builder.build(str(workspace_path)))]

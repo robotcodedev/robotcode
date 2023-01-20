@@ -500,7 +500,6 @@ class ImportsManager:
         self.parent_protocol = parent_protocol
 
         self.folder = folder
-        get_robot_version()
 
         cache_base_path = self.folder.to_path()
         if (
@@ -1339,7 +1338,7 @@ class ImportsManager:
                     f"Supported extensions are {', '.join(repr(s) for s in RESOURCE_EXTENSIONS)}."
                 )
 
-            return await self.parent_protocol.documents.get_or_open_document(source_path, "robotframework")
+            return await self.parent_protocol.documents.get_or_open_document(source_path)
 
         entry_key = _ResourcesEntryKey(source)
 

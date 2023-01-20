@@ -4,7 +4,13 @@
 import { red, yellow } from "ansi-colors";
 import * as vscode from "vscode";
 import { DebugManager } from "./debugmanager";
-import { ClientState, LanguageClientsManager, RobotTestItem, toVsCodeRange } from "./languageclientsmanger";
+import {
+  ClientState,
+  LanguageClientsManager,
+  RobotTestItem,
+  toVsCodeRange,
+  SUPPORTED_LANGUAGES,
+} from "./languageclientsmanger";
 import { Mutex, sleep, WeakValueMap } from "./utils";
 
 interface RobotExecutionAttributes {
@@ -147,7 +153,7 @@ export class TestControllerManager {
         }
       }),
       vscode.workspace.onDidCloseTextDocument(async (document) => {
-        if (document.languageId !== "robotframework") return;
+        if (!SUPPORTED_LANGUAGES.includes(document.languageId)) return;
 
         await this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(document.uri));
       }),
@@ -155,7 +161,7 @@ export class TestControllerManager {
         this.refreshDocument(document);
       }),
       vscode.workspace.onDidOpenTextDocument(async (document) => {
-        if (document.languageId !== "robotframework") return;
+        if (!SUPPORTED_LANGUAGES.includes(document.languageId)) return;
 
         await this.refresh(this.findTestItemForDocument(document));
       }),
@@ -271,7 +277,7 @@ export class TestControllerManager {
   }
 
   public refreshDocument(document: vscode.TextDocument): void {
-    if (document.languageId !== "robotframework") return;
+    if (!SUPPORTED_LANGUAGES.includes(document.languageId)) return;
 
     const uri_str = document.uri.toString();
     if (this.didChangedTimer.has(uri_str)) {

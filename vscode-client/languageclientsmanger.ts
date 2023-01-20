@@ -35,6 +35,8 @@ export function toVsCodeRange(range: Range): vscode.Range {
   );
 }
 
+export const SUPPORTED_LANGUAGES = ["robotframework"];
+
 export interface RobotTestItem {
   type: string;
   id: string;
@@ -299,7 +301,7 @@ export class LanguageClientsManager {
   }
 
   public async getLanguageClientForDocument(document: vscode.TextDocument): Promise<LanguageClient | undefined> {
-    if (document.languageId !== "robotframework") return;
+    if (!SUPPORTED_LANGUAGES.includes(document.languageId)) return;
 
     return this.getLanguageClientForResource(document.uri);
   }
@@ -348,9 +350,16 @@ export class LanguageClientsManager {
 
       const clientOptions: LanguageClientOptions = {
         documentSelector:
+          // TODO: use SUPPORTED_LANGUAGES here
           vscode.workspace.workspaceFolders?.length === 1
-            ? [{ scheme: "file", language: "robotframework" }]
-            : [{ scheme: "file", language: "robotframework", pattern: `${workspaceFolder.uri.fsPath}/**/*` }],
+            ? [
+                { scheme: "file", language: "robotframework" },
+                { scheme: "file", language: "feature" },
+              ]
+            : [
+                { scheme: "file", language: "robotframework", pattern: `${workspaceFolder.uri.fsPath}/**/*` },
+                { scheme: "file", language: "feature", pattern: `${workspaceFolder.uri.fsPath}/**/*` },
+              ],
         synchronize: {
           configurationSection: [CONFIG_SECTION],
         },
@@ -532,7 +541,7 @@ export class LanguageClientsManager {
     }
 
     for (const document of vscode.workspace.textDocuments) {
-      if (document.languageId === "robotframework") {
+      if (SUPPORTED_LANGUAGES.includes(document.languageId)) {
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
         if (workspaceFolder) {
           folders.add(workspaceFolder);

@@ -5,7 +5,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { PythonManager } from "./pythonmanger";
 import { CONFIG_SECTION } from "./config";
-import { LanguageClientsManager, toVsCodeRange } from "./languageclientsmanger";
+import { LanguageClientsManager, SUPPORTED_LANGUAGES, toVsCodeRange } from "./languageclientsmanger";
 import { WeakValueSet } from "./utils";
 
 const DEBUG_ADAPTER_DEFAULT_TCP_PORT = 6611;
@@ -55,7 +55,11 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
   ): Promise<vscode.DebugConfiguration> {
     if (!debugConfiguration.type && !debugConfiguration.request && !debugConfiguration.name) {
       const editor = vscode.window.activeTextEditor;
-      if (editor && editor.document.languageId === "robotframework" && editor.document.fileName.endsWith(".robot")) {
+      if (
+        editor &&
+        SUPPORTED_LANGUAGES.includes(editor.document.languageId) &&
+        (editor.document.fileName.endsWith(".robot") || editor.document.fileName.endsWith(".feature"))
+      ) {
         const result = await vscode.window.showQuickPick(
           DEBUG_CONFIGURATIONS.map((v) => v),
           { canPickMany: false },

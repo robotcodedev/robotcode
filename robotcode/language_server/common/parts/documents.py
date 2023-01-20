@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -119,7 +120,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
                         loop=self.parent.loop,
                     )
 
-    async def read_document_text(self, uri: Uri, language_id: Union[str, Callable[[Any], bool]]) -> str:
+    async def read_document_text(self, uri: Uri, language_id: Union[str, Callable[[Any], bool], None]) -> str:
         for e in await self.on_read_document_text(
             self, uri, callback_filter=language_id_filter(language_id) if isinstance(language_id, str) else language_id
         ):
@@ -128,9 +129,18 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
 
         raise FileNotFoundError(str(uri))
 
+    def detect_language_id(self, path_or_uri: Union[str, os.PathLike[Any], Uri]) -> str:
+        path = path_or_uri.to_path() if isinstance(path_or_uri, Uri) else Path(path_or_uri)
+
+        for lang in self.parent.languages:
+            if path.suffix in lang.extensions:
+                return lang.id
+
+        return "unknown"
+
     @_logger.call
     async def get_or_open_document(
-        self, path: Union[str, os.PathLike[Any]], language_id: str, version: Optional[int] = None
+        self, path: Union[str, os.PathLike[Any]], language_id: Optional[str] = None, version: Optional[int] = None
     ) -> TextDocument:
         uri = Uri.from_path(path).normalized()
 
@@ -141,7 +151,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
         try:
             return await self.parent.documents.append_document(
                 document_uri=DocumentUri(uri),
-                language_id=language_id,
+                language_id=language_id or self.detect_language_id(path),
                 text=await self.read_document_text(uri, language_id),
                 version=version,
             )

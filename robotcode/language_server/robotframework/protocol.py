@@ -2,7 +2,7 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from ...__version__ import __version__
 from ...jsonrpc2.protocol import (
@@ -14,7 +14,7 @@ from ...utils.dataclasses import from_dict
 from ...utils.logging import LoggingDescriptor
 from ..common.lsp_types import InitializeError, Model
 from ..common.parts.document_symbols import symbol_information_label
-from ..common.protocol import LanguageServerProtocol
+from ..common.protocol import LanguageDefinition, LanguageServerProtocol
 from .configuration import RobotConfig
 from .parts.code_action_documentation import RobotCodeActionDocumentationProtocolPart
 from .parts.code_action_fixes import RobotCodeActionFixesProtocolPart
@@ -108,7 +108,21 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     short_name = "RobotCode"
     version = __version__
 
-    file_extensions = {"robot", "resource", "py", "yaml", "yml"}
+    file_extensions = {"robot", "resource", "py", "yaml", "yml", "feature"}
+
+    languages: List[LanguageDefinition] = [
+        LanguageDefinition(
+            id="robotframework",
+            extensions=[".robot", ".resource"],
+            aliases=["Robot Framework", "robotframework"],
+        ),
+        # LanguageDefinition(
+        #     id="feature",
+        #     extensions=[".feature", ".md"],
+        #     aliases=["feature", "gherkin", "Gherkin", "cucumber"],
+        # ),
+        LanguageDefinition(id="markdown", extensions=[".md"]),
+    ]
 
     def __init__(self, server: "RobotLanguageServer"):
         super().__init__(server)
@@ -135,14 +149,14 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
         self.workspace.did_change_configuration.add(self._on_did_change_configuration)
 
-        self._logger.debug(f"initialized with {repr(self.options)}")
+        self._logger.critical(f"initialized with {repr(self.options)}")
 
     async def _on_did_change_configuration(self, sender: Any, settings: Dict[str, Any]) -> None:
         pass
 
     async def _on_initialized(self, sender: Any) -> None:
         for folder in self.workspace.workspace_folders:
-            config: RobotConfig = await self.workspace.get_configuration(RobotConfig, folder.uri)
+            config: RobotConfig = await self.workspace.get_configuration(RobotConfig, folder.uri, request=False)
             if config is not None:
                 if config.env:
                     for k, v in config.env.items():

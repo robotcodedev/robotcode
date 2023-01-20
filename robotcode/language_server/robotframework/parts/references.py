@@ -148,12 +148,12 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         # tasks = []
         for doc in self.parent.documents.documents:
-            if doc.language_id == "robotframework":
-                result.extend(await func(doc, *args, **kwargs))
-                if result and stop_at_first:
-                    break
+            # if doc.language_id == "robotframework":
+            result.extend(await func(doc, *args, **kwargs))
+            if result and stop_at_first:
+                break
 
-                # tasks.append(run_coroutine_in_thread(func, doc, *args, **kwargs))
+            # tasks.append(run_coroutine_in_thread(func, doc, *args, **kwargs))
 
         # result = await asyncio.gather(*tasks)
 

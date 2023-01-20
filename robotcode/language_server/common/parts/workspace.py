@@ -308,21 +308,23 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
     async def _workspace_did_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
         await self.did_delete_files(self, list(f.uri for f in files))
 
-    async def get_configuration(self, section: Type[_TConfig], scope_uri: Union[str, Uri, None] = None) -> _TConfig:
+    async def get_configuration(
+        self, section: Type[_TConfig], scope_uri: Union[str, Uri, None] = None, request: bool = True
+    ) -> _TConfig:
         config = await self.get_configuration_raw(
-            section=cast(HasConfigSection, section).__config_section__, scope_uri=scope_uri
+            section=cast(HasConfigSection, section).__config_section__, scope_uri=scope_uri, request=request
         )
 
         return from_dict(config if config is not None else {}, section)
 
     async def get_configuration_raw(
-        self, section: Optional[str], scope_uri: Union[str, Uri, None] = None
+        self, section: Optional[str], scope_uri: Union[str, Uri, None] = None, request: bool = True
     ) -> Optional[Any]:
-
         if (
             self.parent.client_capabilities
             and self.parent.client_capabilities.workspace
             and self.parent.client_capabilities.workspace.configuration
+            and request
         ):
             r = await self.parent.send_request_async(
                 "workspace/configuration",
