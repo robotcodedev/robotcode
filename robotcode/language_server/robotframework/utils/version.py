@@ -55,7 +55,7 @@ def create_version_from_str(version_str: str) -> Version:
             return Version(
                 int(m.group("major")),
                 int(m.group("minor")),
-                s_to_i(m.group("patch")),
+                s_to_i(m.group("patch")) or 0,
                 m.group("pre_id"),
                 s_to_i(m.group("pre_number")),
                 s_to_i(m.group("dev")),
@@ -69,4 +69,4 @@ def create_version_from_str(version_str: str) -> Version:
 
 
 if __name__ == "__main__":
-    print(get_robot_version() >= (4, 0))
+    print(get_robot_version())
