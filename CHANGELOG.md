@@ -4,6 +4,11 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.24.1 (2023-01-20)
+### Fix
+* **robotlangserver:** Robot version string is incorrectly parsed if version has no patch ([`d1afe4d`](https://github.com/d-biehl/robotcode/commit/d1afe4d6f1c10740f6ac850526b1f357653c95d2))
+* Start diagnostics only when the language server is fully initialized ([`d2bd3db`](https://github.com/d-biehl/robotcode/commit/d2bd3db3f6e4ce978fb32231d68764367426e7eb))
+
 ## v0.24.0 (2023-01-16)
 ### Feature
 * **robotlangserver:** Create undefined keywords in the same file ([`c607c3f`](https://github.com/d-biehl/robotcode/commit/c607c3f10b5d9382285e1bfeffdd81992336bab2))
