@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.24.3 (2023-01-23)
+### Fix
+* Set env and pythonpath erlier in lifecycle to prevent that sometime analyses fails because of python path is not correct ([`4183391`](https://github.com/d-biehl/robotcode/commit/41833917d2311b33effa1dc2e8f654b0982c439c))
+
 ## v0.24.2 (2023-01-20)
 ### Fix
 * **robotlangserver:** Retun correct robot framework version test ([`e786b76`](https://github.com/d-biehl/robotcode/commit/e786b76144718b2773ae7d0516a88969e8a6b647))
