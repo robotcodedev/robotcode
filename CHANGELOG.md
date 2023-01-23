@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.24.4 (2023-01-24)
+### Fix
+* **debugger:** Show error/warning messages of python logger in debug console ([`665a3ff`](https://github.com/d-biehl/robotcode/commit/665a3ffd22f28ef73bb48aa63ceaeb831b6f4ffe))
+
 ## v0.24.3 (2023-01-23)
 ### Fix
 * Set env and pythonpath erlier in lifecycle to prevent that sometime analyses fails because of python path is not correct ([`4183391`](https://github.com/d-biehl/robotcode/commit/41833917d2311b33effa1dc2e8f654b0982c439c))
