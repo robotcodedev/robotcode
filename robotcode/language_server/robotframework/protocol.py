@@ -1,6 +1,6 @@
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
@@ -73,6 +73,8 @@ def check_robotframework() -> None:
 class Options(Model):
     storage_uri: Optional[str] = None
     global_storage_uri: Optional[str] = None
+    python_path: List[str] = field(default_factory=list)
+    env: Dict[str, str] = field(default_factory=dict)
 
 
 @symbol_information_label("robotframework")
@@ -137,15 +139,30 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
     @_logger.call
     async def _on_initialize(self, sender: Any, initialization_options: Optional[Any] = None) -> None:
+        if initialization_options is not None:
+            self.options = from_dict(initialization_options, Options)
+
+        if self.options.env:
+            for k, v in self.options.env.items():
+                os.environ[k] = v
+
+        if self.options.python_path:
+            for folder in self.workspace.workspace_folders:
+                for p in self.options.python_path:
+                    pa = Path(p)
+                    if not pa.is_absolute():
+                        pa = Path(folder.uri.to_path(), pa)
+
+                    absolute_path = str(pa.absolute())
+                    if absolute_path not in sys.path:
+                        sys.path.insert(0, absolute_path)
+
         try:
             check_robotframework()
         except RobotCodeException as e:
             raise JsonRPCErrorException(
                 JsonRPCErrors.INTERNAL_ERROR, f"Can't start language server: {e}", InitializeError(retry=False)
             ) from e
-
-        if initialization_options is not None:
-            self.options = from_dict(initialization_options, Options)
 
         self.workspace.did_change_configuration.add(self._on_did_change_configuration)
 

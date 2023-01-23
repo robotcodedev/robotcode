@@ -271,6 +271,8 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
                 text_changed = document.text() != normalized_text
                 if text_changed:
                     document.apply_full_change(text_document.version, normalized_text)
+                else:
+                    document.version = text_document.version
 
             document.opened_in_editor = True
 

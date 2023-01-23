@@ -12,7 +12,7 @@ from ...jsonrpc2.protocol import (
     rpc_method,
 )
 from ...jsonrpc2.server import JsonRPCServer
-from ...utils.async_tools import async_event
+from ...utils.async_tools import Event, async_event
 from ...utils.logging import LoggingDescriptor
 from .has_extend_capabilities import HasExtendCapabilities
 from .lsp_types import (
@@ -132,7 +132,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         )
 
         self._trace = TraceValue.OFF
-        self._is_initialized = False
+        self.is_initialized = Event()
 
     @async_event
     async def on_shutdown(sender) -> None:  # pragma: no cover, NOSONAR
@@ -244,11 +244,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     async def _initialized(self, params: InitializedParams, *args: Any, **kwargs: Any) -> None:
         await self.on_initialized(self)
 
-        self._is_initialized = True
-
-    @property
-    def is_initialized(self) -> bool:
-        return self._is_initialized
+        self.is_initialized.set()
 
     @async_event
     async def on_initialized(sender) -> None:  # pragma: no cover, NOSONAR
