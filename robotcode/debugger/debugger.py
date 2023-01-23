@@ -1040,8 +1040,14 @@ class Debugger:
             )
 
     def message(self, message: Dict[str, Any]) -> None:
-        if self.output_messages:
-            level = message["level"]
+        level = message["level"]
+        current_frame = self.full_stack_frames[0] if self.full_stack_frames else None
+        if (
+            self.output_messages
+            or current_frame is not None
+            and current_frame.type != "KEYWORD"
+            and level in ["FAIL", "ERROR", "WARN"]
+        ):
             msg = message["message"]
 
             self.send_event(
@@ -1050,7 +1056,7 @@ class Debugger:
                     body=OutputEventBody(
                         output=f"\u001b[38;5;237m{message['timestamp'].split(' ', 1)[1]}"
                         f" {self.MESSAGE_COLORS.get(level, '')}{level}\u001b[0m: {msg}\n",
-                        category="messages",
+                        category=OutputCategory.CONSOLE,
                     )
                 ),
             )
