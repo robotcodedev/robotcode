@@ -646,7 +646,7 @@ class Debugger:
                 ),
             )
 
-    def end_output_group(self, name: str, attributes: Dict[str, Any]) -> None:
+    def end_output_group(self, name: str, attributes: Dict[str, Any], type: Optional[str] = None) -> None:
         if self.group_output:
             source = attributes.get("source", None)
             line_no = attributes.get("lineno", None)

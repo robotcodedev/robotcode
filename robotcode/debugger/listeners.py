@@ -44,7 +44,7 @@ class ListenerV2:
 
         Debugger.instance().end_suite(name, attributes)
 
-        Debugger.instance().end_output_group(name, attributes)
+        Debugger.instance().end_output_group(name, attributes, "SUITE")
 
         Debugger.instance().send_event(
             self,
@@ -82,7 +82,7 @@ class ListenerV2:
     def end_test(self, name: str, attributes: Dict[str, Any]) -> None:
         Debugger.instance().end_test(name, attributes)
 
-        Debugger.instance().end_output_group(name, attributes)
+        Debugger.instance().end_output_group(name, attributes, "TEST")
 
         Debugger.instance().send_event(
             self,
@@ -114,7 +114,7 @@ class ListenerV2:
         Debugger.instance().end_keyword(name, attributes)
 
         if attributes["type"] in ["KEYWORD", "SETUP", "TEARDOWN"]:
-            Debugger.instance().end_output_group(name, attributes)
+            Debugger.instance().end_output_group(name, attributes, attributes.get("type", None))
 
             if attributes["status"] == "FAIL" and attributes.get("source", None):
                 if self.failed_keywords is None:
