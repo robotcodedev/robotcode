@@ -872,8 +872,7 @@ export class TestControllerManager {
               }
 
               if (event.attributes.status === "FAIL") {
-                if (!item.canResolveChildren || (messages.length > 0 && messages.some((m) => m.message)))
-                  run.failed(item, messages, event.attributes.elapsedtime);
+                run.failed(item, messages, event.attributes.elapsedtime);
               } else {
                 run.errored(item, messages, event.attributes.elapsedtime);
               }
