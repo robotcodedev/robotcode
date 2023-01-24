@@ -149,6 +149,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         outputDir: Optional[str] = None,
         outputMessages: Optional[bool] = False,
         outputLog: Optional[bool] = False,
+        outputTimestamps: Optional[bool] = False,
         groupOutput: Optional[bool] = False,
         stopOnEntry: Optional[bool] = False,  # noqa: N803
         dryRun: Optional[bool] = None,
@@ -189,6 +190,9 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
 
         if outputLog:
             run_args += ["-ol"]
+
+        if outputTimestamps:
+            run_args += ["-ot"]
 
         if groupOutput:
             run_args += ["-og"]

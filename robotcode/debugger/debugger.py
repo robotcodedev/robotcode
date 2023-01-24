@@ -243,6 +243,7 @@ class Debugger:
         self._robot_output_file: Optional[str] = None
         self.output_messages: bool = False
         self.output_log: bool = False
+        self.output_timestamps: bool = False
         self.group_output: bool = False
         self.hit_counts: Dict[HitCountEntry, int] = {}
         self.last_fail_message: Optional[str] = None
@@ -1013,53 +1014,52 @@ class Debugger:
         level = message["level"]
         msg = message["message"]
 
-        if message["level"] == "FAIL":
+        if level == "FAIL":
             self.last_fail_message = msg
 
+        if self.output_log:
+            self._send_log_event(message["timestamp"], level, msg, OutputCategory.CONSOLE)
+
+    def _send_log_event(self, timestamp: str, level: str, msg: str, category: Union[OutputCategory, str]) -> None:
         current_frame = self.full_stack_frames[0] if self.full_stack_frames else None
         source = (
             Source(path=str(self.map_path_to_client(current_frame.source)))
-            if current_frame and current_frame.source
+            if current_frame and current_frame.is_file and current_frame.source
             else None
         )
         line = current_frame.line if current_frame else None
 
-        if self.output_log:
-            self.send_event(
-                self,
-                OutputEvent(
-                    body=OutputEventBody(
-                        output=f"\u001b[38;5;237m{message['timestamp'].split(' ', 1)[1]}"
-                        f" {self.MESSAGE_COLORS.get(level, '')}{level}\u001b[0m: {msg}\n",
-                        category=OutputCategory.CONSOLE,
-                        source=source,
-                        line=line if line is not None else 0,
-                        column=0 if source is not None else None,
-                    )
-                ),
-            )
+        self.send_event(
+            self,
+            OutputEvent(
+                body=OutputEventBody(
+                    output=self._build_output(level, msg, timestamp),
+                    category=category,
+                    source=source,
+                    line=line if line is not None else 0,
+                    column=0 if source is not None else None,
+                )
+            ),
+        )
+
+    def _build_output(self, level: str, msg: str, timestamp: str) -> str:
+        return (
+            (f"\u001b[38;5;237m{timestamp.split(' ', 1)[1]}\u001b[0m " if self.output_timestamps else "")
+            + (f"[ {self.MESSAGE_COLORS.get(level, '')}{level}\u001b[0m ] " if level != "INFO" else "")
+            + f"{msg}\n"
+        )
 
     def message(self, message: Dict[str, Any]) -> None:
         level = message["level"]
         current_frame = self.full_stack_frames[0] if self.full_stack_frames else None
+
         if (
             self.output_messages
             or current_frame is not None
             and current_frame.type != "KEYWORD"
             and level in ["FAIL", "ERROR", "WARN"]
         ):
-            msg = message["message"]
-
-            self.send_event(
-                self,
-                OutputEvent(
-                    body=OutputEventBody(
-                        output=f"\u001b[38;5;237m{message['timestamp'].split(' ', 1)[1]}"
-                        f" {self.MESSAGE_COLORS.get(level, '')}{level}\u001b[0m: {msg}\n",
-                        category=OutputCategory.CONSOLE,
-                    )
-                ),
-            )
+            self._send_log_event(message["timestamp"], level, message["message"], "messages")
 
     def get_scopes(self, frame_id: int) -> List[Scope]:
         result: List[Scope] = []

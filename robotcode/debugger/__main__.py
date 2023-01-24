@@ -138,6 +138,7 @@ async def run_robot(
     debugpy_port: int = 5678,
     output_messages: bool = False,
     output_log: bool = False,
+    output_timestamps: bool = False,
     group_output: bool = False,
     stop_on_entry: bool = False,
 ) -> Any:
@@ -199,6 +200,7 @@ async def run_robot(
         Debugger.instance().output_messages = output_messages
         Debugger.instance().output_log = output_log
         Debugger.instance().group_output = group_output
+        Debugger.instance().output_timestamps = output_timestamps
         Debugger.instance().no_debug = no_debug
         Debugger.instance().set_main_thread(threading.current_thread())
         Debugger.instance().start()
@@ -332,6 +334,9 @@ def main() -> None:
         "-ol", "--output-log", action="store_true", help="Send log messages from robotframework to client."
     )
     parser.add_argument(
+        "-ot", "--output-timestamps", action="store_true", help="Include timestamps in log and output messages."
+    )
+    parser.add_argument(
         "-og", "--group-output", action="store_true", help="Fold messages/log from robotframework to client."
     )
     parser.add_argument("-soe", "--stop-on-entry", action="store_true", help="Stops on entry.")
@@ -408,6 +413,7 @@ def main() -> None:
             args.debugpy_port,
             args.output_messages,
             args.output_log,
+            args.output_timestamps,
             args.group_output,
             args.stop_on_entry,
         )

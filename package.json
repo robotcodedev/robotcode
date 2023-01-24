@@ -544,6 +544,12 @@
             "default": true,
             "scope": "resource"
           },
+          "robotcode.debug.outputTimestamps": {
+            "type": "boolean",
+            "description": "Include timestamps in log and output messages.",
+            "default": false,
+            "scope": "resource"
+          },
           "robotcode.debug.groupOutput": {
             "type": "boolean",
             "description": "Group start and stop suite/test/keyword messages in debug console.",
@@ -1000,6 +1006,11 @@
                 "type": "boolean",
                 "description": "Output log messages from robotframework in debug console.",
                 "default": true
+              },
+              "outputTimestamps": {
+                "type": "boolean",
+                "description": "Include timestamps in log and output messages.",
+                "default": false
               },
               "groupOutput": {
                 "type": "boolean",

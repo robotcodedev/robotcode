@@ -150,6 +150,9 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
 
       debugConfiguration.outputLog = debugConfiguration?.outputLog ?? config.get<boolean>("debug.outputLog");
 
+      debugConfiguration.outputTimestamps =
+        debugConfiguration?.outputTimestamps ?? config.get<boolean>("debug.outputTimestamps");
+
       debugConfiguration.groupOutput = debugConfiguration?.groupOutput ?? config.get<boolean>("debug.groupOutput");
 
       if (!debugConfiguration.attachPython || debugConfiguration.noDebug) {
