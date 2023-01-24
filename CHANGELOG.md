@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.25.1 (2023-01-24)
+### Fix
+* **vscode:** In long test runs suites with failed tests are still marked as running even though they are already finished ([`942addf`](https://github.com/d-biehl/robotcode/commit/942addf005878bab9983603cd85429283eee4c6e))
+
 ## v0.25.0 (2023-01-24)
 ### Feature
 * **debugger:** New setting for `outputTimestamps` in launch and workspace configuration to enable/disable timestamps in debug console ([`e3ed581`](https://github.com/d-biehl/robotcode/commit/e3ed581f99d92f2e00c1cae443b98d9d255b638b))
