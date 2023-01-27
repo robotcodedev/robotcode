@@ -1,7 +1,23 @@
-# RobotCode
+# RobotCode - Language support for Robot Framework for Visual Studio Code
+
+[![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/d-biehl.robotcode?style=flat&label=VS%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/d-biehl.robotcode?style=flat)](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/d-biehl/robotcode/build-test-package-publish.yml?branch=main&style=flat&logo=github)](https://github.com/d-biehl/robotcode/actions?query=workflow:build_test_package_publish)
+[![License](https://img.shields.io/github/license/d-biehl/robotcode?style=flat&logo=apache)](https://github.com/d-biehl/robotcode/blob/master/LICENSE)
 
 An [extension](https://marketplace.visualstudio.com/VSCode) which brings support for [RobotFramework](https://robotframework.org/)
 to [Visual Studio Code](https://code.visualstudio.com/), including [features](#features) like code completion, debugging, test explorer, refactoring and more!
+
+## Quick start
+
+1. [Install a supported version of Python on your system](https://code.visualstudio.com/docs/python/python-tutorial#_prerequisites)
+(note: only Python 3.8 and above are supported)
+
+2. [Install a supported version of RobotFramwork on your system](https://github.com/robotframework/robotframework/blob/master/INSTALL.rst) (note: only RobotFramework 4.0 and above are supported)
+
+3. [Install the RobotCode extension for Visual Studio Code](https://code.visualstudio.com/docs/editor/extension-gallery).
+4. Open or create a robot file and start coding! 😉
+
 
 ## Requirements
 
@@ -9,11 +25,6 @@ to [Visual Studio Code](https://code.visualstudio.com/), including [features](#f
 * Robotframework 4.0 and above
 * VSCode version 1.67 and above
 
-## Installed extensions
-
-RobotCode will automatically install [Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python).
-
-Extensions installed through the marketplace are subject to the [Marketplace Terms of Use](https://cdn.vsassets.io/v/M146_20190123.39/_content/Microsoft-Visual-Studio-Marketplace-Terms-of-Use.pdf).
 
 ## Features
 
@@ -103,15 +114,11 @@ In the debug console you can see all log messages of the current run and navigat
 RobotCodes support for [Multi-root Workspaces](https://code.visualstudio.com/docs/editor/multi-root-workspaces), enables loading and editing different Robotframework projects/folders with different RobotFramework/Python environments and settings at the same time or you can share the same RobotFramework/Python environment and settings for all folders in the workspace.
 
 
-## Quick start
+## Installed extensions
 
-1. [Install a supported version of Python on your system](https://code.visualstudio.com/docs/python/python-tutorial#_prerequisites)
-(note: only Python 3.8 and above are supported)
+RobotCode will automatically install [Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python).
 
-2. [Install a supported version of RobotFramwork on your system](https://github.com/robotframework/robotframework/blob/master/INSTALL.rst) (note: only RobotFramework 4.0 and above are supported)
-
-3. [Install the RobotCode extension for Visual Studio Code](https://code.visualstudio.com/docs/editor/extension-gallery).
-4. Open or create a robot file and start coding! 😉
+Extensions installed through the marketplace are subject to the [Marketplace Terms of Use](https://cdn.vsassets.io/v/M146_20190123.39/_content/Microsoft-Visual-Studio-Marketplace-Terms-of-Use.pdf).
 
 
 ## Setting up your environment
@@ -140,18 +147,6 @@ This is the simpliest way to create an running environment.
     ```
 - Open project in VSCode
 - Set the python interpreter to the created virtual environment
-
-### Using Pre-Release Version
-
-Starting from VSCode version 1.63 it is possible to use pre-release versions of an extension. RobotCode uses recommend way for a version scheme, the major.EVEN_NUMBER.patch for release versions and major.ODD_NUMBER.patch for pre-release versions. RobotCode pre-release version will provide smaller changes or bugfixes maybe just one or two, and then all changes where collected to create a normal minor release with an even minor number.
-
-You can select install pre-release version at installion via extensions view:
-
-![Extensions View](./doc/images/install_prelease_extension_list.gif)
-
-Or you can switch between release and pre-release version in the RobotCode Extension Information view:
-
-![Extension Information View](./doc/images/switch_release_prerelease.gif)
 
 
 ## Customization
