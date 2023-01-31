@@ -5,6 +5,9 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/d-biehl/robotcode/build-test-package-publish.yml?branch=main&style=flat&logo=github)](https://github.com/d-biehl/robotcode/actions?query=workflow:build_test_package_publish)
 [![License](https://img.shields.io/github/license/d-biehl/robotcode?style=flat&logo=apache)](https://github.com/d-biehl/robotcode/blob/master/LICENSE)
 
+[![PyPI - Version](https://img.shields.io/pypi/v/robotcode.svg?style=flat)](https://pypi.org/project/robotcode)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/robotcode.svg?style=flat)](https://pypi.org/project/robotcode)
+
 An [extension](https://marketplace.visualstudio.com/VSCode) which brings support for [RobotFramework](https://robotframework.org/)
 to [Visual Studio Code](https://code.visualstudio.com/), including [features](#features) like code completion, debugging, test explorer, refactoring and more!
 
