@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
 from urllib.parse import parse_qs, urlparse
 
 from ....jsonrpc2.protocol import rpc_method
+from ....utils.async_tools import threaded
 from ....utils.logging import LoggingDescriptor
 from ....utils.net import find_free_port
 from ....utils.uri import Uri
@@ -383,7 +384,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         return f"{base_url}/?&{params}{f'#{target}' if target else ''}"
 
     @rpc_method(name="robot/documentationServer/convertUri", param_type=ConvertUriParams)
-    @_logger.call
+    @threaded()
     async def _convert_uri(self, uri: str, *args: Any, **kwargs: Any) -> Optional[str]:
         real_uri = Uri(uri)
 

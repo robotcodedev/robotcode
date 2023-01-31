@@ -174,6 +174,6 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
 
     @rpc_method(name="robot/cache/clear")
     @threaded()
-    async def get_tests_from_workspace(self) -> None:
+    async def robot_cache_clear(self) -> None:
         for folder in self.parent.workspace.workspace_folders:
             (await self.parent.documents_cache.get_imports_manager_for_workspace_folder(folder)).clear_cache()
