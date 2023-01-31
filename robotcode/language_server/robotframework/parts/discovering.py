@@ -119,7 +119,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             if self.parent.loop:
                 doc = self.parent.documents.get_sync(Uri.from_path(source).normalized())
                 if doc is not None:
-                    return doc.text_sync()
+                    return doc.text()
 
             return source
 

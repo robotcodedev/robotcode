@@ -152,14 +152,8 @@ export class TestControllerManager {
           }
         }
       }),
-      vscode.workspace.onDidCloseTextDocument(async (document) => {
-        if (!SUPPORTED_LANGUAGES.includes(document.languageId)) return;
-
-        await this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(document.uri));
-      }),
-      vscode.workspace.onDidSaveTextDocument((document) => {
-        this.refreshDocument(document);
-      }),
+      vscode.workspace.onDidCloseTextDocument((document) => this.refreshDocument(document)),
+      vscode.workspace.onDidSaveTextDocument((document) => this.refreshDocument(document)),
       vscode.workspace.onDidOpenTextDocument(async (document) => {
         if (!SUPPORTED_LANGUAGES.includes(document.languageId)) return;
 
@@ -318,7 +312,7 @@ export class TestControllerManager {
               () => undefined
             );
           }
-        }, 500),
+        }, 1000),
         cancelationTokenSource
       )
     );
@@ -563,7 +557,7 @@ export class TestControllerManager {
             () => undefined,
             () => undefined
           );
-        }, 500),
+        }, 1000),
         cancelationTokenSource
       );
     } else {
