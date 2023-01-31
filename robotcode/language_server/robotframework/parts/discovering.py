@@ -238,6 +238,8 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 else None,
             )
 
+        self._logger.info("Wait for workspace documents loaded...")
+
         await self.parent.robot_workspace.documents_loaded.wait()
 
         start = time.monotonic()
