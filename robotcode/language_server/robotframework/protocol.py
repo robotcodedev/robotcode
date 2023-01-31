@@ -166,7 +166,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
         self.workspace.did_change_configuration.add(self._on_did_change_configuration)
 
-        self._logger.critical(f"initialized with {repr(self.options)}")
+        self._logger.info(f"initialized with {repr(self.options)}")
 
     async def _on_did_change_configuration(self, sender: Any, settings: Dict[str, Any]) -> None:
         pass
