@@ -377,7 +377,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                     f"collecting workspace diagnostics for for {len(documents)} "
                     f"documents takes {time.monotonic() - start}s"
                 )
-                self._logger.info(f"{len(self.parent.documents)} documents loaded")
 
             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                 raise

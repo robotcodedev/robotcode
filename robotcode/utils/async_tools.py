@@ -266,7 +266,7 @@ def check_canceled_sync() -> bool:
     return True
 
 
-# __executor = ThreadPoolExecutor(thread_name_prefix="global_sub_asyncio")
+__executor = ThreadPoolExecutor(thread_name_prefix="global_sub_asyncio")
 
 
 def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyncio.Future[_T]:
@@ -275,19 +275,19 @@ def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyn
     ctx = contextvars.copy_context()
     func_call = functools.partial(ctx.run, func, *args, **kwargs)
 
-    # return cast(
-    #     "asyncio.Future[_T]",
-    #     loop.run_in_executor(__executor, cast(Callable[..., _T], func_call)),
-    # )
+    return cast(
+        "asyncio.Future[_T]",
+        loop.run_in_executor(__executor, cast(Callable[..., _T], func_call)),
+    )
 
-    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sub_asyncio")
-    try:
-        return cast(
-            "asyncio.Future[_T]",
-            loop.run_in_executor(executor, cast(Callable[..., _T], func_call)),
-        )
-    finally:
-        executor.shutdown(wait=False)
+    # executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sub_asyncio")
+    # try:
+    #     return cast(
+    #         "asyncio.Future[_T]",
+    #         loop.run_in_executor(executor, cast(Callable[..., _T], func_call)),
+    #     )
+    # finally:
+    #     executor.shutdown(wait=False)
 
 
 def run_coroutine_in_thread(
