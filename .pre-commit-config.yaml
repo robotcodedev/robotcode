@@ -7,28 +7,28 @@ repos:
     hooks:
       - id: system
         name: isort
-        entry: poetry run isort --check --diff .
+        entry: hatch run isort --check --diff .
         pass_filenames: false
         language: system
   - repo: local
     hooks:
       - id: system
         name: Black
-        entry: poetry run black --check --diff .
+        entry: hatch run black --check --diff .
         pass_filenames: false
         language: system
   - repo: local
     hooks:
       - id: system
         name: Flake8
-        entry: poetry run flake8 .
+        entry: hatch run flake8 .
         pass_filenames: false
         language: system
   - repo: local
     hooks:
       - id: system
         name: MyPy
-        entry: poetry run mypy .
+        entry: hatch run mypy .
         pass_filenames: false
         language: system
   - repo: local

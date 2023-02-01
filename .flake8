@@ -3,6 +3,7 @@ max-line-length = 120
 exclude =
     .git
     .venv
+    .hatch
     __pycache__
     .mypy_cache
     docs
@@ -14,4 +15,3 @@ exclude =
 
 ignore = N805,W503,N818,E203
 per-file-ignores=__init__.py:F401,F403
-

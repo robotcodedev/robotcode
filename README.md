@@ -25,7 +25,7 @@ to [Visual Studio Code](https://code.visualstudio.com/), including [features](#f
 ## Requirements
 
 * Python 3.8 or above
-* Robotframework 4.0 and above
+* Robotframework 4.1 and above
 * VSCode version 1.67 and above
 
 

@@ -1,18 +1,13 @@
 [build-system]
-requires = ["poetry-core>=1.2.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling>=1.12.2", "hatch-vcs"]
+build-backend = "hatchling.build"
 
-[tool.poetry]
+[project]
 name = "robotcode"
-version = "0.25.1"
 description = "Language server, debugger and tools for Robot Framework"
-authors = ["Daniel Biehl <dbiehlo@live.de>"]
-homepage = 'https://github.com/d-biehl/robotcode'
-repository = 'https://github.com/d-biehl/robotcode'
+authors = [{ name = "Daniel Biehl", email = "dbiehlo@live.de" }]
 readme = "README.md"
 license = "Apache-2.0"
-include = ["robotcode/py.typed", "README.md", "CHANGELOG.md"]
-exclude = ["robotcode/external"]
 keywords = [
   "Test",
   "Testing",
@@ -48,61 +43,99 @@ classifiers = [
   "Topic :: Software Development :: Debuggers",
   "Topic :: Text Editors :: Integrated Development Environments (IDE)",
 ]
+requires-python = ">=3.8"
+dependencies = ["robotframework>=4.1.0"]
+dynamic = ["version"]
 
+[project.urls]
+Donate = "https://github.com/sponsors/d-biehl"
+Documentation = "https://github.com/d-biehl/robotcode#readme"
+Changelog = "https://github.com/d-biehl/robotcode/blob/main/CHANGELOG.md"
+Issues = "https://github.com/d-biehl/robotcode/issues"
+Source = "https://github.com/d-biehl/robotcode"
 
-[tool.poetry.dependencies]
-python = "^3.8.1"
-robotframework = { version = ">=4.1.0" }
+[project.optional-dependencies]
+yaml = ["PyYAML>=5.4", "types-PyYAML>=5.4"]
+lint = ["robotframework-robocop>=2.0.0"]
+tidy = ["robotframework-tidy>=2.0.0"]
+rest = ["docutils", "types-docutils"]
 
-
-[tool.poetry.group.dev.dependencies]
-robotframework = { version = "~4.1.0", allow-prereleases = false }
-isort = "*"
-mypy = "*"
-flake8 = "*"
-black = "*"
-pep8-naming = "*"
-debugpy = "*"
-GitPython = "*"
-semantic-version = "*"
-pre-commit = "*"
-docutils = "*"
-types-docutils = "*"
-python-semantic-release = "*"
-
-[tool.poetry.group.test.dependencies]
-robotremoteserver = "*"
-pytest-html = "*"
-pytest = "*"
-pytest-asyncio = "*"
-pytest-cov = "*"
-coverage = "*"
-pytest-regtest = "^1.5.0"
-
-[tool.poetry.group.toolsupport.dependencies]
-PyYAML = "*"
-types-PyYAML = "*"
-robotframework-robocop = "*"
-robotframework-tidy = "*"
-
-[tool.poetry.scripts]
+[project.scripts]
 'robotcode.debugger' = 'robotcode.debugger.__main__:main'
 'robotcode.language_server' = 'robotcode.language_server.__main__:main'
 
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "robotcode/__version__.py"
+template = '''
+__version__ = "{version}"
+'''
+[tool.hatch.build.targets.sdist]
+only-include = ["robotcode", "CHANGELOG.md"]
+
+
+[tool.hatch.envs.default]
+dependencies = [
+  "pytest",
+  "pytest-html",
+  "pytest_asyncio",
+  "pytest-regtest>=1.5.0",
+  "pytest-cov",
+  "isort",
+  "mypy",
+  "flake8",
+  "black",
+  "pep8-naming",
+  "debugpy",
+  "GitPython",
+  "semantic-version",
+  "pre-commit",
+  "python-semantic-release",
+  "robotremoteserver",
+  "PyYAML>=5.4",
+  "types-PyYAML>=5.4",
+  "robotframework-robocop>=2.0.0",
+  "robotframework-tidy>=2.0.0",
+  "docutils",
+  "types-docutils",
+]
+
+[tool.hatch.envs.default.scripts]
+cov = "pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=hatchtester --cov=tests {args}"
+no-cov = "cov --no-cov {args}"
+test = "pytest {args}"
+
+[tool.hatch.envs.devel]
+python = "38"
+
+[[tool.hatch.envs.devel.matrix]]
+python = ["38", "311"]
+rf = ["rf41", "rf50", "rf60"]
+
+
+[tool.hatch.envs.devel.overrides]
+matrix.rf.dependencies = [
+  { value = "robotframework>=4.1.0, <5.0", if = [
+    "rf41",
+  ] },
+  { value = "robotframework>=5.0.0, <6.0", if = [
+    "rf50",
+  ] },
+  { value = "robotframework>6.0.0, <6.1", if = [
+    "rf60",
+  ] },
+]
+
+
 [tool.semantic_release]
-version_variable = [
-  "robotcode/__version__.py:__version__",
-]
-version_toml = [
-  "pyproject.toml:tool.poetry.version"
-]
-version_pattern = [
-  'package.json:"version": "{version}"'
-]
+version_variable = ["robotcode/__version__.py:__version__"]
+version_pattern = ['package.json:"version": "{version}"']
 branch = "main"
 upload_to_pypi = false
 upload_to_release = false
-build_command = "pip install poetry && poetry build"
+build_command = "pip install hatch && hatch build"
 
 [tool.black]
 line-length = 120
@@ -115,6 +148,7 @@ exclude = '''
     | \.mypy_cache
     | \.tox
     | \.venv
+    | \.hatch
     | build
     | dist
     | out
@@ -138,7 +172,7 @@ asyncio_mode = "auto"
 profile = "black"
 src_paths = ["robotcode", "tests"]
 skip_gitignore = true
-skip = ['external', '.venv']
+skip = ['external', '.venv', ".hatch"]
 
 [tool.coverage.run]
 omit = ["*tests*"]
@@ -166,6 +200,7 @@ disallow_subclassing_any = false
 exclude = [
   "\\.mypy_cache",
   "\\.venv",
+  "\\.hatch",
   "build",
   "dist",
   "out",
@@ -180,6 +215,6 @@ module = [
   "debugpy.*",
   "robotidy.*",
   "robocop.*",
-  "pytest_regtest.*"
+  "pytest_regtest.*",
 ]
 ignore_missing_imports = true
