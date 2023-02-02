@@ -133,6 +133,24 @@ matrix.rf.dependencies = [
   ] },
 ]
 
+[[tool.hatch.envs.test.matrix]]
+python = ["38", "39", "310", "311"]
+rf = ["rf41", "rf50", "rf60"]
+
+
+[tool.hatch.envs.test.overrides]
+matrix.rf.dependencies = [
+  { value = "robotframework>=4.1.0, <5.0", if = [
+    "rf41",
+  ] },
+  { value = "robotframework>=5.0.0, <6.0", if = [
+    "rf50",
+  ] },
+  { value = "robotframework>6.0.0, <6.1", if = [
+    "rf60",
+  ] },
+]
+
 [tool.semantic_release]
 version_variable = ["robotcode/__version__.py:__version__"]
 version_pattern = ['package.json:"version": "{version}"']
