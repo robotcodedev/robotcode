@@ -7,28 +7,28 @@ repos:
     hooks:
       - id: system
         name: isort
-        entry: hatch run isort --check --diff .
+        entry: hatch -e devel.py38-rf41 run isort --check --diff .
         pass_filenames: false
         language: system
   - repo: local
     hooks:
       - id: system
         name: Black
-        entry: hatch run black --check --diff .
+        entry: hatch -e devel.py38-rf41 run black --check --diff .
         pass_filenames: false
         language: system
   - repo: local
     hooks:
       - id: system
-        name: Flake8
-        entry: hatch run flake8 .
+        name: Ruff
+        entry: hatch -e devel.py38-rf41 run ruff check .
         pass_filenames: false
         language: system
   - repo: local
     hooks:
       - id: system
         name: MyPy
-        entry: hatch run mypy .
+        entry: hatch -e devel.py38-rf41 run mypy .
         pass_filenames: false
         language: system
   - repo: local
