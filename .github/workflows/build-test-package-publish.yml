@@ -31,6 +31,7 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
         python-version: ["3.8", "3.9", "3.10", "3.11"]
+        robot-version: ["rf41", "rf50", "rf60"]
 
     steps:
       - uses: actions/checkout@v3
@@ -48,14 +49,14 @@ jobs:
         run: python -m pip install --upgrade hatch
 
       - name: "test python packages"
-        timeout-minutes: 10
-        run: hatch run test:test "--junitxml=test-results/python-${{ matrix.python-version }}/test-results.xml" "--html=test-results/python-${{ matrix.python-version }}/report.html" --self-contained-html
+        timeout-minutes: 15
+        run: hatch run test.${{ matrix.robot-version }}:test "--junitxml=test-results/python-${{ matrix.python-version }}-${{ matrix.robot-version }}/test-results.xml" "--html=test-results/python-${{ matrix.python-version }}-${{ matrix.robot-version }}//report.html" --self-contained-html
 
       - name: upload test results
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: test-results-${{ matrix.os }}-${{ matrix.python-version }}
+          name: test-results/python-${{ matrix.python-version }}-${{ matrix.robot-version }}
           path: test-results
 
   publish-test-results:

@@ -134,7 +134,6 @@ matrix.rf.dependencies = [
 ]
 
 [[tool.hatch.envs.test.matrix]]
-python = ["38", "39", "310", "311"]
 rf = ["rf41", "rf50", "rf60"]
 
 
