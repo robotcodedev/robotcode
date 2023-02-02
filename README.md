@@ -2,7 +2,7 @@
 
 [![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/d-biehl.robotcode?style=flat&label=VS%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/d-biehl.robotcode?style=flat)](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/d-biehl/robotcode/build-test-package-publish.yml?branch=main&style=flat&logo=github)](https://github.com/d-biehl/robotcode/actions?query=workflow:build_test_package_publish)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/d-biehl/robotcode/ci.yml?branch=main&style=flat&logo=github)](https://github.com/d-biehl/robotcode/actions?query=workflow:build_test_package_publish)
 [![License](https://img.shields.io/github/license/d-biehl/robotcode?style=flat&logo=apache)](https://github.com/d-biehl/robotcode/blob/master/LICENSE)
 
 [![PyPI - Version](https://img.shields.io/pypi/v/robotcode.svg?style=flat)](https://pypi.org/project/robotcode)
