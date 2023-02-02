@@ -37,7 +37,6 @@ from ..diagnostics.entities import VariableDefinition, VariableDefinitionType
 from ..diagnostics.library_doc import KeywordDoc
 from ..utils.ast_utils import (
     HasTokens,
-    Statement,
     Token,
     get_nodes_at_position,
     get_tokens_at_position,
@@ -96,9 +95,6 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
 
         result_node = result_nodes[-1]
 
-        if result_node is None:
-            return None
-
         result = await self._rename_default(result_nodes, document, position, new_name)
         if result:
             return result
@@ -126,9 +122,6 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
             return None
 
         result_node = result_nodes[-1]
-
-        if result_node is None:
-            return None
 
         result = await self._prepare_rename_default(result_nodes, document, position)
         if result:
@@ -214,8 +207,6 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         from robot.parsing.lexer.tokens import Token as RobotToken
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         if not nodes:
             return None
@@ -241,7 +232,6 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
 
         if (
             token_and_var is None
-            and isinstance(node, Statement)
             and isinstance(node, self.get_expression_statement_types())
             and (token := node.get_token(RobotToken.ARGUMENT)) is not None
             and position in range_from_token(token)
@@ -319,8 +309,6 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         from robot.parsing.model.statements import KeywordCall
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         kw_node = cast(KeywordCall, node)
         result = await self.get_keyworddoc_and_token_from_position(
@@ -389,8 +377,6 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         from robot.parsing.model.statements import KeywordName
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         kw_node = cast(KeywordName, node)
 
@@ -428,8 +414,6 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         from robot.parsing.model.statements import Fixture
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         fixture_node = cast(Fixture, node)
 
@@ -496,8 +480,6 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
                 return None
 
             namespace = await self.parent.documents_cache.get_namespace(document)
-            if namespace is None:
-                return None
 
             if (
                 await namespace.find_keyword(keyword_token.value, raise_keyword_error=False, handle_bdd_style=False)
@@ -567,10 +549,11 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
     ) -> Optional[PrepareRenameResult]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
-        token = get_tokens_at_position(cast(HasTokens, node), position)[-1]
-
-        if token is None:
+        tokens = get_tokens_at_position(cast(HasTokens, node), position)
+        if not tokens:
             return None
+
+        token = tokens[-1]
 
         if token.type in [RobotToken.ARGUMENT] and token.value:
             return PrepareRenameResultWithPlaceHolder(range_from_token(token), token.value)
@@ -598,10 +581,11 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
 
         from robot.parsing.lexer.tokens import Token as RobotToken
 
-        token = get_tokens_at_position(cast(HasTokens, node), position)[-1]
-
-        if token is None:
+        tokens = get_tokens_at_position(cast(HasTokens, node), position)
+        if not tokens:
             return None
+
+        token = tokens[-1]
 
         if token.type in [RobotToken.ARGUMENT] and token.value:
             references = await self.parent.robot_references.find_tag_references(document, token.value)

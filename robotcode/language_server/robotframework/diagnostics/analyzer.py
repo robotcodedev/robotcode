@@ -178,7 +178,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 DiagnosticSeverity.HINT if isinstance(node, DocumentationOrMetadata) else DiagnosticSeverity.ERROR
             )
 
-            if isinstance(node, Statement) and isinstance(node, KeywordCall) and node.keyword:
+            if isinstance(node, KeywordCall) and node.keyword:
                 kw_doc = self.finder.find_keyword(node.keyword)
                 if kw_doc is not None and kw_doc.longname in ["BuiltIn.Comment"]:
                     severity = DiagnosticSeverity.HINT

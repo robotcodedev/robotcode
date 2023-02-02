@@ -92,8 +92,6 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             robotidy_version = create_version_from_str(__version__)
 
             model = await self.parent.documents_cache.get_model(document, False)
-            if model is None:
-                return None
 
             if robotidy_version >= (3, 0):
                 from robotidy.api import get_robotidy

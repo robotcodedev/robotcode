@@ -799,7 +799,7 @@ class Namespace:
                     if self.document is not None:
                         # check or save several data in documents data cache,
                         # if imports are different, then the data is invalid
-                        old_imports: List[Import] = self.document.get_data(Namespace)
+                        old_imports: Optional[List[Import]] = self.document.get_data(Namespace)
                         if old_imports is None:
                             self.document.set_data(Namespace, imports)
                         elif old_imports != imports:
@@ -1749,7 +1749,7 @@ class KeywordFinder:
             )
             raise CancelSearchError()
         if not isinstance(name, str):
-            self.diagnostics.append(
+            self.diagnostics.append(  # type: ignore
                 DiagnosticsEntry("Keyword name must be a string.", DiagnosticSeverity.ERROR, "KeywordError")
             )
             raise CancelSearchError()

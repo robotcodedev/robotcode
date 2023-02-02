@@ -118,9 +118,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         result_node = result_nodes[-1]
 
-        if result_node is None:
-            return None
-
         result = await self._references_default(result_nodes, document, position, context)
         if result:
             return result
@@ -163,8 +160,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self, nodes: List[ast.AST], document: TextDocument, position: Position, context: ReferenceContext
     ) -> Optional[List[Location]]:
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         all_variable_refs = await namespace.get_variable_references()
         if all_variable_refs:
@@ -229,8 +224,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self, doc: TextDocument, variable: VariableDefinition, include_declaration: bool = True
     ) -> List[Location]:
         namespace = await self.parent.documents_cache.get_namespace(doc)
-        if namespace is None:
-            return []
 
         if (
             variable.source
@@ -269,8 +262,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         try:
             namespace = await self.parent.documents_cache.get_namespace(doc)
-            if namespace is None:
-                return []
 
             if (
                 lib_doc is not None
@@ -314,8 +305,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     ) -> List[Location]:
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return []
 
         lib_doc = (
             next(
@@ -376,8 +365,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         from robot.parsing.model.statements import LibraryImport
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         import_node = cast(LibraryImport, node)
 
@@ -423,8 +410,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         from robot.parsing.model.statements import ResourceImport
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         import_node = cast(ResourceImport, node)
 
@@ -467,8 +452,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         from robot.parsing.model.statements import VariablesImport
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         import_node = cast(VariablesImport, node)
 
@@ -496,8 +479,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         from robot.parsing.model.statements import DefaultTags, ForceTags, Tags
 
         model = await self.parent.documents_cache.get_model(doc)
-        if model is None:
-            return []
 
         result: List[Location] = []
         if not is_normalized:
@@ -516,10 +497,11 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     ) -> Optional[List[Location]]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
-        token = get_tokens_at_position(cast(HasTokens, node), position)[-1]
-
-        if token is None:
+        tokens = get_tokens_at_position(cast(HasTokens, node), position)
+        if not tokens:
             return None
+
+        token = get_tokens_at_position(cast(HasTokens, node), position)[-1]
 
         if token.type in [RobotToken.ARGUMENT] and token.value:
             return await self.find_tag_references(document, token.value)

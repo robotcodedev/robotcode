@@ -39,7 +39,7 @@ class ProtocolMessage(Model):
 
 
 @dataclass
-class _Request(Model):
+class _Request:
     command: str
     arguments: Optional[Any] = None
 
@@ -50,18 +50,18 @@ class Request(ProtocolMessage, _Request):
 
 
 @dataclass
-class _Event(Model):
+class _Event:
     event: str
+    body: Optional[Any] = None
 
 
 @dataclass
 class Event(ProtocolMessage, _Event):
     type: str = "event"
-    body: Optional[Any] = None
 
 
 @dataclass
-class _Response(Model):
+class _Response:
     request_seq: int = field(metadata={"alias": "request_seq"})
     success: bool
     command: str
@@ -100,7 +100,7 @@ class ErrorBody(Model):
 
 
 @dataclass
-class _ErrorResponse(Model):
+class _ErrorResponse:
     body: Optional[ErrorBody]
 
 
@@ -161,7 +161,7 @@ class StoppedEventBody(Model):
 
 
 @dataclass
-class _StoppedEvent(Model):
+class _StoppedEvent:
     body: StoppedEventBody
 
 
@@ -178,7 +178,7 @@ class ContinuedEventBody(Model):
 
 
 @dataclass
-class _ContinuedEvent(Model):
+class _ContinuedEvent:
     body: ContinuedEventBody
 
 
@@ -194,7 +194,7 @@ class ExitedEventBody(Model):
 
 
 @dataclass
-class _ExitedEvent(Model):
+class _ExitedEvent:
     body: ExitedEventBody
 
 
@@ -210,7 +210,7 @@ class TerminatedEventBody(Model):
 
 
 @dataclass
-class _TerminatedEvent(Model):
+class _TerminatedEvent:
     body: Optional[TerminatedEventBody] = None
 
 
@@ -281,7 +281,7 @@ class OutputEventBody(Model):
 
 
 @dataclass
-class _OutputEvent(Model):
+class _OutputEvent:
     body: Optional[OutputEventBody] = None
 
 
@@ -309,7 +309,7 @@ class InitializeRequestArguments(Model):
 
 
 @dataclass
-class _InitializeRequest(Model):
+class _InitializeRequest:
     arguments: InitializeRequestArguments
 
 
@@ -325,7 +325,7 @@ class AttachRequestArguments(Model):
 
 
 @dataclass
-class _AttachRequest(Model):
+class _AttachRequest:
     arguments: AttachRequestArguments
 
 
@@ -412,7 +412,7 @@ class LaunchRequestArguments(Model):
 
 
 @dataclass
-class _LaunchRequest(Model):
+class _LaunchRequest:
     arguments: LaunchRequestArguments
 
 
@@ -446,7 +446,7 @@ class RunInTerminalRequestArguments(Model):
 
 
 @dataclass
-class _RunInTerminalRequest(Model):
+class _RunInTerminalRequest:
     arguments: RunInTerminalRequestArguments
 
 
@@ -463,7 +463,7 @@ class RunInTerminalResponseBody(Model):
 
 
 @dataclass
-class _RunInTerminalResponse(Model):
+class _RunInTerminalResponse:
     body: RunInTerminalResponseBody
 
 
@@ -478,7 +478,7 @@ class ConfigurationDoneArguments(Model):
 
 
 @dataclass
-class _ConfigurationDoneRequest(Model):
+class _ConfigurationDoneRequest:
     arguments: Optional[ConfigurationDoneArguments] = None
 
 
@@ -501,7 +501,7 @@ class DisconnectArguments(Model):
 
 
 @dataclass
-class _DisconnectRequest(Model):
+class _DisconnectRequest:
     arguments: Optional[DisconnectArguments] = None
 
 
@@ -534,7 +534,7 @@ class SetBreakpointsArguments(Model):
 
 
 @dataclass
-class _SetBreakpointsRequest(Model):
+class _SetBreakpointsRequest:
     arguments: SetBreakpointsArguments
 
 
@@ -564,7 +564,7 @@ class SetBreakpointsResponseBody(Model):
 
 
 @dataclass
-class _SetBreakpointsResponse(Model):
+class _SetBreakpointsResponse:
     body: SetBreakpointsResponseBody
 
 
@@ -590,7 +590,7 @@ class ThreadsResponseBody(Model):
 
 
 @dataclass
-class _ThreadsResponse(Model):
+class _ThreadsResponse:
     body: ThreadsResponseBody
 
 
@@ -605,7 +605,7 @@ class TerminateArguments(Model):
 
 
 @dataclass
-class _TerminateRequest(Model):
+class _TerminateRequest:
     arguments: Optional[TerminateArguments] = None
 
 
@@ -640,7 +640,7 @@ class StackTraceArguments(Model):
 
 
 @dataclass
-class _StackTraceRequest(Model):
+class _StackTraceRequest:
     arguments: StackTraceArguments
 
 
@@ -672,7 +672,7 @@ class StackTraceResponseBody(Model):
 
 
 @dataclass
-class _StackTraceResponse(Model):
+class _StackTraceResponse:
     body: StackTraceResponseBody
 
 
@@ -702,7 +702,7 @@ class Scope(Model):
 
 
 @dataclass
-class _ScopesRequest(Model):
+class _ScopesRequest:
     arguments: ScopesArguments
 
 
@@ -718,7 +718,7 @@ class ScopesResponseBody(Model):
 
 
 @dataclass
-class _ScopesResponse(Model):
+class _ScopesResponse:
     body: ScopesResponseBody
 
 
@@ -733,7 +733,7 @@ class ContinueArguments(Model):
 
 
 @dataclass
-class _ContinueRequest(Model):
+class _ContinueRequest:
     arguments: ContinueArguments
 
 
@@ -749,7 +749,7 @@ class ContinueResponseBody(Model):
 
 
 @dataclass
-class _ContinueResponse(Model):
+class _ContinueResponse:
     body: ContinueResponseBody
 
 
@@ -764,7 +764,7 @@ class PauseArguments(Model):
 
 
 @dataclass
-class _PauseRequest(Model):
+class _PauseRequest:
     arguments: PauseArguments
 
 
@@ -796,7 +796,7 @@ class NextArguments(Model):
 
 
 @dataclass
-class _NextRequest(Model):
+class _NextRequest:
     arguments: NextArguments
 
 
@@ -819,7 +819,7 @@ class StepInArguments(Model):
 
 
 @dataclass
-class _StepInRequest(Model):
+class _StepInRequest:
     arguments: StepInArguments
 
 
@@ -841,7 +841,7 @@ class StepOutArguments(Model):
 
 
 @dataclass
-class _StepOutRequest(Model):
+class _StepOutRequest:
     arguments: StepOutArguments
 
 
@@ -871,7 +871,7 @@ class VariablesArguments(Model):
 
 
 @dataclass
-class _VariablesRequest(Model):
+class _VariablesRequest:
     arguments: VariablesArguments
 
 
@@ -941,7 +941,7 @@ class VariablesResponseBody(Model):
 
 
 @dataclass
-class _VariablesResponse(Model):
+class _VariablesResponse:
     body: VariablesResponseBody
 
 
@@ -969,7 +969,7 @@ class EvaluateArguments(Model):
 
 
 @dataclass
-class _EvaluateRequest(Model):
+class _EvaluateRequest:
     arguments: EvaluateArguments
 
 
@@ -991,7 +991,7 @@ class EvaluateResponseBody(Model):
 
 
 @dataclass
-class _EvaluateResponse(Model):
+class _EvaluateResponse:
     body: VariablesResponseBody
 
 
@@ -1009,7 +1009,7 @@ class SetVariableArguments(Model):
 
 
 @dataclass
-class _SetVariableRequest(Model):
+class _SetVariableRequest:
     arguments: SetVariableArguments
 
 
@@ -1029,7 +1029,7 @@ class SetVariableResponseBody(Model):
 
 
 @dataclass
-class _SetVariableResponse(Model):
+class _SetVariableResponse:
     body: SetVariableResponseBody
 
 
@@ -1074,7 +1074,7 @@ class SetExceptionBreakpointsArguments(Model):
 
 
 @dataclass
-class _SetExceptionBreakpointsRequest(Model):
+class _SetExceptionBreakpointsRequest:
     arguments: SetExceptionBreakpointsArguments
 
 

@@ -34,7 +34,7 @@ def enable_debugpy(port: int, addresses: Union[Sequence[str], str, None] = None)
             addresses = ["127.0.0.1"]
 
         if not isinstance(addresses, Sequence):
-            addresses = [addresses]
+            addresses = [addresses]  # type: ignore
 
         for address in addresses:
             debugpy.listen((address, port))

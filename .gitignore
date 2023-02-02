@@ -288,3 +288,6 @@ report.html
 
 # robotcode
 .robotcode_cache/
+
+# ruff
+.ruff_cache/

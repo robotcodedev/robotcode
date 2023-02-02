@@ -844,7 +844,7 @@ def get_module_spec(module_name: str) -> Optional[ModuleSpec]:
             module_name = splitted[0]
 
     if result is not None:
-        return ModuleSpec(
+        return ModuleSpec(  # type: ignore
             name=result.name,
             origin=result.origin,
             submodule_search_locations=[i for i in result.submodule_search_locations]

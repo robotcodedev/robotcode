@@ -95,9 +95,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         result_node = result_nodes[-1]
 
-        if result_node is None:
-            return None
-
         result = await self._definition_default(result_nodes, document, position, collect_type)
         if result:
             return result
@@ -114,8 +111,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         self, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         if not nodes:
             return None
@@ -161,8 +156,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         from robot.parsing.model.statements import IfHeader
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         header = cast(IfHeader, node)
 
@@ -202,8 +195,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         from robot.parsing.model.statements import WhileHeader
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         header = cast(WhileHeader, node)
 
@@ -242,8 +233,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         from robot.parsing.model.statements import KeywordName
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         kw_node = cast(KeywordName, node)
         name_token = cast(RobotToken, kw_node.get_token(RobotToken.KEYWORD_NAME))
@@ -273,8 +262,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         from robot.parsing.model.statements import KeywordCall
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         kw_node = cast(KeywordCall, node)
         result = await self.get_keyworddoc_and_token_from_position(
@@ -343,8 +330,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         from robot.parsing.model.statements import Fixture
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         fixture_node = cast(Fixture, node)
 
@@ -430,8 +415,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 return None
 
             namespace = await self.parent.documents_cache.get_namespace(document)
-            if namespace is None:
-                return None
 
             if (
                 await namespace.find_keyword(keyword_token.value, raise_keyword_error=False, handle_bdd_style=False)
@@ -510,8 +493,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
             if position.is_in_range(range_from_token(name_token)):
                 namespace = await self.parent.documents_cache.get_namespace(document)
-                if namespace is None:
-                    return None
 
                 try:
                     libdoc = await namespace.get_imported_library_libdoc(
@@ -525,9 +506,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                             str(document.uri.to_path().parent),
                             variables=await namespace.get_resolvable_variables(),
                         )
-
-                    if libdoc is None:
-                        return None
 
                     python_source = libdoc.source_or_origin
                     if python_source is not None:
@@ -560,8 +538,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
             if position.is_in_range(range_from_token(name_token)):
                 namespace = await self.parent.documents_cache.get_namespace(document)
-                if namespace is None:
-                    return None
 
                 try:
                     libdoc = await namespace.get_imported_resource_libdoc(resource_node.name)
@@ -572,9 +548,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                             str(document.uri.to_path().parent),
                             variables=await namespace.get_resolvable_variables(),
                         )
-
-                    if libdoc is None:
-                        return None
 
                     python_source = libdoc.source_or_origin
                     if python_source is not None:
@@ -607,8 +580,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
             if position.is_in_range(range_from_token(name_token)):
                 namespace = await self.parent.documents_cache.get_namespace(document)
-                if namespace is None:
-                    return None
 
                 try:
                     libdoc = await namespace.get_imported_variables_libdoc(variables_node.name, variables_node.args)
@@ -620,9 +591,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                             str(document.uri.to_path().parent),
                             variables=await namespace.get_resolvable_variables(),
                         )
-
-                    if libdoc is None:
-                        return None
 
                     python_source = libdoc.source_or_origin
                     if python_source is not None:

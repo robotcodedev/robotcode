@@ -10,7 +10,6 @@ from ....utils.logging import LoggingDescriptor
 from ...common.lsp_types import Model, Position, Range, TextDocumentIdentifier
 from ..utils.ast_utils import (
     HasTokens,
-    Statement,
     get_nodes_at_position,
     get_tokens_at_position,
     range_from_token,
@@ -59,12 +58,7 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
                 return None
 
             namespace = await self.parent.documents_cache.get_namespace(document)
-            if namespace is None:
-                return None
-
             model = await self.parent.documents_cache.get_model(document, False)
-            if model is None:
-                return None
 
             nodes = await get_nodes_at_position(model, position)
             node = nodes[-1]
@@ -85,7 +79,6 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
 
             if (
                 token_and_var is None
-                and isinstance(node, Statement)
                 and isinstance(node, self.get_expression_statement_types())
                 and (token := node.get_token(RobotToken.ARGUMENT)) is not None
                 and position in range_from_token(token)

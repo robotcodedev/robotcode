@@ -81,9 +81,6 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         if result_node is None:
             return None
 
-        if result_node is None:
-            return None
-
         method = self._find_method(type(result_node))
         if method is None:
             return None
@@ -102,8 +99,6 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         from robot.parsing.model.statements import Statement
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         kw_node = cast(Statement, node)
 
@@ -220,8 +215,6 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         # TODO from robot.utils.escaping import split_from_equals
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         library_node = cast(LibraryImport, node)
 
@@ -245,8 +238,6 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                     variables=await namespace.get_resolvable_variables(),
                 )
 
-            if lib_doc is None:
-                return None
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException:

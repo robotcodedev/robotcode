@@ -46,7 +46,7 @@ class InlineValueProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             document_filters: DocumentSelector = []
             for e in self.collect:
                 if isinstance(e, HasLanguageId):
-                    for lang_id in e.__language_id__:
+                    for lang_id in e.__language_id__:  # type: ignore
                         document_filters.append(DocumentFilter(language=lang_id))
             capabilities.inline_value_provider = InlineValueRegistrationOptions(
                 work_done_progress=True, document_selector=document_filters if document_filters else None

@@ -58,7 +58,7 @@ class DAPClient:
                         if isinstance(self.tcp_params.host, Sequence):
                             host = self.tcp_params.host[0]
                         else:
-                            host = self.tcp_params.host
+                            host = self.tcp_params.host  # type: ignore
                     else:
                         host = "127.0.0.1"
                     self._transport, protocol = await asyncio.get_running_loop().create_connection(

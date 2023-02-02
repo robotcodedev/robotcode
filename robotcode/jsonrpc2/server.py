@@ -87,7 +87,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
     def __del__(self) -> None:
         self.close()
 
-    @_logger.call
     def start(self) -> None:
         if self.mode == JsonRpcServerMode.STDIO:
             self.start_stdio()
@@ -100,14 +99,12 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         else:
             raise JsonRPCException(f"Unknown server mode {self.mode}")
 
-    @_logger.call
     async def start_async(self) -> None:
         if self.mode == JsonRpcServerMode.TCP:
             await self.start_tcp(self.tcp_params.host, self.tcp_params.port)
         else:
             raise JsonRPCException(f"Unsupported server mode {self.mode}")
 
-    @_logger.call
     def _close(self) -> None:
         if self._stdio_stop_event is not None:
             self._stdio_stop_event.set()
@@ -115,7 +112,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         if self._server and self._server.is_serving():
             self._server.close()
 
-    @_logger.call
     def close(self) -> None:
         if self._in_closing or self._closed:
             return
@@ -127,7 +123,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
             self._in_closing = False
             self._closed = True
 
-    @_logger.call
     async def close_async(self) -> None:
         if self._in_closing or self._closed:
             return
@@ -172,7 +167,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
     stdio_executor: Optional[ThreadPoolExecutor] = None
 
-    @_logger.call
     def start_stdio(self) -> None:
         self.mode = JsonRpcServerMode.STDIO
 
@@ -202,7 +196,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
         self._run_func = run_io_nonblocking
 
-    @_logger.call
     async def start_tcp(self, host: Union[str, Sequence[str], None] = None, port: int = 0) -> None:
         self.mode = JsonRpcServerMode.TCP
 
@@ -211,7 +204,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         self._serve_func = self._server.serve_forever
         self._run_func = self.loop.run_forever
 
-    @_logger.call
     def start_pipe(self, pipe_name: Optional[str]) -> None:
         from typing import TYPE_CHECKING
 
@@ -240,7 +232,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
         self._run_func = self.loop.run_forever
 
-    @_logger.call
     def start_socket(self, port: int) -> None:
         self.mode = JsonRpcServerMode.SOCKET
 
@@ -248,14 +239,12 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
         self._run_func = self.loop.run_forever
 
-    @_logger.call
     def run(self) -> None:
         if self._run_func is None:
             self._logger.warning("server is not started.")
             return
         self._run_func()
 
-    @_logger.call
     async def serve(self) -> None:
         if self._serve_func is None:
             self._logger.warning("server is not started.")

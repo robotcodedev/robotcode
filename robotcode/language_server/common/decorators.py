@@ -99,6 +99,6 @@ def command(name: str) -> Callable[[_F], _F]:
 
 def get_command_name(func: _F) -> str:
     if isinstance(func, IsCommand):
-        return func.__command_name__
+        return func.__command_name__  # type: ignore
 
     raise TypeError(f"{func} is not a command.")

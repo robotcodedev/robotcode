@@ -565,28 +565,23 @@ class ImportsManager:
         async with self._command_line_variables_lock:
 
             if self._command_line_variables is None:
-                command_line_vars: List[VariableDefinition] = []
+                command_line_vars: List[VariableDefinition] = [
+                    CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=(v,))
+                    for k, v in self.config.robot.variables.items()
+                ]
+                for variable_file in self.config.robot.variable_files:
+                    name, args = split_args_from_name_or_path(variable_file)
+                    try:
+                        lib_doc = await self.get_libdoc_for_variables_import(
+                            name, tuple(args), str(self.folder.to_path()), self
+                        )
+                        if lib_doc is not None:
+                            command_line_vars += lib_doc.variables
 
-                if self.config.robot is None:
-                    self._command_line_variables = []
-                else:
-                    command_line_vars = [
-                        CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=(v,))
-                        for k, v in self.config.robot.variables.items()
-                    ]
-                    for variable_file in self.config.robot.variable_files:
-                        name, args = split_args_from_name_or_path(variable_file)
-                        try:
-                            lib_doc = await self.get_libdoc_for_variables_import(
-                                name, tuple(args), str(self.folder.to_path()), self
-                            )
-                            if lib_doc is not None:
-                                command_line_vars += lib_doc.variables
-
-                        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                            raise
-                        except BaseException as e:
-                            self._logger.exception(e)
+                    except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                        raise
+                    except BaseException as e:
+                        self._logger.exception(e)
 
                 self._command_line_variables = command_line_vars
 

@@ -36,8 +36,6 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
     ) -> Optional[List[SelectionRange]]:
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         results: List[SelectionRange] = []
         for position in positions:

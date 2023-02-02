@@ -199,11 +199,10 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
             set(self),
         ):
             if method is not None:
-                if threaded and isinstance(method, HasThreaded) and cast(HasThreaded, method).__threaded__:
-                    future = run_coroutine_in_thread(ensure_coroutine(method), *args, **kwargs)
+                if threaded and isinstance(method, HasThreaded) and method.__threaded__:  # type: ignore
+                    future = run_coroutine_in_thread(ensure_coroutine(method), *args, **kwargs)  # type: ignore
                 else:
                     future = create_sub_task(ensure_coroutine(method)(*args, **kwargs))
-
                 awaitables.append(future)
 
                 if result_callback is not None:

@@ -18,15 +18,6 @@ _T = TypeVar("_T")
 AnyIterable = Union[Iterable[_T], AsyncIterable[_T]]
 
 
-async def as_async_iterable(iterable: AnyIterable[_T]) -> AsyncGenerator[_T, None]:
-    if isinstance(iterable, AsyncIterable):
-        async for v in iterable:
-            yield v
-    else:
-        for v in iterable:
-            yield v
-
-
 async def async_chain(*iterables: AnyIterable[_T]) -> AsyncGenerator[_T, None]:
     for iterable in iterables:
         if isinstance(iterable, AsyncIterable):

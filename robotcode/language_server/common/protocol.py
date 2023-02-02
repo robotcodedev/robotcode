@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, List, NamedTuple, Optional, Set, Union, cast
+from typing import Any, List, NamedTuple, Optional, Set, Union
 
 from ...jsonrpc2.protocol import (
     JsonRPCErrorException,
@@ -170,7 +170,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
         for p in self.registry.parts:
             if isinstance(p, HasExtendCapabilities):
-                cast(HasExtendCapabilities, p).extend_capabilities(base_capabilities)
+                p.extend_capabilities(base_capabilities)
 
         return base_capabilities
 

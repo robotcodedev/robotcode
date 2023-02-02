@@ -145,7 +145,7 @@ def node_in_range(node: ast.AST, range: Range, include_end: bool = False) -> boo
     return node_range.start.is_in_range(range, include_end) or node_range.end.is_in_range(range, include_end)
 
 
-def range_from_node_or_token(node: ast.AST, token: Optional[Token]) -> Range:
+def range_from_node_or_token(node: Optional[ast.AST], token: Optional[Token]) -> Range:
     if token is not None:
         return range_from_token(token)
     if node is not None:

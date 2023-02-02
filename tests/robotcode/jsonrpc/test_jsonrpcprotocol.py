@@ -25,14 +25,14 @@ class DummyJsonRPCProtocol(JsonRPCProtocol):
 
     async def handle_message(self, message: JsonRPCMessage) -> None:
         self.handled_messages.append(message)
-        return await super().handle_message(message)
+        await super().handle_message(message)
 
     def send_message(self, message: JsonRPCMessage) -> None:
         self.sended_message = message
 
     async def data_received_async(self, data: bytes) -> None:
         self.data_received(data)
-        return await asyncio.sleep(0)
+        await asyncio.sleep(0)
 
 
 @pytest.fixture(scope="module")

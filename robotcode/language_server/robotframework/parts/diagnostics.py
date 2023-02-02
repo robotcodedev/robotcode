@@ -81,8 +81,6 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     async def _collect_namespace_diagnostics(self, document: TextDocument) -> DiagnosticsResult:
         try:
             namespace = await self.parent.documents_cache.get_namespace(document)
-            if namespace is None:
-                return DiagnosticsResult(self.collect_namespace_diagnostics, None)
 
             return DiagnosticsResult(self.collect_namespace_diagnostics, await namespace.get_diagnostisc())
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
@@ -279,8 +277,6 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     async def _collect_unused_keyword_references(self, document: TextDocument) -> DiagnosticsResult:
         try:
             namespace = await self.parent.documents_cache.get_namespace(document)
-            if namespace is None:
-                return DiagnosticsResult(self.collect_unused_keyword_references, None)
 
             result: List[Diagnostic] = []
             for kw in (await namespace.get_library_doc()).keywords.values():
@@ -340,8 +336,6 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     async def _collect_unused_variable_references(self, document: TextDocument) -> DiagnosticsResult:
         try:
             namespace = await self.parent.documents_cache.get_namespace(document)
-            if namespace is None:
-                return DiagnosticsResult(self.collect_unused_variable_references, None)
 
             result: List[Diagnostic] = []
 

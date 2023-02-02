@@ -124,8 +124,6 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
             return
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         model = await self.parent.documents_cache.get_model(document, False)
         node = await get_node_at_position(model, range.start)

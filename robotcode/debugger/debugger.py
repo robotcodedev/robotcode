@@ -12,6 +12,7 @@ from pathlib import Path, PurePath
 from typing import (
     Any,
     Callable,
+    ClassVar,
     Deque,
     Dict,
     Generator,
@@ -195,9 +196,9 @@ class PathMapping(NamedTuple):
 
 
 class Debugger:
-    __instance = None
-    __lock = threading.RLock()
-    __inside_instance = False
+    __instance: ClassVar[Optional[Debugger]] = None
+    __lock: ClassVar = threading.RLock()
+    __inside_instance: ClassVar = False
 
     _logger = LoggingDescriptor()
 
@@ -289,21 +290,17 @@ class Debugger:
     def robot_output_file(self, value: Optional[str]) -> None:
         self._robot_output_file = value
 
-    @_logger.call
     def terminate_requested(self) -> None:
         self.terminated_requested = True
 
-    @_logger.call
     def terminate(self) -> None:
         self.terminated = True
 
-    @_logger.call
     def start(self) -> None:
         with self.condition:
             self.state = State.Running
             self.condition.notify_all()
 
-    @_logger.call
     def stop(self) -> None:
         with self.condition:
             self.state = State.Stopped
@@ -318,12 +315,10 @@ class Debugger:
 
             self.condition.notify_all()
 
-    @_logger.call
     def continue_all(self, send_event: bool = True) -> None:
         if self.main_thread is not None and self.main_thread.ident is not None:
             self.continue_thread(self.main_thread.ident, send_event)
 
-    @_logger.call
     def continue_thread(self, thread_id: int, send_event: bool = False) -> None:
         if self.main_thread is None or thread_id != self.main_thread.ident:
             raise InvalidThreadId(thread_id)
@@ -339,7 +334,6 @@ class Debugger:
             self.state = State.Running
             self.condition.notify_all()
 
-    @_logger.call
     def pause_thread(self, thread_id: int) -> None:
         if self.main_thread is None or thread_id != self.main_thread.ident:
             raise InvalidThreadId(thread_id)
@@ -350,7 +344,6 @@ class Debugger:
 
             self.condition.notify_all()
 
-    @_logger.call
     def next(self, thread_id: int, granularity: Optional[SteppingGranularity] = None) -> None:
         if self.main_thread is None or thread_id != self.main_thread.ident:
             raise InvalidThreadId(thread_id)
@@ -380,7 +373,6 @@ class Debugger:
 
             self.condition.notify_all()
 
-    @_logger.call
     def step_in(
         self, thread_id: int, target_id: Optional[int] = None, granularity: Optional[SteppingGranularity] = None
     ) -> None:
@@ -393,7 +385,6 @@ class Debugger:
 
             self.condition.notify_all()
 
-    @_logger.call
     def step_out(self, thread_id: int, granularity: Optional[SteppingGranularity] = None) -> None:
         if self.main_thread is None or thread_id != self.main_thread.ident:
             raise InvalidThreadId(thread_id)
@@ -603,7 +594,6 @@ class Debugger:
             )
             self.wait_for_running()
 
-    @_logger.call
     def wait_for_running(self) -> None:
         if self.attached:
             while True:
@@ -862,7 +852,7 @@ class Debugger:
 
             self.wait_for_running()
 
-    CAUGHTED_KEYWORDS = [
+    CAUGHTED_KEYWORDS: ClassVar = [
         "BuiltIn.Run Keyword And Expect Error",
         "BuiltIn.Run Keyword And Ignore Error",
         "BuiltIn.Run Keyword And Warn On Failure",
@@ -920,7 +910,7 @@ class Debugger:
 
         return [Thread(id=main_thread.ident if main_thread.ident else 0, name=main_thread.name or "")]
 
-    WINDOW_PATH_REGEX = re.compile(r"^(([a-z]:[\\/])|(\\\\)).*$", re.RegexFlag.IGNORECASE)
+    WINDOW_PATH_REGEX: ClassVar = re.compile(r"^(([a-z]:[\\/])|(\\\\)).*$", re.RegexFlag.IGNORECASE)
 
     @classmethod
     def is_windows_path(cls, path: Union[os.PathLike[str], str]) -> bool:
@@ -1001,7 +991,7 @@ class Debugger:
 
         return StackTraceResult(frames, len(self.stack_frames))
 
-    MESSAGE_COLORS = {
+    MESSAGE_COLORS: ClassVar = {
         "INFO": "\u001b[38;5;2m",
         "WARN": "\u001b[38;5;3m",
         "ERROR": "\u001b[38;5;1m",
@@ -1190,10 +1180,10 @@ class Debugger:
 
         return list(result.values())
 
-    IS_VARIABLE_RE = re.compile(r"^[$@&%]\{.*\}(\[[^\]]*\])?$")
-    IS_VARIABLE_ASSIGNMENT_RE = re.compile(r"^[$@&%]\{.*\}=?$")
-    SPLIT_LINE = re.compile(r"(?= {2,}| ?\t)\s*")
-    CURRDIR = re.compile(r"(?i)\$\{CURDIR\}")
+    IS_VARIABLE_RE: ClassVar = re.compile(r"^[$@&%]\{.*\}(\[[^\]]*\])?$")
+    IS_VARIABLE_ASSIGNMENT_RE: ClassVar = re.compile(r"^[$@&%]\{.*\}=?$")
+    SPLIT_LINE: ClassVar = re.compile(r"(?= {2,}| ?\t)\s*")
+    CURRDIR: ClassVar = re.compile(r"(?i)\$\{CURDIR\}")
 
     def evaluate(
         self,

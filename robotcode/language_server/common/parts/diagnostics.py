@@ -507,7 +507,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         data: DiagnosticsData = document.get_data(self, None)
 
         if data is None:
-            data = DiagnosticsData(str(uuid.uuid4()))
+            data = DiagnosticsData(str(uuid.uuid4()))  # type: ignore
             document.set_data(self, data)
 
         return data

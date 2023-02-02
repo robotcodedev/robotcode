@@ -16,7 +16,54 @@ from .model_helper import ModelHelperMixin
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
+from ..utils.async_ast import AsyncVisitor
 from .protocol_part import RobotLanguageServerProtocolPart
+
+
+class _Visitor(AsyncVisitor):
+    def __init__(self, parent: RobotCodeLensProtocolPart, document: TextDocument) -> None:
+        super().__init__()
+        self.parent = parent
+        self.document = document
+
+        self.result: List[CodeLens] = []
+
+    async def visit(self, node: ast.AST) -> None:
+        await super().visit(node)
+
+    @classmethod
+    async def find_from(
+        cls, model: ast.AST, parent: RobotCodeLensProtocolPart, document: TextDocument
+    ) -> Optional[List[CodeLens]]:
+
+        finder = cls(parent, document)
+
+        await finder.visit(model)
+
+        return finder.result if finder.result else None
+
+    async def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.model.blocks import KeywordSection
+
+        if isinstance(node, KeywordSection):
+            await self.generic_visit(node)
+
+    async def visit_KeywordName(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import KeywordName
+
+        kw_node = cast(KeywordName, node)
+        name_token = cast(RobotToken, kw_node.get_token(RobotToken.KEYWORD_NAME))
+        if not name_token:
+            return None
+
+        self.result.append(
+            CodeLens(
+                range_from_token(name_token),
+                command=None,
+                data={"uri": str(self.document.uri), "name": name_token.value, "line": name_token.lineno},
+            )
+        )
 
 
 class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
@@ -39,55 +86,10 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
 
     @language_id("robotframework")
     async def collect(self, sender: Any, document: TextDocument) -> Optional[List[CodeLens]]:
-
-        from ..utils.async_ast import AsyncVisitor
-
-        class Visitor(AsyncVisitor):
-            def __init__(self, parent: RobotCodeLensProtocolPart) -> None:
-                super().__init__()
-                self.parent = parent
-
-                self.result: List[CodeLens] = []
-
-            async def visit(self, node: ast.AST) -> None:
-                await super().visit(node)
-
-            @classmethod
-            async def find_from(cls, model: ast.AST, parent: RobotCodeLensProtocolPart) -> Optional[List[CodeLens]]:
-
-                finder = cls(parent)
-
-                await finder.visit(model)
-
-                return finder.result if finder.result else None
-
-            async def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
-                from robot.parsing.model.blocks import KeywordSection
-
-                if isinstance(node, KeywordSection):
-                    await self.generic_visit(node)
-
-            async def visit_KeywordName(self, node: ast.AST) -> None:  # noqa: N802
-                from robot.parsing.lexer.tokens import Token as RobotToken
-                from robot.parsing.model.statements import KeywordName
-
-                kw_node = cast(KeywordName, node)
-                name_token = cast(RobotToken, kw_node.get_token(RobotToken.KEYWORD_NAME))
-                if not name_token:
-                    return None
-
-                self.result.append(
-                    CodeLens(
-                        range_from_token(name_token),
-                        command=None,
-                        data={"uri": str(document.uri), "name": name_token.value, "line": name_token.lineno},
-                    )
-                )
-
         if not (await self.parent.workspace.get_configuration(AnalysisConfig, document.uri)).references_code_lens:
             return None
 
-        return await Visitor.find_from(await self.parent.documents_cache.get_model(document), self)
+        return await _Visitor.find_from(await self.parent.documents_cache.get_model(document), self, document)
 
     @language_id("robotframework")
     async def resolve(self, sender: Any, code_lens: CodeLens) -> Optional[CodeLens]:
@@ -102,9 +104,6 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
             return None
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-
-        if namespace is None:
-            return None
 
         name = code_lens.data["name"]
         line = code_lens.data["line"]

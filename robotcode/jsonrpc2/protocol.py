@@ -13,7 +13,9 @@ from dataclasses import dataclass, field
 from typing import (
     Any,
     Callable,
+    ClassVar,
     Dict,
+    Final,
     Generic,
     Iterator,
     List,
@@ -68,15 +70,15 @@ _TResult = TypeVar("_TResult", bound=Any)
 
 
 class JsonRPCErrors:
-    PARSE_ERROR = -32700
-    INVALID_REQUEST = -32600
-    METHOD_NOT_FOUND = -32601
-    INVALID_PARAMS = -32602
-    INTERNAL_ERROR = -32603
-    SERVER_ERROR_START = -32000
-    SERVER_ERROR_END = -32099
+    PARSE_ERROR: Final = -32700
+    INVALID_REQUEST: Final = -32600
+    METHOD_NOT_FOUND: Final = -32601
+    INVALID_PARAMS: Final = -32602
+    INTERNAL_ERROR: Final = -32603
+    SERVER_ERROR_START: Final = -32000
+    SERVER_ERROR_END: Final = -32099
 
-    REQUEST_CANCELLED = -32800
+    REQUEST_CANCELLED: Final = -32800
 
 
 PROTOCOL_VERSION = "2.0"
@@ -183,9 +185,9 @@ def rpc_method(
             raise TypeError(f"Not supported type {type(func)}.")
 
         if isinstance(func, classmethod):
-            f = func.__func__
+            f = func.__func__  # type: ignore
         elif isinstance(func, staticmethod):
-            f = func.__func__
+            f = func.__func__  # type: ignore
         else:
             f = func
 
@@ -207,7 +209,7 @@ class HasRpcRegistry(Protocol):
 
 
 class RpcRegistry:
-    _class_registries: Dict[Type[Any], RpcRegistry] = {}
+    _class_registries: ClassVar[Dict[Type[Any], RpcRegistry]] = {}
 
     def __init__(self, owner: Any = None) -> None:
         self.__owner = owner
@@ -277,7 +279,7 @@ class RpcRegistry:
             else:
                 registries: List[RpcRegistry] = []
                 for m in inspect.getmro(type(self.__owner)):
-                    r = self._class_registries.get(m, None)
+                    r = RpcRegistry._class_registries.get(m, None)
                     if r is not None:
                         registries.insert(0, r)
                 for r in registries:
@@ -342,7 +344,7 @@ class ReceivedRequestEntry(NamedTuple):
 class JsonRPCProtocolBase(asyncio.Protocol, ABC):
 
     _logger = LoggingDescriptor()
-    registry = RpcRegistry()
+    registry: ClassVar = RpcRegistry()
 
     def __init__(self) -> None:
         self.read_transport: Optional[asyncio.ReadTransport] = None
@@ -382,10 +384,10 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
     def eof_received(self) -> Optional[bool]:
         return False
 
-    CHARSET = "utf-8"
-    CONTENT_TYPE = "application/vscode-jsonrpc"
+    CHARSET: Final = "utf-8"
+    CONTENT_TYPE: Final = "application/vscode-jsonrpc"
 
-    MESSAGE_PATTERN = re.compile(
+    MESSAGE_PATTERN: Final = re.compile(
         rb"(?:[^\r\n]*\r\n)*"
         + rb"(Content-Length: ?(?P<length>\d+)\r\n)"
         + rb"((Content-Type: ?(?P<content_type>[^\r\n;]+)"
@@ -690,7 +692,6 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 kw_args["params"] = converted_params
         return args, kw_args
 
-    @_logger.call
     async def handle_request(self, message: JsonRPCRequest) -> None:
         e = self.registry.get_entry(message.method)
 
@@ -704,8 +705,10 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
         params = self._convert_params(e.method, e.param_type, message.params)
 
-        if isinstance(e.method, HasThreaded) and cast(HasThreaded, e.method).__threaded__:
-            task = run_coroutine_in_thread(ensure_coroutine(e.method), *params[0], **params[1])
+        if isinstance(e.method, HasThreaded) and e.method.__threaded__:
+            task = run_coroutine_in_thread(
+                ensure_coroutine(cast(Callable[..., Any], e.method)), *params[0], **params[1]
+            )
         else:
             task = create_sub_task(
                 ensure_coroutine(e.method)(*params[0], **params[1]),
@@ -715,7 +718,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         with self._received_request_lock:
             self._received_request[message.id] = ReceivedRequestEntry(task, message, e.cancelable)
 
-        def done(t: asyncio.Task[Any]) -> None:
+        def done(t: asyncio.Future[Any]) -> None:
             try:
                 if not t.cancelled():
                     ex = t.exception()
@@ -767,8 +770,10 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         try:
             params = self._convert_params(e.method, e.param_type, message.params)
 
-            if isinstance(e.method, HasThreaded) and cast(HasThreaded, e.method).__threaded__:
-                task = run_coroutine_in_thread(ensure_coroutine(e.method), *params[0], **params[1])
+            if isinstance(e.method, HasThreaded) and e.method.__threaded__:
+                task = run_coroutine_in_thread(
+                    ensure_coroutine(cast(Callable[..., Any], e.method)), *params[0], **params[1]
+                )
             else:
                 task = create_sub_task(
                     ensure_coroutine(e.method)(*params[0], **params[1]),

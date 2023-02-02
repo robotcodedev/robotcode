@@ -113,9 +113,6 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
     ) -> Union[List[CompletionItem], CompletionList, None]:
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
-
         model = await self.parent.documents_cache.get_model(document, False)
 
         config = await self.get_config(document)
@@ -469,8 +466,6 @@ class CompletionCollector(ModelHelperMixin):
     async def create_variables_completion_items(
         self, range: Range, nodes: List[ast.AST], position: Position
     ) -> List[CompletionItem]:
-        if self.document is None:
-            return []
 
         return [
             CompletionItem(
@@ -675,8 +670,6 @@ class CompletionCollector(ModelHelperMixin):
         add_bdd_prefixes: bool = True,
     ) -> List[CompletionItem]:
         result: List[CompletionItem] = []
-        if self.document is None:
-            return []
 
         r: Optional[Range] = None
 
@@ -1453,9 +1446,6 @@ class CompletionCollector(ModelHelperMixin):
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import LibraryImport, Statement
 
-        if self.document is None:
-            return []
-
         import_node = cast(LibraryImport, node)
         import_token = import_node.get_token(RobotToken.LIBRARY)
         if import_token is None:
@@ -1467,9 +1457,6 @@ class CompletionCollector(ModelHelperMixin):
         import_token_index = import_node.tokens.index(import_token)
 
         async def complete_import() -> Optional[List[CompletionItem]]:
-            if self.document is None:
-                return None
-
             if len(import_node.tokens) > import_token_index + 2:
                 name_token = import_node.tokens[import_token_index + 2]
                 if not position.is_in_range(r := range_from_token(name_token)):
@@ -1555,9 +1542,6 @@ class CompletionCollector(ModelHelperMixin):
             ]
 
         async def complete_arguments() -> Optional[List[CompletionItem]]:
-            if self.document is None:
-                return None
-
             if (
                 import_node.name is None
                 or position <= range_from_token(import_node.get_token(RobotToken.NAME)).extend(end_character=1).end
@@ -1659,9 +1643,6 @@ class CompletionCollector(ModelHelperMixin):
             return None
 
         async def complete_with_name() -> Optional[List[CompletionItem]]:
-            if self.document is None:
-                return None
-
             if context is None or context.trigger_kind != CompletionTriggerKind.INVOKED:
                 return []
 
@@ -1700,9 +1681,6 @@ class CompletionCollector(ModelHelperMixin):
 
         from robot.parsing.lexer.tokens import Token
         from robot.parsing.model.statements import ResourceImport
-
-        if self.document is None:
-            return []
 
         import_node = cast(ResourceImport, node)
         import_token = import_node.get_token(Token.RESOURCE)
@@ -1805,9 +1783,6 @@ class CompletionCollector(ModelHelperMixin):
 
         from robot.parsing.lexer.tokens import Token
         from robot.parsing.model.statements import VariablesImport
-
-        if self.document is None:
-            return []
 
         import_node = cast(VariablesImport, node)
         import_token = import_node.get_token(Token.VARIABLES)
@@ -1913,9 +1888,6 @@ class CompletionCollector(ModelHelperMixin):
         from robot.parsing.model.statements import Statement
 
         if context is None or context.trigger_kind != CompletionTriggerKind.INVOKED:
-            return []
-
-        if self.document is None:
             return []
 
         kw_node = cast(Statement, node)

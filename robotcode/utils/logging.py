@@ -8,7 +8,18 @@ import os
 import reprlib
 import time
 from enum import Enum
-from typing import Any, Callable, List, Optional, Type, TypeVar, Union, cast, overload
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    List,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 __all__ = ["LoggingDescriptor"]
 
@@ -90,7 +101,7 @@ logging.addLevelName(TRACE, "TRACE")
 class LoggingDescriptor:
     __func: _FUNC_TYPE = None
     __name: Optional[str] = None
-    __level: int = logging.NOTSET
+    __level: int = 0
     __owner: Any = None
     __owner_name: Optional[str] = None
     __postfix: str = ""
@@ -107,7 +118,7 @@ class LoggingDescriptor:
         self.__func = _func
 
         if _func is not None:
-            functools.update_wrapper(self, _func)  # type: ignore
+            functools.update_wrapper(self, cast(Callable[..., Any], _func))
 
         self.__name = name
         self.__level = level
@@ -120,7 +131,7 @@ class LoggingDescriptor:
             if self.__func is not None:
 
                 if isinstance(self.__func, staticmethod):
-                    returned_logger = self.__func.__func__()
+                    returned_logger = self.__func.__func__()  # type: ignore
                 else:
                     returned_logger = self.__func()
 
@@ -299,10 +310,10 @@ class LoggingDescriptor:
         level = logging.getLevelName(logger.getEffectiveLevel())
         return f"{self.__class__.__name__}(name={repr(logger.name)}, level={repr(level)})"
 
-    _call_tracing_enabled = (
+    _call_tracing_enabled: ClassVar = (
         "ROBOT_CALL_TRACING_ENABLED" in os.environ and os.environ["ROBOT_CALL_TRACING_ENABLED"] != "0"
     )
-    _call_tracing_default_level = (
+    _call_tracing_default_level: ClassVar = (
         logging.getLevelName(os.environ["ROBOT_CALL_TRACING_LEVEL"])
         if "ROBOT_CALL_TRACING_LEVEL" in os.environ
         else TRACE

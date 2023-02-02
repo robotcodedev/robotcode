@@ -46,8 +46,6 @@ class RobotInlineValueProtocolPart(RobotLanguageServerProtocolPart, ModelHelperM
         from robot.parsing.lexer import Token as RobotToken
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         model = await self.parent.documents_cache.get_model(document, False)
 

@@ -67,8 +67,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     async def collect(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:
 
         model = await self.parent.documents_cache.get_model(document)
-        if model is None:
-            return None
 
         result_nodes = await get_nodes_at_position(model, position)
 
@@ -90,8 +88,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
     async def _hover_default(self, nodes: List[ast.AST], document: TextDocument, position: Position) -> Optional[Hover]:
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         if not nodes:
             return None
@@ -149,8 +145,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         from robot.parsing.model.statements import IfHeader
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         header = cast(IfHeader, node)
 
@@ -200,8 +194,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         from robot.parsing.model.statements import WhileHeader
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         header = cast(WhileHeader, node)
 
@@ -251,8 +243,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         from robot.parsing.model.statements import KeywordCall
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         kw_node = cast(KeywordCall, node)
         result = await self.get_keyworddoc_and_token_from_position(
@@ -300,8 +290,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         from robot.parsing.model.statements import Fixture
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         fixture_node = cast(Fixture, node)
 
@@ -361,8 +349,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 return None
 
             namespace = await self.parent.documents_cache.get_namespace(document)
-            if namespace is None:
-                return None
 
             if (
                 await namespace.find_keyword(keyword_token.value, raise_keyword_error=False, handle_bdd_style=False)
@@ -423,8 +409,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             token_range = range_from_token(name_token)
             if position.is_in_range(token_range):
                 namespace = await self.parent.documents_cache.get_namespace(document)
-                if namespace is None:
-                    return None
 
                 try:
                     libdoc = await namespace.get_imported_library_libdoc(
@@ -471,8 +455,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             token_range = range_from_token(name_token)
             if position.is_in_range(token_range):
                 namespace = await self.parent.documents_cache.get_namespace(document)
-                if namespace is None:
-                    return None
 
                 try:
                     libdoc = await namespace.get_imported_resource_libdoc(resource_node.name)
@@ -516,8 +498,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             token_range = range_from_token(name_token)
             if position.is_in_range(token_range):
                 namespace = await self.parent.documents_cache.get_namespace(document)
-                if namespace is None:
-                    return None
 
                 try:
                     libdoc = await namespace.get_imported_variables_libdoc(variables_node.name, variables_node.args)
@@ -553,8 +533,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         from robot.parsing.model.statements import KeywordName
 
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         kw_node = cast(KeywordName, node)
         name_token = cast(RobotToken, kw_node.get_token(RobotToken.KEYWORD_NAME))

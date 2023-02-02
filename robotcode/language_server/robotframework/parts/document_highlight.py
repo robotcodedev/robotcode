@@ -31,8 +31,6 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
         position: Position,
     ) -> Optional[List[DocumentHighlight]]:
         namespace = await self.parent.documents_cache.get_namespace(document)
-        if namespace is None:
-            return None
 
         all_variable_refs = await namespace.get_variable_references()
         if all_variable_refs:
