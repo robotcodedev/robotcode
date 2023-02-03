@@ -9,10 +9,6 @@ on:
   schedule:
     - cron: "29 0 * * 6"
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: true
-
 env:
   PYTHONUNBUFFERED: "1"
   FORCE_COLOR: "1"
@@ -50,7 +46,7 @@ jobs:
       - name: install robotcode
         run: |
           hatch env create
-          echo "CODEQL_PYTHON=$(hatch run which python)" >> $GITHUB_ENV
+          echo "CODEQL_PYTHON=$(hatch -q run which python)" >> $GITHUB_ENV
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2

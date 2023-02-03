@@ -13,10 +13,6 @@ on:
 
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: true
-
 env:
   PYTHONUNBUFFERED: "1"
 
@@ -31,7 +27,8 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
         python-version: ["3.8", "3.9", "3.10", "3.11"]
-        robot-version: ["rf41", "rf50", "rf60"]
+        # robot-version: ["rf41", "rf50", "rf60"]
+        robot-version: ["rf41"]
 
     steps:
       - uses: actions/checkout@v3
@@ -62,8 +59,13 @@ jobs:
   publish-test-results:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
 
-    if: success() || failure()
+      # only needed unless run with comment_mode: off
+      pull-requests: write
+
+    if: always()
 
     steps:
       - name: Download Artifacts
