@@ -46,7 +46,7 @@ jobs:
         run: python -m pip install --upgrade hatch
 
       - name: "test python packages"
-        timeout-minutes: 15
+        timeout-minutes: 5
         run: hatch run test.${{ matrix.robot-version }}:test "--junitxml=test-results/python-${{ matrix.python-version }}-${{ matrix.robot-version }}/test-results.xml" "--html=test-results/python-${{ matrix.python-version }}-${{ matrix.robot-version }}//report.html" --self-contained-html
 
       - name: upload test results
