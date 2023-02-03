@@ -62,7 +62,7 @@ def generate_foldingrange_test_id(params: Any) -> Any:
     ids=generate_foldingrange_test_id,
     scope="module",
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test(
     regtest: RegTestFixture,
     protocol: RobotLanguageServerProtocol,

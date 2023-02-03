@@ -12,7 +12,7 @@ from robotcode.utils.async_tools import run_coroutine_in_thread
 
 
 @pytest.mark.usefixtures("protocol")
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_workspace_discovery(
     regtest: RegTestFixture,
     protocol: RobotLanguageServerProtocol,

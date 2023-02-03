@@ -8,7 +8,7 @@ from robotcode.language_server.common.text_document import (
 from robotcode.utils.async_tools import check_canceled
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_apply_full_change_should_work() -> None:
     text = """first"""
     new_text = """changed"""
@@ -20,7 +20,7 @@ async def test_apply_full_change_should_work() -> None:
     assert document.text() == new_text
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_apply_apply_incremental_change_at_begining_should_work() -> None:
     text = """first"""
     new_text = """changed"""
@@ -34,7 +34,7 @@ async def test_apply_apply_incremental_change_at_begining_should_work() -> None:
     assert document.text() == new_text + text
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_apply_apply_incremental_change_at_end_should_work() -> None:
     text = """first"""
     new_text = """changed"""
@@ -49,7 +49,7 @@ async def test_apply_apply_incremental_change_at_end_should_work() -> None:
     assert document.text() == text + new_text
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_save_and_revert_should_work() -> None:
     text = """first"""
     new_text = """changed"""
@@ -82,7 +82,7 @@ async def test_save_and_revert_should_work() -> None:
     assert document.version == 2
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_apply_apply_incremental_change_in_the_middle_should_work() -> None:
     text = """\
 first line
@@ -104,7 +104,7 @@ third"""
     assert document.text() == expected
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_apply_apply_incremental_change_with_start_line_eq_len_lines_should_work() -> None:
     text = """\
 first line
@@ -122,7 +122,7 @@ third"""
     assert document.text() == text + new_text
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_apply_apply_incremental_change_with_wrong_range_should_raise_invalidrangerrror() -> None:
     text = """first"""
     new_text = """changed"""
@@ -136,7 +136,7 @@ async def test_apply_apply_incremental_change_with_wrong_range_should_raise_inva
         )
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_apply_none_change_should_work() -> None:
     text = """first"""
 
@@ -148,7 +148,7 @@ async def test_apply_none_change_should_work() -> None:
     assert document.text() == text
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_lines_should_give_the_lines_of_the_document() -> None:
     text = """\
 first
@@ -164,7 +164,7 @@ third
     assert document.get_lines() == text.splitlines(True)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_document_get_set_clear_data_should_work() -> None:
     text = """\
 first
@@ -191,7 +191,7 @@ third
     assert document.get_data(key, None) is None
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_document_get_set_cache_with_function_should_work() -> None:
     text = """\
 first
@@ -222,7 +222,7 @@ third
     assert await document.get_cache(get_data, "data3") == "3data3"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_document_get_set_cache_with_method_should_work() -> None:
     text = """\
 first

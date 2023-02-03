@@ -270,7 +270,9 @@ select = [
   "ISC",
   "G",
   #"INP",
-  "PIE"
+  "PIE",
+  # "T20",
+  "PT"
 ]
 
 

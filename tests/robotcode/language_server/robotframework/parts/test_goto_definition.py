@@ -26,7 +26,7 @@ from .test_goto_implementation import split
     scope="module",
 )
 @pytest.mark.usefixtures("protocol")
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_definition(
     regtest: RegTestFixture,
     protocol: RobotLanguageServerProtocol,

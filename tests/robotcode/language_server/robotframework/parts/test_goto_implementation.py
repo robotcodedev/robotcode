@@ -50,7 +50,7 @@ def split(
     scope="module",
 )
 @pytest.mark.usefixtures("protocol")
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_implementation(
     regtest: RegTestFixture,
     protocol: RobotLanguageServerProtocol,
