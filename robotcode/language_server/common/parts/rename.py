@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 from .protocol_part import LanguageServerProtocolPart
 
 
-class CantRenameException(Exception):
+class CantRenameError(Exception):
     pass
 
 
@@ -125,7 +125,7 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             self, document, position, callback_filter=language_id_filter(document)
         ):
             if isinstance(result, BaseException):
-                if isinstance(result, CantRenameException):
+                if isinstance(result, CantRenameError):
                     raise JsonRPCErrorException(ErrorCodes.INVALID_PARAMS, str(result))
 
                 if not isinstance(result, CancelledError):

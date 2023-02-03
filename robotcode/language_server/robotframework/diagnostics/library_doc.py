@@ -290,9 +290,7 @@ class ArgumentSpec:
         dict_to_kwargs: bool = False,
     ) -> Any:
         from robot.running.arguments.argumentresolver import ArgumentResolver
-        from robot.running.arguments.argumentspec import (
-            ArgumentSpec as RobotArgumentSpec,
-        )
+        from robot.running.arguments.argumentspec import ArgumentSpec as RobotArgumentSpec
 
         if not hasattr(self, "__robot_arguments"):
             self.__robot_arguments = RobotArgumentSpec(
@@ -1109,7 +1107,7 @@ def _std_capture() -> Iterator[io.StringIO]:
         sys.__stdout__ = old__stdout__
 
 
-class IgnoreEasterEggLibraryWarning(Exception):
+class IgnoreEasterEggLibraryWarning(Exception):  # noqa: N818
     pass
 
 

@@ -58,9 +58,10 @@ from ..lsp_types import (
     TextEdit,
     WatchKind,
     WorkspaceEdit,
+    WorkspaceFoldersChangeEvent,
+    WorkspaceFoldersServerCapabilities,
 )
 from ..lsp_types import WorkspaceFolder as TypesWorkspaceFolder
-from ..lsp_types import WorkspaceFoldersChangeEvent, WorkspaceFoldersServerCapabilities
 from .protocol_part import LanguageServerProtocolPart
 
 __all__ = ["WorkspaceFolder", "Workspace", "ConfigBase", "config_section", "FileWatcherEntry"]

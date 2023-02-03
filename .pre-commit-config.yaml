@@ -6,13 +6,6 @@ repos:
   - repo: local
     hooks:
       - id: system
-        name: isort
-        entry: hatch -e devel.py38-rf41 run isort --check --diff .
-        pass_filenames: false
-        language: system
-  - repo: local
-    hooks:
-      - id: system
         name: Black
         entry: hatch -e devel.py38-rf41 run black --check --diff .
         pass_filenames: false

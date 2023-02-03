@@ -125,7 +125,7 @@ class JsonRPCError(_JsonRPCResponseBase):
     result: Optional[Any] = None
 
 
-class JsonRPCException(Exception):
+class JsonRPCException(Exception):  # noqa: N818
     pass
 
 

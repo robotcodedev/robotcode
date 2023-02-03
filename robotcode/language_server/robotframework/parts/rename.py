@@ -31,7 +31,7 @@ from ...common.lsp_types import (
     TextDocumentEdit,
     WorkspaceEdit,
 )
-from ...common.parts.rename import CantRenameException
+from ...common.parts.rename import CantRenameError
 from ...common.text_document import TextDocument
 from ..diagnostics.entities import VariableDefinition, VariableDefinitionType
 from ..diagnostics.library_doc import KeywordDoc
@@ -254,7 +254,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
             kw_doc, token = result
 
             if kw_doc.is_embedded:
-                raise CantRenameException("Renaming of keywords with embedded parameters is not supported.")
+                raise CantRenameError("Renaming of keywords with embedded parameters is not supported.")
 
             if kw_doc.is_library_keyword:
                 self.parent.window.show_message(

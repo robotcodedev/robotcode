@@ -235,7 +235,14 @@ exclude = [
   "venv",
   ".hatch",
 ]
-ignore = ["E741"]
+ignore = ["E741", "N805"]
+select = [
+  "E",
+  "F",
+  "W",
+  "I",
+  "N"
+]
 
 
 [tool.ruff.per-file-ignores]

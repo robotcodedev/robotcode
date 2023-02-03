@@ -478,9 +478,7 @@ class ImportVisitor(Visitor):
 
     def visit_VariablesImport(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import (
-            VariablesImport as RobotVariablesImport,
-        )
+        from robot.parsing.model.statements import VariablesImport as RobotVariablesImport
 
         n = cast(RobotVariablesImport, node)
         name = cast(RobotToken, n.get_token(RobotToken.NAME))

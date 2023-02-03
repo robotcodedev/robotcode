@@ -45,15 +45,15 @@ if TYPE_CHECKING:
     from .server import RobotLanguageServer
 
 
-class RobotCodeException(Exception):
+class RobotCodeError(Exception):
     pass
 
 
-class RobotModuleNotFoundError(RobotCodeException):
+class RobotModuleNotFoundError(RobotCodeError):
     pass
 
 
-class RobotVersionDontMatchError(RobotCodeException):
+class RobotVersionDontMatchError(RobotCodeError):
     pass
 
 
@@ -159,7 +159,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
         try:
             check_robotframework()
-        except RobotCodeException as e:
+        except RobotCodeError as e:
             raise JsonRPCErrorException(
                 JsonRPCErrors.INTERNAL_ERROR, f"Can't start language server: {e}", InitializeError(retry=False)
             ) from e

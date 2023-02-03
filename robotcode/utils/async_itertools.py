@@ -78,7 +78,7 @@ async def async_dropwhile(
                 yield e
 
 
-class __NotSet:
+class __NotSet:  # noqa: N801
     pass
 
 

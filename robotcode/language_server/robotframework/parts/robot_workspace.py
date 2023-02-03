@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 from .protocol_part import RobotLanguageServerProtocolPart
 
 
-class CantReadDocumentException(Exception):
+class CantReadDocumentError(Exception):
     pass
 
 

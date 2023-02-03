@@ -52,9 +52,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         if get_robot_version() < (6, 0):
             return None
 
-        from robot.conf.languages import (
-            Languages as RobotLanguages,  # pyright: reportMissingImports=false
-        )
+        from robot.conf.languages import Languages as RobotLanguages  # pyright: reportMissingImports=false
 
         uri: Union[Uri, str]
 

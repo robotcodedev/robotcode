@@ -84,7 +84,7 @@ _FUNC_TYPE = Union[Callable[[], logging.Logger], Callable[[], None], staticmetho
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 
-class LoggerException(Exception):
+class LoggerError(Exception):
     pass
 
 
@@ -165,7 +165,7 @@ class LoggingDescriptor:
             self.__init_logger()
 
         if self.__logger is None:
-            raise LoggerException("Logger not initialized")
+            raise LoggerError("Logger not initialized")
 
         return self.__logger
 

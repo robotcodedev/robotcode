@@ -54,14 +54,14 @@ if TYPE_CHECKING:
 
 from .protocol_part import LanguageServerProtocolPart
 
-__all__ = ["TextDocumentProtocolPart", "LanguageServerDocumentException"]
+__all__ = ["TextDocumentProtocolPart", "LanguageServerDocumentError"]
 
 
-class LanguageServerDocumentException(JsonRPCException):
+class LanguageServerDocumentError(JsonRPCException):
     pass
 
 
-class CantReadDocumentException(Exception):
+class CantReadDocumentError(Exception):
     pass
 
 
@@ -158,7 +158,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
         except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
             raise
         except BaseException as e:
-            raise CantReadDocumentException(f"Error reading document '{path}': {str(e)}") from e
+            raise CantReadDocumentError(f"Error reading document '{path}': {str(e)}") from e
 
     @async_event
     async def on_read_document_text(sender, uri: Uri) -> Optional[str]:  # NOSONAR
@@ -368,7 +368,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
     ) -> None:
         document = self.get_sync(str(Uri(text_document.uri).normalized()))
         if document is None:
-            raise LanguageServerDocumentException(f"Document {text_document.uri} is not opened.")
+            raise LanguageServerDocumentError(f"Document {text_document.uri} is not opened.")
 
         sync_kind = (
             self.parent.capabilities.text_document_sync
@@ -391,7 +391,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
                     text_document.version, content_change.range, self._normalize_line_endings(content_change.text)
                 )
             else:
-                raise LanguageServerDocumentException(
+                raise LanguageServerDocumentError(
                     f"Invalid type for content_changes {type(content_change)} "
                     f"and server capability {self.parent.capabilities.text_document_sync} "
                     f"for document {text_document.uri}."
