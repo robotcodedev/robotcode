@@ -141,7 +141,7 @@ def __default(o: Any) -> Any:
     elif isinstance(o, enum.Enum):
         return o.value
     elif isinstance(o, Set):
-        return [v for v in o]
+        return list(o)
     else:
         raise TypeError(f"Cant' get default value for {type(o)} with value {repr(o)}")
 

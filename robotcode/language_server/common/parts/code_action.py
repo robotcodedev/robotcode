@@ -46,16 +46,15 @@ class CodeActionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect):
-            code_action_kinds = [
-                k
-                for k in chain(
+            code_action_kinds = list(
+                chain(
                     *[
                         cast(HasCodeActionKinds, e).__code_action_kinds__
                         for e in self.collect
                         if isinstance(e, HasCodeActionKinds)
                     ]
                 )
-            ]
+            )
 
             capabilities.code_action_provider = CodeActionOptions(
                 code_action_kinds=code_action_kinds if code_action_kinds else None,

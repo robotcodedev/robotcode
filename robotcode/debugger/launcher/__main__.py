@@ -135,8 +135,8 @@ def main() -> None:
                 logging.getLogger("robotcode.debugger.launcher").setLevel(logging.CRITICAL)
                 logging.getLogger("robotcode.jsonrpc2").setLevel(logging.CRITICAL)
 
-    _logger.info(f"starting debugger launcher server version={__version__}")
-    _logger.debug(f"args={args}")
+    _logger.info(lambda: f"starting debugger launcher server version={__version__}")
+    _logger.debug(lambda: f"args={args}")
     if args.debugpy:
         start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)
 

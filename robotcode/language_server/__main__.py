@@ -184,8 +184,8 @@ def main() -> None:
         else:
             init_logging(args)
 
-    _logger.info(f"starting language server version={__version__}")
-    _logger.debug(f"args={args}")
+    _logger.info(lambda: f"starting language server version={__version__}")
+    _logger.debug(lambda: f"args={args}")
 
     if args.debugpy:
         start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)

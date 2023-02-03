@@ -333,7 +333,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                     await asyncio.sleep(1)
                     continue
 
-                self._logger.info(f"start collecting workspace diagnostics for {len(documents)} documents")
+                self._logger.info(lambda: f"start collecting workspace diagnostics for {len(documents)} documents")
 
                 done_something = False
 
@@ -374,14 +374,15 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                     await asyncio.sleep(1)
 
                 self._logger.info(
-                    f"collecting workspace diagnostics for for {len(documents)} "
+                    lambda: f"collecting workspace diagnostics for for {len(documents)} "
                     f"documents takes {time.monotonic() - start}s"
                 )
 
             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                 raise
             except BaseException as e:
-                self._logger.exception(f"Error in workspace diagnostics loop: {e}", exc_info=e)
+                ex = e
+                self._logger.exception(lambda: f"Error in workspace diagnostics loop: {ex}", exc_info=e)
 
     def create_document_diagnostics_task(
         self, document: TextDocument, single: bool, debounce: bool = True, send_diagnostics: bool = True
@@ -464,9 +465,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                             PublishDiagnosticsParams(
                                 uri=document.document_uri,
                                 version=document._version,
-                                diagnostics=[
-                                    e for e in itertools.chain(*(i for i in data.entries.values() if i is not None))
-                                ],
+                                diagnostics=list(itertools.chain(*(i for i in data.entries.values() if i is not None))),
                             ),
                         )
 

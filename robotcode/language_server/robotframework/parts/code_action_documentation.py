@@ -99,10 +99,10 @@ class LibDocRequestHandler(SimpleHTTPRequestHandler):
     _logger = LoggingDescriptor()
 
     def log_message(self, format: str, *args: Any) -> None:
-        self._logger.info("%s - %s\n" % (self.address_string(), format % args))
+        self._logger.info(lambda: f"{self.address_string()} - {format % args}")
 
     def log_error(self, format: str, *args: Any) -> None:
-        self._logger.error("%s - %s\n" % (self.address_string(), format % args))
+        self._logger.error(lambda: f"{self.address_string()} - {format % args}")
 
     def do_GET(self) -> None:  # noqa: N802
 
@@ -206,7 +206,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
 
         self._documentation_server_port = find_free_port(start_port, end_port)
 
-        self._logger.debug(f"Start documentation server on port {self._documentation_server_port}")
+        self._logger.debug(lambda: f"Start documentation server on port {self._documentation_server_port}")
 
         with DualStackServer(("127.0.0.1", self._documentation_server_port), LibDocRequestHandler) as server:
             self._documentation_server = server

@@ -59,8 +59,8 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         ...
 
-    token_types: List[Enum] = [e for e in SemanticTokenTypes]
-    token_modifiers: List[Enum] = [e for e in SemanticTokenModifiers]
+    token_types: List[Enum] = list(SemanticTokenTypes)
+    token_modifiers: List[Enum] = list(SemanticTokenModifiers)
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect_full) or len(self.collect_range):

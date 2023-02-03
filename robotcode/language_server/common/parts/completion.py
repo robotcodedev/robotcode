@@ -50,27 +50,25 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect):
-            trigger_chars = [
-                k
-                for k in chain(
+            trigger_chars = list(
+                chain(
                     *[
                         cast(HasTriggerCharacters, e).__trigger_characters__
                         for e in self.collect
                         if isinstance(e, HasTriggerCharacters)
                     ]
                 )
-            ]
+            )
 
-            commit_chars = [
-                k
-                for k in chain(
+            commit_chars = list(
+                chain(
                     *[
                         cast(HasAllCommitCharacters, e).__all_commit_characters__
                         for e in self.collect
                         if isinstance(e, HasAllCommitCharacters)
                     ]
                 )
-            ]
+            )
             capabilities.completion_provider = CompletionOptions(
                 trigger_characters=trigger_chars if trigger_chars else None,
                 all_commit_characters=commit_chars if commit_chars else None,
@@ -113,13 +111,13 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             if any(e for e in results if isinstance(e, CompletionList)):
                 result = CompletionList(
                     is_incomplete=any(e for e in results if isinstance(e, CompletionList) and e.is_incomplete),
-                    items=[e for e in chain(*[r.items if isinstance(r, CompletionList) else r for r in results])],
+                    items=list(chain(*[r.items if isinstance(r, CompletionList) else r for r in results])),
                 )
                 if len(result.items) == 0:
                     return None
                 return result
             else:
-                result = [e for e in chain(*[k for k in results if isinstance(k, list)])]
+                result = list(chain(*[k for k in results if isinstance(k, list)]))
                 if len(result) == 0:
                     return None
 

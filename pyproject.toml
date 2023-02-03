@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.12.2", "hatch-vcs"]
+requires = ["hatchling>=1.12.2"]
 build-backend = "hatchling.build"
 
 
@@ -67,15 +67,11 @@ rest = ["docutils", "types-docutils"]
 'robotcode.debugger' = 'robotcode.debugger.__main__:main'
 'robotcode.language_server' = 'robotcode.language_server.__main__:main'
 
+
 [tool.hatch.version]
-source = "vcs"
+path = "robotcode/__version__.py"
 
 
-[tool.hatch.build.hooks.vcs]
-version-file = "robotcode/__version__.py"
-template = '''
-__version__ = "{version}"
-'''
 [tool.hatch.build.targets.sdist]
 only-include = ["robotcode", "CHANGELOG.md"]
 
@@ -87,7 +83,6 @@ dependencies = [
   "pytest_asyncio",
   "pytest-regtest>=1.5.0",
   "pytest-cov",
-  "isort",
   "mypy",
   "ruff",
   "black",
@@ -150,6 +145,31 @@ matrix.rf.dependencies = [
   ] },
 ]
 
+[tool.hatch.envs.lint]
+detached = true
+dependencies = [
+  "pytest",
+  "pytest_asyncio",
+  "pytest-regtest>=1.5.0",
+  "mypy",
+  "ruff",
+  "black",
+  "debugpy",
+  "robotremoteserver",
+  "PyYAML>=5.4",
+  "types-PyYAML>=5.4",
+  "robotframework-robocop>=2.0.0",
+  "robotframework-tidy>=2.0.0",
+  "docutils",
+  "types-docutils",
+]
+
+[tool.hatch.envs.lint.scripts]
+typing = "mypy --install-types --non-interactive {args:.}"
+style = ["ruff {args:.}", "black --check --diff {args:.}"]
+fmt = ["black {args:.}", "ruff --fix {args:.}", "style"]
+all = ["style", "typing"]
+
 [tool.semantic_release]
 version_variable = ["robotcode/__version__.py:__version__"]
 version_pattern = ['package.json:"version": "{version}"']
@@ -188,12 +208,6 @@ junit_suite_name = "robotcode"
 # log_cli_level = 4
 # log_cli_format = "%(levelname)s %(name)s: %(message)s"
 asyncio_mode = "auto"
-
-[tool.isort]
-profile = "black"
-src_paths = ["robotcode", "tests"]
-skip_gitignore = true
-skip = ['external', '.venv', ".hatch"]
 
 
 [tool.coverage.run]
@@ -241,7 +255,20 @@ select = [
   "F",
   "W",
   "I",
-  "N"
+  "N",
+  #"UP",
+  "YTT",
+  #"ANN",
+  #"BLE",
+  #"B",
+  #"A"
+  #"COM"
+  #"C4", TODO enable this
+  "DTZ",
+  "T10",
+  # "EM",
+  "ISC",
+  "G",
 ]
 
 

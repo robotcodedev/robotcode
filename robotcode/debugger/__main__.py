@@ -109,7 +109,7 @@ async def start_debugpy_async(
 
     port = find_free_port(debugpy_port)
     if port != debugpy_port:
-        _logger.warning(f"start debugpy session on port {port}")
+        _logger.warning(lambda: f"start debugpy session on port {port}")
 
     if enable_debugpy(port, addresses):
         global config_done_callback
@@ -396,8 +396,8 @@ def main() -> None:
                 logging.getLogger("robotcode.jsonrpc2").propagate = True
                 logging.getLogger("robotcode.jsonrpc2").setLevel(logging.CRITICAL)
 
-    _logger.info(f"starting {__package__} version={__version__}")
-    _logger.debug(f"args={args}")
+    _logger.info(lambda: f"starting {__package__} version={__version__}")
+    _logger.debug(lambda: f"args={args}")
 
     asyncio.run(
         run_robot(

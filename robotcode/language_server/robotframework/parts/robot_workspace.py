@@ -86,15 +86,14 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                 config = await self.parent.workspace.get_configuration(RobotCodeConfig, folder.uri)
 
                 async with self.parent.window.progress("Collect sources", cancellable=False):
-                    files = [
-                        f
-                        for f in iter_files(
+                    files = list(
+                        iter_files(
                             folder.uri.to_path(),
                             f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}",
                             ignore_patterns=config.workspace.exclude_patterns or [],
                             absolute=True,
                         )
-                    ]
+                    )
 
                 canceled = False
                 async with self.parent.window.progress(
@@ -118,7 +117,8 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                             except (SystemExit, KeyboardInterrupt):
                                 raise
                             except BaseException as e:
-                                self._logger.critical(f"Can't load document {f}: {e}")
+                                ex = e
+                                self._logger.critical(lambda: f"Can't load document {f}: {ex}")
                     finally:
                         self.documents_loaded.set()
 
@@ -160,7 +160,8 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                         except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                             raise
                         except BaseException as e:
-                            self._logger.critical(f"Can't initialize document {f}: {e}")
+                            ex = e
+                            self._logger.critical(lambda: f"Can't initialize document {f}: {ex}")
 
             if canceled:
                 return []
@@ -170,7 +171,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
 
             return result
         finally:
-            self._logger.info(f"Workspace loaded {len(result)} documents in {time.monotonic() - start}s")
+            self._logger.info(lambda: f"Workspace loaded {len(result)} documents in {time.monotonic() - start}s")
 
     @rpc_method(name="robot/cache/clear")
     @threaded()

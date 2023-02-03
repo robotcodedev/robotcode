@@ -578,7 +578,7 @@ class KeywordStore:
         return {v.name for v in self.keywords}
 
     def values(self) -> AbstractSet[KeywordDoc]:
-        return {v for v in self.keywords}
+        return set(self.keywords)
 
     def __iter__(self) -> Iterator[KeywordDoc]:
         return self.keywords.__iter__()
@@ -845,7 +845,7 @@ def get_module_spec(module_name: str) -> Optional[ModuleSpec]:
         return ModuleSpec(  # type: ignore
             name=result.name,
             origin=result.origin,
-            submodule_search_locations=[i for i in result.submodule_search_locations]
+            submodule_search_locations=list(result.submodule_search_locations)
             if result.submodule_search_locations
             else None,
         )
@@ -1347,7 +1347,7 @@ def get_library_doc(
                     keywords=[
                         KeywordDoc(
                             name=libdoc.name,
-                            args=list(KeywordArgumentDoc.from_robot(a) for a in kw[0].args),
+                            args=[KeywordArgumentDoc.from_robot(a) for a in kw[0].args],
                             doc=kw[0].doc,
                             tags=list(kw[0].tags),
                             source=kw[0].source,
@@ -1390,7 +1390,7 @@ def get_library_doc(
                     keywords=[
                         KeywordDoc(
                             name=kw[0].name,
-                            args=list(KeywordArgumentDoc.from_robot(a) for a in kw[0].args),
+                            args=[KeywordArgumentDoc.from_robot(a) for a in kw[0].args],
                             doc=kw[0].doc,
                             tags=list(kw[0].tags),
                             source=kw[0].source,
@@ -1729,7 +1729,7 @@ def complete_library_import(
         name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 
     if name is None or not name.startswith((".", "/", os.sep)):
-        result += [e for e in iter_modules_from_python_path(name)]
+        result += list(iter_modules_from_python_path(name))
 
     if name is None or (is_file_like(name) and (name.endswith("/") or name.endswith(os.sep))):
         name_path = Path(name if name else base_dir)
@@ -1787,7 +1787,7 @@ def complete_resource_import(
         name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 
     if name is None or not name.startswith(".") and not name.startswith("/") and not name.startswith(os.sep):
-        result += [e for e in iter_resources_from_python_path(name)]
+        result += list(iter_resources_from_python_path(name))
 
     if name is None or name.startswith(".") or name.startswith("/") or name.startswith(os.sep):
         name_path = Path(name if name else base_dir)
@@ -1874,7 +1874,7 @@ def complete_variables_import(
         name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
 
     if name is None or not name.startswith(".") and not name.startswith("/") and not name.startswith(os.sep):
-        result += [e for e in iter_variables_from_python_path(name)]
+        result += list(iter_variables_from_python_path(name))
 
     if name is None or name.startswith(".") or name.startswith("/") or name.startswith(os.sep):
         name_path = Path(name if name else base_dir)

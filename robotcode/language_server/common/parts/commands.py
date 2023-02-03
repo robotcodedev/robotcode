@@ -50,7 +50,7 @@ class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         command = f"{self.PREFIX}.{name}"
 
         if command in self.commands:
-            self._logger.critical(f"command '{command}' already registered.")
+            self._logger.critical(lambda: f"command '{command}' already registered.")
         else:
             self.commands[command] = CommandEntry(name, callback)
 
@@ -78,7 +78,7 @@ class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     async def _workspace_execute_command(
         self, command: str, arguments: Optional[List[LSPAny]], *args: Any, **kwargs: Any
     ) -> Optional[LSPAny]:
-        self._logger.debug(f"execute command {command}")
+        self._logger.debug(lambda: f"execute command {command}")
 
         entry = self.commands.get(command, None)
         if entry is None or entry.callback is None:

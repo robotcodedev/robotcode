@@ -389,10 +389,10 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
 
     MESSAGE_PATTERN: Final = re.compile(
         rb"(?:[^\r\n]*\r\n)*"
-        + rb"(Content-Length: ?(?P<length>\d+)\r\n)"
-        + rb"((Content-Type: ?(?P<content_type>[^\r\n;]+)"
-        + rb"(; *(charset=(?P<charset>[^\r\n]+))?)?\r\n)|(?:[^\r\n]+\r\n))*"
-        + rb"\r\n(?P<body>.*)",
+        rb"(Content-Length: ?(?P<length>\d+)\r\n)"
+        rb"((Content-Type: ?(?P<content_type>[^\r\n;]+)"
+        rb"(; *(charset=(?P<charset>[^\r\n]+))?)?\r\n)|(?:[^\r\n]+\r\n))*"
+        rb"\r\n(?P<body>.*)",
         re.DOTALL,
     )
 
@@ -620,7 +620,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                             await asyncio.sleep(0)
 
                     else:
-                        self._logger.warning(f"Response {repr(entry)} loop is not running.")
+                        self._logger.warning(lambda: f"Response {repr(entry)} loop is not running.")
 
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -728,7 +728,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
                 self.send_response(message.id, t.result())
             except asyncio.CancelledError:
-                self._logger.debug(f"request message {repr(message)} canceled")
+                self._logger.debug(lambda: f"request message {repr(message)} canceled")
                 self.send_error(JsonRPCErrors.REQUEST_CANCELLED, "Request canceled.", id=message.id)
             except (SystemExit, KeyboardInterrupt):
                 raise
@@ -751,7 +751,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             entry = self._received_request.get(id, None)
 
         if entry is not None and entry.future is not None and not entry.future.cancelled():
-            self._logger.debug(f"try to cancel request {entry.request}")
+            self._logger.debug(lambda: f"try to cancel request {entry.request if entry is not None else ''}")
             entry.future.cancel()
 
     @_logger.call
@@ -765,7 +765,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         e = self.registry.get_entry(message.method)
 
         if e is None or not callable(e.method):
-            self._logger.warning(f"Unknown method: {message.method}")
+            self._logger.warning(lambda: f"Unknown method: {message.method}")
             return
         try:
             params = self._convert_params(e.method, e.param_type, message.params)

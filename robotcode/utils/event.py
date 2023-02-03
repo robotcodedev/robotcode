@@ -79,7 +79,7 @@ class EventIterator(EventResultIteratorBase[_TCallable, _TResult]):
 
 class Event(EventResultIteratorBase[_TCallable, _TResult]):
     def __call__(self, *args: Any, **kwargs: Any) -> List[_TResult]:
-        return [a for a in self._notify(*args, **kwargs)]
+        return list(self._notify(*args, **kwargs))
 
 
 _TEvent = TypeVar("_TEvent")

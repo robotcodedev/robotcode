@@ -137,7 +137,8 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
-                self._logger.critical(f"Can't parse {source}: {e}")
+                ex = e
+                self._logger.critical(lambda: f"Can't parse {source}: {ex}")
                 return File(source=source)
 
         def my_get_model_v6(
@@ -149,7 +150,8 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
-                self._logger.critical(f"Can't parse {source}: {e}")
+                ex = e
+                self._logger.critical(lambda: f"Can't parse {source}: {ex}")
                 return File(source=source)
 
         my_get_model = my_get_model_v4 if get_robot_version() < (6, 0) else my_get_model_v6
@@ -216,7 +218,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                             start=Position(line=test.lineno - 1, character=0),
                             end=Position(line=test.lineno - 1, character=0),
                         ),
-                        tags=[t for t in test.tags],
+                        tags=list(test.tags),
                     )
                 )
 
@@ -284,7 +286,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                         if not p.exists():
                             yield str(p)
 
-                valid_paths = [i for i in normalize_paths(paths)]
+                valid_paths = list(normalize_paths(paths))
 
                 if get_robot_version() >= (6, 1):
                     builder = TestSuiteBuilder(
@@ -347,7 +349,8 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             self._logger.info("Tests discovery canceled")
             raise
         except BaseException as e:
-            self._logger.info(f"Failed to discover tests: {e}")
+            ex = e
+            self._logger.info(lambda: f"Failed to discover tests: {ex}")
             return [
                 TestItem(
                     type="error",
@@ -359,7 +362,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             ]
         finally:
             if not canceled:
-                self._logger.info(f"Tests discovery took {time.monotonic() - start}s")
+                self._logger.info(lambda: f"Tests discovery took {time.monotonic() - start}s")
 
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
     @threaded()

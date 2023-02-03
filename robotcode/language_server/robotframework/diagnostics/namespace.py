@@ -784,12 +784,12 @@ class Namespace:
             if not self._initialized:
 
                 if self._in_initialize:
-                    self._logger.critical(f"already initialized {self.document}")
+                    self._logger.critical(lambda: f"already initialized {self.document}")
 
                 self._in_initialize = True
 
                 try:
-                    self._logger.debug(f"ensure_initialized -> initialize {self.document}")
+                    self._logger.debug(lambda: f"ensure_initialized -> initialize {self.document}")
 
                     imports = self.get_imports()
 
@@ -1346,7 +1346,7 @@ class Namespace:
         finally:
             self._logger.debug(
                 lambda: "end import imports for "
-                + f"{self.document if top_level else source} in {time.monotonic() - current_time}s"
+                f"{self.document if top_level else source} in {time.monotonic() - current_time}s"
             )
 
     async def _import_default_libraries(self, variables: Optional[Dict[str, Any]] = None) -> None:
@@ -1826,9 +1826,7 @@ class KeywordFinder:
 
     def find_keywords(self, owner_name: str, name: str) -> List[Tuple[LibraryEntry, KeywordDoc]]:
         if self._all_keywords is None:
-            self._all_keywords = [
-                v for v in chain(self.namespace._libraries.values(), self.namespace._resources.values())
-            ]
+            self._all_keywords = list(chain(self.namespace._libraries.values(), self.namespace._resources.values()))
 
         if get_robot_version() >= (6, 0, 0):
             result: List[Tuple[LibraryEntry, KeywordDoc]] = []
@@ -1912,7 +1910,7 @@ class KeywordFinder:
 
     def _get_keyword_from_resource_files(self, name: str) -> Optional[KeywordDoc]:
         if self._resource_keywords is None:
-            self._resource_keywords = [v for v in chain(self.namespace._resources.values())]
+            self._resource_keywords = list(chain(self.namespace._resources.values()))
 
         if get_robot_version() >= (6, 0, 0):
             found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = []
@@ -1969,7 +1967,7 @@ class KeywordFinder:
 
     def _get_keyword_from_libraries(self, name: str) -> Optional[KeywordDoc]:
         if self._library_keywords is None:
-            self._library_keywords = [v for v in chain(self.namespace._libraries.values())]
+            self._library_keywords = list(chain(self.namespace._libraries.values()))
 
         if get_robot_version() >= (6, 0, 0):
             found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = []

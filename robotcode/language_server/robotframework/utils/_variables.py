@@ -29,7 +29,7 @@ class EnvironmentFinder:
         variable_not_found(name, self._get_candidates(), "Environment variable '%s' not found." % name)
 
     def _get_candidates(self) -> Mapping[str, str]:
-        candidates: Dict[str, str] = dict()
+        candidates: Dict[str, str] = {}
         candidates.update(self.env)
         return candidates
 

@@ -45,27 +45,25 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilitie
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect):
-            trigger_chars = [
-                k
-                for k in chain(
+            trigger_chars = list(
+                chain(
                     *[
                         cast(HasTriggerCharacters, e).__trigger_characters__
                         for e in self.collect
                         if isinstance(e, HasTriggerCharacters)
                     ]
                 )
-            ]
+            )
 
-            retrigger_chars = [
-                k
-                for k in chain(
+            retrigger_chars = list(
+                chain(
                     *[
                         cast(HasRetriggerCharacters, e).__retrigger_characters__
                         for e in self.collect
                         if isinstance(e, HasRetriggerCharacters)
                     ]
                 )
-            ]
+            )
 
             capabilities.signature_help_provider = SignatureHelpOptions(
                 trigger_characters=trigger_chars if trigger_chars else None,

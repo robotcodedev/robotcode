@@ -267,7 +267,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
     async def _workspace_will_create_files(
         self, files: List[FileCreate], *args: Any, **kwargs: Any
     ) -> Optional[WorkspaceEdit]:
-        results = await self.will_create_files(self, list(f.uri for f in files))
+        results = await self.will_create_files(self, [f.uri for f in files])
         if len(results) == 0:
             return None
 
@@ -283,31 +283,31 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
     @rpc_method(name="workspace/didCreateFiles", param_type=CreateFilesParams)
     @threaded()
     async def _workspace_did_create_files(self, files: List[FileCreate], *args: Any, **kwargs: Any) -> None:
-        await self.did_create_files(self, list(f.uri for f in files))
+        await self.did_create_files(self, [f.uri for f in files])
 
     @rpc_method(name="workspace/willRenameFiles", param_type=RenameFilesParams)
     @threaded()
     async def _workspace_will_rename_files(self, files: List[FileRename], *args: Any, **kwargs: Any) -> None:
-        await self.will_rename_files(self, list((f.old_uri, f.new_uri) for f in files))
+        await self.will_rename_files(self, [(f.old_uri, f.new_uri) for f in files])
 
         # TODO: return WorkspaceEdit
 
     @rpc_method(name="workspace/didRenameFiles", param_type=RenameFilesParams)
     @threaded()
     async def _workspace_did_rename_files(self, files: List[FileRename], *args: Any, **kwargs: Any) -> None:
-        await self.did_rename_files(self, list((f.old_uri, f.new_uri) for f in files))
+        await self.did_rename_files(self, [(f.old_uri, f.new_uri) for f in files])
 
     @rpc_method(name="workspace/willDeleteFiles", param_type=DeleteFilesParams)
     @threaded()
     async def _workspace_will_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
-        await self.will_delete_files(self, list(f.uri for f in files))
+        await self.will_delete_files(self, [f.uri for f in files])
 
         # TODO: return WorkspaceEdit
 
     @rpc_method(name="workspace/didDeleteFiles", param_type=DeleteFilesParams)
     @threaded()
     async def _workspace_did_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
-        await self.did_delete_files(self, list(f.uri for f in files))
+        await self.did_delete_files(self, [f.uri for f in files])
 
     async def get_configuration(
         self, section: Type[_TConfig], scope_uri: Union[str, Uri, None] = None, request: bool = True

@@ -556,7 +556,7 @@ class ImportsManager:
     def clear_cache(self) -> None:
         if self.cache_path.exists():
             shutil.rmtree(self.cache_path)
-            self._logger.debug(f"Cleared cache {self.cache_path}")
+            self._logger.debug(lambda: f"Cleared cache {self.cache_path}")
 
     @_logger.call
     async def get_command_line_variables(self) -> List[VariableDefinition]:
@@ -800,7 +800,10 @@ class ImportsManager:
                     or (p.matches(result.origin) if result.origin is not None else False)
                     for p in self.ignored_libraries_patters
                 ):
-                    self._logger.debug(f"Ignore library {result.name or ''} {result.origin or ''} for caching.")
+                    self._logger.debug(
+                        lambda: f"Ignore library {result.name or '' if result is not None else ''}"
+                        f" {result.origin or '' if result is not None else ''} for caching."
+                    )
                     return None, import_name
 
                 if result.origin is not None:
@@ -861,7 +864,10 @@ class ImportsManager:
                     or (p.matches(result.origin) if result.origin is not None else False)
                     for p in self.ignored_variables_patters
                 ):
-                    self._logger.debug(f"Ignore Variables {result.name or ''} {result.origin or ''} for caching.")
+                    self._logger.debug(
+                        lambda: f"Ignore Variables {result.name or '' if result is not None else ''}"
+                        f" {result.origin or '' if result is not None else ''} for caching."
+                    )
                     return None, import_name
 
                 if result.origin is not None:
@@ -1178,7 +1184,7 @@ class ImportsManager:
             keywords=[
                 KeywordDoc(
                     name=kw[0].name,
-                    args=list(KeywordArgumentDoc.from_robot(a) for a in kw[0].args),
+                    args=[KeywordArgumentDoc.from_robot(a) for a in kw[0].args],
                     doc=kw[0].doc,
                     tags=list(kw[0].tags),
                     source=kw[0].source,

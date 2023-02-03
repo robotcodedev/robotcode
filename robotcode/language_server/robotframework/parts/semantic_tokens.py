@@ -135,8 +135,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
-        parent.semantic_tokens.token_types += [e for e in RobotSemTokenTypes]
-        parent.semantic_tokens.token_modifiers += [e for e in RobotSemTokenModifiers]
+        parent.semantic_tokens.token_types += list(RobotSemTokenTypes)
+        parent.semantic_tokens.token_modifiers += list(RobotSemTokenModifiers)
 
         parent.semantic_tokens.collect_full.add(self.collect_full)
         # parent.semantic_tokens.collect_range.add(self.collect_range)

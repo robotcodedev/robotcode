@@ -52,7 +52,7 @@ def start_debugpy(end_point: Union[Tuple[str, int], int], wait_for_client: bool)
 
         real_port = find_free_port(end_point[1])
         if real_port != end_point[1]:
-            _logger.warning(f"start debugpy session on port {real_port}")
+            _logger.warning(lambda: f"start debugpy session on port {real_port}")
         debugpy.listen((end_point[0], real_port))
 
         if wait_for_client:

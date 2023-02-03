@@ -25,7 +25,7 @@ def iter_methods(
 def get_methods(
     instance_or_type: Any, predicate: Optional[Callable[[Callable[..., Any]], bool]] = None
 ) -> List[Callable[..., Any]]:
-    return [m for m in iter_methods(instance_or_type, predicate)]
+    return list(iter_methods(instance_or_type, predicate))
 
 
 _lambda_type = type(lambda: 0)
