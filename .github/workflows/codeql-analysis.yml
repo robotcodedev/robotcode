@@ -43,7 +43,7 @@ jobs:
       - name: Ensure latest hatch is installed
         run: python -m pip install --upgrade hatch
 
-      - name: install robotcode
+      - name: Create dev environment
         run: |
           hatch env create
           echo "CODEQL_PYTHON=$(hatch -q run which python)" >> $GITHUB_ENV
