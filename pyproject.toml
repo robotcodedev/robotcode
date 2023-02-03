@@ -263,12 +263,14 @@ select = [
   #"B",
   #"A"
   #"COM"
-  #"C4", TODO enable this
+  # "C4", # TODO enable this
   "DTZ",
   "T10",
   # "EM",
   "ISC",
   "G",
+  #"INP",
+  "PIE"
 ]
 
 
@@ -277,8 +279,6 @@ select = [
 
 
 [tool.mypy]
-# MyPy config
-# File reference here - http://mypy.readthedocs.io/en/latest/config_file.html#config-file
 python_version = 3.8
 
 strict = true

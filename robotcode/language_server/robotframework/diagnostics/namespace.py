@@ -529,13 +529,13 @@ class LibraryEntry:
 
 @dataclass
 class ResourceEntry(LibraryEntry):
-    imports: List[Import] = field(default_factory=lambda: [])
-    variables: List[VariableDefinition] = field(default_factory=lambda: [])
+    imports: List[Import] = field(default_factory=list)
+    variables: List[VariableDefinition] = field(default_factory=list)
 
 
 @dataclass
 class VariablesEntry(LibraryEntry):
-    variables: List[ImportedVariableDefinition] = field(default_factory=lambda: [])
+    variables: List[ImportedVariableDefinition] = field(default_factory=list)
 
 
 class DocumentType(enum.Enum):
