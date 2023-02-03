@@ -18,6 +18,9 @@ vscode-client
 
 
 # python
+build
+.ruff_cache
+.hatch
 .venv
 .flake8
 mypy.ini
@@ -51,3 +54,5 @@ scripts
 doc
 
 **/.robotcode_cache
+
+.pre-commit-config.yaml
