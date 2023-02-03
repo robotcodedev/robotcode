@@ -91,6 +91,12 @@ jobs:
         with:
           python-version: "3.8"
 
+      - name: Ensure latest pip is installed
+        run: python -m pip install --upgrade pip
+
+      - name: Ensure latest hatch is installed
+        run: python -m pip install --upgrade hatch
+
       - run: hatch run lint:style
         if: always()
 
