@@ -47,13 +47,13 @@ jobs:
 
       - name: Test Python Packages
         timeout-minutes: 5
-        run: hatch run test.${{ matrix.robot-version }}:test "--junitxml=test-results/python-${{ matrix.python-version }}-${{ matrix.robot-version }}/test-results.xml" "--html=test-results/python-${{ matrix.python-version }}-${{ matrix.robot-version }}//report.html" --self-contained-html
+        run: hatch run test.${{ matrix.robot-version }}:test "--junitxml=test-results/os-${{ matrix.os }}-py-${{ matrix.python-version }}-${{ matrix.robot-version }}/test-results.xml" "--html=test-results/os-${{ matrix.os }}-py-${{ matrix.python-version }}-${{ matrix.robot-version }}//report.html" --self-contained-html
 
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: test-results-python-${{ matrix.python-version }}-${{ matrix.robot-version }}
+          name: test-results-os-${{ matrix.os }}-py-${{ matrix.python-version }}-${{ matrix.robot-version }}
           path: test-results
 
   publish-test-results:
