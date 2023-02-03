@@ -138,12 +138,12 @@ def __default(o: Any) -> Any:
             )
             if value is not None or field.default == dataclasses.MISSING
         }
-    elif isinstance(o, enum.Enum):
+    if isinstance(o, enum.Enum):
         return o.value
-    elif isinstance(o, Set):
+    if isinstance(o, Set):
         return list(o)
-    else:
-        raise TypeError(f"Cant' get default value for {type(o)} with value {repr(o)}")
+
+    raise TypeError(f"Cant' get default value for {type(o)} with value {repr(o)}")
 
 
 def as_json(obj: Any, indent: Optional[bool] = None, compact: Optional[bool] = None) -> str:
@@ -176,8 +176,8 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
         if origin is Literal:
             if value in args:
                 return cast(_T, value)
-            else:
-                continue
+
+            continue
 
         if (
             t is Any
@@ -187,7 +187,7 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
         ):
             if isinstance(value, Mapping):
                 return cast(_T, {n: _from_dict_with_name(n, v, args[1] if args else None) for n, v in value.items()})
-            elif isinstance(value, Sequence) and args:
+            if isinstance(value, Sequence) and args:
                 return cast(_T, (origin or t)(from_dict(v, args) for v in value))  # type: ignore
 
             return cast(_T, value)

@@ -272,7 +272,9 @@ select = [
   #"INP",
   "PIE",
   # "T20",
-  "PT"
+  "PT",
+  "Q",
+  "RET"
 ]
 
 

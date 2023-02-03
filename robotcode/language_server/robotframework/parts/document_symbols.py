@@ -224,7 +224,7 @@ class _Visitor(AsyncVisitor):
 
             match = search_variable(name, ignore_errors=True)
             if not match.is_assign(allow_assign_mark=True):
-                return None
+                return
 
             if name.endswith("="):
                 name = name[:-1].rstrip()

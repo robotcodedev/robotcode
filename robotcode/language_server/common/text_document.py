@@ -185,11 +185,9 @@ class TextDocument:
     def __get_cache_reference(self, entry: Callable[..., Any], /, *, add_remove: bool = True) -> weakref.ref[Any]:
 
         if inspect.ismethod(entry):
-            reference: weakref.ref[Any] = weakref.WeakMethod(entry, self.__remove_cache_entry if add_remove else None)
-        else:
-            reference = weakref.ref(entry, self.__remove_cache_entry if add_remove else None)
+            return weakref.WeakMethod(entry, self.__remove_cache_entry if add_remove else None)
 
-        return reference
+        return weakref.ref(entry, self.__remove_cache_entry if add_remove else None)
 
     def get_cache_value(
         self,

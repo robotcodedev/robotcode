@@ -308,8 +308,8 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                                 target_selection_range=lib_entry.import_range,
                             )
                         ]
-                    else:
-                        return None
+
+                    return None
 
             if position in kw_range and keyword_doc is not None and keyword_doc.source:
                 return [
@@ -381,8 +381,8 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                                 target_selection_range=lib_entry.import_range,
                             )
                         ]
-                    else:
-                        return None
+
+                    return None
 
             if position in kw_range and keyword_doc is not None and keyword_doc.source:
                 return [
@@ -454,8 +454,8 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                                         target_selection_range=lib_entry.import_range,
                                     )
                                 ]
-                            else:
-                                return None
+
+                            return None
 
                     if keyword_doc.source and not keyword_doc.is_error_handler:
                         return [

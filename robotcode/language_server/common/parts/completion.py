@@ -116,12 +116,12 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 if len(result.items) == 0:
                     return None
                 return result
-            else:
-                result = list(chain(*[k for k in results if isinstance(k, list)]))
-                if len(result) == 0:
-                    return None
 
-                return result
+            result = list(chain(*[k for k in results if isinstance(k, list)]))
+            if len(result) == 0:
+                return None
+
+            return result
 
         return None
 

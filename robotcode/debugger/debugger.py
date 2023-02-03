@@ -440,8 +440,8 @@ class Debugger:
                 Breakpoint(id=id(v), source=Source(path=str(path)), verified=True, line=v.line)
                 for v in result.breakpoints
             ]
-        else:
-            self._logger.error("not supported breakpoint")
+
+        self._logger.error("not supported breakpoint")
 
         return []
 
@@ -452,7 +452,7 @@ class Debugger:
         if self.state == State.Stopped:
             return
 
-        elif self.requested_state == RequestedState.Pause:
+        if self.requested_state == RequestedState.Pause:
             self.state = State.Paused
             self.send_event(
                 self,
@@ -555,18 +555,18 @@ class Debugger:
                                 ),
                             )
                             return
-                        else:
-                            self.state = State.Paused
-                            self.send_event(
-                                self,
-                                StoppedEvent(
-                                    body=StoppedEventBody(
-                                        reason=StoppedReason.BREAKPOINT,
-                                        thread_id=threading.current_thread().ident,
-                                        hit_breakpoint_ids=[id(v) for v in breakpoints],
-                                    )
-                                ),
-                            )
+
+                        self.state = State.Paused
+                        self.send_event(
+                            self,
+                            StoppedEvent(
+                                body=StoppedEventBody(
+                                    reason=StoppedReason.BREAKPOINT,
+                                    thread_id=threading.current_thread().ident,
+                                    hit_breakpoint_ids=[id(v) for v in breakpoints],
+                                )
+                            ),
+                        )
 
     def process_end_state(self, status: str, filter_id: Set[str], description: str, text: Optional[str]) -> None:
         if (
@@ -940,8 +940,8 @@ class Debugger:
             ):
                 if self.is_windows_path(mapping.local_root):
                     return pathlib.PureWindowsPath(mapping.local_root, relative_path)
-                else:
-                    return pathlib.PurePath(mapping.local_root, relative_path)
+
+                return pathlib.PurePath(mapping.local_root, relative_path)
 
         return path
 
@@ -961,8 +961,8 @@ class Debugger:
         def source_from_entry(entry: StackFrameEntry) -> Optional[Source]:
             if entry.source is not None and entry.is_file:
                 return Source(path=str(self.map_path_to_client(entry.source)))
-            else:
-                return None
+
+            return None
 
         def yield_stack() -> Iterator[StackFrame]:
             for i, v in enumerate(itertools.islice(self.stack_frames, start_frame, levels)):

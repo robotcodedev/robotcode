@@ -138,13 +138,14 @@ class VariableMatcher:
 
         if isinstance(o, VariableMatcher):
             return o.normalized_name == self.normalized_name
-        elif isinstance(o, str):
+
+        if isinstance(o, str):
             match = search_variable(o, "$@&%", ignore_errors=True)
             base = match.base
             normalized = str(normalize(base))
             return self.normalized_name == normalized
-        else:
-            return False
+
+        return False
 
     def __hash__(self) -> int:
         return hash(self.name)
@@ -195,8 +196,8 @@ class VariableDefinition(SourceEntity):
     def name_range(self) -> Range:
         if self.name_token is not None:
             return range_from_token(self.name_token)
-        else:
-            return self.range
+
+        return self.range
 
     @property
     def range(self) -> Range:

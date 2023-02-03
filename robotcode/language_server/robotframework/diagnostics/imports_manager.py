@@ -915,7 +915,7 @@ class ImportsManager:
             result = name
 
         if is_library_by_path(result):
-            result = find_file_ex(result, base_dir, "Library")
+            return find_file_ex(result, base_dir, "Library")
 
         return result
 

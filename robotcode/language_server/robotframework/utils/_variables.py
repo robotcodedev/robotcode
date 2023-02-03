@@ -26,7 +26,7 @@ class EnvironmentFinder:
             return value
         if has_default:  # in case if '' is desired default value
             return default_value
-        variable_not_found(name, self._get_candidates(), "Environment variable '%s' not found." % name)
+        variable_not_found(name, self._get_candidates(), "Environment variable '%s' not found." % name)  # noqa: RET503
 
     def _get_candidates(self) -> Mapping[str, str]:
         candidates: Dict[str, str] = {}

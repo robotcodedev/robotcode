@@ -934,7 +934,7 @@ class CompletionCollector(ModelHelperMixin):
                     and (only_stars or value.startswith("*") or position.character == 0)
                 ):
                     return await self.create_headers_completion_items(r)
-                elif len(statement_node.tokens) > 1 and only_stars:
+                if len(statement_node.tokens) > 1 and only_stars:
                     r1 = range_from_token(statement_node.tokens[1])
                     ws = whitespace_at_begin_of_token(statement_node.tokens[1])
                     if ws > 0:
@@ -1596,8 +1596,8 @@ class CompletionCollector(ModelHelperMixin):
                     equal_index = (argument_token or token_at_position).value.index("=")
                     if completion_range.start.character + equal_index < position.character:
                         return None
-                    else:
-                        completion_range.end.character = completion_range.start.character + equal_index + 1
+
+                    completion_range.end.character = completion_range.start.character + equal_index + 1
                 else:
                     completion_range.end = position
 
@@ -1937,8 +1937,8 @@ class CompletionCollector(ModelHelperMixin):
                 equal_index = (argument_token or token_at_position).value.index("=")
                 if completion_range.start.character + equal_index < position.character:
                     return None
-                else:
-                    completion_range.end.character = completion_range.start.character + equal_index + 1
+
+                completion_range.end.character = completion_range.start.character + equal_index + 1
             else:
                 completion_range.end = position
 

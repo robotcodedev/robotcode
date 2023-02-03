@@ -180,7 +180,7 @@ class BlockVariableVisitor(Visitor):
 
     def visit(self, node: ast.AST) -> None:
         if self.position is None or self.position >= range_from_node(node).start:
-            return super().visit(node)
+            super().visit(node)
 
     def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
         try:
@@ -1716,27 +1716,27 @@ class KeywordFinder:
             if cached is not None:
                 self.diagnostics = cached[1]
                 return cached[0]
-            else:
-                try:
-                    result = self._find_keyword(name)
-                    if result is None:
-                        self.diagnostics.append(
-                            DiagnosticsEntry(
-                                f"No keyword with name {repr(name)} found.",
-                                DiagnosticSeverity.ERROR,
-                                "KeywordNotFoundError",
-                            )
+
+            try:
+                result = self._find_keyword(name)
+                if result is None:
+                    self.diagnostics.append(
+                        DiagnosticsEntry(
+                            f"No keyword with name {repr(name)} found.",
+                            DiagnosticSeverity.ERROR,
+                            "KeywordNotFoundError",
                         )
-                except KeywordError as e:
-                    if raise_keyword_error:
-                        raise
+                    )
+            except KeywordError as e:
+                if raise_keyword_error:
+                    raise
 
-                    result = None
-                    self.diagnostics.append(DiagnosticsEntry(str(e), DiagnosticSeverity.ERROR, "KeywordError"))
+                result = None
+                self.diagnostics.append(DiagnosticsEntry(str(e), DiagnosticSeverity.ERROR, "KeywordError"))
 
-                self._cache[(name, self.handle_bdd_style)] = (result, self.diagnostics)
+            self._cache[(name, self.handle_bdd_style)] = (result, self.diagnostics)
 
-                return result
+            return result
         except CancelSearchError:
             return None
 
@@ -1760,7 +1760,7 @@ class KeywordFinder:
             result = self._get_implicit_keyword(name)
 
         if not result and self.handle_bdd_style:
-            result = self._get_bdd_style_keyword(name)
+            return self._get_bdd_style_keyword(name)
 
         return result
 
@@ -1786,18 +1786,18 @@ class KeywordFinder:
                 return found[0][1]
 
             return None
-        else:
-            try:
-                return self.self_library_doc.keywords.get(name, None)
-            except KeywordError as e:
-                self.diagnostics.append(
-                    DiagnosticsEntry(
-                        str(e),
-                        DiagnosticSeverity.ERROR,
-                        "KeywordError",
-                    )
+
+        try:
+            return self.self_library_doc.keywords.get(name, None)
+        except KeywordError as e:
+            self.diagnostics.append(
+                DiagnosticsEntry(
+                    str(e),
+                    DiagnosticSeverity.ERROR,
+                    "KeywordError",
                 )
-                raise CancelSearchError() from e
+            )
+            raise CancelSearchError() from e
 
     def _yield_owner_and_kw_names(self, full_name: str) -> Iterator[Tuple[str, ...]]:
         tokens = full_name.split(".")
@@ -1834,14 +1834,14 @@ class KeywordFinder:
                 if eq(v.alias or v.name, owner_name):
                     result.extend((v, kw) for kw in v.library_doc.keywords.get_all(name))
             return result
-        else:
-            result = []
-            for v in self._all_keywords:
-                if eq(v.alias or v.name, owner_name):
-                    kw = v.library_doc.keywords.get(name, None)
-                    if kw is not None:
-                        result.append((v, kw))
-            return result
+
+        result = []
+        for v in self._all_keywords:
+            if eq(v.alias or v.name, owner_name):
+                kw = v.library_doc.keywords.get(name, None)
+                if kw is not None:
+                    result.append((v, kw))
+        return result
 
     def _create_multiple_keywords_found_message(
         self, name: str, found: Sequence[Tuple[Optional[LibraryEntry], KeywordDoc]], implicit: bool = True
@@ -1860,7 +1860,7 @@ class KeywordFinder:
     def _get_implicit_keyword(self, name: str) -> Optional[KeywordDoc]:
         result = self._get_keyword_from_resource_files(name)
         if not result:
-            result = self._get_keyword_from_libraries(name)
+            return self._get_keyword_from_libraries(name)
         return result
 
     def _prioritize_same_file_or_public(
@@ -2058,16 +2058,13 @@ class KeywordFinder:
                     return self._find_keyword(name[len(prefix) :])  # noqa: E203
             return None
 
-        else:
-            parts = name.split()
-            if len(parts) < 2:
-                return None
-            for index in range(1, len(parts)):
-                prefix = " ".join(parts[:index]).title()
-                if prefix.title() in (
-                    self.namespace.languages.bdd_prefixes
-                    if self.namespace.languages is not None
-                    else DEFAULT_BDD_PREFIXES
-                ):
-                    return self._find_keyword(" ".join(parts[index:]))
+        parts = name.split()
+        if len(parts) < 2:
             return None
+        for index in range(1, len(parts)):
+            prefix = " ".join(parts[:index]).title()
+            if prefix.title() in (
+                self.namespace.languages.bdd_prefixes if self.namespace.languages is not None else DEFAULT_BDD_PREFIXES
+            ):
+                return self._find_keyword(" ".join(parts[index:]))
+        return None

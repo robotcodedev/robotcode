@@ -30,5 +30,5 @@ def get_current_version_from_git() -> Version:
 def get_version() -> Version:
     if "npm_package_version" in os.environ:
         return Version(os.environ["npm_package_version"])
-    else:
-        return get_current_version_from_git()
+
+    return get_current_version_from_git()

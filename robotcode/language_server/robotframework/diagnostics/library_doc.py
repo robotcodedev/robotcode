@@ -165,8 +165,8 @@ class KeywordMatcher:
         if isinstance(o, KeywordMatcher):
             if not self.embedded_arguments:
                 return self.normalized_name == o.normalized_name
-            else:
-                o = o.name
+
+            o = o.name
 
         if not isinstance(o, str):
             return False
@@ -174,8 +174,8 @@ class KeywordMatcher:
         if self.embedded_arguments:
             if get_robot_version() >= (6, 0):
                 return self.embedded_arguments.match(o) is not None
-            else:
-                return self.embedded_arguments.name.match(o) is not None
+
+            return self.embedded_arguments.name.match(o) is not None
 
         return self.normalized_name == str(normalize(o))
 
@@ -372,8 +372,8 @@ class KeywordDoc(SourceEntity):
     def name_range(self) -> Range:
         if self.name_token is not None:
             return range_from_token(self.name_token)
-        else:
-            return Range.invalid()
+
+        return Range.invalid()
 
     @single_call
     def normalized_tags(self) -> List[str]:
@@ -390,21 +390,21 @@ class KeywordDoc(SourceEntity):
     def range(self) -> Range:
         if self.name_token is not None:
             return range_from_token(self.name_token)
-        else:
-            return Range(
-                start=Position(
-                    line=self.line_no - 1 if self.line_no > 0 else 0,
-                    character=self.col_offset if self.col_offset >= 0 else 0,
-                ),
-                end=Position(
-                    line=self.end_line_no - 1 if self.end_line_no >= 0 else self.line_no if self.line_no > 0 else 0,
-                    character=self.end_col_offset
-                    if self.end_col_offset >= 0
-                    else self.col_offset
-                    if self.col_offset >= 0
-                    else 0,
-                ),
-            )
+
+        return Range(
+            start=Position(
+                line=self.line_no - 1 if self.line_no > 0 else 0,
+                character=self.col_offset if self.col_offset >= 0 else 0,
+            ),
+            end=Position(
+                line=self.end_line_no - 1 if self.end_line_no >= 0 else self.line_no if self.line_no > 0 else 0,
+                character=self.end_col_offset
+                if self.end_col_offset >= 0
+                else self.col_offset
+                if self.col_offset >= 0
+                else 0,
+            ),
+        )
 
     def to_markdown(self, add_signature: bool = True, header_level: int = 2, add_type: bool = True) -> str:
         result = ""
@@ -1494,15 +1494,15 @@ def find_variables(
 ) -> str:
     if get_robot_version() >= (5, 0):
         return _find_variables_internal(name, working_dir, base_dir, command_line_variables, variables)[0]
-    else:
-        return find_file(
-            name,
-            working_dir,
-            base_dir,
-            command_line_variables,
-            variables,
-            file_type="Variables",
-        )
+
+    return find_file(
+        name,
+        working_dir,
+        base_dir,
+        command_line_variables,
+        variables,
+        file_type="Variables",
+    )
 
 
 def get_variables_doc(

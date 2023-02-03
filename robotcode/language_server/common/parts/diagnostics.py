@@ -449,25 +449,26 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                 if isinstance(result_any, BaseException):
                     if not isinstance(result_any, asyncio.CancelledError):
                         self._logger.exception(result_any, exc_info=result_any)
-                elif result_any is None:
                     continue
-                else:
-                    result = cast(DiagnosticsResult, result_any)
+                if result_any is None:
+                    continue
 
-                    data.id = str(uuid.uuid4())
-                    data.entries[result.key] = result.diagnostics
-                    if result.diagnostics is not None:
-                        collected_keys.append(result.key)
+                result = cast(DiagnosticsResult, result_any)
 
-                    if data.entries and send_diagnostics:
-                        self.parent.send_notification(
-                            "textDocument/publishDiagnostics",
-                            PublishDiagnosticsParams(
-                                uri=document.document_uri,
-                                version=document._version,
-                                diagnostics=list(itertools.chain(*(i for i in data.entries.values() if i is not None))),
-                            ),
-                        )
+                data.id = str(uuid.uuid4())
+                data.entries[result.key] = result.diagnostics
+                if result.diagnostics is not None:
+                    collected_keys.append(result.key)
+
+                if data.entries and send_diagnostics:
+                    self.parent.send_notification(
+                        "textDocument/publishDiagnostics",
+                        PublishDiagnosticsParams(
+                            uri=document.document_uri,
+                            version=document._version,
+                            diagnostics=list(itertools.chain(*(i for i in data.entries.values() if i is not None))),
+                        ),
+                    )
 
         except asyncio.CancelledError:
             self._logger.debug(lambda: f"_get_diagnostics cancelled for {document}")

@@ -55,7 +55,7 @@ class _Visitor(AsyncVisitor):
         kw_node = cast(KeywordName, node)
         name_token = cast(RobotToken, kw_node.get_token(RobotToken.KEYWORD_NAME))
         if not name_token:
-            return None
+            return
 
         self.result.append(
             CodeLens(

@@ -71,8 +71,8 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
     def __contains__(self, obj: Any) -> bool:
         if inspect.ismethod(obj):
             return weakref.WeakMethod(obj) in self._listeners
-        else:
-            return weakref.ref(obj) in self._listeners
+
+        return weakref.ref(obj) in self._listeners
 
     def __len__(self) -> int:
         return len(self._listeners)

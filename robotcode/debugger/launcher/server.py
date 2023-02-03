@@ -314,7 +314,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
     @rpc_method(name="terminate", param_type=TerminateArguments)
     async def _terminate(self, arguments: Optional[TerminateArguments] = None, *args: Any, **kwargs: Any) -> None:
         if self.client.connected:
-            return await self.client.protocol.send_request_async(TerminateRequest(arguments=arguments))
+            await self.client.protocol.send_request_async(TerminateRequest(arguments=arguments))
         else:
             self.send_event(Event("terminateRequested"))
             await self.send_event_async(TerminatedEvent())

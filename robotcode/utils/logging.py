@@ -192,7 +192,7 @@ class LoggingDescriptor:
         **kwargs: Any,
     ) -> None:
         if self.is_enabled_for(level) and condition is not None and condition() or condition is None:
-            return self.logger.log(level, msg() if callable(msg) else msg, *args, stacklevel=stacklevel, **kwargs)
+            self.logger.log(level, msg() if callable(msg) else msg, *args, stacklevel=stacklevel, **kwargs)
 
     def debug(
         self,
@@ -268,16 +268,16 @@ class LoggingDescriptor:
                 stacklevel=stacklevel,
                 **kwargs,
             )
-        else:
-            return self.log(
-                logging.ERROR if level is None else level,
-                msg,
-                condition,
-                *args,
-                exc_info=exc_info,
-                stacklevel=stacklevel,
-                **kwargs,
-            )
+
+        return self.log(
+            logging.ERROR if level is None else level,
+            msg,
+            condition,
+            *args,
+            exc_info=exc_info,
+            stacklevel=stacklevel,
+            **kwargs,
+        )
 
     def critical(
         self,
@@ -399,12 +399,12 @@ class LoggingDescriptor:
                             if self.__owner or self.__name is None
                             else unwrapped_func.__func__.__name__
                         )
-                    else:
-                        return (
-                            str(unwrapped_func.__qualname__)
-                            if self.__owner is None or self.__name
-                            else str(unwrapped_func.__name__)
-                        )
+
+                    return (
+                        str(unwrapped_func.__qualname__)
+                        if self.__owner is None or self.__name
+                        else str(unwrapped_func.__name__)
+                    )
 
                 def _log(
                     message: Callable[[], str],

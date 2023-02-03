@@ -127,7 +127,7 @@ class Uri(Mapping[str, str]):
             value = path
 
         if _IS_WIN:
-            value = value.replace("/", "\\")
+            return value.replace("/", "\\")
 
         return value
 

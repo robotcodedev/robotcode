@@ -82,8 +82,8 @@ class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         if len(locations) > 0 and len(location_links) == 0:
             if len(locations) == 1:
                 return locations[0]
-            else:
-                return locations
+
+            return locations
 
         if len(locations) > 0 and len(location_links) > 0:
             self._logger.warning("can't mix Locations and LocationLinks")

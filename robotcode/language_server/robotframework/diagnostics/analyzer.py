@@ -553,7 +553,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             )
 
             return argument_tokens[1:]
-        elif keyword_doc.is_run_keyword_with_condition() and len(argument_tokens) > (
+
+        if keyword_doc.is_run_keyword_with_condition() and len(argument_tokens) > (
             cond_count := keyword_doc.run_keyword_condition_count()
         ):
             await self._analyze_keyword_call(
@@ -565,7 +566,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 ignore_errors_if_contains_variables=True,
             )
             return argument_tokens[cond_count + 1 :]
-        elif keyword_doc.is_run_keywords():
+
+        if keyword_doc.is_run_keywords():
             has_and = False
             while argument_tokens:
 
@@ -601,7 +603,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
             return []
 
-        elif keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1:
+        if keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1:
 
             def skip_args() -> List[Token]:
                 nonlocal argument_tokens
@@ -657,7 +659,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         argument_tokens = await self._analyse_run_keyword(result, node, argument_tokens)
 
                     break
-                elif argument_tokens[0].value == "ELSE IF" and len(argument_tokens) > 2:
+
+                if argument_tokens[0].value == "ELSE IF" and len(argument_tokens) > 2:
 
                     kwt = argument_tokens[2]
                     argument_tokens = argument_tokens[3:]

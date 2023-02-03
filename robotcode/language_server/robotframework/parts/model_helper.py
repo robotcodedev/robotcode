@@ -55,9 +55,9 @@ class ModelHelperMixin:
             result = await cls.get_keyworddoc_and_token_from_position(
                 unescape(argument_tokens[0].value), argument_tokens[0], argument_tokens[1:], namespace, position
             )
-
             return result, argument_tokens[1:]
-        elif keyword_doc.is_run_keyword_with_condition() and len(argument_tokens) > (
+
+        if keyword_doc.is_run_keyword_with_condition() and len(argument_tokens) > (
             cond_count := keyword_doc.run_keyword_condition_count()
         ):
             result = await cls.get_keyworddoc_and_token_from_position(
@@ -70,7 +70,7 @@ class ModelHelperMixin:
 
             return result, argument_tokens[cond_count + 1 :]
 
-        elif keyword_doc.is_run_keywords():
+        if keyword_doc.is_run_keywords():
             has_and = False
             while argument_tokens:
                 t = argument_tokens[0]
@@ -100,7 +100,8 @@ class ModelHelperMixin:
                     argument_tokens = []
 
             return None, []
-        elif keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1:
+
+        if keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1:
 
             def skip_args() -> None:
                 nonlocal argument_tokens
@@ -149,7 +150,7 @@ class ModelHelperMixin:
                     skip_args()
 
                     break
-                elif argument_tokens[0].value == "ELSE IF" and len(argument_tokens) > 2:
+                if argument_tokens[0].value == "ELSE IF" and len(argument_tokens) > 2:
                     inner_keyword_doc = await namespace.find_keyword(unescape(argument_tokens[2].value))
 
                     if position.is_in_range(range_from_token(argument_tokens[2])):
@@ -189,7 +190,8 @@ class ModelHelperMixin:
 
         if position.is_in_range(range_from_token(keyword_token)):
             return keyword_doc, keyword_token
-        elif analyse_run_keywords:
+
+        if analyse_run_keywords:
             return (
                 await cls.get_run_keyword_keyworddoc_and_token_from_position(
                     keyword_doc, argument_tokens, namespace, position
@@ -549,47 +551,47 @@ class ModelHelperMixin:
                     token.error,
                 )
             return token
-        else:
-            parts = token.value.split()
-            if len(parts) < 2:
-                return token
 
-            for index in range(1, len(parts)):
-                prefix = " ".join(parts[:index]).title()
-                if prefix in (
-                    namespace.languages.bdd_prefixes if namespace.languages is not None else DEFAULT_BDD_PREFIXES
-                ):
-                    bdd_len = len(prefix)
-                    token = RobotToken(
-                        token.type,
-                        token.value[bdd_len + 1 :],
-                        token.lineno,
-                        token.col_offset + bdd_len + 1,
-                        token.error,
-                    )
-                    break
-
+        parts = token.value.split()
+        if len(parts) < 2:
             return token
+
+        for index in range(1, len(parts)):
+            prefix = " ".join(parts[:index]).title()
+            if prefix in (
+                namespace.languages.bdd_prefixes if namespace.languages is not None else DEFAULT_BDD_PREFIXES
+            ):
+                bdd_len = len(prefix)
+                token = RobotToken(
+                    token.type,
+                    token.value[bdd_len + 1 :],
+                    token.lineno,
+                    token.col_offset + bdd_len + 1,
+                    token.error,
+                )
+                break
+
+        return token
 
     @classmethod
     def is_bdd_token(cls, namespace: Namespace, token: Token) -> bool:
         if get_robot_version() < (6, 0):
             bdd_match = cls.BDD_TOKEN.match(token.value)
             return bool(bdd_match)
-        else:
-            parts = token.value.split()
-            if len(parts) < 2:
-                return False
 
-            for index in range(1, len(parts)):
-                prefix = " ".join(parts[:index]).title()
-
-                if prefix.title() in (
-                    namespace.languages.bdd_prefixes if namespace.languages is not None else DEFAULT_BDD_PREFIXES
-                ):
-                    return True
-
+        parts = token.value.split()
+        if len(parts) < 2:
             return False
+
+        for index in range(1, len(parts)):
+            prefix = " ".join(parts[:index]).title()
+
+            if prefix.title() in (
+                namespace.languages.bdd_prefixes if namespace.languages is not None else DEFAULT_BDD_PREFIXES
+            ):
+                return True
+
+        return False
 
     @classmethod
     def get_keyword_definition_at_token(cls, library_doc: LibraryDoc, token: Token) -> Optional[KeywordDoc]:

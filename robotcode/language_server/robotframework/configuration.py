@@ -46,7 +46,7 @@ class RobotConfig(ConfigBase):
     def get_rpa_mode(self) -> Optional[bool]:
         if self.mode == RpaMode.RPA:
             return True
-        elif self.mode == RpaMode.NORPA:
+        if self.mode == RpaMode.NORPA:
             return False
         return None
 

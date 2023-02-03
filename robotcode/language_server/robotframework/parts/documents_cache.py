@@ -124,12 +124,12 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         if path.name == "__init__.robot":
             return DocumentType.INIT
-        elif suffix == ".robot":
+        if suffix == ".robot":
             return DocumentType.GENERAL
-        elif suffix == ".resource":
+        if suffix == ".resource":
             return DocumentType.RESOURCE
-        else:
-            return DocumentType.UNKNOWN
+
+        return DocumentType.UNKNOWN
 
     async def get_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
         if data_only:
@@ -140,23 +140,23 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         document_type = await self.get_document_type(document)
         if document_type == DocumentType.INIT:
             return await self.get_init_tokens(document, True)
-        elif document_type == DocumentType.GENERAL:
+        if document_type == DocumentType.GENERAL:
             return await self.get_general_tokens(document, True)
-        elif document_type == DocumentType.RESOURCE:
+        if document_type == DocumentType.RESOURCE:
             return await self.get_resource_tokens(document, True)
-        else:
-            raise UnknownFileTypeError(str(document.uri))
+
+        raise UnknownFileTypeError(str(document.uri))
 
     async def __get_tokens(self, document: TextDocument) -> List[Token]:
         document_type = await self.get_document_type(document)
         if document_type == DocumentType.INIT:
             return await self.get_init_tokens(document)
-        elif document_type == DocumentType.GENERAL:
+        if document_type == DocumentType.GENERAL:
             return await self.get_general_tokens(document)
-        elif document_type == DocumentType.RESOURCE:
+        if document_type == DocumentType.RESOURCE:
             return await self.get_resource_tokens(document)
-        else:
-            raise UnknownFileTypeError(str(document.uri))
+
+        raise UnknownFileTypeError(str(document.uri))
 
     async def get_general_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
         if data_only:
@@ -170,8 +170,8 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         if get_robot_version() >= (6, 0):
             return robot.api.get_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables, lang=lang)
-        else:
-            return robot.api.get_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
+
+        return robot.api.get_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
 
     def __internal_get_resource_tokens(
         self,
@@ -186,8 +186,8 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
             return robot.api.get_resource_tokens(
                 source, data_only=data_only, tokenize_variables=tokenize_variables, lang=lang
             )
-        else:
-            return robot.api.get_resource_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
+
+        return robot.api.get_resource_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
 
     def __internal_get_init_tokens(
         self, source: Any, data_only: bool = False, tokenize_variables: bool = False, lang: Any = None
@@ -198,8 +198,8 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
             return robot.api.get_init_tokens(
                 source, data_only=data_only, tokenize_variables=tokenize_variables, lang=lang
             )
-        else:
-            return robot.api.get_init_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
+
+        return robot.api.get_init_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
 
     async def __get_general_tokens_data_only(self, document: TextDocument) -> List[Token]:
         lang = await self.get_workspace_languages(document)
@@ -285,8 +285,8 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
             return await self.get_general_model(document, data_only)
         if document_type == DocumentType.RESOURCE:
             return await self.get_resource_model(document, data_only)
-        else:
-            raise UnknownFileTypeError(f"Unknown file type '{document.uri}'.")
+
+        raise UnknownFileTypeError(f"Unknown file type '{document.uri}'.")
 
     def __get_model(self, document: TextDocument, tokens: Iterable[Any], document_type: DocumentType) -> ast.AST:
         from robot.parsing.lexer import Token

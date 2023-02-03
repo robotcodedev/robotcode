@@ -123,7 +123,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         def inner(d: Dict[Any, Any]) -> ProtocolMessage:
             result = from_dict(d, (Request, Response, Event))
             if isinstance(result, Response) and not result.success:
-                result = from_dict(d, ErrorResponse)
+                return from_dict(d, ErrorResponse)
             return result
 
         if isinstance(data, list):
@@ -174,8 +174,8 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         if param_type is None:
             if isinstance(params, Mapping):
                 return [], dict(**params)
-            else:
-                return [params], {}
+
+            return [params], {}
 
         converted_params = from_dict(params, param_type)
 

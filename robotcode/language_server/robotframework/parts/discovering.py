@@ -329,19 +329,19 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                         ],
                     )
                 ]
+
+            if get_robot_version() >= (6, 1):
+                builder = TestSuiteBuilder(
+                    included_suites=suites if suites else None,
+                    rpa=rpa_mode,
+                    lang=languages,
+                    parsers=parsers,
+                )
+            elif get_robot_version() >= (6, 0):
+                builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode, lang=languages)
             else:
-                if get_robot_version() >= (6, 1):
-                    builder = TestSuiteBuilder(
-                        included_suites=suites if suites else None,
-                        rpa=rpa_mode,
-                        lang=languages,
-                        parsers=parsers,
-                    )
-                elif get_robot_version() >= (6, 0):
-                    builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode, lang=languages)
-                else:
-                    builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
-                return [await generate(builder.build(str(workspace_path)))]
+                builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
+            return [await generate(builder.build(str(workspace_path)))]
         except (SystemExit, KeyboardInterrupt):
             raise
         except asyncio.CancelledError:

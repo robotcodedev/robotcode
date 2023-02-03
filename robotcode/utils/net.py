@@ -29,6 +29,6 @@ def find_free_port(start: Optional[int] = None, end: Optional[int] = None) -> in
     except BaseException:
         if port and end > port:
             return find_free_port(port + 1, end)
-        elif start and start > 0:
+        if start and start > 0:
             return find_free_port(None)
         raise

@@ -173,7 +173,7 @@ class LinkFormatter:
 
         link, content = [t.strip() for t in text.split("|", 1)]
         if self._is_image(content):
-            content = self._get_image(content, link)
+            return self._get_image(content, link)
 
         return content
 

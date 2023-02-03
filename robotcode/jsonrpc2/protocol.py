@@ -645,8 +645,8 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         if params_type is None:
             if isinstance(params, Mapping):
                 return [], dict(**params)
-            else:
-                return [params], {}
+
+            return [params], {}
 
         # try to convert the dict to correct type
         converted_params = from_dict(params, params_type)
@@ -701,7 +701,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 f"Unknown method: {message.method}",
                 id=message.id,
             )
-            return None
+            return
 
         params = self._convert_params(e.method, e.param_type, message.params)
 
