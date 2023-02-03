@@ -283,7 +283,7 @@ class RpcRegistry:
                     if r is not None:
                         registries.insert(0, r)
                 for r in registries:
-                    for k in r.__class_parts.keys():
+                    for k in r.__class_parts:
                         getattr(self.__owner, k)
 
                 self.__methods = get_methods(self.__owner)

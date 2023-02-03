@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import contextlib
 import functools
 import logging
 import logging.config
@@ -32,10 +33,8 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
     if str(top) not in sys.path:
         sys.path.append(str(top))
 
-    try:
+    with contextlib.suppress(ValueError):
         sys.path.remove(str(parent))
-    except ValueError:  # Already removed
-        pass
 
     __package__ = "robotcode.debugger"
 

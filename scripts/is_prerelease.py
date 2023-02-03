@@ -4,10 +4,7 @@ from scripts.tools import get_version
 def main() -> None:
 
     version = get_version()
-    if version.prerelease:
-        preview = 1
-    else:
-        preview = 0
+    preview = 1 if version.prerelease else 0
 
     print(preview)
 

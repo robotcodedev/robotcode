@@ -22,10 +22,7 @@ def find_file_ex(
     from robot.errors import DataError
 
     path = Path(path)
-    if path.is_absolute():
-        ret = _find_absolute_path(path)
-    else:
-        ret = _find_relative_path(path, basedir)
+    ret = _find_absolute_path(path) if path.is_absolute() else _find_relative_path(path, basedir)
     if ret:
         return str(ret)
     default = file_type or "File"

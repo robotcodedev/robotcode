@@ -489,19 +489,18 @@ class Debugger:
                 ),
             )
             self.requested_state = RequestedState.Nothing
-        elif self.requested_state == RequestedState.StepOut:
-            if len(self.full_stack_frames) <= self.stop_stack_len:
-                self.state = State.Paused
-                self.send_event(
-                    self,
-                    StoppedEvent(
-                        body=StoppedEventBody(
-                            reason=StoppedReason.STEP,
-                            thread_id=threading.current_thread().ident,
-                        )
-                    ),
-                )
-                self.requested_state = RequestedState.Nothing
+        elif self.requested_state == RequestedState.StepOut and len(self.full_stack_frames) <= self.stop_stack_len:
+            self.state = State.Paused
+            self.send_event(
+                self,
+                StoppedEvent(
+                    body=StoppedEventBody(
+                        reason=StoppedReason.STEP,
+                        thread_id=threading.current_thread().ident,
+                    )
+                ),
+            )
+            self.requested_state = RequestedState.Nothing
 
         if source is not None:
             source_path = self.map_path_to_client(str(Path(source).absolute()))

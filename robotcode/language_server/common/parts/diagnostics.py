@@ -353,10 +353,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                             progress.begin()
                             path = document.uri.to_path()
                             folder = self.parent.workspace.get_workspace_folder(document.uri)
-                            if folder is None:
-                                name = path
-                            else:
-                                name = path.relative_to(folder.uri.to_path())
+                            name = path if folder is None else path.relative_to(folder.uri.to_path())
 
                             progress.report(f"Analyse {name}", current=i + 1)
                         elif analysis_mode == AnalysisProgressMode.SIMPLE:

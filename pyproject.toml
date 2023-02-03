@@ -274,7 +274,12 @@ select = [
   # "T20",
   "PT",
   "Q",
-  "RET"
+  "RET",
+  # "SIM", # TODO enable this
+  #"TID",
+  #"TCH",
+  #"ARG",
+  #"PTH", # TODO enable this
 ]
 
 

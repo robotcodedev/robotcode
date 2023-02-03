@@ -1668,11 +1668,7 @@ class Namespace:
     def __should_ignore(lines: List[int], range: Range) -> bool:
         import builtins
 
-        for line_no in builtins.range(range.start.line, range.end.line + 1):
-            if line_no in lines:
-                return True
-
-        return False
+        return any(line_no in lines for line_no in builtins.range(range.start.line, range.end.line + 1))
 
 
 class DiagnosticsEntry(NamedTuple):
