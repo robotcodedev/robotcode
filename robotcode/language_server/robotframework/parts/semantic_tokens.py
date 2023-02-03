@@ -9,7 +9,7 @@ from functools import reduce
 from typing import (
     TYPE_CHECKING,
     Any,
-    AsyncGenerator,
+    AsyncIterator,
     Dict,
     FrozenSet,
     List,
@@ -263,7 +263,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         node: ast.AST,
         col_offset: Optional[int] = None,
         length: Optional[int] = None,
-    ) -> AsyncGenerator[SemTokenInfo, None]:
+    ) -> AsyncIterator[SemTokenInfo]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import (
             Arguments,
@@ -485,7 +485,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         builtin_library_doc: Optional[LibraryDoc],
         libraries_matchers: Dict[KeywordMatcher, LibraryEntry],
         resources_matchers: Dict[KeywordMatcher, ResourceEntry],
-    ) -> AsyncGenerator[SemTokenInfo, None]:
+    ) -> AsyncIterator[SemTokenInfo]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Variable
         from robot.utils.escaping import split_from_equals
@@ -533,11 +533,11 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         kw_token: Token,
         arguments: List[Token],
         node: ast.AST,
-    ) -> AsyncGenerator[Tuple[Token, ast.AST], None]:
+    ) -> AsyncIterator[Tuple[Token, ast.AST]]:
         from robot.parsing.lexer import Token as RobotToken
         from robot.utils.escaping import unescape
 
-        async def skip_non_data_tokens() -> AsyncGenerator[Tuple[Token, ast.AST], None]:
+        async def skip_non_data_tokens() -> AsyncIterator[Tuple[Token, ast.AST]]:
             nonlocal arguments
             while arguments and arguments[0] and arguments[0].type in RobotToken.NON_DATA_TOKENS:
 
@@ -627,7 +627,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                         yield e
             elif kw_doc.is_run_keyword_if() and len(arguments) > 0:
 
-                async def generate_run_kw_if() -> AsyncGenerator[Tuple[Token, ast.AST], None]:
+                async def generate_run_kw_if() -> AsyncIterator[Tuple[Token, ast.AST]]:
                     nonlocal arguments
 
                     yield arguments[0], node,
@@ -711,7 +711,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         arguments: List[Token],
         node: ast.AST,
         kw_doc: Optional[KeywordDoc] = None,
-    ) -> AsyncGenerator[Tuple[Token, ast.AST], None]:
+    ) -> AsyncIterator[Tuple[Token, ast.AST]]:
         from robot.parsing.lexer import Token as RobotToken
         from robot.utils.escaping import split_from_equals
 
@@ -758,7 +758,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         last_line = 0
         last_col = 0
 
-        async def get_tokens() -> AsyncGenerator[Tuple[Token, ast.AST], None]:
+        async def get_tokens() -> AsyncIterator[Tuple[Token, ast.AST]]:
             async for node in async_ast.iter_nodes(model):
                 if isinstance(node, HasTokens):
                     if isinstance(node, LibraryImport):

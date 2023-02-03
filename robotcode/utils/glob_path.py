@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Any, Generator, Iterable, Sequence, Union, cast
+from typing import Any, Iterable, Iterator, Sequence, Union, cast
 
 
 def _glob_pattern_to_re(pattern: str) -> str:
@@ -89,7 +89,7 @@ def iter_files(
     *,
     absolute: bool = False,
     _base_path: Union[Path, str, os.PathLike[str], None] = None,
-) -> Generator[Path, None, None]:
+) -> Iterator[Path]:
     if not isinstance(path, Path):
         path = Path(path or ".")
 

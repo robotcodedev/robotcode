@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ast
-from typing import TYPE_CHECKING, Any, Generator, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Iterator, List, Optional, Tuple
 
 from ....utils.async_itertools import async_dropwhile, async_takewhile
 from ....utils.logging import LoggingDescriptor
@@ -53,7 +53,7 @@ class RobotInlineValueProtocolPart(RobotLanguageServerProtocolPart, ModelHelperM
 
         nodes = await get_nodes_at_position(model, context.stopped_location.start)
 
-        def get_tokens() -> Generator[Tuple[Token, ast.AST], None, None]:
+        def get_tokens() -> Iterator[Tuple[Token, ast.AST]]:
             for n in iter_nodes(model):
                 r = range_from_node(n)
                 if (r.start in real_range or r.end in real_range) and isinstance(n, HasTokens):

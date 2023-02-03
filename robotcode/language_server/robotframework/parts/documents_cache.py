@@ -7,8 +7,8 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Generator,
     Iterable,
+    Iterator,
     List,
     Optional,
     Tuple,
@@ -292,7 +292,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         from robot.parsing.lexer import Token
         from robot.parsing.parser.parser import _get_model
 
-        def get_tokens(source: str, data_only: bool = False, lang: Any = None) -> Generator[Token, None, None]:
+        def get_tokens(source: str, data_only: bool = False, lang: Any = None) -> Iterator[Token]:
             for t in tokens:
                 check_canceled_sync()
 

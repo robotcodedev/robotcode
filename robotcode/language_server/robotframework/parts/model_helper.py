@@ -7,9 +7,9 @@ from io import StringIO
 from tokenize import TokenError, generate_tokens
 from typing import (
     Any,
-    AsyncGenerator,
+    AsyncIterator,
     Dict,
-    Generator,
+    Iterator,
     List,
     Optional,
     Set,
@@ -242,7 +242,7 @@ class ModelHelperMixin:
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
         return_not_found: bool = False,
-    ) -> AsyncGenerator[Tuple[Token, VariableDefinition], Any]:
+    ) -> AsyncIterator[Tuple[Token, VariableDefinition]]:
         from robot.api.parsing import Token as RobotToken
 
         variable_started = False
@@ -330,7 +330,7 @@ class ModelHelperMixin:
         ignore_errors: bool = False,
         *,
         extra_types: Optional[Set[str]] = None,
-    ) -> Generator[Token, Any, Any]:
+    ) -> Iterator[Token]:
         from robot.api.parsing import Token as RobotToken
 
         for t in tokenize_variables(token, identifiers, ignore_errors, extra_types=extra_types):
@@ -352,7 +352,7 @@ class ModelHelperMixin:
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
         return_not_found: bool = False,
-    ) -> AsyncGenerator[Tuple[Token, VariableDefinition], Any]:
+    ) -> AsyncIterator[Tuple[Token, VariableDefinition]]:
         from robot.api.parsing import Token as RobotToken
         from robot.variables.search import contains_variable, search_variable
 
@@ -366,7 +366,7 @@ class ModelHelperMixin:
 
         async def iter_token(
             to: Token, ignore_errors: bool = False
-        ) -> AsyncGenerator[Union[Token, Tuple[Token, VariableDefinition]], Any]:
+        ) -> AsyncIterator[Union[Token, Tuple[Token, VariableDefinition]]]:
             for sub_token in cls._tokenize_variables(to, ignore_errors=ignore_errors):
                 if sub_token.type == RobotToken.VARIABLE:
                     base = sub_token.value[2:-1]

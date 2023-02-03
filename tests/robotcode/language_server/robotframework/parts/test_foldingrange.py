@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Generator, Iterable, Tuple, Union
+from typing import Any, Iterable, Iterator, Tuple, Union
 
 import pytest
 import yaml
@@ -24,7 +24,7 @@ from ..tools import (
 
 def prepend_protocol_data(
     protocol: Iterable[Any], data: Iterable[Union[Tuple[Any, Path, GeneratedTestData], Any]]
-) -> Generator[Union[Tuple[Any, Path, GeneratedTestData], Any], None, None]:
+) -> Iterator[Union[Tuple[Any, Path, GeneratedTestData], Any]]:
     for p in protocol:
         for d in data:
             yield (p, *d)

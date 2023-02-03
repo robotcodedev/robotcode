@@ -1,11 +1,11 @@
 import asyncio
-from typing import Generator
+from typing import Iterator
 
 import pytest
 
 
 @pytest.fixture(scope="session")
-def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
+def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
     import asyncio.runners
 
     loop = asyncio.new_event_loop()

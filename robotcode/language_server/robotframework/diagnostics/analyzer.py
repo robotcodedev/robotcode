@@ -6,7 +6,7 @@ import itertools
 import os
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union, cast
 
 from ....utils.uri import Uri
 from ...common.lsp_types import (
@@ -91,7 +91,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         return AnalyzerResult(self._diagnostics, self._keyword_references, self._variable_references)
 
-    def yield_argument_name_and_rest(self, node: ast.AST, token: Token) -> Generator[Token, None, None]:
+    def yield_argument_name_and_rest(self, node: ast.AST, token: Token) -> Iterator[Token]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Arguments
 

@@ -2,7 +2,7 @@ import dataclasses
 import re
 from enum import Enum
 from pathlib import Path
-from typing import Any, Generator, Tuple, Union
+from typing import Any, Iterator, Tuple, Union
 
 import pytest
 import yaml
@@ -22,7 +22,7 @@ class GeneratedTestData:
 
 def generate_tests_from_source_document(
     path: Path,
-) -> Generator[Union[Tuple[Path, GeneratedTestData], Any], None, None]:
+) -> Iterator[Union[Tuple[Path, GeneratedTestData], Any]]:
 
     current_line = 0
     for line, text in enumerate(path.read_text().splitlines()):

@@ -4,7 +4,6 @@ import ast
 from typing import (
     Any,
     AsyncIterator,
-    Generator,
     Iterator,
     List,
     Optional,
@@ -19,7 +18,7 @@ from ...common.lsp_types import Position, Range
 from . import async_ast
 
 
-def iter_nodes(node: ast.AST) -> Generator[ast.AST, None, None]:
+def iter_nodes(node: ast.AST) -> Iterator[ast.AST]:
     for _field, value in ast.iter_fields(node):
         if isinstance(value, list):
             for item in value:
@@ -220,13 +219,13 @@ async def get_node_at_position(node: ast.AST, position: Position, include_end: b
     return result_nodes[-1]
 
 
-def _tokenize_no_variables(token: Token) -> Generator[Token, None, None]:
+def _tokenize_no_variables(token: Token) -> Iterator[Token]:
     yield token
 
 
 def tokenize_variables(
     token: Token, identifiers: str = "$@&%", ignore_errors: bool = False, *, extra_types: Optional[Set[str]] = None
-) -> Generator[Token, Any, Any]:
+) -> Iterator[Token]:
     from robot.api.parsing import Token as RobotToken
     from robot.variables import VariableIterator
 
@@ -246,7 +245,7 @@ def tokenize_variables(
     return _tokenize_variables(token, variables)
 
 
-def _tokenize_variables(token: Token, variables: Any) -> Generator[Token, Any, Any]:
+def _tokenize_variables(token: Token, variables: Any) -> Iterator[Token]:
     from robot.api.parsing import Token as RobotToken
 
     lineno = token.lineno

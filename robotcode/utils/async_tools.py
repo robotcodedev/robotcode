@@ -14,7 +14,6 @@ from concurrent.futures import ThreadPoolExecutor
 from types import TracebackType
 from typing import (
     Any,
-    AsyncGenerator,
     AsyncIterator,
     Awaitable,
     Callable,
@@ -183,7 +182,7 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
         callback_filter: Optional[Callable[[_TCallable], bool]] = None,
         threaded: Optional[bool] = True,
         **kwargs: Any,
-    ) -> AsyncGenerator[Union[_TResult, BaseException], None]:
+    ) -> AsyncIterator[Union[_TResult, BaseException]]:
         def _done(f: asyncio.Future[_TResult]) -> None:
             if result_callback is not None:
                 try:
@@ -222,7 +221,7 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
 
 
 class AsyncTaskingEventIterator(AsyncTaskingEventResultIteratorBase[_TCallable, _TResult]):
-    def __call__(self, *args: Any, **kwargs: Any) -> AsyncGenerator[Union[_TResult, BaseException], None]:
+    def __call__(self, *args: Any, **kwargs: Any) -> AsyncIterator[Union[_TResult, BaseException]]:
         return self._notify(*args, **kwargs)
 
 

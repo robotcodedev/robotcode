@@ -1,10 +1,10 @@
 import ast
-from typing import Any, AsyncGenerator, Callable, Generator, Optional, Type, cast
+from typing import Any, AsyncIterator, Callable, Iterator, Optional, Type, cast
 
 __all__ = ["iter_fields", "iter_child_nodes", "AsyncVisitor"]
 
 
-def iter_fields(node: ast.AST) -> Generator[Any, None, None]:
+def iter_fields(node: ast.AST) -> Iterator[Any]:
     """
     Yield a tuple of ``(fieldname, value)`` for each field in ``node._fields``
     that is present on *node*.
@@ -16,7 +16,7 @@ def iter_fields(node: ast.AST) -> Generator[Any, None, None]:
             pass
 
 
-def iter_child_nodes(node: ast.AST) -> Generator[ast.AST, None, None]:
+def iter_child_nodes(node: ast.AST) -> Iterator[ast.AST]:
     """
     Yield all direct child nodes of *node*, that is, all fields that are nodes
     and all items of fields that are lists of nodes.
@@ -30,7 +30,7 @@ def iter_child_nodes(node: ast.AST) -> Generator[ast.AST, None, None]:
                     yield item
 
 
-async def iter_nodes(node: ast.AST) -> AsyncGenerator[ast.AST, None]:
+async def iter_nodes(node: ast.AST) -> AsyncIterator[ast.AST]:
     for _name, value in iter_fields(node):
         if isinstance(value, list):
             for item in value:

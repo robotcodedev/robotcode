@@ -1,6 +1,6 @@
 import dataclasses
 from pathlib import Path
-from typing import Any, AsyncGenerator, cast
+from typing import Any, AsyncIterator, cast
 
 import pytest
 import pytest_asyncio
@@ -30,7 +30,7 @@ from tests.robotcode.language_server.robotframework.tools import generate_test_i
 
 
 @pytest_asyncio.fixture(scope="package", ids=generate_test_id)
-async def protocol(request: Any) -> AsyncGenerator[RobotLanguageServerProtocol, None]:
+async def protocol(request: Any) -> AsyncIterator[RobotLanguageServerProtocol]:
     root_path = Path(Path(__file__).resolve().parent, "data")
 
     server = RobotLanguageServer()
@@ -80,7 +80,7 @@ async def protocol(request: Any) -> AsyncGenerator[RobotLanguageServerProtocol, 
 
 @pytest_asyncio.fixture(scope="module")
 @pytest.mark.usefixtures("event_loop")
-async def test_document(request: Any) -> AsyncGenerator[TextDocument, None]:
+async def test_document(request: Any) -> AsyncIterator[TextDocument]:
     data_path = Path(request.param)
     data = data_path.read_text()
 

@@ -8,7 +8,7 @@ import os
 from typing import (
     TYPE_CHECKING,
     Any,
-    AsyncGenerator,
+    AsyncIterator,
     Awaitable,
     Callable,
     Dict,
@@ -242,7 +242,7 @@ class CompletionCollector(ModelHelperMixin):
         self.namespace = namespace
         self.config = config
 
-    async def _find_methods(self, cls: Type[Any]) -> AsyncGenerator[_CompleteMethod, None]:
+    async def _find_methods(self, cls: Type[Any]) -> AsyncIterator[_CompleteMethod]:
         if cls is ast.AST:
             return
 
@@ -266,7 +266,7 @@ class CompletionCollector(ModelHelperMixin):
 
         result_nodes.reverse()
 
-        async def iter_results() -> AsyncGenerator[List[CompletionItem], None]:
+        async def iter_results() -> AsyncIterator[List[CompletionItem]]:
             for result_node in result_nodes:
                 async for method in self._find_methods(type(result_node)):
                     r = await method(result_node, result_nodes, position, context)

@@ -14,10 +14,10 @@ from itertools import chain
 from pathlib import Path
 from typing import (
     Any,
-    AsyncGenerator,
+    AsyncIterator,
     Dict,
-    Generator,
     Iterable,
+    Iterator,
     List,
     NamedTuple,
     Optional,
@@ -920,7 +920,7 @@ class Namespace:
         nodes: Optional[List[ast.AST]] = None,
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
-    ) -> AsyncGenerator[Tuple[VariableMatcher, VariableDefinition], None]:
+    ) -> AsyncIterator[Tuple[VariableMatcher, VariableDefinition]]:
         from robot.parsing.model.blocks import Keyword, TestCase
         from robot.parsing.model.statements import Arguments
 
@@ -1494,7 +1494,7 @@ class Namespace:
             return self._imported_keywords
 
     @_logger.call
-    async def iter_all_keywords(self) -> AsyncGenerator[KeywordDoc, None]:
+    async def iter_all_keywords(self) -> AsyncIterator[KeywordDoc]:
         import itertools
 
         libdoc = await self.get_library_doc()
@@ -1799,7 +1799,7 @@ class KeywordFinder:
                 )
                 raise CancelSearchError() from e
 
-    def _yield_owner_and_kw_names(self, full_name: str) -> Generator[Tuple[str, ...], None, None]:
+    def _yield_owner_and_kw_names(self, full_name: str) -> Iterator[Tuple[str, ...]]:
         tokens = full_name.split(".")
         for i in range(1, len(tokens)):
             yield ".".join(tokens[:i]), ".".join(tokens[i:])

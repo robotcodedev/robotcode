@@ -15,7 +15,7 @@ from typing import (
     ClassVar,
     Deque,
     Dict,
-    Generator,
+    Iterator,
     List,
     Literal,
     NamedTuple,
@@ -964,7 +964,7 @@ class Debugger:
             else:
                 return None
 
-        def yield_stack() -> Generator[StackFrame, None, None]:
+        def yield_stack() -> Iterator[StackFrame]:
             for i, v in enumerate(itertools.islice(self.stack_frames, start_frame, levels)):
                 if v.stack_frames:
                     yield StackFrame(
