@@ -10,6 +10,7 @@ from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
+from robotcode.utils.async_tools import run_coroutine_in_thread
 
 from ..tools import (
     GeneratedTestData,
@@ -33,8 +34,8 @@ async def test(
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-    result = await protocol.robot_hover.collect(
-        protocol.hover, test_document, Position(line=data.line, character=data.character)
+    result = await run_coroutine_in_thread(
+        protocol.robot_hover.collect, protocol.hover, test_document, Position(line=data.line, character=data.character)
     )
 
     def split(hover: Optional[Hover]) -> Optional[Hover]:
