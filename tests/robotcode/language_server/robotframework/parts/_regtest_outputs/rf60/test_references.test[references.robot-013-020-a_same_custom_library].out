@@ -1,0 +1,77 @@
+data: !GeneratedTestData
+  character: 20
+  line: 13
+  name: a same custom library
+result:
+- !Location
+  range:
+    end:
+      character: 24
+      line: 8
+    start:
+      character: 16
+      line: 8
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 9
+    start:
+      character: 16
+      line: 9
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 22
+      line: 1
+    start:
+      character: 11
+      line: 1
+  uri: tests/external_libray.robot
+- !Location
+  range:
+    end:
+      character: 43
+      line: 11
+    start:
+      character: 18
+      line: 11
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 26
+      line: 3
+    start:
+      character: 18
+      line: 3
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 26
+      line: 4
+    start:
+      character: 18
+      line: 4
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 11
+    start:
+      character: 16
+      line: 11
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 13
+    start:
+      character: 16
+      line: 13
+  uri: tests/references.robot

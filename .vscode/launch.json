@@ -61,7 +61,7 @@
 			"args": [
 				//"tests/robotcode/language_server/robotframework/parts/test_foldingrange.py"
 				//"tests/robotcode/language_server/robotframework/parts/test_references.py"
-				"tests/robotcode/language_server/robotframework/parts/test_goto.py"
+				"./tests/robotcode/language_server/robotframework/parts/test_discovering.py::test_workspace_discovery"
 			],
 			"console": "integratedTerminal",
 			"justMyCode": false,

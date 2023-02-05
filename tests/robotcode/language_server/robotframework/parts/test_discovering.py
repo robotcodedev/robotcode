@@ -3,18 +3,19 @@ from pathlib import Path
 
 import pytest
 import yaml
-from pytest_regtest import RegTestFixture
 
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
 from robotcode.utils.async_tools import run_coroutine_in_thread
 
+from .pytest_regtestex import RegTestFixtureEx
+
 
 @pytest.mark.usefixtures("protocol")
 @pytest.mark.asyncio()
 async def test_workspace_discovery(
-    regtest: RegTestFixture,
+    regtest: RegTestFixtureEx,
     protocol: RobotLanguageServerProtocol,
 ) -> None:
     from robotcode.language_server.robotframework.parts.discovering import TestItem

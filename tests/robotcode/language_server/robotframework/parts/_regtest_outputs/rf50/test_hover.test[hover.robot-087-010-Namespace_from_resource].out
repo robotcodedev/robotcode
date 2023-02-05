@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 10
+  line: 87
+  name: Namespace from resource
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '### Resource *firstresource*'
+  range:
+    end:
+      character: 17
+      line: 87
+    start:
+      character: 4
+      line: 87

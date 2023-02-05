@@ -1,0 +1,23 @@
+data: !GeneratedTestData
+  character: 15
+  line: 84
+  name: argument usage
+result:
+- !DocumentHighlight
+  kind: &id001 !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 35
+      line: 78
+    start:
+      character: 30
+      line: 78
+- !DocumentHighlight
+  kind: *id001
+  range:
+    end:
+      character: 18
+      line: 84
+    start:
+      character: 13
+      line: 84

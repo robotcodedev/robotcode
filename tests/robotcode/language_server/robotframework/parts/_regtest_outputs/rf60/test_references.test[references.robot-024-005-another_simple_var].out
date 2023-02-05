@@ -1,0 +1,32 @@
+data: !GeneratedTestData
+  character: 5
+  line: 24
+  name: another simple var
+result:
+- !Location
+  range:
+    end:
+      character: 45
+      line: 13
+    start:
+      character: 38
+      line: 13
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 9
+      line: 24
+    start:
+      character: 2
+      line: 24
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 44
+      line: 62
+    start:
+      character: 37
+      line: 62
+  uri: tests/references.robot

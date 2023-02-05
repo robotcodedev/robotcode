@@ -28,6 +28,8 @@ from robotcode.language_server.robotframework.server import RobotLanguageServer
 from robotcode.utils.dataclasses import as_dict
 from tests.robotcode.language_server.robotframework.tools import generate_test_id
 
+from .pytest_regtestex import RegTestFixtureEx
+
 
 @pytest_asyncio.fixture(scope="package", ids=generate_test_id)
 async def protocol(request: Any) -> AsyncIterator[RobotLanguageServerProtocol]:
@@ -91,3 +93,10 @@ async def test_document(request: Any) -> AsyncIterator[TextDocument]:
         yield document
     finally:
         del document
+
+
+@pytest.fixture()
+def regtest(request: Any) -> RegTestFixtureEx:
+    item = request.node
+
+    return RegTestFixtureEx(request, item.nodeid)

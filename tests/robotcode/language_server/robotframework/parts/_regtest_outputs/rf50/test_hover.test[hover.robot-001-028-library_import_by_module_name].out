@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 28
+  line: 1
+  name: library import by module name
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '### Library *Collections*'
+  range:
+    end:
+      character: 29
+      line: 1
+    start:
+      character: 18
+      line: 1

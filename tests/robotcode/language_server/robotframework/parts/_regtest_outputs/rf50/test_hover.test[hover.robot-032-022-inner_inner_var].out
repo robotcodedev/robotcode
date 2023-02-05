@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 22
+  line: 32
+  name: inner inner var
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: (variable) ${D}
+  range:
+    end:
+      character: 23
+      line: 32
+    start:
+      character: 22
+      line: 32
