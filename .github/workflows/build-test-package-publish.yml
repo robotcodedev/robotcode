@@ -6,6 +6,10 @@ on:
       - main
     tags:
       - "v*"
+    paths-ignore:
+      - '.devcontainer/**'
+      - '.github/**'
+      - '!.github/workflows/**'
 
   pull_request:
     branches:
