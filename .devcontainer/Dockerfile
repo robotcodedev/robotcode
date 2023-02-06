@@ -1,42 +1,45 @@
-FROM ubuntu:latest
-
-ARG DEBIAN_FRONTEND=noninteractive
-ENV TZ=Europe/Berlin
+FROM	 archlinux:latest
 
 # Update the repositories
-RUN apt update --yes
+RUN	 pacman -Syy
 
-RUN apt install --yes --no-install-recommends locales
+RUN /bin/sh -c echo '[multilib]' >> /etc/pacman.conf && \
+    pacman --noconfirm -Syyu && \
+    pacman --noconfirm -S base-devel git git-lfs && \
+    useradd -m -r -s /bin/bash aur && \
+    passwd -d aur && \
+    echo 'aur ALL=(ALL) ALL' > /etc/sudoers.d/aur && \
+    mkdir -p /home/aur/.gnupg && \
+    echo 'standard-resolver' > /home/aur/.gnupg/dirmngr.conf && \
+    chown -R aur:aur /home/aur && \
+    mkdir /build && \
+    chown -R aur:aur /build && \
+    cd /build && \
+    sudo -u aur git clone --depth 1 https://aur.archlinux.org/yay.git && \
+    cd yay && \
+    sudo -u aur makepkg --noconfirm -si
 
-RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
-    locale-gen
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8
+RUN sudo -u aur yay -S --needed --noconfirm zsh easy-zsh-config
 
+RUN sed -i -r "s/^(PATH_OF_THE_THEME=).*/\1\/usr\/share\/oh-my-posh\/themes\/stelbent\.minimal\.omp\.json/" /etc/skel/.zshrc
 
-RUN apt install --yes --no-install-recommends curl make build-essential \
-        libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev \
-        wget curl llvm libncursesw5-dev xz-utils tk-dev libxml2-dev \
-        libxmlsec1-dev libffi-dev liblzma-dev pipx git less nano
+RUN sudo -u aur yay -S --needed --noconfirm python python-pip python-setuptools python-pipenv python-pipx nodejs npm npm-check-updates
 
-RUN curl -fsSL https://deb.nodesource.com/setup_19.x | bash - && \
-        apt install -y nodejs
+RUN echo '' >> ~/.zshrc \
+    && echo 'if [ -d "$HOME/.local/bin" ] ; then' >> ~/.zshrc \
+    && echo '    PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc \
+    && echo 'fi' >> ~/.zshrc
+
+RUN sudo -u aur yay --cleanafter --removemake --save && \
+    pacman -Qtdq | xargs -r pacman --noconfirm -Rcns && \
+    rm -rf /home/aur/.cache && \
+    rm -rf /build
+
+RUN sudo -u aur yay -S --needed --noconfirm python38 python39 python311
+
+RUN useradd -l -u 33333 -G wheel -md /home/vscode -s /bin/zsh -p vscode vscode
+USER vscode
 
 RUN pipx install hatch
 
-RUN curl https://pyenv.run | bash
-
-
-RUN echo 'if [ -d "$HOME/.local/bin" ] ; then' >> ~/.profile
-RUN echo '    PATH="$HOME/.local/bin:$PATH"' >> ~/.profile
-RUN echo 'fi' >> ~/.profile
-
-RUN echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.profile
-RUN echo 'command -v pyenv >/dev/null || export PATH="$PATH:$PYENV_ROOT/bin"' >> ~/.profile
-RUN echo 'eval "$(pyenv init -)"' >> ~/.profile
-
-
-RUN . ~/.profile && pyenv install 3.8.16
-RUN . ~/.profile && pyenv install 3.11.1
-RUN . ~/.profile && pyenv global 3.11.1
+ENV SHELL=/usr/bin/zsh
