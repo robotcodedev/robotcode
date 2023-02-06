@@ -21,5 +21,16 @@
   // "customizations": {},
 
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-je+-containers-non-root.
-  "remoteUser": "vscode"
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "tamasfe.even-better-toml"
+      ]
+    }
+  }
 }
