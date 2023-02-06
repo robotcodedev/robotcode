@@ -31,7 +31,7 @@ RUN sudo -u aur yay -S --needed --noconfirm zsh easy-zsh-config
 RUN echo '' >> /etc/skel/.zshrc \
     && sed -i -r "s/^(PATH_OF_THE_THEME=).*/\1\/usr\/share\/oh-my-posh\/themes\/stelbent\.minimal\.omp\.json/" /etc/skel/.zshrc
 
-RUN sudo -u aur yay -S --needed --noconfirm python python-pip python-setuptools python-pipenv python-pipx nodejs npm npm-check-updates
+RUN sudo -u aur yay -S --needed --noconfirm openssh python python-pip python-setuptools python-pipenv python-pipx nodejs npm npm-check-updates
 
 # configure python
 RUN sudo -u aur yay -S --needed --noconfirm python38 python39 python311
