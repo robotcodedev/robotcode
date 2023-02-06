@@ -19,24 +19,29 @@ RUN /bin/sh -c echo '[multilib]' >> /etc/pacman.conf && \
     cd yay && \
     sudo -u aur makepkg --noconfirm -si
 
-RUN sudo -u aur yay -S --needed --noconfirm zsh easy-zsh-config
-
-RUN sed -i -r "s/^(PATH_OF_THE_THEME=).*/\1\/usr\/share\/oh-my-posh\/themes\/stelbent\.minimal\.omp\.json/" /etc/skel/.zshrc
-
-RUN sudo -u aur yay -S --needed --noconfirm python python-pip python-setuptools python-pipenv python-pipx nodejs npm npm-check-updates
-
-RUN echo '' >> ~/.zshrc \
-    && echo 'if [ -d "$HOME/.local/bin" ] ; then' >> ~/.zshrc \
-    && echo '    PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc \
-    && echo 'fi' >> ~/.zshrc
-
+# install yay
 RUN sudo -u aur yay --cleanafter --removemake --save && \
     pacman -Qtdq | xargs -r pacman --noconfirm -Rcns && \
     rm -rf /home/aur/.cache && \
     rm -rf /build
 
+# configure zsh
+RUN sudo -u aur yay -S --needed --noconfirm zsh easy-zsh-config
+
+RUN echo '' >> /etc/skel/.zshrc \
+    && sed -i -r "s/^(PATH_OF_THE_THEME=).*/\1\/usr\/share\/oh-my-posh\/themes\/stelbent\.minimal\.omp\.json/" /etc/skel/.zshrc
+
+RUN sudo -u aur yay -S --needed --noconfirm python python-pip python-setuptools python-pipenv python-pipx nodejs npm npm-check-updates
+
+# configure python
 RUN sudo -u aur yay -S --needed --noconfirm python38 python39 python311
 
+RUN echo '' >> /etc/skel/.zshrc \
+    && echo 'if [ -d "$HOME/.local/bin" ] ; then' >> /etc/skel/.zshrc \
+    && echo '    PATH="$HOME/.local/bin:$PATH"' >> /etc/skel/.zshrc \
+    && echo 'fi' >> /etc/skel/.zshrc
+
+# create vscode user
 RUN useradd -l -u 33333 -G wheel -md /home/vscode -s /bin/zsh -p vscode vscode
 USER vscode
 
