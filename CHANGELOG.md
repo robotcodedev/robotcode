@@ -4,6 +4,11 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.25.2-beta.1 (2023-02-07)
+### Documentation
+* Add python badges to README ([`c0ec329`](https://github.com/d-biehl/robotcode/commit/c0ec3290b80714ff73528082a3fd2825f1c01f59))
+* Add some badges to readme and reorder the chapters ([`22120f1`](https://github.com/d-biehl/robotcode/commit/22120f16e973f61b02f04a47c29fbe6d1b5e2283))
+
 ## v0.25.1 (2023-01-24)
 ### Fix
 * **vscode:** In long test runs suites with failed tests are still marked as running even though they are already finished ([`942addf`](https://github.com/d-biehl/robotcode/commit/942addf005878bab9983603cd85429283eee4c6e))
