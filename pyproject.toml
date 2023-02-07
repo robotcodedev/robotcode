@@ -174,8 +174,8 @@ all = ["style", "typing"]
 version_variable = ["robotcode/__version__.py:__version__"]
 version_pattern = ['package.json:"version": "{version}"']
 branch = "main"
-upload_to_pypi = false
 upload_to_release = false
+upload_to_repository = false
 build_command = "pip install hatch && hatch build"
 
 [tool.black]
