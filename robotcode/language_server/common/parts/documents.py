@@ -66,7 +66,6 @@ class CantReadDocumentError(Exception):
 
 
 class TextDocumentProtocolPart(LanguageServerProtocolPart):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -215,7 +214,6 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
         language_id: Optional[str] = None,
         version: Optional[int] = None,
     ) -> TextDocument:
-
         return TextDocument(
             document_uri=document_uri,
             language_id=language_id,
@@ -230,7 +228,6 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
         text: str,
         version: Optional[int] = None,
     ) -> TextDocument:
-
         async with self._lock:
             document = await self._create_document(
                 document_uri=document_uri, language_id=language_id, text=text, version=version

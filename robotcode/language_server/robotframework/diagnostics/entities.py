@@ -18,7 +18,6 @@ def single_call(func: _F) -> _F:
     name = f"__single_result_{func.__name__}__"
 
     def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
-
         result = self.__dict__.get(name, _NOT_SET)
         if result is _NOT_SET:
             result = func(self, *args, **kwargs)

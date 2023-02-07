@@ -126,7 +126,6 @@ class VariablesVisitor(Visitor):
         name = name_token.value
 
         if name is not None:
-
             match = search_variable(name, ignore_errors=True)
             if not match.is_assign(allow_assign_mark=True):
                 return
@@ -171,7 +170,6 @@ class BlockVariableVisitor(Visitor):
         self.current_kw_doc: Optional[KeywordDoc] = None
 
     def get(self, model: ast.AST) -> List[VariableDefinition]:
-
         self._results = {}
 
         self.visit(model)
@@ -199,7 +197,6 @@ class BlockVariableVisitor(Visitor):
         name_token = cast(Token, n.get_token(RobotToken.KEYWORD_NAME))
 
         if name_token is not None and name_token.value:
-
             keyword = ModelHelperMixin.get_keyword_definition_at_token(self.library_doc, name_token)
             self.current_kw_doc = keyword
 
@@ -208,7 +205,6 @@ class BlockVariableVisitor(Visitor):
                 tokenize_variables(name_token, identifiers="$", ignore_errors=True),
             ):
                 if variable_token.value:
-
                     match = search_variable(variable_token.value, "$", ignore_errors=True)
                     if match.base is None:
                         continue
@@ -782,7 +778,6 @@ class Namespace:
 
         async with self._initialize_lock:
             if not self._initialized:
-
                 if self._in_initialize:
                     self._logger.critical(lambda: f"already initialized {self.document}")
 
@@ -979,7 +974,6 @@ class Namespace:
         skip_commandline_variables: bool = False,
         ignore_error: bool = False,
     ) -> Optional[VariableDefinition]:
-
         await self.ensure_initialized()
 
         if name[:2] == "%{" and name[-1] == "}":
@@ -1093,7 +1087,6 @@ class Namespace:
                             )
 
                 elif isinstance(value, VariablesImport):
-
                     if value.name is None:
                         raise NameSpaceError("Variables setting requires value.")
 
@@ -1186,7 +1179,6 @@ class Namespace:
         current_time = time.monotonic()
         self._logger.debug(lambda: f"start imports for {self.document if top_level else source}")
         try:
-
             for imp in imports:
                 if variables is None:
                     variables = await self.get_resolvable_variables()
@@ -1388,7 +1380,6 @@ class Namespace:
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> LibraryEntry:
-
         library_doc = await self.imports_manager.get_libdoc_for_library_import(
             name,
             args,
@@ -1509,7 +1500,6 @@ class Namespace:
     async def get_keywords(self) -> List[KeywordDoc]:
         async with self._keywords_lock:
             if self._keywords is None:
-
                 current_time = time.monotonic()
                 self._logger.debug("start collecting keywords")
                 try:
@@ -1619,7 +1609,6 @@ class Namespace:
 
     async def get_finder(self) -> KeywordFinder:
         if self._finder is None:
-
             self._finder = await self.create_finder()
         return self._finder
 
@@ -1644,11 +1633,9 @@ class Namespace:
         result = []
         lines = document.get_lines()
         for line_no, line in enumerate(lines):
-
             comment = EXTRACT_COMMENT_PATTERN.match(line)
             if comment and comment.group("comment"):
                 for match in ROBOTCODE_PATTERN.finditer(comment.group("comment")):
-
                     if match.group("rule") == "ignore":
                         result.append(line_no)
 
@@ -1862,7 +1849,6 @@ class KeywordFinder:
     def _prioritize_same_file_or_public(
         self, entries: List[Tuple[Optional[LibraryEntry], KeywordDoc]]
     ) -> List[Tuple[Optional[LibraryEntry], KeywordDoc]]:
-
         matches = [h for h in entries if h[1].source == self.namespace.source]
         if matches:
             return matches
@@ -1874,7 +1860,6 @@ class KeywordFinder:
     def _select_best_matches(
         self, entries: List[Tuple[Optional[LibraryEntry], KeywordDoc]]
     ) -> List[Tuple[Optional[LibraryEntry], KeywordDoc]]:
-
         normal = [hand for hand in entries if not hand[1].is_embedded]
         if normal:
             return normal
@@ -1953,7 +1938,6 @@ class KeywordFinder:
     def _get_keyword_based_on_search_order(
         self, entries: List[Tuple[Optional[LibraryEntry], KeywordDoc]]
     ) -> List[Tuple[Optional[LibraryEntry], KeywordDoc]]:
-
         for libname in self.namespace.search_order:
             for e in entries:
                 if e[0] is not None and eq(libname, e[0].alias or e[0].name):

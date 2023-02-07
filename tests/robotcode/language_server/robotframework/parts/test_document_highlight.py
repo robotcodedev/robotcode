@@ -33,7 +33,6 @@ async def test(
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-
     result = result = await run_coroutine_in_thread(
         protocol.robot_document_highlight.collect,
         protocol.robot_document_highlight,

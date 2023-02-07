@@ -129,7 +129,6 @@ class LoggingDescriptor:
             returned_logger = None
 
             if self.__func is not None:
-
                 if isinstance(self.__func, staticmethod):
                     returned_logger = self.__func.__func__()  # type: ignore
                 else:
@@ -358,7 +357,6 @@ class LoggingDescriptor:
         timed: bool = False,
         **kwargs: Any,
     ) -> Callable[[_F], _F]:
-
         if level is None:
             level = type(self)._call_tracing_default_level
 
@@ -381,7 +379,6 @@ class LoggingDescriptor:
 
             @functools.wraps(func)
             def _wrapper(*wrapper_args: Any, **wrapper_kwargs: Any) -> Any:
-
                 if isinstance(unwrapped_func, staticmethod):
                     real_args = wrapper_args[1:]
                     real_func = unwrapped_func.__func__

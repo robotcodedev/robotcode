@@ -371,7 +371,6 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
     async def _workspace_did_change_workspace_folders(
         self, event: WorkspaceFoldersChangeEvent, *args: Any, **kwargs: Any
     ) -> None:
-
         async with self._workspace_folders_lock:
             to_remove: List[WorkspaceFolder] = []
             for removed in event.removed:
@@ -411,7 +410,6 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         callback: Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
         watchers: List[Union[FileWatcher, str, Tuple[str, Optional[WatchKind]]]],
     ) -> FileWatcherEntry:
-
         async with self._file_watchers_lock:
             _watchers = [
                 e if isinstance(e, FileWatcher) else FileWatcher(*e) if isinstance(e, tuple) else FileWatcher(e)

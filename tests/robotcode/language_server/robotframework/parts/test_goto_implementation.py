@@ -58,7 +58,6 @@ async def test_implementation(
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-
     result = await run_coroutine_in_thread(
         protocol.robot_goto.collect_implementation,
         protocol.robot_goto,

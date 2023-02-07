@@ -131,7 +131,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         name = name_token.value
 
         if name is not None:
-
             match = search_variable(name, ignore_errors=True)
             if not match.is_assign(allow_assign_mark=True):
                 return
@@ -295,7 +294,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         related_information: Optional[List[DiagnosticRelatedInformation]] = None,
         data: Optional[Any] = None,
     ) -> None:
-
         if self._should_ignore(range):
             return
 
@@ -339,7 +337,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             kw_range = range_from_token(keyword_token)
 
             if keyword is not None:
-
                 for lib, name in iter_over_keyword_names_and_owners(keyword):
                     if (
                         lib is not None
@@ -570,7 +567,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         if keyword_doc.is_run_keywords():
             has_and = False
             while argument_tokens:
-
                 t = argument_tokens[0]
                 argument_tokens = argument_tokens[1:]
                 if t.value == "AND":
@@ -641,7 +637,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
             while argument_tokens:
                 if argument_tokens[0].value == "ELSE" and len(argument_tokens) > 1:
-
                     kwt = argument_tokens[1]
                     argument_tokens = argument_tokens[2:]
 
@@ -661,7 +656,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     break
 
                 if argument_tokens[0].value == "ELSE IF" and len(argument_tokens) > 2:
-
                     kwt = argument_tokens[2]
                     argument_tokens = argument_tokens[3:]
 

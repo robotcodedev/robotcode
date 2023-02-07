@@ -42,7 +42,6 @@ class RobotInlineValueProtocolPart(RobotLanguageServerProtocolPart, ModelHelperM
     async def collect(
         self, sender: Any, document: TextDocument, range: Range, context: InlineValueContext
     ) -> Optional[List[InlineValue]]:
-
         from robot.parsing.lexer import Token as RobotToken
 
         namespace = await self.parent.documents_cache.get_namespace(document)

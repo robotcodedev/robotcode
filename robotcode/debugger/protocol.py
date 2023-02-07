@@ -75,7 +75,6 @@ TResult = TypeVar("TResult", bound=Any)
 
 
 class DebugAdapterProtocol(JsonRPCProtocolBase):
-
     _logger = LoggingDescriptor()
 
     def __init__(self) -> None:
@@ -301,7 +300,6 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         request: Request,
         return_type: Optional[Type[TResult]] = None,
     ) -> asyncio.Future[TResult]:
-
         result: asyncio.Future[TResult] = asyncio.get_event_loop().create_future()
 
         with self._sended_request_lock:

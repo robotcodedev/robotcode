@@ -54,7 +54,6 @@ def symbol_information_label(label: str) -> Callable[[_F], _F]:
 
 
 class DocumentSymbolsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -70,7 +69,6 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilit
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
-
         if (
             self.parent.client_capabilities
             and self.parent.client_capabilities.text_document
@@ -102,7 +100,6 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilit
     async def _text_document_symbol(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
-
         document_symbols: List[DocumentSymbol] = []
         symbol_informations: List[SymbolInformation] = []
 

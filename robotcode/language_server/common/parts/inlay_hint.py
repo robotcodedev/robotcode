@@ -25,7 +25,6 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class InlayHintProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -55,7 +54,6 @@ class InlayHintProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         *args: Any,
         **kwargs: Any,
     ) -> Optional[List[InlayHint]]:
-
         results: List[InlayHint] = []
 
         document = await self.parent.documents.get(text_document.uri)
@@ -88,7 +86,6 @@ class InlayHintProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         *args: Any,
         **kwargs: Any,
     ) -> Optional[InlayHint]:
-
         for result in await self.resolve(self, params):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):

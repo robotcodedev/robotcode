@@ -221,7 +221,6 @@ class _Visitor(AsyncVisitor):
         name = name_token.value
 
         if name is not None:
-
             match = search_variable(name, ignore_errors=True)
             if not match.is_assign(allow_assign_mark=True):
                 return
@@ -248,5 +247,4 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
     async def collect(
         self, sender: Any, document: TextDocument
     ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
-
         return await _Visitor.find_from(await self.parent.documents_cache.get_model(document), self)

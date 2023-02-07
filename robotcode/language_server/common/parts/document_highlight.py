@@ -25,7 +25,6 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class DocumentHighlightProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -50,7 +49,6 @@ class DocumentHighlightProtocolPart(LanguageServerProtocolPart, HasExtendCapabil
         *args: Any,
         **kwargs: Any,
     ) -> Optional[List[DocumentHighlight]]:
-
         highlights: List[DocumentHighlight] = []
 
         document = await self.parent.documents.get(text_document.uri)

@@ -13,7 +13,6 @@ if __file__.endswith((".pyc", ".pyo")):
     __file__ = __file__[:-1]
 
 if __name__ == "__main__" and __package__ is None or __package__ == "":
-
     file = Path(__file__).resolve()
     parent, top = file.parent, file.parents[2]
 

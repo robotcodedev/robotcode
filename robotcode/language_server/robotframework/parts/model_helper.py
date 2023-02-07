@@ -183,7 +183,6 @@ class ModelHelperMixin:
         position: Position,
         analyse_run_keywords: bool = True,
     ) -> Optional[Tuple[Optional[KeywordDoc], Token]]:
-
         keyword_doc = await namespace.find_keyword(keyword_name, raise_keyword_error=False)
         if keyword_doc is None:
             return None

@@ -32,7 +32,6 @@ class CantRenameError(Exception):
 
 
 class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -66,7 +65,6 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         *args: Any,
         **kwargs: Any,
     ) -> Optional[WorkspaceEdit]:
-
         edits: List[WorkspaceEdit] = []
 
         document = await self.parent.documents.get(text_document.uri)
@@ -114,7 +112,6 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         *args: Any,
         **kwargs: Any,
     ) -> Optional[PrepareRenameResult]:
-
         results: List[PrepareRenameResult] = []
 
         document = await self.parent.documents.get(text_document.uri)

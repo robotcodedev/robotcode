@@ -26,7 +26,6 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class ReferencesProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -52,7 +51,6 @@ class ReferencesProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         *args: Any,
         **kwargs: Any,
     ) -> Optional[List[Location]]:
-
         await self.parent.diagnostics.ensure_workspace_loaded()
 
         locations: List[Location] = []

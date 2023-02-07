@@ -87,7 +87,6 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         position: Position,
         new_name: str,
     ) -> Optional[WorkspaceEdit]:
-
         result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
         if not result_nodes:
@@ -115,7 +114,6 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         document: TextDocument,
         position: Position,
     ) -> Optional[PrepareRenameResult]:
-
         result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
         if not result_nodes:
@@ -474,7 +472,6 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
 
         template_node = cast(Union[Template, TestTemplate], node)
         if template_node.value:
-
             keyword_token = cast(RobotToken, template_node.get_token(RobotToken.NAME))
             if keyword_token is None or keyword_token.value is None or keyword_token.value.upper() in ("", "NONE"):
                 return None
@@ -488,11 +485,9 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
                 keyword_token = self.strip_bdd_prefix(namespace, keyword_token)
 
             if position.is_in_range(range_from_token(keyword_token), False):
-
                 keyword_doc = await namespace.find_keyword(template_node.value)
 
                 if keyword_doc is not None:
-
                     lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
 
                     kw_range = range_from_token(keyword_token)
@@ -578,7 +573,6 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
     async def _rename_tags(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position, new_name: str
     ) -> Optional[WorkspaceEdit]:
-
         from robot.parsing.lexer.tokens import Token as RobotToken
 
         tokens = get_tokens_at_position(cast(HasTokens, node), position)

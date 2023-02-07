@@ -25,7 +25,6 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -49,7 +48,6 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     async def _text_document_code_lens(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Optional[List[CodeLens]]:
-
         results: List[CodeLens] = []
         document = await self.parent.documents.get(text_document.uri)
         if document is None:
@@ -71,7 +69,6 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     @rpc_method(name="codeLens/resolve", param_type=CodeLens)
     @threaded()
     async def _code_lens_resolve(self, params: CodeLens, *args: Any, **kwargs: Any) -> CodeLens:
-
         results: List[CodeLens] = []
 
         for result in await self.resolve(self, params):

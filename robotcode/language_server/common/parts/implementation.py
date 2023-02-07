@@ -25,7 +25,6 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class ImplementationProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -54,7 +53,6 @@ class ImplementationProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
     async def _text_document_implementation(
         self, text_document: TextDocumentIdentifier, position: Position, *args: Any, **kwargs: Any
     ) -> Optional[Union[Location, List[Location], List[LocationLink]]]:
-
         locations: List[Location] = []
         location_links: List[LocationLink] = []
 

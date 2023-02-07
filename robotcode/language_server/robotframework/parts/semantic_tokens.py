@@ -374,7 +374,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 kw: str = token.value
 
                 for lib, name in iter_over_keyword_names_and_owners(token.value):
-
                     if lib is not None and (
                         any(k for k in libraries_matchers.keys() if k == lib)
                         or any(k for k in resources_matchers.keys() if k == lib)
@@ -491,7 +490,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         from robot.utils.escaping import split_from_equals
 
         if token.type in {RobotToken.ARGUMENT, RobotToken.TESTCASE_NAME, RobotToken.KEYWORD_NAME}:
-
             if isinstance(node, Variable) and token.type == RobotToken.ARGUMENT and node.name and node.name[0] == "&":
                 name, value = split_from_equals(token.value)
                 if value is not None:
@@ -540,7 +538,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         async def skip_non_data_tokens() -> AsyncIterator[Tuple[Token, ast.AST]]:
             nonlocal arguments
             while arguments and arguments[0] and arguments[0].type in RobotToken.NON_DATA_TOKENS:
-
                 yield arguments[0], node,
                 arguments = arguments[1:]
 
@@ -749,7 +746,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         libraries_matchers: Dict[KeywordMatcher, LibraryEntry],
         resources_matchers: Dict[KeywordMatcher, ResourceEntry],
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Fixture, KeywordCall, LibraryImport
         from robot.utils.escaping import split_from_equals
@@ -765,7 +761,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                         lib_doc = await namespace.get_imported_library_libdoc(node.name, node.args, node.alias)
                         kw_doc = lib_doc.inits.keywords[0] if lib_doc and lib_doc.inits else None
                         if lib_doc is not None:
-
                             for token in node.tokens:
                                 if token.type == RobotToken.ARGUMENT:
                                     name, value = split_from_equals(token.value)
@@ -898,7 +893,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     async def _collect(
         self, document: TextDocument, range: Optional[Range]
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-
         model = await self.parent.documents_cache.get_model(document, False)
         namespace = await self.parent.documents_cache.get_namespace(document)
 

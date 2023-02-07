@@ -25,7 +25,6 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class SelectionRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -50,7 +49,6 @@ class SelectionRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
         *args: Any,
         **kwargs: Any,
     ) -> Optional[List[SelectionRange]]:
-
         results: List[SelectionRange] = []
 
         document = await self.parent.documents.get(text_document.uri)

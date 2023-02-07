@@ -49,7 +49,6 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @threaded()
     @_logger.call
     async def collect_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
-
         workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
         if workspace_folder is not None:
             extension_config = await self.get_config(document)
@@ -96,7 +95,6 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
             class MyRobocop(Robocop):
                 async def run_check(self, ast_model, filename, source=None):  # type: ignore
-
                     await check_canceled()
 
                     if robocop_version >= (2, 4):

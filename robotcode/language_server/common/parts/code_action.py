@@ -28,7 +28,6 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class CodeActionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -71,7 +70,6 @@ class CodeActionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         *args: Any,
         **kwargs: Any,
     ) -> Optional[List[Union[Command, CodeAction]]]:
-
         results: List[Union[Command, CodeAction]] = []
 
         document = await self.parent.documents.get(text_document.uri)
@@ -105,7 +103,6 @@ class CodeActionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         *args: Any,
         **kwargs: Any,
     ) -> CodeAction:
-
         results: List[CodeAction] = []
 
         for result in await self.resolve(self, params):

@@ -77,7 +77,6 @@ class LanguageDefinition(NamedTuple):
 
 
 class LanguageServerProtocol(JsonRPCProtocol):
-
     _logger = LoggingDescriptor()
 
     commands = ProtocolPartDescriptor(CommandsProtocolPart)
@@ -189,7 +188,6 @@ class LanguageServerProtocol(JsonRPCProtocol):
         *args: Any,
         **kwargs: Any,
     ) -> InitializeResult:
-
         self.trace = trace or TraceValue.OFF
         self.client_info = client_info
 

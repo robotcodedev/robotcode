@@ -183,7 +183,6 @@ class TextDocument:
                 self._cache.pop(ref)
 
     def __get_cache_reference(self, entry: Callable[..., Any], /, *, add_remove: bool = True) -> weakref.ref[Any]:
-
         if inspect.ismethod(entry):
             return weakref.WeakMethod(entry, self.__remove_cache_entry if add_remove else None)
 
@@ -193,7 +192,6 @@ class TextDocument:
         self,
         entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]],
     ) -> Optional[_T]:
-
         reference = self.__get_cache_reference(entry)
 
         e = self._cache.get(reference, None)
@@ -208,7 +206,6 @@ class TextDocument:
         *args: Any,
         **kwargs: Any,
     ) -> _T:
-
         reference = self.__get_cache_reference(entry)
 
         e = self._cache[reference]
@@ -226,7 +223,6 @@ class TextDocument:
         *args: Any,
         **kwargs: Any,
     ) -> _T:
-
         reference = self.__get_cache_reference(entry)
 
         e = self._cache[reference]

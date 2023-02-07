@@ -31,7 +31,6 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -80,7 +79,6 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilitie
         *args: Any,
         **kwargs: Any,
     ) -> Optional[SignatureHelp]:
-
         results: List[SignatureHelp] = []
 
         document = await self.parent.documents.get(text_document.uri)

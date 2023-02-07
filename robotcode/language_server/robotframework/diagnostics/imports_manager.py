@@ -311,7 +311,6 @@ class _ResourcesEntry(_ImportEntry):
 
     async def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
         async with self._lock:
-
             for change in changes:
                 uri = Uri(change.uri)
                 if uri.scheme != "file":
@@ -563,7 +562,6 @@ class ImportsManager:
         from robot.utils.text import split_args_from_name_or_path
 
         async with self._command_line_variables_lock:
-
             if self._command_line_variables is None:
                 command_line_vars: List[VariableDefinition] = [
                     CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=(v,))
@@ -676,21 +674,21 @@ class ImportsManager:
                     variables_changed.append((v_key, result, lib_doc))
 
         if libraries_changed:
-            for (l, t, _) in libraries_changed:
+            for l, t, _ in libraries_changed:
                 if t == FileChangeType.DELETED:
                     self.__remove_library_entry(l, self._libaries[l], True)
 
             await self.libraries_changed(self, [v for (_, _, v) in libraries_changed if v is not None])
 
         if resource_changed:
-            for (r, t, _) in resource_changed:
+            for r, t, _ in resource_changed:
                 if t == FileChangeType.DELETED:
                     self.__remove_resource_entry(r, self._resources[r], True)
 
             await self.resources_changed(self, [v for (_, _, v) in resource_changed if v is not None])
 
         if variables_changed:
-            for (v, t, _) in variables_changed:
+            for v, t, _ in variables_changed:
                 if t == FileChangeType.DELETED:
                     self.__remove_variables_entry(v, self._variables[v], True)
 
@@ -959,7 +957,6 @@ class ImportsManager:
             )
 
         if get_robot_version() >= (5, 0):
-
             if is_variables_by_path(name):
                 return str(find_file_ex(name, base_dir, "Library"))
 
@@ -983,7 +980,6 @@ class ImportsManager:
         )
 
         async def _get_libdoc(name: str, args: Tuple[Any, ...], working_dir: str, base_dir: str) -> LibraryDoc:
-
             meta, source = await self.get_library_meta(
                 name,
                 base_dir,
@@ -1095,7 +1091,6 @@ class ImportsManager:
         scope: str = "GLOBAL",
         append_model_errors: bool = True,
     ) -> LibraryDoc:
-
         from robot.errors import DataError
         from robot.libdocpkg.robotbuilder import KeywordDocBuilder
         from robot.parsing.lexer.tokens import Token as RobotToken
@@ -1409,7 +1404,6 @@ class ImportsManager:
     async def complete_variables_import(
         self, name: Optional[str], base_dir: str = ".", variables: Optional[Dict[str, Any]] = None
     ) -> Optional[List[CompleteResult]]:
-
         return complete_variables_import(
             name,
             str(self.folder.to_path()),

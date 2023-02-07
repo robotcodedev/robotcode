@@ -23,7 +23,6 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -42,7 +41,6 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities
     async def _text_document_folding_range(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Optional[List[FoldingRange]]:
-
         results: List[FoldingRange] = []
         document = await self.parent.documents.get(text_document.uri)
         if document is None:

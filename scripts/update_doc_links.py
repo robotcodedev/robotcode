@@ -15,7 +15,6 @@ REPOSITORY_BASE = "https://raw.githubusercontent.com/d-biehl/robotcode"
 
 
 def main() -> None:
-
     version = get_version()
     if version.prerelease:
         tag_base = f"{REPOSITORY_BASE}/v{version}"

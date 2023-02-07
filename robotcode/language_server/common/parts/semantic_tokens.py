@@ -35,7 +35,6 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -82,7 +81,6 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
     async def _text_document_semantic_tokens_full(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-
         results: List[Union[SemanticTokens, SemanticTokensPartialResult]] = []
 
         document = await self.parent.documents.get(text_document.uri)
@@ -113,7 +111,6 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
     async def _text_document_semantic_tokens_full_delta(
         self, text_document: TextDocumentIdentifier, previous_result_id: str, *args: Any, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None]:
-
         results: List[Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult]] = []
 
         document = await self.parent.documents.get(text_document.uri)
@@ -145,7 +142,6 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
     async def _text_document_semantic_tokens_range(
         self, text_document: TextDocumentIdentifier, range: Range, *args: Any, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-
         results: List[Union[SemanticTokens, SemanticTokensPartialResult]] = []
 
         document = await self.parent.documents.get(text_document.uri)

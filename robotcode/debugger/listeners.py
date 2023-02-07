@@ -41,7 +41,6 @@ class ListenerV2:
         Debugger.instance().start_suite(name, attributes)
 
     def end_suite(self, name: str, attributes: Dict[str, Any]) -> None:
-
         Debugger.instance().end_suite(name, attributes)
 
         Debugger.instance().end_output_group(name, attributes, "SUITE")

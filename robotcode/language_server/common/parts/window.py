@@ -147,7 +147,6 @@ class WindowProtocolPart(LanguageServerProtocolPart):
         start: bool = True,
         progress_token: Optional[ProgressToken] = None,
     ) -> AsyncIterator[Progress]:
-
         p = Progress(self, await self.create_progress() if progress_token is None else progress_token, message, max)
         if start:
             p.begin(
@@ -164,7 +163,6 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             p.end()
 
     async def create_progress(self) -> Optional[ProgressToken]:
-
         if (
             self.parent.client_capabilities
             and self.parent.client_capabilities.window
@@ -184,7 +182,6 @@ class WindowProtocolPart(LanguageServerProtocolPart):
         *args: Any,
         **kwargs: Any,
     ) -> None:
-
         if token in self.__progress_tokens:
             self.__progress_tokens[token] = True
 

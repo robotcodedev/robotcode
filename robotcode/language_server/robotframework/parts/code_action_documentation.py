@@ -105,7 +105,6 @@ class LibDocRequestHandler(SimpleHTTPRequestHandler):
         self._logger.error(lambda: f"{self.address_string()} - {format % args}")
 
     def do_GET(self) -> None:  # noqa: N802
-
         query = parse_qs(urlparse(self.path).query)
         name = n[0] if (n := query.get("name", [])) else None
         args = n[0] if (n := query.get("args", [])) else None
@@ -203,7 +202,6 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                 self._documentation_server = None
 
     def _run_server(self, start_port: int, end_port: int) -> None:
-
         self._documentation_server_port = find_free_port(start_port, end_port)
 
         self._logger.debug(lambda: f"Start documentation server on port {self._documentation_server_port}")
@@ -239,7 +237,6 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
     async def collect(
         self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
-
         from robot.parsing.lexer import Token as RobotToken
         from robot.parsing.model.statements import (
             Fixture,
@@ -286,7 +283,6 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                 kw_doc, _ = result
 
                 if kw_doc is not None:
-
                     if context.only and CodeActionKinds.SOURCE in context.only:
                         entry: Optional[LibraryEntry] = None
 
@@ -312,7 +308,6 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
 
                             self_libdoc = await namespace.get_library_doc()
                             if entry is None and self_libdoc.digest == kw_doc.parent:
-
                                 entry = LibraryEntry(self_libdoc.name, str(document.uri.to_path().name), self_libdoc)
 
                         if entry is None:

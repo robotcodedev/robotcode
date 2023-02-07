@@ -65,7 +65,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     @language_id("robotframework")
     @_logger.call
     async def collect(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:
-
         model = await self.parent.documents_cache.get_model(document)
 
         result_nodes = await get_nodes_at_position(model, position)
@@ -343,7 +342,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         template_node = cast(Union[Template, TestTemplate], node)
         if template_node.value:
-
             keyword_token = cast(RobotToken, template_node.get_token(RobotToken.NAME))
             if keyword_token is None:
                 return None
@@ -360,7 +358,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 keyword_doc = await namespace.find_keyword(template_node.value)
 
                 if keyword_doc is not None:
-
                     lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
 
                     kw_range = range_from_token(keyword_token)
@@ -401,7 +398,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         library_node = cast(LibraryImport, node)
         if library_node.name:
-
             name_token = cast(RobotToken, library_node.get_token(RobotToken.NAME))
             if name_token is None:
                 return None
@@ -447,7 +443,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         resource_node = cast(ResourceImport, node)
         if resource_node.name:
-
             name_token = cast(RobotToken, resource_node.get_token(RobotToken.NAME))
             if name_token is None:
                 return None
@@ -490,7 +485,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         variables_node = cast(VariablesImport, node)
         if variables_node.name:
-
             name_token = cast(RobotToken, variables_node.get_token(RobotToken.NAME))
             if name_token is None:
                 return None

@@ -233,7 +233,6 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
 
     @rpc_method(name="disconnect", param_type=DisconnectArguments)
     async def _disconnect(self, arguments: Optional[DisconnectArguments] = None, *args: Any, **kwargs: Any) -> None:
-
         if (
             (not (await self.exited) or not (await self.terminated))
             and arguments is not None
@@ -264,7 +263,6 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         self._received_configuration_done_event.set()
 
         if self.received_configuration_done_callback is not None:
-
             self.received_configuration_done_callback()
 
     @_logger.call

@@ -35,7 +35,6 @@ class _Visitor(AsyncVisitor):
     async def find_from(
         cls, model: ast.AST, parent: RobotCodeLensProtocolPart, document: TextDocument
     ) -> Optional[List[CodeLens]]:
-
         finder = cls(parent, document)
 
         await finder.visit(model)

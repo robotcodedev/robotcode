@@ -70,7 +70,6 @@ async def test(
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-
     result = await run_coroutine_in_thread(
         protocol.robot_folding_ranges.collect, protocol.robot_folding_ranges, test_document
     )

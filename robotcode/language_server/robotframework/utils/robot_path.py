@@ -46,7 +46,6 @@ def _find_relative_path(
     path: Union[Path, PathLike[str], str],
     basedir: Union[Path, PathLike[str], str],
 ) -> Optional[str]:
-
     for base in [basedir, *sys.path]:
         if not base:
             continue

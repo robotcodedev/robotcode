@@ -224,7 +224,6 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         document: TextDocument,
         get: Callable[[str], List[Token]],
     ) -> List[Token]:
-
         return get(document.text())
 
     async def get_resource_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
@@ -396,7 +395,6 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         document: TextDocument,
         document_type: Optional[DocumentType],
     ) -> Namespace:
-
         if document_type is not None and document_type == DocumentType.INIT:
             model = await self.get_init_model(document)
         elif document_type is not None and document_type == DocumentType.RESOURCE:

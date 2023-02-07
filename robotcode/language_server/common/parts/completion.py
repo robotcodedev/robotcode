@@ -32,7 +32,6 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -86,7 +85,6 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         *args: Any,
         **kwargs: Any,
     ) -> Union[List[CompletionItem], CompletionList, None]:
-
         results: List[Union[List[CompletionItem], CompletionList]] = []
 
         document = await self.parent.documents.get(text_document.uri)
@@ -133,7 +131,6 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         *args: Any,
         **kwargs: Any,
     ) -> CompletionItem:
-
         results: List[CompletionItem] = []
 
         for result in await self.resolve(self, params):

@@ -409,7 +409,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         template_node = cast(Union[Template, TestTemplate], template_node)
         if template_node.value:
-
             keyword_token = cast(RobotToken, template_node.get_token(RobotToken.NAME))
             if keyword_token is None or keyword_token.value is None or keyword_token.value.upper() in ("", "NONE"):
                 return None
@@ -423,10 +422,8 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 keyword_token = self.strip_bdd_prefix(namespace, keyword_token)
 
             if position.is_in_range(range_from_token(keyword_token)):
-
                 keyword_doc = await namespace.find_keyword(template_node.value)
                 if keyword_doc is not None:
-
                     lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
 
                     kw_range = range_from_token(keyword_token)
@@ -486,7 +483,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         library_node = cast(LibraryImport, node)
         if library_node.name:
-
             name_token = cast(RobotToken, library_node.get_token(RobotToken.NAME))
             if name_token is None:
                 return None
@@ -531,7 +527,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         resource_node = cast(ResourceImport, node)
         if resource_node.name:
-
             name_token = cast(RobotToken, resource_node.get_token(RobotToken.NAME))
             if name_token is None:
                 return None
@@ -573,7 +568,6 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         variables_node = cast(VariablesImport, node)
         if variables_node.name:
-
             name_token = cast(RobotToken, variables_node.get_token(RobotToken.NAME))
             if name_token is None:
                 return None

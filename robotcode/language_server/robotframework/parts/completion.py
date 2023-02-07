@@ -111,7 +111,6 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
-
         namespace = await self.parent.documents_cache.get_namespace(document)
         model = await self.parent.documents_cache.get_model(document, False)
 
@@ -261,7 +260,6 @@ class CompletionCollector(ModelHelperMixin):
     async def collect(
         self, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
-
         result_nodes = await get_nodes_at_position(self.model, position)
 
         result_nodes.reverse()
@@ -337,7 +335,6 @@ class CompletionCollector(ModelHelperMixin):
                                 pass
 
                     elif comp_type in [CompleteResultKind.RESOURCE.name]:
-
                         if (res_id := data.get("id", None)) is not None:
                             try:
                                 lib_doc = next(
@@ -466,7 +463,6 @@ class CompletionCollector(ModelHelperMixin):
     async def create_variables_completion_items(
         self, range: Range, nodes: List[ast.AST], position: Position
     ) -> List[CompletionItem]:
-
         return [
             CompletionItem(
                 label=s.name,
@@ -502,7 +498,6 @@ class CompletionCollector(ModelHelperMixin):
         settings = {*settings_class.names, *settings_class.aliases.keys()}
 
         if self.namespace.languages is not None:
-
             if self.config.filter_default_language and len(self.namespace.languages.languages) > 1:
                 languages = self.namespace.languages.languages
 
@@ -550,7 +545,6 @@ class CompletionCollector(ModelHelperMixin):
         settings = {*TestCaseSettings.names, *TestCaseSettings.aliases.keys()}
 
         if self.namespace.languages is not None:
-
             if self.config.filter_default_language and len(self.namespace.languages.languages) > 1:
                 languages = self.namespace.languages.languages
 
@@ -602,7 +596,6 @@ class CompletionCollector(ModelHelperMixin):
         settings = {*KeywordSettings.names, *KeywordSettings.aliases.keys()}
 
         if self.namespace.languages is not None:
-
             if self.config.filter_default_language and len(self.namespace.languages.languages) > 1:
                 languages = self.namespace.languages.languages
 
@@ -1285,7 +1278,6 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-
         return await self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
             node, nodes_at_position, position, context
         )
@@ -1297,7 +1289,6 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-
         return await self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
             node, nodes_at_position, position, context
         )
@@ -1309,7 +1300,6 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-
         return await self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
             node, nodes_at_position, position, context
         )
@@ -1321,7 +1311,6 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-
         return await self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
             node, nodes_at_position, position, context
         )
@@ -1333,7 +1322,6 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-
         return await self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
             node, nodes_at_position, position, context
         )
@@ -1412,7 +1400,6 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-
         return await self.complete_Setup_or_Teardown_or_Template(node, nodes_at_position, position, context)
 
     async def complete_Teardown(  # noqa: N802
@@ -1422,7 +1409,6 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-
         return await self.complete_Setup_or_Teardown_or_Template(node, nodes_at_position, position, context)
 
     async def complete_Template(  # noqa: N802
@@ -1432,7 +1418,6 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-
         return await self.complete_Setup_or_Teardown_or_Template(node, nodes_at_position, position, context)
 
     async def complete_LibraryImport(  # noqa: N802
@@ -1442,7 +1427,6 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import LibraryImport, Statement
 
@@ -1466,7 +1450,6 @@ class CompletionCollector(ModelHelperMixin):
                 name_token = import_node.tokens[import_token_index + 1]
                 if position.is_in_range(r := range_from_token(name_token)):
                     if whitespace_at_begin_of_token(name_token) > 1:
-
                         ws_b = whitespace_from_begin_of_token(name_token)
                         r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
@@ -1678,7 +1661,6 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-
         from robot.parsing.lexer.tokens import Token
         from robot.parsing.model.statements import ResourceImport
 
@@ -1701,7 +1683,6 @@ class CompletionCollector(ModelHelperMixin):
             name_token = import_node.tokens[import_token_index + 1]
             if position.is_in_range(r := range_from_token(name_token)):
                 if whitespace_at_begin_of_token(name_token) > 1:
-
                     ws_b = whitespace_from_begin_of_token(name_token)
                     r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
@@ -1780,7 +1761,6 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-
         from robot.parsing.lexer.tokens import Token
         from robot.parsing.model.statements import VariablesImport
 
@@ -1804,7 +1784,6 @@ class CompletionCollector(ModelHelperMixin):
             name_token = import_node.tokens[import_token_index + 1]
             if position.is_in_range(r := range_from_token(name_token)):
                 if whitespace_at_begin_of_token(name_token) > 1:
-
                     ws_b = whitespace_from_begin_of_token(name_token)
                     r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 

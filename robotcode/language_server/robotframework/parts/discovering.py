@@ -263,9 +263,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
             if paths and len(paths):
 
                 def normalize_paths(paths: List[str]) -> Iterator[str]:
-
                     for path in paths:
-
                         p = Path(path)
 
                         if not p.is_absolute():
@@ -275,9 +273,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                             yield str(p)
 
                 def nonexisting_paths(paths: List[str]) -> Iterator[str]:
-
                     for path in paths:
-
                         p = Path(path)
 
                         if not p.is_absolute():
@@ -369,7 +365,6 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
     async def get_tests_from_document(
         self, text_document: TextDocumentIdentifier, base_name: Optional[str], *args: Any, **kwargs: Any
     ) -> List[TestItem]:
-
         try:
             return await FindTestCasesVisitor().get(
                 text_document.uri,

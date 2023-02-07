@@ -136,7 +136,6 @@ class KeywordMatcher:
 
     @property
     def normalized_name(self) -> str:
-
         if self._normalized_name is None:
             self._normalized_name = str(normalize(self.name))
 
@@ -437,7 +436,6 @@ class KeywordDoc(SourceEntity):
                 result = ""
 
         if self.args:
-
             result += f"\n##{'#'*header_level} Arguments: \n\n"
 
             result += "\n| | | | |"
@@ -703,7 +701,6 @@ class LibraryDoc:
                 write_lines("", "")
 
             if self.doc:
-
                 write_lines(f"##{'#'*header_level} Introduction", "")
 
                 if self.doc_format == ROBOT_DOC_FORMAT:
@@ -980,7 +977,6 @@ def error_from_exception(ex: BaseException, default_source: Optional[str], defau
 
 @dataclass
 class _Variable(object):
-
     name: str
     value: Iterable[str]
     source: Optional[str] = None
@@ -1060,7 +1056,6 @@ def resolve_robot_variables(
             result[f"${{{k1}}}"] = v1
 
     if variables is not None:
-
         vars = [_Variable(k, v) for k, v in variables.items() if v is not None and not isinstance(v, NativeValue)]
         result.set_from_variable_table(vars)
 
@@ -1118,7 +1113,6 @@ def _find_library_internal(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Tuple[str, Any]:
-
     from robot.errors import DataError
     from robot.libraries import STDLIBS
     from robot.utils.robotpath import find_file as robot_find_file
@@ -1150,7 +1144,6 @@ def find_library(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> str:
-
     return _find_library_internal(name, working_dir, base_dir, command_line_variables, variables)[0]
 
 
@@ -1187,7 +1180,6 @@ def get_library_doc(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> LibraryDoc:
-
     import robot.running.testlibraries
     from robot.libdocpkg.robotbuilder import KeywordDocBuilder
     from robot.output import LOGGER
@@ -1208,7 +1200,6 @@ def get_library_doc(
     def import_test_library(
         name: str,
     ) -> Union[Any, Tuple[Any, str]]:
-
         with OutputCapturer(library_import=True):
             importer = Importer("test library", LOGGER)
             return importer.import_class_or_module(name, return_source=True)
@@ -1331,7 +1322,6 @@ def get_library_doc(
 
         if lib is not None:
             try:
-
                 libdoc.has_listener = lib.has_listener
 
                 if isinstance(lib, robot.running.testlibraries._ModuleLibrary):
@@ -1523,7 +1513,6 @@ def get_variables_doc(
     source: Optional[str] = None
     try:
         with _std_capture() as std_capturer:
-
             import_name = find_variables(name, working_dir, base_dir, command_line_variables, variables)
 
             if import_name.lower().endswith((".yaml", ".yml")):
@@ -1709,7 +1698,6 @@ def complete_library_import(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Optional[List[CompleteResult]]:
-
     _update_env(working_dir)
 
     result: List[CompleteResult] = []
@@ -1774,7 +1762,6 @@ def complete_resource_import(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Optional[List[CompleteResult]]:
-
     _update_env(working_dir)
 
     result: List[CompleteResult] = []
@@ -1861,7 +1848,6 @@ def complete_variables_import(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Optional[List[CompleteResult]]:
-
     _update_env(working_dir)
 
     result: List[CompleteResult] = []

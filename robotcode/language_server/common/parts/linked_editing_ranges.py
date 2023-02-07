@@ -26,7 +26,6 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class LinkedEditingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -49,7 +48,6 @@ class LinkedEditingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabi
         *args: Any,
         **kwargs: Any,
     ) -> Optional[LinkedEditingRanges]:
-
         linked_ranges: List[Range] = []
         word_pattern: Optional[str] = None
 

@@ -180,7 +180,6 @@ def rpc_method(
     cancelable: bool = True,
 ) -> Callable[[_F], _F]:
     def _decorator(func: _F) -> Callable[[_F], _F]:
-
         if inspect.isclass(_func):
             raise TypeError(f"Not supported type {type(func)}.")
 
@@ -270,7 +269,6 @@ class RpcRegistry:
             }
 
         if not self.__initialized:
-
             if inspect.isclass(self.__owner):
                 self.__methods = get_methods(self.__owner)
 
@@ -342,7 +340,6 @@ class ReceivedRequestEntry(NamedTuple):
 
 
 class JsonRPCProtocolBase(asyncio.Protocol, ABC):
-
     _logger = LoggingDescriptor()
     registry: ClassVar = RpcRegistry()
 
@@ -547,7 +544,6 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         params: Optional[Any] = None,
         return_type_or_converter: Optional[Type[_TResult]] = None,
     ) -> asyncio.Future[Optional[_TResult]]:
-
         with self._sended_request_lock:
             result: asyncio.Future[Optional[_TResult]] = create_sub_future()
             self._sended_request_count += 1
@@ -566,7 +562,6 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         params: Optional[Any] = None,
         return_type: Optional[Type[_TResult]] = None,
     ) -> Optional[_TResult]:
-
         return await self.send_request(method, params, return_type)
 
     @_logger.call
@@ -613,7 +608,6 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
                         start = time.monotonic()
                         while not done.is_set():
-
                             if time.monotonic() - start > 120:
                                 raise TimeoutError("Can't set future result.")
 

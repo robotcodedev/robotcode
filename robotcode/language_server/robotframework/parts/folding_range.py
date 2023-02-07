@@ -37,7 +37,6 @@ class _Visitor(AsyncVisitor):
 
     @classmethod
     async def find_from(cls, model: ast.AST, parent: RobotFoldingRangeProtocolPart) -> Optional[List[FoldingRange]]:
-
         finder = cls(parent)
 
         await finder.visit(model)

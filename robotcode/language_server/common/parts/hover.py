@@ -25,7 +25,6 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -48,7 +47,6 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         *args: Any,
         **kwargs: Any,
     ) -> Optional[Hover]:
-
         results: List[Hover] = []
 
         document = await self.parent.documents.get(text_document.uri)

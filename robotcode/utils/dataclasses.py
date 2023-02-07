@@ -35,7 +35,6 @@ _RE_SNAKE_CASE_2 = re.compile(r"[A-Z]")
 
 @functools.lru_cache(1024)
 def to_snake_case(s: str) -> str:
-
     s = _RE_SNAKE_CASE_1.sub("_", s)
     if not s:
         return s
@@ -243,7 +242,6 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
             and match_signature is not None
             and match_type_hints is not None
         ):
-
             params: Dict[str, Any] = {
                 k: _from_dict_with_name(k, v, match_type_hints[k])
                 for k, v in match_value.items()

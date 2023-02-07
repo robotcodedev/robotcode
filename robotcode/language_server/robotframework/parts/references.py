@@ -110,7 +110,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: ReferenceContext
     ) -> Optional[List[Location]]:
-
         result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
 
         if not result_nodes:
@@ -138,7 +137,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         *args: Any,
         **kwargs: Any,
     ) -> List[Location]:
-
         await self.parent.diagnostics.ensure_workspace_loaded()
 
         result: List[Location] = []
@@ -238,7 +236,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             )
             and not any(e for e in await namespace.get_command_line_variables() if e.source == variable.source)
         ):
-
             return []
 
         result = set()
@@ -259,7 +256,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         lib_doc: Optional[LibraryDoc] = None,
         include_declaration: bool = True,
     ) -> List[Location]:
-
         try:
             namespace = await self.parent.documents_cache.get_namespace(doc)
 
@@ -303,7 +299,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def _find_keyword_references(
         self, document: TextDocument, kw_doc: KeywordDoc, include_declaration: bool = True, stop_at_first: bool = False
     ) -> List[Location]:
-
         namespace = await self.parent.documents_cache.get_namespace(document)
 
         lib_doc = (
@@ -345,7 +340,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         doc: TextDocument,
         library_doc: LibraryDoc,
     ) -> List[Location]:
-
         namespace = await self.parent.documents_cache.get_namespace(doc)
 
         result: List[Location] = []
@@ -393,7 +387,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         doc: TextDocument,
         library_doc: LibraryDoc,
     ) -> List[Location]:
-
         namespace = await self.parent.documents_cache.get_namespace(doc)
 
         result: List[Location] = []
@@ -435,7 +428,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         doc: TextDocument,
         library_doc: LibraryDoc,
     ) -> List[Location]:
-
         namespace = await self.parent.documents_cache.get_namespace(doc)
 
         result: List[Location] = []

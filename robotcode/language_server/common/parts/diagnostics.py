@@ -437,7 +437,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
         collected_keys: List[Any] = []
         try:
-
             async for result_any in self.collect(
                 self, document, callback_filter=language_id_filter(document), return_exceptions=True
             ):

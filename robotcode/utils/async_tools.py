@@ -92,7 +92,6 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
     async def _notify(
         self, *args: Any, callback_filter: Optional[Callable[[_TCallable], bool]] = None, **kwargs: Any
     ) -> AsyncIterator[_TResult]:
-
         for method in filter(
             lambda x: callback_filter(x) if callback_filter is not None else True,
             set(self),
@@ -527,7 +526,6 @@ class Lock:
 
                     start = time.monotonic()
                     while not done.is_set():
-
                         if time.monotonic() - start > 120:
                             warnings.warn("Can't set future result.")
                             break
@@ -604,7 +602,6 @@ def get_current_future_info() -> Optional[FutureInfo]:
 def create_sub_task(
     coro: Coroutine[Any, Any, _T], *, name: Optional[str] = None, loop: Optional[asyncio.AbstractEventLoop] = None
 ) -> asyncio.Task[_T]:
-
     ct = get_current_future_info()
 
     if loop is not None:
@@ -642,7 +639,6 @@ def create_delayed_sub_task(
 
 
 def create_sub_future(loop: Optional[asyncio.AbstractEventLoop] = None) -> asyncio.Future[Any]:
-
     ct = get_current_future_info()
 
     if loop is None:

@@ -83,7 +83,6 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def format_robot_tidy(
         self, document: TextDocument, options: FormattingOptions, range: Optional[Range] = None, **further_options: Any
     ) -> Optional[List[TextEdit]]:
-
         from difflib import SequenceMatcher
 
         from robotidy.version import __version__
@@ -175,7 +174,6 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def format_internal(
         self, document: TextDocument, options: FormattingOptions, **further_options: Any
     ) -> Optional[List[TextEdit]]:
-
         from robot.parsing.model.blocks import File
         from robot.tidypkg import (
             Aligner,
@@ -208,7 +206,6 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def format_range(
         self, sender: Any, document: TextDocument, range: Range, options: FormattingOptions, **further_options: Any
     ) -> Optional[List[TextEdit]]:
-
         config = await self.get_config(document)
         if config and config.enabled and robotidy_installed():
             return await self.format_robot_tidy(document, options, range=range, **further_options)

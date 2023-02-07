@@ -34,7 +34,6 @@ async def test_definition(
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-
     result = await run_coroutine_in_thread(
         protocol.robot_goto.collect_definition,
         protocol.robot_goto,

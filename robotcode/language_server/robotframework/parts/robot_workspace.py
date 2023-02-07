@@ -79,7 +79,6 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
     async def _load_workspace_documents(self, sender: Any) -> List[WorkspaceDocumentsResult]:
         start = time.monotonic()
         try:
-
             result: List[WorkspaceDocumentsResult] = []
 
             for folder in self.parent.workspace.workspace_folders:

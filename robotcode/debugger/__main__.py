@@ -26,7 +26,6 @@ if __file__.endswith((".pyc", ".pyo")):
     __file__ = __file__[:-1]
 
 if __name__ == "__main__" and __package__ is None or __package__ == "":
-
     file = Path(__file__).resolve()
     parent, top = file.parent, file.parents[2]
 
@@ -114,7 +113,6 @@ async def start_debugpy_async(
         global config_done_callback
 
         def connect_debugpy(server: "DebugAdapterServer") -> None:
-
             server.protocol.send_event(Event(event="debugpyStarted", body={"port": port, "addresses": addresses}))
 
             if wait_for_debugpy_client:
@@ -206,7 +204,6 @@ async def run_robot(
 
         exit_code = -1
         try:
-
             exit_code = robot.run_cli(args, False)
         finally:
             if server.protocol.connected:

@@ -12,7 +12,6 @@ def replace_in_file(filename: Path, pattern: "re.Pattern[str]", to: str) -> None
 
 
 def main() -> None:
-
     version = get_version()
 
     preview = version.minor % 2 != 0

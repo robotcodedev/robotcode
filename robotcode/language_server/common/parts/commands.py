@@ -35,7 +35,6 @@ class CommandEntry:
 
 
 class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-
     _logger = LoggingDescriptor()
 
     PREFIX = f"{uuid.uuid4()}"
@@ -70,7 +69,6 @@ class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         return f"{self.PREFIX}.{name}"
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
-
         capabilities.execute_command_provider = ExecuteCommandOptions(list(self.commands.keys()))
 
     @rpc_method(name="workspace/executeCommand", param_type=ExecuteCommandParams)
@@ -91,7 +89,6 @@ class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
         if arguments:
             for i, v in enumerate(signature.parameters.values()):
-
                 if i < len(arguments):
                     command_args.append(from_dict(arguments[i], type_hints[i]))
 
