@@ -36,6 +36,8 @@ from ..utils.inspect import ensure_coroutine
 
 _T = TypeVar("_T")
 
+# TODO try to use new ParamSpec feature in Python 3.10
+
 _TResult = TypeVar("_TResult")
 _TCallable = TypeVar("_TCallable", bound=Callable[..., Any])
 
@@ -145,12 +147,12 @@ class async_event_iterator(  # noqa: N801
     AsyncEventDescriptorBase[_TCallable, Any, AsyncEventIterator[_TCallable, Any]]
 ):
     def __init__(self, _func: _TCallable) -> None:
-        super().__init__(_func, AsyncEventIterator[_TCallable, _TResult])
+        super().__init__(_func, AsyncEventIterator[_TCallable, Any])
 
 
 class async_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncEvent[_TCallable, Any]]):  # noqa: N801
     def __init__(self, _func: _TCallable) -> None:
-        super().__init__(_func, AsyncEvent[_TCallable, _TResult])
+        super().__init__(_func, AsyncEvent[_TCallable, Any])
 
 
 _F = TypeVar("_F", bound=Callable[..., Any])

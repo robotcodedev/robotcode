@@ -113,9 +113,9 @@ class EventDescriptorBase(Generic[_TCallable, _TResult, _TEvent]):
 
 class event_iterator(EventDescriptorBase[_TCallable, Any, EventIterator[_TCallable, Any]]):  # noqa: N801
     def __init__(self, _func: _TCallable) -> None:
-        super().__init__(_func, EventIterator[_TCallable, _TResult])
+        super().__init__(_func, EventIterator[_TCallable, Any])
 
 
 class event(EventDescriptorBase[_TCallable, Any, Event[_TCallable, Any]]):  # noqa: N801
     def __init__(self, _func: _TCallable) -> None:
-        super().__init__(_func, Event[_TCallable, _TResult])
+        super().__init__(_func, Event[_TCallable, Any])
