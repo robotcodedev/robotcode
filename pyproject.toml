@@ -61,7 +61,7 @@ Source = "https://github.com/d-biehl/robotcode"
 yaml = ["PyYAML>=5.4", "types-PyYAML>=5.4"]
 lint = ["robotframework-robocop>=2.0.0"]
 tidy = ["robotframework-tidy>=2.0.0"]
-rest = ["docutils", "types-docutils"]
+rest = ["docutils"]
 
 [project.scripts]
 'robotcode.debugger' = 'robotcode.debugger.__main__:main'
@@ -89,16 +89,9 @@ dependencies = [
   "debugpy",
   "GitPython",
   "semantic-version",
-  "pre-commit",
-  "python-semantic-release",
   "robotremoteserver",
-  "PyYAML>=5.4",
-  "types-PyYAML>=5.4",
-  "robotframework-robocop>=2.0.0",
-  "robotframework-tidy>=2.0.0",
-  "docutils",
-  "types-docutils",
 ]
+features = ["yaml", "rest"]
 
 
 [tool.hatch.envs.default.scripts]
@@ -146,23 +139,8 @@ matrix.rf.dependencies = [
 ]
 
 [tool.hatch.envs.lint]
-detached = true
-dependencies = [
-  "pytest",
-  "pytest_asyncio",
-  "pytest-regtest>=1.5.0",
-  "mypy",
-  "ruff",
-  "black",
-  "debugpy",
-  "robotremoteserver",
-  "PyYAML>=5.4",
-  "types-PyYAML>=5.4",
-  "robotframework-robocop>=2.0.0",
-  "robotframework-tidy>=2.0.0",
-  "docutils",
-  "types-docutils",
-]
+skip-install = true
+features = ["yaml", "rest"]
 
 [tool.hatch.envs.lint.scripts]
 typing = "mypy --install-types --non-interactive {args:.}"
