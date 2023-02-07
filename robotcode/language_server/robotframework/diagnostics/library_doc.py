@@ -1644,9 +1644,7 @@ class CompleteResult(NamedTuple):
 
 
 def is_file_like(name: Optional[str]) -> bool:
-    return name is not None and (
-        name.startswith(".") or name.startswith("/") or name.startswith(os.sep) or "/" in name or os.sep in name
-    )
+    return name is not None and (name.startswith((".", "/", os.sep)) or "/" in name or os.sep in name)
 
 
 def iter_module_names(name: Optional[str] = None) -> Iterator[str]:
@@ -1731,7 +1729,7 @@ def complete_library_import(
     if name is None or not name.startswith((".", "/", os.sep)):
         result += list(iter_modules_from_python_path(name))
 
-    if name is None or (is_file_like(name) and (name.endswith("/") or name.endswith(os.sep))):
+    if name is None or (is_file_like(name) and (name.endswith(("/", os.sep)))):
         name_path = Path(name if name else base_dir)
         if name_path.is_absolute():
             path = name_path.resolve()
@@ -1789,7 +1787,7 @@ def complete_resource_import(
     if name is None or not name.startswith(".") and not name.startswith("/") and not name.startswith(os.sep):
         result += list(iter_resources_from_python_path(name))
 
-    if name is None or name.startswith(".") or name.startswith("/") or name.startswith(os.sep):
+    if name is None or name.startswith((".", "/", os.sep)):
         name_path = Path(name if name else base_dir)
         if name_path.is_absolute():
             path = name_path.resolve()
@@ -1876,7 +1874,7 @@ def complete_variables_import(
     if name is None or not name.startswith(".") and not name.startswith("/") and not name.startswith(os.sep):
         result += list(iter_variables_from_python_path(name))
 
-    if name is None or name.startswith(".") or name.startswith("/") or name.startswith(os.sep):
+    if name is None or name.startswith((".", "/", os.sep)):
         name_path = Path(name if name else base_dir)
         if name_path.is_absolute():
             path = name_path.resolve()
