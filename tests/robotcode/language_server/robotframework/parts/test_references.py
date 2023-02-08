@@ -49,7 +49,7 @@ async def test(
             Position(line=data.line, character=data.character),
             ReferenceContext(include_declaration=True),
         ),
-        60,
+        5,
     )
     regtest.write(
         yaml.dump(
