@@ -471,8 +471,8 @@ class Lock:
                     finally:
                         h.cancel()
                 finally:
-                    with self._lock:
-                        self._waiters.remove(fut)
+                    # with self._lock:
+                    self._waiters.remove(fut)
             except asyncio.CancelledError:
                 # with self._lock:
                 if not self._locked:
@@ -493,18 +493,18 @@ class Lock:
                 self._locker = None
                 wake_up = True
 
-        if wake_up:
-            self._wake_up_first()
+            if wake_up:
+                self._wake_up_first()
 
     def _wake_up_first(self) -> None:
         if not self._waiters:
             return
 
-        with self._lock:
-            try:
-                fut = next(iter(self._waiters))
-            except StopIteration:
-                return
+        # with self._lock:
+        try:
+            fut = next(iter(self._waiters))
+        except StopIteration:
+            return
 
         if fut.get_loop().is_running() and not fut.get_loop().is_closed():
             if fut.get_loop() == asyncio.get_running_loop():

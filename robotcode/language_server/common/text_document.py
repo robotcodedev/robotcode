@@ -164,7 +164,6 @@ class TextDocument:
         self._cache.clear()
         create_sub_task(self.cache_invalidated(self))
 
-    @_logger.call
     def invalidate_cache(self) -> None:
         with self._lock:
             self._invalidate_cache()
@@ -172,7 +171,6 @@ class TextDocument:
     def _invalidate_data(self) -> None:
         self._data.clear()
 
-    @_logger.call
     def invalidate_data(self) -> None:
         with self._lock:
             self._invalidate_data()
@@ -234,7 +232,6 @@ class TextDocument:
 
             return cast(_T, e.data)
 
-    @_logger.call
     async def remove_cache_entry(
         self, entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]]
     ) -> None:
