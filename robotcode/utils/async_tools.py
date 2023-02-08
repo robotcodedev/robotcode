@@ -458,28 +458,28 @@ class Lock:
             fut = create_sub_future()
             self._waiters.append(fut)
 
-        try:
             try:
-
-                def aaa(fut: asyncio.Future[Any]) -> None:
-                    warnings.warn(f"Lock {self} takes to long {threading.current_thread()}\n, try to cancel...")
-                    fut.cancel()
-
-                h = fut.get_loop().call_later(120, aaa, fut)
                 try:
-                    await fut
+
+                    def aaa(fut: asyncio.Future[Any]) -> None:
+                        warnings.warn(f"Lock {self} takes to long {threading.current_thread()}\n, try to cancel...")
+                        fut.cancel()
+
+                    h = fut.get_loop().call_later(120, aaa, fut)
+                    try:
+                        await fut
+                    finally:
+                        h.cancel()
                 finally:
-                    h.cancel()
-            finally:
-                with self._lock:
-                    self._waiters.remove(fut)
-        except asyncio.CancelledError:
-            with self._lock:
+                    with self._lock:
+                        self._waiters.remove(fut)
+            except asyncio.CancelledError:
+                # with self._lock:
                 if not self._locked:
                     self._wake_up_first()
                 raise
 
-        with self._lock:
+            # with self._lock:
             self._locked = True
             self._locker = asyncio.current_task()
 
