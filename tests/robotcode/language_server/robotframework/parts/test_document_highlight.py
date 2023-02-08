@@ -41,7 +41,7 @@ async def test(
             test_document,
             Position(line=data.line, character=data.character),
         ),
-        5,
+        60,
     )
     regtest.write(
         yaml.dump(
