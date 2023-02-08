@@ -46,5 +46,7 @@ RUN useradd -l -u 33333 -G wheel -md /home/vscode -s /bin/zsh -p vscode vscode
 USER vscode
 
 RUN pipx install hatch
+RUN pipx install python-semantic-release
+RUN pipx install pre-commit
 
 ENV SHELL=/usr/bin/zsh
