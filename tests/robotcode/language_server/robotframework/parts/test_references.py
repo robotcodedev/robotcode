@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -40,12 +41,15 @@ async def test(
     def split(location: Location) -> Location:
         return Location("/".join(location.uri.split("/")[-2:]), location.range)
 
-    result = await run_coroutine_in_thread(
-        protocol.robot_references.collect,
-        protocol.robot_references,
-        test_document,
-        Position(line=data.line, character=data.character),
-        ReferenceContext(include_declaration=True),
+    result = await asyncio.wait_for(
+        run_coroutine_in_thread(
+            protocol.robot_references.collect,
+            protocol.robot_references,
+            test_document,
+            Position(line=data.line, character=data.character),
+            ReferenceContext(include_declaration=True),
+        ),
+        60,
     )
     regtest.write(
         yaml.dump(

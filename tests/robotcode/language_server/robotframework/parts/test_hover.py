@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 from typing import Optional
 
@@ -19,6 +20,17 @@ from ..tools import (
 )
 
 
+def split(hover: Optional[Hover]) -> Optional[Hover]:
+    if hover is None:
+        return None
+    if isinstance(hover.contents, MarkupContent):
+        return Hover(
+            MarkupContent(hover.contents.kind, hover.contents.value.splitlines()[0].split("=")[0].strip()),
+            hover.range,
+        )
+    return hover
+
+
 @pytest.mark.parametrize(
     ("test_document", "data"),
     generate_tests_from_source_document(Path(Path(__file__).parent, "data/tests/hover.robot")),
@@ -34,18 +46,14 @@ async def test(
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-    result = await run_coroutine_in_thread(
-        protocol.robot_hover.collect, protocol.hover, test_document, Position(line=data.line, character=data.character)
+    result = await asyncio.wait_for(
+        run_coroutine_in_thread(
+            protocol.robot_hover.collect,
+            protocol.hover,
+            test_document,
+            Position(line=data.line, character=data.character),
+        ),
+        60,
     )
-
-    def split(hover: Optional[Hover]) -> Optional[Hover]:
-        if hover is None:
-            return None
-        if isinstance(hover.contents, MarkupContent):
-            return Hover(
-                MarkupContent(hover.contents.kind, hover.contents.value.splitlines()[0].split("=")[0].strip()),
-                hover.range,
-            )
-        return hover
 
     regtest.write(yaml.dump({"data": data, "result": split(result)}))

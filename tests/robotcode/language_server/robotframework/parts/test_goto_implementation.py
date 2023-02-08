@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 from typing import List, Union, cast
 
@@ -58,11 +59,14 @@ async def test_implementation(
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-    result = await run_coroutine_in_thread(
-        protocol.robot_goto.collect_implementation,
-        protocol.robot_goto,
-        test_document,
-        Position(line=data.line, character=data.character),
+    result = await asyncio.wait_for(
+        run_coroutine_in_thread(
+            protocol.robot_goto.collect_implementation,
+            protocol.robot_goto,
+            test_document,
+            Position(line=data.line, character=data.character),
+        ),
+        60,
     )
 
     regtest.write(yaml.dump({"data": data, "result": split(result)}))

@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 from pathlib import Path
 
@@ -37,8 +38,11 @@ async def test_workspace_discovery(
             else item.children,
         )
 
-    result = await run_coroutine_in_thread(
-        protocol.robot_discovering.get_tests_from_workspace, Path(Path(__file__).parent, "data").as_uri()
+    result = await asyncio.wait_for(
+        run_coroutine_in_thread(
+            protocol.robot_discovering.get_tests_from_workspace, Path(Path(__file__).parent, "data").as_uri()
+        ),
+        120,
     )
     regtest.write(
         yaml.dump(

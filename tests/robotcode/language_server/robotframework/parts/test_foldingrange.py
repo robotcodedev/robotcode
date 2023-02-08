@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Tuple, Union
 
@@ -70,8 +71,8 @@ async def test(
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-    result = await run_coroutine_in_thread(
-        protocol.robot_folding_ranges.collect, protocol.robot_folding_ranges, test_document
+    result = await asyncio.wait_for(
+        run_coroutine_in_thread(protocol.robot_folding_ranges.collect, protocol.robot_folding_ranges, test_document), 60
     )
 
     regtest.write(yaml.dump({"data": data, "result": result}))

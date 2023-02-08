@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -33,11 +34,14 @@ async def test(
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-    result = result = await run_coroutine_in_thread(
-        protocol.robot_document_highlight.collect,
-        protocol.robot_document_highlight,
-        test_document,
-        Position(line=data.line, character=data.character),
+    result = await asyncio.wait_for(
+        run_coroutine_in_thread(
+            protocol.robot_document_highlight.collect,
+            protocol.robot_document_highlight,
+            test_document,
+            Position(line=data.line, character=data.character),
+        ),
+        60,
     )
     regtest.write(
         yaml.dump(
