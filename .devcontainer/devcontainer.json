@@ -30,7 +30,44 @@
         "esbenp.prettier-vscode",
         "dbaeumer.vscode-eslint",
         "tamasfe.even-better-toml"
-      ]
+      ],
+      "settings": {
+        "python.testing.pytestArgs": ["tests"],
+        "python.testing.unittestEnabled": false,
+        "python.testing.pytestEnabled": true,
+        "files.exclude": {
+          "**/__pycache__": true,
+          "**/.idea": true,
+          "**/.mypy_cache": true,
+          "**/.pytest_cache": true,
+          "**/.hatch": true,
+          "**/.ruff_cache": true
+        },
+        "files.watcherExclude": {
+          "**/__pycache__": true,
+          "**/.idea": true,
+          "**/.mypy_cache": true,
+          "**/.pytest_cache": true,
+          "**/.hatch": true,
+          "**/.ruff_cache": true
+        },
+        "python.linting.flake8Enabled": false,
+        "python.linting.mypyEnabled": true,
+        "python.terminal.activateEnvInCurrentTerminal": true,
+        "python.formatting.provider": "black",
+        "python.analysis.completeFunctionParens": true,
+        "python.linting.mypyArgs": ["--show-column-numbers"],
+        "prettier.printWidth": 120,
+        "prettier.tabWidth": 4,
+        "eslint.alwaysShowStatus": true,
+        "eslint.format.enable": true,
+        "eslint.lintTask.enable": true,
+        "git.followTagsWhenSync": true,
+        "git.enableSmartCommit": true,
+        "python.analysis.diagnosticMode": "workspace",
+        "ruff.importStrategy": "fromEnvironment",
+        "python.linting.enabled": true
+      }
     }
   }
 }
