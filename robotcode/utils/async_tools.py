@@ -458,28 +458,27 @@ class Lock:
             fut = create_sub_future()
             self._waiters.append(fut)
 
+        try:
             try:
+
+                def aaa(fut: asyncio.Future[Any]) -> None:
+                    warnings.warn(f"Lock {self} takes to long {threading.current_thread()}\n, try to cancel...")
+                    fut.cancel()
+
+                h = fut.get_loop().call_later(120, aaa, fut)
                 try:
-
-                    def aaa(fut: asyncio.Future[Any]) -> None:
-                        warnings.warn(f"Lock {self} takes to long {threading.current_thread()}\n, try to cancel...")
-                        fut.cancel()
-
-                    h = fut.get_loop().call_later(120, aaa, fut)
-                    try:
-                        await fut
-                    finally:
-                        h.cancel()
+                    await fut
                 finally:
-                    # with self._lock:
+                    h.cancel()
+            finally:
+                with self._lock:
                     self._waiters.remove(fut)
-            except asyncio.CancelledError:
-                # with self._lock:
-                if not self._locked:
-                    self._wake_up_first()
-                raise
+        except asyncio.CancelledError:
+            if not self._locked:
+                self._wake_up_first()
+            raise
 
-            # with self._lock:
+        with self._lock:
             self._locked = True
             self._locker = asyncio.current_task()
 
@@ -493,18 +492,18 @@ class Lock:
                 self._locker = None
                 wake_up = True
 
-            if wake_up:
-                self._wake_up_first()
+        if wake_up:
+            self._wake_up_first()
 
     def _wake_up_first(self) -> None:
         if not self._waiters:
             return
 
-        # with self._lock:
-        try:
-            fut = next(iter(self._waiters))
-        except StopIteration:
-            return
+        with self._lock:
+            try:
+                fut = next(iter(self._waiters))
+            except StopIteration:
+                return
 
         if fut.get_loop().is_running() and not fut.get_loop().is_closed():
             if fut.get_loop() == asyncio.get_running_loop():
@@ -588,9 +587,14 @@ _running_tasks: weakref.WeakKeyDictionary[asyncio.Future[Any], FutureInfo] = wea
 
 
 def get_current_future_info() -> Optional[FutureInfo]:
-    ct = asyncio.current_task()
+    try:
+        ct = asyncio.current_task()
 
-    if ct is None:
+        if ct is None:
+            return None
+    except (SystemExit, KeyboardInterrupt):
+        raise
+    except BaseException:
         return None
 
     if ct not in _running_tasks:
