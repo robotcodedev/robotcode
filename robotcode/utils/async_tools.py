@@ -349,8 +349,7 @@ class Event:
 
     def __init__(self, value: bool = False) -> None:
         self._waiters: Deque[asyncio.Future[Any]] = deque()
-        self._value = value
-        self._lock = threading.RLock()
+        self._value = [value]  # make value atomic according to GIL
 
     def __repr__(self) -> str:
         res = super().__repr__()
@@ -360,55 +359,51 @@ class Event:
         return f"<{res[1:-1]} [{extra}]>"
 
     def is_set(self) -> bool:
-        with self._lock:
-            return self._value
+        return self._value[0]
 
     def set(self) -> None:
-        with self._lock:
-            if not self._value:
-                self._value = True
+        if not self._value[0]:
+            self._value[0] = True
 
-                while self._waiters:
-                    fut = self._waiters.popleft()
+            while self._waiters:
+                fut = self._waiters.popleft()
 
-                    if not fut.done():
-                        if fut.get_loop() == asyncio.get_running_loop():
-                            if not fut.done():
-                                fut.set_result(True)
-                        else:
+                if not fut.done():
+                    if fut.get_loop() == asyncio.get_running_loop():
+                        if not fut.done():
+                            fut.set_result(True)
+                    else:
 
-                            def set_result(w: asyncio.Future[Any], ev: threading.Event) -> None:
-                                try:
-                                    if not w.done():
-                                        w.set_result(True)
-                                finally:
-                                    ev.set()
+                        def set_result(w: asyncio.Future[Any], ev: threading.Event) -> None:
+                            try:
+                                if not w.done():
+                                    w.set_result(True)
+                            finally:
+                                ev.set()
 
-                            done = threading.Event()
+                        done = threading.Event()
 
-                            fut.get_loop().call_soon_threadsafe(set_result, fut, done)
+                        fut.get_loop().call_soon_threadsafe(set_result, fut, done)
 
-                            start = time.monotonic()
-                            while not done.is_set():
-                                check_canceled_sync()
+                        start = time.monotonic()
+                        while not done.is_set():
+                            check_canceled_sync()
 
-                                if time.monotonic() - start > 120:
-                                    warnings.warn("Can't set future result.")
-                                    break
+                            if time.monotonic() - start > 120:
+                                warnings.warn("Can't set future result.")
+                                break
 
-                                time.sleep(0.001)
+                            time.sleep(0.001)
 
     def clear(self) -> None:
-        with self._lock:
-            self._value = False
+        self._value[0] = False
 
     async def wait(self, timeout: Optional[float] = None) -> bool:
-        with self._lock:
-            if self._value:
-                return True
+        if self._value[0]:
+            return True
 
-            fut = create_sub_future()
-            self._waiters.append(fut)
+        fut = create_sub_future()
+        self._waiters.append(fut)
 
         try:
             await asyncio.wait_for(fut, timeout)
