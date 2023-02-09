@@ -72,7 +72,7 @@ async def test(
     data: GeneratedTestData,
 ) -> None:
     result = await asyncio.wait_for(
-        run_coroutine_in_thread(protocol.robot_folding_ranges.collect, protocol.robot_folding_ranges, test_document), 60
+        run_coroutine_in_thread(protocol.robot_folding_ranges.collect, protocol.robot_folding_ranges, test_document), 5
     )
 
     regtest.write(yaml.dump({"data": data, "result": result}))
