@@ -422,8 +422,7 @@ class Lock:
 
     def __init__(self) -> None:
         self._waiters: Optional[Deque[asyncio.Future[Any]]] = None
-        self._locked = False
-        self._lock = threading.RLock()
+        self._locked = [False]  # make locked atomic according to GIL
         self._locker: Optional[asyncio.Task[Any]] = None
 
     async def __aenter__(self) -> None:
@@ -443,20 +442,23 @@ class Lock:
 
     @property
     def locked(self) -> bool:
-        return self._locked
+        return self._locked[0]
+
+    def _set_locked(self, value: bool) -> None:
+        self._locked[0] = value
+        self._locker = asyncio.current_task() if value else None
 
     async def acquire(self) -> bool:
-        with self._lock:
-            if not self._locked and (self._waiters is None or all(w.cancelled() for w in self._waiters)):
-                self._locked = True
-                self._locker = asyncio.current_task()
-                return True
+        if not self.locked and (self._waiters is None or all(w.cancelled() for w in self._waiters)):
+            self._set_locked(True)
 
-            if self._waiters is None:
-                self._waiters = deque()
+            return True
 
-            fut = create_sub_future()
-            self._waiters.append(fut)
+        if self._waiters is None:
+            self._waiters = deque()
+
+        fut = create_sub_future()
+        self._waiters.append(fut)
 
         try:
             try:
@@ -471,39 +473,31 @@ class Lock:
                 finally:
                     h.cancel()
             finally:
-                with self._lock:
-                    self._waiters.remove(fut)
+                self._waiters.remove(fut)
         except asyncio.CancelledError:
-            if not self._locked:
+            if not self.locked:
                 self._wake_up_first()
             raise
 
-        with self._lock:
-            self._locked = True
-            self._locker = asyncio.current_task()
+        self._set_locked(True)
 
         return True
 
     def release(self) -> None:
-        with self._lock:
-            wake_up = False
-            if self._locked:
-                self._locked = False
-                self._locker = None
-                wake_up = True
-
-        if wake_up:
+        if self.locked:
+            self._set_locked(False)
             self._wake_up_first()
+        else:
+            raise RuntimeError("Lock is not acquired.")
 
     def _wake_up_first(self) -> None:
         if not self._waiters:
             return
 
-        with self._lock:
-            try:
-                fut = next(iter(self._waiters))
-            except StopIteration:
-                return
+        try:
+            fut = next(iter(self._waiters))
+        except StopIteration:
+            return
 
         if fut.get_loop().is_running() and not fut.get_loop().is_closed():
             if fut.get_loop() == asyncio.get_running_loop():
@@ -532,8 +526,7 @@ class Lock:
                         time.sleep(0.001)
         else:
             warnings.warn(f"Future {repr(fut)} loop is closed")
-            with self._lock:
-                self._waiters.remove(fut)
+            self._waiters.remove(fut)
             self._wake_up_first()
 
 
