@@ -318,9 +318,12 @@ def run_coroutine_in_thread(
         return await inner_task
 
     def run(coro: Callable[..., Coroutine[Any, Any, _T]], *args: Any, **kwargs: Any) -> _T:
+        old_name = threading.current_thread().name
         threading.current_thread().name = coro.__qualname__
-
-        return asyncio.run(create_inner_task(coro, *args, **kwargs))
+        try:
+            return asyncio.run(create_inner_task(coro, *args, **kwargs))
+        finally:
+            threading.current_thread().name = old_name
 
     cti = get_current_future_info()
     result = run_in_thread(run, coro, *args, **kwargs)
