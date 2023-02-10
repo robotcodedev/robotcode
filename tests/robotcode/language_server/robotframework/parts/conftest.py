@@ -1,4 +1,5 @@
 import dataclasses
+import shutil
 from pathlib import Path
 from typing import Any, AsyncIterator, cast
 
@@ -32,6 +33,10 @@ from .pytest_regtestex import RegTestFixtureEx
 @pytest_asyncio.fixture(scope="package", ids=generate_test_id)
 async def protocol(request: Any) -> AsyncIterator[RobotLanguageServerProtocol]:
     root_path = Path(Path(__file__).resolve().parent, "data")
+    robotcode_cache_path = root_path / ".robotcode_cache"
+
+    if robotcode_cache_path.exists():
+        shutil.rmtree(robotcode_cache_path)
 
     server = RobotLanguageServer()
     try:
