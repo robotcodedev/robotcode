@@ -1026,32 +1026,30 @@ class ImportsManager:
                     LOAD_LIBRARY_TIME_OUT,
                 )
 
-                if result.stdout:
-                    self._logger.warning(
-                        lambda: f"stdout captured at loading library {name}{repr(args)}:\n{result.stdout}"
-                    )
-                try:
-                    if meta is not None:
-                        meta_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
-                        spec_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".spec.json"))
-                        spec_file.parent.mkdir(parents=True, exist_ok=True)
+            if result.stdout:
+                self._logger.warning(lambda: f"stdout captured at loading library {name}{repr(args)}:\n{result.stdout}")
+            try:
+                if meta is not None:
+                    meta_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
+                    spec_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".spec.json"))
+                    spec_file.parent.mkdir(parents=True, exist_ok=True)
 
-                        try:
-                            spec_file.write_text(as_json(result), "utf-8")
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except BaseException as e:
-                            raise RuntimeError(f"Cannot write spec file for library '{name}' to '{spec_file}'") from e
+                    try:
+                        spec_file.write_text(as_json(result), "utf-8")
+                    except (SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException as e:
+                        raise RuntimeError(f"Cannot write spec file for library '{name}' to '{spec_file}'") from e
 
-                        meta_file.write_text(as_json(meta), "utf-8")
-                    else:
-                        self._logger.debug(lambda: f"Skip caching library {name}{repr(args)}")
-                except (SystemExit, KeyboardInterrupt):
-                    raise
-                except BaseException as e:
-                    self._logger.exception(e)
+                    meta_file.write_text(as_json(meta), "utf-8")
+                else:
+                    self._logger.debug(lambda: f"Skip caching library {name}{repr(args)}")
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                self._logger.exception(e)
 
-                return result
+            return result
 
         resolved_args = resolve_args(
             args,

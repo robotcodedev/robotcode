@@ -1,7 +1,7 @@
 from collections import defaultdict
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, TypeVar, cast
 
-from .async_tools import RLock
+from .async_tools import Lock
 
 _T = TypeVar("_T")
 
@@ -16,7 +16,7 @@ class CacheEntry:
     def __init__(self) -> None:
         self.data: Any = None
         self.has_data: bool = False
-        self.lock = RLock()
+        self.lock = Lock()
 
 
 class AsyncSimpleLRUCache:
@@ -27,7 +27,7 @@ class AsyncSimpleLRUCache:
         self._order: Optional[List[Tuple[Any, ...]]] = None
         if self.max_items:
             self._order = []
-        self._lock = RLock()
+        self._lock = Lock()
 
     async def has(self, *args: Any, **kwargs: Any) -> bool:
         key = self._make_key(*args, **kwargs)
