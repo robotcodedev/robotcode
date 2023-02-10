@@ -51,6 +51,7 @@ __all__ = ["DiagnosticsProtocolPart", "DiagnosticsResult"]
 
 
 class DiagnosticsMode(Enum):
+    OFF = "off"
     WORKSPACE = "workspace"
     OPENFILESONLY = "openFilesOnly"
 
@@ -342,6 +343,11 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                     "Analyse workspace", cancellable=False, current=0, max=len(documents) + 1, start=False
                 ) as progress:
                     for i, document in enumerate(documents):
+                        mode = await self.get_diagnostics_mode(document.uri)
+                        if mode == DiagnosticsMode.OFF:
+                            self.get_diagnostics_data(document).version = document.version
+                            continue
+
                         if document.opened_in_editor:
                             continue
 
@@ -364,7 +370,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                             document,
                             False,
                             False,
-                            await self.get_diagnostics_mode(document.uri) == DiagnosticsMode.WORKSPACE,
+                            mode == DiagnosticsMode.WORKSPACE,
                         )
 
                 if not done_something:

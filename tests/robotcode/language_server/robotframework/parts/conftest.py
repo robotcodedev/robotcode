@@ -15,12 +15,10 @@ from robotcode.language_server.common.lsp_types import (
     TextDocumentClientCapabilities,
     WorkspaceFolder,
 )
+from robotcode.language_server.common.parts.diagnostics import DiagnosticsMode
 from robotcode.language_server.common.parts.workspace import HasConfigSection
 from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.configuration import (
-    RobotCodeConfig,
-    RobotConfig,
-)
+from robotcode.language_server.robotframework.configuration import AnalysisConfig, RobotCodeConfig, RobotConfig
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
@@ -67,7 +65,8 @@ async def protocol(request: Any) -> AsyncIterator[RobotLanguageServerProtocol]:
                         variables={
                             "CMD_VAR": "1",
                         },
-                    )
+                    ),
+                    analysis=AnalysisConfig(diagnostic_mode=DiagnosticsMode.OFF),
                 )
             )
         }
