@@ -137,7 +137,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         *args: Any,
         **kwargs: Any,
     ) -> List[Location]:
-        await self.parent.diagnostics.ensure_workspace_loaded()
+        # await self.parent.diagnostics.ensure_workspace_loaded()
 
         result: List[Location] = []
 

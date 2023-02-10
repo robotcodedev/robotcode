@@ -962,11 +962,11 @@ class ImportsManager:
 
         if get_robot_version() >= (5, 0):
             if is_variables_by_path(name):
-                return str(find_file_ex(name, base_dir, "Library"))
+                return str(find_file_ex(name, base_dir, "Variables"))
 
             return name
 
-        return str(find_file_ex(name, base_dir, "Library"))
+        return str(find_file_ex(name, base_dir, "Variables"))
 
     @_logger.call
     async def get_libdoc_for_library_import(
