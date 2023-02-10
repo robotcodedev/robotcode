@@ -36,7 +36,7 @@ async def protocol(request: Any) -> AsyncIterator[RobotLanguageServerProtocol]:
     robotcode_cache_path = root_path / ".robotcode_cache"
 
     if robotcode_cache_path.exists():
-        shutil.rmtree(robotcode_cache_path)
+        shutil.rmtree(robotcode_cache_path, ignore_errors=True)
 
     server = RobotLanguageServer()
     try:
