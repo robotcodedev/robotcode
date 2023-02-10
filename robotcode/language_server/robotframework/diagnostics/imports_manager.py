@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import itertools
+import multiprocessing as mp
 import os
 import shutil
 import sys
@@ -1011,7 +1012,7 @@ class ImportsManager:
                     except BaseException as e:
                         self._logger.exception(e)
 
-            with ProcessPoolExecutor(max_workers=1) as executor:
+            with ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn")) as executor:
                 result = await asyncio.wait_for(
                     asyncio.get_running_loop().run_in_executor(
                         executor,
@@ -1253,7 +1254,7 @@ class ImportsManager:
                     except BaseException as e:
                         self._logger.exception(e)
 
-            with ProcessPoolExecutor(max_workers=1) as executor:
+            with ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn")) as executor:
                 result = await asyncio.wait_for(
                     asyncio.get_running_loop().run_in_executor(
                         executor,

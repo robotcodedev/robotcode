@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import multiprocessing as mp
 import socket
 import threading
 import traceback
@@ -131,7 +132,7 @@ class LibDocRequestHandler(SimpleHTTPRequestHandler):
 
                     self.wfile.write(bytes(data, "utf-8"))
                 else:
-                    with ProcessPoolExecutor(max_workers=1) as executor:
+                    with ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn")) as executor:
                         result = executor.submit(
                             get_robot_library_html_doc_str,
                             name,
