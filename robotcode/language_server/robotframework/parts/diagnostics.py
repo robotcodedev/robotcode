@@ -4,7 +4,7 @@ import ast
 import asyncio
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from ....utils.async_tools import check_canceled, threaded
+from ....utils.async_tools import check_canceled, create_sub_task, threaded
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.decorators import language_id
@@ -51,10 +51,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
 
-    @language_id("robotframework")
-    @threaded()
-    @_logger.call
-    async def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
+    async def namespace_invalidated_task(self, namespace: Namespace) -> None:
         if namespace.document is not None:
             refresh = namespace.document.opened_in_editor
 
@@ -71,6 +68,11 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
             if refresh:
                 await self.parent.diagnostics.refresh()
+
+    @language_id("robotframework")
+    @_logger.call
+    async def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
+        create_sub_task(self.namespace_invalidated_task(namespace), loop=self.parent.diagnostics.diagnostics_loop)
 
     @language_id("robotframework")
     @threaded()
