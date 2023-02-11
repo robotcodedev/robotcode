@@ -1085,7 +1085,7 @@ class ImportsManager:
         return await entry.get_libdoc()
 
     @_logger.call
-    async def get_libdoc_from_model(
+    def get_libdoc_from_model(
         self,
         model: ast.AST,
         source: str,

@@ -635,30 +635,51 @@ class Namespace:
 
     @_logger.call
     async def libraries_changed(self, sender: Any, libraries: List[LibraryDoc]) -> None:
-        for p in libraries:
-            if any(e for e in self._libraries.values() if e.library_doc == p):
-                if self.document is not None:
-                    self.document.set_data(Namespace.DataEntry, None)
-                await self.invalidate()
-                break
+        invalidate = False
+
+        async with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
+            for p in libraries:
+                if any(e for e in self._libraries.values() if e.library_doc == p):
+                    invalidate = True
+                    break
+
+        if invalidate:
+            if self.document is not None:
+                self.document.set_data(Namespace.DataEntry, None)
+
+            await self.invalidate()
 
     @_logger.call
     async def resources_changed(self, sender: Any, resources: List[LibraryDoc]) -> None:
-        for p in resources:
-            if any(e for e in self._resources.values() if e.library_doc.source == p.source):
-                if self.document is not None:
-                    self.document.set_data(Namespace.DataEntry, None)
-                await self.invalidate()
-                break
+        invalidate = False
+
+        async with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
+            for p in resources:
+                if any(e for e in self._resources.values() if e.library_doc.source == p.source):
+                    invalidate = True
+                    break
+
+        if invalidate:
+            if self.document is not None:
+                self.document.set_data(Namespace.DataEntry, None)
+
+            await self.invalidate()
 
     @_logger.call
     async def variables_changed(self, sender: Any, variables: List[LibraryDoc]) -> None:
-        for p in variables:
-            if any(e for e in self._variables.values() if e.library_doc.source == p.source):
-                if self.document is not None:
-                    self.document.set_data(Namespace.DataEntry, None)
-                await self.invalidate()
-                break
+        invalidate = False
+
+        async with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
+            for p in variables:
+                if any(e for e in self._variables.values() if e.library_doc.source == p.source):
+                    invalidate = True
+                    break
+
+        if invalidate:
+            if self.document is not None:
+                self.document.set_data(Namespace.DataEntry, None)
+
+            await self.invalidate()
 
     async def is_initialized(self) -> bool:
         async with self._initialize_lock:
@@ -753,7 +774,7 @@ class Namespace:
     async def get_library_doc(self) -> LibraryDoc:
         async with self._library_doc_lock:
             if self._library_doc is None:
-                self._library_doc = await self.imports_manager.get_libdoc_from_model(
+                self._library_doc = self.imports_manager.get_libdoc_from_model(
                     self.model,
                     self.source,
                     model_type="RESOURCE",

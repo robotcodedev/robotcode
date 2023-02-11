@@ -465,7 +465,7 @@ class Lock:
                     warnings.warn(f"Lock {self} takes to long {threading.current_thread()}\n, try to cancel...")
                     fut.cancel()
 
-                h = fut.get_loop().call_later(120, aaa, fut)
+                h = fut.get_loop().call_later(60, aaa, fut)
                 try:
                     await fut
                 finally:
