@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, List, NamedTuple, Optional, Set, Union
+from typing import Any, ClassVar, Final, List, NamedTuple, Optional, Set, Union
 
 from ...jsonrpc2.protocol import (
     JsonRPCErrorException,
@@ -77,38 +77,38 @@ class LanguageDefinition(NamedTuple):
 
 
 class LanguageServerProtocol(JsonRPCProtocol):
-    _logger = LoggingDescriptor()
+    __logger = LoggingDescriptor()
 
-    commands = ProtocolPartDescriptor(CommandsProtocolPart)
-    window = ProtocolPartDescriptor(WindowProtocolPart)
-    documents = ProtocolPartDescriptor(TextDocumentProtocolPart)
-    diagnostics = ProtocolPartDescriptor(DiagnosticsProtocolPart)
-    folding_ranges = ProtocolPartDescriptor(FoldingRangeProtocolPart)
-    definition = ProtocolPartDescriptor(DefinitionProtocolPart)
-    implementation = ProtocolPartDescriptor(ImplementationProtocolPart)
-    declaration = ProtocolPartDescriptor(DeclarationProtocolPart)
-    hover = ProtocolPartDescriptor(HoverProtocolPart)
-    completion = ProtocolPartDescriptor(CompletionProtocolPart)
-    signature_help = ProtocolPartDescriptor(SignatureHelpProtocolPart)
-    code_lens = ProtocolPartDescriptor(CodeLensProtocolPart)
-    document_symbols = ProtocolPartDescriptor(DocumentSymbolsProtocolPart)
-    formatting = ProtocolPartDescriptor(FormattingProtocolPart)
-    semantic_tokens = ProtocolPartDescriptor(SemanticTokensProtocolPart)
-    references = ProtocolPartDescriptor(ReferencesProtocolPart)
-    document_highlight = ProtocolPartDescriptor(DocumentHighlightProtocolPart)
-    linked_editing_range = ProtocolPartDescriptor(LinkedEditingRangeProtocolPart)
-    selection_range = ProtocolPartDescriptor(SelectionRangeProtocolPart)
-    rename = ProtocolPartDescriptor(RenameProtocolPart)
-    inline_value = ProtocolPartDescriptor(InlineValueProtocolPart)
-    inlay_hint = ProtocolPartDescriptor(InlayHintProtocolPart)
-    code_action = ProtocolPartDescriptor(CodeActionProtocolPart)
+    commands: Final = ProtocolPartDescriptor(CommandsProtocolPart)
+    window: Final = ProtocolPartDescriptor(WindowProtocolPart)
+    documents: Final = ProtocolPartDescriptor(TextDocumentProtocolPart)
+    diagnostics: Final = ProtocolPartDescriptor(DiagnosticsProtocolPart)
+    folding_ranges: Final = ProtocolPartDescriptor(FoldingRangeProtocolPart)
+    definition: Final = ProtocolPartDescriptor(DefinitionProtocolPart)
+    implementation: Final = ProtocolPartDescriptor(ImplementationProtocolPart)
+    declaration: Final = ProtocolPartDescriptor(DeclarationProtocolPart)
+    hover: Final = ProtocolPartDescriptor(HoverProtocolPart)
+    completion: Final = ProtocolPartDescriptor(CompletionProtocolPart)
+    signature_help: Final = ProtocolPartDescriptor(SignatureHelpProtocolPart)
+    code_lens: Final = ProtocolPartDescriptor(CodeLensProtocolPart)
+    document_symbols: Final = ProtocolPartDescriptor(DocumentSymbolsProtocolPart)
+    formatting: Final = ProtocolPartDescriptor(FormattingProtocolPart)
+    semantic_tokens: Final = ProtocolPartDescriptor(SemanticTokensProtocolPart)
+    references: Final = ProtocolPartDescriptor(ReferencesProtocolPart)
+    document_highlight: Final = ProtocolPartDescriptor(DocumentHighlightProtocolPart)
+    linked_editing_range: Final = ProtocolPartDescriptor(LinkedEditingRangeProtocolPart)
+    selection_range: Final = ProtocolPartDescriptor(SelectionRangeProtocolPart)
+    rename: Final = ProtocolPartDescriptor(RenameProtocolPart)
+    inline_value: Final = ProtocolPartDescriptor(InlineValueProtocolPart)
+    inlay_hint: Final = ProtocolPartDescriptor(InlayHintProtocolPart)
+    code_action: Final = ProtocolPartDescriptor(CodeActionProtocolPart)
 
     name: Optional[str] = None
     short_name: Optional[str] = None
     version: Optional[str] = None
 
-    file_extensions: Set[str] = set()
-    languages: List[LanguageDefinition] = []
+    file_extensions: ClassVar[Set[str]] = set()
+    languages: ClassVar[List[LanguageDefinition]] = []
 
     def __init__(self, server: JsonRPCServer[Any]):
         super().__init__()
@@ -174,7 +174,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         return base_capabilities
 
     @rpc_method(name="initialize", param_type=InitializeParams)
-    @_logger.call
+    @__logger.call
     async def _initialize(
         self,
         capabilities: ClientCapabilities,
@@ -249,7 +249,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         ...
 
     @rpc_method(name="shutdown", cancelable=False)
-    @_logger.call
+    @__logger.call
     async def _shutdown(self, *args: Any, **kwargs: Any) -> None:
         if self.shutdown_received:
             return
@@ -259,24 +259,24 @@ class LanguageServerProtocol(JsonRPCProtocol):
         try:
             await asyncio.wait_for(self.cancel_all_received_request(), 1)
         except BaseException as e:  # NOSONAR
-            self._logger.exception(e)
+            self.__logger.exception(e)
 
         await self.on_shutdown(self)
 
     @rpc_method(name="exit")
-    @_logger.call
+    @__logger.call
     async def _exit(self, *args: Any, **kwargs: Any) -> None:
         await self.on_exit(self)
 
         raise SystemExit(0 if self.shutdown_received else 1)
 
     @rpc_method(name="$/setTrace", param_type=SetTraceParams)
-    @_logger.call
+    @__logger.call
     async def _set_trace(self, value: TraceValue, *args: Any, **kwargs: Any) -> None:
         self.trace = value
 
     @rpc_method(name="$/cancelRequest", param_type=CancelParams)
-    @_logger.call
+    @__logger.call
     async def _cancel_request(self, id: Union[int, str], **kwargs: Any) -> None:
         self.cancel_request(id)
 

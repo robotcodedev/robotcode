@@ -10,6 +10,7 @@ from typing import (
     Callable,
     Coroutine,
     Dict,
+    Final,
     List,
     Mapping,
     NamedTuple,
@@ -123,7 +124,6 @@ class HasConfigSection(Protocol):
     __config_section__: str
 
 
-@config_section("unknown")
 @dataclass
 class ConfigBase(Model):
     pass
@@ -134,7 +134,7 @@ _F = TypeVar("_F", bound=Callable[..., Any])
 
 
 class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
-    _logger = LoggingDescriptor()
+    _logger: Final = LoggingDescriptor()
 
     def __init__(
         self,

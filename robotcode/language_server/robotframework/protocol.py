@@ -2,7 +2,7 @@ import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional
 
 from ...__version__ import __version__
 from ...jsonrpc2.protocol import (
@@ -79,7 +79,7 @@ class Options(Model):
 
 @symbol_information_label("robotframework")
 class RobotLanguageServerProtocol(LanguageServerProtocol):
-    _logger = LoggingDescriptor()
+    _logger: Final = LoggingDescriptor()
 
     documents_cache = ProtocolPartDescriptor(DocumentsCache)
     robot_diagnostics = ProtocolPartDescriptor(RobotDiagnosticsProtocolPart)
@@ -112,7 +112,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
     file_extensions = {"robot", "resource", "py", "yaml", "yml", "feature"}
 
-    languages: List[LanguageDefinition] = [
+    languages = [
         LanguageDefinition(
             id="robotframework",
             extensions=[".robot", ".resource"],

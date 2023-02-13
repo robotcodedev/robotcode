@@ -4,7 +4,7 @@ import dataclasses
 from dataclasses import dataclass
 from enum import Enum, IntEnum, IntFlag
 from reprlib import recursive_repr
-from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, Final, Iterator, List, Literal, Optional, Tuple, Union
 
 from ...utils.dataclasses import to_camel_case, to_snake_case
 
@@ -17,30 +17,30 @@ LSPAny = Any
 
 
 class ErrorCodes:
-    PARSE_ERROR = -32700
-    INVALID_REQUEST = -32600
-    METHOD_NOT_FOUND = -32601
-    INVALID_PARAMS = -32602
-    INTERNAL_ERROR = -32603
-    SERVER_ERROR_START = -32000
-    SERVER_ERROR_END = -32099
+    PARSE_ERROR: Final = -32700
+    INVALID_REQUEST: Final = -32600
+    METHOD_NOT_FOUND: Final = -32601
+    INVALID_PARAMS: Final = -32602
+    INTERNAL_ERROR: Final = -32603
+    SERVER_ERROR_START: Final = -32000
+    SERVER_ERROR_END: Final = -32099
 
-    JSON_RPC_RESERVED_ERROR_RANGE_START = -32099
+    JSON_RPC_RESERVED_ERROR_RANGE_START: Final = -32099
 
-    SERVER_NOT_INITIALIZED = -32002
-    UNKNOWN_ERROR = -32001
+    SERVER_NOT_INITIALIZED: Final = -32002
+    UNKNOWN_ERROR: Final = -32001
 
-    JSON_RPC_RESERVED_ERROR_RANGE_END = -32000
+    JSON_RPC_RESERVED_ERROR_RANGE_END: Final = -32000
 
-    LSP_RESERVED_ERROR_RANGE_START = -32899
-    REQUEST_FAILED = -32803
-    SERVER_CANCELLED = -32802
-    CONTENT_MODIFIED = -32801
-    REQUEST_CANCELLED = -32800
-    LSP_RESERVED_ERROR_RANGE_END = -32800
+    LSP_RESERVED_ERROR_RANGE_START: Final = -32899
+    REQUEST_FAILED: Final = -32803
+    SERVER_CANCELLED: Final = -32802
+    CONTENT_MODIFIED: Final = -32801
+    REQUEST_CANCELLED: Final = -32800
+    LSP_RESERVED_ERROR_RANGE_END: Final = -32800
 
 
-@dataclass(repr=False)
+@dataclass
 class Model:
     @classmethod
     def _encode_case(cls, s: str) -> str:
@@ -65,17 +65,17 @@ class Model:
         return f"{self.__class__.__qualname__}({args})"
 
 
-@dataclass(repr=False)
+@dataclass
 class CancelParams(Model):
     id: Union[int, str]
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkDoneProgressParams(Model):
     work_done_token: Optional[ProgressToken] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ClientInfo(Model):
     name: str
     version: Optional[str] = None
@@ -90,13 +90,13 @@ class TraceValue(Enum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkspaceFolder(Model):
     uri: DocumentUri
     name: str
 
 
-@dataclass(repr=False)
+@dataclass
 class TextDocumentSyncClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     will_save: Optional[bool] = None
@@ -123,12 +123,12 @@ class FailureHandlingKind(Enum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkspaceEditClientCapabilitiesChangeAnnotationSupport(Model):
     groups_on_label: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkspaceEditClientCapabilities(Model):
     document_changes: Optional[bool] = None
     resource_operations: Optional[List[ResourceOperationKind]] = None
@@ -138,27 +138,27 @@ class WorkspaceEditClientCapabilities(Model):
     change_annotation_support: Optional[WorkspaceEditClientCapabilitiesChangeAnnotationSupport] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DidChangeConfigurationClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DidChangeWatchedFilesClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ExecuteCommandClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensWorkspaceClientCapabilities(Model):
     refresh_support: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeLensWorkspaceClientCapabilities(Model):
     refresh_support: Optional[bool] = None
 
@@ -233,17 +233,17 @@ class InsertTextFormat(Enum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkspaceSymbolClientCapabilitiesSymbolKind(Model):
     value_set: List[SymbolKind]
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkspaceSymbolClientCapabilitiesTagSupport(Model):
     value_set: List[SymbolTag]
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkspaceSymbolClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     symbol_kind: Optional[WorkspaceSymbolClientCapabilitiesSymbolKind] = None
@@ -281,22 +281,22 @@ class CompletionItemKind(IntEnum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class CompletionClientCapabilitiesCompletionItemTagSupport(Model):
     value_set: List[CompletionItemTag]
 
 
-@dataclass(repr=False)
+@dataclass
 class CompletionClientCapabilitiesCompletionItemResolveSupport(Model):
     properties: List[str]
 
 
-@dataclass(repr=False)
+@dataclass
 class CompletionClientCapabilitiesCompletionItemInsertTextModeSupport(Model):
     value_set: List[InsertTextMode]
 
 
-@dataclass(repr=False)
+@dataclass
 class CompletionClientCapabilitiesCompletionItem(Model):
     snippet_support: Optional[bool] = None
     commit_characters_support: Optional[bool] = None
@@ -309,12 +309,12 @@ class CompletionClientCapabilitiesCompletionItem(Model):
     insert_text_mode_support: Optional[CompletionClientCapabilitiesCompletionItemInsertTextModeSupport] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class CompletionClientCapabilitiesCompletionItemKind(Model):
     value_set: Optional[List[CompletionItemKind]] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class CompletionClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     completion_item: Optional[CompletionClientCapabilitiesCompletionItem] = None
@@ -322,76 +322,76 @@ class CompletionClientCapabilities(Model):
     context_support: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class HoverClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     content_format: Optional[List[MarkupKind]] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SignatureHelpClientCapabilitiesSignatureInformationParameterInformation(Model):
     label_offset_support: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SignatureHelpClientCapabilitiesSignatureInformation(Model):
     documentation_format: Optional[List[MarkupKind]] = None
     parameter_information: Optional[SignatureHelpClientCapabilitiesSignatureInformationParameterInformation] = None
     active_parameter_support: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SignatureHelpClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     signature_information: Optional[SignatureHelpClientCapabilitiesSignatureInformation] = None
     context_support: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DeclarationClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     link_support: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DefinitionClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     link_support: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class TypeDefinitionClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     link_support: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ImplementationClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     link_support: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ReferenceClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentHighlightClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentSymbolClientCapabilitiesSymbolKind(Model):
     value_set: Optional[List[SymbolKind]] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentSymbolClientCapabilitiesTagSupport(Model):
     value_set: List[SymbolTag]
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentSymbolClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     symbol_kind: Optional[DocumentSymbolClientCapabilitiesSymbolKind] = None
@@ -415,22 +415,22 @@ class CodeActionKinds:
 CodeActionKind = str
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeActionClientCapabilitiesCodeActionLiteralSupportCodeActionKind(Model):
     value_set: Optional[List[CodeActionKind]] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeActionClientCapabilitiesCodeActionLiteralSupport(Model):
     code_action_kind: CodeActionClientCapabilitiesCodeActionLiteralSupportCodeActionKind
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeActionClientCapabilitiesResolveSupport(Model):
     properties: List[str]
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeActionClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     code_action_literal_support: Optional[CodeActionClientCapabilitiesCodeActionLiteralSupport] = None
@@ -441,38 +441,38 @@ class CodeActionClientCapabilities(Model):
     honors_change_annotations: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeLensClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentLinkClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     tooltip_support: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentColorClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentFormattingClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentRangeFormattingClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentOnTypeFormattingClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class PrepareSupportDefaultBehavior(IntEnum):
     Identifier = 1
 
@@ -480,7 +480,7 @@ class PrepareSupportDefaultBehavior(IntEnum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class RenameClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     prepare_support: Optional[bool] = None
@@ -496,12 +496,12 @@ class DiagnosticTag(IntEnum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class PublishDiagnosticsClientCapabilitiesTagSupport(Model):
     value_set: List[DiagnosticTag]
 
 
-@dataclass(repr=False)
+@dataclass
 class PublishDiagnosticsClientCapabilities(Model):
     related_information: Optional[bool] = None
     tag_support: Optional[PublishDiagnosticsClientCapabilitiesTagSupport] = None
@@ -519,17 +519,17 @@ class FoldingRangeKind(Enum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class FoldingRangeClientCapabilitiesFoldingRangeKind(Model):
     value_set: Optional[List[FoldingRangeKind]]
 
 
-@dataclass(repr=False)
+@dataclass
 class FoldingRangeClientCapabilitiesFoldingRange(Model):
     collapsed_text: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class FoldingRangeClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     range_limit: Optional[int] = None
@@ -538,17 +538,17 @@ class FoldingRangeClientCapabilities(Model):
     folding_range: Optional[FoldingRangeClientCapabilitiesFoldingRange] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SelectionRangeClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class LinkedEditingRangeClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class CallHierarchyClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
@@ -560,18 +560,18 @@ class TokenFormat(Enum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensClientCapabilitiesRequestsFull(Model):
     delta: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensClientCapabilitiesRequests(Model):
     range: Union[bool, Dict[Any, Any], None] = None
     full: Union[SemanticTokensClientCapabilitiesRequestsFull, bool, None] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensClientCapabilities(Model):
     requests: SemanticTokensClientCapabilitiesRequests
     token_types: List[str]
@@ -584,34 +584,34 @@ class SemanticTokensClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class MonikerClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class InlayHintClientCapabilitiesResolveSupport(Model):
     properties: List[str]
 
 
-@dataclass(repr=False)
+@dataclass
 class InlayHintClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     resolve_support: Optional[InlayHintClientCapabilitiesResolveSupport] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class InlineValueClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DiagnosticClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     related_document_support: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class TextDocumentClientCapabilities(Model):
     synchronization: Optional[TextDocumentSyncClientCapabilities] = None
     completion: Optional[CompletionClientCapabilities] = None
@@ -645,35 +645,35 @@ class TextDocumentClientCapabilities(Model):
     diagnostic: Optional[DiagnosticClientCapabilities] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ShowMessageRequestClientCapabilitiesMessageActionItem(Model):
     additional_properties_support: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ShowMessageRequestClientCapabilities(Model):
     message_action_item: Optional[ShowMessageRequestClientCapabilitiesMessageActionItem] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ShowDocumentClientCapabilities(Model):
     support: bool
 
 
-@dataclass(repr=False)
+@dataclass
 class RegularExpressionsClientCapabilities(Model):
     engine: str
     version: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class MarkdownClientCapabilities(Model):
     parser: str
     version: Optional[str] = None
     allowed_tags: Optional[List[str]] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ClientCapabilitiesWorkspaceFileOperationsWorkspaceClientCapabilities(Model):
     dynamic_registration: Optional[bool] = None
     did_create: Optional[bool] = None
@@ -684,22 +684,22 @@ class ClientCapabilitiesWorkspaceFileOperationsWorkspaceClientCapabilities(Model
     will_delete: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class InlineValueWorkspaceClientCapabilities(Model):
     refresh_support: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class InlayHintWorkspaceClientCapabilities(Model):
     refresh_support: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DiagnosticWorkspaceClientCapabilities(Model):
     refresh_support: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ClientCapabilitiesWorkspace(Model):
     apply_edit: Optional[bool] = None
     workspace_edit: Optional[WorkspaceEditClientCapabilities] = None
@@ -717,7 +717,7 @@ class ClientCapabilitiesWorkspace(Model):
     diagnostics: Optional[DiagnosticWorkspaceClientCapabilities] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ClientCapabilitiesWindow(Model):
     work_done_progress: Optional[bool] = None
     show_message: Optional[ShowMessageRequestClientCapabilities] = None
@@ -731,14 +731,14 @@ UTF16: PositionEncodingKind = "utf-16"
 UTF32: PositionEncodingKind = "utf-32"
 
 
-@dataclass(repr=False)
+@dataclass
 class ClientCapabilitiesGeneral(Model):
     regular_expressions: Optional[RegularExpressionsClientCapabilities] = None
     markdown: Optional[MarkdownClientCapabilities] = None
     position_encodings: Optional[List[PositionEncodingKind]] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ClientCapabilities(Model):
     workspace: Optional[ClientCapabilitiesWorkspace] = None
     text_document: Optional[TextDocumentClientCapabilities] = None
@@ -747,8 +747,8 @@ class ClientCapabilities(Model):
     experimental: Optional[Any] = None
 
 
-@dataclass(repr=False)
-class _InitializeParams(Model):
+@dataclass
+class _InitializeParams:
     capabilities: ClientCapabilities
     process_id: Optional[int] = None
     client_info: Optional[ClientInfo] = None
@@ -760,17 +760,17 @@ class _InitializeParams(Model):
     workspace_folders: Optional[List[WorkspaceFolder]] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class InitializeParams(WorkDoneProgressParams, _InitializeParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class InitializeError(Model):
     retry: bool
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkspaceFoldersServerCapabilities(Model):
     supported: Optional[bool] = None
     change_notifications: Union[str, bool, None] = None
@@ -784,25 +784,25 @@ class FileOperationPatternKind(Enum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class FileOperationPatternOptions(Model):
     ignore_case: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class FileOperationPattern(Model):
     glob: str
     matches: Optional[FileOperationPatternKind] = None
     options: Optional[FileOperationPatternOptions] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class FileOperationFilter(Model):
     pattern: FileOperationPattern
     scheme: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class FileOperationRegistrationOptions(Model):
     filters: List[FileOperationFilter]
 
@@ -816,12 +816,12 @@ class TextDocumentSyncKind(Enum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class SaveOptions(Model):
     include_text: Optional[bool]
 
 
-@dataclass(repr=False)
+@dataclass
 class TextDocumentSyncOptions(Model):
     open_close: Optional[bool] = None
     change: Optional[TextDocumentSyncKind] = None
@@ -830,12 +830,12 @@ class TextDocumentSyncOptions(Model):
     save: Union[bool, SaveOptions, None] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkDoneProgressOptions(Model):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentFilter(Model):
     language: Optional[str] = None
     scheme: Optional[str] = None
@@ -845,77 +845,77 @@ class DocumentFilter(Model):
 DocumentSelector = List[DocumentFilter]
 
 
-@dataclass(repr=False)
+@dataclass
 class TextDocumentRegistrationOptions(Model):
     document_selector: Optional[DocumentSelector] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class StaticRegistrationOptions(Model):
     id: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class TextDocumentChangeRegistrationOptions(TextDocumentRegistrationOptions):
     sync_kind: TextDocumentSyncKind = TextDocumentSyncKind.FULL
 
 
-@dataclass(repr=False)
+@dataclass
 class FoldingRangeOptions(WorkDoneProgressOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class FoldingRangeRegistrationOptions(StaticRegistrationOptions, TextDocumentRegistrationOptions, FoldingRangeOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class DefinitionOptions(WorkDoneProgressOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class DeclarationOptions(WorkDoneProgressOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class DeclarationRegistrationOptions(DeclarationOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class ImplementationOptions(WorkDoneProgressOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class ImplementationRegistrationOptions(DeclarationOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class HoverOptions(WorkDoneProgressOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkspaceSymbolOptions(WorkDoneProgressOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentSymbolOptions(WorkDoneProgressOptions):
     label: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentSymbolRegistrationOptions(TextDocumentRegistrationOptions, DocumentSymbolOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class ServerCapabilitiesWorkspaceFileOperations(Model):
     did_create: Optional[FileOperationRegistrationOptions] = None
     will_create: Optional[FileOperationRegistrationOptions] = None
@@ -925,224 +925,224 @@ class ServerCapabilitiesWorkspaceFileOperations(Model):
     will_delete: Optional[FileOperationRegistrationOptions] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ServerCapabilitiesWorkspace(Model):
     workspace_folders: Optional[WorkspaceFoldersServerCapabilities] = None
     file_operations: Optional[ServerCapabilitiesWorkspaceFileOperations] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class CompletionOptions(WorkDoneProgressOptions):
     trigger_characters: Optional[List[str]] = None
     all_commit_characters: Optional[List[str]] = None
     resolve_provider: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class CompletionRegistrationOptions(TextDocumentRegistrationOptions, CompletionOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class SignatureHelpOptions(WorkDoneProgressOptions):
     trigger_characters: Optional[List[str]] = None
     retrigger_characters: Optional[List[str]] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeLensOptions(WorkDoneProgressOptions):
     resolve_provider: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentFormattingOptions(WorkDoneProgressOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentFormattingOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentRangeFormattingOptions(WorkDoneProgressOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentRangeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentRangeFormattingOptions):
     pass
 
 
-@dataclass(repr=False)
-class _ExecuteCommandOptions(Model):
+@dataclass
+class _ExecuteCommandOptions:
     commands: List[str]
 
 
-@dataclass(repr=False)
+@dataclass
 class ExecuteCommandOptions(WorkDoneProgressOptions, _ExecuteCommandOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class ExecuteCommandRegistrationOptions(ExecuteCommandOptions):
     pass
 
 
-@dataclass(repr=False)
-class _ExecuteCommandParams(Model):
+@dataclass
+class _ExecuteCommandParams:
     command: str
     arguments: Optional[List[LSPAny]] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ExecuteCommandParams(WorkDoneProgressParams, _ExecuteCommandParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensLegend(Model):
     token_types: List[str]
     token_modifiers: List[str]
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensOptionsFull(Model):
     delta: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensOptionsRange(Model):
     pass
 
 
-@dataclass(repr=False)
-class _SemanticTokensOptions(Model):
+@dataclass
+class _SemanticTokensOptions:
     legend: SemanticTokensLegend
     range: Union[bool, SemanticTokensOptionsRange, None] = None
     full: Union[bool, SemanticTokensOptionsFull, None] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensOptions(WorkDoneProgressOptions, _SemanticTokensOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensRegistrationOptions(
     TextDocumentRegistrationOptions, StaticRegistrationOptions, SemanticTokensOptions
 ):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class ReferenceOptions(WorkDoneProgressOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class ReferenceRegistrationOptions(TextDocumentRegistrationOptions, ReferenceOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentHighlightOptions(WorkDoneProgressOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentHighlightRegistrationOptions(TextDocumentRegistrationOptions, DocumentHighlightOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class LinkedEditingRangeOptions(WorkDoneProgressOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class LinkedEditingRangeRegistrationOptions(
     LinkedEditingRangeOptions, StaticRegistrationOptions, TextDocumentRegistrationOptions
 ):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class SelectionRangeOptions(WorkDoneProgressOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class SelectionRangeRegistrationOptions(
     TextDocumentRegistrationOptions, SelectionRangeOptions, StaticRegistrationOptions
 ):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class RenameOptions(WorkDoneProgressOptions):
     prepare_provider: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class RenameRegistrationOptions(RenameOptions, StaticRegistrationOptions, TextDocumentRegistrationOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class InlineValueOptions(WorkDoneProgressOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class InlineValueRegistrationOptions(TextDocumentRegistrationOptions, StaticRegistrationOptions, InlineValueOptions):
     pass
 
 
-@dataclass(repr=False)
-class _DiagnosticOptions(Model):
+@dataclass
+class _DiagnosticOptions:
     inter_file_dependencies: bool
     workspace_diagnostics: bool
     identifier: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DiagnosticOptions(WorkDoneProgressOptions, _DiagnosticOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class DiagnosticRegistrationOptions(TextDocumentRegistrationOptions, StaticRegistrationOptions, DiagnosticOptions):
     pass
 
 
-@dataclass(repr=False)
-class _CodeActionOptions(Model):
+@dataclass
+class _CodeActionOptions:
     code_action_kinds: Optional[List[CodeActionKind]] = None
     resolve_provider: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeActionOptions(WorkDoneProgressOptions, _CodeActionOptions):
     pass
 
 
-@dataclass(repr=False)
-class _InlayHintOptions(Model):
+@dataclass
+class _InlayHintOptions:
     resolve_provider: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class InlayHintOptions(WorkDoneProgressOptions, _InlayHintOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class InlayHintRegistrationOptions(InlayHintOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class ServerCapabilities(Model):
     position_encoding: Optional[PositionEncodingKind] = None
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None] = None
@@ -1183,29 +1183,29 @@ class ServerCapabilities(Model):
     experimental: Optional[Any] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class InitializeResultServerInfo(Model):
     name: str
     version: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class InitializeResult(Model):
     capabilities: ServerCapabilities
     server_info: Optional[InitializeResultServerInfo] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class InitializedParams(Model):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class DidChangeConfigurationParams(Model):
     settings: Any
 
 
-@dataclass(repr=False)
+@dataclass
 class Position(Model):
     line: int
     character: int
@@ -1270,7 +1270,7 @@ class Position(Model):
         return hash((self.line, self.character))
 
 
-@dataclass(repr=False)
+@dataclass
 class Range(Model):
     start: Position
     end: Position
@@ -1322,7 +1322,7 @@ class Range(Model):
         return hash((self.start, self.end))
 
 
-@dataclass(repr=False)
+@dataclass
 class TextDocumentItem(Model):
     uri: DocumentUri
     language_id: str
@@ -1330,39 +1330,39 @@ class TextDocumentItem(Model):
     text: str
 
 
-@dataclass(repr=False)
+@dataclass
 class DidOpenTextDocumentParams(Model):
     text_document: TextDocumentItem
 
 
-@dataclass(repr=False)
+@dataclass
 class TextDocumentIdentifier(Model):
     uri: DocumentUri
 
 
-@dataclass(repr=False)
+@dataclass
 class OptionalVersionedTextDocumentIdentifier(TextDocumentIdentifier):
     version: Optional[int]
 
 
-@dataclass(repr=False)
+@dataclass
 class VersionedTextDocumentIdentifier(TextDocumentIdentifier):
     version: int
 
 
-@dataclass(repr=False)
+@dataclass
 class DidCloseTextDocumentParams(Model):
     text_document: TextDocumentIdentifier
 
 
-@dataclass(repr=False)
+@dataclass
 class TextDocumentContentRangeChangeEvent(Model):
     range: Range
     text: str
     range_length: Optional[int] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class TextDocumentContentTextChangeEvent(Model):
     text: str
 
@@ -1370,19 +1370,19 @@ class TextDocumentContentTextChangeEvent(Model):
 TextDocumentContentChangeEvent = Union[TextDocumentContentRangeChangeEvent, TextDocumentContentTextChangeEvent]
 
 
-@dataclass(repr=False)
+@dataclass
 class DidChangeTextDocumentParams(Model):
     text_document: VersionedTextDocumentIdentifier
     content_changes: List[TextDocumentContentChangeEvent]
 
 
-@dataclass(repr=False)
+@dataclass
 class ConfigurationItem(Model):
     scope_uri: Optional[DocumentUri]
     section: Optional[str]
 
 
-@dataclass(repr=False)
+@dataclass
 class ConfigurationParams(Model):
     items: List[ConfigurationItem]
 
@@ -1397,29 +1397,29 @@ class MessageType(IntEnum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class ShowMessageParams(Model):
     type: MessageType
     message: str
 
 
-@dataclass(repr=False)
+@dataclass
 class LogMessageParams(Model):
     type: MessageType
     message: str
 
 
-@dataclass(repr=False)
+@dataclass
 class MessageActionItem(Model):
     title: str
 
 
-@dataclass(repr=False)
+@dataclass
 class ShowMessageRequestParams(ShowMessageParams):
     actions: Optional[List[MessageActionItem]] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ShowDocumentParams(Model):
     uri: URI
     external: Optional[bool] = None
@@ -1427,7 +1427,7 @@ class ShowDocumentParams(Model):
     selection: Optional[Range] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ShowDocumentResult(Model):
     success: bool
 
@@ -1441,19 +1441,19 @@ class TextDocumentSaveReason(IntEnum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class WillSaveTextDocumentParams(Model):
     text_document: TextDocumentIdentifier
     reason: TextDocumentSaveReason
 
 
-@dataclass(repr=False)
+@dataclass
 class TextEdit(Model):
     range: Range
     new_text: str
 
 
-@dataclass(repr=False)
+@dataclass
 class DidSaveTextDocumentParams(Model):
     text_document: TextDocumentIdentifier
     text: Optional[str] = None
@@ -1469,12 +1469,12 @@ class DiagnosticSeverity(Enum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeDescription(Model):
     href: URI
 
 
-@dataclass(repr=False)
+@dataclass
 class Location(Model):
     uri: DocumentUri
     range: Range
@@ -1483,7 +1483,7 @@ class Location(Model):
         return hash((self.uri, self.range))
 
 
-@dataclass(repr=False)
+@dataclass
 class LocationLink(Model):
     origin_selection_range: Optional[Range]
     target_uri: DocumentUri
@@ -1491,13 +1491,13 @@ class LocationLink(Model):
     target_selection_range: Range
 
 
-@dataclass(repr=False)
+@dataclass
 class DiagnosticRelatedInformation(Model):
     location: Location
     message: str
 
 
-@dataclass(repr=False)
+@dataclass
 class Diagnostic(Model):
     range: Range
     message: str
@@ -1510,29 +1510,29 @@ class Diagnostic(Model):
     data: Optional[Any] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class PublishDiagnosticsParams(Model):
     uri: DocumentUri
     diagnostics: List[Diagnostic]
     version: Optional[int] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SetTraceParams(Model):
     value: TraceValue
 
 
-@dataclass(repr=False)
-class _FoldingRangeParams(Model):
+@dataclass
+class _FoldingRangeParams:
     text_document: TextDocumentIdentifier
 
 
-@dataclass(repr=False)
+@dataclass
 class FoldingRangeParams(WorkDoneProgressParams, _FoldingRangeParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class FoldingRange(Model):
     start_line: int
     end_line: int
@@ -1542,33 +1542,33 @@ class FoldingRange(Model):
     collapsed_text: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class FileCreate(Model):
     uri: str
 
 
-@dataclass(repr=False)
+@dataclass
 class CreateFilesParams(Model):
     files: List[FileCreate]
 
 
-@dataclass(repr=False)
+@dataclass
 class FileRename(Model):
     old_uri: str
     new_uri: str
 
 
-@dataclass(repr=False)
+@dataclass
 class RenameFilesParams(Model):
     files: List[FileRename]
 
 
-@dataclass(repr=False)
+@dataclass
 class FileDelete(Model):
     uri: str
 
 
-@dataclass(repr=False)
+@dataclass
 class DeleteFilesParams(Model):
     files: List[FileDelete]
 
@@ -1576,13 +1576,13 @@ class DeleteFilesParams(Model):
 ChangeAnnotationIdentifier = str
 
 
-@dataclass(repr=False)
+@dataclass
 class CreateFileOptions(Model):
     overwrite: Optional[bool] = None
     ignore_if_exists: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class CreateFile(Model):
     kind: Literal["create"]
     uri: DocumentUri
@@ -1590,13 +1590,13 @@ class CreateFile(Model):
     annotation_id: ChangeAnnotationIdentifier
 
 
-@dataclass(repr=False)
+@dataclass
 class RenameFileOptions(Model):
     overwrite: Optional[bool] = None
     ignore_if_exists: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class RenameFile(Model):
     kind: Literal["rename"]
     old_uri: DocumentUri
@@ -1605,13 +1605,13 @@ class RenameFile(Model):
     annotation_id: ChangeAnnotationIdentifier
 
 
-@dataclass(repr=False)
+@dataclass
 class DeleteFileOptions(Model):
     recursive: Optional[bool] = None
     ignore_if_exists: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DeleteFile(Model):
     kind: Literal["delete"]
     uri: DocumentUri
@@ -1619,63 +1619,63 @@ class DeleteFile(Model):
     annotation_id: ChangeAnnotationIdentifier
 
 
-@dataclass(repr=False)
+@dataclass
 class AnnotatedTextEdit(TextEdit):
     annotation_id: ChangeAnnotationIdentifier
 
 
-@dataclass(repr=False)
+@dataclass
 class TextDocumentEdit(Model):
     text_document: OptionalVersionedTextDocumentIdentifier
     edits: List[Union[TextEdit, AnnotatedTextEdit]]
 
 
-@dataclass(repr=False)
+@dataclass
 class ChangeAnnotation(Model):
     label: str
     needs_confirmation: Optional[bool] = None
     description: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkspaceEdit(Model):
     changes: Optional[Dict[DocumentUri, List[TextEdit]]] = None
     document_changes: Optional[List[Union[TextDocumentEdit, CreateFile, RenameFile, DeleteFile]]] = None
     change_annotations: Optional[Dict[ChangeAnnotationIdentifier, ChangeAnnotation]] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class PartialResultParams(Model):
     partial_result_token: Optional[ProgressToken] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class TextDocumentPositionParams(Model):
     text_document: TextDocumentIdentifier
     position: Position
 
 
-@dataclass(repr=False)
+@dataclass
 class DefinitionParams(WorkDoneProgressParams, PartialResultParams, TextDocumentPositionParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class DeclarationParams(WorkDoneProgressParams, PartialResultParams, TextDocumentPositionParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class ImplementationParams(WorkDoneProgressParams, PartialResultParams, TextDocumentPositionParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class HoverParams(WorkDoneProgressParams, TextDocumentPositionParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class MarkedStringType(Model):
     language: str
     value: str
@@ -1684,48 +1684,48 @@ class MarkedStringType(Model):
 MarkedString = Union[str, MarkedStringType]
 
 
-@dataclass(repr=False)
+@dataclass
 class MarkupContent(Model):
     kind: MarkupKind
     value: str
 
 
-@dataclass(repr=False)
+@dataclass
 class Hover(Model):
     contents: Union[MarkedString, List[MarkedString], MarkupContent]
     range: Optional[Range] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkspaceFoldersChangeEvent(Model):
     added: List[WorkspaceFolder]
     removed: List[WorkspaceFolder]
 
 
-@dataclass(repr=False)
+@dataclass
 class DidChangeWorkspaceFoldersParams(Model):
     event: WorkspaceFoldersChangeEvent
 
 
-@dataclass(repr=False)
+@dataclass
 class Registration(Model):
     id: str
     method: str
     register_options: Optional[Any]
 
 
-@dataclass(repr=False)
+@dataclass
 class RegistrationParams(Model):
     registrations: List[Registration]
 
 
-@dataclass(repr=False)
+@dataclass
 class Unregistration(Model):
     id: str
     method: str
 
 
-@dataclass(repr=False)
+@dataclass
 class UnregistrationParams(Model):
     unregisterations: List[Unregistration]
 
@@ -1736,13 +1736,13 @@ class WatchKind(IntFlag):
     DELETE = 4
 
 
-@dataclass(repr=False)
+@dataclass
 class FileSystemWatcher(Model):
     glob_pattern: str
     kind: Optional[WatchKind]
 
 
-@dataclass(repr=False)
+@dataclass
 class DidChangeWatchedFilesRegistrationOptions(Model):
     watchers: List[FileSystemWatcher]
 
@@ -1756,18 +1756,18 @@ class FileChangeType(IntEnum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class FileEvent(Model):
     uri: DocumentUri
     type: FileChangeType
 
 
-@dataclass(repr=False)
+@dataclass
 class DidChangeWatchedFilesParams(Model):
     changes: List[FileEvent]
 
 
-@dataclass(repr=False)
+@dataclass
 class Command(Model):
     title: str
     command: str
@@ -1783,25 +1783,25 @@ class CompletionTriggerKind(Enum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class CompletionContext(Model):
     trigger_kind: CompletionTriggerKind
     trigger_character: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class CompletionParams(WorkDoneProgressParams, PartialResultParams, TextDocumentPositionParams):
     context: Optional[CompletionContext] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class InsertReplaceEdit(Model):
     new_text: str
     insert: Range
     replace: Range
 
 
-@dataclass(repr=False)
+@dataclass
 class CompletionItem(Model):
     label: str
     kind: Optional[CompletionItemKind] = None
@@ -1822,7 +1822,7 @@ class CompletionItem(Model):
     data: Optional[Any] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class CompletionList(Model):
     is_incomplete: bool
     items: List[CompletionItem]
@@ -1837,13 +1837,13 @@ class SignatureHelpTriggerKind(Enum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class ParameterInformation(Model):
     label: Union[str, Tuple[int, int]]
     documentation: Union[str, MarkupContent, None] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SignatureInformation(Model):
     label: str
     documentation: Union[str, MarkupContent, None] = None
@@ -1851,14 +1851,14 @@ class SignatureInformation(Model):
     active_parameter: Optional[int] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SignatureHelp(Model):
     signatures: List[SignatureInformation]
     active_signature: Optional[int] = None
     active_parameter: Optional[int] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SignatureHelpContext(Model):
     trigger_kind: SignatureHelpTriggerKind
     trigger_character: Optional[str] = None
@@ -1866,44 +1866,44 @@ class SignatureHelpContext(Model):
     active_signature_help: Optional[SignatureHelp] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SignatureHelpParams(WorkDoneProgressParams, TextDocumentPositionParams):
     context: Optional[SignatureHelpContext] = None
 
 
-@dataclass(repr=False)
-class _CodeLensParams(Model):
+@dataclass
+class _CodeLensParams:
     text_document: TextDocumentIdentifier
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeLensParams(WorkDoneProgressParams, PartialResultParams, _CodeLensParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeLens(Model):
     range: Range
     command: Optional[Command] = None
     data: Optional[Any] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeLensRegistrationOptions(TextDocumentRegistrationOptions, CodeLensOptions):
     pass
 
 
-@dataclass(repr=False)
-class _DocumentSymbolParams(Model):
+@dataclass
+class _DocumentSymbolParams:
     text_document: TextDocumentIdentifier
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentSymbolParams(WorkDoneProgressParams, PartialResultParams, _DocumentSymbolParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentSymbol(Model):
     name: str
     kind: SymbolKind
@@ -1915,7 +1915,7 @@ class DocumentSymbol(Model):
     children: Optional[List[DocumentSymbol]] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SymbolInformation(Model):
     name: str
     kind: SymbolKind
@@ -1925,7 +1925,7 @@ class SymbolInformation(Model):
     container_name: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class FormattingOptions(Model):
     tab_size: int
     insert_spaces: bool
@@ -1934,86 +1934,86 @@ class FormattingOptions(Model):
     trim_final_newlines: Optional[bool] = None
 
 
-@dataclass(repr=False)
-class _DocumentFormattingParams(Model):
+@dataclass
+class _DocumentFormattingParams:
     text_document: TextDocumentIdentifier
     options: FormattingOptions
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentFormattingParams(WorkDoneProgressParams, _DocumentFormattingParams):
     pass
 
 
-@dataclass(repr=False)
-class _DocumentRangeFormattingParams(Model):
+@dataclass
+class _DocumentRangeFormattingParams:
     text_document: TextDocumentIdentifier
     range: Range
     options: FormattingOptions
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentRangeFormattingParams(WorkDoneProgressParams, _DocumentRangeFormattingParams):
     pass
 
 
-@dataclass(repr=False)
-class _SemanticTokensParams(Model):
+@dataclass
+class _SemanticTokensParams:
     text_document: TextDocumentIdentifier
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensParams(WorkDoneProgressParams, PartialResultParams, _SemanticTokensParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokens(Model):
     data: List[int]
     result_id: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensPartialResult(Model):
     data: List[int]
 
 
-@dataclass(repr=False)
-class _SemanticTokensDeltaParams(Model):
+@dataclass
+class _SemanticTokensDeltaParams:
     text_document: TextDocumentIdentifier
     previous_result_id: str
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensDeltaParams(WorkDoneProgressParams, PartialResultParams, _SemanticTokensDeltaParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensEdit(Model):
     start: int
     delete_count: int
     data: Optional[List[int]] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensDelta(Model):
     edits: List[SemanticTokensEdit]
     result_id: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensDeltaPartialResult(Model):
     edits: List[SemanticTokensEdit]
 
 
-@dataclass(repr=False)
-class _SemanticTokensRangeParams(Model):
+@dataclass
+class _SemanticTokensRangeParams:
     text_document: TextDocumentIdentifier
     range: Range
 
 
-@dataclass(repr=False)
+@dataclass
 class SemanticTokensRangeParams(WorkDoneProgressParams, PartialResultParams, _SemanticTokensRangeParams):
     pass
 
@@ -2063,27 +2063,27 @@ class SemanticTokenModifiers(Enum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class ReferenceContext(Model):
     include_declaration: bool
 
 
-@dataclass(repr=False)
-class _ReferenceParams(Model):
+@dataclass
+class _ReferenceParams:
     context: ReferenceContext
 
 
-@dataclass(repr=False)
+@dataclass
 class ReferenceParams(WorkDoneProgressParams, PartialResultParams, TextDocumentPositionParams, _ReferenceParams):
     pass
 
 
-@dataclass(repr=False)
-class _DocumentHighlightParams(Model):
+@dataclass
+class _DocumentHighlightParams:
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentHighlightParams(
     WorkDoneProgressParams, PartialResultParams, TextDocumentPositionParams, _DocumentHighlightParams
 ):
@@ -2096,111 +2096,111 @@ class DocumentHighlightKind(Enum):
     WRITE = 3
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentHighlight(Model):
     range: Range
     kind: Optional[DocumentHighlightKind] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class LinkedEditingRangeParams(WorkDoneProgressParams, TextDocumentPositionParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class LinkedEditingRanges(Model):
     ranges: List[Range]
     word_pattern: Optional[str] = None
 
 
-@dataclass(repr=False)
-class _SelectionRangeParams(Model):
+@dataclass
+class _SelectionRangeParams:
     text_document: TextDocumentIdentifier
     positions: List[Position]
 
 
-@dataclass(repr=False)
+@dataclass
 class SelectionRangeParams(WorkDoneProgressParams, PartialResultParams, _SelectionRangeParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class SelectionRange(Model):
     range: Range
     parent: Optional[SelectionRange] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ProgressParams(Model):
     token: ProgressToken
     value: Any
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkDoneProgressCreateParams(Model):
     token: ProgressToken
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkDoneProgressCancelParams(Model):
     token: ProgressToken
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkDoneProgressBase(Model):
     kind: Literal["begin", "end", "report"]
 
 
-@dataclass(repr=False)
-class _WorkDoneProgressCommon(Model):
+@dataclass
+class _WorkDoneProgressCommon:
     title: str
     message: Optional[str] = None
     percentage: Optional[int] = None
     cancellable: Optional[bool] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkDoneProgressBegin(WorkDoneProgressBase, _WorkDoneProgressCommon):
     kind: Literal["begin"] = "begin"
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkDoneProgressReport(WorkDoneProgressBase, _WorkDoneProgressCommon):
     kind: Literal["report"] = "report"
 
 
-@dataclass(repr=False)
-class _WorkDoneProgressEnd(Model):
+@dataclass
+class _WorkDoneProgressEnd:
     message: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkDoneProgressEnd(WorkDoneProgressBase, _WorkDoneProgressEnd):
     kind: Literal["end"] = "end"
 
 
-@dataclass(repr=False)
-class _RenameParams(Model):
+@dataclass
+class _RenameParams:
     new_name: str
 
 
-@dataclass(repr=False)
+@dataclass
 class RenameParams(WorkDoneProgressParams, TextDocumentPositionParams, _RenameParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class PrepareRenameParams(TextDocumentPositionParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class PrepareRenameResultWithPlaceHolder(Model):
     range: Range
     placeholder: str
 
 
-@dataclass(repr=False)
+@dataclass
 class PrepareRenameResultWithDefaultBehavior(Model):
     default_behavior: bool
 
@@ -2208,38 +2208,38 @@ class PrepareRenameResultWithDefaultBehavior(Model):
 PrepareRenameResult = Union[Range, PrepareRenameResultWithPlaceHolder, PrepareRenameResultWithDefaultBehavior]
 
 
-@dataclass(repr=False)
+@dataclass
 class InlineValueContext(Model):
     frame_id: int
     stopped_location: Range
 
 
-@dataclass(repr=False)
-class _InlineValueParams(Model):
+@dataclass
+class _InlineValueParams:
     text_document: TextDocumentIdentifier
     range: Range
     context: InlineValueContext
 
 
-@dataclass(repr=False)
+@dataclass
 class InlineValueParams(WorkDoneProgressParams, _InlineValueParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class InlineValueText(Model):
     range: Range
     text: str
 
 
-@dataclass(repr=False)
+@dataclass
 class InlineValueVariableLookup(Model):
     range: Range
     variable_name: Optional[str]
     case_sensitive_lookup: bool
 
 
-@dataclass(repr=False)
+@dataclass
 class InlineValueEvaluatableExpression(Model):
     range: Range
     expression: Optional[str]
@@ -2248,14 +2248,14 @@ class InlineValueEvaluatableExpression(Model):
 InlineValue = Union[InlineValueText, InlineValueVariableLookup, InlineValueEvaluatableExpression]
 
 
-@dataclass(repr=False)
-class _DocumentDiagnosticParams(Model):
+@dataclass
+class _DocumentDiagnosticParams:
     text_document: TextDocumentIdentifier
     identifier: Optional[str] = None
     previous_result_id: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentDiagnosticParams(WorkDoneProgressParams, PartialResultParams, _DocumentDiagnosticParams):
     pass
 
@@ -2265,27 +2265,27 @@ class DocumentDiagnosticReportKind(Enum):
     UNCHANGED = "unchanged"
 
 
-@dataclass(repr=False)
+@dataclass
 class FullDocumentDiagnosticReport(Model):
     items: List[Diagnostic]
     result_id: Optional[str] = None
     kind: Literal[DocumentDiagnosticReportKind.FULL] = DocumentDiagnosticReportKind.FULL
 
 
-@dataclass(repr=False)
+@dataclass
 class UnchangedDocumentDiagnosticReport(Model):
     result_id: str
     kind: DocumentDiagnosticReportKind = DocumentDiagnosticReportKind.UNCHANGED
 
 
-@dataclass(repr=False)
+@dataclass
 class RelatedFullDocumentDiagnosticReport(FullDocumentDiagnosticReport):
     related_documents: Optional[
         Dict[DocumentUri, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]
     ] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class RelatedUnchangedDocumentDiagnosticReport(UnchangedDocumentDiagnosticReport):
     related_documents: Optional[
         Dict[DocumentUri, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]
@@ -2295,53 +2295,53 @@ class RelatedUnchangedDocumentDiagnosticReport(UnchangedDocumentDiagnosticReport
 DocumentDiagnosticReport = Union[RelatedFullDocumentDiagnosticReport, RelatedUnchangedDocumentDiagnosticReport]
 
 
-@dataclass(repr=False)
+@dataclass
 class DocumentDiagnosticReportPartialResult(Model):
     related_documents: Optional[
         Dict[DocumentUri, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]
     ] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class DiagnosticServerCancellationData(Model):
     retrigger_request: bool
 
 
-@dataclass(repr=False)
+@dataclass
 class PreviousResultId(Model):
     uri: DocumentUri
     value: str
 
 
-@dataclass(repr=False)
-class _WorkspaceDiagnosticParams(Model):
+@dataclass
+class _WorkspaceDiagnosticParams:
     previous_result_ids: List[PreviousResultId]
     identifier: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkspaceDiagnosticParams(WorkDoneProgressParams, PartialResultParams, _WorkspaceDiagnosticParams):
     pass
 
 
-@dataclass(repr=False)
-class _WorkspaceFullDocumentDiagnosticReport(Model):
+@dataclass
+class _WorkspaceFullDocumentDiagnosticReport:
     uri: DocumentUri
     version: Optional[int]
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkspaceFullDocumentDiagnosticReport(FullDocumentDiagnosticReport, _WorkspaceFullDocumentDiagnosticReport):
     pass
 
 
-@dataclass(repr=False)
-class _WorkspaceUnchangedDocumentDiagnosticReport(Model):
+@dataclass
+class _WorkspaceUnchangedDocumentDiagnosticReport:
     uri: DocumentUri
     version: Optional[int]
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkspaceUnchangedDocumentDiagnosticReport(
     UnchangedDocumentDiagnosticReport, _WorkspaceUnchangedDocumentDiagnosticReport
 ):
@@ -2353,24 +2353,24 @@ WorkspaceDocumentDiagnosticReport = Union[
 ]
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkspaceDiagnosticReportPartialResult(Model):
     items: List[WorkspaceDocumentDiagnosticReport]
 
 
-@dataclass(repr=False)
+@dataclass
 class WorkspaceDiagnosticReport(Model):
     items: List[WorkspaceDocumentDiagnosticReport]
 
 
-@dataclass(repr=False)
-class _CodeActionParams(Model):
+@dataclass
+class _CodeActionParams:
     text_document: TextDocumentIdentifier
     range: Range
     context: CodeActionContext
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeActionParams(WorkDoneProgressParams, PartialResultParams, _CodeActionParams):
     pass
 
@@ -2380,19 +2380,19 @@ class CodeActionTriggerKind(IntEnum):
     AUTOMATIC = 2
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeActionContext(Model):
     diagnostics: List[Diagnostic]
     only: Optional[List[CodeActionKind]] = None
     trigger_kind: Optional[CodeActionTriggerKind] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeActionDisabled:
     reason: str
 
 
-@dataclass(repr=False)
+@dataclass
 class CodeAction:
     title: str
     kind: Optional[CodeActionKind] = None
@@ -2404,31 +2404,31 @@ class CodeAction:
     data: Any = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ApplyWorkspaceEditParams(Model):
     edit: WorkspaceEdit
     label: Optional[str] = None
 
 
-@dataclass(repr=False)
+@dataclass
 class ApplyWorkspaceEditResult(Model):
     applied: bool
     failure_reason: Optional[str] = None
     failed_change: Optional[int] = None
 
 
-@dataclass(repr=False)
-class _InlayHintParams(Model):
+@dataclass
+class _InlayHintParams:
     text_document: TextDocumentIdentifier
     range: Range
 
 
-@dataclass(repr=False)
+@dataclass
 class InlayHintParams(WorkDoneProgressParams, _InlayHintParams):
     pass
 
 
-@dataclass(repr=False)
+@dataclass
 class InlayHintLabelPart(Model):
     value: str
     tooltip: Union[str, MarkupContent]
@@ -2444,7 +2444,7 @@ class InlayHintKind(IntEnum):
         return super().__str__()
 
 
-@dataclass(repr=False)
+@dataclass
 class InlayHint(Model):
     position: Position
     label: Union[str, List[InlayHintLabelPart]]

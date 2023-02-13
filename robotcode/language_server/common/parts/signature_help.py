@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from asyncio import CancelledError
 from itertools import chain
-from typing import TYPE_CHECKING, Any, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Final, List, Optional, cast
 
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_tools import async_tasking_event, threaded
@@ -23,15 +23,14 @@ from ..lsp_types import (
     TextDocumentIdentifier,
 )
 from ..text_document import TextDocument
+from .protocol_part import LanguageServerProtocolPart
 
 if TYPE_CHECKING:
     from ..protocol import LanguageServerProtocol
 
-from .protocol_part import LanguageServerProtocolPart
-
 
 class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-    _logger = LoggingDescriptor()
+    _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)

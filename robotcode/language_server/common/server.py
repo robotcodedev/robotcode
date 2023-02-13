@@ -2,7 +2,6 @@ import abc
 from typing import Optional, TypeVar
 
 from ...jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
-from ...utils.logging import LoggingDescriptor
 from .protocol import LanguageServerProtocol
 
 __all__ = ["LanguageServerBase", "TCP_DEFAULT_PORT"]
@@ -13,8 +12,6 @@ TProtocol = TypeVar("TProtocol", bound=LanguageServerProtocol)
 
 
 class LanguageServerBase(JsonRPCServer[TProtocol], abc.ABC):
-    _logger = LoggingDescriptor()
-
     def __init__(
         self,
         mode: JsonRpcServerMode = JsonRpcServerMode.STDIO,

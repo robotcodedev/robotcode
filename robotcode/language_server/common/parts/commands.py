@@ -4,7 +4,7 @@ import inspect
 import typing
 import uuid
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Final, List, Optional, cast
 
 from ....jsonrpc2.protocol import JsonRPCErrorException, rpc_method
 from ....utils.async_tools import threaded
@@ -35,9 +35,9 @@ class CommandEntry:
 
 
 class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-    _logger = LoggingDescriptor()
+    _logger: Final = LoggingDescriptor()
 
-    PREFIX = f"{uuid.uuid4()}"
+    PREFIX: Final = f"{uuid.uuid4()}"
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)

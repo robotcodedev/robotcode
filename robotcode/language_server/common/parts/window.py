@@ -1,6 +1,6 @@
 import contextlib
 import uuid
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, List, Optional
 
 from ....jsonrpc2.protocol import rpc_method
 from ..lsp_types import (
@@ -22,6 +22,9 @@ from ..lsp_types import (
     WorkDoneProgressReport,
 )
 from .protocol_part import LanguageServerProtocolPart
+
+if TYPE_CHECKING:
+    from ..protocol import LanguageServerProtocol
 
 
 class Progress:
@@ -102,6 +105,10 @@ class Progress:
 
 
 class WindowProtocolPart(LanguageServerProtocolPart):
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
+        super().__init__(parent)
+        self.__progress_tokens: Dict[ProgressToken, bool] = {}
+
     def show_message(self, message: str, type: MessageType = MessageType.INFO) -> None:
         self.parent.send_notification("window/showMessage", ShowMessageParams(type=type, message=message))
 
@@ -131,8 +138,6 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             ShowDocumentResult,
         )
         return r.success if r is not None else False
-
-    __progress_tokens: Dict[ProgressToken, bool] = {}
 
     @contextlib.asynccontextmanager
     async def progress(

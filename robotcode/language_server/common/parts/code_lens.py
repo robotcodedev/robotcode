@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from asyncio import CancelledError
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, Final, List, Optional
 
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_tools import async_tasking_event, create_sub_task, threaded
@@ -25,7 +25,7 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-    _logger = LoggingDescriptor()
+    _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)

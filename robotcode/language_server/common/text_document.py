@@ -5,7 +5,7 @@ import inspect
 import io
 import threading
 import weakref
-from typing import Any, Awaitable, Callable, Dict, List, Optional, TypeVar, Union, cast
+from typing import Any, Awaitable, Callable, Dict, Final, List, Optional, TypeVar, Union, cast
 
 from ...utils.async_tools import async_event, create_sub_task
 from ...utils.logging import LoggingDescriptor
@@ -28,7 +28,7 @@ class CacheEntry:
 
 
 class TextDocument:
-    _logger = LoggingDescriptor()
+    _logger: Final = LoggingDescriptor()
 
     def __init__(
         self,

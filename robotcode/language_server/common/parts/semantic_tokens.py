@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from asyncio import CancelledError
 from enum import Enum
-from typing import TYPE_CHECKING, Any, List, Union
+from typing import TYPE_CHECKING, Any, Final, List, Union
 
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_tools import async_tasking_event, threaded
@@ -35,10 +35,12 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-    _logger = LoggingDescriptor()
+    _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)
+        self.token_types: List[Enum] = list(SemanticTokenTypes)
+        self.token_modifiers: List[Enum] = list(SemanticTokenModifiers)
 
     @async_tasking_event
     async def collect_full(
@@ -57,9 +59,6 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
         sender, document: TextDocument, range: Range, **kwargs: Any  # NOSONAR
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         ...
-
-    token_types: List[Enum] = list(SemanticTokenTypes)
-    token_modifiers: List[Enum] = list(SemanticTokenModifiers)
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect_full) or len(self.collect_range):

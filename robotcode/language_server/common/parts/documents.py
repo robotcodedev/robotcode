@@ -9,6 +9,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Final,
     Iterator,
     List,
     Optional,
@@ -66,7 +67,7 @@ class CantReadDocumentError(Exception):
 
 
 class TextDocumentProtocolPart(LanguageServerProtocolPart):
-    _logger = LoggingDescriptor()
+    _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)
@@ -242,7 +243,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
 
             return document
 
-    __NORMALIZE_LINE_ENDINGS = re.compile(r"(\r?\n)")
+    __NORMALIZE_LINE_ENDINGS: Final = re.compile(r"(\r?\n)")
 
     @classmethod
     def _normalize_line_endings(cls, text: str) -> str:
@@ -307,7 +308,6 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
                 self._documents.pop(str(document.uri), None)
 
             document.clear()
-            del document
         else:
             document._version = None
             if document.revert(None):

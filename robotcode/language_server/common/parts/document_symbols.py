@@ -5,6 +5,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Final,
     List,
     Optional,
     Protocol,
@@ -54,7 +55,7 @@ def symbol_information_label(label: str) -> Callable[[_F], _F]:
 
 
 class DocumentSymbolsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-    _logger = LoggingDescriptor()
+    _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)

@@ -340,7 +340,6 @@ class ReceivedRequestEntry(NamedTuple):
 
 
 class JsonRPCProtocolBase(asyncio.Protocol, ABC):
-    _logger = LoggingDescriptor()
     registry: ClassVar = RpcRegistry()
 
     def __init__(self) -> None:
@@ -361,7 +360,6 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
     async def on_connection_lost(sender, exc: Optional[BaseException]) -> None:
         ...
 
-    @_logger.call
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         super().connection_made(transport)
         self._loop = asyncio.get_running_loop()
@@ -372,12 +370,10 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
 
         create_sub_task(self.on_connection_made(self, transport))
 
-    @_logger.call
     def connection_lost(self, exc: Optional[BaseException]) -> None:
         create_sub_task(self.on_connection_lost(self, exc))
         self._loop = None
 
-    @_logger.call
     def eof_received(self) -> Optional[bool]:
         return False
 
@@ -422,7 +418,7 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
 
 
 class JsonRPCProtocol(JsonRPCProtocolBase):
-    _logger = LoggingDescriptor()
+    __logger = LoggingDescriptor()
     _data_logger = LoggingDescriptor(postfix="_data")
 
     def __init__(self) -> None:
@@ -471,7 +467,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
-            self._logger.exception(e)
+            self.__logger.exception(e)
             self.send_error(JsonRPCErrors.PARSE_ERROR, f"{type(e).__name__}: {e}")
 
     def _handle_messages(self, iterator: Iterator[JsonRPCMessage]) -> None:
@@ -485,7 +481,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         for m in iterator:
             create_sub_task(self.handle_message(m)).add_done_callback(done)
 
-    @_logger.call
+    @__logger.call
     async def handle_message(self, message: JsonRPCMessage) -> None:
         if isinstance(message, JsonRPCRequest):
             await self.handle_request(message)
@@ -496,11 +492,11 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         elif isinstance(message, JsonRPCResponse):
             await self.handle_response(message)
 
-    @_logger.call
+    @__logger.call
     def send_response(self, id: Optional[Union[str, int, None]], result: Optional[Any] = None) -> None:
         self.send_message(JsonRPCResponse(id=id, result=result))
 
-    @_logger.call
+    @__logger.call
     def send_error(
         self,
         code: int,
@@ -519,7 +515,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             )
         )
 
-    @_logger.call
+    @__logger.call
     def send_message(self, message: JsonRPCMessage) -> None:
         message.jsonrpc = PROTOCOL_VERSION
 
@@ -537,7 +533,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             if self._loop:
                 self._loop.call_soon_threadsafe(self.write_transport.write, msg)
 
-    @_logger.call
+    @__logger.call
     def send_request(
         self,
         method: str,
@@ -564,15 +560,15 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
     ) -> Optional[_TResult]:
         return await self.send_request(method, params, return_type)
 
-    @_logger.call
+    @__logger.call
     def send_notification(self, method: str, params: Any) -> None:
         self.send_message(JsonRPCNotification(method=method, params=params))
 
-    @_logger.call(exception=True)
+    @__logger.call(exception=True)
     async def handle_response(self, message: JsonRPCResponse) -> None:
         if message.id is None:
             error = "Invalid response. Response id is null."
-            self._logger.warning(error)
+            self.__logger.warning(error)
             self.send_error(JsonRPCErrors.INTERNAL_ERROR, error)
             return
 
@@ -581,7 +577,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
         if entry is None:
             error = f"Invalid response. Could not find id '{message.id}' in request list."
-            self._logger.warning(error)
+            self.__logger.warning(error)
             self.send_error(JsonRPCErrors.INTERNAL_ERROR, error)
             return
 
@@ -614,7 +610,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                             await asyncio.sleep(0)
 
                     else:
-                        self._logger.warning(lambda: f"Response {repr(entry)} loop is not running.")
+                        self.__logger.warning(lambda: f"Response {repr(entry)} loop is not running.")
 
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -626,7 +622,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                     if entry.future.get_loop().is_running():
                         entry.future.get_loop().call_soon_threadsafe(entry.future.set_exception, e)
 
-    @_logger.call
+    @__logger.call
     async def handle_error(self, message: JsonRPCError) -> None:
         raise JsonRPCErrorException(message.error.code, message.error.message, message.error.data)
 
@@ -717,19 +713,19 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 if not t.cancelled():
                     ex = t.exception()
                     if ex is not None:
-                        self._logger.exception(ex, exc_info=ex)
+                        self.__logger.exception(ex, exc_info=ex)
                         raise JsonRPCErrorException(JsonRPCErrors.INTERNAL_ERROR, f"{type(ex).__name__}: {ex}") from ex
 
                 self.send_response(message.id, t.result())
             except asyncio.CancelledError:
-                self._logger.debug(lambda: f"request message {repr(message)} canceled")
+                self.__logger.debug(lambda: f"request message {repr(message)} canceled")
                 self.send_error(JsonRPCErrors.REQUEST_CANCELLED, "Request canceled.", id=message.id)
             except (SystemExit, KeyboardInterrupt):
                 raise
             except JsonRPCErrorException as e:
                 self.send_error(e.code, e.message or f"{type(e).__name__}: {e}", id=message.id, data=e.data)
             except BaseException as e:
-                self._logger.exception(e)
+                self.__logger.exception(e)
                 self.send_error(JsonRPCErrors.INTERNAL_ERROR, f"{type(e).__name__}: {e}", id=message.id)
             finally:
                 with self._received_request_lock:
@@ -739,27 +735,27 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
         await task
 
-    @_logger.call
+    @__logger.call
     def cancel_request(self, id: Union[int, str, None]) -> None:
         with self._received_request_lock:
             entry = self._received_request.get(id, None)
 
         if entry is not None and entry.future is not None and not entry.future.cancelled():
-            self._logger.debug(lambda: f"try to cancel request {entry.request if entry is not None else ''}")
+            self.__logger.debug(lambda: f"try to cancel request {entry.request if entry is not None else ''}")
             entry.future.cancel()
 
-    @_logger.call
+    @__logger.call
     async def cancel_all_received_request(self) -> None:
         for entry in self._received_request.values():
             if entry is not None and entry.cancelable and entry.future is not None and not entry.future.cancelled():
                 entry.future.cancel()
 
-    @_logger.call
+    @__logger.call
     async def handle_notification(self, message: JsonRPCNotification) -> None:
         e = self.registry.get_entry(message.method)
 
         if e is None or not callable(e.method):
-            self._logger.warning(lambda: f"Unknown method: {message.method}")
+            self.__logger.warning(lambda: f"Unknown method: {message.method}")
             return
         try:
             params = self._convert_params(e.method, e.param_type, message.params)
@@ -780,7 +776,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
-            self._logger.exception(e)
+            self.__logger.exception(e)
 
 
 TProtocol = TypeVar("TProtocol", bound=JsonRPCProtocol)

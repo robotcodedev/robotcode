@@ -7,7 +7,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional, cast
 
 from ....jsonrpc2.protocol import JsonRPCErrorException, rpc_method
 from ....utils.async_tools import (
@@ -110,7 +110,7 @@ def _cancel_all_tasks(loop: asyncio.AbstractEventLoop) -> None:
 
 
 class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-    _logger = LoggingDescriptor()
+    _logger: Final = LoggingDescriptor()
 
     def __init__(self, protocol: LanguageServerProtocol) -> None:
         super().__init__(protocol)
@@ -468,7 +468,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                         PublishDiagnosticsParams(
                             uri=document.document_uri,
                             version=document._version,
-                            diagnostics=list(itertools.chain(*(i for i in data.entries.values() if i is not None))),
+                            diagnostics=[
+                                l for l in itertools.chain(*[i for i in data.entries.values() if i is not None])
+                            ],
                         ),
                     )
 

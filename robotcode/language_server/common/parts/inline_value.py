@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from asyncio import CancelledError
-from typing import TYPE_CHECKING, Any, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Final, List, Optional, Union
 
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_tools import async_tasking_event, threaded
@@ -29,7 +29,7 @@ from .protocol_part import LanguageServerProtocolPart
 
 
 class InlineValueProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
-    _logger = LoggingDescriptor()
+    _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)
