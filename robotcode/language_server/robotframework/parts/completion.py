@@ -699,7 +699,7 @@ class CompletionCollector(ModelHelperMixin):
                         lib_name_index = e
 
                 if lib_name_index >= 0:
-                    library_name = token.value[0 : lib_name_index - r.start.character]  # noqa: E203
+                    library_name = token.value[0 : lib_name_index - r.start.character]
 
                     libraries = await self.namespace.get_libraries()
 

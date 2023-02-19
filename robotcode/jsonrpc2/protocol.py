@@ -208,7 +208,7 @@ class HasRpcRegistry(Protocol):
 
 
 class RpcRegistry:
-    _class_registries: ClassVar[Dict[Type[Any], RpcRegistry]] = {}
+    class_registries: ClassVar[Dict[Type[Any], RpcRegistry]] = {}
 
     def __init__(self, owner: Any = None) -> None:
         self.__owner = owner
@@ -230,10 +230,10 @@ class RpcRegistry:
 
             return cast(HasRpcRegistry, obj).__rpc_registry__
 
-        if obj_type not in RpcRegistry._class_registries:
-            RpcRegistry._class_registries[obj_type] = RpcRegistry(obj_type)
+        if obj_type not in RpcRegistry.class_registries:
+            RpcRegistry.class_registries[obj_type] = RpcRegistry(obj_type)
 
-        return RpcRegistry._class_registries[obj_type]
+        return RpcRegistry.class_registries[obj_type]
 
     def _reset(self) -> None:
         self.__methods.clear()
@@ -277,7 +277,7 @@ class RpcRegistry:
             else:
                 registries: List[RpcRegistry] = []
                 for m in inspect.getmro(type(self.__owner)):
-                    r = RpcRegistry._class_registries.get(m, None)
+                    r = RpcRegistry.class_registries.get(m, None)
                     if r is not None:
                         registries.insert(0, r)
                 for r in registries:
@@ -815,7 +815,7 @@ class ProtocolPartDescriptor(Generic[TProtocolPart]):
 
     def __set_name__(self, owner: Type[Any], name: str) -> None:
         if not issubclass(owner, JsonRPCProtocol):
-            raise AttributeError()
+            raise TypeError
         owner.registry.add_class_part(name, self._instance_type)
 
     def __get__(self, obj: Optional[Any], objtype: Type[Any]) -> TProtocolPart:

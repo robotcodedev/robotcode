@@ -1749,12 +1749,12 @@ class KeywordFinder:
             self.diagnostics.append(
                 DiagnosticsEntry("Keyword name cannot be empty.", DiagnosticSeverity.ERROR, "KeywordError")
             )
-            raise CancelSearchError()
+            raise CancelSearchError
         if not isinstance(name, str):
             self.diagnostics.append(  # type: ignore
                 DiagnosticsEntry("Keyword name must be a string.", DiagnosticSeverity.ERROR, "KeywordError")
             )
-            raise CancelSearchError()
+            raise CancelSearchError
 
         result = self._get_keyword_from_self(name)
         if not result and "." in name:
@@ -1783,7 +1783,7 @@ class KeywordFinder:
                             "KeywordError",
                         )
                     )
-                    raise CancelSearchError()
+                    raise CancelSearchError
 
             if len(found) == 1:
                 # TODO warning if keyword found is defined in resource and suite
@@ -1801,7 +1801,7 @@ class KeywordFinder:
                     "KeywordError",
                 )
             )
-            raise CancelSearchError() from e
+            raise CancelSearchError from e
 
     def _yield_owner_and_kw_names(self, full_name: str) -> Iterator[Tuple[str, ...]]:
         tokens = full_name.split(".")
@@ -1824,7 +1824,7 @@ class KeywordFinder:
                     "KeywordError",
                 )
             )
-            raise CancelSearchError()
+            raise CancelSearchError
 
         return found[0][1] if found else None
 
@@ -1859,7 +1859,7 @@ class KeywordFinder:
                 error += ". Give the full name of the keyword you want to use"
 
         names = sorted(f"{e[1].name if e[0] is None else f'{e[0].alias or e[0].name}.{e[1].name}'}" for e in found)
-        return "\n    ".join([error + ":"] + names)
+        return "\n    ".join([f"{error}:", *names])
 
     def _get_implicit_keyword(self, name: str) -> Optional[KeywordDoc]:
         result = self._get_keyword_from_resource_files(name)
@@ -1954,7 +1954,7 @@ class KeywordFinder:
                 "KeywordError",
             )
         )
-        raise CancelSearchError()
+        raise CancelSearchError
 
     def _get_keyword_based_on_search_order(
         self, entries: List[Tuple[Optional[LibraryEntry], KeywordDoc]]
@@ -2008,7 +2008,7 @@ class KeywordFinder:
                 "KeywordError",
             )
         )
-        raise CancelSearchError()
+        raise CancelSearchError
 
     def _filter_stdlib_runner(
         self, entry1: Tuple[Optional[LibraryEntry], KeywordDoc], entry2: Tuple[Optional[LibraryEntry], KeywordDoc]
@@ -2056,7 +2056,7 @@ class KeywordFinder:
             lower = name.lower()
             for prefix in ["given ", "when ", "then ", "and ", "but "]:
                 if lower.startswith(prefix):
-                    return self._find_keyword(name[len(prefix) :])  # noqa: E203
+                    return self._find_keyword(name[len(prefix) :])
             return None
 
         parts = name.split()

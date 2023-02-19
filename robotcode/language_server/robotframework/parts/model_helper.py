@@ -174,7 +174,7 @@ class ModelHelperMixin:
         return None, argument_tokens
 
     @classmethod
-    async def get_keyworddoc_and_token_from_position(  # noqa: N802
+    async def get_keyworddoc_and_token_from_position(
         cls,
         keyword_name: Optional[str],
         keyword_token: Token,

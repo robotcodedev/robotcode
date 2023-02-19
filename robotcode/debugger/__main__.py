@@ -344,7 +344,7 @@ def main() -> None:
     split_index = sys_args.index("--") if "--" in sys_args else -1
 
     my_args = sys_args[:split_index] if split_index >= 0 else sys_args
-    robot_args = sys_args[split_index + 1 :] if split_index >= 0 else []  # noqa: E203
+    robot_args = sys_args[split_index + 1 :] if split_index >= 0 else []
 
     args = parser.parse_args(my_args)
 

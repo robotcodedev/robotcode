@@ -539,7 +539,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
             document, new_name, await self._find_Template_or_TestTemplate(node, document, position)
         )
 
-    async def _prepare_rename_tags(  # noqa: N802
+    async def _prepare_rename_tags(
         self, node: ast.AST, document: TextDocument, position: Position
     ) -> Optional[PrepareRenameResult]:
         from robot.parsing.lexer.tokens import Token as RobotToken
@@ -570,7 +570,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
     ) -> Optional[PrepareRenameResult]:
         return await self._prepare_rename_tags(node, document, position)
 
-    async def _rename_tags(  # noqa: N802
+    async def _rename_tags(
         self, node: ast.AST, document: TextDocument, position: Position, new_name: str
     ) -> Optional[WorkspaceEdit]:
         from robot.parsing.lexer.tokens import Token as RobotToken

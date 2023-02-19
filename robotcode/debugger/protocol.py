@@ -360,4 +360,4 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
 
     @_logger.call
     def handle_event(self, message: Event) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError

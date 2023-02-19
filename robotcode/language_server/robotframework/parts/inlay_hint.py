@@ -82,7 +82,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
 
         return result
 
-    async def _handle_keywordcall_fixture_template(  # noqa: N802
+    async def _handle_keywordcall_fixture_template(
         self,
         keyword_token: Token,
         arguments: List[Token],

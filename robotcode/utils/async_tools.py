@@ -261,7 +261,7 @@ async def check_canceled() -> bool:
 def check_canceled_sync() -> bool:
     info = get_current_future_info()
     if info is not None and info.canceled():
-        raise asyncio.CancelledError()
+        raise asyncio.CancelledError
     return True
 
 

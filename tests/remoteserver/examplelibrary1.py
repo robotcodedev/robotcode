@@ -20,7 +20,7 @@ class ExampleLibrary:
     def strings_should_be_equal_new(self, str1: str, str2: str) -> None:
         print("Comparing '%s' to '%s'." % (str1, str2))
         if not (isinstance(str1, str) and isinstance(str2, str)):
-            raise AssertionError("Given strings are not strings.")
+            raise TypeError("Given strings are not strings.")
         if str1 != str2:
             raise AssertionError("Given strings are not equal.")
 

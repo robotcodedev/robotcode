@@ -320,7 +320,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
 
         if isinstance(node, KeywordName):
             name_token = node.get_token(RobotToken.KEYWORD_NAME)
-            if name_token and range in range_from_token(name_token):
+            if name_token is not None and range in range_from_token(name_token):
                 url = await self.build_url(str(document.uri.to_path().name), (), document, namespace, name_token.value)
 
                 return [self.open_documentation_code_action(url)]

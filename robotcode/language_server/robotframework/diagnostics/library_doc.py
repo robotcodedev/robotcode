@@ -540,7 +540,7 @@ class KeywordStore:
         items = [(k, v) for k, v in self._matchers.items() if k == key]
 
         if not items:
-            raise KeyError()
+            raise KeyError
         if len(items) == 1:
             return items[0][1]
 

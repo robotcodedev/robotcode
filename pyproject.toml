@@ -91,7 +91,7 @@ dependencies = [
   "semantic-version",
   "robotremoteserver",
 ]
-features = ["yaml", "rest"]
+features = ["yaml", "rest", "lint", "tidy"]
 
 
 [tool.hatch.envs.default.scripts]
@@ -102,6 +102,7 @@ test = "pytest {args}"
 
 [tool.hatch.envs.devel]
 python = "38"
+features = ["yaml", "rest", "lint", "tidy"]
 
 [[tool.hatch.envs.devel.matrix]]
 python = ["38", "39", "310", "311"]
@@ -140,7 +141,7 @@ matrix.rf.dependencies = [
 
 [tool.hatch.envs.lint]
 skip-install = true
-features = ["yaml", "rest"]
+features = ["yaml", "rest", "lint", "tidy"]
 
 [tool.hatch.envs.lint.scripts]
 typing = "mypy --install-types --non-interactive {args:.}"
@@ -229,7 +230,7 @@ exclude = [
   "venv",
   ".hatch",
 ]
-ignore = ["E741", "N805"]
+ignore = ["E741", "N805", "N999"]
 select = [
   "E",
   "F",
@@ -256,10 +257,18 @@ select = [
   "Q",
   "RET",
   # "SIM", # TODO enable this
-  #"TID",
-  #"TCH",
-  #"ARG",
-  #"PTH", # TODO enable this
+  # "TID",
+  # "TCH",
+  # "ARG",
+  # "PTH", # TODO enable this
+  # "SLF", #  TODO enable this
+  # "ERA", # TODO enable this
+  "RSE",
+  # "PL",
+  #"TRY",
+  "RUF",
+  # "TID"
+
 ]
 
 
@@ -301,3 +310,22 @@ module = [
   "pytest_regtest.*",
 ]
 ignore_missing_imports = true
+
+
+[tool.hatch.build.targets.wheel.hooks.mypyc]
+enable-by-default = false
+dependencies = ["hatch-mypyc", "types-PyYAML", "types-docutils"]
+require-runtime-dependencies = true
+include = [
+  "robotcode/utils/glob_path.py",
+  "robotcode/language_server/robotframework/diagnostics/analyzer.py",
+]
+exclude = ["__main__.py", "__version__.py", "__init__.py", "typings", "tests"]
+
+
+[tool.hatch.build.targets.wheel.hooks.mypyc.options]
+# # opt_level = "3"
+# multi_file = true
+#separate = true
+#verbose = true
+#include_runtime_files = false

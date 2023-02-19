@@ -227,8 +227,8 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
                 )
             else:
                 self.loop.run_until_complete(self.loop.create_unix_connection(self.create_protocol, pipe_name))
-        except NotImplementedError:
-            raise NotSupportedError("Pipe transport is not supported on this platform.")
+        except NotImplementedError as e:
+            raise NotSupportedError("Pipe transport is not supported on this platform.") from e
 
         self._run_func = self.loop.run_forever
 

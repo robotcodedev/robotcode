@@ -24,16 +24,16 @@ _robot_version: Optional[Version] = None
 def get_robot_version() -> Version:
     global _robot_version
     if _robot_version is None:
-        import robot
+        import robot.version
 
-        _robot_version = create_version_from_str(robot.get_version())
+        _robot_version = create_version_from_str(robot.version.get_version())
     return _robot_version
 
 
 def get_robot_version_str() -> str:
-    import robot
+    import robot.version
 
-    return str(robot.get_version())
+    return str(robot.version.get_version())
 
 
 def create_version_from_str(version_str: str) -> Version:
@@ -63,9 +63,9 @@ def create_version_from_str(version_str: str) -> Version:
     except (SystemExit, KeyboardInterrupt):
         raise
     except BaseException as ex:
-        raise InvalidVersionError() from ex
+        raise InvalidVersionError from ex
 
-    raise InvalidVersionError()
+    raise InvalidVersionError
 
 
 if __name__ == "__main__":
