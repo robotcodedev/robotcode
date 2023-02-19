@@ -46,9 +46,6 @@ playground
 coverage.xml
 .python-version
 
-# gitignore
-.gitignore/
-
 # others
 scripts
 doc
@@ -56,3 +53,4 @@ doc
 **/.robotcode_cache
 
 .pre-commit-config.yaml
+.devcontainer
