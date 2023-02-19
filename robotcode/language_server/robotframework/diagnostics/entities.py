@@ -179,11 +179,9 @@ class VariableDefinition(SourceEntity):
     value: Any = field(default=None, compare=False)
     value_is_native: bool = field(default=False, compare=False)
 
-    __matcher: Optional[VariableMatcher] = None
-
     @property
     def matcher(self) -> VariableMatcher:
-        if self.__matcher is None:
+        if not hasattr(self, "__matcher"):
             self.__matcher = VariableMatcher(self.name)
         return self.__matcher
 
