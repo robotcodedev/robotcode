@@ -56,6 +56,16 @@ def to_camel_case(s: str) -> str:
     )
 
 
+class CamelSnakeMixin:
+    @classmethod
+    def _encode_case(cls, s: str) -> str:
+        return to_camel_case(s)
+
+    @classmethod
+    def _decode_case(cls, s: str) -> str:
+        return to_snake_case(s)
+
+
 @runtime_checkable
 class HasCaseEncoder(Protocol):
     @classmethod

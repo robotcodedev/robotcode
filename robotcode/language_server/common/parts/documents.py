@@ -36,8 +36,8 @@ from ..lsp_types import (
     FileChangeType,
     FileEvent,
     TextDocumentContentChangeEvent,
-    TextDocumentContentRangeChangeEvent,
-    TextDocumentContentTextChangeEvent,
+    TextDocumentContentChangeEventType1,
+    TextDocumentContentChangeEventType2,
     TextDocumentIdentifier,
     TextDocumentItem,
     TextDocumentSaveReason,
@@ -375,14 +375,14 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
             else None
         )
         for content_change in content_changes:
-            if sync_kind is None or sync_kind == TextDocumentSyncKind.NONE:
+            if sync_kind is None or sync_kind == TextDocumentSyncKind.NONE_:
                 document.apply_none_change()
             elif sync_kind == TextDocumentSyncKind.FULL and isinstance(
-                content_change, TextDocumentContentTextChangeEvent
+                content_change, TextDocumentContentChangeEventType2
             ):
                 document.apply_full_change(text_document.version, self._normalize_line_endings(content_change.text))
             elif sync_kind == TextDocumentSyncKind.INCREMENTAL and isinstance(
-                content_change, TextDocumentContentRangeChangeEvent
+                content_change, TextDocumentContentChangeEventType1
             ):
                 document.apply_incremental_change(
                     text_document.version, content_change.range, self._normalize_line_endings(content_change.text)

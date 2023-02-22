@@ -4,7 +4,7 @@ data: !GeneratedTestData
   name: argument usage
 result:
 - !DocumentHighlight
-  kind: &id001 !DocumentHighlightKind 'TEXT'
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 43
@@ -13,7 +13,7 @@ result:
       character: 42
       line: 88
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 14
@@ -22,7 +22,7 @@ result:
       character: 13
       line: 96
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 60
@@ -31,7 +31,7 @@ result:
       character: 59
       line: 99
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 52
@@ -40,7 +40,7 @@ result:
       character: 51
       line: 100
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 61
@@ -49,7 +49,7 @@ result:
       character: 60
       line: 100
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 58

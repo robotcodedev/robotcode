@@ -26,7 +26,7 @@ from ...common.lsp_types import (
     OptionalVersionedTextDocumentIdentifier,
     Position,
     PrepareRenameResult,
-    PrepareRenameResultWithPlaceHolder,
+    PrepareRenameResultType1,
     RenameFile,
     TextDocumentEdit,
     WorkspaceEdit,
@@ -160,7 +160,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
                     "Only references are renamed and you have to rename the variable definition yourself."
                 )
 
-            return PrepareRenameResultWithPlaceHolder(range_from_token(token), token.value)
+            return PrepareRenameResultType1(range_from_token(token), token.value)
 
         return None
 
@@ -188,7 +188,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
                 changes.append(
                     TextDocumentEdit(
                         OptionalVersionedTextDocumentIdentifier(reference.uri, None),
-                        [AnnotatedTextEdit(reference.range, new_name, annotation_id="rename_variable")],
+                        [AnnotatedTextEdit("rename_variable", reference.range, new_name)],
                     )
                 )
 
@@ -260,7 +260,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
                     "Only references are renamed and you have to rename the keyword definition yourself."
                 )
 
-            return PrepareRenameResultWithPlaceHolder(range_from_token(token), token.value)
+            return PrepareRenameResultType1(range_from_token(token), token.value)
 
         return None
 
@@ -279,7 +279,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
                 changes.append(
                     TextDocumentEdit(
                         OptionalVersionedTextDocumentIdentifier(reference.uri, None),
-                        [AnnotatedTextEdit(reference.range, new_name, annotation_id="rename_keyword")],
+                        [AnnotatedTextEdit("rename_keyword", reference.range, new_name)],
                     )
                 )
 
@@ -551,7 +551,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         token = tokens[-1]
 
         if token.type in [RobotToken.ARGUMENT] and token.value:
-            return PrepareRenameResultWithPlaceHolder(range_from_token(token), token.value)
+            return PrepareRenameResultType1(range_from_token(token), token.value)
 
         return None
 
@@ -590,7 +590,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
                 changes.append(
                     TextDocumentEdit(
                         OptionalVersionedTextDocumentIdentifier(reference.uri, None),
-                        [AnnotatedTextEdit(reference.range, new_name, annotation_id="rename_tag")],
+                        [AnnotatedTextEdit("rename_tag", reference.range, new_name)],
                     )
                 )
 

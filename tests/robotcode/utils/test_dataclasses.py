@@ -8,22 +8,22 @@ import pytest
 from robotcode.language_server.common.lsp_types import (
     CallHierarchyClientCapabilities,
     ClientCapabilities,
-    ClientCapabilitiesWindow,
-    ClientCapabilitiesWorkspace,
-    ClientCapabilitiesWorkspaceFileOperationsWorkspaceClientCapabilities,
-    ClientInfo,
+    WindowClientCapabilities,
+    WorkspaceClientCapabilities,
+    FileOperationClientCapabilities,
+    InitializeParamsClientInfoType,
     CodeActionClientCapabilities,
-    CodeActionClientCapabilitiesCodeActionLiteralSupport,
-    CodeActionClientCapabilitiesCodeActionLiteralSupportCodeActionKind,
-    CodeActionClientCapabilitiesResolveSupport,
+    CodeActionClientCapabilitiesCodeActionLiteralSupportType,
+    CodeActionClientCapabilitiesCodeActionLiteralSupportTypeCodeActionKindType,
+    CodeActionClientCapabilitiesResolveSupportType,
     CodeLensClientCapabilities,
     CodeLensWorkspaceClientCapabilities,
     CompletionClientCapabilities,
-    CompletionClientCapabilitiesCompletionItem,
-    CompletionClientCapabilitiesCompletionItemInsertTextModeSupport,
-    CompletionClientCapabilitiesCompletionItemKind,
-    CompletionClientCapabilitiesCompletionItemResolveSupport,
-    CompletionClientCapabilitiesCompletionItemTagSupport,
+    CompletionClientCapabilitiesCompletionItemType,
+    CompletionClientCapabilitiesCompletionItemTypeInsertTextModeSupportType,
+    CompletionClientCapabilitiesCompletionItemKindType,
+    CompletionClientCapabilitiesCompletionItemTypeResolveSupportType,
+    CompletionClientCapabilitiesCompletionItemTypeTagSupportType,
     CompletionItemKind,
     CompletionItemTag,
     DeclarationClientCapabilities,
@@ -38,8 +38,8 @@ from robotcode.language_server.common.lsp_types import (
     DocumentOnTypeFormattingClientCapabilities,
     DocumentRangeFormattingClientCapabilities,
     DocumentSymbolClientCapabilities,
-    DocumentSymbolClientCapabilitiesSymbolKind,
-    DocumentSymbolClientCapabilitiesTagSupport,
+    DocumentSymbolClientCapabilitiesSymbolKindType,
+    DocumentSymbolClientCapabilitiesTagSupportType,
     ExecuteCommandClientCapabilities,
     FailureHandlingKind,
     FoldingRangeClientCapabilities,
@@ -51,33 +51,33 @@ from robotcode.language_server.common.lsp_types import (
     MarkupKind,
     PrepareSupportDefaultBehavior,
     PublishDiagnosticsClientCapabilities,
-    PublishDiagnosticsClientCapabilitiesTagSupport,
+    PublishDiagnosticsClientCapabilitiesTagSupportType,
     ReferenceClientCapabilities,
     RenameClientCapabilities,
     ResourceOperationKind,
     SelectionRangeClientCapabilities,
     SemanticTokensClientCapabilities,
-    SemanticTokensClientCapabilitiesRequests,
-    SemanticTokensClientCapabilitiesRequestsFull,
+    SemanticTokensClientCapabilitiesRequestsType,
+    SemanticTokensClientCapabilitiesRequestsTypeFullType1,
     SemanticTokensWorkspaceClientCapabilities,
     ShowMessageRequestClientCapabilities,
-    ShowMessageRequestClientCapabilitiesMessageActionItem,
+    ShowMessageRequestClientCapabilitiesMessageActionItemType,
     SignatureHelpClientCapabilities,
-    SignatureHelpClientCapabilitiesSignatureInformation,
-    SignatureHelpClientCapabilitiesSignatureInformationParameterInformation,
+    SignatureHelpClientCapabilitiesSignatureInformationType,
+    SignatureHelpClientCapabilitiesSignatureInformationTypeParameterInformationType,
     SymbolKind,
     SymbolTag,
     TextDocumentClientCapabilities,
     TextDocumentSyncClientCapabilities,
     TokenFormat,
-    TraceValue,
+    TraceValues,
     TypeDefinitionClientCapabilities,
     WorkspaceEditClientCapabilities,
-    WorkspaceEditClientCapabilitiesChangeAnnotationSupport,
+    WorkspaceEditClientCapabilitiesChangeAnnotationSupportType,
     WorkspaceFolder,
     WorkspaceSymbolClientCapabilities,
-    WorkspaceSymbolClientCapabilitiesSymbolKind,
-    WorkspaceSymbolClientCapabilitiesTagSupport,
+    WorkspaceSymbolClientCapabilitiesSymbolKindType,
+    WorkspaceSymbolClientCapabilitiesTagSupportType,
 )
 from robotcode.utils.dataclasses import as_json, from_json, to_camel_case, to_snake_case
 
@@ -917,7 +917,7 @@ def test_really_complex_data() -> None:
 
     assert from_json(data, InitializeParams) == InitializeParams(
         capabilities=ClientCapabilities(
-            workspace=ClientCapabilitiesWorkspace(
+            workspace=WorkspaceClientCapabilities(
                 apply_edit=True,
                 workspace_edit=WorkspaceEditClientCapabilities(
                     document_changes=True,
@@ -928,7 +928,7 @@ def test_really_complex_data() -> None:
                     ],
                     failure_handling=FailureHandlingKind.TEXT_ONLY_TRANSACTIONAL,
                     normalizes_line_endings=True,
-                    change_annotation_support=WorkspaceEditClientCapabilitiesChangeAnnotationSupport(
+                    change_annotation_support=WorkspaceEditClientCapabilitiesChangeAnnotationSupportType(
                         groups_on_label=True
                     ),
                 ),
@@ -936,7 +936,7 @@ def test_really_complex_data() -> None:
                 did_change_watched_files=DidChangeWatchedFilesClientCapabilities(dynamic_registration=True),
                 symbol=WorkspaceSymbolClientCapabilities(
                     dynamic_registration=True,
-                    symbol_kind=WorkspaceSymbolClientCapabilitiesSymbolKind(
+                    symbol_kind=WorkspaceSymbolClientCapabilitiesSymbolKindType(
                         value_set=[
                             SymbolKind.FILE,
                             SymbolKind.MODULE,
@@ -959,21 +959,21 @@ def test_really_complex_data() -> None:
                             SymbolKind.OBJECT,
                             SymbolKind.KEY,
                             SymbolKind.NULL,
-                            SymbolKind.ENUMMEMBER,
+                            SymbolKind.ENUM_MEMBER,
                             SymbolKind.STRUCT,
                             SymbolKind.EVENT,
                             SymbolKind.OPERATOR,
-                            SymbolKind.TYPEPARAMETER,
+                            SymbolKind.TYPE_PARAMETER,
                         ]
                     ),
-                    tag_support=WorkspaceSymbolClientCapabilitiesTagSupport(value_set=[SymbolTag.DEPRECATED]),
+                    tag_support=WorkspaceSymbolClientCapabilitiesTagSupportType(value_set=[SymbolTag.DEPRECATED]),
                 ),
                 execute_command=ExecuteCommandClientCapabilities(dynamic_registration=True),
                 workspace_folders=True,
                 configuration=True,
                 semantic_tokens=SemanticTokensWorkspaceClientCapabilities(refresh_support=True),
                 code_lens=CodeLensWorkspaceClientCapabilities(refresh_support=True),
-                file_operations=ClientCapabilitiesWorkspaceFileOperationsWorkspaceClientCapabilities(
+                file_operations=FileOperationClientCapabilities(
                     dynamic_registration=True,
                     did_create=True,
                     will_create=True,
@@ -989,24 +989,24 @@ def test_really_complex_data() -> None:
                 ),
                 completion=CompletionClientCapabilities(
                     dynamic_registration=True,
-                    completion_item=CompletionClientCapabilitiesCompletionItem(
+                    completion_item=CompletionClientCapabilitiesCompletionItemType(
                         snippet_support=True,
                         commit_characters_support=True,
-                        documentation_format=[MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT],
+                        documentation_format=[MarkupKind.MARKDOWN, MarkupKind.PLAIN_TEXT],
                         deprecated_support=True,
                         preselect_support=True,
-                        tag_support=CompletionClientCapabilitiesCompletionItemTagSupport(
+                        tag_support=CompletionClientCapabilitiesCompletionItemTypeTagSupportType(
                             value_set=[CompletionItemTag.DEPRECATED]
                         ),
                         insert_replace_support=True,
-                        resolve_support=CompletionClientCapabilitiesCompletionItemResolveSupport(
+                        resolve_support=CompletionClientCapabilitiesCompletionItemTypeResolveSupportType(
                             properties=["documentation", "detail", "additionalTextEdits"]
                         ),
-                        insert_text_mode_support=CompletionClientCapabilitiesCompletionItemInsertTextModeSupport(
+                        insert_text_mode_support=CompletionClientCapabilitiesCompletionItemTypeInsertTextModeSupportType(
                             value_set=[InsertTextMode.AS_IS, InsertTextMode.ADJUST_INDENTATION]
                         ),
                     ),
-                    completion_item_kind=CompletionClientCapabilitiesCompletionItemKind(
+                    completion_item_kind=CompletionClientCapabilitiesCompletionItemKindType(
                         value_set=[
                             CompletionItemKind.TEXT,
                             CompletionItemKind.METHOD,
@@ -1038,13 +1038,13 @@ def test_really_complex_data() -> None:
                     context_support=True,
                 ),
                 hover=HoverClientCapabilities(
-                    dynamic_registration=True, content_format=[MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT]
+                    dynamic_registration=True, content_format=[MarkupKind.MARKDOWN, MarkupKind.PLAIN_TEXT]
                 ),
                 signature_help=SignatureHelpClientCapabilities(
                     dynamic_registration=True,
-                    signature_information=SignatureHelpClientCapabilitiesSignatureInformation(
-                        documentation_format=[MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT],
-                        parameter_information=SignatureHelpClientCapabilitiesSignatureInformationParameterInformation(
+                    signature_information=SignatureHelpClientCapabilitiesSignatureInformationType(
+                        documentation_format=[MarkupKind.MARKDOWN, MarkupKind.PLAIN_TEXT],
+                        parameter_information=SignatureHelpClientCapabilitiesSignatureInformationTypeParameterInformationType(
                             label_offset_support=True
                         ),
                         active_parameter_support=True,
@@ -1059,7 +1059,7 @@ def test_really_complex_data() -> None:
                 document_highlight=DocumentHighlightClientCapabilities(dynamic_registration=True),
                 document_symbol=DocumentSymbolClientCapabilities(
                     dynamic_registration=True,
-                    symbol_kind=DocumentSymbolClientCapabilitiesSymbolKind(
+                    symbol_kind=DocumentSymbolClientCapabilitiesSymbolKindType(
                         value_set=[
                             SymbolKind.FILE,
                             SymbolKind.MODULE,
@@ -1082,21 +1082,21 @@ def test_really_complex_data() -> None:
                             SymbolKind.OBJECT,
                             SymbolKind.KEY,
                             SymbolKind.NULL,
-                            SymbolKind.ENUMMEMBER,
+                            SymbolKind.ENUM_MEMBER,
                             SymbolKind.STRUCT,
                             SymbolKind.EVENT,
                             SymbolKind.OPERATOR,
-                            SymbolKind.TYPEPARAMETER,
+                            SymbolKind.TYPE_PARAMETER,
                         ]
                     ),
                     hierarchical_document_symbol_support=True,
-                    tag_support=DocumentSymbolClientCapabilitiesTagSupport(value_set=[SymbolTag.DEPRECATED]),
+                    tag_support=DocumentSymbolClientCapabilitiesTagSupportType(value_set=[SymbolTag.DEPRECATED]),
                     label_support=True,
                 ),
                 code_action=CodeActionClientCapabilities(
                     dynamic_registration=True,
-                    code_action_literal_support=CodeActionClientCapabilitiesCodeActionLiteralSupport(
-                        code_action_kind=CodeActionClientCapabilitiesCodeActionLiteralSupportCodeActionKind(
+                    code_action_literal_support=CodeActionClientCapabilitiesCodeActionLiteralSupportType(
+                        code_action_kind=CodeActionClientCapabilitiesCodeActionLiteralSupportTypeCodeActionKindType(
                             value_set=[
                                 "",
                                 "quickfix",
@@ -1112,7 +1112,7 @@ def test_really_complex_data() -> None:
                     is_preferred_support=True,
                     disabled_support=True,
                     data_support=True,
-                    resolve_support=CodeActionClientCapabilitiesResolveSupport(properties=["edit"]),
+                    resolve_support=CodeActionClientCapabilitiesResolveSupportType(properties=["edit"]),
                     honors_change_annotations=False,
                 ),
                 code_lens=CodeLensClientCapabilities(dynamic_registration=True),
@@ -1124,13 +1124,13 @@ def test_really_complex_data() -> None:
                 rename=RenameClientCapabilities(
                     dynamic_registration=True,
                     prepare_support=True,
-                    prepare_support_default_behavior=PrepareSupportDefaultBehavior.Identifier,
+                    prepare_support_default_behavior=PrepareSupportDefaultBehavior.IDENTIFIER,
                     honors_change_annotations=True,
                 ),
                 publish_diagnostics=PublishDiagnosticsClientCapabilities(
                     related_information=True,
-                    tag_support=PublishDiagnosticsClientCapabilitiesTagSupport(
-                        value_set=[DiagnosticTag.Unnecessary, DiagnosticTag.Deprecated]
+                    tag_support=PublishDiagnosticsClientCapabilitiesTagSupportType(
+                        value_set=[DiagnosticTag.UNNECESSARY, DiagnosticTag.DEPRECATED]
                     ),
                     version_support=False,
                     code_description_support=True,
@@ -1143,8 +1143,8 @@ def test_really_complex_data() -> None:
                 linked_editing_range=LinkedEditingRangeClientCapabilities(dynamic_registration=True),
                 call_hierarchy=CallHierarchyClientCapabilities(dynamic_registration=True),
                 semantic_tokens=SemanticTokensClientCapabilities(
-                    requests=SemanticTokensClientCapabilitiesRequests(
-                        range=True, full=SemanticTokensClientCapabilitiesRequestsFull(delta=True)
+                    requests=SemanticTokensClientCapabilitiesRequestsType(
+                        range=True, full=SemanticTokensClientCapabilitiesRequestsTypeFullType1(delta=True)
                     ),
                     token_types=[
                         "namespace",
@@ -1182,17 +1182,17 @@ def test_really_complex_data() -> None:
                         "documentation",
                         "defaultLibrary",
                     ],
-                    formats=[TokenFormat.Relative],
+                    formats=[TokenFormat.RELATIVE],
                     overlapping_token_support=False,
                     multiline_token_support=False,
                     dynamic_registration=True,
                 ),
                 moniker=None,
             ),
-            window=ClientCapabilitiesWindow(
+            window=WindowClientCapabilities(
                 work_done_progress=None,
                 show_message=ShowMessageRequestClientCapabilities(
-                    message_action_item=ShowMessageRequestClientCapabilitiesMessageActionItem(
+                    message_action_item=ShowMessageRequestClientCapabilitiesMessageActionItemType(
                         additional_properties_support=True
                     )
                 ),
@@ -1202,7 +1202,7 @@ def test_really_complex_data() -> None:
             experimental=None,
         ),
         process_id=17800,
-        client_info=ClientInfo(name="Visual Studio Code - Insiders", version="1.62.0-insider"),
+        client_info=InitializeParamsClientInfoType(name="Visual Studio Code - Insiders", version="1.62.0-insider"),
         locale="de",
         root_path="c:\\tmp\\robottest\\dummy\\testprj",
         root_uri="file:///c%3A/tmp/robottest/dummy/testprj",
@@ -1210,7 +1210,7 @@ def test_really_complex_data() -> None:
             "storageUri": "file:///c%3A/Users/daniel/AppData/Roaming/Code%20-%20Insiders/User/workspaceStorage/1ab0e3033b053a024fb7cbf9068380d1/d-biehl.robotcode",
             "globalStorageUri": "file:///c%3A/Users/daniel/AppData/Roaming/Code%20-%20Insiders/User/globalStorage/d-biehl.robotcode",
         },
-        trace=TraceValue.OFF,
+        trace=TraceValues.OFF,
         workspace_folders=[WorkspaceFolder(uri="file:///c%3A/tmp/robottest/dummy/testprj", name="testprj")],
         work_done_token="76db5c8a-d083-44d0-bfa8-9e004eb69a1d",
     )

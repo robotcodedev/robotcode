@@ -1,14 +1,13 @@
 import dataclasses
 import re
-from enum import Enum
+from enum import Enum, IntEnum
 from pathlib import Path
 from typing import Any, Iterator, Tuple, Union
 
 import pytest
 import yaml
 
-from robotcode.language_server.common.lsp_types import Model
-from robotcode.utils.dataclasses import as_dict
+from robotcode.utils.dataclasses import CamelSnakeMixin, as_dict
 
 TEST_EXPRESSION_LINE = re.compile(r"^\#\s*(?P<todo>TODO)?\s*(?P<position>\^+)\s+(?P<name>.*)")
 
@@ -70,5 +69,6 @@ def dump_model(dumper: yaml.Dumper, data: Any) -> yaml.Node:
 
 
 yaml.add_multi_representer(Enum, dump_enum)
-yaml.add_multi_representer(Model, dump_model)
+yaml.add_multi_representer(IntEnum, dump_enum)
+yaml.add_multi_representer(CamelSnakeMixin, dump_model)
 yaml.add_multi_representer(GeneratedTestData, dump_model)

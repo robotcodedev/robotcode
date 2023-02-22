@@ -416,7 +416,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         message=f"Keyword '{result.name}' is deprecated"
                         f"{f': {result.deprecated_message}' if result.deprecated_message else ''}.",
                         severity=DiagnosticSeverity.HINT,
-                        tags=[DiagnosticTag.Deprecated],
+                        tags=[DiagnosticTag.DEPRECATED],
                         code="DeprecatedKeyword",
                     )
                 if result.is_error_handler:
@@ -754,7 +754,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 range=range_from_node_or_token(value, value.get_token(RobotToken.ASSIGN)),
                 message="Code is unreachable.",
                 severity=DiagnosticSeverity.HINT,
-                tags=[DiagnosticTag.Unnecessary],
+                tags=[DiagnosticTag.UNNECESSARY],
                 code="CodeUnreachable",
             )
 
@@ -893,6 +893,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         f"for removing tags. Escape '{tag.value}' like '\\{tag.value}' to use the "
                         f"literal value and to avoid this warning.",
                         severity=DiagnosticSeverity.WARNING,
-                        tags=[DiagnosticTag.Deprecated],
+                        tags=[DiagnosticTag.DEPRECATED],
                         code="DeprecatedHyphenTag",
                     )

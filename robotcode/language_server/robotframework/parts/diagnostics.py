@@ -291,7 +291,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                             severity=DiagnosticSeverity.WARNING,
                             source=self.source_name,
                             code="KeywordNotUsed",
-                            tags=[DiagnosticTag.Unnecessary],
+                            tags=[DiagnosticTag.UNNECESSARY],
                         )
                     )
 
@@ -352,7 +352,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                             severity=DiagnosticSeverity.WARNING,
                             source=self.source_name,
                             code="VariableNotUsed",
-                            tags=[DiagnosticTag.Unnecessary],
+                            tags=[DiagnosticTag.UNNECESSARY],
                         )
                     )
 

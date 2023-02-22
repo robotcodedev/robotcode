@@ -30,10 +30,10 @@ def split(
         return Location((Uri(result.uri).to_path().name), result.range)
     if isinstance(result, LocationLink):
         return LocationLink(
-            result.origin_selection_range,
-            (Uri(result.target_uri).to_path().name),
+            Uri(result.target_uri).to_path().name,
             result.target_range,
             result.target_selection_range,
+            result.origin_selection_range,
         )
     if isinstance(result, list) and len(result) > 0 and isinstance(result[0], LocationLink):
         return cast("List[LocationLink]", [split(v) for v in result])

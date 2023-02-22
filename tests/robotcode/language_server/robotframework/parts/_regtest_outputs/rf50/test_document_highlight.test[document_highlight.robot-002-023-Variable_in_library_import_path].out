@@ -4,7 +4,7 @@ data: !GeneratedTestData
   name: Variable in library import path
 result:
 - !DocumentHighlight
-  kind: &id001 !DocumentHighlightKind 'TEXT'
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 24
@@ -13,7 +13,7 @@ result:
       character: 18
       line: 2
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 24
@@ -22,7 +22,7 @@ result:
       character: 18
       line: 4
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 24

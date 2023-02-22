@@ -9,7 +9,6 @@ from ....utils.logging import LoggingDescriptor
 from ..decorators import HasLanguageId, language_id_filter
 from ..has_extend_capabilities import HasExtendCapabilities
 from ..lsp_types import (
-    DocumentFilter,
     DocumentSelector,
     InlineValue,
     InlineValueContext,
@@ -18,6 +17,7 @@ from ..lsp_types import (
     Position,
     Range,
     ServerCapabilities,
+    TextDocumentFilterType1,
     TextDocumentIdentifier,
 )
 from ..text_document import TextDocument
@@ -46,7 +46,7 @@ class InlineValueProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             for e in self.collect:
                 if isinstance(e, HasLanguageId):
                     for lang_id in e.__language_id__:  # type: ignore
-                        document_filters.append(DocumentFilter(language=lang_id))
+                        document_filters.append(TextDocumentFilterType1(language=lang_id))
             capabilities.inline_value_provider = InlineValueRegistrationOptions(
                 work_done_progress=True, document_selector=document_filters if document_filters else None
             )

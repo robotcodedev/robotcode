@@ -10,7 +10,7 @@ from ...common.lsp_types import (
     ChangeAnnotation,
     CodeAction,
     CodeActionContext,
-    CodeActionKinds,
+    CodeActionKind,
     CodeActionTriggerKind,
     Command,
     DocumentUri,
@@ -32,7 +32,7 @@ from string import Template
 
 from .protocol_part import RobotLanguageServerProtocolPart
 
-CODEACTIONKINDS_QUICKFIX_CREATEKEYWORD = f"{CodeActionKinds.QUICKFIX}.createKeyword"
+CODEACTIONKINDS_QUICKFIX_CREATEKEYWORD = f"{CodeActionKind.QUICK_FIX}.createKeyword"
 
 
 KEYWORD_WITH_ARGS_TEMPLATE = Template(
@@ -88,13 +88,13 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
         kw_not_found_in_diagnostics = next((d for d in context.diagnostics if d.code == "KeywordNotFoundError"), None)
 
         if kw_not_found_in_diagnostics and (
-            (context.only and CodeActionKinds.QUICKFIX in context.only)
+            (context.only and CodeActionKind.QUICK_FIX in context.only)
             or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
         ):
             return [
                 CodeAction(
                     "Create Keyword",
-                    kind=CodeActionKinds.QUICKFIX + ".createKeyword",
+                    kind=CodeActionKind.QUICK_FIX + ".createKeyword",
                     command=Command(
                         "Create Keyword",
                         self.parent.commands.get_command_name(self.create_keyword),
@@ -181,7 +181,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
                 document_changes=[
                     TextDocumentEdit(
                         OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
-                        [AnnotatedTextEdit(insert_range, insert_text, annotation_id="create_keyword")],
+                        [AnnotatedTextEdit("create_keyword", insert_range, insert_text)],
                     )
                 ],
                 change_annotations={"create_keyword": ChangeAnnotation("Create Keyword", False)},

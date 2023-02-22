@@ -59,9 +59,14 @@
 			"request": "launch",
 			"module": "pytest",
 			"args": [
+				"--full-trace",
+				"--tb=native",
+				//"--regtest-reset",
 				//"tests/robotcode/language_server/robotframework/parts/test_foldingrange.py"
 				//"tests/robotcode/language_server/robotframework/parts/test_references.py"
-				"./tests/robotcode/language_server/robotframework/parts/test_discovering.py::test_workspace_discovery"
+				//"./tests/robotcode/language_server/robotframework/parts/test_discovering.py::test_workspace_discovery"
+				//"tests/robotcode/language_server/robotframework/parts/test_document_highlight.py"
+				"tests/robotcode/utils/test_dataclasses.py::test_really_complex_data"
 			],
 			"console": "integratedTerminal",
 			"justMyCode": false,

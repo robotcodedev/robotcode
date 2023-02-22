@@ -22,8 +22,8 @@ from ..decorators import language_id_filter
 from ..has_extend_capabilities import HasExtendCapabilities
 from ..lsp_types import (
     DocumentSymbol,
-    DocumentSymbolClientCapabilitiesSymbolKind,
-    DocumentSymbolClientCapabilitiesTagSupport,
+    DocumentSymbolClientCapabilitiesSymbolKindType,
+    DocumentSymbolClientCapabilitiesTagSupportType,
     DocumentSymbolOptions,
     DocumentSymbolParams,
     ServerCapabilities,
@@ -60,8 +60,8 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilit
     def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)
         self.hierarchical_document_symbol_support = False
-        self.symbol_kind: Optional[DocumentSymbolClientCapabilitiesSymbolKind] = None
-        self.tag_support: Optional[DocumentSymbolClientCapabilitiesTagSupport] = None
+        self.symbol_kind: Optional[DocumentSymbolClientCapabilitiesSymbolKindType] = None
+        self.tag_support: Optional[DocumentSymbolClientCapabilitiesTagSupportType] = None
 
     @async_tasking_event
     async def collect(

@@ -6,30 +6,30 @@ from typing import TYPE_CHECKING, Any, Optional
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_itertools import async_next
 from ....utils.async_tools import run_coroutine_in_thread, threaded
+from ....utils.dataclasses import CamelSnakeMixin
 from ....utils.logging import LoggingDescriptor
-from ...common.lsp_types import Model, Position, Range, TextDocumentIdentifier
+from ...common.lsp_types import Position, Range, TextDocumentIdentifier
 from ..utils.ast_utils import (
     HasTokens,
     get_nodes_at_position,
     get_tokens_at_position,
     range_from_token,
 )
+from .model_helper import ModelHelperMixin
+from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
-from .model_helper import ModelHelperMixin
-from .protocol_part import RobotLanguageServerProtocolPart
-
 
 @dataclass(repr=False)
-class EvaluatableExpressionParams(Model):
+class EvaluatableExpressionParams(CamelSnakeMixin):
     text_document: TextDocumentIdentifier
     position: Position
 
 
 @dataclass(repr=False)
-class EvaluatableExpression(Model):
+class EvaluatableExpression(CamelSnakeMixin):
     range: Range
     expression: Optional[str]
 

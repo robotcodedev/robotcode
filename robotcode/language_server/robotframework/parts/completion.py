@@ -421,7 +421,7 @@ class CompletionCollector(ModelHelperMixin):
                 if self.namespace.languages is not None
                 else None,
                 sort_text=f"100_{s[1]}",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
+                insert_text_format=InsertTextFormat.PLAIN_TEXT,
                 text_edit=TextEdit(
                     range=range,
                     new_text=s[0],
@@ -439,7 +439,7 @@ class CompletionCollector(ModelHelperMixin):
                 kind=CompletionItemKind.VARIABLE,
                 detail="Variable",
                 sort_text=f"035_{s}",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
+                insert_text_format=InsertTextFormat.PLAIN_TEXT,
                 text_edit=TextEdit(
                     range=range,
                     new_text=s,
@@ -469,7 +469,7 @@ class CompletionCollector(ModelHelperMixin):
                 kind=CompletionItemKind.VARIABLE,
                 detail=f"{s.type.value}",
                 sort_text=f"{self._VARIABLE_COMPLETION_SORT_TEXT_PREFIX.get(s.type, '035')}_{s.name[2:-1]}",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
+                insert_text_format=InsertTextFormat.PLAIN_TEXT,
                 text_edit=TextEdit(
                     range=range,
                     new_text=s.name[2:-1],
@@ -519,7 +519,7 @@ class CompletionCollector(ModelHelperMixin):
                 if self.namespace.languages is not None
                 else None,
                 sort_text=f"090_{setting}",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
+                insert_text_format=InsertTextFormat.PLAIN_TEXT,
                 text_edit=TextEdit(range=range, new_text=setting) if range is not None else None,
             )
             for setting in settings
@@ -566,7 +566,7 @@ class CompletionCollector(ModelHelperMixin):
                 else None,
                 detail="Setting",
                 sort_text=f"070_{setting}",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
+                insert_text_format=InsertTextFormat.PLAIN_TEXT,
                 text_edit=TextEdit(range=range, new_text=f"[{setting}]") if range is not None else None,
             )
             for setting in settings
@@ -584,7 +584,7 @@ class CompletionCollector(ModelHelperMixin):
                 kind=CompletionItemKind.UNIT,
                 detail="BDD Prefix",
                 sort_text=f"080_{prefix}",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
+                insert_text_format=InsertTextFormat.PLAIN_TEXT,
                 text_edit=TextEdit(range=range, new_text=f"{prefix} ") if range is not None else None,
             )
             for prefix in prefixes
@@ -617,7 +617,7 @@ class CompletionCollector(ModelHelperMixin):
                 else None,
                 detail="Setting",
                 sort_text=f"070_{setting}",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
+                insert_text_format=InsertTextFormat.PLAIN_TEXT,
                 text_edit=TextEdit(range=range, new_text=f"[{setting}]") if range is not None else None,
             )
             for setting in settings
@@ -720,7 +720,7 @@ class CompletionCollector(ModelHelperMixin):
                                     detail=f"{CompleteResultKind.KEYWORD.value} "
                                     f"{f'({kw.libname})' if kw.libname is not None else ''}",
                                     sort_text=f"020_{kw.name}",
-                                    insert_text_format=InsertTextFormat.PLAINTEXT
+                                    insert_text_format=InsertTextFormat.PLAIN_TEXT
                                     if not kw.is_embedded
                                     else InsertTextFormat.SNIPPET,
                                     text_edit=TextEdit(
@@ -762,7 +762,7 @@ class CompletionCollector(ModelHelperMixin):
                                         detail=f"{CompleteResultKind.KEYWORD.value} "
                                         f"{f'({kw.libname})' if kw.libname is not None else ''}",
                                         sort_text=f"020_{kw.name}",
-                                        insert_text_format=InsertTextFormat.PLAINTEXT
+                                        insert_text_format=InsertTextFormat.PLAIN_TEXT
                                         if not kw.is_embedded
                                         else InsertTextFormat.SNIPPET,
                                         text_edit=TextEdit(
@@ -798,7 +798,7 @@ class CompletionCollector(ModelHelperMixin):
                     detail=f"{CompleteResultKind.KEYWORD.value} {f'({kw.libname})' if kw.libname is not None else ''}",
                     deprecated=kw.is_deprecated,
                     sort_text=f"020_{kw.name}",
-                    insert_text_format=InsertTextFormat.PLAINTEXT if not kw.is_embedded else InsertTextFormat.SNIPPET,
+                    insert_text_format=InsertTextFormat.PLAIN_TEXT if not kw.is_embedded else InsertTextFormat.SNIPPET,
                     text_edit=TextEdit(
                         range=r,
                         new_text=kw.name if not kw.is_embedded else self.get_keyword_snipped_text(kw, in_template),
@@ -822,7 +822,7 @@ class CompletionCollector(ModelHelperMixin):
                     detail="Library",
                     sort_text=f"030_{v.name}",
                     deprecated=v.library_doc.is_deprecated,
-                    insert_text_format=InsertTextFormat.PLAINTEXT,
+                    insert_text_format=InsertTextFormat.PLAIN_TEXT,
                     text_edit=TextEdit(range=r, new_text=k),
                     data=CompletionItemImportData(
                         document_uri=str(self.document.uri),
@@ -845,7 +845,7 @@ class CompletionCollector(ModelHelperMixin):
                     detail="Resource",
                     deprecated=v.library_doc.is_deprecated,
                     sort_text=f"030_{v.name}",
-                    insert_text_format=InsertTextFormat.PLAINTEXT,
+                    insert_text_format=InsertTextFormat.PLAIN_TEXT,
                     text_edit=TextEdit(range=r, new_text=v.name),
                     data=CompletionItemImportData(
                         document_uri=str(self.document.uri),
@@ -866,7 +866,7 @@ class CompletionCollector(ModelHelperMixin):
                     label="NONE",
                     kind=CompletionItemKind.KEYWORD,
                     sort_text="998_NONE",
-                    insert_text_format=InsertTextFormat.PLAINTEXT,
+                    insert_text_format=InsertTextFormat.PLAIN_TEXT,
                     text_edit=TextEdit(range=r, new_text="NONE"),
                 )
             )
@@ -883,7 +883,7 @@ class CompletionCollector(ModelHelperMixin):
                         label=k,
                         kind=CompletionItemKind.KEYWORD,
                         sort_text=f"999_{k}",
-                        insert_text_format=InsertTextFormat.PLAINTEXT,
+                        insert_text_format=InsertTextFormat.PLAIN_TEXT,
                         text_edit=TextEdit(range=r, new_text=k),
                     )
                 )
@@ -1012,7 +1012,7 @@ class CompletionCollector(ModelHelperMixin):
         # TODO should this be configurable?
         if (
             context is not None
-            and context.trigger_kind == CompletionTriggerKind.TRIGGERCHARACTER
+            and context.trigger_kind == CompletionTriggerKind.TRIGGER_CHARACTER
             and context.trigger_character in [" ", "\t"]
         ):
             return None
@@ -1045,7 +1045,7 @@ class CompletionCollector(ModelHelperMixin):
         # TODO should this be configurable?
         if (
             context is not None
-            and context.trigger_kind == CompletionTriggerKind.TRIGGERCHARACTER
+            and context.trigger_kind == CompletionTriggerKind.TRIGGER_CHARACTER
             and context.trigger_character in [" ", "\t"]
         ):
             return None
@@ -1213,7 +1213,7 @@ class CompletionCollector(ModelHelperMixin):
         # TODO should this be configurable?
         if (
             context is not None
-            and context.trigger_kind == CompletionTriggerKind.TRIGGERCHARACTER
+            and context.trigger_kind == CompletionTriggerKind.TRIGGER_CHARACTER
             and context.trigger_character in [" ", "\t"]
         ):
             return None
@@ -1338,7 +1338,7 @@ class CompletionCollector(ModelHelperMixin):
         # TODO should this be configurable?
         if (
             context is not None
-            and context.trigger_kind == CompletionTriggerKind.TRIGGERCHARACTER
+            and context.trigger_kind == CompletionTriggerKind.TRIGGER_CHARACTER
             and context.trigger_character in [" ", "\t"]
         ):
             return None
@@ -1513,7 +1513,7 @@ class CompletionCollector(ModelHelperMixin):
                     else None,
                     detail=e.kind.value,
                     sort_text=f"030_{e}",
-                    insert_text_format=InsertTextFormat.PLAINTEXT,
+                    insert_text_format=InsertTextFormat.PLAIN_TEXT,
                     text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
                     data=CompletionItemData(
                         document_uri=str(self.document.uri),
@@ -1605,7 +1605,7 @@ class CompletionCollector(ModelHelperMixin):
                             kind=CompletionItemKind.VARIABLE,
                             sort_text=f"010{i}_{e.name}",
                             filter_text=e.name,
-                            insert_text_format=InsertTextFormat.PLAINTEXT,
+                            insert_text_format=InsertTextFormat.PLAIN_TEXT,
                             text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
                             data=CompletionItemData(
                                 document_uri=str(self.document.uri),
@@ -1643,7 +1643,7 @@ class CompletionCollector(ModelHelperMixin):
                             kind=CompletionItemKind.KEYWORD,
                             # detail=e.detail,
                             sort_text="03_NAMESPACE_MARKER",
-                            insert_text_format=InsertTextFormat.PLAINTEXT,
+                            insert_text_format=InsertTextFormat.PLAIN_TEXT,
                         )
                     ]
             return []
@@ -1743,7 +1743,7 @@ class CompletionCollector(ModelHelperMixin):
                 else None,
                 detail=e.kind.value,
                 sort_text=f"030_{e}",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
+                insert_text_format=InsertTextFormat.PLAIN_TEXT,
                 text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
                 data=CompletionItemData(
                     document_uri=str(self.document.uri),
@@ -1844,7 +1844,7 @@ class CompletionCollector(ModelHelperMixin):
                 else None,
                 detail=e.kind.value,
                 sort_text=f"030_{e}",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
+                insert_text_format=InsertTextFormat.PLAIN_TEXT,
                 text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
                 data=CompletionItemData(
                     document_uri=str(self.document.uri),
@@ -1952,7 +1952,7 @@ class CompletionCollector(ModelHelperMixin):
                 detail="Argument",
                 filter_text=e.name,
                 sort_text=f"02{i}_{e.name}=",
-                insert_text_format=InsertTextFormat.PLAINTEXT,
+                insert_text_format=InsertTextFormat.PLAIN_TEXT,
                 text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
             )
             for i, e in enumerate(result[0].args)

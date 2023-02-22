@@ -26,7 +26,7 @@ from typing import (
 
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_tools import Lock, async_tasking_event, create_sub_task, threaded
-from ....utils.dataclasses import from_dict
+from ....utils.dataclasses import CamelSnakeMixin, from_dict
 from ....utils.logging import LoggingDescriptor
 from ....utils.path import path_is_relative_to
 from ....utils.uri import Uri
@@ -47,15 +47,14 @@ from ..lsp_types import (
     FileDelete,
     FileEvent,
     FileOperationFilter,
+    FileOperationOptions,
     FileOperationPattern,
     FileOperationRegistrationOptions,
     FileRename,
     FileSystemWatcher,
-    Model,
     RenameFilesParams,
     ServerCapabilities,
-    ServerCapabilitiesWorkspace,
-    ServerCapabilitiesWorkspaceFileOperations,
+    ServerCapabilitiesWorkspaceType,
     TextEdit,
     WatchKind,
     WorkspaceEdit,
@@ -125,7 +124,7 @@ class HasConfigSection(Protocol):
 
 
 @dataclass
-class ConfigBase(Model):
+class ConfigBase(CamelSnakeMixin):
     pass
 
 
@@ -170,11 +169,11 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
             await self.remove_file_watcher_entry(e)
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
-        capabilities.workspace = ServerCapabilitiesWorkspace(
+        capabilities.workspace = ServerCapabilitiesWorkspaceType(
             workspace_folders=WorkspaceFoldersServerCapabilities(
                 supported=True, change_notifications=str(uuid.uuid4())
             ),
-            file_operations=ServerCapabilitiesWorkspaceFileOperations(
+            file_operations=FileOperationOptions(
                 did_create=FileOperationRegistrationOptions(
                     filters=[
                         FileOperationFilter(

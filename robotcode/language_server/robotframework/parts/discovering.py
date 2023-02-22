@@ -10,11 +10,11 @@ from typing import TYPE_CHECKING, Any, Iterator, List, Optional, cast
 
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_tools import check_canceled, check_canceled_sync, threaded
+from ....utils.dataclasses import CamelSnakeMixin
 from ....utils.logging import LoggingDescriptor
 from ....utils.uri import Uri
 from ...common.lsp_types import (
     DocumentUri,
-    Model,
     Position,
     Range,
     TextDocumentIdentifier,
@@ -27,26 +27,26 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 
-@dataclass(repr=False)
-class GetAllTestsParams(Model):
+@dataclass
+class GetAllTestsParams(CamelSnakeMixin):
     workspace_folder: str
     paths: Optional[List[str]] = None
     suites: Optional[List[str]] = None
 
 
-@dataclass(repr=False)
-class GetTestsParams(Model):
+@dataclass
+class GetTestsParams(CamelSnakeMixin):
     text_document: TextDocumentIdentifier
     base_name: Optional[str]
 
 
-@dataclass(repr=False)
-class GetTestsFromDocumentParams(Model):
+@dataclass
+class GetTestsFromDocumentParams(CamelSnakeMixin):
     text_document: TextDocumentIdentifier
 
 
-@dataclass(repr=False)
-class TestItem(Model):
+@dataclass
+class TestItem(CamelSnakeMixin):
     type: str
     id: str
     label: str

@@ -30,7 +30,7 @@ from ..lsp_types import (
     DiagnosticServerCancellationData,
     DocumentDiagnosticParams,
     DocumentDiagnosticReport,
-    ErrorCodes,
+    LSPErrorCodes,
     PreviousResultId,
     ProgressToken,
     PublishDiagnosticsParams,
@@ -493,12 +493,12 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         try:
             if not self.parent.is_initialized:
                 raise JsonRPCErrorException(
-                    ErrorCodes.SERVER_CANCELLED, "Server not initialized.", DiagnosticServerCancellationData(True)
+                    LSPErrorCodes.SERVER_CANCELLED, "Server not initialized.", DiagnosticServerCancellationData(True)
                 )
 
             document = await self.parent.documents.get(text_document.uri)
             if document is None:
-                raise JsonRPCErrorException(ErrorCodes.SERVER_CANCELLED, f"Document {text_document!r} not found.")
+                raise JsonRPCErrorException(LSPErrorCodes.SERVER_CANCELLED, f"Document {text_document!r} not found.")
 
             self.create_document_diagnostics_task(document, True)
 

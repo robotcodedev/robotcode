@@ -224,10 +224,10 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             self.send_progress(
                 token,
                 WorkDoneProgressBegin(
-                    title or self.parent.short_name or self.parent.name or self._default_title,
-                    message,
-                    percentage,
-                    cancellable,
+                    title=title or self.parent.short_name or self.parent.name or self._default_title,
+                    message=message,
+                    percentage=percentage,
+                    cancellable=cancellable,
                 ),
             )
 
@@ -248,10 +248,9 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             self.send_progress(
                 token,
                 WorkDoneProgressReport(
-                    title or self.parent.short_name or self.parent.name or self._default_title,
-                    message,
-                    percentage,
-                    cancellable,
+                    message=message,
+                    percentage=percentage,
+                    cancellable=cancellable,
                 ),
             )
 
@@ -267,7 +266,7 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             and self.parent.client_capabilities.window.work_done_progress
         ):
             try:
-                self.send_progress(token, WorkDoneProgressEnd(message))
+                self.send_progress(token, WorkDoneProgressEnd(message=message))
             finally:
                 if token in self.__progress_tokens:
                     self.__progress_tokens.pop(token)

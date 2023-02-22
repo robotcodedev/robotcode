@@ -16,15 +16,15 @@ from ...utils.async_tools import Event, async_event
 from ...utils.logging import LoggingDescriptor
 from .has_extend_capabilities import HasExtendCapabilities
 from .lsp_types import (
-    UTF16,
     CancelParams,
     ClientCapabilities,
-    ClientInfo,
     InitializedParams,
     InitializeError,
     InitializeParams,
+    InitializeParamsClientInfoType,
     InitializeResult,
-    InitializeResultServerInfo,
+    InitializeResultServerInfoType,
+    PositionEncodingKind,
     ProgressToken,
     Registration,
     RegistrationParams,
@@ -33,7 +33,7 @@ from .lsp_types import (
     SetTraceParams,
     TextDocumentSyncKind,
     TextDocumentSyncOptions,
-    TraceValue,
+    TraceValues,
     Unregistration,
     UnregistrationParams,
     WorkspaceFolder,
@@ -115,7 +115,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         self.server = server
 
         self.initialization_options: Any = None
-        self.client_info: Optional[ClientInfo] = None
+        self.client_info: Optional[InitializeParamsClientInfoType] = None
         self._workspace: Optional[Workspace] = None
         self.client_capabilities: Optional[ClientCapabilities] = None
         self.shutdown_received = False
@@ -130,7 +130,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
             )
         )
 
-        self._trace = TraceValue.OFF
+        self._trace = TraceValues.OFF
         self.is_initialized = Event()
 
     @async_event
@@ -142,11 +142,11 @@ class LanguageServerProtocol(JsonRPCProtocol):
         ...
 
     @property
-    def trace(self) -> TraceValue:
+    def trace(self) -> TraceValues:
         return self._trace
 
     @trace.setter
-    def trace(self, value: TraceValue) -> None:
+    def trace(self, value: TraceValues) -> None:
         self._trace = value
 
     @property
@@ -181,14 +181,14 @@ class LanguageServerProtocol(JsonRPCProtocol):
         root_path: Optional[str] = None,
         root_uri: Optional[str] = None,
         initialization_options: Optional[Any] = None,
-        trace: Optional[TraceValue] = None,
-        client_info: Optional[ClientInfo] = None,
+        trace: Optional[TraceValues] = None,
+        client_info: Optional[InitializeParamsClientInfoType] = None,
         workspace_folders: Optional[List[WorkspaceFolder]] = None,
         work_done_token: Optional[ProgressToken] = None,
         *args: Any,
         **kwargs: Any,
     ) -> InitializeResult:
-        self.trace = trace or TraceValue.OFF
+        self.trace = trace or TraceValues.OFF
         self.client_info = client_info
 
         self.client_capabilities = capabilities
@@ -209,9 +209,9 @@ class LanguageServerProtocol(JsonRPCProtocol):
                 if (
                     self.client_capabilities.general
                     and self.client_capabilities.general.position_encodings
-                    and UTF16 in self.client_capabilities.general.position_encodings
+                    and PositionEncodingKind.UTF16 in self.client_capabilities.general.position_encodings
                 ):
-                    self.capabilities.position_encoding = UTF16
+                    self.capabilities.position_encoding = PositionEncodingKind.UTF16
 
                 await self.on_initialize(self, initialization_options)
             except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
@@ -226,7 +226,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
             return InitializeResult(
                 capabilities=self.capabilities,
                 **(
-                    {"server_info": InitializeResultServerInfo(name=self.name, version=self.version)}
+                    {"server_info": InitializeResultServerInfoType(name=self.name, version=self.version)}
                     if self.name is not None
                     else {}
                 ),
@@ -272,7 +272,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     @rpc_method(name="$/setTrace", param_type=SetTraceParams)
     @__logger.call
-    async def _set_trace(self, value: TraceValue, *args: Any, **kwargs: Any) -> None:
+    async def _set_trace(self, value: TraceValues, *args: Any, **kwargs: Any) -> None:
         self.trace = value
 
     @rpc_method(name="$/cancelRequest", param_type=CancelParams)

@@ -18,7 +18,7 @@ from ..lsp_types import (
     SemanticTokensDeltaPartialResult,
     SemanticTokensLegend,
     SemanticTokensOptions,
-    SemanticTokensOptionsFull,
+    SemanticTokensOptionsFullType1,
     SemanticTokensParams,
     SemanticTokensPartialResult,
     SemanticTokensRangeParams,
@@ -67,7 +67,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
                     token_types=[e.value for e in self.token_types],
                     token_modifiers=[e.value for e in self.token_modifiers],
                 ),
-                full=SemanticTokensOptionsFull(delta=True if len(self.collect_full_delta) else None)
+                full=SemanticTokensOptionsFullType1(delta=True if len(self.collect_full_delta) else None)
                 if len(self.collect_full) and len(self.collect_full_delta)
                 else True
                 if len(self.collect_full)

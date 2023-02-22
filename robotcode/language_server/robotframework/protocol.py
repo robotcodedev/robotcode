@@ -10,9 +10,9 @@ from ...jsonrpc2.protocol import (
     JsonRPCErrors,
     ProtocolPartDescriptor,
 )
-from ...utils.dataclasses import from_dict
+from ...utils.dataclasses import CamelSnakeMixin, from_dict
 from ...utils.logging import LoggingDescriptor
-from ..common.lsp_types import InitializeError, Model
+from ..common.lsp_types import InitializeError
 from ..common.parts.document_symbols import symbol_information_label
 from ..common.protocol import LanguageDefinition, LanguageServerProtocol
 from .configuration import RobotConfig
@@ -70,7 +70,7 @@ def check_robotframework() -> None:
 
 
 @dataclass
-class Options(Model):
+class Options(CamelSnakeMixin):
     storage_uri: Optional[str] = None
     global_storage_uri: Optional[str] = None
     python_path: List[str] = field(default_factory=list)

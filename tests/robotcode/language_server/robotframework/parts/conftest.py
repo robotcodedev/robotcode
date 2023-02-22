@@ -8,10 +8,10 @@ import pytest_asyncio
 
 from robotcode.language_server.common.lsp_types import (
     ClientCapabilities,
-    ClientInfo,
     FoldingRangeClientCapabilities,
     HoverClientCapabilities,
     InitializedParams,
+    InitializeParamsClientInfoType,
     MarkupKind,
     TextDocumentClientCapabilities,
     WorkspaceFolder,
@@ -39,45 +39,43 @@ async def protocol(request: Any) -> AsyncIterator[RobotLanguageServerProtocol]:
         shutil.rmtree(robotcode_cache_path, ignore_errors=True)
 
     server = RobotLanguageServer()
-    try:
-        client_capas = ClientCapabilities(
-            text_document=TextDocumentClientCapabilities(
-                hover=HoverClientCapabilities(content_format=[MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT]),
-                folding_range=FoldingRangeClientCapabilities(range_limit=0, line_folding_only=False),
-            )
-        )
 
-        protocol = RobotLanguageServerProtocol(server)
-        await protocol._initialize(
-            dataclasses.replace(
-                client_capas,
-                **(
-                    {k: v for k, v in vars(request.param).items() if v is not None} if hasattr(request, "param") else {}
+    client_capas = ClientCapabilities(
+        text_document=TextDocumentClientCapabilities(
+            hover=HoverClientCapabilities(content_format=[MarkupKind.MARKDOWN, MarkupKind.PLAIN_TEXT]),
+            folding_range=FoldingRangeClientCapabilities(range_limit=0, line_folding_only=False),
+        )
+    )
+
+    protocol = RobotLanguageServerProtocol(server)
+    await protocol._initialize(
+        dataclasses.replace(
+            client_capas,
+            **({k: v for k, v in vars(request.param).items() if v is not None} if hasattr(request, "param") else {}),
+        ),
+        root_path=str(root_path),
+        root_uri=root_path.as_uri(),
+        workspace_folders=[WorkspaceFolder(name="test workspace", uri=root_path.as_uri())],
+        client_info=InitializeParamsClientInfoType(name="TestClient", version="1.0.0"),
+    )
+
+    protocol.workspace.settings = {
+        cast(HasConfigSection, RobotCodeConfig).__config_section__: as_dict(
+            RobotCodeConfig(
+                robot=RobotConfig(
+                    python_path=["./lib", "./resources"],
+                    env={"ENV_VAR": "1"},
+                    variables={
+                        "CMD_VAR": "1",
+                    },
                 ),
-            ),
-            root_path=str(root_path),
-            root_uri=root_path.as_uri(),
-            workspace_folders=[WorkspaceFolder(name="test workspace", uri=root_path.as_uri())],
-            client_info=ClientInfo(name="TestClient", version="1.0.0"),
-        )
-
-        protocol.workspace.settings = {
-            cast(HasConfigSection, RobotCodeConfig).__config_section__: as_dict(
-                RobotCodeConfig(
-                    robot=RobotConfig(
-                        python_path=["./lib", "./resources"],
-                        env={"ENV_VAR": "1"},
-                        variables={
-                            "CMD_VAR": "1",
-                        },
-                    ),
-                    analysis=AnalysisConfig(diagnostic_mode=DiagnosticsMode.OFF),
-                )
+                analysis=AnalysisConfig(diagnostic_mode=DiagnosticsMode.OFF),
             )
-        }
+        )
+    }
 
-        await protocol._initialized(InitializedParams())
-
+    await protocol._initialized(InitializedParams())
+    try:
         yield protocol
     finally:
         await protocol._shutdown()

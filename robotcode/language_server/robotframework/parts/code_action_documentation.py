@@ -15,6 +15,7 @@ from urllib.parse import parse_qs, urlparse
 
 from ....jsonrpc2.protocol import rpc_method
 from ....utils.async_tools import threaded
+from ....utils.dataclasses import CamelSnakeMixin
 from ....utils.logging import LoggingDescriptor
 from ....utils.net import find_free_port
 from ....utils.uri import Uri
@@ -22,9 +23,8 @@ from ...common.decorators import code_action_kinds, language_id
 from ...common.lsp_types import (
     CodeAction,
     CodeActionContext,
-    CodeActionKinds,
+    CodeActionKind,
     Command,
-    Model,
     Range,
 )
 from ...common.text_document import TextDocument
@@ -47,7 +47,7 @@ from .protocol_part import RobotLanguageServerProtocolPart
 
 
 @dataclass(repr=False)
-class ConvertUriParams(Model):
+class ConvertUriParams(CamelSnakeMixin):
     uri: str
 
 
@@ -174,7 +174,7 @@ class DualStackServer(ThreadingHTTPServer):
         return super().server_bind()
 
 
-CODEACTIONKINDS_SOURCE_OPENDOCUMENTATION = f"{CodeActionKinds.SOURCE}.openDocumentation"
+CODEACTIONKINDS_SOURCE_OPENDOCUMENTATION = f"{CodeActionKind.SOURCE}.openDocumentation"
 
 
 class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
@@ -255,7 +255,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         node = await get_node_at_position(model, range.start)
 
         if context.only and isinstance(node, (LibraryImport, ResourceImport)):
-            if CodeActionKinds.SOURCE in context.only and range in range_from_token(node.get_token(RobotToken.NAME)):
+            if CodeActionKind.SOURCE in context.only and range in range_from_token(node.get_token(RobotToken.NAME)):
                 url = await self.build_url(
                     node.name, node.args if isinstance(node, LibraryImport) else (), document, namespace
                 )
@@ -284,7 +284,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                 kw_doc, _ = result
 
                 if kw_doc is not None:
-                    if context.only and CodeActionKinds.SOURCE in context.only:
+                    if context.only and CodeActionKind.SOURCE in context.only:
                         entry: Optional[LibraryEntry] = None
 
                         if kw_doc.libtype == "LIBRARY":

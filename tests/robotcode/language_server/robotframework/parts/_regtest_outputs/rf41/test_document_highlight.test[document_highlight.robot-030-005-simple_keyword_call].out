@@ -4,7 +4,7 @@ data: !GeneratedTestData
   name: simple keyword call
 result:
 - !DocumentHighlight
-  kind: &id001 !DocumentHighlightKind 'TEXT'
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
@@ -13,7 +13,7 @@ result:
       character: 4
       line: 30
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
@@ -22,7 +22,7 @@ result:
       character: 4
       line: 37
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
@@ -31,7 +31,7 @@ result:
       character: 4
       line: 72
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
@@ -40,7 +40,7 @@ result:
       character: 4
       line: 74
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
@@ -49,7 +49,7 @@ result:
       character: 4
       line: 82
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
@@ -58,7 +58,7 @@ result:
       character: 4
       line: 84
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
@@ -67,7 +67,7 @@ result:
       character: 4
       line: 92
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
@@ -76,7 +76,7 @@ result:
       character: 4
       line: 94
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
@@ -85,7 +85,7 @@ result:
       character: 4
       line: 96
 - !DocumentHighlight
-  kind: *id001
+  kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
