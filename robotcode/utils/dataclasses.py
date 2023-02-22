@@ -202,7 +202,7 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
             return cast(_T, value)
 
     if isinstance(value, Mapping):
-        match: Optional[Type[_T]] = None
+        match_: Optional[Type[_T]] = None
         match_same_keys: Optional[List[str]] = None
         match_value: Optional[Dict[str, Any]] = None
         match_signature: Optional[inspect.Signature] = None
@@ -236,7 +236,7 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
 
             if match_same_keys is None or len(match_same_keys) < len(same_keys):
                 match_same_keys = same_keys
-                match = t
+                match_ = t
                 match_value = cased_value
                 match_signature = signature
                 match_type_hints = type_hints
@@ -247,7 +247,7 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
                 )
 
         if (
-            match is not None
+            match_ is not None
             and match_value is not None
             and match_signature is not None
             and match_type_hints is not None
@@ -259,9 +259,9 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
             }
 
             try:
-                return match(**params)
+                return match_(**params)
             except TypeError as ex:
-                raise TypeError(f"Can't initialize class {repr(match)} with parameters {repr(params)}.") from ex
+                raise TypeError(f"Can't initialize class {repr(match_)} with parameters {repr(params)}.") from ex
 
     for t in types:
         args = get_args(t)
