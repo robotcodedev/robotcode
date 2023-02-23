@@ -9,7 +9,7 @@ import time
 import weakref
 from abc import ABC, abstractmethod
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, is_dataclass
 from typing import (
     Any,
     Callable,
@@ -648,16 +648,24 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         kw_args = {}
         args = []
         params_added = False
-        rest = set(converted_params.__dict__.keys())
+
+        field_names = (
+            [f.name for f in fields(converted_params)]
+            if is_dataclass(converted_params)
+            else list(converted_params.__dict__.keys())
+        )
+
+        rest = set(field_names)
         if isinstance(params, dict):
             rest = set.union(rest, params.keys())
 
         for v in signature.parameters.values():
-            if v.name in converted_params.__dict__:
+            if v.name in field_names:
                 if v.kind == inspect.Parameter.POSITIONAL_ONLY:
                     args.append(getattr(converted_params, v.name))
                 else:
                     kw_args[v.name] = getattr(converted_params, v.name)
+
                 rest.remove(v.name)
             elif v.name == "params":
                 if v.kind == inspect.Parameter.POSITIONAL_ONLY:
