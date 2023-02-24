@@ -1206,14 +1206,7 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint --ext .ts,.tsx,.js .",
     "lint-fix": "eslint --ext .ts,.tsx,.js --fix .",
-    "test": "node ./out/test/runTest.js",
-    "version": "python scripts/update_versions.py && git add .",
-    "package": "python scripts/package.py",
-    "publish": "python scripts/publish.py",
-    "package-publish": "npm run package && python scripts/publish.py",
-    "extract-release-notes": "python scripts/extract_release_notes.py",
-    "update-doc-links": "python scripts/update_doc_links.py",
-    "is-prerelease": "python scripts/is_prerelease.py"
+    "test": "node ./out/test/runTest.js"
   },
   "extensionDependencies": [
     "ms-python.python"

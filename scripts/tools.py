@@ -16,7 +16,7 @@ def get_current_version_from_git() -> Version:
     repo = Repo(Path.cwd())
 
     git_version = GitDescribeVersion(
-        *repo.git.describe("--tag", "--long", "--first-parent", "--match", "v[0-9]*").split("-")
+        *repo.git.describe("--tag", "--long", "--first-parent", "--match", "v[0-9]*").rsplit("-", 2)
     )
 
     version = Version(git_version.version[1:])

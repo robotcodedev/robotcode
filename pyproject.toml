@@ -144,10 +144,24 @@ skip-install = true
 features = ["yaml", "rest", "lint", "tidy"]
 
 [tool.hatch.envs.lint.scripts]
-typing = "mypy --install-types --non-interactive {args:.}"
+typing = ["mypy --install-types --non-interactive {args:.}"]
 style = ["ruff {args:.}", "black --check --diff {args:.}"]
 fmt = ["black {args:.}", "ruff --fix {args:.}", "style"]
 all = ["style", "typing"]
+
+
+[tool.hatch.envs.build]
+detached = true
+python = "38"
+dependencies = ["GitPython", "semantic-version"]
+
+[tool.hatch.envs.build.scripts]
+update-git-versions = ["python scripts/update_git_versions.py"]
+update-doc-links = ["python scripts/update_doc_links.py"]
+package = ["python scripts/package.py"]
+publish = ["python scripts/publish.py"]
+extract-release-notes = ["python scripts/extract_release_notes.py"]
+is-prerelease = ["python scripts/is_prerelease.py"]
 
 [tool.semantic_release]
 version_variable = ["robotcode/__version__.py:__version__"]

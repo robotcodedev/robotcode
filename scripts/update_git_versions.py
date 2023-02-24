@@ -1,5 +1,20 @@
+import contextlib
 import re
+import sys
 from pathlib import Path
+
+if __name__ == "__main__" and __package__ is None or __package__ == "":
+    file = Path(__file__).resolve()
+    parent, top = file.parent, file.parents[1]
+
+    if str(top) not in sys.path:
+        sys.path.append(str(top))
+
+    with contextlib.suppress(ValueError):
+        sys.path.remove(str(parent))
+
+    __package__ = "scripts"
+
 
 from scripts.tools import get_version
 
@@ -13,20 +28,18 @@ def replace_in_file(filename: Path, pattern: "re.Pattern[str]", to: str) -> None
 def main() -> None:
     version = get_version()
 
-    preview = version.minor % 2 != 0
-
-    for f in ["robotcode/__version__.py", "pyproject.toml"]:
+    for f in ["robotcode/__version__.py"]:
         replace_in_file(
             Path(f),
             re.compile(r"""(^_*version_*\s*=\s*['"])([^'"]*)(['"])""", re.MULTILINE),
-            rf"\g<1>{version or ''}{'.dev.0' if preview and version.prerelease is None else ''}\g<3>",
+            rf"\g<1>{version or ''}\g<3>",
         )
 
     for f in ["package.json"]:
         replace_in_file(
             Path(f),
             re.compile(r"""(\"version\"\s*:\s*['"])([0-9]+\.[0-9]+\.[0-9]+.*)(['"])""", re.MULTILINE),
-            rf"\g<1>{version or ''}{'.dev.0' if preview and version.prerelease is None else ''}\g<3>",
+            rf"\g<1>{version or ''}\g<3>",
         )
 
 
