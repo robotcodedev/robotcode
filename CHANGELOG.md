@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.25.3-beta.2 (2023-02-25)
+### Hint
+* this is just a dummy release
+
 ## v0.25.2-beta.1 (2023-02-07)
 ### Documentation
 * Add python badges to README ([`c0ec329`](https://github.com/d-biehl/robotcode/commit/c0ec3290b80714ff73528082a3fd2825f1c01f59))
