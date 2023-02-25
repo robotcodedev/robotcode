@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.26.1 (2023-02-25)
+### Fix
+* Github workflow ([`a235b86`](https://github.com/d-biehl/robotcode/commit/a235b864139c911cf593b58843c4d2726f770cf5))
+
 ## v0.26.0 (2023-02-25)
 ### Feature
 * Switch to [hatch](https://hatch.pypa.io) build tool and bigger internal refactorings ([`bc1c99b`](https://github.com/d-biehl/robotcode/commit/bc1c99bd8d70ec0b6a70257575d9dd4c44793f96))
