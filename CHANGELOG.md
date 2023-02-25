@@ -4,6 +4,13 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.26.0 (2023-02-25)
+### Feature
+* Switch to [hatch](https://hatch.pypa.io) build tool and bigger internal refactorings ([`bc1c99b`](https://github.com/d-biehl/robotcode/commit/bc1c99bd8d70ec0b6a70257575d9dd4c44793f96))
+
+### Fix
+* Correct error message if variable import not found ([`a4b8fbb`](https://github.com/d-biehl/robotcode/commit/a4b8fbb6d830dfb92c59b17b7ac14fafe88558ed))
+
 ## v0.25.3-beta.2 (2023-02-25)
 ### Hint
 * this is just a dummy release
