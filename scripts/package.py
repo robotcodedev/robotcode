@@ -24,11 +24,11 @@ def main() -> None:
     if not dist_path.exists():
         dist_path.mkdir()
 
+    run("hatch -e build build", shell=True).check_returncode()
+
     run(
         f"npx vsce package {'--pre-release' if get_version().prerelease else ''} -o ./dist", shell=True
     ).check_returncode()
-
-    run("hatch -e build build", shell=True).check_returncode()
 
 
 if __name__ == "__main__":

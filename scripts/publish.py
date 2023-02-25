@@ -31,8 +31,8 @@ def main() -> None:
     run("npx vsce publish", f"npx vsce publish -i {vsix_path}", shell=True, timeout=600)
     run("npx ovsx publish", f"npx ovsx publish {vsix_path}", shell=True, timeout=600)
     run(
-        "poetry publish",
-        f"poetry publish --username {os.environ['PYPI_USERNAME']} --password {os.environ['PYPI_PASSWORD']}",
+        "hatch publish",
+        f'hatch -e build publish -u "{os.environ["PYPI_USERNAME"]}" -a "{os.environ["PYPI_PASSWORD"]}"',
         shell=True,
         timeout=600,
     )
