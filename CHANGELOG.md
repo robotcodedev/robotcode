@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.26.2 (2023-02-25)
+### Fix
+* Publish script ([`0d3dd8f`](https://github.com/d-biehl/robotcode/commit/0d3dd8fb7bac3d26cccb5fa60be3d4284bc8d9b7))
+
 ## v0.26.1 (2023-02-25)
 ### Fix
 * Github workflow ([`a235b86`](https://github.com/d-biehl/robotcode/commit/a235b864139c911cf593b58843c4d2726f770cf5))
