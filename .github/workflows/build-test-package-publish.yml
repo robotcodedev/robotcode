@@ -193,6 +193,8 @@ jobs:
 
       - name: Ensure latest hatch is installed
         run: python -m pip install --upgrade hatch
+
+      - name: Create Build Environment
         run: hatch env create build
 
       - name: Setup Node.js environment
