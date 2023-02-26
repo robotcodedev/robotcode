@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 [project]
 name = "robotcode"
 description = "Language server, debugger and tools for Robot Framework"
-authors = [{ name = "Daniel Biehl", email = "dbiehlo@live.de" }]
+authors = [{ name = "Daniel Biehl", email = "dbiehl@live.de" }]
 readme = "README.md"
 license = { text = "Apache-2.0" }
 keywords = [
@@ -40,9 +40,12 @@ classifiers = [
   "Topic :: Software Development :: Testing",
   "Topic :: Software Development :: Testing :: Acceptance",
   "Topic :: Software Development :: Testing :: BDD",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Utilities",
   "Typing :: Typed",
   "Topic :: Software Development :: Debuggers",
   "Topic :: Text Editors :: Integrated Development Environments (IDE)",
+  "Intended Audience :: Developers",
 ]
 requires-python = ">=3.8"
 dependencies = ["robotframework>=4.1.0"]
