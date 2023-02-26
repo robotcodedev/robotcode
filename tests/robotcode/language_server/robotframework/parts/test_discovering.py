@@ -8,7 +8,6 @@ import yaml
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
-from robotcode.utils.async_tools import run_coroutine_in_thread
 
 from .pytest_regtestex import RegTestFixtureEx
 
@@ -39,10 +38,7 @@ async def test_workspace_discovery(
         )
 
     result = await asyncio.wait_for(
-        run_coroutine_in_thread(
-            protocol.robot_discovering.get_tests_from_workspace, Path(Path(__file__).parent, "data").as_uri()
-        ),
-        120,
+        protocol.robot_discovering.get_tests_from_workspace(Path(Path(__file__).parent, "data").as_uri()), 120
     )
     regtest.write(
         yaml.dump(

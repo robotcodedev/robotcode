@@ -11,7 +11,6 @@ from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
-from robotcode.utils.async_tools import run_coroutine_in_thread
 from robotcode.utils.uri import Uri
 
 from ..tools import (
@@ -60,8 +59,7 @@ async def test_implementation(
     data: GeneratedTestData,
 ) -> None:
     result = await asyncio.wait_for(
-        run_coroutine_in_thread(
-            protocol.robot_goto.collect_implementation,
+        protocol.robot_goto.collect_implementation(
             protocol.robot_goto,
             test_document,
             Position(line=data.line, character=data.character),
