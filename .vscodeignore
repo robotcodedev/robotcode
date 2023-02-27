@@ -54,3 +54,6 @@ doc
 
 .pre-commit-config.yaml
 .devcontainer
+
+src
+bundled/libs/bin

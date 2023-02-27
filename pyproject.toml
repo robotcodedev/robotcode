@@ -72,11 +72,11 @@ rest = ["docutils"]
 
 
 [tool.hatch.version]
-path = "robotcode/__version__.py"
+path = "src/robotcode/__version__.py"
 
 
 [tool.hatch.build.targets.sdist]
-only-include = ["robotcode", "CHANGELOG.md"]
+only-include = ["src", "CHANGELOG.md"]
 
 
 [tool.hatch.envs.default]
@@ -177,19 +177,10 @@ build_command = "pip install hatch && hatch build"
 [tool.black]
 line-length = 120
 target-version = ['py38']
-exclude = '''
+extend-exclude = '''
 (
   /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | \.hatch
-    | build
-    | dist
-    | out
-    | playground
+    | bundled/libs
   )/
 )
 '''
@@ -225,27 +216,9 @@ fail_under = 40
 [tool.ruff]
 line-length = 120
 target-version = "py38"
-exclude = [
-  ".bzr",
-  ".direnv",
-  ".eggs",
-  ".git",
-  ".hg",
-  ".mypy_cache",
-  ".nox",
-  ".pants.d",
-  ".ruff_cache",
-  ".svn",
-  ".tox",
-  ".venv",
-  "__pypackages__",
-  "_build",
-  "buck-out",
-  "build",
-  "dist",
-  "node_modules",
-  "venv",
-  ".hatch",
+src = ["src"]
+extend-exclude = [
+  "bundled/libs",
 ]
 ignore = ["E741", "N805", "N999"]
 select = [
@@ -295,7 +268,7 @@ select = [
 
 [tool.mypy]
 python_version = 3.8
-
+pretty = true
 strict = true
 warn_redundant_casts = true
 warn_unused_ignores = true
@@ -314,6 +287,7 @@ exclude = [
   "out",
   "playground",
   "scripts",
+  "bundled/libs",
 ]
 
 

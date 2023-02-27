@@ -93,14 +93,14 @@ export class PythonManager {
     public readonly outputChannel: vscode.OutputChannel
   ) {
     this._pythonLanguageServerMain = this.extensionContext.asAbsolutePath(
-      path.join("robotcode", "language_server", "__main__.py")
+      path.join("bundled", "tool", "language_server")
     );
     this._pythonDebugAdapterMain = this.extensionContext.asAbsolutePath(
-      path.join("robotcode", "debugger", "launcher", "__main__.py")
+      path.join("bundled", "tool", "debugger", "launcher")
     );
 
     this._checkRobotVersionMain = this.extensionContext.asAbsolutePath(
-      path.join("robotcode", "language_server", "robotframework", "utils", "version.py")
+      path.join("bundled", "tool", "check_robot_version.py")
     );
   }
 

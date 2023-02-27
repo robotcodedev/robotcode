@@ -3,27 +3,7 @@ import logging
 import logging.config
 import os
 import pathlib
-import sys
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
-
-__file__ = os.path.abspath(__file__)
-if __file__.endswith((".pyc", ".pyo")):
-    __file__ = __file__[:-1]
-
-if __name__ == "__main__" and __package__ is None or __package__ == "":
-    file = Path(__file__).resolve()
-    parent, top = file.parent, file.parents[3]
-
-    if str(top) not in sys.path:
-        sys.path.append(str(top))
-
-    try:
-        sys.path.remove(str(parent))
-    except ValueError:  # Already removed
-        pass
-
-    __package__ = "robotcode.debugger.launcher"
 
 from ...__version__ import __version__
 from ...utils.debugpy import start_debugpy
@@ -140,7 +120,3 @@ def main() -> None:
         start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)
 
     run_server(args.mode, args.port)
-
-
-if __name__ == "__main__":
-    main()

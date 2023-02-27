@@ -28,7 +28,7 @@ def replace_in_file(filename: Path, pattern: "re.Pattern[str]", to: str) -> None
 def main() -> None:
     version = get_version()
 
-    for f in ["robotcode/__version__.py"]:
+    for f in ["src/robotcode/__version__.py"]:
         replace_in_file(
             Path(f),
             re.compile(r"""(^_*version_*\s*=\s*['"])([^'"]*)(['"])""", re.MULTILINE),

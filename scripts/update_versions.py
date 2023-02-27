@@ -16,7 +16,7 @@ def main() -> None:
 
     preview = version.minor % 2 != 0
 
-    for f in ["robotcode/__version__.py", "pyproject.toml"]:
+    for f in ["src/robotcode/__version__.py", "pyproject.toml"]:
         replace_in_file(
             Path(f),
             re.compile(r"""(^_*version_*\s*=\s*['"])([^'"]*)(['"])""", re.MULTILINE),

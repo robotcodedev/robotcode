@@ -66,7 +66,3 @@ def create_version_from_str(version_str: str) -> Version:
         raise InvalidVersionError from ex
 
     raise InvalidVersionError
-
-
-if __name__ == "__main__":
-    print(get_robot_version() >= (4, 0))

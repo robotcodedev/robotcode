@@ -291,3 +291,5 @@ report.html
 
 # ruff
 .ruff_cache/
+
+bundled/libs

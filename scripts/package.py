@@ -1,4 +1,5 @@
 import contextlib
+import shutil
 import sys
 from pathlib import Path
 from subprocess import run
@@ -25,6 +26,12 @@ def main() -> None:
         dist_path.mkdir()
 
     run("hatch -e build build", shell=True).check_returncode()
+
+    shutil.rmtree("./bundled/libs", ignore_errors=True)
+
+    run(
+        "pip install -U -t ./bundled/libs --no-cache-dir --implementation py --no-deps .", shell=True
+    ).check_returncode()
 
     run(
         f"npx vsce package {'--pre-release' if get_version().prerelease else ''} -o ./dist", shell=True
