@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.27.0 (2023-03-01)
+### Feature
+* Split python code into several packages, now for instance robotcode.debugger can be installed standalone ([`01ac842`](https://github.com/d-biehl/robotcode/commit/01ac84237fccc40be658e0f35d4f7b00942f8461))
+
 ## v0.26.2 (2023-02-25)
 ### Fix
 * Publish script ([`0d3dd8f`](https://github.com/d-biehl/robotcode/commit/0d3dd8fb7bac3d26cccb5fa60be3d4284bc8d9b7))
