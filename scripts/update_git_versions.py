@@ -27,20 +27,20 @@ def replace_in_file(filename: Path, pattern: "re.Pattern[str]", to: str) -> None
 
 def main() -> None:
     version = get_version()
+    version_files = list(Path("packages").rglob("__version__.py"))
 
-    for f in ["src/robotcode/__version__.py"]:
+    for f in [Path("robotcode/cli/__version__.py"), *version_files]:
         replace_in_file(
-            Path(f),
+            f,
             re.compile(r"""(^_*version_*\s*=\s*['"])([^'"]*)(['"])""", re.MULTILINE),
             rf"\g<1>{version or ''}\g<3>",
         )
 
-    for f in ["package.json"]:
-        replace_in_file(
-            Path(f),
-            re.compile(r"""(\"version\"\s*:\s*['"])([0-9]+\.[0-9]+\.[0-9]+.*)(['"])""", re.MULTILINE),
-            rf"\g<1>{version or ''}\g<3>",
-        )
+    replace_in_file(
+        Path("package.json"),
+        re.compile(r"""(\"version\"\s*:\s*['"])([0-9]+\.[0-9]+\.[0-9]+.*)(['"])""", re.MULTILINE),
+        rf"\g<1>{version or ''}\g<3>",
+    )
 
 
 if __name__ == "__main__":
