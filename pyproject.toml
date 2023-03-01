@@ -173,11 +173,11 @@ is-prerelease = ["python scripts/is_prerelease.py"]
 [tool.semantic_release]
 version_variable = [
   "robotcode/cli/__version__.py:__version__",
-  "packages/core/robotcode/core/__version__.py",
-  "packages/debugger/robotcode/debugger/__version__.py",
-  "packages/jsonrpc2/robotcode/jsonrpc2/__version__.py",
-  "packages/language_server/robotcode/language_server/__version__.py",
-  "packages/modifiers/robotcode/modifiers/__version__.py",
+  "packages/core/robotcode/core/__version__.py:__version__",
+  "packages/debugger/robotcode/debugger/__version__.py:__version__",
+  "packages/jsonrpc2/robotcode/jsonrpc2/__version__.py:__version__",
+  "packages/language_server/robotcode/language_server/__version__.py:__version__",
+  "packages/modifiers/robotcode/modifiers/__version__.py:__version__",
 ]
 version_pattern = ['package.json:"version": "{version}"']
 branch = "main"
