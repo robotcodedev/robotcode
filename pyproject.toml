@@ -105,6 +105,7 @@ post-install-commands = [
 cov = "pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=robotcode --cov=tests {args}"
 no-cov = "cov --no-cov {args}"
 test = "pytest {args}"
+install-bundled-editable = "python ./scripts/install_bundled_editable.py"
 
 
 [tool.hatch.envs.devel]
@@ -152,8 +153,8 @@ features = ["yaml", "rest", "lint", "tidy"]
 
 [tool.hatch.envs.lint.scripts]
 typing = ["mypy --install-types --non-interactive {args:.}"]
-style = ["ruff {args:.}", "black --check --diff {args:.}"]
-fmt = ["black {args:.}", "ruff --fix {args:.}", "style"]
+style = ["ruff .", "black --check --diff ."]
+fmt = ["ruff --fix .", "black .", "style"]
 all = ["style", "typing"]
 
 
