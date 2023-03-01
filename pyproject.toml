@@ -36,7 +36,8 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: Implementation",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
   "Topic :: Software Development :: Testing",
   "Topic :: Software Development :: Testing :: Acceptance",
   "Topic :: Software Development :: Testing :: BDD",
@@ -48,7 +49,6 @@ classifiers = [
   "Intended Audience :: Developers",
 ]
 requires-python = ">=3.8"
-dependencies = ["robotframework>=4.1.0"]
 dynamic = ["version"]
 
 
@@ -61,22 +61,23 @@ Source = "https://github.com/d-biehl/robotcode"
 
 
 [project.optional-dependencies]
+debugger = ["robotcode-debugger"]
+language-server = ["robotcode-language-server"]
 yaml = ["PyYAML>=5.4", "types-PyYAML>=5.4"]
 lint = ["robotframework-robocop>=2.0.0"]
 tidy = ["robotframework-tidy>=2.0.0"]
 rest = ["docutils"]
 
-[project.scripts]
-'robotcode.debugger' = 'robotcode.debugger.__main__:main'
-'robotcode.language_server' = 'robotcode.language_server.__main__:main'
-
 
 [tool.hatch.version]
-path = "src/robotcode/__version__.py"
+path = "robotcode/cli/__version__.py"
 
 
 [tool.hatch.build.targets.sdist]
-only-include = ["src", "CHANGELOG.md"]
+only-include = ["robotcode", "CHANGELOG.md"]
+
+[tool.hatch.build.targets.wheel]
+only-include = ["robotcode", "CHANGELOG.md"]
 
 
 [tool.hatch.envs.default]
@@ -95,6 +96,9 @@ dependencies = [
   "robotremoteserver",
 ]
 features = ["yaml", "rest", "lint", "tidy"]
+post-install-commands = [
+  "pip install -U -e {root:uri}/packages/core -e {root:uri}/packages/jsonrpc2 -e {root:uri}/packages/language_server -e {root:uri}/packages/debugger -e {root:uri}/packages/modifiers",
+]
 
 
 [tool.hatch.envs.default.scripts]
@@ -167,7 +171,14 @@ extract-release-notes = ["python scripts/extract_release_notes.py"]
 is-prerelease = ["python scripts/is_prerelease.py"]
 
 [tool.semantic_release]
-version_variable = ["robotcode/__version__.py:__version__"]
+version_variable = [
+  "robotcode/cli/__version__.py:__version__",
+  "packages/core/robotcode/core/__version__.py",
+  "packages/debugger/robotcode/debugger/__version__.py",
+  "packages/jsonrpc2/robotcode/jsonrpc2/__version__.py",
+  "packages/language_server/robotcode/language_server/__version__.py",
+  "packages/modifiers/robotcode/modifiers/__version__.py",
+]
 version_pattern = ['package.json:"version": "{version}"']
 branch = "main"
 upload_to_release = false
@@ -216,10 +227,7 @@ fail_under = 40
 [tool.ruff]
 line-length = 120
 target-version = "py38"
-src = ["src"]
-extend-exclude = [
-  "bundled/libs",
-]
+extend-exclude = ["bundled/libs"]
 ignore = ["E741", "N805", "N999"]
 select = [
   "E",
@@ -289,6 +297,15 @@ exclude = [
   "scripts",
   "bundled/libs",
 ]
+mypy_path = [
+  "typings",
+  "packages/core",
+  "packages/debugger",
+  "packages/jsonrpc2",
+  "packages/language_server",
+  "packages/modifiers",
+]
+explicit_package_bases = true
 
 
 [[tool.mypy.overrides]]

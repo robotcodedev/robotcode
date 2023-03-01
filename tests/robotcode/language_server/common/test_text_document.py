@@ -1,11 +1,11 @@
 import pytest
 
+from robotcode.core.async_tools import check_canceled
 from robotcode.language_server.common.lsp_types import Position, Range
 from robotcode.language_server.common.text_document import (
     InvalidRangeError,
     TextDocument,
 )
-from robotcode.utils.async_tools import check_canceled
 
 
 @pytest.mark.asyncio()

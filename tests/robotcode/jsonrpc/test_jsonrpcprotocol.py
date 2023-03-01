@@ -3,6 +3,7 @@ from typing import Any, Dict, Iterator, List, Optional, cast
 
 import pytest
 
+from robotcode.core.dataclasses import as_dict, as_json
 from robotcode.jsonrpc2.protocol import (
     JsonRPCError,
     JsonRPCErrorObject,
@@ -14,7 +15,6 @@ from robotcode.jsonrpc2.protocol import (
 )
 from robotcode.jsonrpc2.server import JsonRPCServer
 from robotcode.language_server.common.lsp_types import MessageActionItem
-from robotcode.utils.dataclasses import as_dict, as_json
 
 
 class DummyJsonRPCProtocol(JsonRPCProtocol):

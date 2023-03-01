@@ -6,14 +6,13 @@ import pytest
 import yaml
 from pytest_regtest import RegTestFixture
 
+from robotcode.core.uri import Uri
 from robotcode.language_server.common.lsp_types import Location, LocationLink, Position
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
-from robotcode.utils.uri import Uri
-
-from ..tools import (
+from tests.robotcode.language_server.robotframework.tools import (
     GeneratedTestData,
     generate_test_id,
     generate_tests_from_source_document,
@@ -35,10 +34,10 @@ def split(
             result.origin_selection_range,
         )
     if isinstance(result, list) and len(result) > 0 and isinstance(result[0], LocationLink):
-        return cast("List[LocationLink]", [split(v) for v in result])
+        return cast(List[LocationLink], [split(v) for v in result])
 
     if isinstance(result, list) and len(result) > 0 and isinstance(result[0], Location):
-        return cast("List[Location]", [split(v) for v in result])
+        return cast(List[Location], [split(v) for v in result])
 
     return result
 

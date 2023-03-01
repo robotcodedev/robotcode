@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "robotcode-language-server"
+description = 'Language Server for RobotCode'
+readme = "README.md"
+requires-python = ">=3.8"
+license = "Apache-2.0"
+keywords = []
+authors = [{ name = "Daniel Biehl", email = "dbiehl@live.de" }]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+  "Operating System :: OS Independent",
+  "Topic :: Utilities",
+  "Typing :: Typed",
+]
+dependencies = ["robotcode-jsonrpc2", "robotframework>=4.1.0"]
+dynamic = ["version"]
+
+[project.scripts]
+'robotcode.language_server' = 'robotcode.language_server.__main__:main'
+
+[project.urls]
+Donate = "https://github.com/sponsors/d-biehl"
+Documentation = "https://github.com/d-biehl/robotcode#readme"
+Changelog = "https://github.com/d-biehl/robotcode/blob/main/CHANGELOG.md"
+Issues = "https://github.com/d-biehl/robotcode/issues"
+Source = "https://github.com/d-biehl/robotcode"
+
+[tool.hatch.version]
+path = "robotcode/language_server/__version__.py"
+
+[tool.hatch.envs.build]
+detached = true
+python = "38"
+
+[tool.hatch.build.targets.sdist]
+only-include = ["robotcode"]
+
+[tool.hatch.build.targets.wheel]
+only-include = ["robotcode"]

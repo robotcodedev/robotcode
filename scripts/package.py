@@ -21,16 +21,21 @@ from scripts.tools import get_version
 
 
 def main() -> None:
-    dist_path = Path("./dist")
+    dist_path = Path("./dist").absolute()
     if not dist_path.exists():
         dist_path.mkdir()
 
-    run("hatch -e build build", shell=True).check_returncode()
+    packages = [f"{path}" for path in Path("./packages").iterdir() if (path / "pyproject.toml").exists()]
+    for package in packages:
+        run(f"hatch -e build build {dist_path}", shell=True, cwd=package).check_returncode()
+
+    run(f"hatch -e build build {dist_path}", shell=True).check_returncode()
 
     shutil.rmtree("./bundled/libs", ignore_errors=True)
 
     run(
-        "pip install -U -t ./bundled/libs --no-cache-dir --implementation py --no-deps .", shell=True
+        f"pip install -U -t ./bundled/libs --no-cache-dir --implementation py --no-deps {' '.join(packages)} .",
+        shell=True,
     ).check_returncode()
 
     run(

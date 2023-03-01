@@ -10,12 +10,12 @@ from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
-
-from ..tools import (
+from tests.robotcode.language_server.robotframework.tools import (
     GeneratedTestData,
     generate_test_id,
     generate_tests_from_source_document,
 )
+
 from .test_goto_implementation import split
 
 
