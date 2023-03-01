@@ -1,7 +1,8 @@
 # robotcode-utils
 
-[![PyPI - Version](https://img.shields.io/pypi/v/robotcode-utils.svg)](https://pypi.org/project/robotcode-utils)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/robotcode-utils.svg)](https://pypi.org/project/robotcode-utils)
+[![PyPI - Version](https://img.shields.io/pypi/v/robotcode-modifiers.svg)](https://pypi.org/project/robotcode-modifiers)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/robotcode-modifiers.svg)](https://pypi.org/project/robotcode-modifiers)
+[![License](https://img.shields.io/github/license/d-biehl/robotcode?style=flat&logo=apache)](https://github.com/d-biehl/robotcode/blob/master/LICENSE.txt)
 
 -----
 
