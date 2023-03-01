@@ -45,10 +45,6 @@ def main() -> None:
     run("npx vsce publish", f"npx vsce publish -i {vsix_path}", shell=True, timeout=600)
     run("npx ovsx publish", f"npx ovsx publish {vsix_path}", shell=True, timeout=600)
 
-    packages = [f"{path}" for path in Path("./packages").iterdir() if (path / "pyproject.toml").exists()]
-    for package in packages:
-        run(f"hatch -e build build {dist_path}", shell=True, cwd=package)
-
     run(
         "hatch publish",
         f'hatch -e build publish -u "{os.environ["PYPI_USERNAME"]}" -a "{os.environ["PYPI_PASSWORD"]}"',
