@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.version import Version, create_version_from_str
 from robotcode.debugger.client import DAPClient, DAPClientError
 from robotcode.debugger.dap_types import (
     AttachRequest,
@@ -35,7 +36,17 @@ from robotcode.debugger.dap_types import (
 from robotcode.debugger.protocol import DebugAdapterProtocol
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
-from robotcode.language_server.robotframework.utils.version import get_robot_version
+
+_robot_version: Optional[Version] = None
+
+
+def get_robot_version() -> Version:
+    global _robot_version
+    if _robot_version is None:
+        import robot.version
+
+        _robot_version = create_version_from_str(robot.version.get_version())
+    return _robot_version
 
 
 class OutputProtocol(asyncio.SubprocessProtocol):
@@ -296,7 +307,10 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
 
     @rpc_method(name="configurationDone", param_type=ConfigurationDoneArguments)
     async def _configuration_done(
-        self, arguments: Optional[ConfigurationDoneArguments] = None, *args: Any, **kwargs: Any
+        self,
+        arguments: Optional[ConfigurationDoneArguments] = None,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         await self.client.protocol.send_request_async(ConfigurationDoneRequest(arguments=arguments))
         await self.client.protocol.send_request_async(AttachRequest(arguments=AttachRequestArguments()))
