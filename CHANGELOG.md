@@ -4,6 +4,11 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.27.2 (2023-03-06)
+### Fix
+* Unknown workspace edit change received at renaming ([`48aef63`](https://github.com/d-biehl/robotcode/commit/48aef63b9085cb90fdbdc42d18ae5843c7774d69))
+* The debugger no longer requires a dependency on the language server ([`c5199ee`](https://github.com/d-biehl/robotcode/commit/c5199ee7111d17f44334464d6a6d24965adb2eea))
+
 ## v0.27.1 (2023-03-01)
 
 
