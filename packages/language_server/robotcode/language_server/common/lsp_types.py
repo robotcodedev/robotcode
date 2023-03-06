@@ -713,7 +713,7 @@ class Location(CamelSnakeMixin):
 class TextDocumentRegistrationOptions(CamelSnakeMixin):
     """General text document registration options."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -740,7 +740,7 @@ class StaticRegistrationOptions(CamelSnakeMixin):
 
 @dataclass
 class ImplementationRegistrationOptions(CamelSnakeMixin):
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -774,7 +774,7 @@ class TypeDefinitionOptions(CamelSnakeMixin):
 
 @dataclass
 class TypeDefinitionRegistrationOptions(CamelSnakeMixin):
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -845,7 +845,7 @@ class DocumentColorOptions(CamelSnakeMixin):
 
 @dataclass
 class DocumentColorRegistrationOptions(CamelSnakeMixin):
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -912,7 +912,8 @@ class FoldingRangeParams(CamelSnakeMixin):
 @dataclass
 class FoldingRange(CamelSnakeMixin):
     """Represents a folding range. To be valid, start and end line must be bigger than zero and smaller
-    than the number of lines in the document. Clients are free to ignore invalid ranges."""
+    than the number of lines in the document. Clients are free to ignore invalid ranges.
+    """
 
     start_line: int
     """The zero-based start line of the range to fold. The folded area starts after the line's last character.
@@ -949,7 +950,7 @@ class FoldingRangeOptions(CamelSnakeMixin):
 
 @dataclass
 class FoldingRangeRegistrationOptions(CamelSnakeMixin):
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -985,7 +986,7 @@ class DeclarationOptions(CamelSnakeMixin):
 class DeclarationRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -1033,7 +1034,7 @@ class SelectionRangeOptions(CamelSnakeMixin):
 class SelectionRangeRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -1127,7 +1128,7 @@ class CallHierarchyRegistrationOptions(CamelSnakeMixin):
 
     # Since: 3.16.0
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -1289,7 +1290,7 @@ class SemanticTokensRegistrationOptions(CamelSnakeMixin):
     legend: SemanticTokensLegend
     """The legend used by the server"""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -1447,7 +1448,7 @@ class LinkedEditingRangeOptions(CamelSnakeMixin):
 
 @dataclass
 class LinkedEditingRangeRegistrationOptions(CamelSnakeMixin):
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -1595,7 +1596,7 @@ class MonikerOptions(CamelSnakeMixin):
 
 @dataclass
 class MonikerRegistrationOptions(CamelSnakeMixin):
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -1676,7 +1677,7 @@ class TypeHierarchyRegistrationOptions(CamelSnakeMixin):
 
     # Since: 3.17.0
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -1766,7 +1767,7 @@ class InlineValueRegistrationOptions(CamelSnakeMixin):
 
     work_done_progress: Optional[bool] = None
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -1872,7 +1873,7 @@ class InlayHintRegistrationOptions(CamelSnakeMixin):
 
     work_done_progress: Optional[bool] = None
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -1914,7 +1915,10 @@ class DocumentDiagnosticReportPartialResult(CamelSnakeMixin):
 
     # Since: 3.17.0
 
-    related_documents: Dict[DocumentUri, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]
+    related_documents: Dict[
+        DocumentUri,
+        Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport],
+    ]
 
 
 @dataclass
@@ -1969,7 +1973,7 @@ class DiagnosticRegistrationOptions(CamelSnakeMixin):
     workspace_diagnostics: bool
     """The server provides support for workspace diagnostics as well."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -2123,62 +2127,8 @@ class InitializeParamsClientInfoType(CamelSnakeMixin):
 
 
 @dataclass
-class _InitializeParams(CamelSnakeMixin):
-    """The initialize parameters"""
-
-    capabilities: ClientCapabilities
-    """The capabilities provided by the client (editor or tool)"""
-
-    process_id: Optional[Union[int, None]] = None
-    """The process Id of the parent process that started
-    the server.
-
-    Is `null` if the process has not been started by another process.
-    If the parent process is not alive then the server should exit."""
-
-    client_info: Optional[InitializeParamsClientInfoType] = None
-    """Information about the client
-
-    @since 3.15.0"""
-    # Since: 3.15.0
-
-    locale: Optional[str] = None
-    """The locale the client is currently showing the user interface
-    in. This must not necessarily be the locale of the operating
-    system.
-
-    Uses IETF language tags as the value's syntax
-    (See https://en.wikipedia.org/wiki/IETF_language_tag)
-
-    @since 3.16.0"""
-    # Since: 3.16.0
-
-    root_path: Optional[Union[str, None]] = None
-    """The rootPath of the workspace. Is null
-    if no folder is open.
-
-    @deprecated in favour of rootUri."""
-
-    root_uri: Optional[Union[DocumentUri, None]] = None
-    """The rootUri of the workspace. Is null if no
-    folder is open. If both `rootPath` and `rootUri` are set
-    `rootUri` wins.
-
-    @deprecated in favour of workspaceFolders."""
-
-    initialization_options: Optional[LSPAny] = None
-    """User provided initialization options."""
-
-    trace: Optional[TraceValues] = None
-    """The initial trace setting. If omitted trace is disabled ('off')."""
-
-    work_done_token: Optional[ProgressToken] = None
-    """An optional token that a server can use to report work done progress."""
-
-
-@dataclass
 class WorkspaceFoldersInitializeParams(CamelSnakeMixin):
-    workspace_folders: Optional[Union[List[WorkspaceFolder], None]] = None
+    workspace_folders: Optional[List[WorkspaceFolder]] = None
     """The workspace folders configured in the client when the server starts.
 
     This property is only available if the client supports workspace folders.
@@ -2194,7 +2144,7 @@ class InitializeParams(CamelSnakeMixin):
     capabilities: ClientCapabilities
     """The capabilities provided by the client (editor or tool)"""
 
-    process_id: Optional[Union[int, None]] = None
+    process_id: Optional[int] = None
     """The process Id of the parent process that started
     the server.
 
@@ -2218,13 +2168,13 @@ class InitializeParams(CamelSnakeMixin):
     @since 3.16.0"""
     # Since: 3.16.0
 
-    root_path: Optional[Union[str, None]] = None
+    root_path: Optional[str] = None
     """The rootPath of the workspace. Is null
     if no folder is open.
 
     @deprecated in favour of rootUri."""
 
-    root_uri: Optional[Union[DocumentUri, None]] = None
+    root_uri: Optional[DocumentUri] = None
     """The rootUri of the workspace. Is null if no
     folder is open. If both `rootPath` and `rootUri` are set
     `rootUri` wins.
@@ -2240,7 +2190,7 @@ class InitializeParams(CamelSnakeMixin):
     work_done_token: Optional[ProgressToken] = None
     """An optional token that a server can use to report work done progress."""
 
-    workspace_folders: Optional[Union[List[WorkspaceFolder], None]] = None
+    workspace_folders: Optional[List[WorkspaceFolder]] = None
     """The workspace folders configured in the client when the server starts.
 
     This property is only available if the client supports workspace folders.
@@ -2382,7 +2332,7 @@ class TextDocumentChangeRegistrationOptions(CamelSnakeMixin):
     sync_kind: TextDocumentSyncKind
     """How documents are synced to the server."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -2419,7 +2369,7 @@ class SaveOptions(CamelSnakeMixin):
 class TextDocumentSaveRegistrationOptions(CamelSnakeMixin):
     """Save registration options."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -2789,7 +2739,7 @@ class CompletionRegistrationOptionsCompletionItemType(CamelSnakeMixin):
 class CompletionRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link CompletionRequest}."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -2865,7 +2815,7 @@ class HoverOptions(CamelSnakeMixin):
 class HoverRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link HoverRequest}."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -2946,7 +2896,7 @@ class SignatureHelpOptions(CamelSnakeMixin):
 class SignatureHelpRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link SignatureHelpRequest}."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -2994,7 +2944,7 @@ class DefinitionOptions(CamelSnakeMixin):
 class DefinitionRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link DefinitionRequest}."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -3032,7 +2982,7 @@ class ReferenceOptions(CamelSnakeMixin):
 class ReferenceRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link ReferencesRequest}."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -3081,7 +3031,7 @@ class DocumentHighlightOptions(CamelSnakeMixin):
 class DocumentHighlightRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link DocumentHighlightRequest}."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -3225,7 +3175,7 @@ class DocumentSymbolOptions(CamelSnakeMixin):
 class DocumentSymbolRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link DocumentSymbolRequest}."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -3373,7 +3323,7 @@ class CodeActionOptions(CamelSnakeMixin):
 class CodeActionRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link CodeActionRequest}."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -3531,7 +3481,7 @@ class CodeLensOptions(CamelSnakeMixin):
 class CodeLensRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link CodeLensRequest}."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -3596,7 +3546,7 @@ class DocumentLinkOptions(CamelSnakeMixin):
 class DocumentLinkRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link DocumentLinkRequest}."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -3631,7 +3581,7 @@ class DocumentFormattingOptions(CamelSnakeMixin):
 class DocumentFormattingRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link DocumentFormattingRequest}."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -3666,7 +3616,7 @@ class DocumentRangeFormattingOptions(CamelSnakeMixin):
 class DocumentRangeFormattingRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link DocumentRangeFormattingRequest}."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -3713,7 +3663,7 @@ class DocumentOnTypeFormattingRegistrationOptions(CamelSnakeMixin):
     first_trigger_character: str
     """A character on which formatting should be triggered, like `{`."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -3757,7 +3707,7 @@ class RenameOptions(CamelSnakeMixin):
 class RenameRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link RenameRequest}."""
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -4017,10 +3967,22 @@ class Range(CamelSnakeMixin):
             ),
         )
 
-    def extend(self, start_line: int = 0, start_character: int = 0, end_line: int = 0, end_character: int = 0) -> Range:
+    def extend(
+        self,
+        start_line: int = 0,
+        start_character: int = 0,
+        end_line: int = 0,
+        end_character: int = 0,
+    ) -> Range:
         return Range(
-            start=Position(line=self.start.line + start_line, character=self.start.character + start_character),
-            end=Position(line=self.end.line + end_line, character=self.end.character + end_character),
+            start=Position(
+                line=self.start.line + start_line,
+                character=self.start.character + start_character,
+            ),
+            end=Position(
+                line=self.end.line + end_line,
+                character=self.end.character + end_character,
+            ),
         )
 
     def __contains__(self, x: object) -> bool:
@@ -4506,7 +4468,10 @@ class RelatedFullDocumentDiagnosticReport(CamelSnakeMixin):
     """The actual items."""
 
     related_documents: Optional[
-        Dict[DocumentUri, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]
+        Dict[
+            DocumentUri,
+            Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport],
+        ]
     ] = None
     """Diagnostics of related documents. This information is useful
     in programming languages where code in a file A can generate
@@ -4559,7 +4524,10 @@ class RelatedUnchangedDocumentDiagnosticReport(CamelSnakeMixin):
     diagnostic request for the same document."""
 
     related_documents: Optional[
-        Dict[DocumentUri, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]
+        Dict[
+            DocumentUri,
+            Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport],
+        ]
     ] = None
     """Diagnostics of related documents. This information is useful
     in programming languages where code in a file A can generate
@@ -5183,7 +5151,7 @@ class OptionalVersionedTextDocumentIdentifier(CamelSnakeMixin):
     uri: DocumentUri
     """The text document's uri."""
 
-    version: Optional[Union[int, None]] = None
+    version: Optional[int]
     """The version number of this document. If a versioned text document identifier
     is sent from the server to the client and the file is not open in the editor
     (the server has not received an open notification before) the server can send
@@ -5198,7 +5166,6 @@ class AnnotatedTextEdit(CamelSnakeMixin):
     @since 3.16.0."""
 
     # Since: 3.16.0.
-
     annotation_id: ChangeAnnotationIdentifier
     """The actual identifier of the change annotation"""
 
@@ -5285,7 +5252,7 @@ class WorkspaceFullDocumentDiagnosticReport(CamelSnakeMixin):
     items: List[Diagnostic]
     """The actual items."""
 
-    version: Optional[Union[int, None]] = None
+    version: Optional[int] = None
     """The version number for which the diagnostics are reported.
     If the document is not marked as open `null` can be provided."""
 
@@ -5313,7 +5280,7 @@ class WorkspaceUnchangedDocumentDiagnosticReport(CamelSnakeMixin):
     """A result id which will be sent on the next
     diagnostic request for the same document."""
 
-    version: Optional[Union[int, None]] = None
+    version: Optional[int] = None
     """The version number for which the diagnostics are reported.
     If the document is not marked as open `null` can be provided."""
 
@@ -5475,7 +5442,10 @@ class NotebookDocumentSyncOptions(CamelSnakeMixin):
     # Since: 3.17.0
 
     notebook_selector: List[
-        Union[NotebookDocumentSyncOptionsNotebookSelectorType1, NotebookDocumentSyncOptionsNotebookSelectorType2]
+        Union[
+            NotebookDocumentSyncOptionsNotebookSelectorType1,
+            NotebookDocumentSyncOptionsNotebookSelectorType2,
+        ]
     ]
     """The notebooks to be synced"""
 
@@ -7129,7 +7099,7 @@ class MarkdownClientCapabilities(CamelSnakeMixin):
 class TextDocumentColorPresentationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
-    document_selector: Optional[Union[DocumentSelector, None]] = None
+    document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
     the document selector provided on the client side will be used."""
 
@@ -7372,7 +7342,11 @@ class NotebookDocumentFilterType3(CamelSnakeMixin):
     """A Uri {@link Uri.scheme scheme}, like `file` or `untitled`."""
 
 
-NotebookDocumentFilter = Union[NotebookDocumentFilterType1, NotebookDocumentFilterType2, NotebookDocumentFilterType3]
+NotebookDocumentFilter = Union[
+    NotebookDocumentFilterType1,
+    NotebookDocumentFilterType2,
+    NotebookDocumentFilterType3,
+]
 """A notebook document filter denotes a notebook document by
 different properties. The properties will be match
 against the notebook's URI (same as with documents)
