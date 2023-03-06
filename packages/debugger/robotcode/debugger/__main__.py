@@ -103,8 +103,8 @@ async def start_debugpy_async(
     wait_for_debugpy_client: bool = False,
     wait_for_client_timeout: float = DEFAULT_TIMEOUT,
 ) -> None:
-    from robotcode.core.debugpy import enable_debugpy, wait_for_debugpy_connected
-    from robotcode.core.net import find_free_port
+    from robotcode.core.utils.debugpy import enable_debugpy, wait_for_debugpy_connected
+    from robotcode.core.utils.net import find_free_port
 
     from .dap_types import Event
 
@@ -145,7 +145,7 @@ async def run_robot(
     import robot
 
     from robotcode.core.async_tools import run_coroutine_from_thread_async, run_coroutine_in_thread
-    from robotcode.core.debugpy import is_debugpy_installed, wait_for_debugpy_connected
+    from robotcode.core.utils.debugpy import is_debugpy_installed, wait_for_debugpy_connected
 
     from .dap_types import Event
     from .debugger import Debugger

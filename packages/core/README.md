@@ -1,4 +1,4 @@
-# robotcode-utils
+# robotcode-core
 
 [![PyPI - Version](https://img.shields.io/pypi/v/robotcode-core.svg)](https://pypi.org/project/robotcode-core)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/robotcode-core.svg)](https://pypi.org/project/robotcode-core)
@@ -18,4 +18,4 @@ pip install robotcode-core
 
 ## License
 
-`robotcode-utils` is distributed under the terms of the [Apache-2.0](https://spdx.org/licenses/Apache-2.0.html) license.
+`robotcode-core` is distributed under the terms of the [Apache-2.0](https://spdx.org/licenses/Apache-2.0.html) license.

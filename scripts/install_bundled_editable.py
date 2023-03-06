@@ -10,6 +10,12 @@ def main() -> None:
 
     shutil.rmtree("./bundled/libs", ignore_errors=True)
 
+    run(
+        "pip install -U -t ./bundled/libs --no-cache-dir --implementation py "
+        "--only-binary=:all: --no-binary=:none: -r ./bundled_requirements.txt",
+        shell=True,
+    ).check_returncode()
+
     packages = [f"-e {path}" for path in Path("./packages").iterdir() if (path / "pyproject.toml").exists()]
 
     run(

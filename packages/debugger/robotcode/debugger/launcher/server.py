@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.core.version import Version, create_version_from_str
+from robotcode.core.utils.version import Version, create_version_from_str
 from robotcode.debugger.client import DAPClient, DAPClientError
 from robotcode.debugger.dap_types import (
     AttachRequest,
@@ -173,7 +173,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         *_args: Any,
         **_kwargs: Any,
     ) -> None:
-        from robotcode.core.net import find_free_port
+        from robotcode.core.utils.net import find_free_port
 
         connect_timeout = launcherTimeout or 10
 

@@ -168,6 +168,10 @@ export class PythonManager {
     });
 
     if (res.status == 0 && res.stdout && res.stdout.trimEnd() === "True") return true;
+
+    this.outputChannel.appendLine(`checkRobotVersion: ${res.stdout}`);
+    this.outputChannel.appendLine(`checkRobotVersion: ${res.stderr}`);
+
     if (res.status != 0) return undefined;
 
     return false;

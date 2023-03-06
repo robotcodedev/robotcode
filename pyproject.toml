@@ -49,6 +49,7 @@ classifiers = [
   "Intended Audience :: Developers",
 ]
 requires-python = ">=3.8"
+dependencies = ["robotcode-plugin"]
 dynamic = ["version"]
 
 
@@ -59,10 +60,14 @@ Changelog = "https://github.com/d-biehl/robotcode/blob/main/CHANGELOG.md"
 Issues = "https://github.com/d-biehl/robotcode/issues"
 Source = "https://github.com/d-biehl/robotcode"
 
+[project.scripts]
+robotcode = "robotcode.cli:robotcode"
+
 
 [project.optional-dependencies]
 debugger = ["robotcode-debugger"]
 language-server = ["robotcode-language-server"]
+runner = ["robotcode-runner"]
 yaml = ["PyYAML>=5.4", "types-PyYAML>=5.4"]
 lint = ["robotframework-robocop>=2.0.0"]
 tidy = ["robotframework-tidy>=2.0.0"]
@@ -96,9 +101,7 @@ dependencies = [
   "robotremoteserver",
 ]
 features = ["yaml", "rest", "lint", "tidy"]
-post-install-commands = [
-  "pip install -U -e {root:uri}/packages/core -e {root:uri}/packages/jsonrpc2 -e {root:uri}/packages/language_server -e {root:uri}/packages/debugger -e {root:uri}/packages/modifiers",
-]
+pre-install-commands = ["python ./scripts/install_packages.py"]
 
 
 [tool.hatch.envs.default.scripts]
@@ -305,6 +308,8 @@ mypy_path = [
   "packages/jsonrpc2",
   "packages/language_server",
   "packages/modifiers",
+  "packages/plugin",
+  "packages/runner",
 ]
 explicit_package_bases = true
 
@@ -317,6 +322,7 @@ module = [
   "robotidy.*",
   "robocop.*",
   "pytest_regtest.*",
+  "pluggy"
 ]
 ignore_missing_imports = true
 

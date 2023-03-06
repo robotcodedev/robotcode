@@ -3,7 +3,7 @@ import socket
 from contextlib import closing
 from typing import Optional, cast
 
-from .logging import LoggingDescriptor
+from ..logging import LoggingDescriptor
 
 _logger = LoggingDescriptor(name=__name__)
 

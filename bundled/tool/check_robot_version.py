@@ -17,13 +17,11 @@ def update_sys_path(path_to_add: str, strategy: str) -> None:
 
 
 if __name__ == "__main__":
-    # Ensure that we can import LSP libraries, and other bundled libraries.
     update_sys_path(
         os.fspath(pathlib.Path(__file__).parent.parent / "libs"),
         os.getenv("LS_IMPORT_STRATEGY", "useBundled"),
     )
 
-    # Run the language server.
     from robotcode.language_server.robotframework.utils.version import get_robot_version
 
     print(get_robot_version() >= (4, 0))

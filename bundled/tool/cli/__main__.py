@@ -22,6 +22,6 @@ if __name__ == "__main__":
         os.getenv("LS_IMPORT_STRATEGY", "useBundled"),
     )
 
-    from robotcode.language_server.cli import main
+    from robotcode.cli import robotcode
 
-    main()
+    sys.exit(robotcode())

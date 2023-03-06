@@ -32,7 +32,7 @@ from typing import (
     runtime_checkable,
 )
 
-from robotcode.core.inspect import ensure_coroutine
+from robotcode.core.utils.inspect import ensure_coroutine
 
 _T = TypeVar("_T")
 

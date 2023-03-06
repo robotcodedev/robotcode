@@ -7,8 +7,8 @@ import sys
 from logging.handlers import RotatingFileHandler
 from typing import Optional
 
-from robotcode.core.debugpy import start_debugpy
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.utils.debugpy import start_debugpy
 
 from .__version__ import __version__
 

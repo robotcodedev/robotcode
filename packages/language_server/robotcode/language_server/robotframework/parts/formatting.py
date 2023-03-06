@@ -15,7 +15,7 @@ from robotcode.language_server.robotframework.utils.version import get_robot_ver
 if TYPE_CHECKING:
     from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
 
-from robotcode.core.version import create_version_from_str
+from robotcode.core.utils.version import create_version_from_str
 from robotcode.language_server.robotframework.configuration import RoboTidyConfig
 
 from .model_helper import ModelHelperMixin

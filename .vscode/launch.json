@@ -6,6 +6,40 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
+			"name": "Python: RobotCode.Runner",
+			"type": "python",
+			"request": "launch",
+			"module": "robotcode.runner",
+			"justMyCode": false,
+			"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data",
+			"args": [
+				"tests1"
+			]
+			// "args": [
+			// 	"-d",
+			// 	"results",
+			// 	"-P",
+			// 	"./lib",
+			// 	"-P",
+			// 	"resources",
+			// 	"-v",
+			// 	"NAME:value",
+			// 	"--dryrun",
+			// 	"tests"
+			// ]
+		},
+		{
+			"name": "Python: RobotCode",
+			"type": "python",
+			"request": "launch",
+			"module": "robotcode.cli",
+			"justMyCode": false,
+			"args": [
+				"run",
+				"--help"
+			]
+		},
+		{
 			"name": "Python: Attach using Process Id",
 			"type": "python",
 			"request": "attach",

@@ -5,9 +5,9 @@ import time
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from robotcode.core.async_tools import Event, threaded
-from robotcode.core.glob_path import iter_files
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.uri import InvalidUriError, Uri
+from robotcode.core.utils.glob_path import iter_files
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id
 from robotcode.language_server.common.lsp_types import (

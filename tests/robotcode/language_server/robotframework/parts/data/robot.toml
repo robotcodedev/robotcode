@@ -1,0 +1,10 @@
+[robot]
+paths = ["."]
+output_dir = "results"
+console = "quiet"
+python_path = ["lib", "resources"]
+
+
+[[robot.variables]]
+ABC = "123"
+DEF = 1

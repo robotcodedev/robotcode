@@ -17,7 +17,6 @@ def update_sys_path(path_to_add: str, strategy: str) -> None:
 
 
 if __name__ == "__main__":
-    # Ensure that we can import LSP libraries, and other bundled libraries.
     update_sys_path(
         os.fspath(pathlib.Path(__file__).parent.parent.parent.parent / "libs"),
         os.getenv("LS_IMPORT_STRATEGY", "useBundled"),

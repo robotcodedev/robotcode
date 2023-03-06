@@ -1,6 +1,6 @@
 from typing import Optional
 
-from robotcode.core.version import Version, create_version_from_str
+from robotcode.core.utils.version import Version, create_version_from_str
 
 _robot_version: Optional[Version] = None
 

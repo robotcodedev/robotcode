@@ -32,10 +32,10 @@ from typing import (
 from robotcode.core.async_cache import AsyncSimpleLRUCache
 from robotcode.core.async_tools import Lock, async_tasking_event, create_sub_task
 from robotcode.core.dataclasses import as_json, from_json
-from robotcode.core.glob_path import Pattern, iter_files
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.core.path import path_is_relative_to
 from robotcode.core.uri import Uri
+from robotcode.core.utils.glob_path import Pattern, iter_files
+from robotcode.core.utils.path import path_is_relative_to
 from robotcode.language_server.common.decorators import language_id
 from robotcode.language_server.common.lsp_types import DocumentUri, FileChangeType, FileEvent
 from robotcode.language_server.common.parts.workspace import FileWatcherEntry, Workspace

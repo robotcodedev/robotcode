@@ -32,8 +32,8 @@ from robotcode.core.async_tools import (
 )
 from robotcode.core.dataclasses import CamelSnakeMixin, from_dict
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.core.path import path_is_relative_to
 from robotcode.core.uri import Uri
+from robotcode.core.utils.path import path_is_relative_to
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.has_extend_capabilities import (
     HasExtendCapabilities,

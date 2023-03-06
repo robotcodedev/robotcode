@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 from robotcode.core.async_tools import check_canceled, threaded
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.core.version import create_version_from_str
+from robotcode.core.utils.version import create_version_from_str
 from robotcode.language_server.common.decorators import language_id
 from robotcode.language_server.common.lsp_types import (
     Diagnostic,
