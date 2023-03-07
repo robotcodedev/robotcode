@@ -1,4 +1,4 @@
-# robotcode-utils
+# robotcode-modifiers
 
 [![PyPI - Version](https://img.shields.io/pypi/v/robotcode-modifiers.svg)](https://pypi.org/project/robotcode-modifiers)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/robotcode-modifiers.svg)](https://pypi.org/project/robotcode-modifiers)
@@ -18,4 +18,4 @@ pip install robotcode-modifiers
 
 ## License
 
-`robotcode-utils` is distributed under the terms of the [Apache-2.0](https://spdx.org/licenses/Apache-2.0.html) license.
+`robotcode-modifiers` is distributed under the terms of the [Apache-2.0](https://spdx.org/licenses/Apache-2.0.html) license.

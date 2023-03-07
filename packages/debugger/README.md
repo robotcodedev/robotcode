@@ -1,4 +1,4 @@
-# robotcode-utils
+# robotcode-debugger
 
 [![PyPI - Version](https://img.shields.io/pypi/v/robotcode-debugger.svg)](https://pypi.org/project/robotcode-debugger)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/robotcode-debugger.svg)](https://pypi.org/project/robotcode-debugger)
@@ -18,4 +18,4 @@ pip install robotcode-debugger
 
 ## License
 
-`robotcode-utils` is distributed under the terms of the [Apache-2.0](https://spdx.org/licenses/Apache-2.0.html) license.
+`robotcode-debugger` is distributed under the terms of the [Apache-2.0](https://spdx.org/licenses/Apache-2.0.html) license.
