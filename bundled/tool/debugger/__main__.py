@@ -18,10 +18,10 @@ def update_sys_path(path_to_add: str, strategy: str) -> None:
 
 if __name__ == "__main__":
     update_sys_path(
-        os.fspath(pathlib.Path(__file__).parent.parent.parent.parent / "libs"),
+        os.fspath(pathlib.Path(__file__).parent.parent.parent / "libs"),
         os.getenv("LS_IMPORT_STRATEGY", "useBundled"),
     )
 
-    from robotcode.debugger.launcher.cli import main
+    from robotcode.debugger.cli import main
 
-    main(str(pathlib.Path(__file__).parent.parent))
+    main()

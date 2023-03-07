@@ -3,10 +3,6 @@ import socket
 from contextlib import closing
 from typing import Optional, cast
 
-from ..logging import LoggingDescriptor
-
-_logger = LoggingDescriptor(name=__name__)
-
 
 def find_free_port(start: Optional[int] = None, end: Optional[int] = None) -> int:
     port = start

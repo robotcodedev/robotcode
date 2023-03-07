@@ -4,6 +4,7 @@ import logging.config
 import os
 import pathlib
 from logging.handlers import RotatingFileHandler
+from typing import Optional
 
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.utils.debugpy import start_debugpy
@@ -19,7 +20,8 @@ def get_log_handler(logfile: str) -> logging.FileHandler:
 
     handler = RotatingFileHandler(log_fn, backupCount=5)
     formatter = logging.Formatter(
-        fmt="[%(levelname)-7s] %(asctime)s (%(name)s) %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+        fmt="[%(levelname)-7s] %(asctime)s (%(name)s) %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
     handler.setFormatter(formatter)
 
@@ -29,12 +31,16 @@ def get_log_handler(logfile: str) -> logging.FileHandler:
     return handler
 
 
-def run_server(mode: str, port: int) -> None:
+def run_server(mode: str, port: int, debugger_script: Optional[str] = None) -> None:
     from robotcode.jsonrpc2.server import JsonRpcServerMode, TcpParams
 
     from .server import LauncherServer
 
-    with LauncherServer(JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port)) as server:
+    with LauncherServer(
+        JsonRpcServerMode(mode),
+        tcp_params=TcpParams("127.0.0.1", port),
+        debugger_script=debugger_script,
+    ) as server:
         try:
             server.run()
         except (SystemExit, KeyboardInterrupt):
@@ -43,7 +49,7 @@ def run_server(mode: str, port: int) -> None:
             _logger.exception(e)
 
 
-def main() -> None:
+def main(debugger_script: Optional[str] = None) -> None:
     parser = argparse.ArgumentParser(
         description="RobotCode Debugger Launcher",
         prog=__package__,
@@ -60,21 +66,54 @@ def main() -> None:
     )
     parser.add_argument("-p", "--port", default=6611, help="server listen port (tcp)", type=int)
     parser.add_argument("--log", action="store_true", help="enable logging")
-    parser.add_argument("--log-debugger-launcher", action="store_true", help="show debugger launcher log messages")
-    parser.add_argument("--debug-asyncio", action="store_true", help="enable async io debugging messages")
-    parser.add_argument("--log-asyncio", action="store_true", help="show asyncio log messages")
-    parser.add_argument("--log-config", default=None, help="reads logging configuration from file", metavar="FILE")
-    parser.add_argument("--log-file", default=None, help="enables logging to file", metavar="FILE")
-    parser.add_argument("--log-level", default="WARNING", help="sets the overall log level", metavar="LEVEL")
-    parser.add_argument("--call-tracing", action="store_true", help="enables log tracing of method calls")
     parser.add_argument(
-        "--call-tracing-default-level", default="TRACE", help="sets the default level for call tracing", metavar="LEVEL"
+        "--log-debugger-launcher",
+        action="store_true",
+        help="show debugger launcher log messages",
+    )
+    parser.add_argument(
+        "--debug-asyncio",
+        action="store_true",
+        help="enable async io debugging messages",
+    )
+    parser.add_argument("--log-asyncio", action="store_true", help="show asyncio log messages")
+    parser.add_argument(
+        "--log-config",
+        default=None,
+        help="reads logging configuration from file",
+        metavar="FILE",
+    )
+    parser.add_argument("--log-file", default=None, help="enables logging to file", metavar="FILE")
+    parser.add_argument(
+        "--log-level",
+        default="WARNING",
+        help="sets the overall log level",
+        metavar="LEVEL",
+    )
+    parser.add_argument(
+        "--call-tracing",
+        action="store_true",
+        help="enables log tracing of method calls",
+    )
+    parser.add_argument(
+        "--call-tracing-default-level",
+        default="TRACE",
+        help="sets the default level for call tracing",
+        metavar="LEVEL",
     )
     parser.add_argument("--debugpy", action="store_true", help="starts a debugpy session")
     parser.add_argument(
-        "--debugpy-port", default=5678, help="sets the port for debugpy session", type=int, metavar="PORT"
+        "--debugpy-port",
+        default=5678,
+        help="sets the port for debugpy session",
+        type=int,
+        metavar="PORT",
     )
-    parser.add_argument("--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect")
+    parser.add_argument(
+        "--debugpy-wait-for-client",
+        action="store_true",
+        help="waits for debugpy client to connect",
+    )
 
     args = parser.parse_args()
 
@@ -121,4 +160,4 @@ def main() -> None:
     if args.debugpy:
         start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)
 
-    run_server(args.mode, args.port)
+    run_server(args.mode, args.port, debugger_script)

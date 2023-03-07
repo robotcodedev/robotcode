@@ -68,8 +68,10 @@ class OutputProtocol(asyncio.SubprocessProtocol):
 class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
     _logger = LoggingDescriptor()
 
-    def __init__(self) -> None:
+    def __init__(self, debugger_script: Optional[str] = None) -> None:
         super().__init__()
+        self.debugger_script = debugger_script
+
         self._client: Optional[DAPClient] = None
         self._process: Optional[asyncio.subprocess.Process] = None
         self._initialize_arguments: Optional[InitializeRequestArguments] = None
@@ -179,9 +181,11 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
 
         port = find_free_port()
 
-        launcher = Path(Path(__file__).parent.parent)
+        debugger_script = (
+            Path(Path(__file__).parent.parent) if self.debugger_script is None else Path(self.debugger_script)
+        )
 
-        run_args = [python, "-u", str(launcher)]
+        run_args = [python, "-u", str(debugger_script)]
 
         run_args += ["-p", str(port)]
 
@@ -350,11 +354,13 @@ class LauncherServer(JsonRPCServer[LauncherDebugAdapterProtocol]):
         self,
         mode: JsonRpcServerMode = JsonRpcServerMode.STDIO,
         tcp_params: TcpParams = TcpParams(None, TCP_DEFAULT_PORT),
+        debugger_script: Optional[str] = None,
     ):
         super().__init__(
             mode=mode,
             tcp_params=tcp_params,
         )
+        self.debugger_script = debugger_script
 
     def create_protocol(self) -> LauncherDebugAdapterProtocol:
-        return LauncherDebugAdapterProtocol()
+        return LauncherDebugAdapterProtocol(debugger_script=self.debugger_script)
