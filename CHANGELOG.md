@@ -4,6 +4,14 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.28.0 (2023-03-09)
+### Feature
+* Debugger is now started from bundled/tool/debugger if available ([`4b04c7a`](https://github.com/d-biehl/robotcode/commit/4b04c7a0524ba7804a7c4c01e1d2107e5ee188ae))
+
+### Fix
+* #125 Robot Code crashes with a variables file containing a Dict[str, Callable] ([`7e0b55c`](https://github.com/d-biehl/robotcode/commit/7e0b55c65609ba37c928a636d0b764ddbb2ae57d))
+* Return codes for command line tools now uses sys.exit with return codes ([`b6ad7dd`](https://github.com/d-biehl/robotcode/commit/b6ad7dd75276e65ffab9c8acb2c24e0750a93791))
+
 ## v0.27.2 (2023-03-06)
 ### Fix
 * Unknown workspace edit change received at renaming ([`48aef63`](https://github.com/d-biehl/robotcode/commit/48aef63b9085cb90fdbdc42d18ae5843c7774d69))
