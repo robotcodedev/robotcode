@@ -8,12 +8,20 @@ from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.lsp_types import FormattingOptions, MessageType, Position, Range, TextEdit
+from robotcode.language_server.common.lsp_types import (
+    FormattingOptions,
+    MessageType,
+    Position,
+    Range,
+    TextEdit,
+)
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.utils.version import get_robot_version
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
+    from robotcode.language_server.robotframework.protocol import (
+        RobotLanguageServerProtocol,
+    )
 
 from robotcode.core.utils.version import create_version_from_str
 from robotcode.language_server.robotframework.configuration import RoboTidyConfig
@@ -57,7 +65,11 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     @language_id("robotframework")
     @_logger.call
     async def format(
-        self, sender: Any, document: TextDocument, options: FormattingOptions, **further_options: Any
+        self,
+        sender: Any,
+        document: TextDocument,
+        options: FormattingOptions,
+        **further_options: Any,
     ) -> Optional[List[TextEdit]]:
         config = await self.get_config(document)
 
@@ -68,7 +80,8 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             return await self.format_internal(document, options, **further_options)
 
         self.parent.window.show_message(
-            "RobotFramework formatter is not available, please install 'robotframework-tidy'.", MessageType.ERROR
+            "RobotFramework formatter is not available, please install 'robotframework-tidy'.",
+            MessageType.ERROR,
         )
 
         return None
@@ -76,7 +89,11 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     RE_LINEBREAKS = re.compile(r"\r\n|\r|\n")
 
     async def format_robot_tidy(
-        self, document: TextDocument, options: FormattingOptions, range: Optional[Range] = None, **further_options: Any
+        self,
+        document: TextDocument,
+        options: FormattingOptions,
+        range: Optional[Range] = None,
+        **further_options: Any,
     ) -> Optional[List[TextEdit]]:
         from difflib import SequenceMatcher
 
@@ -98,7 +115,8 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     robot_tidy.config.formatting.end_line = range.end.line + 1
 
                 disabler_finder = RegisterDisablers(
-                    robot_tidy.config.formatting.start_line, robot_tidy.config.formatting.end_line
+                    robot_tidy.config.formatting.start_line,
+                    robot_tidy.config.formatting.end_line,
                 )
                 disabler_finder.visit(model)
                 if disabler_finder.file_disabled:
@@ -118,7 +136,8 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     from robotidy.disablers import RegisterDisablers
 
                     disabler_finder = RegisterDisablers(
-                        robot_tidy.formatting_config.start_line, robot_tidy.formatting_config.end_line
+                        robot_tidy.formatting_config.start_line,
+                        robot_tidy.formatting_config.end_line,
                     )
                     disabler_finder.visit(model)
                     if disabler_finder.file_disabled:
@@ -170,7 +189,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self, document: TextDocument, options: FormattingOptions, **further_options: Any
     ) -> Optional[List[TextEdit]]:
         from robot.parsing.model.blocks import File
-        from robot.tidypkg import (
+        from robot.tidypkg import (  # pyright: ignore [reportMissingImports]
             Aligner,
             Cleaner,
             NewlineNormalizer,
@@ -182,7 +201,11 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         Cleaner().visit(model)
         NewlineNormalizer(self.line_separator, self.short_test_name_length).visit(model)
         SeparatorNormalizer(self.use_pipes, self.space_count).visit(model)
-        Aligner(self.short_test_name_length, self.setting_and_variable_name_length, self.use_pipes).visit(model)
+        Aligner(
+            self.short_test_name_length,
+            self.setting_and_variable_name_length,
+            self.use_pipes,
+        ).visit(model)
 
         with io.StringIO() as s:
             model.save(s)
@@ -191,7 +214,10 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 TextEdit(
                     range=Range(
                         start=Position(line=0, character=0),
-                        end=Position(line=len(document.get_lines()), character=len((document.get_lines())[-1])),
+                        end=Position(
+                            line=len(document.get_lines()),
+                            character=len((document.get_lines())[-1]),
+                        ),
                     ),
                     new_text=s.getvalue(),
                 )
@@ -199,7 +225,12 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
     @language_id("robotframework")
     async def format_range(
-        self, sender: Any, document: TextDocument, range: Range, options: FormattingOptions, **further_options: Any
+        self,
+        sender: Any,
+        document: TextDocument,
+        range: Range,
+        options: FormattingOptions,
+        **further_options: Any,
     ) -> Optional[List[TextEdit]]:
         config = await self.get_config(document)
         if config and config.enabled and robotidy_installed():

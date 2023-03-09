@@ -1101,15 +1101,15 @@ def _std_capture() -> Iterator[io.StringIO]:
     old_stdout = sys.stdout
     old_stderr = sys.stderr
 
-    capturer = sys.stdout = sys.__stdout__ = sys.stderr = sys.__stderr__ = io.StringIO()
+    capturer = sys.stdout = sys.__stdout__ = sys.stderr = sys.__stderr__ = io.StringIO()  # type: ignore
 
     try:
         yield capturer
     finally:
         sys.stderr = old_stderr
         sys.stdout = old_stdout
-        sys.__stderr__ = old__stderr__
-        sys.__stdout__ = old__stdout__
+        sys.__stderr__ = old__stderr__  # type: ignore
+        sys.__stdout__ = old__stdout__  # type: ignore
 
 
 class IgnoreEasterEggLibraryWarning(Exception):  # noqa: N818

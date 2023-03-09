@@ -82,7 +82,7 @@ path = "robotcode/cli/__version__.py"
 only-include = ["robotcode", "CHANGELOG.md"]
 
 [tool.hatch.build.targets.wheel]
-only-include = ["robotcode", "CHANGELOG.md"]
+only-include = ["robotcode"]
 
 
 [tool.hatch.envs.default]
@@ -152,6 +152,7 @@ matrix.rf.dependencies = [
 
 [tool.hatch.envs.lint]
 skip-install = true
+extra-dependencies = ["tomli>=2.0.0"]
 features = ["yaml", "rest", "lint", "tidy"]
 
 [tool.hatch.envs.lint.scripts]
@@ -182,6 +183,9 @@ version_variable = [
   "packages/jsonrpc2/robotcode/jsonrpc2/__version__.py:__version__",
   "packages/language_server/robotcode/language_server/__version__.py:__version__",
   "packages/modifiers/robotcode/modifiers/__version__.py:__version__",
+  "packages/modifiers/robotcode/plugin/__version__.py:__version__",
+  "packages/modifiers/robotcode/runner/__version__.py:__version__",
+
 ]
 version_pattern = ['package.json:"version": "{version}"']
 branch = "main"
@@ -322,25 +326,28 @@ module = [
   "robotidy.*",
   "robocop.*",
   "pytest_regtest.*",
-  "pluggy"
+  "pluggy",
 ]
 ignore_missing_imports = true
 
 
-[tool.hatch.build.targets.wheel.hooks.mypyc]
-enable-by-default = false
-dependencies = ["hatch-mypyc", "types-PyYAML", "types-docutils"]
-require-runtime-dependencies = true
-include = [
-  "robotcode/utils/glob_path.py",
-  "robotcode/language_server/robotframework/diagnostics/analyzer.py",
-]
-exclude = ["__main__.py", "__version__.py", "__init__.py", "typings", "tests"]
+# [tool.hatch.build.targets.wheel.hooks.mypyc]
+# enable-by-default = false
+# dependencies = ["hatch-mypyc", "types-PyYAML", "types-docutils"]
+# require-runtime-dependencies = true
+# include = [
+#   "robotcode/utils/glob_path.py",
+#   "robotcode/language_server/robotframework/diagnostics/analyzer.py",
+# ]
+# exclude = ["__main__.py", "__version__.py", "__init__.py", "typings", "tests"]
 
 
-[tool.hatch.build.targets.wheel.hooks.mypyc.options]
+# [tool.hatch.build.targets.wheel.hooks.mypyc.options]
 # # opt_level = "3"
 # multi_file = true
 #separate = true
 #verbose = true
 #include_runtime_files = false
+
+[tool.pyright]
+exclude = ["**/.hatch", "**/node_modules", "**/__pycache__", "bundled/libs"]
