@@ -1560,6 +1560,7 @@ def get_variables_doc(
 
                 importer = MyPythonImporter(libcode)
 
+            # TODO: add type information of the value including dict key names and member names
             vars: List[ImportedVariableDefinition] = [
                 ImportedVariableDefinition(
                     1,
@@ -1569,11 +1570,9 @@ def get_variables_doc(
                     source or (module_spec.origin if module_spec is not None else None) or "",
                     name,
                     None,
-                    value=NativeValue(value)
-                    if value is None or isinstance(value, (int, float, bool, str, dict, list))
-                    else None,
-                    has_value=value is None or isinstance(value, (int, float, bool, str, dict, list)),
-                    value_is_native=value is None or isinstance(value, (int, float, bool, str, dict, list)),
+                    value=NativeValue(value) if value is None or isinstance(value, (int, float, bool, str)) else None,
+                    has_value=value is None or isinstance(value, (int, float, bool, str)),
+                    value_is_native=value is None or isinstance(value, (int, float, bool, str)),
                 )
                 for name, value in importer.import_variables(import_name, args)
             ]
