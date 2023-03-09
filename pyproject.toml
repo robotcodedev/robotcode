@@ -183,8 +183,8 @@ version_variable = [
   "packages/jsonrpc2/robotcode/jsonrpc2/__version__.py:__version__",
   "packages/language_server/robotcode/language_server/__version__.py:__version__",
   "packages/modifiers/robotcode/modifiers/__version__.py:__version__",
-  "packages/modifiers/robotcode/plugin/__version__.py:__version__",
-  "packages/modifiers/robotcode/runner/__version__.py:__version__",
+  "packages/plugin/robotcode/plugin/__version__.py:__version__",
+  "packages/plugin/robotcode/plugin/__version__.py:__version__",
 
 ]
 version_pattern = ['package.json:"version": "{version}"']
