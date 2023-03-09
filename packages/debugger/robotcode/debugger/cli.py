@@ -10,7 +10,6 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
-    Any,
     Callable,
     List,
     NoReturn,
@@ -59,7 +58,9 @@ async def wait_for_server(timeout: float = 5) -> "DebugAdapterServer":
 
 @_logger.call
 async def _debug_adapter_server_(
-    host: str, port: int, on_config_done_callback: Optional[Callable[["DebugAdapterServer"], None]]
+    host: str,
+    port: int,
+    on_config_done_callback: Optional[Callable[["DebugAdapterServer"], None]],
 ) -> None:
     from robotcode.jsonrpc2.server import TcpParams
 
@@ -124,11 +125,17 @@ async def run_robot(
     output_timestamps: bool = False,
     group_output: bool = False,
     stop_on_entry: bool = False,
-) -> Any:
+) -> int:
     import robot
 
-    from robotcode.core.async_tools import run_coroutine_from_thread_async, run_coroutine_in_thread
-    from robotcode.core.utils.debugpy import is_debugpy_installed, wait_for_debugpy_connected
+    from robotcode.core.async_tools import (
+        run_coroutine_from_thread_async,
+        run_coroutine_in_thread,
+    )
+    from robotcode.core.utils.debugpy import (
+        is_debugpy_installed,
+        wait_for_debugpy_connected,
+    )
 
     from .dap_types import Event
     from .debugger import Debugger
@@ -142,12 +149,15 @@ async def run_robot(
     server_future = run_coroutine_in_thread(_debug_adapter_server_, addresses, port, config_done_callback)
 
     server = await wait_for_server()
+    exit_code = 255
 
     try:
         if wait_for_client:
             try:
                 await run_coroutine_from_thread_async(
-                    server.protocol.wait_for_client, wait_for_client_timeout, loop=server.loop
+                    server.protocol.wait_for_client,
+                    wait_for_client_timeout,
+                    loop=server.loop,
                 )
             except asyncio.CancelledError:
                 pass
@@ -159,7 +169,9 @@ async def run_robot(
         if wait_for_client:
             try:
                 await run_coroutine_from_thread_async(
-                    server.protocol.wait_for_configuration_done, configuration_done_timeout, loop=server.loop
+                    server.protocol.wait_for_configuration_done,
+                    configuration_done_timeout,
+                    loop=server.loop,
                 )
             except asyncio.CancelledError:
                 pass
@@ -186,7 +198,6 @@ async def run_robot(
         Debugger.instance().set_main_thread(threading.current_thread())
         Debugger.instance().start()
 
-        exit_code = -1
         try:
             exit_code = robot.run_cli(args, False)
         finally:
@@ -206,8 +217,6 @@ async def run_robot(
                 )
 
                 await run_coroutine_from_thread_async(server.protocol.exit, exit_code, loop=server.loop)
-
-        return exit_code
     except asyncio.CancelledError:
         pass
     except ConnectionError as e:
@@ -229,6 +238,8 @@ async def run_robot(
         except asyncio.CancelledError:
             pass
 
+    return exit_code
+
 
 def get_log_handler(logfile: str) -> logging.FileHandler:
     log_fn = Path(logfile)
@@ -236,7 +247,8 @@ def get_log_handler(logfile: str) -> logging.FileHandler:
 
     handler = RotatingFileHandler(log_fn, backupCount=5)
     formatter = logging.Formatter(
-        fmt="[%(levelname)-7s] %(asctime)s (%(name)s) %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+        fmt="[%(levelname)-7s] %(asctime)s (%(name)s) %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
     handler.setFormatter(formatter)
 
@@ -255,7 +267,7 @@ class ArgumentParser(argparse.ArgumentParser):
         self.exit(252, _("%(prog)s: error: %(message)s\n") % args)
 
 
-def main() -> None:
+def main() -> int:
     parser = ArgumentParser(
         description="RobotCode Debugger",
         prog=__package__,
@@ -271,7 +283,12 @@ def main() -> None:
         help="Specify alternate bind address. If not specified '127.0.0.1' is used",
         metavar="ADDRESS",
     )
-    parser.add_argument("-w", "--wait-for-client", action="store_true", help="waits for an debug client to connect")
+    parser.add_argument(
+        "-w",
+        "--wait-for-client",
+        action="store_true",
+        help="waits for an debug client to connect",
+    )
     parser.add_argument(
         "-t",
         "--wait-for-client-timeout",
@@ -291,37 +308,83 @@ def main() -> None:
     parser.add_argument("--log", action="store_true", help="enable logging")
     parser.add_argument("--log-debugger", action="store_true", help="show debugger log messages")
     parser.add_argument("-n", "--no-debug", action="store_true", help="disable debugging")
-    parser.add_argument("--debug-asyncio", action="store_true", help="enable async io debugging messages")
-    parser.add_argument("--log-asyncio", action="store_true", help="show asyncio log messages")
-    parser.add_argument("--log-config", default=None, help="reads logging configuration from file", metavar="FILE")
-    parser.add_argument("--log-file", default=None, help="enables logging to file", metavar="FILE")
-    parser.add_argument("--log-level", default="WARNING", help="sets the overall log level", metavar="LEVEL")
-    parser.add_argument("--call-tracing", action="store_true", help="enables log tracing of method calls")
     parser.add_argument(
-        "--call-tracing-default-level", default="TRACE", help="sets the default level for call tracing", metavar="LEVEL"
+        "--debug-asyncio",
+        action="store_true",
+        help="enable async io debugging messages",
+    )
+    parser.add_argument("--log-asyncio", action="store_true", help="show asyncio log messages")
+    parser.add_argument(
+        "--log-config",
+        default=None,
+        help="reads logging configuration from file",
+        metavar="FILE",
+    )
+    parser.add_argument("--log-file", default=None, help="enables logging to file", metavar="FILE")
+    parser.add_argument(
+        "--log-level",
+        default="WARNING",
+        help="sets the overall log level",
+        metavar="LEVEL",
+    )
+    parser.add_argument(
+        "--call-tracing",
+        action="store_true",
+        help="enables log tracing of method calls",
+    )
+    parser.add_argument(
+        "--call-tracing-default-level",
+        default="TRACE",
+        help="sets the default level for call tracing",
+        metavar="LEVEL",
     )
     parser.add_argument("-d", "--debugpy", action="store_true", help="starts a debugpy session")
     parser.add_argument(
-        "-dp", "--debugpy-port", default=5678, help="sets the port for debugpy session", type=int, metavar="PORT"
+        "-dp",
+        "--debugpy-port",
+        default=5678,
+        help="sets the port for debugpy session",
+        type=int,
+        metavar="PORT",
     )
     parser.add_argument(
-        "-dw", "--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect"
+        "-dw",
+        "--debugpy-wait-for-client",
+        action="store_true",
+        help="waits for debugpy client to connect",
     )
     parser.add_argument(
-        "-om", "--output-messages", action="store_true", help="Send output messages from robotframework to client."
+        "-om",
+        "--output-messages",
+        action="store_true",
+        help="Send output messages from robotframework to client.",
     )
     parser.add_argument(
-        "-ol", "--output-log", action="store_true", help="Send log messages from robotframework to client."
+        "-ol",
+        "--output-log",
+        action="store_true",
+        help="Send log messages from robotframework to client.",
     )
     parser.add_argument(
-        "-ot", "--output-timestamps", action="store_true", help="Include timestamps in log and output messages."
+        "-ot",
+        "--output-timestamps",
+        action="store_true",
+        help="Include timestamps in log and output messages.",
     )
     parser.add_argument(
-        "-og", "--group-output", action="store_true", help="Fold messages/log from robotframework to client."
+        "-og",
+        "--group-output",
+        action="store_true",
+        help="Fold messages/log from robotframework to client.",
     )
     parser.add_argument("-soe", "--stop-on-entry", action="store_true", help="Stops on entry.")
 
-    parser.add_argument("--", help="RobotFramework arguments. (see robot --help)", dest="robot args", nargs="*")
+    parser.add_argument(
+        "--",
+        help="RobotFramework arguments. (see robot --help)",
+        dest="robot args",
+        nargs="*",
+    )
 
     sys_args = sys.argv[1:]
 
@@ -334,11 +397,11 @@ def main() -> None:
 
     if args.version:
         print(__version__)
-        return
+        return 251  # exit code for --version
 
     if split_index == -1:
         parser.print_help()
-        return
+        return 251  # exit code for --help
 
     if args.log:
         if args.call_tracing:
@@ -379,7 +442,7 @@ def main() -> None:
     _logger.info(lambda: f"starting {__package__} version={__version__}")
     _logger.debug(lambda: f"args={args}")
 
-    asyncio.run(
+    return asyncio.run(
         run_robot(
             args.port,
             robot_args,

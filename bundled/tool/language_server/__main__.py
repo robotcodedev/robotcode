@@ -24,4 +24,4 @@ if __name__ == "__main__":
 
     from robotcode.language_server.cli import main
 
-    main()
+    sys.exit(main())

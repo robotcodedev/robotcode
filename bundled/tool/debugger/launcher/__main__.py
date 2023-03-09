@@ -24,4 +24,4 @@ if __name__ == "__main__":
 
     from robotcode.debugger.launcher.cli import main
 
-    main(str(pathlib.Path(__file__).parent.parent))
+    sys.exit(main(str(pathlib.Path(__file__).parent.parent)))

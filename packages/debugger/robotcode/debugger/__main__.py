@@ -21,4 +21,4 @@ if __name__ == "__main__" and __package__ is None or __package__ == "":
 from .cli import main
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

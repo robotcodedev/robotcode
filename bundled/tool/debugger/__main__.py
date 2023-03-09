@@ -24,4 +24,4 @@ if __name__ == "__main__":
 
     from robotcode.debugger.cli import main
 
-    main()
+    sys.exit(main())

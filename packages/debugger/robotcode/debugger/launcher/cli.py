@@ -31,7 +31,7 @@ def get_log_handler(logfile: str) -> logging.FileHandler:
     return handler
 
 
-def run_server(mode: str, port: int, debugger_script: Optional[str] = None) -> None:
+def run_server(mode: str, port: int, debugger_script: Optional[str] = None) -> int:
     from robotcode.jsonrpc2.server import JsonRpcServerMode, TcpParams
 
     from .server import LauncherServer
@@ -47,9 +47,12 @@ def run_server(mode: str, port: int, debugger_script: Optional[str] = None) -> N
             raise
         except BaseException as e:
             _logger.exception(e)
+            return 255
+
+    return 0
 
 
-def main(debugger_script: Optional[str] = None) -> None:
+def main(debugger_script: Optional[str] = None) -> int:
     parser = argparse.ArgumentParser(
         description="RobotCode Debugger Launcher",
         prog=__package__,
@@ -119,7 +122,7 @@ def main(debugger_script: Optional[str] = None) -> None:
 
     if args.version:
         print(__version__)
-        return
+        return 251  # 251 is the exit code for --version
 
     if args.log:
         if args.call_tracing:
@@ -160,4 +163,4 @@ def main(debugger_script: Optional[str] = None) -> None:
     if args.debugpy:
         start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)
 
-    run_server(args.mode, args.port, debugger_script)
+    return run_server(args.mode, args.port, debugger_script)

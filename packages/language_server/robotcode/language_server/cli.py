@@ -3,7 +3,6 @@ import logging
 import logging.config
 import os
 import pathlib
-import sys
 from logging.handlers import RotatingFileHandler
 from typing import Optional
 
@@ -21,7 +20,8 @@ def get_log_handler(logfile: str) -> logging.FileHandler:
 
     handler = RotatingFileHandler(log_fn, backupCount=5)
     formatter = logging.Formatter(
-        fmt="[%(levelname)-7s] %(asctime)s (%(name)s) %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+        fmt="[%(levelname)-7s] %(asctime)s (%(name)s) %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
     handler.setFormatter(formatter)
 
@@ -37,7 +37,9 @@ def run_server(mode: str, port: int, pipe_name: Optional[str]) -> int:
     from .robotframework.server import RobotLanguageServer
 
     with RobotLanguageServer(
-        mode=JsonRpcServerMode(mode), tcp_params=TcpParams("127.0.0.1", port), pipe_name=pipe_name
+        mode=JsonRpcServerMode(mode),
+        tcp_params=TcpParams("127.0.0.1", port),
+        pipe_name=pipe_name,
     ) as server:
         try:
             server.run()
@@ -69,43 +71,100 @@ def create_parser() -> argparse.ArgumentParser:
         help="communication mode",
     )
 
-    result.add_argument("--stdio", action="store_true", help="run in stdio mode (Shortcut for --mode=stdio)")
     result.add_argument(
-        "--socket", default=None, help="run in socket mode (Shortcut for --mode=socket --port ...)", type=int
+        "--stdio",
+        action="store_true",
+        help="run in stdio mode (Shortcut for --mode=stdio)",
     )
     result.add_argument(
-        "--pipe", default=None, help="run in named pipe mode (Shortcut for --mode=pipe --pipe-name ...)", type=str
+        "--socket",
+        default=None,
+        help="run in socket mode (Shortcut for --mode=socket --port ...)",
+        type=int,
+    )
+    result.add_argument(
+        "--pipe",
+        default=None,
+        help="run in named pipe mode (Shortcut for --mode=pipe --pipe-name ...)",
+        type=str,
     )
 
-    result.add_argument("-p", "--port", default=6610, help="server listen port (mode socket and tcp)", type=int)
+    result.add_argument(
+        "-p",
+        "--port",
+        default=6610,
+        help="server listen port (mode socket and tcp)",
+        type=int,
+    )
 
     result.add_argument("-pn", "--pipe-name", default=None, help="pipe name for pipe mode", type=str)
 
     result.add_argument("--log", action="store_true", help="enable logging")
     result.add_argument("--log-all", action="store_true", help="enable all log messages")
     result.add_argument("--log-json-rpc", action="store_true", help="show json-rpc log messages")
-    result.add_argument("--log-json-rpc-data", action="store_true", help="show json-rpc-data log messages")
-    result.add_argument("--log-language-server", action="store_true", help="show language server log messages")
     result.add_argument(
-        "--log-language-server-parts", action="store_true", help="show language server parts log messages"
+        "--log-json-rpc-data",
+        action="store_true",
+        help="show json-rpc-data log messages",
     )
     result.add_argument(
-        "--log-robotframework", action="store_true", help="show robotframework language server log messages"
+        "--log-language-server",
+        action="store_true",
+        help="show language server log messages",
     )
-    result.add_argument("--debug-asyncio", action="store_true", help="enable async io debugging messages")
+    result.add_argument(
+        "--log-language-server-parts",
+        action="store_true",
+        help="show language server parts log messages",
+    )
+    result.add_argument(
+        "--log-robotframework",
+        action="store_true",
+        help="show robotframework language server log messages",
+    )
+    result.add_argument(
+        "--debug-asyncio",
+        action="store_true",
+        help="enable async io debugging messages",
+    )
     result.add_argument("--log-asyncio", action="store_true", help="show asyncio log messages")
-    result.add_argument("--log-config", default=None, help="reads logging configuration from file", metavar="FILE")
-    result.add_argument("--log-file", default=None, help="enables logging to file", metavar="FILE")
-    result.add_argument("--log-level", default="WARNING", help="sets the overall log level", metavar="LEVEL")
-    result.add_argument("--call-tracing", action="store_true", help="enables log tracing of method calls")
     result.add_argument(
-        "--call-tracing-default-level", default="TRACE", help="sets the default level for call tracing", metavar="LEVEL"
+        "--log-config",
+        default=None,
+        help="reads logging configuration from file",
+        metavar="FILE",
+    )
+    result.add_argument("--log-file", default=None, help="enables logging to file", metavar="FILE")
+    result.add_argument(
+        "--log-level",
+        default="WARNING",
+        help="sets the overall log level",
+        metavar="LEVEL",
+    )
+    result.add_argument(
+        "--call-tracing",
+        action="store_true",
+        help="enables log tracing of method calls",
+    )
+    result.add_argument(
+        "--call-tracing-default-level",
+        default="TRACE",
+        help="sets the default level for call tracing",
+        metavar="LEVEL",
     )
     result.add_argument("--debugpy", action="store_true", help="starts a debugpy session")
     result.add_argument(
-        "--debugpy-port", default=5678, help="sets the port for debugpy session", type=int, metavar="PORT"
+        "--debugpy-port",
+        default=5678,
+        help="sets the port for debugpy session",
+        type=int,
+        metavar="PORT",
     )
-    result.add_argument("--debugpy-wait-for-client", action="store_true", help="waits for debugpy client to connect")
+    result.add_argument(
+        "--debugpy-wait-for-client",
+        action="store_true",
+        help="waits for debugpy client to connect",
+    )
     return result
 
 
@@ -135,14 +194,14 @@ def init_logging(args: argparse.Namespace) -> None:
             logging.getLogger("asyncio").setLevel(DEFAULT_LOG_LEVEL)
 
 
-def main() -> None:
+def main() -> int:
     parser = create_parser()
 
     args = parser.parse_args()
 
     if args.version:
         print(__version__)
-        return
+        return 251  # 251 is the exit code for --version
 
     if args.call_tracing:
         LoggingDescriptor.set_call_tracing(True)
@@ -188,4 +247,4 @@ def main() -> None:
         mode = "pipe"
         pipe_name = args.pipe
 
-    sys.exit(run_server(mode, port, pipe_name))
+    return run_server(mode, port, pipe_name)
