@@ -161,6 +161,12 @@ style = ["ruff .", "black --check --diff ."]
 fmt = ["ruff --fix .", "black .", "style"]
 all = ["style", "typing"]
 
+[tool.hatch.envs.pages]
+detached = true
+dependencies = ["mkdocs>=1.4.2", "mkdocs-material"]
+
+[tool.hatch.envs.pages.scripts]
+build = ["mkdocs build"]
 
 [tool.hatch.envs.build]
 detached = true
@@ -184,7 +190,7 @@ version_variable = [
   "packages/language_server/robotcode/language_server/__version__.py:__version__",
   "packages/modifiers/robotcode/modifiers/__version__.py:__version__",
   "packages/plugin/robotcode/plugin/__version__.py:__version__",
-  "packages/plugin/robotcode/plugin/__version__.py:__version__",
+  "packages/runner/robotcode/runner/__version__.py:__version__",
 
 ]
 version_pattern = ['package.json:"version": "{version}"']
