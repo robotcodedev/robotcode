@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol  # pragma: no cover
 
 
-CODEACTIONKINDS_QUICKFIX_CREATEKEYWORD = f"{CodeActionKind.QUICK_FIX}.createKeyword"
+CODEACTIONKINDS_QUICKFIX_CREATEKEYWORD = f"{CodeActionKind.QUICK_FIX.value}.createKeyword"
 
 
 KEYWORD_WITH_ARGS_TEMPLATE = Template(
@@ -88,13 +88,13 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
         kw_not_found_in_diagnostics = next((d for d in context.diagnostics if d.code == "KeywordNotFoundError"), None)
 
         if kw_not_found_in_diagnostics and (
-            (context.only and CodeActionKind.QUICK_FIX in context.only)
+            (context.only and CodeActionKind.QUICK_FIX.value in context.only)
             or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
         ):
             return [
                 CodeAction(
                     "Create Keyword",
-                    kind=CodeActionKind.QUICK_FIX + ".createKeyword",
+                    kind=CodeActionKind.QUICK_FIX.value + ".createKeyword",
                     command=Command(
                         "Create Keyword",
                         self.parent.commands.get_command_name(self.create_keyword),

@@ -21,22 +21,39 @@ from robotcode.core.uri import Uri
 from robotcode.core.utils.net import find_free_port
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import code_action_kinds, language_id
-from robotcode.language_server.common.lsp_types import CodeAction, CodeActionContext, CodeActionKind, Command, Range
+from robotcode.language_server.common.lsp_types import (
+    CodeAction,
+    CodeActionContext,
+    CodeActionKind,
+    Command,
+    Range,
+)
 from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.configuration import DocumentationServerConfig
+from robotcode.language_server.robotframework.configuration import (
+    DocumentationServerConfig,
+)
 from robotcode.language_server.robotframework.diagnostics.library_doc import (
     get_library_doc,
     get_robot_library_html_doc_str,
     resolve_robot_variables,
 )
-from robotcode.language_server.robotframework.diagnostics.namespace import LibraryEntry, Namespace
-from robotcode.language_server.robotframework.utils.ast_utils import Token, get_node_at_position, range_from_token
+from robotcode.language_server.robotframework.diagnostics.namespace import (
+    LibraryEntry,
+    Namespace,
+)
+from robotcode.language_server.robotframework.utils.ast_utils import (
+    Token,
+    get_node_at_position,
+    range_from_token,
+)
 
 from .model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol  # pragma: no cover
+    from robotcode.language_server.robotframework.protocol import (
+        RobotLanguageServerProtocol,
+    )
 
 
 @dataclass(repr=False)
@@ -110,7 +127,9 @@ class LibDocRequestHandler(SimpleHTTPRequestHandler):
             try:
                 if type_ in ["md", "markdown"]:
                     libdoc = get_library_doc(
-                        name, tuple(args.split("::") if args else ()), base_dir=basedir if basedir else "."
+                        name,
+                        tuple(args.split("::") if args else ()),
+                        base_dir=basedir if basedir else ".",
                     )
 
                     def calc_md() -> str:
@@ -149,7 +168,9 @@ class LibDocRequestHandler(SimpleHTTPRequestHandler):
                 self.wfile.write(
                     bytes(
                         HTML_ERROR_TEMPLATE.substitute(
-                            type=type(e).__qualname__, message=str(e), stacktrace="".join(traceback.format_exc())
+                            type=type(e).__qualname__,
+                            message=str(e),
+                            stacktrace="".join(traceback.format_exc()),
                         ),
                         "utf-8",
                     )
@@ -167,7 +188,7 @@ class DualStackServer(ThreadingHTTPServer):
         return super().server_bind()
 
 
-CODEACTIONKINDS_SOURCE_OPENDOCUMENTATION = f"{CodeActionKind.SOURCE}.openDocumentation"
+CODEACTIONKINDS_SOURCE_OPENDOCUMENTATION = f"{CodeActionKind.SOURCE.value}.openDocumentation"
 
 
 class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
@@ -229,7 +250,11 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
     )
     @_logger.call
     async def collect(
-        self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
+        self,
+        sender: Any,
+        document: TextDocument,
+        range: Range,
+        context: CodeActionContext,
     ) -> Optional[List[Union[Command, CodeAction]]]:
         from robot.parsing.lexer import Token as RobotToken
         from robot.parsing.model.statements import (
@@ -248,9 +273,14 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         node = await get_node_at_position(model, range.start)
 
         if context.only and isinstance(node, (LibraryImport, ResourceImport)):
-            if CodeActionKind.SOURCE in context.only and range in range_from_token(node.get_token(RobotToken.NAME)):
+            if CodeActionKind.SOURCE.value in context.only and range in range_from_token(
+                node.get_token(RobotToken.NAME)
+            ):
                 url = await self.build_url(
-                    node.name, node.args if isinstance(node, LibraryImport) else (), document, namespace
+                    node.name,
+                    node.args if isinstance(node, LibraryImport) else (),
+                    document,
+                    namespace,
                 )
 
                 return [self.open_documentation_code_action(url)]
@@ -264,7 +294,10 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                 else node.keyword
                 if isinstance(node, KeywordCall)
                 else node.name,
-                cast(Token, node.get_token(RobotToken.KEYWORD if isinstance(node, KeywordCall) else RobotToken.NAME)),
+                cast(
+                    Token,
+                    node.get_token(RobotToken.KEYWORD if isinstance(node, KeywordCall) else RobotToken.NAME),
+                ),
                 [cast(Token, t) for t in node.get_tokens(RobotToken.ARGUMENT)],
                 namespace,
                 range.start,
@@ -277,7 +310,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                 kw_doc, _ = result
 
                 if kw_doc is not None:
-                    if context.only and CodeActionKind.SOURCE in context.only:
+                    if context.only and CodeActionKind.SOURCE.value in context.only:
                         entry: Optional[LibraryEntry] = None
 
                         if kw_doc.libtype == "LIBRARY":
@@ -302,19 +335,35 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
 
                             self_libdoc = await namespace.get_library_doc()
                             if entry is None and self_libdoc.digest == kw_doc.parent:
-                                entry = LibraryEntry(self_libdoc.name, str(document.uri.to_path().name), self_libdoc)
+                                entry = LibraryEntry(
+                                    self_libdoc.name,
+                                    str(document.uri.to_path().name),
+                                    self_libdoc,
+                                )
 
                         if entry is None:
                             return None
 
-                        url = await self.build_url(entry.import_name, entry.args, document, namespace, kw_doc.name)
+                        url = await self.build_url(
+                            entry.import_name,
+                            entry.args,
+                            document,
+                            namespace,
+                            kw_doc.name,
+                        )
 
                         return [self.open_documentation_code_action(url)]
 
         if isinstance(node, KeywordName):
             name_token = node.get_token(RobotToken.KEYWORD_NAME)
             if name_token is not None and range in range_from_token(name_token):
-                url = await self.build_url(str(document.uri.to_path().name), (), document, namespace, name_token.value)
+                url = await self.build_url(
+                    str(document.uri.to_path().name),
+                    (),
+                    document,
+                    namespace,
+                    name_token.value,
+                )
 
                 return [self.open_documentation_code_action(url)]
 
@@ -366,7 +415,14 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         url_args = "::".join(args) if args else ""
 
         base_url = f"http://localhost:{self._documentation_server_port}"
-        params = urllib.parse.urlencode({"name": name, "args": url_args, "basedir": str(base_dir), "theme": "${theme}"})
+        params = urllib.parse.urlencode(
+            {
+                "name": name,
+                "args": url_args,
+                "basedir": str(base_dir),
+                "theme": "${theme}",
+            }
+        )
 
         return f"{base_url}/?&{params}{f'#{target}' if target else ''}"
 
