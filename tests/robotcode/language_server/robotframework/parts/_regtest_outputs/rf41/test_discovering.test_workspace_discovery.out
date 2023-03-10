@@ -67,6 +67,102 @@ result:
       type: suite
       uri: tests/bddstyle.robot
     - children:
+      - children: null
+        description: null
+        error: null
+        id: Data.Tests.Code Action Show Documentation.first;28
+        label: first
+        longname: Data.Tests.Code Action Show Documentation.first
+        range:
+          end:
+            character: 0
+            line: 27
+          start:
+            character: 0
+            line: 27
+        tags: []
+        type: test
+        uri: tests/code_action_show_documentation.robot
+      - children: null
+        description: null
+        error: null
+        id: Data.Tests.Code Action Show Documentation.second;40
+        label: second
+        longname: Data.Tests.Code Action Show Documentation.second
+        range:
+          end:
+            character: 0
+            line: 39
+          start:
+            character: 0
+            line: 39
+        tags: []
+        type: test
+        uri: tests/code_action_show_documentation.robot
+      - children: null
+        description: null
+        error: null
+        id: Data.Tests.Code Action Show Documentation.third;46
+        label: third
+        longname: Data.Tests.Code Action Show Documentation.third
+        range:
+          end:
+            character: 0
+            line: 45
+          start:
+            character: 0
+            line: 45
+        tags: []
+        type: test
+        uri: tests/code_action_show_documentation.robot
+      - children: null
+        description: null
+        error: null
+        id: Data.Tests.Code Action Show Documentation.forth;52
+        label: forth
+        longname: Data.Tests.Code Action Show Documentation.forth
+        range:
+          end:
+            character: 0
+            line: 51
+          start:
+            character: 0
+            line: 51
+        tags: []
+        type: test
+        uri: tests/code_action_show_documentation.robot
+      - children: null
+        description: null
+        error: null
+        id: Data.Tests.Code Action Show Documentation.fifth;61
+        label: fifth
+        longname: Data.Tests.Code Action Show Documentation.fifth
+        range:
+          end:
+            character: 0
+            line: 60
+          start:
+            character: 0
+            line: 60
+        tags: []
+        type: test
+        uri: tests/code_action_show_documentation.robot
+      description: null
+      error: null
+      id: Data.Tests.Code Action Show Documentation
+      label: Code Action Show Documentation
+      longname: Data.Tests.Code Action Show Documentation
+      range:
+        end:
+          character: 0
+          line: 0
+        start:
+          character: 0
+          line: 0
+      tags: null
+      type: suite
+      uri: tests/code_action_show_documentation.robot
+    - children:
       - children:
         - children: null
           description: null

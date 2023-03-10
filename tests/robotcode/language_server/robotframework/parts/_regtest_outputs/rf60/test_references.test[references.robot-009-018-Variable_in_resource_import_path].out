@@ -7,6 +7,33 @@ result:
   range:
     end:
       character: 24
+      line: 5
+    start:
+      character: 18
+      line: 5
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 7
+    start:
+      character: 18
+      line: 7
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 10
+    start:
+      character: 18
+      line: 10
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 24
       line: 2
     start:
       character: 18

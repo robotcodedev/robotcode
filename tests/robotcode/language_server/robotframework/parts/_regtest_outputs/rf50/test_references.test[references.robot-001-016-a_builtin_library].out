@@ -11,6 +11,15 @@ result:
     start:
       character: 16
       line: 1
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 27
+      line: 1
+    start:
+      character: 16
+      line: 1
   uri: tests/document_highlight.robot
 - !Location
   range:

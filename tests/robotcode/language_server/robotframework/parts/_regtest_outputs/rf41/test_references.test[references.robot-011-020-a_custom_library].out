@@ -7,6 +7,24 @@ result:
   range:
     end:
       character: 24
+      line: 12
+    start:
+      character: 16
+      line: 12
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 14
+    start:
+      character: 16
+      line: 14
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 24
       line: 8
     start:
       character: 16

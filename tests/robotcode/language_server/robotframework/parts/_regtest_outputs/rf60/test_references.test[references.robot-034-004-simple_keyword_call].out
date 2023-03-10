@@ -187,6 +187,141 @@ result:
   range:
     end:
       character: 7
+      line: 32
+    start:
+      character: 4
+      line: 32
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 37
+    start:
+      character: 4
+      line: 37
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 94
+    start:
+      character: 4
+      line: 94
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 8
+      line: 99
+    start:
+      character: 5
+      line: 99
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 102
+    start:
+      character: 4
+      line: 102
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 103
+    start:
+      character: 4
+      line: 103
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 106
+    start:
+      character: 4
+      line: 106
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 109
+    start:
+      character: 4
+      line: 109
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 112
+    start:
+      character: 4
+      line: 112
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 116
+    start:
+      character: 4
+      line: 116
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 117
+    start:
+      character: 4
+      line: 117
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 121
+    start:
+      character: 4
+      line: 121
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 122
+    start:
+      character: 4
+      line: 122
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 126
+    start:
+      character: 4
+      line: 126
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 127
+    start:
+      character: 4
+      line: 127
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
       line: 30
     start:
       character: 4

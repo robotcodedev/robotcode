@@ -1,0 +1,18 @@
+data: !GeneratedTestData
+  character: 15
+  line: 65
+  name: keyword call normal arguments in test case
+result:
+- !CodeAction
+  command:
+    arguments:
+    - <removed>
+    command: robotcode.showDocumentation
+    title: Open Documentation
+  data: null
+  diagnostics: null
+  disabled: null
+  edit: null
+  is_preferred: null
+  kind: source.openDocumentation
+  title: Open Documentation

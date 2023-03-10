@@ -6,6 +6,15 @@ result:
 - !Location
   range:
     end:
+      character: 27
+      line: 3
+    start:
+      character: 16
+      line: 3
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
       character: 47
       line: 2
     start:

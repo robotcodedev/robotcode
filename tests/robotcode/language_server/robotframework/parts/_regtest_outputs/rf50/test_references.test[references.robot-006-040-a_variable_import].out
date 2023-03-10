@@ -7,6 +7,15 @@ result:
   range:
     end:
       character: 47
+      line: 7
+    start:
+      character: 16
+      line: 7
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 47
       line: 4
     start:
       character: 16
