@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.28.1 (2023-03-10)
+### Fix
+* Source actions are missing in the context menu for versions #129 ([`dd6202a`](https://github.com/d-biehl/robotcode/commit/dd6202af03e9ff09a0140d1d0d5da40db20410a8))
+
 ## v0.28.0 (2023-03-09)
 ### Feature
 * Debugger is now started from bundled/tool/debugger if available ([`4b04c7a`](https://github.com/d-biehl/robotcode/commit/4b04c7a0524ba7804a7c4c01e1d2107e5ee188ae))
