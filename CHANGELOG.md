@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.28.2 (2023-03-10)
+### Fix
+* Correct version of robotcode runner ([`1ba8590`](https://github.com/d-biehl/robotcode/commit/1ba85902bfe8ab2c737658757e8fc76bf7cd19ca))
+
 ## v0.28.1 (2023-03-10)
 ### Fix
 * Source actions are missing in the context menu for versions #129 ([`dd6202a`](https://github.com/d-biehl/robotcode/commit/dd6202af03e9ff09a0140d1d0d5da40db20410a8))
