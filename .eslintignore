@@ -8,3 +8,5 @@ vscode.proposed.d.ts
 
 .mypy_cache/
 .pytest_cache/
+
+site/

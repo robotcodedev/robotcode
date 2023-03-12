@@ -3,8 +3,16 @@ paths = ["."]
 output_dir = "results"
 console = "quiet"
 python_path = ["lib", "resources"]
+variables = 1
+# [[robot.variables]]
+# ABC = "123"
+# DEF = 1
 
+# [[robot.variables]]
+# QWER = "123"
+# ASDF = 1
 
-[[robot.variables]]
-ABC = "123"
-DEF = 1
+[[robot.listeners]]
+MyListener = ["arg1", "arg2"]
+MyListener1 = ["arg1", "arg2asd"]
+AnotherListener = []

@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 import click
 
@@ -17,7 +18,7 @@ from .__version__ import __version__
 )
 @click.option("-d", "--dry", is_flag=True, help="Dry run, do not execute any commands.")
 @click.pass_context
-def robotcode(ctx: click.Context) -> None:
+def robotcode(ctx: click.Context, config_file: Optional[Path], dry: Optional[bool] = None) -> None:
     """\b
  _____       _           _    _____          _
 |  __ \\     | |         | |  / ____|        | |
@@ -27,8 +28,39 @@ def robotcode(ctx: click.Context) -> None:
 |_|  \\_\\___/|_.__/ \\___/ \\__|\\_____\\___/ \\__,_|\\___|
 
 """
+    ctx.ensure_object(dict)
+    ctx.obj["config_file"] = config_file
+    ctx.obj["dry"] = dry
 
 
 for p in PluginManager().cli_commands:
     for c in p:
         robotcode.add_command(c)
+
+
+@robotcode.command()
+@click.pass_context
+def analyse(ctx: click.Context) -> None:
+    """Analyse the robotframework project."""
+    click.echo("TODO")
+
+
+@robotcode.command()
+@click.pass_context
+def debug(ctx: click.Context) -> None:
+    """Debug the robotframework run."""
+    click.echo("TODO")
+
+
+@robotcode.command()
+@click.pass_context
+def clean(ctx: click.Context) -> None:
+    """Clean the robotframework project."""
+    click.echo("TODO")
+
+
+@robotcode.command()
+@click.pass_context
+def new(ctx: click.Context) -> None:
+    """Create a new robotframework project."""
+    click.echo("TODO")

@@ -1,0 +1,116 @@
+site_name: RobotCode
+site_description: Language support for Robot Framework for Visual Studio Code
+site_author: Daniel Biehl
+site_url: https://robotcode.io
+repo_url: https://github.com/d-biehl/robotcode
+repo_name: d-biehl/robotcode
+edit_uri: blob/master/docs
+copyright: >
+  <p>'Copyright &copy; Daniel Biehl 2022-present'</p>
+  <p><a href="#__consent">Change cookie settings</a></p>
+
+theme:
+  name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    - content.action.edit
+    - navigation.sections
+    - navigation.expand
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.instant
+  favicon: assets/images/logo.png
+  logo: assets/images/logo.png
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: green
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: green
+      toggle:
+        icon: material/brightness-4
+        name: Switch to dark mode
+
+markdown_extensions:
+  # Built-in
+  - abbr
+  - admonition
+  - attr_list
+  - footnotes
+  - tables
+  - markdown.extensions.toc:
+      permalink: true
+  # Extra
+  - pymdownx.arithmatex
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.emoji:
+      # https://github.com/twitter/twemoji
+      # https://raw.githubusercontent.com/facelessuser/pymdown-extensions/master/pymdownx/twemoji_db.py
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.highlight:
+      auto_title: true
+      linenums_style: pymdownx-inline
+      use_pygments: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shortener: true
+      repo_url_shorthand: true
+      social_url_shortener: true
+      social_url_shorthand: true
+      normalize_issue_symbols: true
+      provider: github
+      user: d-biehl
+      repo: robotcode
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  # - pymdownx.snippets:
+  #     check_paths: true
+  #     base_path:
+  #       - docs/.snippets
+  #     auto_append:
+  #       - links.txt
+  #       - abbrs.txt
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+extra:
+  consent:
+    title: Cookie consent
+    description: >-
+      We use cookies to recognize your repeated visits and preferences, as well
+      as to measure the effectiveness of our documentation and whether users
+      find what they're searching for. With your consent, you're helping us to
+      make our documentation better.
+    actions:
+      - accept
+      - reject
+      - manage
+
+extra_css:
+  - stylesheets/extra.css
+
+nav:
+  - Home: index.md
+  - Features: features.md
+  - Installation: installation.md

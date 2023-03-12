@@ -3,11 +3,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
 
 import click
-from robot.errors import DataError
+from robot.errors import DataError, Information
 from robot.run import USAGE, RobotFramework
 from robot.version import get_full_version
 
 from robotcode.config.model import RobotConfig
+from robotcode.core.dataclasses import from_dict
 
 from ..__version__ import __version__
 
@@ -18,9 +19,10 @@ else:
 
 
 class RobotFrameworkEx(RobotFramework):
-    def __init__(self, arguments: List[str]) -> None:
+    def __init__(self, arguments: List[str], dry: bool) -> None:
         super().__init__()
         self.arguments = arguments
+        self.dry = dry
 
     def parse_arguments(self, cli_args: Any) -> Any:
         try:
@@ -30,6 +32,15 @@ class RobotFrameworkEx(RobotFramework):
 
         if not arguments:
             arguments = self.arguments
+
+        if self.dry:
+            line_end = "\n"
+            raise Information(
+                "Dry run, not executing any commands. "
+                f"Would execute robot with the following arguments:\n"
+                f'{line_end.join((*(f"{k} = {repr(v)}" for k, v in options.items()) ,*arguments))}'
+            )
+
         return options, arguments
 
 
@@ -60,7 +71,7 @@ def run(
     with open("robot.toml", "rb") as f:
         pyproject_toml = tomllib.load(f)
 
-    model = RobotConfig(**pyproject_toml["robot"])
+    model = from_dict(pyproject_toml["robot"], RobotConfig)
 
     options = []
 
@@ -71,18 +82,17 @@ def run(
         for e in model.python_path:
             options += ["-P", e]
 
-    if model.variables:
-        for entry in model.variables:
-            for k, v in entry.items():
-                options += ["-v", f"{k}:{v}"]
+    if model.variables and isinstance(model.variables, dict):
+        for k, v in model.variables.items():
+            options += ["-v", f"{k}:{v}"]
+
     try:
         return cast(
             int,
-            RobotFrameworkEx(model.paths or []).execute_cli(
-                # (*options, *robot_options_and_args, *(model.paths or [])), exit=False
+            RobotFrameworkEx(model.paths or [], ctx.obj["dry"]).execute_cli(
                 (*options, *robot_options_and_args),
                 exit=False,
             ),
         )
     except SystemExit as e:
-        return e.code
+        return cast(int, e.code)

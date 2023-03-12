@@ -58,7 +58,7 @@ Autocompletion for:
 - Keywords with parameters
 - Namespaces
 
-![Autocomplete Libraries and Keywords](./doc/images/autocomplete1.gif)
+![Autocomplete Libraries and Keywords](./docs/images/autocomplete1.gif)
 
 Autocompletion supports all supported variables types
   - local variables
@@ -68,7 +68,7 @@ Autocompletion supports all supported variables types
   - command line variables
   - builtin variables
 
-![Autocomplete Variables](./doc/images/autocomplete2.gif)
+![Autocomplete Variables](./docs/images/autocomplete2.gif)
 
 ### Code Navigation
 
@@ -111,7 +111,7 @@ RobotCode can format your code with the internal RobotFramework robot.tidy tool 
 
 RobotCode supports running and debugging of RobotFramework testcases and tasks out of the box, directly from the definition of the test or suite.
 
-![Running Tests](./doc/images/running_tests.gif)
+![Running Tests](./docs/images/running_tests.gif)
 
 In the debug console you can see all log messages of the current run and navigate to the keyword the message was written by.
 
@@ -165,7 +165,7 @@ See the difference:
 
 | Before                                                           | After                                                      |
 | ---------------------------------------------------------------- | ---------------------------------------------------------- |
-| ![Without customization](./doc/images/without_customization.gif) | ![With customization](./doc/images/with_customization.gif) |
+| ![Without customization](./docs/images/without_customization.gif) | ![With customization](./docs/images/with_customization.gif) |
 
 
 As a template you can put the following code to your user settings of VSCode.

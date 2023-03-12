@@ -34,9 +34,10 @@
 			"request": "launch",
 			"module": "robotcode.cli",
 			"justMyCode": false,
+			"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data",
 			"args": [
-				"run",
-				"--help"
+				"--dry",
+				"run"
 			]
 		},
 		{

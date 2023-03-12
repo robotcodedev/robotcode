@@ -163,7 +163,22 @@ all = ["style", "typing"]
 
 [tool.hatch.envs.pages]
 detached = true
-dependencies = ["mkdocs>=1.4.2", "mkdocs-material"]
+dependencies = [
+  "mkdocs>=1.4.2",
+  "mkdocs-material",
+  # Plugins
+  "mkdocs-minify-plugin",
+  "mkdocs-git-revision-date-localized-plugin",
+  "mkdocstrings-python",
+  "mkdocs-redirects",
+  "mkdocs-glightbox",
+
+  # Extensions
+  "mkdocs-click~=0.8.0",
+  "pymdown-extensions~=9.6.0",
+  # Necessary for syntax highlighting in code blocks
+  "pygments",
+]
 
 [tool.hatch.envs.pages.scripts]
 build = ["mkdocs build"]
