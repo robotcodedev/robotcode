@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "robotcode-plugin"
 description = 'Some classes for RobotCode plugin management'
-readme = "README.md"
+readme = {"file" = "README.md", "content-type" = "text/markdown"}
 requires-python = ">=3.8"
 license = "Apache-2.0"
 keywords = []

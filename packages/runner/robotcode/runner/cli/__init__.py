@@ -7,8 +7,8 @@ from robot.errors import DataError, Information
 from robot.run import USAGE, RobotFramework
 from robot.version import get_full_version
 
-from robotcode.config.model import RobotConfig
 from robotcode.core.dataclasses import from_dict
+from robotcode.robot.config.model import RobotConfig
 
 from ..__version__ import __version__
 
@@ -54,7 +54,7 @@ class RobotFrameworkEx(RobotFramework):
 )
 @click.version_option(
     version=__version__,
-    package_name="robotcode",
+    package_name="robotcode.runner",
     prog_name="RobotCode Runner",
     message=f"%(prog)s %(version)s\n{USAGE.splitlines()[0].split(' -- ')[0].strip()} {get_full_version()}",
 )

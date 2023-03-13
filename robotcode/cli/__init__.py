@@ -40,13 +40,6 @@ for p in PluginManager().cli_commands:
 
 @robotcode.command()
 @click.pass_context
-def analyse(ctx: click.Context) -> None:
-    """Analyse the robotframework project."""
-    click.echo("TODO")
-
-
-@robotcode.command()
-@click.pass_context
 def debug(ctx: click.Context) -> None:
     """Debug the robotframework run."""
     click.echo("TODO")

@@ -1,0 +1,116 @@
+[version]
+path = "robotcode/cli/__version__.py"
+
+[build.targets.sdist]
+only-include = ["robotcode", "CHANGELOG.md"]
+
+[build.targets.wheel]
+only-include = ["robotcode"]
+
+[envs.default]
+dependencies = [
+  "pytest",
+  "pytest-html",
+  "pytest_asyncio",
+  "pytest-regtest>=1.5.0",
+  "pytest-cov",
+  "mypy",
+  "ruff",
+  "black",
+  "debugpy",
+  "GitPython",
+  "semantic-version",
+  "robotremoteserver",
+]
+features = ["yaml", "rest", "lint", "tidy"]
+pre-install-commands = ["python ./scripts/install_packages.py"]
+
+
+[envs.default.scripts]
+cov = "pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=robotcode --cov=tests {args}"
+no-cov = "cov --no-cov {args}"
+test = "pytest {args}"
+install-bundled-editable = "python ./scripts/install_bundled_editable.py"
+
+[envs.devel]
+python = "38"
+features = ["yaml", "rest", "lint", "tidy"]
+
+[[envs.devel.matrix]]
+python = ["38", "39", "310", "311"]
+rf = ["rf41", "rf50", "rf60"]
+
+[envs.devel.overrides]
+matrix.rf.dependencies = [
+  { value = "robotframework>=4.1.0, <5.0", if = [
+    "rf41",
+  ] },
+  { value = "robotframework>=5.0.0, <6.0", if = [
+    "rf50",
+  ] },
+  { value = "robotframework>6.0.0, <6.1", if = [
+    "rf60",
+  ] },
+]
+
+[[envs.test.matrix]]
+rf = ["rf41", "rf50", "rf60"]
+
+[envs.test.overrides]
+matrix.rf.dependencies = [
+  { value = "robotframework>=4.1.0, <5.0", if = [
+    "rf41",
+  ] },
+  { value = "robotframework>=5.0.0, <6.0", if = [
+    "rf50",
+  ] },
+  { value = "robotframework>6.0.0, <6.1", if = [
+    "rf60",
+  ] },
+]
+
+[envs.lint]
+skip-install = true
+extra-dependencies = ["tomli>=2.0.0"]
+features = ["yaml", "rest", "lint", "tidy"]
+
+[envs.lint.scripts]
+typing = ["mypy --install-types --non-interactive {args:.}"]
+style = ["ruff .", "black --check --diff ."]
+fmt = ["ruff --fix .", "black .", "style"]
+all = ["style", "typing"]
+
+[envs.pages]
+detached = true
+dependencies = [
+  "mkdocs>=1.4.2",
+  "mkdocs-material",
+  # Plugins
+  "mkdocs-minify-plugin",
+  "mkdocs-git-revision-date-localized-plugin",
+  "mkdocstrings-python",
+  "mkdocs-redirects",
+  "mkdocs-glightbox",
+
+  # Extensions
+  "mkdocs-click~=0.8.0",
+  "pymdown-extensions~=9.6.0",
+  # Necessary for syntax highlighting in code blocks
+  "pygments",
+]
+
+[envs.pages.scripts]
+build = ["mkdocs build"]
+
+[envs.build]
+detached = true
+python = "38"
+dependencies = ["GitPython", "semantic-version"]
+
+[envs.build.scripts]
+update-git-versions = ["python scripts/update_git_versions.py"]
+update-doc-links = ["python scripts/update_doc_links.py"]
+package = ["python scripts/package.py"]
+publish = ["python scripts/publish.py"]
+extract-release-notes = ["python scripts/extract_release_notes.py"]
+is-prerelease = ["python scripts/is_prerelease.py"]

@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "robotcode-runner"
-description = 'A Robot Framework runner RobotCode plugin management'
-readme = "README.md"
+description = 'RobotCode runner plugin for Robot Framework'
+readme = {"file" = "README.md", "content-type" = "text/markdown"}
 requires-python = ">=3.8"
 license = "Apache-2.0"
 keywords = []
@@ -26,7 +26,7 @@ classifiers = [
 dependencies = [
   "robotframework>=4.1.0",
   "robotcode-plugin",
-  "tomli>=1.1.0; python_version < '3.11'",
+  "robotcode-robot",
 ]
 dynamic = ["version"]
 
@@ -34,6 +34,7 @@ dynamic = ["version"]
 runner = "robotcode.runner.hooks"
 
 [project.urls]
+Homepage = "https://robotcode.io"
 Donate = "https://github.com/sponsors/d-biehl"
 Documentation = "https://github.com/d-biehl/robotcode#readme"
 Changelog = "https://github.com/d-biehl/robotcode/blob/main/CHANGELOG.md"

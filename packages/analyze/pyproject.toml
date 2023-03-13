@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "robotcode-debugger"
-description = 'RobotCode Debugger for Robot Framework'
+name = "robotcode-analyze"
+description = 'RobotCode analyze plugin for Robot Framework'
 readme = {"file" = "README.md", "content-type" = "text/markdown"}
 requires-python = ">=3.8"
 license = "Apache-2.0"
@@ -23,11 +23,15 @@ classifiers = [
   "Topic :: Utilities",
   "Typing :: Typed",
 ]
-dependencies = ["robotcode-jsonrpc2", "robotframework>=4.1.0"]
+dependencies = [
+  "robotframework>=4.1.0",
+  "robotcode-plugin",
+  "robotcode-robot"
+]
 dynamic = ["version"]
 
-[project.scripts]
-'robotcode.debugger' = 'robotcode.debugger.__main__:main'
+[project.entry-points.robotcode]
+analyze = "robotcode.analyze.hooks"
 
 [project.urls]
 Homepage = "https://robotcode.io"
@@ -38,11 +42,12 @@ Issues = "https://github.com/d-biehl/robotcode/issues"
 Source = "https://github.com/d-biehl/robotcode"
 
 [tool.hatch.version]
-path = "robotcode/debugger/__version__.py"
+path = "robotcode/analyze/__version__.py"
 
 [tool.hatch.envs.build]
 detached = true
 python = "38"
+
 
 [tool.hatch.build.targets.sdist]
 only-include = ["robotcode"]

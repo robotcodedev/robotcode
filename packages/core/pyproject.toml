@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "robotcode-core"
 description = 'Some core classes for RobotCode'
-readme = "README.md"
+readme = {"file" = "README.md", "content-type" = "text/markdown"}
 requires-python = ">=3.8"
 license = "Apache-2.0"
 keywords = []
@@ -27,6 +27,7 @@ dependencies = ["typing-extensions>=4.4.0"]
 dynamic = ["version"]
 
 [project.urls]
+Homepage = "https://robotcode.io"
 Donate = "https://github.com/sponsors/d-biehl"
 Documentation = "https://github.com/d-biehl/robotcode#readme"
 Changelog = "https://github.com/d-biehl/robotcode/blob/main/CHANGELOG.md"

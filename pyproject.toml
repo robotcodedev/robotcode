@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 name = "robotcode"
 description = "Language server, debugger and tools for Robot Framework"
 authors = [{ name = "Daniel Biehl", email = "dbiehl@live.de" }]
-readme = "README.md"
+readme = {"file" = "README.md", "content-type" = "text/markdown"}
 license = { text = "Apache-2.0" }
 keywords = [
   "Test",
@@ -54,6 +54,7 @@ dynamic = ["version"]
 
 
 [project.urls]
+Homepage = "https://robotcode.io"
 Donate = "https://github.com/sponsors/d-biehl"
 Documentation = "https://github.com/d-biehl/robotcode#readme"
 Changelog = "https://github.com/d-biehl/robotcode/blob/main/CHANGELOG.md"
@@ -68,133 +69,12 @@ robotcode = "robotcode.cli:robotcode"
 debugger = ["robotcode-debugger"]
 language-server = ["robotcode-language-server"]
 runner = ["robotcode-runner"]
+analyze = ["robotcode-analyze"]
 yaml = ["PyYAML>=5.4", "types-PyYAML>=5.4"]
 lint = ["robotframework-robocop>=2.0.0"]
 tidy = ["robotframework-tidy>=2.0.0"]
 rest = ["docutils"]
 
-
-[tool.hatch.version]
-path = "robotcode/cli/__version__.py"
-
-
-[tool.hatch.build.targets.sdist]
-only-include = ["robotcode", "CHANGELOG.md"]
-
-[tool.hatch.build.targets.wheel]
-only-include = ["robotcode"]
-
-
-[tool.hatch.envs.default]
-dependencies = [
-  "pytest",
-  "pytest-html",
-  "pytest_asyncio",
-  "pytest-regtest>=1.5.0",
-  "pytest-cov",
-  "mypy",
-  "ruff",
-  "black",
-  "debugpy",
-  "GitPython",
-  "semantic-version",
-  "robotremoteserver",
-]
-features = ["yaml", "rest", "lint", "tidy"]
-pre-install-commands = ["python ./scripts/install_packages.py"]
-
-
-[tool.hatch.envs.default.scripts]
-cov = "pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=robotcode --cov=tests {args}"
-no-cov = "cov --no-cov {args}"
-test = "pytest {args}"
-install-bundled-editable = "python ./scripts/install_bundled_editable.py"
-
-
-[tool.hatch.envs.devel]
-python = "38"
-features = ["yaml", "rest", "lint", "tidy"]
-
-[[tool.hatch.envs.devel.matrix]]
-python = ["38", "39", "310", "311"]
-rf = ["rf41", "rf50", "rf60"]
-
-
-[tool.hatch.envs.devel.overrides]
-matrix.rf.dependencies = [
-  { value = "robotframework>=4.1.0, <5.0", if = [
-    "rf41",
-  ] },
-  { value = "robotframework>=5.0.0, <6.0", if = [
-    "rf50",
-  ] },
-  { value = "robotframework>6.0.0, <6.1", if = [
-    "rf60",
-  ] },
-]
-
-[[tool.hatch.envs.test.matrix]]
-rf = ["rf41", "rf50", "rf60"]
-
-
-[tool.hatch.envs.test.overrides]
-matrix.rf.dependencies = [
-  { value = "robotframework>=4.1.0, <5.0", if = [
-    "rf41",
-  ] },
-  { value = "robotframework>=5.0.0, <6.0", if = [
-    "rf50",
-  ] },
-  { value = "robotframework>6.0.0, <6.1", if = [
-    "rf60",
-  ] },
-]
-
-[tool.hatch.envs.lint]
-skip-install = true
-extra-dependencies = ["tomli>=2.0.0"]
-features = ["yaml", "rest", "lint", "tidy"]
-
-[tool.hatch.envs.lint.scripts]
-typing = ["mypy --install-types --non-interactive {args:.}"]
-style = ["ruff .", "black --check --diff ."]
-fmt = ["ruff --fix .", "black .", "style"]
-all = ["style", "typing"]
-
-[tool.hatch.envs.pages]
-detached = true
-dependencies = [
-  "mkdocs>=1.4.2",
-  "mkdocs-material",
-  # Plugins
-  "mkdocs-minify-plugin",
-  "mkdocs-git-revision-date-localized-plugin",
-  "mkdocstrings-python",
-  "mkdocs-redirects",
-  "mkdocs-glightbox",
-
-  # Extensions
-  "mkdocs-click~=0.8.0",
-  "pymdown-extensions~=9.6.0",
-  # Necessary for syntax highlighting in code blocks
-  "pygments",
-]
-
-[tool.hatch.envs.pages.scripts]
-build = ["mkdocs build"]
-
-[tool.hatch.envs.build]
-detached = true
-python = "38"
-dependencies = ["GitPython", "semantic-version"]
-
-[tool.hatch.envs.build.scripts]
-update-git-versions = ["python scripts/update_git_versions.py"]
-update-doc-links = ["python scripts/update_doc_links.py"]
-package = ["python scripts/package.py"]
-publish = ["python scripts/publish.py"]
-extract-release-notes = ["python scripts/extract_release_notes.py"]
-is-prerelease = ["python scripts/is_prerelease.py"]
 
 [tool.semantic_release]
 version_variable = [
@@ -206,7 +86,8 @@ version_variable = [
   "packages/modifiers/robotcode/modifiers/__version__.py:__version__",
   "packages/plugin/robotcode/plugin/__version__.py:__version__",
   "packages/runner/robotcode/runner/__version__.py:__version__",
-
+  "packages/analyze/robotcode/analyze/__version__.py:__version__",
+  "packages/robot/robotcode/robot/__version__.py:__version__",
 ]
 version_pattern = ['package.json:"version": "{version}"']
 branch = "main"
@@ -334,7 +215,9 @@ mypy_path = [
   "packages/language_server",
   "packages/modifiers",
   "packages/plugin",
+  "packages/robot",
   "packages/runner",
+  "packages/analyze",
 ]
 explicit_package_bases = true
 
