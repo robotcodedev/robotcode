@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.28.4 (2023-03-19)
+### Fix
+* Update regression tests ([`59b782d`](https://github.com/d-biehl/robotcode/commit/59b782d434764a564521832f375ce062ed155842))
+
 ## v0.28.3 (2023-03-19)
 ### Fix
 * Correct analysing keywords with embedded arguments for RF >= 6.1 ([`ef0b51f`](https://github.com/d-biehl/robotcode/commit/ef0b51f0bae83194a20a45d7cb07a4a6ac2b4f1c))
