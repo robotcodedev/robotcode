@@ -4,6 +4,11 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.28.3 (2023-03-19)
+### Fix
+* Correct analysing keywords with embedded arguments for RF >= 6.1 ([`ef0b51f`](https://github.com/d-biehl/robotcode/commit/ef0b51f0bae83194a20a45d7cb07a4a6ac2b4f1c))
+* Correct discovering for RobotFramework 6.1a1 ([`99aa82d`](https://github.com/d-biehl/robotcode/commit/99aa82de7d8b67d6acae1d2131351ff9354c4a4f))
+
 ## v0.28.2 (2023-03-10)
 ### Fix
 * Correct version of robotcode runner ([`1ba8590`](https://github.com/d-biehl/robotcode/commit/1ba85902bfe8ab2c737658757e8fc76bf7cd19ca))
