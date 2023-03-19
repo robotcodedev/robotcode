@@ -7,7 +7,7 @@ from robot.run import USAGE, RobotFramework
 from robot.version import get_full_version
 
 from robotcode.core.dataclasses import from_dict
-from robotcode.robot.config.model import RobotConfig
+from robotcode.robot.config.model import Configuration
 
 from ..__version__ import __version__
 
@@ -70,7 +70,7 @@ def run(
     with open("robot.toml", "rb") as f:
         pyproject_toml = tomllib.load(f)
 
-    model = from_dict(pyproject_toml["robot"], RobotConfig)
+    model = from_dict(pyproject_toml["robot"], Configuration)
 
     options = []
 

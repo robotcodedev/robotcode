@@ -16,8 +16,16 @@ class Mode(Enum):
 
 
 @dataclass
-class BaseConfig(ValidateMixin):
+class BaseConfiguration(ValidateMixin):
     """Base configuration for Robot Framework."""
+
+    @classmethod
+    def _encode_case(cls, s: str) -> str:
+        return s.replace("_", "-")
+
+    @classmethod
+    def _decode_case(cls, s: str) -> str:
+        return s.replace("-", "_")
 
     args: List[str] = field(
         default_factory=list,
@@ -82,25 +90,42 @@ SECRET = "password"
     pre_rebot_modifiers: Dict[str, List[Any]] = field(default_factory=dict)
 
     listeners: Dict[str, List[Any]] = field(default_factory=dict)
+    dry_run: Optional[bool] = None
 
 
 @dataclass
-class EnvironmentConfig(BaseConfig):
+class DetachableConfiguration(BaseConfiguration):
     detached: bool = False
 
 
 @dataclass
-class RobotConfig(BaseConfig):
-    configs: Dict[str, EnvironmentConfig] = field(default_factory=dict)
+class Configuration(BaseConfiguration):
+    configurations: Dict[str, DetachableConfiguration] = field(
+        default_factory=dict,
+        metadata={"description": "Configurations for Robot Framework."},
+    )
 
 
 # if __name__ == "__main__":
+#     import json
 #     import pathlib
 
-#     from pydantic import schema_json_of
+#     import pydantic
 
-#     json = schema_json_of(RobotConfig, by_alias=False, indent=2)
+#     class Config:
+#         @classmethod
+#         def alias_generator(cls, string: str) -> str:
+#             # this is the same as `alias_generator = to_camel` above
+#             return string.replace("_", "-")
+
+#     model = pydantic.dataclasses.create_pydantic_model_from_dataclass(Configuration, config=Config)  # type: ignore
+
+#     schema = pydantic.schema.schema([model], title="Robot Framework Configuration")
+
+#     schema["$schema"] = "http://json-schema.org/draft-07/schema#"
+#     schema["$id"] = "robotframework:https://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.json"
+
+#     json_str = json.dumps(schema, indent=2, sort_keys=True)
+
 #     # TODO add $id and $schema
-#     # json["$id"] = "https://json.schemastore.org/robot.schema.json"
-#     # json["$schema"] = "http://json-schema.org/draft-07/schema#"
-#     pathlib.Path("etc", "robot.json").write_text(json, "utf-8")
+#     pathlib.Path("etc", "robot.json").write_text(json_str, "utf-8")

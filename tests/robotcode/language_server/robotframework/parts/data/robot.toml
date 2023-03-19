@@ -1,5 +1,5 @@
-args = ["abc"]
-mode = "rpa"
+args = []
+
 python_path = []
 documentation = """\
 This is a *sample* test suite
@@ -19,14 +19,17 @@ c = [1, 2, "hello World"]
 MyListener = []
 Abc = ["def", 1]
 
-[configs.default]
+[configurations.default]
 args = ["abc"]
 python_path = ["abc", "def"]
 
-[configs.devel]
+[configurations.default.envs]
+ENV_VAR2 = "2"
+
+[configurations.devel]
 mode = "default"
 
-[configs.devel.listeners]
+[configurations.devel.listeners]
 AnotherListener = ["default"]
 
 [configs.devel_detached]

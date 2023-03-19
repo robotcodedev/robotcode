@@ -1,279 +1,290 @@
 {
-  "title": "ParsingModel[RobotConfig]",
-  "$ref": "#/definitions/RobotConfig",
+  "$id": "robotframework:https://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
+    "Configuration": {
+      "description": "Configuration(args: 'List[str]' = <factory>, documentation: 'Optional[str]' = None, python_path: 'List[str]' = <factory>, env: 'Dict[str, str]' = <factory>, variables: 'Dict[str, Any]' = <factory>, variable_files: 'List[str]' = <factory>, paths: 'List[str]' = <factory>, output_dir: 'Optional[str]' = None, output_file: 'Optional[str]' = None, log_file: 'Optional[str]' = None, debug_file: 'Optional[str]' = None, log_level: 'Optional[str]' = None, console: 'Optional[str]' = None, mode: 'Optional[Mode]' = None, meta_data: 'List[str]' = <factory>, languages: 'List[str]' = <factory>, parsers: 'Dict[str, List[Any]]' = <factory>, pre_run_modifiers: 'Dict[str, List[Any]]' = <factory>, pre_rebot_modifiers: 'Dict[str, List[Any]]' = <factory>, listeners: 'Dict[str, List[Any]]' = <factory>, dry_run: 'Optional[bool]' = None, configurations: 'Dict[str, DetachableConfiguration]' = <factory>)",
+      "properties": {
+        "args": {
+          "description": "Extra arguments to be passed to Robot Framework\n\nExamples:\n```toml\nargs = [\"-t\", \"abc\"]\n```\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Args",
+          "type": "array"
+        },
+        "configurations": {
+          "additionalProperties": {
+            "$ref": "#/definitions/DetachableConfiguration"
+          },
+          "description": "Configurations for Robot Framework.",
+          "title": "Configurations",
+          "type": "object"
+        },
+        "console": {
+          "title": "Console",
+          "type": "string"
+        },
+        "debug-file": {
+          "title": "Debug-File",
+          "type": "string"
+        },
+        "documentation": {
+          "description": "Documentation for the test suite.",
+          "title": "Documentation",
+          "type": "string"
+        },
+        "dry-run": {
+          "title": "Dry-Run",
+          "type": "boolean"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Environment variables to be set before running tests.\n\nExamples:\n```toml\n[env]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
+          "title": "Env",
+          "type": "object"
+        },
+        "languages": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Languages",
+          "type": "array"
+        },
+        "listeners": {
+          "additionalProperties": {
+            "items": {},
+            "type": "array"
+          },
+          "title": "Listeners",
+          "type": "object"
+        },
+        "log-file": {
+          "title": "Log-File",
+          "type": "string"
+        },
+        "log-level": {
+          "title": "Log-Level",
+          "type": "string"
+        },
+        "meta-data": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Meta-Data",
+          "type": "array"
+        },
+        "mode": {
+          "$ref": "#/definitions/Mode"
+        },
+        "output-dir": {
+          "title": "Output-Dir",
+          "type": "string"
+        },
+        "output-file": {
+          "title": "Output-File",
+          "type": "string"
+        },
+        "parsers": {
+          "additionalProperties": {
+            "items": {},
+            "type": "array"
+          },
+          "title": "Parsers",
+          "type": "object"
+        },
+        "paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Paths",
+          "type": "array"
+        },
+        "pre-rebot-modifiers": {
+          "additionalProperties": {
+            "items": {},
+            "type": "array"
+          },
+          "title": "Pre-Rebot-Modifiers",
+          "type": "object"
+        },
+        "pre-run-modifiers": {
+          "additionalProperties": {
+            "items": {},
+            "type": "array"
+          },
+          "title": "Pre-Run-Modifiers",
+          "type": "object"
+        },
+        "python-path": {
+          "description": "Additional locations directories where\nto search test libraries and other extensions when\nthey are imported. Given path can also be a glob\npattern matching multiple paths.\n\nExamples:\n```toml\npython_path = [\"./lib\", \"./resources\"]\n```\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Python-Path",
+          "type": "array"
+        },
+        "variable-files": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Variable-Files",
+          "type": "array"
+        },
+        "variables": {
+          "title": "Variables",
+          "type": "object"
+        }
+      },
+      "title": "Configuration",
+      "type": "object"
+    },
+    "DetachableConfiguration": {
+      "properties": {
+        "args": {
+          "description": "Extra arguments to be passed to Robot Framework\n\nExamples:\n```toml\nargs = [\"-t\", \"abc\"]\n```\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Args",
+          "type": "array"
+        },
+        "console": {
+          "title": "Console",
+          "type": "string"
+        },
+        "debug-file": {
+          "title": "Debug-File",
+          "type": "string"
+        },
+        "detached": {
+          "default": false,
+          "title": "Detached",
+          "type": "boolean"
+        },
+        "documentation": {
+          "description": "Documentation for the test suite.",
+          "title": "Documentation",
+          "type": "string"
+        },
+        "dry-run": {
+          "title": "Dry-Run",
+          "type": "boolean"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Environment variables to be set before running tests.\n\nExamples:\n```toml\n[env]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
+          "title": "Env",
+          "type": "object"
+        },
+        "languages": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Languages",
+          "type": "array"
+        },
+        "listeners": {
+          "additionalProperties": {
+            "items": {},
+            "type": "array"
+          },
+          "title": "Listeners",
+          "type": "object"
+        },
+        "log-file": {
+          "title": "Log-File",
+          "type": "string"
+        },
+        "log-level": {
+          "title": "Log-Level",
+          "type": "string"
+        },
+        "meta-data": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Meta-Data",
+          "type": "array"
+        },
+        "mode": {
+          "$ref": "#/definitions/Mode"
+        },
+        "output-dir": {
+          "title": "Output-Dir",
+          "type": "string"
+        },
+        "output-file": {
+          "title": "Output-File",
+          "type": "string"
+        },
+        "parsers": {
+          "additionalProperties": {
+            "items": {},
+            "type": "array"
+          },
+          "title": "Parsers",
+          "type": "object"
+        },
+        "paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Paths",
+          "type": "array"
+        },
+        "pre-rebot-modifiers": {
+          "additionalProperties": {
+            "items": {},
+            "type": "array"
+          },
+          "title": "Pre-Rebot-Modifiers",
+          "type": "object"
+        },
+        "pre-run-modifiers": {
+          "additionalProperties": {
+            "items": {},
+            "type": "array"
+          },
+          "title": "Pre-Run-Modifiers",
+          "type": "object"
+        },
+        "python-path": {
+          "description": "Additional locations directories where\nto search test libraries and other extensions when\nthey are imported. Given path can also be a glob\npattern matching multiple paths.\n\nExamples:\n```toml\npython_path = [\"./lib\", \"./resources\"]\n```\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Python-Path",
+          "type": "array"
+        },
+        "variable-files": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Variable-Files",
+          "type": "array"
+        },
+        "variables": {
+          "title": "Variables",
+          "type": "object"
+        }
+      },
+      "title": "DetachableConfiguration",
+      "type": "object"
+    },
     "Mode": {
-      "title": "Mode",
       "description": "Run mode for Robot Framework.",
       "enum": [
         "default",
         "rpa",
         "norpa"
-      ]
-    },
-    "EnvironmentConfig": {
-      "title": "EnvironmentConfig",
-      "type": "object",
-      "properties": {
-        "args": {
-          "title": "Args",
-          "description": "Extra arguments to be passed to Robot Framework\n\nExamples:\n```toml\nargs = [\"-t\", \"abc\"]\n```\n",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "documentation": {
-          "title": "Documentation",
-          "description": "Documentation for the test suite.",
-          "type": "string"
-        },
-        "python_path": {
-          "title": "Python Path",
-          "description": "Additional locations directories where\nto search test libraries and other extensions when\nthey are imported. Given path can also be a glob\npattern matching multiple paths.\n\nExamples:\n```toml\npython_path = [\"./lib\", \"./resources\"]\n```\n",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "env": {
-          "title": "Env",
-          "description": "Environment variables to be set before running tests.\n\nExamples:\n```toml\n[env]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
-        },
-        "variables": {
-          "title": "Variables",
-          "type": "object"
-        },
-        "variable_files": {
-          "title": "Variable Files",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "paths": {
-          "title": "Paths",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "output_dir": {
-          "title": "Output Dir",
-          "type": "string"
-        },
-        "output_file": {
-          "title": "Output File",
-          "type": "string"
-        },
-        "log_file": {
-          "title": "Log File",
-          "type": "string"
-        },
-        "debug_file": {
-          "title": "Debug File",
-          "type": "string"
-        },
-        "log_level": {
-          "title": "Log Level",
-          "type": "string"
-        },
-        "console": {
-          "title": "Console",
-          "type": "string"
-        },
-        "mode": {
-          "$ref": "#/definitions/Mode"
-        },
-        "meta_data": {
-          "title": "Meta Data",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "languages": {
-          "title": "Languages",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "parsers": {
-          "title": "Parsers",
-          "type": "object",
-          "additionalProperties": {
-            "type": "array",
-            "items": {}
-          }
-        },
-        "pre_run_modifiers": {
-          "title": "Pre Run Modifiers",
-          "type": "object",
-          "additionalProperties": {
-            "type": "array",
-            "items": {}
-          }
-        },
-        "pre_rebot_modifiers": {
-          "title": "Pre Rebot Modifiers",
-          "type": "object",
-          "additionalProperties": {
-            "type": "array",
-            "items": {}
-          }
-        },
-        "listeners": {
-          "title": "Listeners",
-          "type": "object",
-          "additionalProperties": {
-            "type": "array",
-            "items": {}
-          }
-        },
-        "detached": {
-          "title": "Detached",
-          "default": false,
-          "type": "boolean"
-        }
-      }
-    },
-    "RobotConfig": {
-      "title": "RobotConfig",
-      "type": "object",
-      "properties": {
-        "args": {
-          "title": "Args",
-          "description": "Extra arguments to be passed to Robot Framework\n\nExamples:\n```toml\nargs = [\"-t\", \"abc\"]\n```\n",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "documentation": {
-          "title": "Documentation",
-          "description": "Documentation for the test suite.",
-          "type": "string"
-        },
-        "python_path": {
-          "title": "Python Path",
-          "description": "Additional locations directories where\nto search test libraries and other extensions when\nthey are imported. Given path can also be a glob\npattern matching multiple paths.\n\nExamples:\n```toml\npython_path = [\"./lib\", \"./resources\"]\n```\n",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "env": {
-          "title": "Env",
-          "description": "Environment variables to be set before running tests.\n\nExamples:\n```toml\n[env]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
-        },
-        "variables": {
-          "title": "Variables",
-          "type": "object"
-        },
-        "variable_files": {
-          "title": "Variable Files",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "paths": {
-          "title": "Paths",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "output_dir": {
-          "title": "Output Dir",
-          "type": "string"
-        },
-        "output_file": {
-          "title": "Output File",
-          "type": "string"
-        },
-        "log_file": {
-          "title": "Log File",
-          "type": "string"
-        },
-        "debug_file": {
-          "title": "Debug File",
-          "type": "string"
-        },
-        "log_level": {
-          "title": "Log Level",
-          "type": "string"
-        },
-        "console": {
-          "title": "Console",
-          "type": "string"
-        },
-        "mode": {
-          "$ref": "#/definitions/Mode"
-        },
-        "meta_data": {
-          "title": "Meta Data",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "languages": {
-          "title": "Languages",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "parsers": {
-          "title": "Parsers",
-          "type": "object",
-          "additionalProperties": {
-            "type": "array",
-            "items": {}
-          }
-        },
-        "pre_run_modifiers": {
-          "title": "Pre Run Modifiers",
-          "type": "object",
-          "additionalProperties": {
-            "type": "array",
-            "items": {}
-          }
-        },
-        "pre_rebot_modifiers": {
-          "title": "Pre Rebot Modifiers",
-          "type": "object",
-          "additionalProperties": {
-            "type": "array",
-            "items": {}
-          }
-        },
-        "listeners": {
-          "title": "Listeners",
-          "type": "object",
-          "additionalProperties": {
-            "type": "array",
-            "items": {}
-          }
-        },
-        "configs": {
-          "title": "Configs",
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/EnvironmentConfig"
-          }
-        }
-      }
+      ],
+      "title": "Mode"
     }
-  }
+  },
+  "title": "Robot Framework Configuration"
 }

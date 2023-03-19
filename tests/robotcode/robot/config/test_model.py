@@ -3,11 +3,11 @@ from typing import Any, Dict
 import pytest
 
 from robotcode.core.dataclasses import TypeValidationError, as_dict, from_dict
-from robotcode.robot.config.model import Mode, RobotConfig
+from robotcode.robot.config.model import Configuration, Mode
 
 
 def test_robot_config_default() -> None:
-    model = RobotConfig()
+    model = Configuration()
 
     assert model.args == []
     assert model.python_path == []
@@ -38,32 +38,32 @@ def test_robot_config_default() -> None:
 )
 def test_robot_config_cannot_assign_invalid_args(kwargs: Dict[str, Any]) -> None:
     with pytest.raises(TypeValidationError):
-        RobotConfig(**kwargs)
+        Configuration(**kwargs)
 
 
 def test_robot_config_can_created_from_dict() -> None:
     data: Dict[str, Any] = {
         "args": ["--argument"],
-        "python_path": ["asd"],
+        "python-path": ["asd"],
         "env": {},
         "variables": {"a": 1},
-        "variable_files": [],
+        "variable-files": [],
         "paths": [],
         "console": None,
-        "output_dir": None,
-        "output_file": None,
-        "log_file": None,
+        "output-dir": None,
+        "output-file": None,
+        "log-file": None,
         "debug_file": None,
-        "log_level": None,
+        "log-level": None,
         "languages": [],
         "parsers": {},
-        "pre_run_modifiers": {},
-        "pre_rebot_modifiers": {},
+        "pre-run-modifiers": {},
+        "pre-rebot-modifiers": {},
         "listeners": {},
         "mode": "default",
     }
-    model = from_dict(data, RobotConfig)
+    model = from_dict(data, Configuration)
     data["mode"] = Mode.DEFAULT
     model_dict = as_dict(model)
     for key in data:
-        assert model_dict[key] == data[key]
+        assert model_dict[key.replace("-", "_")] == data[key]

@@ -74,6 +74,12 @@
   },
   "main": "./out/extension.js",
   "contributes": {
+    "tomlValidation": [
+      {
+        "fileMatch": "robot.toml",
+        "url": "https://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.json"
+      }
+    ],
     "configurationDefaults": {
       "[robotframework]": {
         "editor.wordBasedSuggestions": false,
