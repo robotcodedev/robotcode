@@ -1,0 +1,50 @@
+data: !GeneratedTestData
+  character: 16
+  line: 1
+  name: a builtin library
+result:
+- !Location
+  range:
+    end:
+      character: 27
+      line: 1
+    start:
+      character: 16
+      line: 1
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 27
+      line: 1
+    start:
+      character: 16
+      line: 1
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 29
+      line: 1
+    start:
+      character: 18
+      line: 1
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 29
+      line: 1
+    start:
+      character: 18
+      line: 1
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 27
+      line: 1
+    start:
+      character: 16
+      line: 1
+  uri: tests/references.robot

@@ -1,0 +1,95 @@
+data: !GeneratedTestData
+  character: 4
+  line: 30
+  name: simple keyword call
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 30
+    start:
+      character: 4
+      line: 30
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 37
+    start:
+      character: 4
+      line: 37
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 72
+    start:
+      character: 4
+      line: 72
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 74
+    start:
+      character: 4
+      line: 74
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 82
+    start:
+      character: 4
+      line: 82
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 84
+    start:
+      character: 4
+      line: 84
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 92
+    start:
+      character: 4
+      line: 92
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 94
+    start:
+      character: 4
+      line: 94
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 96
+    start:
+      character: 4
+      line: 96
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 106
+    start:
+      character: 4
+      line: 106

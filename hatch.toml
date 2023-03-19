@@ -30,6 +30,7 @@ pre-install-commands = ["python ./scripts/install_packages.py"]
 cov = "pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=robotcode --cov=tests {args}"
 no-cov = "cov --no-cov {args}"
 test = "pytest {args}"
+test-reset = "test --regtest-reset"
 install-bundled-editable = "python ./scripts/install_bundled_editable.py"
 
 [envs.devel]
@@ -38,7 +39,7 @@ features = ["yaml", "rest", "lint", "tidy"]
 
 [[envs.devel.matrix]]
 python = ["38", "39", "310", "311"]
-rf = ["rf41", "rf50", "rf60"]
+rf = ["rf41", "rf50", "rf60", "rf61a1"]
 
 [envs.devel.overrides]
 matrix.rf.dependencies = [
@@ -51,10 +52,13 @@ matrix.rf.dependencies = [
   { value = "robotframework>6.0.0, <6.1", if = [
     "rf60",
   ] },
+  { value = "robotframework==6.1a1", if = [
+    "rf61a1",
+  ] },
 ]
 
 [[envs.test.matrix]]
-rf = ["rf41", "rf50", "rf60"]
+rf = ["rf41", "rf50", "rf60", "rf61a1"]
 
 [envs.test.overrides]
 matrix.rf.dependencies = [
@@ -66,6 +70,9 @@ matrix.rf.dependencies = [
   ] },
   { value = "robotframework>6.0.0, <6.1", if = [
     "rf60",
+  ] },
+  { value = "robotframework==6.1a1", if = [
+    "rf61a1",
   ] },
 ]
 

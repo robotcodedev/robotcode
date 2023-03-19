@@ -1,0 +1,59 @@
+data: !GeneratedTestData
+  character: 13
+  line: 96
+  name: argument usage
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 43
+      line: 88
+    start:
+      character: 42
+      line: 88
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 14
+      line: 96
+    start:
+      character: 13
+      line: 96
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 60
+      line: 99
+    start:
+      character: 59
+      line: 99
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 52
+      line: 100
+    start:
+      character: 51
+      line: 100
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 61
+      line: 100
+    start:
+      character: 60
+      line: 100
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 58
+      line: 101
+    start:
+      character: 57
+      line: 101

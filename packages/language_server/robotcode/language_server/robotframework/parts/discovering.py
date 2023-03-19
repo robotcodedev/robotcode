@@ -13,14 +13,21 @@ from robotcode.core.dataclasses import CamelSnakeMixin
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.uri import Uri
 from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.common.lsp_types import DocumentUri, Position, Range, TextDocumentIdentifier
+from robotcode.language_server.common.lsp_types import (
+    DocumentUri,
+    Position,
+    Range,
+    TextDocumentIdentifier,
+)
 from robotcode.language_server.robotframework.configuration import RobotConfig
 from robotcode.language_server.robotframework.utils.async_ast import AsyncVisitor
 
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
+    from robotcode.language_server.robotframework.protocol import (
+        RobotLanguageServerProtocol,
+    )
 
 
 @dataclass
@@ -107,7 +114,9 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         from robot.running import TestSuite
         from robot.running.builder.builders import RobotParser, TestSuiteBuilder
 
-        from robotcode.language_server.robotframework.utils.version import get_robot_version
+        from robotcode.language_server.robotframework.utils.version import (
+            get_robot_version,
+        )
 
         def get_document_text(source: str) -> str:
             check_canceled_sync()
@@ -138,7 +147,10 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                 return File(source=source)
 
         def my_get_model_v6(
-            source: str, data_only: bool = False, curdir: Optional[str] = None, lang: Any = None
+            source: str,
+            data_only: bool = False,
+            curdir: Optional[str] = None,
+            lang: Any = None,
         ) -> Any:
             check_canceled_sync()
             try:
@@ -193,7 +205,9 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
         from robot.running import TestCase, TestSuite
         from robot.running.builder.builders import TestSuiteBuilder
 
-        from robotcode.language_server.robotframework.utils.version import get_robot_version
+        from robotcode.language_server.robotframework.utils.version import (
+            get_robot_version,
+        )
 
         async def generate(suite: TestSuite) -> TestItem:
             children: List[TestItem] = []
@@ -280,7 +294,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
 
                 valid_paths = list(normalize_paths(paths))
 
-                if get_robot_version() >= (6, 1):
+                if get_robot_version() >= (6, 1, 0, "a", 2):
                     builder = TestSuiteBuilder(
                         included_suites=suites if suites else None,
                         rpa=rpa_mode,
@@ -322,7 +336,7 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                     )
                 ]
 
-            if get_robot_version() >= (6, 1):
+            if get_robot_version() >= (6, 1, 0, "a", 2):
                 builder = TestSuiteBuilder(
                     included_suites=suites if suites else None,
                     rpa=rpa_mode,
@@ -330,7 +344,11 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
                     parsers=parsers,
                 )
             elif get_robot_version() >= (6, 0):
-                builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode, lang=languages)
+                builder = TestSuiteBuilder(
+                    included_suites=suites if suites else None,
+                    rpa=rpa_mode,
+                    lang=languages,
+                )
             else:
                 builder = TestSuiteBuilder(included_suites=suites if suites else None, rpa=rpa_mode)
             return [await generate(builder.build(str(workspace_path)))]
@@ -359,7 +377,11 @@ class DiscoveringProtocolPart(RobotLanguageServerProtocolPart):
     @rpc_method(name="robot/discovering/getTestsFromDocument", param_type=GetTestsParams)
     @threaded()
     async def get_tests_from_document(
-        self, text_document: TextDocumentIdentifier, base_name: Optional[str], *args: Any, **kwargs: Any
+        self,
+        text_document: TextDocumentIdentifier,
+        base_name: Optional[str],
+        *args: Any,
+        **kwargs: Any,
     ) -> List[TestItem]:
         try:
             return await FindTestCasesVisitor().get(

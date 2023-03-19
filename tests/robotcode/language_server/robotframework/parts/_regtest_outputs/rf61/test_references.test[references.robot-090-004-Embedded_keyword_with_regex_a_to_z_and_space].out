@@ -1,0 +1,41 @@
+data: !GeneratedTestData
+  character: 4
+  line: 90
+  name: Embedded keyword with regex a to z and space
+result:
+- !Location
+  range:
+    end:
+      character: 32
+      line: 80
+    start:
+      character: 4
+      line: 80
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 36
+      line: 90
+    start:
+      character: 4
+      line: 90
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 36
+      line: 92
+    start:
+      character: 4
+      line: 92
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 34
+      line: 118
+    start:
+      character: 0
+      line: 118
+  uri: tests/references.robot

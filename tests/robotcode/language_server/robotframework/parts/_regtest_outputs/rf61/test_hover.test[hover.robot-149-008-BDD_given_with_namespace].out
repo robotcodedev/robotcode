@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 8
+  line: 149
+  name: BDD given with namespace
+result: null

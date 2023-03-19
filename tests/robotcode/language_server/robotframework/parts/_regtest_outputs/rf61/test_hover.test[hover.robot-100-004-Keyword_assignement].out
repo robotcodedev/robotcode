@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 4
+  line: 100
+  name: Keyword assignement
+result: null

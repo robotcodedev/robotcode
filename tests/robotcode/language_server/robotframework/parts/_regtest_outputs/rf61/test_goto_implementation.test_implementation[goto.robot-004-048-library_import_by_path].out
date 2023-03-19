@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 48
+  line: 4
+  name: library import by path
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 49
+      line: 4
+    start:
+      character: 18
+      line: 4
+  target_range:
+    end:
+      character: 0
+      line: 1
+    start:
+      character: 0
+      line: 0
+  target_selection_range:
+    end:
+      character: 0
+      line: 1
+    start:
+      character: 0
+      line: 0
+  target_uri: myvariables.py
