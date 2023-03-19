@@ -1,8 +1,10 @@
 {
   "$id": "robotframework:https://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
   "definitions": {
     "DetachableConfiguration": {
+      "additionalProperties": false,
       "properties": {
         "args": {
           "description": "Extra arguments to be passed to Robot Framework\n\nExamples:\n```toml\nargs = [\"-t\", \"abc\"]\n```\n",
@@ -25,9 +27,9 @@
           "title": "Detached",
           "type": "boolean"
         },
-        "documentation": {
-          "description": "Documentation for the test suite.",
-          "title": "Documentation",
+        "doc": {
+          "description": "Set the documentation of the top level suite.\nSimple formatting is supported (e.g. *bold*). If the\ndocumentation contains spaces, it must be quoted.\nIf the value is path to an existing file, actual\ndocumentation is read from that file.\n\nExamples:\n```toml\ndoc = \"\"\"Very *good* example\n\nThis is a second paragraph.\n\"\"\"\n```\n",
+          "title": "Doc",
           "type": "string"
         },
         "dry-run": {
@@ -38,7 +40,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Environment variables to be set before running tests.\n\nExamples:\n```toml\n[env]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
+          "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`\n\nExamples:\n```toml\n[env]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
           "title": "Env",
           "type": "object"
         },
@@ -130,6 +132,7 @@
           "type": "array"
         },
         "variables": {
+          "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`\n\nExamples:\n```toml\n[variables]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
           "title": "Variables",
           "type": "object"
         }
@@ -157,14 +160,6 @@
       "title": "Args",
       "type": "array"
     },
-    "configurations": {
-      "additionalProperties": {
-        "$ref": "#/definitions/DetachableConfiguration"
-      },
-      "description": "Configurations for Robot Framework.",
-      "title": "Configurations",
-      "type": "object"
-    },
     "console": {
       "title": "Console",
       "type": "string"
@@ -173,9 +168,9 @@
       "title": "Debug-File",
       "type": "string"
     },
-    "documentation": {
-      "description": "Documentation for the test suite.",
-      "title": "Documentation",
+    "doc": {
+      "description": "Set the documentation of the top level suite.\nSimple formatting is supported (e.g. *bold*). If the\ndocumentation contains spaces, it must be quoted.\nIf the value is path to an existing file, actual\ndocumentation is read from that file.\n\nExamples:\n```toml\ndoc = \"\"\"Very *good* example\n\nThis is a second paragraph.\n\"\"\"\n```\n",
+      "title": "Doc",
       "type": "string"
     },
     "dry-run": {
@@ -186,7 +181,7 @@
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Environment variables to be set before running tests.\n\nExamples:\n```toml\n[env]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
+      "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`\n\nExamples:\n```toml\n[env]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
       "title": "Env",
       "type": "object"
     },
@@ -262,6 +257,14 @@
       "title": "Pre-Run-Modifiers",
       "type": "object"
     },
+    "profiles": {
+      "additionalProperties": {
+        "$ref": "#/definitions/DetachableConfiguration"
+      },
+      "description": "Execution Profiles.",
+      "title": "Profiles",
+      "type": "object"
+    },
     "python-path": {
       "description": "Additional locations directories where\nto search test libraries and other extensions when\nthey are imported. Given path can also be a glob\npattern matching multiple paths.\n\nExamples:\n```toml\npython_path = [\"./lib\", \"./resources\"]\n```\n",
       "items": {
@@ -278,6 +281,7 @@
       "type": "array"
     },
     "variables": {
+      "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`\n\nExamples:\n```toml\n[variables]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
       "title": "Variables",
       "type": "object"
     }

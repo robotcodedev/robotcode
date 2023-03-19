@@ -1,6 +1,5 @@
 args = []
-
-python_path = []
+python-path = []
 documentation = """\
 This is a *sample* test suite
 
@@ -19,19 +18,19 @@ c = [1, 2, "hello World"]
 MyListener = []
 Abc = ["def", 1]
 
-[configurations.default]
+[profiles.default]
 args = ["abc"]
-python_path = ["abc", "def"]
+python-path = ["abc", "def"]
 
-[configurations.default.envs]
+[profiles.default.envs]
 ENV_VAR2 = "2"
 
-[configurations.devel]
+[profiles.devel]
 mode = "default"
 
-[configurations.devel.listeners]
+[profiles.devel.listeners]
 AnotherListener = ["default"]
 
-[configs.devel_detached]
+[profiles.devel-detached]
 detached = true
 mode = "default"

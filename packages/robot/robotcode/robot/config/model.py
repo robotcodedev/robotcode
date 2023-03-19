@@ -40,7 +40,26 @@ args = ["-t", "abc"]
 """
         },
     )
-    documentation: Optional[str] = field(default=None, metadata={"description": "Documentation for the test suite."})
+    doc: Optional[str] = field(
+        default=None,
+        metadata={
+            "description": """\
+Set the documentation of the top level suite.
+Simple formatting is supported (e.g. *bold*). If the
+documentation contains spaces, it must be quoted.
+If the value is path to an existing file, actual
+documentation is read from that file.
+
+Examples:
+```toml
+doc = \"\"\"Very *good* example
+
+This is a second paragraph.
+\"\"\"
+```
+"""
+        },
+    )
     """Arguments to be passed to Robot Framework"""
     python_path: List[str] = field(
         default_factory=list,
@@ -62,7 +81,9 @@ python_path = ["./lib", "./resources"]
         default_factory=dict,
         metadata={
             "description": """\
-Environment variables to be set before running tests.
+Set variables in the test data. Only scalar
+variables with string value are supported and name is
+given without `${}`
 
 Examples:
 ```toml
@@ -73,7 +94,39 @@ SECRET = "password"
 """
         },
     )
-    variables: Dict[str, Any] = field(default_factory=dict)
+    variables: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={
+            "description": """\
+Set variables in the test data. Only scalar
+variables with string value are supported and name is
+given without `${}`
+
+Examples:
+```toml
+[variables]
+TEST_VAR = "test"
+SECRET = "password"
+```
+"""
+        },
+    )
+    meta_data: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={
+            "description": """\
+Set metadata of the top level suite. Value can
+contain formatting and be read from a file similarly
+
+Examples:
+```toml
+[meta-data]
+Version = "1.2"
+Release = "release.txt"
+```
+"""
+        },
+    )
     variable_files: List[str] = field(default_factory=list)
     paths: List[str] = field(default_factory=list)
     output_dir: Optional[str] = None
@@ -83,7 +136,6 @@ SECRET = "password"
     log_level: Optional[str] = None
     console: Optional[str] = None
     mode: Optional[Mode] = None
-    meta_data: List[str] = field(default_factory=list)
     languages: List[str] = field(default_factory=list)
     parsers: Dict[str, List[Any]] = field(default_factory=dict)
     pre_run_modifiers: Dict[str, List[Any]] = field(default_factory=dict)
@@ -104,9 +156,9 @@ class DetachableConfiguration(BaseConfiguration):
 class Configuration(BaseConfiguration):
     """Configuration for Robot Framework."""
 
-    configurations: Dict[str, DetachableConfiguration] = field(
+    profiles: Dict[str, DetachableConfiguration] = field(
         default_factory=dict,
-        metadata={"description": "Configurations for Robot Framework."},
+        metadata={"description": "Execution Profiles."},
     )
 
 
@@ -119,6 +171,9 @@ class Configuration(BaseConfiguration):
 #     class Config:
 #         title = "robot.toml"
 #         description = "Configuration for Robot Framework."
+#         schema_extra = {
+#             "additionalProperties": False,
+#         }
 
 #         @classmethod
 #         def alias_generator(cls, string: str) -> str:
@@ -129,9 +184,7 @@ class Configuration(BaseConfiguration):
 #     schema = model.schema()
 
 #     schema["$schema"] = "http://json-schema.org/draft-07/schema#"
-#     schema[
-#         "$id"
-#     ] = "robotframework:https://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.json"
+#     schema["$id"] = "robotframework:https://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.json"
 #     schema["x-taplo-info"] = {
 #         "authors": ["d-biehl (https://github.com/d-biehl)"],
 #         "patterns": ["^(.*(/|\\\\)robot\\.toml|robot\\.toml)$"],
