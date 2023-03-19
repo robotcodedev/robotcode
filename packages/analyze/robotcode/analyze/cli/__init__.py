@@ -1,13 +1,8 @@
-import sys
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
+from typing import Tuple, Union
 
 import click
-from robot.errors import DataError, Information
-from robot.run import USAGE, RobotFramework
+from robot.run import USAGE
 from robot.version import get_full_version
-
-from robotcode.core.dataclasses import from_dict
 
 from ..__version__ import __version__
 

@@ -3,6 +3,7 @@ import dataclasses
 import enum
 import functools
 import inspect
+import itertools
 import json
 import re
 from typing import (
@@ -27,7 +28,16 @@ from typing import (
     runtime_checkable,
 )
 
-__all__ = ["to_snake_case", "to_camel_case", "as_json", "from_dict", "from_json", "as_dict"]
+__all__ = [
+    "to_snake_case",
+    "to_camel_case",
+    "as_json",
+    "from_dict",
+    "from_json",
+    "as_dict",
+    "ValidateMixin",
+    "CamelSnakeMixin",
+]
 
 _RE_SNAKE_CASE_1 = re.compile(r"[\-\.\s]")
 _RE_SNAKE_CASE_2 = re.compile(r"[A-Z]")
@@ -125,7 +135,10 @@ def __encode_case(obj: Any, field: dataclasses.Field) -> str:  # type: ignore
 
 def __decode_case(type: Type[_T], name: str) -> str:
     if dataclasses.is_dataclass(type):
-        field = next((f for f in dataclasses.fields(type) if f.metadata.get("alias", None) == name), None)
+        field = next(
+            (f for f in dataclasses.fields(type) if f.metadata.get("alias", None) == name),
+            None,
+        )
         if field:
             return field.name
 
@@ -156,19 +169,35 @@ def __default(o: Any) -> Any:
 
 
 def as_json(obj: Any, indent: Optional[bool] = None, compact: Optional[bool] = None) -> str:
-    return json.dumps(obj, default=__default, indent=4 if indent else None, separators=(",", ":") if compact else None)
+    return json.dumps(
+        obj,
+        default=__default,
+        indent=4 if indent else None,
+        separators=(",", ":") if compact else None,
+    )
 
 
 def _from_dict_with_name(
-    name: str, value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = None, /, *, strict: bool = False
+    name: str,
+    value: Any,
+    types: Union[Type[_T], Tuple[Type[_T], ...], None] = None,
+    /,
+    *,
+    strict: bool = False,
 ) -> _T:
     try:
         return from_dict(value, types, strict=strict)
     except TypeError as e:
-        raise TypeError(f"Can't convert value for '{name}': {e}") from e
+        raise TypeError(f"Invalid value for '{name}': {e}") from e
 
 
-def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = None, /, *, strict: bool = False) -> _T:
+def from_dict(
+    value: Any,
+    types: Union[Type[_T], Tuple[Type[_T], ...], None] = None,
+    /,
+    *,
+    strict: bool = False,
+) -> _T:
     if types is None:
         return cast(_T, value)
 
@@ -195,7 +224,10 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
             or (isinstance(value, Sequence) and args and issubclass(origin or t, Sequence))
         ):
             if isinstance(value, Mapping):
-                return cast(_T, {n: _from_dict_with_name(n, v, args[1] if args else None) for n, v in value.items()})
+                return cast(
+                    _T,
+                    {n: _from_dict_with_name(n, v, args[1] if args else None) for n, v in value.items()},
+                )
             if isinstance(value, Sequence) and args:
                 return cast(_T, (origin or t)(from_dict(v, args) for v in value))  # type: ignore
 
@@ -276,16 +308,150 @@ def from_dict(value: Any, types: Union[Type[_T], Tuple[Type[_T], ...], None] = N
                     return cast(_T, v)
 
     raise TypeError(
-        f"Cant convert value {repr(value)} to type "
+        f"Cant convert value <{repr(value)}> of type {type(value)} to type "
         f"{repr(types[0]) if len(types)==1 else ' | '.join(repr(e) for e in types)}."
     )
 
 
 def from_json(
-    s: Union[str, bytes], types: Union[Type[_T], Tuple[Type[_T], ...], None] = None, /, *, strict: bool = False
+    s: Union[str, bytes],
+    types: Union[Type[_T], Tuple[Type[_T], ...], None] = None,
+    /,
+    *,
+    strict: bool = False,
 ) -> _T:
     return from_dict(json.loads(s), types, strict=strict)
 
 
 def as_dict(value: Any) -> Dict[str, Any]:
     return dataclasses.asdict(value)
+
+
+class TypeValidationError(Exception):
+    def __init__(self, *args: Any, target: Any, errors: Dict[str, str]) -> None:
+        super().__init__(*args)
+        self.class_ = target.__class__
+        self.errors = errors
+
+    def __repr__(self) -> str:
+        cls = self.class_
+        cls_name = f"{cls.__module__}.{cls.__name__}" if cls.__module__ != "__main__" else cls.__name__
+        attrs = ", ".join([repr(v) for v in self.args])
+        return f"{cls_name}({attrs}, errors={repr(self.errors)})"
+
+    def __str__(self) -> str:
+        cls = self.class_
+        cls_name = f"{cls.__module__}.{cls.__name__}" if cls.__module__ != "__main__" else cls.__name__
+        s = cls_name
+        return f"{s} (errors = {self.errors})"
+
+
+def _validate_types(expected_types: Union[type, Tuple[type, ...], None], value: Any) -> List[str]:
+    if expected_types is None:
+        return []
+
+    if not isinstance(expected_types, tuple):
+        expected_types = (expected_types,)
+
+    result = []
+
+    for t in expected_types:
+        args = get_args(t)
+        origin = get_origin(t)
+
+        if origin is Union:
+            r = _validate_types(args, value)
+            if r:
+                result.extend(r)
+                continue
+
+            return []
+
+        if origin is Literal:
+            if value in args:
+                return []
+
+            result.append(f"Value {value} is not in {args}")
+            continue
+
+        if (
+            t is Any
+            or t is Ellipsis  # type: ignore
+            or isinstance(value, origin or t)
+            or (isinstance(value, Sequence) and args and issubclass(origin or t, Sequence))
+        ):
+            if isinstance(value, Mapping):
+                r = list(
+                    itertools.chain(
+                        *(
+                            itertools.chain(
+                                _validate_types(args[0] if args else None, n),
+                                _validate_types(args[1] if args else None, v),
+                            )
+                            for n, v in value.items()
+                        )
+                    )
+                )
+                if r:
+                    result.extend(r)
+                    continue
+
+                return []
+
+            if isinstance(value, Sequence) and args:
+                r = list(itertools.chain(*(_validate_types(args, v) for v in value)))
+                if r:
+                    result.extend(r)
+                    continue
+
+                return []
+
+            if result:
+                continue
+
+            return []
+
+    if result:
+        return result
+
+    types_str = repr(expected_types[0]) if len(expected_types) == 1 else " | ".join(repr(e) for e in expected_types)
+    return [f"Expected type {types_str} but got {type(value)}"]
+
+
+class ValidateMixin:
+    def _convert(self) -> None:
+        if not dataclasses.is_dataclass(self):
+            return
+
+        for f in dataclasses.fields(self):
+            converter = f.metadata.get("convert")
+            if converter is not None:
+                if inspect.ismethod(converter):
+                    setattr(self, f.name, converter(getattr(self, f.name)))
+                else:
+                    setattr(self, f.name, converter(self, getattr(self, f.name)))
+
+    def _validate(self) -> None:
+        if not dataclasses.is_dataclass(self):
+            return
+
+        errors = {}
+        type_hints = get_type_hints(self.__class__)
+
+        for f in dataclasses.fields(self):
+            validate = f.metadata.get("validate")
+            if validate is not None:
+                ers = validate(self, getattr(self, f.name))
+                if ers:
+                    errors[f.name] = ers
+            else:
+                ers = _validate_types(type_hints[f.name], value=getattr(self, f.name))
+                if ers:
+                    errors[f.name] = ers
+
+        if errors:
+            raise TypeValidationError("Dataclass Type Validation Error", target=self, errors=errors)
+
+    def __post_init__(self) -> None:
+        self._convert()
+        self._validate()

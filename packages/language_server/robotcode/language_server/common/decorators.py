@@ -97,7 +97,7 @@ def command(name: str) -> Callable[[_F], _F]:
     return decorator
 
 
-def get_command_name(func: _F) -> str:
+def get_command_name(func: Callable[..., Any]) -> str:
     if isinstance(func, IsCommand):
         return func.__command_name__  # type: ignore
 

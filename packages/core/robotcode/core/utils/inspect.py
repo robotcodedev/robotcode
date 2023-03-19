@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Callable, Coroutine, Iterator, List, Optional, TypeVar, cast
+from typing import Any, Callable, Coroutine, Iterator, List, Optional
 
 
 def iter_methods(
@@ -23,7 +23,8 @@ def iter_methods(
 
 
 def get_methods(
-    instance_or_type: Any, predicate: Optional[Callable[[Callable[..., Any]], bool]] = None
+    instance_or_type: Any,
+    predicate: Optional[Callable[[Callable[..., Any]], bool]] = None,
 ) -> List[Callable[..., Any]]:
     return list(iter_methods(instance_or_type, predicate))
 
@@ -36,14 +37,11 @@ def is_lambda(v: Any) -> bool:
     return isinstance(v, _lambda_type) and v.__name__ == _lambda_name
 
 
-_TCallable = TypeVar("_TCallable", bound=Callable[..., Any])
-
-
-def ensure_coroutine(func: _TCallable) -> Callable[..., Coroutine[Any, Any, Any]]:
+def ensure_coroutine(func: Callable[..., Any]) -> Callable[..., Coroutine[Any, Any, Any]]:
     async def wrapper(*fargs: Any, **fkwargs: Any) -> Any:
         return func(*fargs, **fkwargs)
 
     if inspect.iscoroutinefunction(func) or inspect.iscoroutinefunction(inspect.unwrap(func)):
         return func
 
-    return cast("_TCallable", wrapper)
+    return wrapper

@@ -1,6 +1,5 @@
 import sys
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
+from typing import Any, List, Tuple, Union, cast
 
 import click
 from robot.errors import DataError, Information

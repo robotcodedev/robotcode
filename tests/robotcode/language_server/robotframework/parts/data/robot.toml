@@ -1,18 +1,34 @@
-[robot]
-paths = ["."]
-output_dir = "results"
-console = "quiet"
-python_path = ["lib", "resources"]
-variables = 1
-# [[robot.variables]]
-# ABC = "123"
-# DEF = 1
+args = ["abc"]
+mode = "rpa"
+python_path = []
+documentation = """\
+This is a *sample* test suite
 
-# [[robot.variables]]
-# QWER = "123"
-# ASDF = 1
+With a second line.
+"""
 
-[[robot.listeners]]
-MyListener = ["arg1", "arg2"]
-MyListener1 = ["arg1", "arg2asd"]
-AnotherListener = []
+[env]
+ENV_VAR1 = "1"
+
+[variables]
+a = 1
+b = "this is a string"
+c = [1, 2, "hello World"]
+
+[listeners]
+MyListener = []
+Abc = ["def", 1]
+
+[configs.default]
+args = ["abc"]
+python_path = ["abc", "def"]
+
+[configs.devel]
+mode = "default"
+
+[configs.devel.listeners]
+AnotherListener = ["default"]
+
+[configs.devel_detached]
+detached = true
+mode = "default"
