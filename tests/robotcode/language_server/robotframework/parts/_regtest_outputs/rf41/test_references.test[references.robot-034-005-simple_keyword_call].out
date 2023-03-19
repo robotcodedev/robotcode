@@ -160,6 +160,24 @@ result:
   range:
     end:
       character: 7
+      line: 7
+    start:
+      character: 4
+      line: 7
+  uri: rf61/embedded_keywords.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 11
+    start:
+      character: 4
+      line: 11
+  uri: rf61/embedded_keywords.robot
+- !Location
+  range:
+    end:
+      character: 7
       line: 2
     start:
       character: 4

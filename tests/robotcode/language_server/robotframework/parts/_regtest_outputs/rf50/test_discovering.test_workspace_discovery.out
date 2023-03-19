@@ -2019,6 +2019,70 @@ result:
       tags: null
       type: suite
       uri: tests/variables.robot
+    - children:
+      - children:
+        - children:
+          - children: null
+            description: null
+            error: null
+            id: Data.Tests.Versions.Rf61.Embedded Keywords.Test 1;2
+            label: Test 1
+            longname: Data.Tests.Versions.Rf61.Embedded Keywords.Test 1
+            range:
+              end:
+                character: 0
+                line: 1
+              start:
+                character: 0
+                line: 1
+            tags: []
+            type: test
+            uri: rf61/embedded_keywords.robot
+          description: null
+          error: null
+          id: Data.Tests.Versions.Rf61.Embedded Keywords
+          label: Embedded Keywords
+          longname: Data.Tests.Versions.Rf61.Embedded Keywords
+          range:
+            end:
+              character: 0
+              line: 0
+            start:
+              character: 0
+              line: 0
+          tags: null
+          type: suite
+          uri: rf61/embedded_keywords.robot
+        description: null
+        error: null
+        id: Data.Tests.Versions.Rf61
+        label: Rf61
+        longname: Data.Tests.Versions.Rf61
+        range:
+          end:
+            character: 0
+            line: 0
+          start:
+            character: 0
+            line: 0
+        tags: null
+        type: suite
+        uri: versions/rf61
+      description: null
+      error: null
+      id: Data.Tests.Versions
+      label: Versions
+      longname: Data.Tests.Versions
+      range:
+        end:
+          character: 0
+          line: 0
+        start:
+          character: 0
+          line: 0
+      tags: null
+      type: suite
+      uri: tests/versions
     description: null
     error: null
     id: Data.Tests
