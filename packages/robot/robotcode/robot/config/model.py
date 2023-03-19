@@ -95,11 +95,15 @@ SECRET = "password"
 
 @dataclass
 class DetachableConfiguration(BaseConfiguration):
+    """Detachable Configuration for Robot Framework."""
+
     detached: bool = False
 
 
 @dataclass
 class Configuration(BaseConfiguration):
+    """Configuration for Robot Framework."""
+
     configurations: Dict[str, DetachableConfiguration] = field(
         default_factory=dict,
         metadata={"description": "Configurations for Robot Framework."},
@@ -113,19 +117,24 @@ class Configuration(BaseConfiguration):
 #     import pydantic
 
 #     class Config:
+#         title = "robot.toml"
+#         description = "Configuration for Robot Framework."
+
 #         @classmethod
 #         def alias_generator(cls, string: str) -> str:
 #             # this is the same as `alias_generator = to_camel` above
 #             return string.replace("_", "-")
 
 #     model = pydantic.dataclasses.create_pydantic_model_from_dataclass(Configuration, config=Config)  # type: ignore
-
-#     schema = pydantic.schema.schema([model], title="Robot Framework Configuration")
+#     schema = model.schema()
 
 #     schema["$schema"] = "http://json-schema.org/draft-07/schema#"
-#     schema["$id"] = "robotframework:https://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.json"
-
+#     schema[
+#         "$id"
+#     ] = "robotframework:https://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.json"
+#     schema["x-taplo-info"] = {
+#         "authors": ["d-biehl (https://github.com/d-biehl)"],
+#         "patterns": ["^(.*(/|\\\\)robot\\.toml|robot\\.toml)$"],
+#     }
 #     json_str = json.dumps(schema, indent=2, sort_keys=True)
-
-#     # TODO add $id and $schema
 #     pathlib.Path("etc", "robot.json").write_text(json_str, "utf-8")
