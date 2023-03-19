@@ -798,8 +798,10 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             if kw_doc is not None and kw_doc not in self._keyword_references:
                 self._keyword_references[kw_doc] = set()
 
-            if is_embedded_keyword(keyword.name) and any(
-                isinstance(v, Arguments) and len(v.values) > 0 for v in keyword.body
+            if (
+                get_robot_version() < (6, 1)
+                and is_embedded_keyword(keyword.name)
+                and any(isinstance(v, Arguments) and len(v.values) > 0 for v in keyword.body)
             ):
                 self.append_diagnostics(
                     range=range_from_node_or_token(keyword, name_token),
