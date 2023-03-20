@@ -21,6 +21,7 @@ dependencies = [
   "GitPython",
   "semantic-version",
   "robotremoteserver",
+  "pydantic",
 ]
 features = ["yaml", "rest", "lint", "tidy"]
 pre-install-commands = ["python ./scripts/install_packages.py"]
@@ -32,6 +33,7 @@ no-cov = "cov --no-cov {args}"
 test = "pytest {args}"
 test-reset = "test --regtest-reset"
 install-bundled-editable = "python ./scripts/install_bundled_editable.py"
+create_json_schema = "python ./scripts/create_robot_toml_json_schema.py"
 
 [envs.devel]
 python = "38"

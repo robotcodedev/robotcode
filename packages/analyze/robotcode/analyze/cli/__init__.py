@@ -1,8 +1,6 @@
-from typing import Tuple, Union
+from typing import Union
 
 import click
-from robot.run import USAGE
-from robot.version import get_full_version
 
 from ..__version__ import __version__
 
@@ -19,13 +17,11 @@ from ..__version__ import __version__
     version=__version__,
     package_name="robotcode.analyze",
     prog_name="RobotCode Analyze",
-    message=f"%(prog)s %(version)s\n{USAGE.splitlines()[0].split(' -- ')[0].strip()} {get_full_version()}",
 )
-@click.argument("robot_options_and_args", nargs=-1, type=click.Path())
 @click.pass_context
 def analyze(
     ctx: click.Context,
-    robot_options_and_args: Tuple[str, ...],
 ) -> Union[str, int, None]:
-    """Analyzes Robot Framework test data."""
+    """Analyzes Robot Framework Tests."""
+    click.echo("Not implemented yet")
     return 0

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import dataclasses
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from robotcode.core.dataclasses import ValidateMixin
 
 
-class Mode(Enum):
+class Mode(str, Enum):
     """Run mode for Robot Framework."""
 
     DEFAULT = "default"
@@ -15,8 +16,35 @@ class Mode(Enum):
     NORPA = "norpa"
 
 
+class ConsoleType(str, Enum):
+    """Run mode for Robot Framework."""
+
+    VERBOSE = "verbose"
+    DOTTED = "dotted"
+    QUIET = "quiet"
+    NONE = "none"
+
+
+def field(
+    *args: Any,
+    description: Optional[str] = None,
+    convert: Optional[Callable[[Any, Any], Any]] = None,
+    **kwargs: Any,
+) -> Any:
+    metadata = kwargs.get("metadata", {})
+    if description:
+        metadata["description"] = "\n".join(line.strip() for line in description.splitlines())
+
+    if convert is not None:
+        metadata["convert"] = convert
+
+    if metadata:
+        kwargs["metadata"] = metadata
+    return dataclasses.field(*args, **kwargs)
+
+
 @dataclass
-class BaseConfiguration(ValidateMixin):
+class BaseProfile(ValidateMixin):
     """Base configuration for Robot Framework."""
 
     @classmethod
@@ -29,112 +57,112 @@ class BaseConfiguration(ValidateMixin):
 
     args: List[str] = field(
         default_factory=list,
-        metadata={
-            "description": """\
-Extra arguments to be passed to Robot Framework
+        description="""\
+            Extra arguments to be passed to Robot Framework
 
-Examples:
-```toml
-args = ["-t", "abc"]
-```
-"""
-        },
+            Examples:
+            ```toml
+            args = ["-t", "abc"]
+            ```
+            """,
     )
     doc: Optional[str] = field(
         default=None,
-        metadata={
-            "description": """\
-Set the documentation of the top level suite.
-Simple formatting is supported (e.g. *bold*). If the
-documentation contains spaces, it must be quoted.
-If the value is path to an existing file, actual
-documentation is read from that file.
+        description="""\
+            Set the documentation of the top level suite.
+            Simple formatting is supported (e.g. *bold*). If the
+            documentation contains spaces, it must be quoted.
+            If the value is path to an existing file, actual
+            documentation is read from that file.
 
-Examples:
-```toml
-doc = \"\"\"Very *good* example
+            Examples:
+            ```toml
+            doc = \"\"\"Very *good* example
 
-This is a second paragraph.
-\"\"\"
-```
-"""
-        },
+            This is a second paragraph.
+            \"\"\"
+            ```
+            """,
     )
     """Arguments to be passed to Robot Framework"""
     python_path: List[str] = field(
         default_factory=list,
-        metadata={
-            "description": """\
-Additional locations directories where
-to search test libraries and other extensions when
-they are imported. Given path can also be a glob
-pattern matching multiple paths.
+        description="""\
+            Additional locations directories where
+            to search test libraries and other extensions when
+            they are imported. Given path can also be a glob
+            pattern matching multiple paths.
 
-Examples:
-```toml
-python_path = ["./lib", "./resources"]
-```
-""",
-        },
+            Examples:
+            ```toml
+            python-path = ["./lib", "./resources"]
+            ```
+            """,
     )
     env: Dict[str, str] = field(
         default_factory=dict,
-        metadata={
-            "description": """\
-Set variables in the test data. Only scalar
-variables with string value are supported and name is
-given without `${}`
+        description="""\
+            Set variables in the test data. Only scalar
+            variables with string value are supported and name is
+            given without `${}`
 
-Examples:
-```toml
-[env]
-TEST_VAR = "test"
-SECRET = "password"
-```
-"""
-        },
+            Examples:
+            ```toml
+            [env]
+            TEST_VAR = "test"
+            SECRET = "password"
+            ```
+            """,
     )
     variables: Dict[str, Any] = field(
         default_factory=dict,
-        metadata={
-            "description": """\
-Set variables in the test data. Only scalar
-variables with string value are supported and name is
-given without `${}`
+        description="""\
+            Set variables in the test data. Only scalar
+            variables with string value are supported and name is
+            given without `${}`
 
-Examples:
-```toml
-[variables]
-TEST_VAR = "test"
-SECRET = "password"
-```
-"""
-        },
+            Examples:
+            ```toml
+            [variables]
+            TEST_VAR = "test"
+            SECRET = "password"
+            ```
+            """,
     )
     meta_data: Dict[str, Any] = field(
         default_factory=dict,
-        metadata={
-            "description": """\
-Set metadata of the top level suite. Value can
-contain formatting and be read from a file similarly
+        description="""\
+            Set metadata of the top level suite. Value can
+            contain formatting and be read from a file similarly
 
-Examples:
-```toml
-[meta-data]
-Version = "1.2"
-Release = "release.txt"
-```
-"""
-        },
+            Examples:
+            ```toml
+            [meta-data]
+            Version = "1.2"
+            Release = "release.txt"
+            ```
+            """,
     )
     variable_files: List[str] = field(default_factory=list)
-    paths: List[str] = field(default_factory=list)
+
+    def __ensure_list(self, x: Union[str, List[str], None]) -> Optional[List[str]]:
+        if x is None:
+            return None
+        return [x] if isinstance(x, str) else x
+
+    paths: Union[str, List[str], None] = field(
+        default=None,
+        description="""\
+            Paths to test data. If no paths are given at the command line this value is used.
+            """,
+        convert=__ensure_list,
+    )
     output_dir: Optional[str] = None
     output_file: Optional[str] = None
     log_file: Optional[str] = None
     debug_file: Optional[str] = None
     log_level: Optional[str] = None
-    console: Optional[str] = None
+    console: Union[ConsoleType, str, None] = field(default=None, description="Console output type.")
     mode: Optional[Mode] = None
     languages: List[str] = field(default_factory=list)
     parsers: Dict[str, List[Any]] = field(default_factory=dict)
@@ -146,48 +174,39 @@ Release = "release.txt"
 
 
 @dataclass
-class DetachableConfiguration(BaseConfiguration):
+class Profile(BaseProfile):
     """Detachable Configuration for Robot Framework."""
 
-    detached: bool = False
-
-
-@dataclass
-class Configuration(BaseConfiguration):
-    """Configuration for Robot Framework."""
-
-    profiles: Dict[str, DetachableConfiguration] = field(
-        default_factory=dict,
-        metadata={"description": "Execution Profiles."},
+    description: Optional[str] = field(default=None, description="Description of the profile.")
+    detached: bool = field(
+        default=False,
+        description="""\
+            If the profile should be detached."
+            Detached means it is not inherited from the main profile.
+            """,
     )
 
 
-# if __name__ == "__main__":
-#     import json
-#     import pathlib
+@dataclass
+class MainProfile(BaseProfile):
+    """Configuration for Robot Framework."""
 
-#     import pydantic
+    default_profile: Union[str, List[str], None] = field(
+        default=None,
+        description="""\
+            Selects the Default profile if no profile is given at command line.
 
-#     class Config:
-#         title = "robot.toml"
-#         description = "Configuration for Robot Framework."
-#         schema_extra = {
-#             "additionalProperties": False,
-#         }
+            Examples:
+            ```toml
+            default_profile = "default"
+            ```
 
-#         @classmethod
-#         def alias_generator(cls, string: str) -> str:
-#             # this is the same as `alias_generator = to_camel` above
-#             return string.replace("_", "-")
-
-#     model = pydantic.dataclasses.create_pydantic_model_from_dataclass(Configuration, config=Config)  # type: ignore
-#     schema = model.schema()
-
-#     schema["$schema"] = "http://json-schema.org/draft-07/schema#"
-#     schema["$id"] = "robotframework:https://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.json"
-#     schema["x-taplo-info"] = {
-#         "authors": ["d-biehl (https://github.com/d-biehl)"],
-#         "patterns": ["^(.*(/|\\\\)robot\\.toml|robot\\.toml)$"],
-#     }
-#     json_str = json.dumps(schema, indent=2, sort_keys=True)
-#     pathlib.Path("etc", "robot.json").write_text(json_str, "utf-8")
+            ```toml
+            default_profile = ["default", "Firefox"]
+            ```
+            """,
+    )
+    profiles: Dict[str, Profile] = field(
+        default_factory=dict,
+        metadata={"description": "Execution Profiles."},
+    )

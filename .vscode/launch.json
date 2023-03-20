@@ -9,7 +9,9 @@
 			"name": "Python: Debug in terminal",
 			"type": "python",
 			"request": "launch",
-			"purpose": ["debug-in-terminal"],
+			"purpose": [
+				"debug-in-terminal"
+			],
 			"justMyCode": false
 		},
 		{
@@ -43,6 +45,9 @@
 			"justMyCode": false,
 			"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data",
 			"args": [
+
+				"-p",
+				"firefox",
 				"--dry",
 				"run"
 			]

@@ -77,7 +77,7 @@
     "tomlValidation": [
       {
         "fileMatch": "robot.toml",
-        "url": "https://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.json"
+        "url": "http://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.toml.json"
       }
     ],
     "configurationDefaults": {

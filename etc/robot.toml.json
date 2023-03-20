@@ -3,7 +3,28 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "additionalProperties": false,
   "definitions": {
-    "DetachableConfiguration": {
+    "ConsoleType": {
+      "description": "Run mode for Robot Framework.",
+      "enum": [
+        "verbose",
+        "dotted",
+        "quiet",
+        "none"
+      ],
+      "title": "ConsoleType",
+      "type": "string"
+    },
+    "Mode": {
+      "description": "Run mode for Robot Framework.",
+      "enum": [
+        "default",
+        "rpa",
+        "norpa"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "Profile": {
       "additionalProperties": false,
       "properties": {
         "args": {
@@ -15,15 +36,29 @@
           "type": "array"
         },
         "console": {
-          "title": "Console",
-          "type": "string"
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ConsoleType"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Console output type.",
+          "title": "Console"
         },
         "debug-file": {
           "title": "Debug-File",
           "type": "string"
         },
+        "description": {
+          "description": "Description of the profile.",
+          "title": "Description",
+          "type": "string"
+        },
         "detached": {
           "default": false,
+          "description": "If the profile should be detached.\"\nDetached means it is not inherited from the main profile.\n",
           "title": "Detached",
           "type": "boolean"
         },
@@ -68,11 +103,9 @@
           "type": "string"
         },
         "meta-data": {
-          "items": {
-            "type": "string"
-          },
+          "description": "Set metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\n\nExamples:\n```toml\n[meta-data]\nVersion = \"1.2\"\nRelease = \"release.txt\"\n```\n",
           "title": "Meta-Data",
-          "type": "array"
+          "type": "object"
         },
         "mode": {
           "$ref": "#/definitions/Mode"
@@ -94,11 +127,19 @@
           "type": "object"
         },
         "paths": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Paths",
-          "type": "array"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Paths to test data. If no paths are given at the command line this value is used.\n",
+          "title": "Paths"
         },
         "pre-rebot-modifiers": {
           "additionalProperties": {
@@ -117,7 +158,7 @@
           "type": "object"
         },
         "python-path": {
-          "description": "Additional locations directories where\nto search test libraries and other extensions when\nthey are imported. Given path can also be a glob\npattern matching multiple paths.\n\nExamples:\n```toml\npython_path = [\"./lib\", \"./resources\"]\n```\n",
+          "description": "Additional locations directories where\nto search test libraries and other extensions when\nthey are imported. Given path can also be a glob\npattern matching multiple paths.\n\nExamples:\n```toml\npython-path = [\"./lib\", \"./resources\"]\n```\n",
           "items": {
             "type": "string"
           },
@@ -139,15 +180,6 @@
       },
       "title": "robot.toml",
       "type": "object"
-    },
-    "Mode": {
-      "description": "Run mode for Robot Framework.",
-      "enum": [
-        "default",
-        "rpa",
-        "norpa"
-      ],
-      "title": "Mode"
     }
   },
   "description": "Configuration for Robot Framework.",
@@ -161,12 +193,35 @@
       "type": "array"
     },
     "console": {
-      "title": "Console",
-      "type": "string"
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ConsoleType"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "description": "Console output type.",
+      "title": "Console"
     },
     "debug-file": {
       "title": "Debug-File",
       "type": "string"
+    },
+    "default-profile": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      ],
+      "description": "Selects the Default profile if no profile is given at command line.\n\nExamples:\n```toml\ndefault_profile = \"default\"\n```\n\n```toml\ndefault_profile = [\"default\", \"Firefox\"]\n```\n",
+      "title": "Default-Profile"
     },
     "doc": {
       "description": "Set the documentation of the top level suite.\nSimple formatting is supported (e.g. *bold*). If the\ndocumentation contains spaces, it must be quoted.\nIf the value is path to an existing file, actual\ndocumentation is read from that file.\n\nExamples:\n```toml\ndoc = \"\"\"Very *good* example\n\nThis is a second paragraph.\n\"\"\"\n```\n",
@@ -209,11 +264,9 @@
       "type": "string"
     },
     "meta-data": {
-      "items": {
-        "type": "string"
-      },
+      "description": "Set metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\n\nExamples:\n```toml\n[meta-data]\nVersion = \"1.2\"\nRelease = \"release.txt\"\n```\n",
       "title": "Meta-Data",
-      "type": "array"
+      "type": "object"
     },
     "mode": {
       "$ref": "#/definitions/Mode"
@@ -235,11 +288,19 @@
       "type": "object"
     },
     "paths": {
-      "items": {
-        "type": "string"
-      },
-      "title": "Paths",
-      "type": "array"
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      ],
+      "description": "Paths to test data. If no paths are given at the command line this value is used.\n",
+      "title": "Paths"
     },
     "pre-rebot-modifiers": {
       "additionalProperties": {
@@ -259,14 +320,14 @@
     },
     "profiles": {
       "additionalProperties": {
-        "$ref": "#/definitions/DetachableConfiguration"
+        "$ref": "#/definitions/Profile"
       },
       "description": "Execution Profiles.",
       "title": "Profiles",
       "type": "object"
     },
     "python-path": {
-      "description": "Additional locations directories where\nto search test libraries and other extensions when\nthey are imported. Given path can also be a glob\npattern matching multiple paths.\n\nExamples:\n```toml\npython_path = [\"./lib\", \"./resources\"]\n```\n",
+      "description": "Additional locations directories where\nto search test libraries and other extensions when\nthey are imported. Given path can also be a glob\npattern matching multiple paths.\n\nExamples:\n```toml\npython-path = [\"./lib\", \"./resources\"]\n```\n",
       "items": {
         "type": "string"
       },

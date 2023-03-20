@@ -7,7 +7,7 @@ from robot.run import USAGE, RobotFramework
 from robot.version import get_full_version
 
 from robotcode.core.dataclasses import from_dict
-from robotcode.robot.config.model import Configuration
+from robotcode.robot.config.model import MainProfile
 
 from ..__version__ import __version__
 
@@ -18,19 +18,19 @@ else:
 
 
 class RobotFrameworkEx(RobotFramework):
-    def __init__(self, arguments: List[str], dry: bool) -> None:
+    def __init__(self, paths: List[str], dry: bool) -> None:
         super().__init__()
-        self.arguments = arguments
+        self.paths = paths
         self.dry = dry
 
     def parse_arguments(self, cli_args: Any) -> Any:
         try:
             options, arguments = super().parse_arguments(cli_args)
         except DataError:
-            options, arguments = super().parse_arguments((*cli_args, *self.arguments))
+            options, arguments = super().parse_arguments((*cli_args, *self.paths))
 
         if not arguments:
-            arguments = self.arguments
+            arguments = self.paths
 
         if self.dry:
             line_end = "\n"
@@ -70,7 +70,7 @@ def run(
     with open("robot.toml", "rb") as f:
         pyproject_toml = tomllib.load(f)
 
-    model = from_dict(pyproject_toml["robot"], Configuration)
+    model = from_dict(pyproject_toml, MainProfile)
 
     options = []
 
@@ -88,7 +88,10 @@ def run(
     try:
         return cast(
             int,
-            RobotFrameworkEx(model.paths or [], ctx.obj["dry"]).execute_cli(
+            RobotFrameworkEx(
+                [] if model.paths is None else model.paths if isinstance(model.paths, list) else [model.paths],
+                ctx.obj["dry"],
+            ).execute_cli(
                 (*options, *robot_options_and_args),
                 exit=False,
             ),
