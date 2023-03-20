@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.29.0 (2023-03-21)
+### Feature
+* Support for Refresh Tests button in test explorer ([`0b27713`](https://github.com/d-biehl/robotcode/commit/0b277134101f65cd57e6980105137ca7c0faa69f))
+
 ## v0.28.4 (2023-03-19)
 ### Fix
 * Update regression tests ([`59b782d`](https://github.com/d-biehl/robotcode/commit/59b782d434764a564521832f375ce062ed155842))
