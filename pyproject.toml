@@ -29,8 +29,6 @@ keywords = [
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "License :: OSI Approved :: Apache Software License",
-  "Framework :: Robot Framework",
-  "Framework :: Robot Framework :: Tool",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
@@ -47,6 +45,8 @@ classifiers = [
   "Topic :: Software Development :: Debuggers",
   "Topic :: Text Editors :: Integrated Development Environments (IDE)",
   "Intended Audience :: Developers",
+  "Framework :: Robot Framework",
+  "Framework :: Robot Framework :: Tool",
 ]
 requires-python = ">=3.8"
 dependencies = ["robotcode-plugin"]

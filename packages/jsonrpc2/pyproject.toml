@@ -22,6 +22,8 @@ classifiers = [
   "Operating System :: OS Independent",
   "Topic :: Utilities",
   "Typing :: Typed",
+  "Framework :: Robot Framework",
+  "Framework :: Robot Framework :: Tool",
 ]
 dependencies = ["robotcode-core"]
 dynamic = ["version"]
