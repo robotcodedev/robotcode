@@ -99,12 +99,22 @@ export class TestControllerManager {
   ) {
     this.testController = vscode.tests.createTestController("robotCode.RobotFramework", "RobotFramework");
 
+    this.testController.resolveHandler = async (item) => {
+      await this.refresh(item);
+    };
+
+    this.testController.refreshHandler = async (token) => {
+      await this.refreshWorkspace(undefined, undefined, token);
+    };
+
     this.runProfile = this.testController.createRunProfile(
       "Run",
       vscode.TestRunProfileKind.Run,
       async (request, token) => this.runTests(request, token),
       true
     );
+
+    this.runProfile.configureHandler = () => this.configureRunProfile();
 
     this.dryRunProfile = this.testController.createRunProfile(
       "Dry Run",
@@ -120,16 +130,14 @@ export class TestControllerManager {
       true
     );
 
+    this.debugProfile.configureHandler = () => this.configureRunProfile();
+
     this.dryRunDebugProfile = this.testController.createRunProfile(
       "Dry Debug",
       vscode.TestRunProfileKind.Debug,
       async (request, token) => this.runTests(request, token, true),
       false
     );
-
-    this.testController.resolveHandler = async (item) => {
-      await this.refresh(item);
-    };
 
     const fileWatcher = vscode.workspace.createFileSystemWatcher("**/*.{robot,resource}");
     fileWatcher.onDidCreate((uri) => this.refreshUri(uri, "create"));
@@ -219,6 +227,33 @@ export class TestControllerManager {
         await vscode.commands.executeCommand("testing.debugCurrentFile", ...args);
       })
     );
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private configureRunProfile() {
+    vscode.window
+      .showQuickPick(
+        [
+          { label: "Chrome", picked: true, description: "Run Tests with Chrome browser" },
+          { label: "Firefox", picked: false, description: "Run Tests with Firefox browser" },
+          { label: "TestDB", picked: false, description: "Run Tests on Test Database" },
+          { label: "ProdDB", picked: false, description: "Run Tests on Production Database" },
+          { label: "NoHeadless", picked: false, description: "Do not run in headless mode" },
+        ],
+        {
+          title: "Select Execution Profile (Teaser: comming soon...)",
+          canPickMany: true,
+        }
+      )
+      .then(
+        (result) => {
+          vscode.window.showInformationMessage(`Selected: ${result?.map((v) => v.label).join(", ") || "<None>"}`).then(
+            () => undefined,
+            () => undefined
+          );
+        },
+        () => undefined
+      );
   }
 
   private removeWorkspaceFolderItems(folder: vscode.WorkspaceFolder) {
