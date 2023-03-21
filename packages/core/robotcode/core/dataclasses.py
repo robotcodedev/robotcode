@@ -221,7 +221,12 @@ def from_dict(
             t is Any
             or t is Ellipsis  # type: ignore
             or isinstance(value, origin or t)
-            or (isinstance(value, Sequence) and args and issubclass(origin or t, Sequence))
+            or (
+                isinstance(value, Sequence)
+                and args
+                and issubclass(origin or t, Sequence)
+                and not isinstance(value, str)
+            )
         ):
             if isinstance(value, Mapping):
                 return cast(
@@ -378,7 +383,12 @@ def _validate_types(expected_types: Union[type, Tuple[type, ...], None], value: 
             t is Any
             or t is Ellipsis  # type: ignore
             or isinstance(value, origin or t)
-            or (isinstance(value, Sequence) and args and issubclass(origin or t, Sequence))
+            or (
+                isinstance(value, Sequence)
+                and args
+                and issubclass(origin or t, Sequence)
+                and not isinstance(value, str)
+            )
         ):
             if isinstance(value, Mapping):
                 r = list(

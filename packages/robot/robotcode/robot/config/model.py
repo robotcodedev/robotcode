@@ -40,12 +40,16 @@ def field(
 
     if metadata:
         kwargs["metadata"] = metadata
+
+    if "default_factory" not in kwargs:
+        kwargs["default"] = None
+
     return dataclasses.field(*args, **kwargs)
 
 
 @dataclass
 class BaseProfile(ValidateMixin):
-    """Base configuration for Robot Framework."""
+    """Base profile for Robot Framework."""
 
     @classmethod
     def _encode_case(cls, s: str) -> str:
@@ -55,8 +59,7 @@ class BaseProfile(ValidateMixin):
     def _decode_case(cls, s: str) -> str:
         return s.replace("-", "_")
 
-    args: List[str] = field(
-        default_factory=list,
+    args: Optional[List[str]] = field(
         description="""\
             Extra arguments to be passed to Robot Framework
 
@@ -67,7 +70,6 @@ class BaseProfile(ValidateMixin):
             """,
     )
     doc: Optional[str] = field(
-        default=None,
         description="""\
             Set the documentation of the top level suite.
             Simple formatting is supported (e.g. *bold*). If the
@@ -85,8 +87,7 @@ class BaseProfile(ValidateMixin):
             """,
     )
     """Arguments to be passed to Robot Framework"""
-    python_path: List[str] = field(
-        default_factory=list,
+    python_path: Optional[List[str]] = field(
         description="""\
             Additional locations directories where
             to search test libraries and other extensions when
@@ -99,8 +100,7 @@ class BaseProfile(ValidateMixin):
             ```
             """,
     )
-    env: Dict[str, str] = field(
-        default_factory=dict,
+    env: Optional[Dict[str, str]] = field(
         description="""\
             Set variables in the test data. Only scalar
             variables with string value are supported and name is
@@ -114,8 +114,7 @@ class BaseProfile(ValidateMixin):
             ```
             """,
     )
-    variables: Dict[str, Any] = field(
-        default_factory=dict,
+    variables: Optional[Dict[str, Any]] = field(
         description="""\
             Set variables in the test data. Only scalar
             variables with string value are supported and name is
@@ -129,8 +128,7 @@ class BaseProfile(ValidateMixin):
             ```
             """,
     )
-    meta_data: Dict[str, Any] = field(
-        default_factory=dict,
+    meta_data: Optional[Dict[str, Any]] = field(
         description="""\
             Set metadata of the top level suite. Value can
             contain formatting and be read from a file similarly
@@ -143,43 +141,35 @@ class BaseProfile(ValidateMixin):
             ```
             """,
     )
-    variable_files: List[str] = field(default_factory=list)
+    variable_files: Optional[List[str]] = field()
 
-    def __ensure_list(self, x: Union[str, List[str], None]) -> Optional[List[str]]:
-        if x is None:
-            return None
-        return [x] if isinstance(x, str) else x
-
-    paths: Union[str, List[str], None] = field(
-        default=None,
+    paths: Optional[List[str]] = field(
         description="""\
             Paths to test data. If no paths are given at the command line this value is used.
             """,
-        convert=__ensure_list,
     )
-    output_dir: Optional[str] = None
-    output_file: Optional[str] = None
-    log_file: Optional[str] = None
-    debug_file: Optional[str] = None
-    log_level: Optional[str] = None
+    output_dir: Optional[str] = field()
+    output_file: Optional[str] = field()
+    log_file: Optional[str] = field()
+    debug_file: Optional[str] = field()
+    log_level: Optional[str] = field()
     console: Union[ConsoleType, str, None] = field(default=None, description="Console output type.")
-    mode: Optional[Mode] = None
-    languages: List[str] = field(default_factory=list)
-    parsers: Dict[str, List[Any]] = field(default_factory=dict)
-    pre_run_modifiers: Dict[str, List[Any]] = field(default_factory=dict)
-    pre_rebot_modifiers: Dict[str, List[Any]] = field(default_factory=dict)
+    mode: Optional[Mode] = field()
+    languages: Optional[List[str]] = field()
+    parsers: Optional[Dict[str, List[Any]]] = field()
+    pre_run_modifiers: Optional[Dict[str, List[Any]]] = field()
+    pre_rebot_modifiers: Optional[Dict[str, List[Any]]] = field()
 
-    listeners: Dict[str, List[Any]] = field(default_factory=dict)
-    dry_run: Optional[bool] = None
+    listeners: Optional[Dict[str, List[Any]]] = field()
+    dry_run: Optional[bool] = field()
 
 
 @dataclass
 class Profile(BaseProfile):
     """Detachable Configuration for Robot Framework."""
 
-    description: Optional[str] = field(default=None, description="Description of the profile.")
-    detached: bool = field(
-        default=False,
+    description: Optional[str] = field(description="Description of the profile.")
+    detached: Optional[bool] = field(
         description="""\
             If the profile should be detached."
             Detached means it is not inherited from the main profile.
@@ -192,7 +182,6 @@ class MainProfile(BaseProfile):
     """Configuration for Robot Framework."""
 
     default_profile: Union[str, List[str], None] = field(
-        default=None,
         description="""\
             Selects the Default profile if no profile is given at command line.
 
@@ -210,3 +199,32 @@ class MainProfile(BaseProfile):
         default_factory=dict,
         metadata={"description": "Execution Profiles."},
     )
+
+    def get_profile(self, *names: str, verbose_callback: Callable[..., None] = None) -> BaseProfile:
+        result = BaseProfile(
+            **{f.name: new for f in dataclasses.fields(BaseProfile) if (new := getattr(self, f.name)) is not None}
+        )
+
+        for name in names:
+            if name not in self.profiles:
+                raise ValueError(f'Unknown profile "{name}".')
+
+            if verbose_callback:
+                verbose_callback(f'Using profile "{name}".')
+
+            profile = self.profiles[name]
+
+            for f in dataclasses.fields(profile):
+                new = getattr(profile, f.name)
+                if profile.detached:
+                    setattr(result, f.name, new)
+                elif new is not None:
+                    old = getattr(result, f.name)
+                    if old is not None and isinstance(old, list):
+                        setattr(result, f.name, [*old, *new])
+                    if old is not None and isinstance(old, dict):
+                        setattr(result, f.name, {**old, **new})
+                    else:
+                        setattr(result, f.name, new)
+
+        return result

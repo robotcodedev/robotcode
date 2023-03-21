@@ -22,6 +22,7 @@ dependencies = [
   "semantic-version",
   "robotremoteserver",
   "pydantic",
+  "tomli_w"
 ]
 features = ["yaml", "rest", "lint", "tidy"]
 pre-install-commands = ["python ./scripts/install_packages.py"]

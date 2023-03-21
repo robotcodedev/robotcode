@@ -187,7 +187,6 @@ select = [
 
 [tool.mypy]
 python_version = 3.8
-pretty = true
 strict = true
 warn_redundant_casts = true
 warn_unused_ignores = true

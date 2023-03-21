@@ -1,4 +1,4 @@
-paths = "tests"
+paths = ["tests"]
 args = []
 
 python-path = ["./lib", "./resources"]
@@ -17,3 +17,6 @@ ENV_VAR = "1"
 [variables]
 CMD_VAR = "1"
 CMD_VAR_LONG = "a test"
+
+[profiles.firefox.variables]
+BROWSER = "firefox"

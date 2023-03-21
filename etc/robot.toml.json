@@ -57,7 +57,6 @@
           "type": "string"
         },
         "detached": {
-          "default": false,
           "description": "If the profile should be detached.\"\nDetached means it is not inherited from the main profile.\n",
           "title": "Detached",
           "type": "boolean"
@@ -127,19 +126,12 @@
           "type": "object"
         },
         "paths": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            }
-          ],
           "description": "Paths to test data. If no paths are given at the command line this value is used.\n",
-          "title": "Paths"
+          "items": {
+            "type": "string"
+          },
+          "title": "Paths",
+          "type": "array"
         },
         "pre-rebot-modifiers": {
           "additionalProperties": {
@@ -288,19 +280,12 @@
       "type": "object"
     },
     "paths": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      ],
       "description": "Paths to test data. If no paths are given at the command line this value is used.\n",
-      "title": "Paths"
+      "items": {
+        "type": "string"
+      },
+      "title": "Paths",
+      "type": "array"
     },
     "pre-rebot-modifiers": {
       "additionalProperties": {

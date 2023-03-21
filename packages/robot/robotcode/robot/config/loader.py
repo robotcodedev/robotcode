@@ -1,4 +1,7 @@
 import sys
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, Optional, Sequence, Tuple, Union, cast
 
 from robotcode.core.dataclasses import from_dict
 
@@ -10,7 +13,100 @@ else:
 
 from .model import MainProfile
 
+PYPROJECT_TOML = "pyproject.toml"
+ROBOT_TOML = "robot.toml"
+LOCAL_ROBOT_TOML = ".robot.toml"
 
-def create_from_toml(__s: str) -> MainProfile:
+
+class DiscoverdBy(str, Enum):
+    GIT = ".git directory"
+    HG = "hg"
+    PYPROJECT_TOML = PYPROJECT_TOML
+    ROBOT_TOML = ROBOT_TOML
+    LOCAL_ROBOT_TOML = LOCAL_ROBOT_TOML
+    NOT_FOUND = "not found"
+
+
+class ConfigType(str, Enum):
+    PYPROJECT_TOML = PYPROJECT_TOML
+    ROBOT_TOML = ROBOT_TOML
+    LOCAL_ROBOT_TOML = LOCAL_ROBOT_TOML
+
+
+def loads_config_from_robot_toml(__s: str) -> MainProfile:
     dict_data = tomllib.loads(__s)
     return from_dict(dict_data, MainProfile)
+
+
+def loads_config_from_pyproject_toml(__s: str) -> MainProfile:
+    dict_data = tomllib.loads(__s)
+
+    return from_dict(dict_data.get("tool", {}).get("robot", {}), MainProfile)
+
+
+def _load_config_data_from_path(__path: Path) -> Dict[str, Any]:
+    if __path.name == PYPROJECT_TOML:
+        return cast(Dict[str, Any], tomllib.loads(__path.read_text("utf-8")).get("tool", {}).get("robot", {}))
+
+    if __path.name == ROBOT_TOML or __path.name == LOCAL_ROBOT_TOML:
+        return tomllib.loads(__path.read_text("utf-8"))
+
+    raise ValueError(f"Unknown config file name: {__path.name}")
+
+
+def load_config_from_path(*__paths: Union[Path, Tuple[Path, ConfigType]]) -> MainProfile:
+    config_data = {}
+    for __path in __paths:
+        config_data.update(_load_config_data_from_path(__path if isinstance(__path, Path) else __path[0]))
+
+    return from_dict(config_data, MainProfile)
+
+
+def find_project_root(*sources: Union[str, Path]) -> Tuple[Optional[Path], DiscoverdBy]:
+    if not sources:
+        sources = (str(Path.cwd().resolve()),)
+
+    path_srcs = [Path(Path.cwd(), src).resolve() for src in sources]
+
+    src_parents = [list(path.parents) + ([path] if path.is_dir() else []) for path in path_srcs]
+
+    common_base = max(
+        set.intersection(*(set(parents) for parents in src_parents)),
+        key=lambda path: path.parts,
+    )
+
+    for directory in (common_base, *common_base.parents):
+        if (directory / LOCAL_ROBOT_TOML).is_file():
+            return directory, DiscoverdBy.LOCAL_ROBOT_TOML
+
+        if (directory / ROBOT_TOML).is_file():
+            return directory, DiscoverdBy.ROBOT_TOML
+
+        if (directory / PYPROJECT_TOML).is_file():
+            return directory, DiscoverdBy.PYPROJECT_TOML
+
+        if (directory / ".git").exists():
+            return directory, DiscoverdBy.GIT
+
+        if (directory / ".hg").is_dir():
+            return directory, DiscoverdBy.HG
+
+    return None, DiscoverdBy.NOT_FOUND
+
+
+def get_config_files_from_folder(folder: Path) -> Sequence[Tuple[Path, ConfigType]]:
+    result = []
+
+    pyproject_toml = folder / PYPROJECT_TOML
+    if pyproject_toml.is_file():
+        result.append((pyproject_toml, ConfigType.PYPROJECT_TOML))
+
+    robot_toml = folder / ROBOT_TOML
+    if robot_toml.is_file():
+        result.append((robot_toml, ConfigType.ROBOT_TOML))
+
+    local_robot_toml = folder / LOCAL_ROBOT_TOML
+    if local_robot_toml.is_file():
+        result.append((local_robot_toml, ConfigType.LOCAL_ROBOT_TOML))
+
+    return result

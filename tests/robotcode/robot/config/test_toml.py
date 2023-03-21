@@ -1,4 +1,4 @@
-from robotcode.robot.config.loader import create_from_toml
+from robotcode.robot.config.loader import loads_config_from_robot_toml
 from robotcode.robot.config.model import Mode
 
 
@@ -32,7 +32,7 @@ detached = true
 mode = "default"
 
     """
-    config = create_from_toml(data)
+    config = loads_config_from_robot_toml(data)
     assert config.args == ["abc"]
     assert config.variables == {"a": 1, "b": "this is a string", "c": [1, 2, "hello World"]}
     assert config.listeners == {"MyListener": [], "Abc": ["def", 1]}
