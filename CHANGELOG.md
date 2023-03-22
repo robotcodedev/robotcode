@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.30.0 (2023-03-22)
+### Feature
+* **robotcode-runner:** Robotcode-runner now supports all features, but not all robot options are supported ([`1b7affb`](https://github.com/d-biehl/robotcode/commit/1b7affbf954dbec8eaf924557272105e59eb5c84))
+
 ## v0.29.0 (2023-03-21)
 ### Feature
 * Support for Refresh Tests button in test explorer ([`0b27713`](https://github.com/d-biehl/robotcode/commit/0b277134101f65cd57e6980105137ca7c0faa69f))
