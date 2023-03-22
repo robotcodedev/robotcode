@@ -4,7 +4,7 @@
   "additionalProperties": false,
   "definitions": {
     "ConsoleType": {
-      "description": "Run mode for Robot Framework.",
+      "description": "Console type for Robot Framework.\n\n- use `verbose` for verbose output\n- use `dotted` for dotted output\n- use `quiet` for quiet output\n- use `none` for no output\n\nExamples:\n```toml\nconsole_type = \"verbose\"\n```",
       "enum": [
         "verbose",
         "dotted",
@@ -15,7 +15,7 @@
       "type": "string"
     },
     "Mode": {
-      "description": "Run mode for Robot Framework.",
+      "description": "Run mode for Robot Framework.\n\n- use `default` for normal execution\n- use `rpa` for RPA execution\n- use `norpa` for non-RPA execution\n\nExamples:\n```toml\nmode = \"rpa\"\n```",
       "enum": [
         "default",
         "rpa",
@@ -28,177 +28,423 @@
       "additionalProperties": false,
       "properties": {
         "args": {
-          "description": "Extra arguments to be passed to Robot Framework\n\nExamples:\n```toml\nargs = [\"-t\", \"abc\"]\n```\n",
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Arguments to be passed to Robot Framework.\n\nExamples:\n```toml\nargs = [\"-t\", \"abc\"]\n```\n",
           "items": {
             "type": "string"
           },
-          "title": "Args",
-          "type": "array"
+          "title": "Args"
         },
         "console": {
-          "anyOf": [
+          "allOf": [
             {
               "$ref": "#/definitions/ConsoleType"
-            },
-            {
-              "type": "string"
             }
           ],
-          "description": "Console output type.",
-          "title": "Console"
+          "anyOf": [
+            {
+              "type": "null"
+            }
+          ],
+          "description": "How to report execution on the console.\n- `verbose`:  report every suite and test (default)\n- `dotted`:   only show `.` for passed test, `f` for\nfailed non-critical tests, and `F` for\nfailed critical tests\n- `quiet`:    no output except for errors and warnings\n- `none`:     no output whatsoever\n"
         },
         "debug-file": {
-          "title": "Debug-File",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Debug-File"
         },
         "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "description": "Description of the profile.",
-          "title": "Description",
-          "type": "string"
+          "title": "Description"
         },
         "detached": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "description": "If the profile should be detached.\"\nDetached means it is not inherited from the main profile.\n",
-          "title": "Detached",
-          "type": "boolean"
+          "title": "Detached"
         },
         "doc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "description": "Set the documentation of the top level suite.\nSimple formatting is supported (e.g. *bold*). If the\ndocumentation contains spaces, it must be quoted.\nIf the value is path to an existing file, actual\ndocumentation is read from that file.\n\nExamples:\n```toml\ndoc = \"\"\"Very *good* example\n\nThis is a second paragraph.\n\"\"\"\n```\n",
-          "title": "Doc",
-          "type": "string"
+          "title": "Doc"
         },
         "dry-run": {
-          "title": "Dry-Run",
-          "type": "boolean"
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Dry-Run"
         },
         "env": {
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`\n\nExamples:\n```toml\n[env]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
-          "title": "Env",
-          "type": "object"
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Define environment variables to be set before tests.\n\nExamples:\n```toml\n[env]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
+          "title": "Env"
         },
-        "languages": {
+        "extra-args": {
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Extra arguments to be passed to Robot Framework\n\nUse this to append these paths to the inherited python path instead of overwriting them.\n\nExamples:\n```toml\nextra-args = [\"-t\", \"abc\"]\n```\n",
           "items": {
             "type": "string"
           },
-          "title": "Languages",
-          "type": "array"
+          "title": "Extra-Args"
+        },
+        "extra-env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Define extra environment variables to be set before tests.\n\nExamples:\n```toml\n[profiles.dummy.env]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
+          "title": "Extra-Env"
+        },
+        "extra-python-path": {
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Extra additional locations (directories) where\nto search test libraries and other extensions when\nthey are imported. Given path can also be a glob\npattern matching multiple paths.\n\nUse this to append these paths to the inherited python path instead of overwriting them.\n\nExamples:\n```toml\nextra-python-path = [\"./lib\", \"./resources\"]\n```\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Extra-Python-Path"
+        },
+        "extra-variables": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Set extra variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`\n\nUse this to append these variables to the inherited variables instead of overwriting them.\n\nExamples:\n```toml\n[profiles.dummy.extra-variables]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
+          "title": "Extra-Variables"
+        },
+        "languages": {
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Languages"
         },
         "listeners": {
           "additionalProperties": {
             "items": {},
             "type": "array"
           },
-          "title": "Listeners",
-          "type": "object"
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Listeners"
         },
         "log-file": {
-          "title": "Log-File",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Log-File"
         },
         "log-level": {
-          "title": "Log-Level",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Log-Level"
         },
         "meta-data": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "description": "Set metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\n\nExamples:\n```toml\n[meta-data]\nVersion = \"1.2\"\nRelease = \"release.txt\"\n```\n",
-          "title": "Meta-Data",
-          "type": "object"
+          "title": "Meta-Data"
         },
         "mode": {
-          "$ref": "#/definitions/Mode"
+          "allOf": [
+            {
+              "$ref": "#/definitions/Mode"
+            }
+          ],
+          "anyOf": [
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Run mode for Robot Framework.\n\n- use `default` for normal execution\n- use `rpa` for RPA execution\n- use `norpa` for non-RPA execution\n\nExamples:\n```toml\nmode = \"rpa\"\n```\n"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Set the name of the top level suite. By default the\nname is created based on the executed file or\ndirectory.\n\nExamples:\n```toml\nname = \"My Suite\"\n```\n",
+          "title": "Name"
         },
         "output-dir": {
-          "title": "Output-Dir",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n",
+          "title": "Output-Dir"
         },
         "output-file": {
-          "title": "Output-File",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Output-File"
         },
         "parsers": {
           "additionalProperties": {
             "items": {},
             "type": "array"
           },
-          "title": "Parsers",
-          "type": "object"
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Parsers"
         },
         "paths": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "description": "Paths to test data. If no paths are given at the command line this value is used.\n",
-          "items": {
-            "type": "string"
-          },
-          "title": "Paths",
-          "type": "array"
+          "title": "Paths"
         },
         "pre-rebot-modifiers": {
           "additionalProperties": {
             "items": {},
             "type": "array"
           },
-          "title": "Pre-Rebot-Modifiers",
-          "type": "object"
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Pre-Rebot-Modifiers"
         },
         "pre-run-modifiers": {
           "additionalProperties": {
             "items": {},
             "type": "array"
           },
-          "title": "Pre-Run-Modifiers",
-          "type": "object"
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Pre-Run-Modifiers"
         },
         "python-path": {
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "description": "Additional locations directories where\nto search test libraries and other extensions when\nthey are imported. Given path can also be a glob\npattern matching multiple paths.\n\nExamples:\n```toml\npython-path = [\"./lib\", \"./resources\"]\n```\n",
           "items": {
             "type": "string"
           },
-          "title": "Python-Path",
-          "type": "array"
+          "title": "Python-Path"
         },
         "variable-files": {
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "items": {
             "type": "string"
           },
-          "title": "Variable-Files",
-          "type": "array"
+          "title": "Variable-Files"
         },
         "variables": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`\n\nExamples:\n```toml\n[variables]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
-          "title": "Variables",
-          "type": "object"
+          "title": "Variables"
         }
       },
-      "title": "robot.toml",
+      "title": "Profile",
       "type": "object"
     }
   },
   "description": "Configuration for Robot Framework.",
   "properties": {
     "args": {
-      "description": "Extra arguments to be passed to Robot Framework\n\nExamples:\n```toml\nargs = [\"-t\", \"abc\"]\n```\n",
+      "anyOf": [
+        {
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Arguments to be passed to Robot Framework.\n\nExamples:\n```toml\nargs = [\"-t\", \"abc\"]\n```\n",
       "items": {
         "type": "string"
       },
-      "title": "Args",
-      "type": "array"
+      "title": "Args"
     },
     "console": {
-      "anyOf": [
+      "allOf": [
         {
           "$ref": "#/definitions/ConsoleType"
-        },
-        {
-          "type": "string"
         }
       ],
-      "description": "Console output type.",
-      "title": "Console"
+      "anyOf": [
+        {
+          "type": "null"
+        }
+      ],
+      "description": "How to report execution on the console.\n- `verbose`:  report every suite and test (default)\n- `dotted`:   only show `.` for passed test, `f` for\nfailed non-critical tests, and `F` for\nfailed critical tests\n- `quiet`:    no output except for errors and warnings\n- `none`:     no output whatsoever\n"
     },
     "debug-file": {
-      "title": "Debug-File",
-      "type": "string"
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Debug-File"
     },
     "default-profile": {
       "anyOf": [
@@ -210,98 +456,225 @@
             "type": "string"
           },
           "type": "array"
+        },
+        {
+          "type": "null"
         }
       ],
       "description": "Selects the Default profile if no profile is given at command line.\n\nExamples:\n```toml\ndefault_profile = \"default\"\n```\n\n```toml\ndefault_profile = [\"default\", \"Firefox\"]\n```\n",
       "title": "Default-Profile"
     },
     "doc": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "description": "Set the documentation of the top level suite.\nSimple formatting is supported (e.g. *bold*). If the\ndocumentation contains spaces, it must be quoted.\nIf the value is path to an existing file, actual\ndocumentation is read from that file.\n\nExamples:\n```toml\ndoc = \"\"\"Very *good* example\n\nThis is a second paragraph.\n\"\"\"\n```\n",
-      "title": "Doc",
-      "type": "string"
+      "title": "Doc"
     },
     "dry-run": {
-      "title": "Dry-Run",
-      "type": "boolean"
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Dry-Run"
     },
     "env": {
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`\n\nExamples:\n```toml\n[env]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
-      "title": "Env",
-      "type": "object"
+      "anyOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Define environment variables to be set before tests.\n\nExamples:\n```toml\n[env]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
+      "title": "Env"
     },
     "languages": {
+      "anyOf": [
+        {
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "items": {
         "type": "string"
       },
-      "title": "Languages",
-      "type": "array"
+      "title": "Languages"
     },
     "listeners": {
       "additionalProperties": {
         "items": {},
         "type": "array"
       },
-      "title": "Listeners",
-      "type": "object"
+      "anyOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Listeners"
     },
     "log-file": {
-      "title": "Log-File",
-      "type": "string"
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Log-File"
     },
     "log-level": {
-      "title": "Log-Level",
-      "type": "string"
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Log-Level"
     },
     "meta-data": {
+      "anyOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "description": "Set metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\n\nExamples:\n```toml\n[meta-data]\nVersion = \"1.2\"\nRelease = \"release.txt\"\n```\n",
-      "title": "Meta-Data",
-      "type": "object"
+      "title": "Meta-Data"
     },
     "mode": {
-      "$ref": "#/definitions/Mode"
+      "allOf": [
+        {
+          "$ref": "#/definitions/Mode"
+        }
+      ],
+      "anyOf": [
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Run mode for Robot Framework.\n\n- use `default` for normal execution\n- use `rpa` for RPA execution\n- use `norpa` for non-RPA execution\n\nExamples:\n```toml\nmode = \"rpa\"\n```\n"
+    },
+    "name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Set the name of the top level suite. By default the\nname is created based on the executed file or\ndirectory.\n\nExamples:\n```toml\nname = \"My Suite\"\n```\n",
+      "title": "Name"
     },
     "output-dir": {
-      "title": "Output-Dir",
-      "type": "string"
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n",
+      "title": "Output-Dir"
     },
     "output-file": {
-      "title": "Output-File",
-      "type": "string"
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Output-File"
     },
     "parsers": {
       "additionalProperties": {
         "items": {},
         "type": "array"
       },
-      "title": "Parsers",
-      "type": "object"
+      "anyOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Parsers"
     },
     "paths": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "description": "Paths to test data. If no paths are given at the command line this value is used.\n",
-      "items": {
-        "type": "string"
-      },
-      "title": "Paths",
-      "type": "array"
+      "title": "Paths"
     },
     "pre-rebot-modifiers": {
       "additionalProperties": {
         "items": {},
         "type": "array"
       },
-      "title": "Pre-Rebot-Modifiers",
-      "type": "object"
+      "anyOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Pre-Rebot-Modifiers"
     },
     "pre-run-modifiers": {
       "additionalProperties": {
         "items": {},
         "type": "array"
       },
-      "title": "Pre-Run-Modifiers",
-      "type": "object"
+      "anyOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Pre-Run-Modifiers"
     },
     "profiles": {
       "additionalProperties": {
@@ -312,27 +685,48 @@
       "type": "object"
     },
     "python-path": {
+      "anyOf": [
+        {
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "description": "Additional locations directories where\nto search test libraries and other extensions when\nthey are imported. Given path can also be a glob\npattern matching multiple paths.\n\nExamples:\n```toml\npython-path = [\"./lib\", \"./resources\"]\n```\n",
       "items": {
         "type": "string"
       },
-      "title": "Python-Path",
-      "type": "array"
+      "title": "Python-Path"
     },
     "variable-files": {
+      "anyOf": [
+        {
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "items": {
         "type": "string"
       },
-      "title": "Variable-Files",
-      "type": "array"
+      "title": "Variable-Files"
     },
     "variables": {
+      "anyOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`\n\nExamples:\n```toml\n[variables]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
-      "title": "Variables",
-      "type": "object"
+      "title": "Variables"
     }
   },
-  "title": "robot.toml",
+  "title": "RobotConfig",
   "type": "object",
   "x-taplo-info": {
     "authors": [

@@ -1,25 +1,48 @@
 import json
 import pathlib
+from typing import Any, Dict
 
 import pydantic
 
-from robotcode.robot.config.model import MainProfile
+from robotcode.robot.config.model import RobotConfig
 
 if __name__ == "__main__":
 
     class Config:
-        title = "robot.toml"
-        description = "Configuration for Robot Framework."
-        schema_extra = {
-            "additionalProperties": False,
-        }
+        @staticmethod
+        def schema_extra(schema: Dict[str, Any], model: Any) -> None:
+            if "additionalProperties" not in schema:
+                schema["additionalProperties"] = False
+
+            for prop, value in schema.get("properties", {}).items():
+                if isinstance(value, dict):
+                    to_remove = []
+                    for key, val in value.items():
+                        if callable(val):
+                            to_remove.append(key)
+                        if key.startswith("robot_"):
+                            to_remove.append(key)
+                    for key in to_remove:
+                        value.pop(key)
+
+                field = [x for x in model.__fields__.values() if x.alias == prop][0]
+                if field.allow_none:
+                    if "type" in value:
+                        value["anyOf"] = [{"type": value.pop("type")}]
+
+                    elif "$ref" in value:
+                        if issubclass(field.type_, pydantic.BaseModel):
+                            value["title"] = field.type_.__config__.title or field.type_.__name__
+                        value["anyOf"] = [{"$ref": value.pop("$ref")}]
+                    elif "anyOf" not in value:
+                        value["anyOf"] = []
+                    value["anyOf"].append({"type": "null"})
 
         @classmethod
         def alias_generator(cls, string: str) -> str:
-            # this is the same as `alias_generator = to_camel` above
             return string.replace("_", "-")
 
-    model = pydantic.dataclasses.create_pydantic_model_from_dataclass(MainProfile, config=Config)  # type: ignore
+    model = pydantic.dataclasses.create_pydantic_model_from_dataclass(RobotConfig, config=Config)  # type: ignore
     schema = model.schema()
 
     schema["$schema"] = "http://json-schema.org/draft-07/schema#"

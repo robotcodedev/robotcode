@@ -1,4 +1,6 @@
 import functools
+import os
+from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union, cast
 
 import click
@@ -14,10 +16,11 @@ from ..__version__ import __version__
 
 
 class RobotFrameworkEx(RobotFramework):
-    def __init__(self, paths: List[str], dry: bool) -> None:
+    def __init__(self, paths: List[str], dry: bool, root_folder: Optional[Path]) -> None:
         super().__init__()
         self.paths = paths
         self.dry = dry
+        self.root_folder = root_folder
 
     def parse_arguments(self, cli_args: Any) -> Any:
         try:
@@ -28,6 +31,13 @@ class RobotFrameworkEx(RobotFramework):
         if not arguments:
             arguments = self.paths
 
+        if self.root_folder is not None:
+            for i, arg in enumerate(arguments.copy()):
+                if Path(arg).is_absolute():
+                    continue
+
+                arguments[i] = str(Path(arg).absolute().relative_to(self.root_folder))
+
         if self.dry:
             line_end = "\n"
             raise Information(
@@ -37,6 +47,12 @@ class RobotFrameworkEx(RobotFramework):
             )
 
         return options, arguments
+
+    def main(self, arguments: Any, **options: Any) -> Any:
+        if self.root_folder is not None:
+            os.chdir(self.root_folder)
+
+        super().main(arguments, **options)
 
 
 @click.command(
@@ -69,13 +85,13 @@ def run(
     Use "-- --help" to see the robot help.
     """
 
-    arguments = None
+    robot_arguments = None
     try:
-        _, arguments = RobotFramework().parse_arguments(robot_options_and_args)
+        _, robot_arguments = RobotFramework().parse_arguments(robot_options_and_args)
     except (DataError, Information):
         pass
 
-    root_folder, discovered_by = find_project_root(*(arguments or []))
+    root_folder, discovered_by = find_project_root(*(robot_arguments or []))
     if common_config.verbose:
         click.secho(f"Found project root at:\n    {root_folder} ({discovered_by})", fg="bright_black")
 
@@ -95,7 +111,7 @@ def run(
                     if common_config.verbose
                     else None,
                 )
-            except TypeError as e:
+            except (TypeError, ValueError) as e:
                 raise click.ClickException(str(e)) from e
 
         else:
@@ -105,25 +121,26 @@ def run(
     if profile is None:
         profile = BaseProfile()
 
-    options = []
+    options = profile.build_robot_options()
 
-    if profile.output_dir:
-        options += ["-d", profile.output_dir]
-
-    if profile.python_path:
-        for v in profile.python_path:
-            options += ["-P", v]
-
-    if profile.variables and isinstance(profile.variables, dict):
-        for k, v in profile.variables.items():
-            options += ["-v", f"{k}:{v}"]
-
+    if profile.env:
+        for k, v in profile.env.items():
+            os.environ[k] = v
+            if common_config.verbose:
+                click.secho(f"Set environment variable {k} to {v}", fg="bright_black")
     try:
+        if common_config.verbose:
+            joined_args = " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
+            click.secho(
+                f"Executing robot with the following options:\n    {joined_args}",
+                fg="bright_black",
+            )
         return cast(
             int,
             RobotFrameworkEx(
-                profile.paths or [],
+                [] if profile.paths is None else profile.paths if isinstance(profile.paths, list) else [profile.paths],
                 common_config.dry,
+                root_folder,
             ).execute_cli(
                 (*options, *robot_options_and_args),
                 exit=False,

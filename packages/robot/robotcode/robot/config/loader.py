@@ -11,7 +11,7 @@ else:
     import tomli as tomllib
 
 
-from .model import MainProfile
+from .model import RobotConfig
 
 PYPROJECT_TOML = "pyproject.toml"
 ROBOT_TOML = "robot.toml"
@@ -33,15 +33,15 @@ class ConfigType(str, Enum):
     LOCAL_ROBOT_TOML = LOCAL_ROBOT_TOML
 
 
-def loads_config_from_robot_toml(__s: str) -> MainProfile:
+def loads_config_from_robot_toml(__s: str) -> RobotConfig:
     dict_data = tomllib.loads(__s)
-    return from_dict(dict_data, MainProfile)
+    return from_dict(dict_data, RobotConfig)
 
 
-def loads_config_from_pyproject_toml(__s: str) -> MainProfile:
+def loads_config_from_pyproject_toml(__s: str) -> RobotConfig:
     dict_data = tomllib.loads(__s)
 
-    return from_dict(dict_data.get("tool", {}).get("robot", {}), MainProfile)
+    return from_dict(dict_data.get("tool", {}).get("robot", {}), RobotConfig)
 
 
 def _load_config_data_from_path(__path: Path) -> Dict[str, Any]:
@@ -54,12 +54,12 @@ def _load_config_data_from_path(__path: Path) -> Dict[str, Any]:
     raise ValueError(f"Unknown config file name: {__path.name}")
 
 
-def load_config_from_path(*__paths: Union[Path, Tuple[Path, ConfigType]]) -> MainProfile:
+def load_config_from_path(*__paths: Union[Path, Tuple[Path, ConfigType]]) -> RobotConfig:
     config_data = {}
     for __path in __paths:
         config_data.update(_load_config_data_from_path(__path if isinstance(__path, Path) else __path[0]))
 
-    return from_dict(config_data, MainProfile)
+    return from_dict(config_data, RobotConfig)
 
 
 def find_project_root(*sources: Union[str, Path]) -> Tuple[Optional[Path], DiscoverdBy]:

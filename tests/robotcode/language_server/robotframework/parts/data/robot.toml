@@ -1,6 +1,5 @@
-paths = ["tests"]
-args = []
-
+paths = "tests"
+args = ["-P aa"]
 python-path = ["./lib", "./resources"]
 output-dir = "results"
 
@@ -9,7 +8,8 @@ This is a *sample* test suite
 
 With a second line.
 """
-console = "dotted"
+console = "verbose"
+mode = "rpa"
 
 [env]
 ENV_VAR = "1"
@@ -18,5 +18,21 @@ ENV_VAR = "1"
 CMD_VAR = "1"
 CMD_VAR_LONG = "a test"
 
-[profiles.firefox.variables]
+[profiles.firefox]
+extra-args = ["-."]
+extra-python-path = ["./lib/firefox"]
+doc = """\
+This is a *sample* test suite
+
+With a second line.
+we use ${BROWSER} here.
+"""
+
+[profiles.firefox.extra-variables]
 BROWSER = "firefox"
+
+[profiles.headless.variables]
+HEADLESS = 1
+
+[profiles.rpa1]
+mode = "default"

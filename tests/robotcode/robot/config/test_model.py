@@ -3,7 +3,7 @@ from typing import Any, Dict
 import pytest
 
 from robotcode.core.dataclasses import TypeValidationError, as_dict, from_dict
-from robotcode.robot.config.model import MainProfile, Mode
+from robotcode.robot.config.model import Mode, RobotConfig
 
 
 @pytest.mark.parametrize(
@@ -18,7 +18,7 @@ from robotcode.robot.config.model import MainProfile, Mode
 )
 def test_robot_config_cannot_assign_invalid_args(kwargs: Dict[str, Any]) -> None:
     with pytest.raises(TypeValidationError):
-        MainProfile(**kwargs)
+        RobotConfig(**kwargs)
 
 
 def test_robot_config_can_created_from_dict() -> None:
@@ -42,7 +42,7 @@ def test_robot_config_can_created_from_dict() -> None:
         "listeners": {},
         "mode": "default",
     }
-    model = from_dict(data, MainProfile)
+    model = from_dict(data, RobotConfig)
     data["mode"] = Mode.DEFAULT
     model_dict = as_dict(model)
     for key in data:

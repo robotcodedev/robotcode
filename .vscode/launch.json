@@ -45,12 +45,12 @@
 			"justMyCode": false,
 			"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data",
 			"args": [
-				//"-v",
+				"-v",
 				"-p",
 				"firefox",
-				"--dry",
+				//"--dry",
 				"run",
-				"."
+				"tests1"
 			]
 		},
 		{

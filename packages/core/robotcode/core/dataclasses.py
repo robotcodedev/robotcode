@@ -333,7 +333,7 @@ def as_dict(value: Any) -> Dict[str, Any]:
 
 
 class TypeValidationError(Exception):
-    def __init__(self, *args: Any, target: Any, errors: Dict[str, str]) -> None:
+    def __init__(self, *args: Any, target: Any, errors: Any) -> None:
         super().__init__(*args)
         self.class_ = target.__class__
         self.errors = errors
@@ -348,10 +348,10 @@ class TypeValidationError(Exception):
         cls = self.class_
         cls_name = f"{cls.__module__}.{cls.__name__}" if cls.__module__ != "__main__" else cls.__name__
         s = cls_name
-        return f"{s} (errors = {self.errors})"
+        return f"{s} (errors = {repr(self.errors)})"
 
 
-def _validate_types(expected_types: Union[type, Tuple[type, ...], None], value: Any) -> List[str]:
+def validate_types(expected_types: Union[type, Tuple[type, ...], None], value: Any) -> List[str]:
     if expected_types is None:
         return []
 
@@ -365,7 +365,7 @@ def _validate_types(expected_types: Union[type, Tuple[type, ...], None], value: 
         origin = get_origin(t)
 
         if origin is Union:
-            r = _validate_types(args, value)
+            r = validate_types(args, value)
             if r:
                 result.extend(r)
                 continue
@@ -395,8 +395,8 @@ def _validate_types(expected_types: Union[type, Tuple[type, ...], None], value: 
                     itertools.chain(
                         *(
                             itertools.chain(
-                                _validate_types(args[0] if args else None, n),
-                                _validate_types(args[1] if args else None, v),
+                                validate_types(args[0] if args else None, n),
+                                validate_types(args[1] if args else None, v),
                             )
                             for n, v in value.items()
                         )
@@ -409,7 +409,7 @@ def _validate_types(expected_types: Union[type, Tuple[type, ...], None], value: 
                 return []
 
             if isinstance(value, Sequence) and args:
-                r = list(itertools.chain(*(_validate_types(args, v) for v in value)))
+                r = list(itertools.chain(*(validate_types(args, v) for v in value)))
                 if r:
                     result.extend(r)
                     continue
@@ -446,6 +446,7 @@ class ValidateMixin:
             return
 
         errors = {}
+
         type_hints = get_type_hints(self.__class__)
 
         for f in dataclasses.fields(self):
@@ -455,7 +456,7 @@ class ValidateMixin:
                 if ers:
                     errors[f.name] = ers
             else:
-                ers = _validate_types(type_hints[f.name], value=getattr(self, f.name))
+                ers = validate_types(type_hints[f.name], value=getattr(self, f.name))
                 if ers:
                     errors[f.name] = ers
 
