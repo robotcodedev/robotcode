@@ -21,8 +21,9 @@ dependencies = [
   "GitPython",
   "semantic-version",
   "robotremoteserver",
-  "pydantic",
-  "tomli_w"
+  "apischema",
+  "tomli-w",
+  "rich"
 ]
 features = ["yaml", "rest", "lint", "tidy"]
 pre-install-commands = ["python ./scripts/install_packages.py"]

@@ -1,4 +1,5 @@
 # pyright: reportMissingTypeArgument=true, reportMissingParameterType=true
+import copy
 import dataclasses
 import enum
 import functools
@@ -8,6 +9,7 @@ import json
 import re
 from typing import (
     Any,
+    Callable,
     Dict,
     Iterable,
     List,
@@ -328,8 +330,39 @@ def from_json(
     return from_dict(json.loads(s), types, strict=strict)
 
 
-def as_dict(value: Any) -> Dict[str, Any]:
-    return dataclasses.asdict(value)
+def as_dict(
+    value: Any, *, remove_defaults: bool = False, dict_factory: Callable[[Any], Dict[str, Any]] = dict
+) -> Dict[str, Any]:
+    if not dataclasses.is_dataclass(value):
+        raise TypeError("as_dict() should be called on dataclass instances")
+
+    return cast(Dict[str, Any], _as_dict_inner(value, remove_defaults, dict_factory))
+
+
+def _as_dict_inner(value: Any, remove_defaults: bool, dict_factory: Callable[[Any], Dict[str, Any]]) -> Any:
+    if dataclasses.is_dataclass(value):
+        result = []
+        for f in dataclasses.fields(value):
+            v = _as_dict_inner(getattr(value, f.name), remove_defaults, dict_factory)
+
+            if remove_defaults and v == f.default:
+                continue
+            result.append((f.name, v))
+        return dict_factory(result)
+
+    if isinstance(value, tuple) and hasattr(value, "_fields"):
+        return type(value)(*[_as_dict_inner(v, remove_defaults, dict_factory) for v in value])
+
+    if isinstance(value, (list, tuple)):
+        return type(value)(_as_dict_inner(v, remove_defaults, dict_factory) for v in value)
+
+    if isinstance(value, dict):
+        return type(value)(
+            (_as_dict_inner(k, remove_defaults, dict_factory), _as_dict_inner(v, remove_defaults, dict_factory))
+            for k, v in value.items()
+        )
+
+    return copy.deepcopy(value)
 
 
 class TypeValidationError(Exception):

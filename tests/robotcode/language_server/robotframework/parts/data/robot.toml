@@ -1,6 +1,6 @@
 paths = "tests"
 args = ["-P aa"]
-python-path = ["./lib", "./resources"]
+python-path = ["resources", "./lib"]
 output-dir = "results"
 
 doc = """\

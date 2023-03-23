@@ -8,7 +8,7 @@
 
 ## Introduction
 
-Some Helper class for [RobotCode](https://robotcode.io) for dealing with Robot Framework.
+Support classes and commands for [RobotCode](https://robotcode.io) for handling Robot Framework projects.
 
 ## Installation
 

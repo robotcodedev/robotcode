@@ -78,6 +78,10 @@
       {
         "fileMatch": "robot.toml",
         "url": "http://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.toml.json"
+      },
+      {
+        "fileMatch": ".robot.toml",
+        "url": "http://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.toml.json"
       }
     ],
     "configurationDefaults": {

@@ -162,7 +162,7 @@ class BaseProfile(ValidateMixin):
     )
     env: Optional[Dict[str, str]] = field(
         description="""\
-            Define environment variables to be set before tests.
+            Define environment variables to be set before running tests.
 
             Examples:
             ```toml
@@ -207,8 +207,7 @@ class BaseProfile(ValidateMixin):
     paths: Union[str, List[str], None] = field(
         description="""\
             Paths to test data. If no paths are given at the command line this value is used.
-            """,
-        convert=lambda s, x: x if x is None else x if isinstance(x, list) else [x],
+            """
     )
     output_dir: Optional[str] = field(
         description="""\
@@ -252,7 +251,7 @@ class BaseProfile(ValidateMixin):
         mode = "rpa"
         ```
         """,
-        robot_name="+value",
+        robot_name="+--norpa/--rpa",
         robot_priority=0,
     )
     languages: Optional[List[str]] = field()
@@ -292,7 +291,7 @@ class BaseProfile(ValidateMixin):
                     append_name(field)
                     result.append(f"{key}:{item}")
             else:
-                if field.metadata.get("robot_name", None) == "+value":
+                if field.metadata.get("robot_name", "").startswith("+"):
                     if str(value) == "default":
                         continue
 
@@ -307,7 +306,7 @@ class BaseProfile(ValidateMixin):
 
 @dataclass
 class Profile(BaseProfile):
-    """Detachable Configuration for Robot Framework."""
+    """Robot Framework Configuration Profile."""
 
     description: Optional[str] = field(description="Description of the profile.")
     detached: Optional[bool] = field(
@@ -379,7 +378,7 @@ class Profile(BaseProfile):
 
 @dataclass
 class RobotConfig(BaseProfile):
-    """Configuration for Robot Framework."""
+    """Robot Framework Configuration."""
 
     default_profile: Union[str, List[str], None] = field(
         description="""\
@@ -395,8 +394,7 @@ class RobotConfig(BaseProfile):
             ```
             """,
     )
-    profiles: Dict[str, Profile] = field(
-        default_factory=dict,
+    profiles: Optional[Dict[str, Profile]] = field(
         metadata={"description": "Execution Profiles."},
     )
 
@@ -420,11 +418,13 @@ class RobotConfig(BaseProfile):
 
         base_field_names = [f.name for f in dataclasses.fields(BaseProfile)]
 
+        profiles = self.profiles or {}
+
         for profile_name in names:
-            if profile_name not in self.profiles:
+            if profile_name not in profiles:
                 raise ValueError(f'Unknown profile "{profile_name}".')
 
-            profile = self.profiles[profile_name]
+            profile = profiles[profile_name]
 
             if verbose_callback:
                 verbose_callback(f'Using profile "{profile_name}".')
