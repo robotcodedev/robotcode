@@ -37,6 +37,7 @@ mode = "default"
     assert config.variables == {"a": 1, "b": "this is a string", "c": [1, 2, "hello World"]}
     assert config.listeners == {"MyListener": [], "Abc": ["def", 1]}
     assert config.mode == Mode.RPA
+    assert config.profiles is not None
     assert config.profiles["default"].description == "Default profile"
     assert config.profiles["default"].args == ["abc"]
     assert config.profiles["devel"].listeners == {"AnotherListener": ["default"]}
