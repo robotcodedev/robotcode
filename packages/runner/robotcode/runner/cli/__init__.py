@@ -8,7 +8,7 @@ from robot.errors import DataError, Information
 from robot.run import USAGE, RobotFramework
 from robot.version import get_full_version
 
-from robotcode.plugin import CommonConfig, pass_common_config
+from robotcode.plugin import ClickCommonConfig, pass_common_config
 from robotcode.robot.config.loader import find_project_root, get_config_files_from_folder, load_config_from_path
 from robotcode.robot.config.model import BaseProfile
 
@@ -59,7 +59,6 @@ class RobotFrameworkEx(RobotFramework):
     context_settings={
         "allow_extra_args": True,
         "ignore_unknown_options": True,
-        "help_option_names": ["-h", "--help"],
     },
     add_help_option=True,
     short_help='Runs "robot" with the selected configuration, profiles, options and arguments.',
@@ -74,7 +73,7 @@ class RobotFrameworkEx(RobotFramework):
 @click.pass_context
 @pass_common_config
 def run(
-    common_config: CommonConfig,
+    common_config: ClickCommonConfig,
     ctx: click.Context,
     robot_options_and_args: Tuple[str, ...],
 ) -> Union[str, int, None]:

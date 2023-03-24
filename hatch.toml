@@ -25,7 +25,7 @@ dependencies = [
   "tomli-w",
   "rich",
 ]
-features = ["yaml", "rest", "lint", "tidy"]
+features = ["all"]
 pre-install-commands = ["python ./scripts/install_packages.py"]
 
 
@@ -39,7 +39,6 @@ create_json_schema = "python ./scripts/create_robot_toml_json_schema.py"
 
 [envs.devel]
 python = "38"
-features = ["yaml", "rest", "lint", "tidy"]
 
 [[envs.devel.matrix]]
 python = ["38", "39", "310", "311"]

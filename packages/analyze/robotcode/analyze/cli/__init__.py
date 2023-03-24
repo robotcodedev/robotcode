@@ -9,7 +9,6 @@ from ..__version__ import __version__
     context_settings={
         "allow_extra_args": True,
         "ignore_unknown_options": True,
-        "help_option_names": ["-h", "--help"],
     },
     add_help_option=True,
 )

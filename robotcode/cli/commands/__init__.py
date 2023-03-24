@@ -1,3 +1,4 @@
 from .config import config
+from .profiles import profiles
 
-__all__ = ["config"]
+__all__ = ["config", "profiles"]

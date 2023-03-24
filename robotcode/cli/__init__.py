@@ -3,15 +3,15 @@ from typing import List, Optional
 
 import click
 
-from robotcode.plugin import CommonConfig, pass_common_config
+from robotcode.plugin import ClickCommonConfig, ColoredOutput, pass_common_config
 from robotcode.plugin.manager import PluginManager
 
 from .__version__ import __version__
-from .commands import config
+from .commands import config, profiles
 
 
 @click.group(
-    context_settings={"help_option_names": ["-h", "--help"], "auto_envvar_prefix": "ROBOTCODE"},
+    context_settings={"auto_envvar_prefix": "ROBOTCODE"},
     invoke_without_command=False,
 )
 @click.version_option(version=__version__, prog_name="robotcode")
@@ -36,16 +36,24 @@ from .commands import config
         """,
 )
 @click.option("-d", "--dry", is_flag=True, show_envvar=True, help="Dry run, do not execute any commands.")
+@click.option(
+    "--color / --no-color",
+    "color",
+    default=None,
+    help="Whether or not to display colored output (default is auto-detection).",
+    show_envvar=True,
+)
 @click.option("-v", "--verbose", is_flag=True, help="Enables verbose mode.")
 @click.pass_context
 @pass_common_config
 def robotcode(
-    common_config: CommonConfig,
+    common_config: ClickCommonConfig,
     ctx: click.Context,
     config_file: Optional[Path],
     profiles: Optional[List[str]],
-    dry: bool = False,
-    verbose: bool = False,
+    dry: bool,
+    verbose: bool,
+    color: Optional[bool],
 ) -> None:
     """\b
  _____       _           _    _____          _
@@ -60,9 +68,16 @@ def robotcode(
     common_config.profiles = profiles
     common_config.dry = dry
     common_config.verbose = verbose
+    if color is None:
+        common_config.colored_output = ColoredOutput.AUTO
+    elif color:
+        common_config.colored_output = ColoredOutput.YES
+    else:
+        common_config.colored_output = ColoredOutput.NO
 
 
 robotcode.add_command(config)
+robotcode.add_command(profiles)
 
 for p in PluginManager().cli_commands:
     for c in p:

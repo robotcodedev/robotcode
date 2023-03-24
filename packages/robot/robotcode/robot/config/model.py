@@ -420,9 +420,20 @@ class RobotConfig(BaseProfile):
 
         profiles = self.profiles or {}
 
+        if not names:
+            if verbose_callback:
+                verbose_callback('No profiles given, try to check if there are default profiles specified".')
+
+            default_profile = [self.default_profile] if isinstance(self.default_profile, str) else self.default_profile
+
+            if verbose_callback and default_profile:
+                verbose_callback(f"Using default profiles {', '.join( default_profile)}.")
+
+            names = (*(default_profile or ()),)
+
         for profile_name in names:
             if profile_name not in profiles:
-                raise ValueError(f'Unknown profile "{profile_name}".')
+                raise ValueError(f'Profile "{profile_name}" is not defined.')
 
             profile = profiles[profile_name]
 

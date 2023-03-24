@@ -31,6 +31,7 @@ class ConfigType(str, Enum):
     PYPROJECT_TOML = PYPROJECT_TOML
     ROBOT_TOML = ROBOT_TOML
     LOCAL_ROBOT_TOML = LOCAL_ROBOT_TOML
+    CUSTOM_TOML = ".toml"
 
 
 def loads_config_from_robot_toml(__s: str) -> RobotConfig:
