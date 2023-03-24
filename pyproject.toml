@@ -67,24 +67,25 @@ robotcode = "robotcode.cli:robotcode"
 
 [project.optional-dependencies]
 debugger = ["robotcode-debugger"]
-language-server = ["robotcode-language-server"]
+languageserver = ["robotcode-language-server"]
 runner = ["robotcode-runner"]
 analyze = ["robotcode-analyze"]
-yaml = ["PyYAML>=5.4", "types-PyYAML>=5.4"]
+yaml = ["PyYAML>=5.4"]
 lint = ["robotframework-robocop>=2.0.0"]
 tidy = ["robotframework-tidy>=2.0.0"]
 rest = ["docutils"]
 colored = ["rich"]
+tomlw = ["tomli-w"]
 all = [
-  "runner",
-  "debugger",
-  "language-server",
-  "analyze",
-  "yaml",
-  "lint",
-  "tidy",
-  "colored",
-  "rest",
+  "robotcode-debugger",
+  "robotcode-language-server",
+  "robotcode-runner",
+  "robotcode-analyze",
+  "PyYAML>=5.4",
+  "robotframework-robocop>=2.0.0",
+  "docutils",
+  "rich",
+  "tomli-w",
 ]
 
 

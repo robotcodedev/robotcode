@@ -22,8 +22,6 @@ dependencies = [
   "semantic-version",
   "robotremoteserver",
   "apischema",
-  "tomli-w",
-  "rich",
 ]
 features = ["all"]
 pre-install-commands = ["python ./scripts/install_packages.py"]
