@@ -54,18 +54,27 @@ if __name__ == "__main__":
     apischema.settings.base_schema.field = field_base_schema
     apischema.settings.base_schema.method = method_base_schema
 
+    base_schema = apischema.schema(
+        extra={
+            "x-taplo-info": {
+                "authors": ["d-biehl (https://github.com/d-biehl)"],
+                "patterns": ["^(.*(/|\\\\)robot\\.toml|robot\\.toml)$"],
+            }
+        }
+    )
     schema = apischema.json_schema.deserialization_schema(
         RobotConfig,
         additional_properties=False,
         aliaser=lambda x: x.replace("_", "-"),
         version=apischema.json_schema.JsonSchemaVersion.DRAFT_7,
         all_refs=True,
+        schema=base_schema,
     )
 
-    schema["x-taplo-info"] = {
-        "authors": ["d-biehl (https://github.com/d-biehl)"],
-        "patterns": ["^(.*(/|\\\\)robot\\.toml|robot\\.toml)$"],
-    }
+    # schema["x-taplo-info"] = {
+    #     "authors": ["d-biehl (https://github.com/d-biehl)"],
+    #     "patterns": ["^(.*(/|\\\\)robot\\.toml|robot\\.toml)$"],
+    # }
 
     json_str = json.dumps(schema, indent=2, sort_keys=True)
     pathlib.Path("etc", "robot.toml.json").write_text(json_str, "utf-8")

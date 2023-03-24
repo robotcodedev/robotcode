@@ -7,6 +7,7 @@ from robotcode.plugin import CommonConfig, pass_common_config
 from robotcode.plugin.manager import PluginManager
 
 from .__version__ import __version__
+from .commands import config
 
 
 @click.group(
@@ -60,6 +61,8 @@ def robotcode(
     common_config.dry = dry
     common_config.verbose = verbose
 
+
+robotcode.add_command(config)
 
 for p in PluginManager().cli_commands:
     for c in p:

@@ -6,10 +6,8 @@ import click
 
 from robotcode.core.dataclasses import as_dict, as_json
 from robotcode.plugin import CommonConfig, pass_common_config
-
-from ...__version__ import __version__
-from ..loader import find_project_root, get_config_files_from_folder, load_config_from_path
-from ..model import RobotConfig
+from robotcode.robot.config.loader import find_project_root, get_config_files_from_folder, load_config_from_path
+from robotcode.robot.config.model import RobotConfig
 
 if sys.version_info >= (3, 11):
     pass
@@ -21,7 +19,6 @@ else:
     context_settings={"help_option_names": ["-h", "--help"], "auto_envvar_prefix": "ROBOTCODE"},
     invoke_without_command=False,
 )
-@click.version_option(version=__version__, package_name="robotcode.robot.config", prog_name="RobotCode Config")
 @click.pass_context
 @pass_common_config
 def config(
@@ -32,6 +29,40 @@ def config(
 
     By default the combined configuration is shown.
     """
+
+    return 0
+
+
+def print_config(config: RobotConfig, format: str, color: str) -> int:
+    text = None
+    if format == "toml":
+        try:
+            import tomli_w
+
+            text = tomli_w.dumps(as_dict(config, remove_defaults=True))
+        except ImportError:
+            click.secho("tomli-w is required to output toml.", fg="red", err=True)
+
+            format = "json"
+
+    if text is None:
+        text = as_json(config, indent=True)
+
+    if color in ["auto", "yes"]:
+        try:
+            from rich.console import Console
+            from rich.syntax import Syntax
+
+            Console().print(Syntax(text, format, background_color="default"))
+
+            return 0
+        except ImportError:
+            if color == "yes":
+                click.secho("rich is required to use colors.", fg="red", err=True)
+                return 1
+            pass
+
+    click.echo(text)
 
     return 0
 
@@ -97,37 +128,3 @@ def show(
         return 1
 
     return print_config(config, format, color)
-
-
-def print_config(config: RobotConfig, format: str, color: str) -> int:
-    text = None
-    if format == "toml":
-        try:
-            import tomli_w
-
-            text = tomli_w.dumps(as_dict(config, remove_defaults=True))
-        except ImportError:
-            click.secho("tomli-w is required to output toml.", fg="red", err=True)
-
-            format = "json"
-
-    if text is None:
-        text = as_json(config, indent=True)
-
-    if color in ["auto", "yes"]:
-        try:
-            from rich.console import Console
-            from rich.syntax import Syntax
-
-            Console().print(Syntax(text, format, background_color="default"))
-
-            return 0
-        except ImportError:
-            if color == "yes":
-                click.secho("rich is required to use colors.", fg="red", err=True)
-                return 1
-            pass
-
-    click.echo(text)
-
-    return 0

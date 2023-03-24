@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 name = "robotcode"
 description = "Language server, debugger and tools for Robot Framework"
 authors = [{ name = "Daniel Biehl", email = "dbiehl@live.de" }]
-readme = {"file" = "README.md", "content-type" = "text/markdown"}
+readme = { "file" = "README.md", "content-type" = "text/markdown" }
 license = { text = "Apache-2.0" }
 keywords = [
   "Test",
@@ -49,7 +49,7 @@ classifiers = [
   "Framework :: Robot Framework :: Tool",
 ]
 requires-python = ">=3.8"
-dependencies = ["robotcode-plugin"]
+dependencies = ["robotcode-plugin", "robotcode-robot"]
 dynamic = ["version"]
 
 
@@ -74,6 +74,15 @@ yaml = ["PyYAML>=5.4", "types-PyYAML>=5.4"]
 lint = ["robotframework-robocop>=2.0.0"]
 tidy = ["robotframework-tidy>=2.0.0"]
 rest = ["docutils"]
+all = [
+  "runner",
+  "debugger",
+  "language-server",
+  "analyze",
+  "yaml",
+  "lint",
+  "tidy",
+]
 
 
 [tool.semantic_release]
@@ -255,5 +264,5 @@ ignore_missing_imports = true
 
 [tool.pyright]
 exclude = ["**/.hatch", "**/node_modules", "**/__pycache__", "bundled/libs"]
-typeCheckingMode= "off"
+typeCheckingMode = "off"
 pythonVersion = "3.8"

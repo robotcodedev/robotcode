@@ -592,7 +592,7 @@
       "d-biehl (https://github.com/d-biehl)"
     ],
     "patterns": [
-      "^(.*(/|\\\\)\\.?robot\\.toml|\\.?robot\\.toml)$"
+      "^(.*(/|\\\\)robot\\.toml|robot\\.toml)$"
     ]
   }
 }

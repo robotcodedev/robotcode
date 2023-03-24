@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "robotcode-robot"
-description = 'Some Robot Framework robot for RobotCode'
+description = 'Support classes for RobotCode for handling Robot Framework projects.'
 readme = { "file" = "README.md", "content-type" = "text/markdown" }
 requires-python = ">=3.8"
 license = "Apache-2.0"
@@ -29,12 +29,8 @@ dependencies = [
   "robotframework>=4.1.0",
   "tomli>=1.1.0; python_version < '3.11'",
   "robotcode-core",
-  "robotcode-plugin",
 ]
 dynamic = ["version"]
-
-[project.entry-points.robotcode]
-robot = "robotcode.robot.hooks"
 
 [project.urls]
 Homepage = "https://robotcode.io"

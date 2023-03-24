@@ -23,7 +23,7 @@ dependencies = [
   "robotremoteserver",
   "apischema",
   "tomli-w",
-  "rich"
+  "rich",
 ]
 features = ["yaml", "rest", "lint", "tidy"]
 pre-install-commands = ["python ./scripts/install_packages.py"]

@@ -8,14 +8,14 @@ def main() -> None:
         dist_path.mkdir()
 
     run(
-        "pip install -U -r ./bundled_requirements.txt",
+        "pip --disable-pip-version-check install -U -r ./bundled_requirements.txt",
         shell=True,
     ).check_returncode()
 
     packages = [f"-e {path}" for path in Path("./packages").iterdir() if (path / "pyproject.toml").exists()]
 
     run(
-        f"pip install --no-deps -U {' '.join(packages)}",
+        f"pip --disable-pip-version-check install --no-deps -U {' '.join(packages)}",
         shell=True,
     ).check_returncode()
 
