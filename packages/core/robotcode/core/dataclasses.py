@@ -179,6 +179,13 @@ def as_json(obj: Any, indent: Optional[bool] = None, compact: Optional[bool] = N
     )
 
 
+class NamedTypeError(TypeError):
+    def __init__(self, name: str, message: str) -> None:
+        super().__init__(f'Invalid value for "{name}": {message}')
+        self.name = name
+        self.message = message
+
+
 def _from_dict_with_name(
     name: str,
     value: Any,
@@ -189,8 +196,10 @@ def _from_dict_with_name(
 ) -> _T:
     try:
         return from_dict(value, types, strict=strict)
+    except NamedTypeError as e:
+        raise NamedTypeError(name + "." + e.name, e.message) from e
     except TypeError as e:
-        raise TypeError(f"Invalid value for '{name}': {e}") from e
+        raise NamedTypeError(name, str(e)) from e
 
 
 def from_dict(
@@ -315,8 +324,13 @@ def from_dict(
                     return cast(_T, v)
 
     raise TypeError(
-        f"Cant convert value <{repr(value)}> of type {type(value)} to type "
-        f"{repr(types[0]) if len(types)==1 else ' | '.join(repr(e) for e in types)}."
+        f"Cant convert value {repr(value)} of type {type(value).__name__} to type " + repr(types[0])
+        if len(types) == 1
+        else " | ".join(
+            ((getattr(e, "__name__", None) or str(e) if e is not type(None) else "None") if e is not None else "None")
+            for e in types
+        )
+        + "."
     )
 
 
@@ -447,6 +461,12 @@ def validate_types(expected_types: Union[type, Tuple[type, ...], None], value: A
                     result.extend(r)
                     continue
 
+                return []
+
+            if t is Any:
+                return []
+
+            if isinstance(value, origin or t):
                 return []
 
             if result:

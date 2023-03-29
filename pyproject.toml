@@ -190,8 +190,8 @@ select = [
   #"TRY",
   "RUF",
   # "TID"
-
 ]
+
 
 
 [tool.ruff.per-file-ignores]

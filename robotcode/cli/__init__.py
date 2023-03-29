@@ -3,7 +3,7 @@ from typing import List, Optional
 
 import click
 
-from robotcode.plugin import ClickCommonConfig, ColoredOutput, pass_common_config
+from robotcode.plugin import Application, ColoredOutput, pass_application
 from robotcode.plugin.manager import PluginManager
 
 from .__version__ import __version__
@@ -45,9 +45,9 @@ from .commands import config, profiles
 )
 @click.option("-v", "--verbose", is_flag=True, help="Enables verbose mode.")
 @click.pass_context
-@pass_common_config
+@pass_application
 def robotcode(
-    common_config: ClickCommonConfig,
+    app: Application,
     ctx: click.Context,
     config_file: Optional[Path],
     profiles: Optional[List[str]],
@@ -56,24 +56,25 @@ def robotcode(
     color: Optional[bool],
 ) -> None:
     """\b
- _____       _           _    _____          _
-|  __ \\     | |         | |  / ____|        | |
-| |__) |___ | |__   ___ | |_| |     ___   __| | ___
-|  _  // _ \\| '_ \\ / _ \\| __| |    / _ \\ / _  |/ _ \\
-| | \\ \\ (_) | |_) | (_) | |_| |___| (_) | (_| |  __/
-|_|  \\_\\___/|_.__/ \\___/ \\__|\\_____\\___/ \\__,_|\\___|
+     _____       _           _    _____          _
+    |  __ \\     | |         | |  / ____|        | |
+    | |__) |___ | |__   ___ | |_| |     ___   __| | ___
+    |  _  // _ \\| '_ \\ / _ \\| __| |    / _ \\ / _  |/ _ \\
+    | | \\ \\ (_) | |_) | (_) | |_| |___| (_) | (_| |  __/
+    |_|  \\_\\___/|_.__/ \\___/ \\__|\\_____\\___/ \\__,_|\\___|
+    A CLI tool for Robot Framework.
 
-"""
-    common_config.config_file = config_file
-    common_config.profiles = profiles
-    common_config.dry = dry
-    common_config.verbose = verbose
+    """
+    app.config.config_file = config_file
+    app.config.profiles = profiles
+    app.config.dry = dry
+    app.config.verbose = verbose
     if color is None:
-        common_config.colored_output = ColoredOutput.AUTO
+        app.config.colored_output = ColoredOutput.AUTO
     elif color:
-        common_config.colored_output = ColoredOutput.YES
+        app.config.colored_output = ColoredOutput.YES
     else:
-        common_config.colored_output = ColoredOutput.NO
+        app.config.colored_output = ColoredOutput.NO
 
 
 robotcode.add_command(config)
@@ -87,19 +88,28 @@ for p in PluginManager().cli_commands:
 @robotcode.command()
 @click.pass_context
 def debug(ctx: click.Context) -> None:
-    """Debug a Robot Framework run."""
+    """TODO: Debug a Robot Framework run.
+
+    TODO: This is not implemented yet.
+    """
     click.echo("TODO")
 
 
 @robotcode.command()
 @click.pass_context
 def clean(ctx: click.Context) -> None:
-    """Cleans a Robot Framework project."""
+    """TODO: Cleans a Robot Framework project.
+
+    TODO: This is not implemented yet.
+    """
     click.echo("TODO")
 
 
 @robotcode.command()
 @click.pass_context
 def new(ctx: click.Context) -> None:
-    """Create a new Robot Framework project."""
+    """TODO: Create a new Robot Framework project.
+
+    TODO: This is not implemented yet.
+    """
     click.echo("TODO")

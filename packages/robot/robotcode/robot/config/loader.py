@@ -1,7 +1,7 @@
 import sys
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional, Sequence, Tuple, Union, cast
+from typing import Optional, Sequence, Tuple, Union
 
 from robotcode.core.dataclasses import from_dict
 
@@ -45,22 +45,23 @@ def loads_config_from_pyproject_toml(__s: str) -> RobotConfig:
     return from_dict(dict_data.get("tool", {}).get("robot", {}), RobotConfig)
 
 
-def _load_config_data_from_path(__path: Path) -> Dict[str, Any]:
+def _load_config_data_from_path(__path: Path) -> RobotConfig:
     if __path.name == PYPROJECT_TOML:
-        return cast(Dict[str, Any], tomllib.loads(__path.read_text("utf-8")).get("tool", {}).get("robot", {}))
+        return loads_config_from_pyproject_toml(__path.read_text("utf-8"))
 
     if __path.name == ROBOT_TOML or __path.name == LOCAL_ROBOT_TOML:
-        return tomllib.loads(__path.read_text("utf-8"))
+        return loads_config_from_robot_toml(__path.read_text("utf-8"))
 
     raise ValueError(f"Unknown config file name: {__path.name}")
 
 
 def load_config_from_path(*__paths: Union[Path, Tuple[Path, ConfigType]]) -> RobotConfig:
-    config_data = {}
-    for __path in __paths:
-        config_data.update(_load_config_data_from_path(__path if isinstance(__path, Path) else __path[0]))
+    result = RobotConfig()
 
-    return from_dict(config_data, RobotConfig)
+    for __path in __paths:
+        result.add_options(_load_config_data_from_path(__path if isinstance(__path, Path) else __path[0]))
+
+    return result
 
 
 def find_project_root(*sources: Union[str, Path]) -> Tuple[Optional[Path], DiscoverdBy]:

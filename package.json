@@ -77,11 +77,11 @@
     "tomlValidation": [
       {
         "fileMatch": "robot.toml",
-        "url": "http://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.toml.json"
+        "url": "http://localhost:8000/etc/robot.toml.json"
       },
       {
         "fileMatch": ".robot.toml",
-        "url": "http://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.toml.json"
+        "url": "http://localhost:8000/etc/robot.toml.json"
       }
     ],
     "configurationDefaults": {
@@ -408,7 +408,7 @@
             "items": {
               "type": "string"
             },
-            "markdownDescription": "Specifies the paths where robot/robotcode should discover tests. Corresponds to the `paths` option of __robot__.",
+            "markdownDescription": "Specifies the paths where robot/robotcode should discover tests. Corresponds to the `paths` argument of __robot__.",
             "scope": "resource"
           },
           "robotcode.robot.pythonPath": {

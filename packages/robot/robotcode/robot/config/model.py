@@ -3,53 +3,24 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, get_type_hints
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union, get_type_hints
 
 from robotcode.core.dataclasses import TypeValidationError, ValidateMixin, validate_types
 
 
-class Mode(str, Enum):
-    """Run mode for Robot Framework.
-
-    - use `default` for normal execution
-    - use `rpa` for RPA execution
-    - use `norpa` for non-RPA execution
-
-    Examples:
-    ```toml
-    mode = "rpa"
-    ```
-    """
-
+class Flag(str, Enum):
+    ON = "on"
+    OFF = "off"
     DEFAULT = "default"
-    RPA = "rpa"
-    NORPA = "norpa"
 
     def __str__(self) -> str:
         return self.value
 
+    def __bool__(self) -> bool:
+        if self == Flag.ON:
+            return True
 
-class ConsoleType(str, Enum):
-    """Console type for Robot Framework.
-
-    - use `verbose` for verbose output
-    - use `dotted` for dotted output
-    - use `quiet` for quiet output
-    - use `none` for no output
-
-    Examples:
-    ```toml
-    console_type = "verbose"
-    ```
-    """
-
-    VERBOSE = "verbose"
-    DOTTED = "dotted"
-    QUIET = "quiet"
-    NONE = "none"
-
-    def __str__(self) -> str:
-        return self.value
+        return False
 
 
 def field(
@@ -57,6 +28,8 @@ def field(
     description: Optional[str] = None,
     robot_name: Optional[str] = None,
     robot_short_name: Optional[str] = None,
+    robot_is_flag: Optional[bool] = None,
+    robot_flag_default: Optional[bool] = None,
     robot_priority: Optional[int] = None,
     convert: Optional[Callable[[Any, Any], Any]] = None,
     **kwargs: Any,
@@ -74,6 +47,12 @@ def field(
     if robot_short_name is not None:
         metadata["robot_short_name"] = robot_short_name
 
+    if robot_is_flag is not None:
+        metadata["robot_is_flag"] = robot_is_flag
+
+    if robot_flag_default is not None:
+        metadata["robot_flag_default"] = robot_flag_default
+
     if robot_priority is not None:
         metadata["robot_priority"] = robot_priority
 
@@ -87,182 +66,10 @@ def field(
 
 
 @dataclass
-class BaseProfile(ValidateMixin):
-    """Base profile for Robot Framework."""
+class BaseOptions(ValidateMixin):
+    """Base class for all options."""
 
-    @classmethod
-    def _encode_case(cls, s: str) -> str:
-        return s.replace("_", "-")
-
-    @classmethod
-    def _decode_case(cls, s: str) -> str:
-        return s.replace("-", "_")
-
-    args: Optional[List[str]] = field(
-        description="""\
-            Arguments to be passed to Robot Framework.
-
-            Examples:
-            ```toml
-            args = ["-t", "abc"]
-            ```
-            """,
-        robot_priority=1000,
-    )
-    name: Optional[str] = field(
-        description="""\
-            Set the name of the top level suite. By default the
-            name is created based on the executed file or
-            directory.
-
-            Examples:
-            ```toml
-            name = "My Suite"
-            ```
-            """,
-        robot_name="--doc",
-        robot_short_name="-D",
-        robot_priority=100,
-    )
-    doc: Optional[str] = field(
-        description="""\
-            Set the documentation of the top level suite.
-            Simple formatting is supported (e.g. *bold*). If the
-            documentation contains spaces, it must be quoted.
-            If the value is path to an existing file, actual
-            documentation is read from that file.
-
-            Examples:
-            ```toml
-            doc = \"\"\"Very *good* example
-
-            This is a second paragraph.
-            \"\"\"
-            ```
-            """,
-        robot_name="--doc",
-        robot_short_name="-D",
-        robot_priority=100,
-    )
-    python_path: Optional[List[str]] = field(
-        description="""\
-            Additional locations directories where
-            to search test libraries and other extensions when
-            they are imported. Given path can also be a glob
-            pattern matching multiple paths.
-
-            Examples:
-            ```toml
-            python-path = ["./lib", "./resources"]
-            ```
-            """,
-        robot_name="--pythonpath",
-        robot_short_name="-P",
-        robot_priority=1,
-    )
-    env: Optional[Dict[str, str]] = field(
-        description="""\
-            Define environment variables to be set before running tests.
-
-            Examples:
-            ```toml
-            [env]
-            TEST_VAR = "test"
-            SECRET = "password"
-            ```
-            """,
-    )
-    variables: Optional[Dict[str, Any]] = field(
-        description="""\
-            Set variables in the test data. Only scalar
-            variables with string value are supported and name is
-            given without `${}`
-
-            Examples:
-            ```toml
-            [variables]
-            TEST_VAR = "test"
-            SECRET = "password"
-            ```
-            """,
-        robot_name="--variable",
-        robot_short_name="-v",
-        robot_priority=300,
-    )
-    meta_data: Optional[Dict[str, Any]] = field(
-        description="""\
-            Set metadata of the top level suite. Value can
-            contain formatting and be read from a file similarly
-
-            Examples:
-            ```toml
-            [meta-data]
-            Version = "1.2"
-            Release = "release.txt"
-            ```
-            """,
-    )
-    variable_files: Optional[List[str]] = field()
-
-    paths: Union[str, List[str], None] = field(
-        description="""\
-            Paths to test data. If no paths are given at the command line this value is used.
-            """
-    )
-    output_dir: Optional[str] = field(
-        description="""\
-            Where to create output files. The default is the
-            directory where tests are run from and the given path
-            is considered relative to that unless it is absolute.
-            """,
-        robot_name="--outputdir",
-        robot_short_name="-d",
-        robot_priority=50,
-    )
-
-    output_file: Optional[str] = field()
-    log_file: Optional[str] = field()
-    debug_file: Optional[str] = field()
-    log_level: Optional[str] = field()
-    console: Optional[ConsoleType] = field(
-        default=None,
-        description="""\
-            How to report execution on the console.
-            - `verbose`:  report every suite and test (default)
-            - `dotted`:   only show `.` for passed test, `f` for
-                          failed non-critical tests, and `F` for
-                          failed critical tests
-            - `quiet`:    no output except for errors and warnings
-            - `none`:     no output whatsoever
-            """,
-        robot_name="--console",
-        robot_priority=500,
-    )
-    mode: Optional[Mode] = field(
-        description="""\
-        Run mode for Robot Framework.
-
-        - use `default` for normal execution
-        - use `rpa` for RPA execution
-        - use `norpa` for non-RPA execution
-
-        Examples:
-        ```toml
-        mode = "rpa"
-        ```
-        """,
-        robot_name="+--norpa/--rpa",
-        robot_priority=0,
-    )
-    languages: Optional[List[str]] = field()
-    parsers: Optional[Dict[str, List[Any]]] = field()
-    pre_run_modifiers: Optional[Dict[str, List[Any]]] = field()
-    pre_rebot_modifiers: Optional[Dict[str, List[Any]]] = field()
-
-    listeners: Optional[Dict[str, List[Any]]] = field()
-    dry_run: Optional[bool] = field()
-
-    def build_robot_options(self) -> List[str]:
+    def build_command_line(self) -> List[str]:
         """Build the arguments to pass to Robot Framework."""
         result = []
 
@@ -271,15 +78,23 @@ class BaseProfile(ValidateMixin):
             key=lambda f: f.metadata.get("robot_priority", 0),
         )
 
-        def append_name(field: dataclasses.Field[Any]) -> None:
+        def append_name(field: dataclasses.Field[Any], add_flag: Optional[str] = None) -> None:
             if "robot_short_name" in field.metadata:
-                result.append(field.metadata["robot_short_name"])
+                result.append(f"-{field.metadata['robot_short_name']}")
             elif "robot_name" in field.metadata:
-                result.append(field.metadata["robot_name"])
+                result.append(f"--{'no' if add_flag else ''}{field.metadata['robot_name']}")
 
         for field in sorted_fields:
             value = getattr(self, field.name)
             if value is None:
+                continue
+
+            if field.metadata.get("robot_is_flag", False):
+                if value is None or value == Flag.DEFAULT:
+                    continue
+
+                append_name(field, bool(value) != field.metadata.get("robot_flag_default", True))
+
                 continue
 
             if isinstance(value, list):
@@ -289,7 +104,11 @@ class BaseProfile(ValidateMixin):
             elif isinstance(value, dict):
                 for key, item in value.items():
                     append_name(field)
-                    result.append(f"{key}:{item}")
+                    if isinstance(item, list):
+                        separator = ";" if any(True for s in item if ":" in s) else ":"
+                        result.append(f"{key}{separator}{separator.join(item)}")
+                    else:
+                        result.append(f"{key}:{item}")
             else:
                 if field.metadata.get("robot_name", "").startswith("+"):
                     if str(value) == "default":
@@ -303,10 +122,1881 @@ class BaseProfile(ValidateMixin):
 
         return result
 
+    @staticmethod
+    def _verified_value(name: str, value: Any, types: Union[type, Tuple[type, ...]], target: Any) -> Any:
+        errors = validate_types(types, value)
+        if errors:
+            raise TypeValidationError("Dataclass Type Validation Error", target=target, errors={name: errors})
+        return value
+
+    def add_options(self, config: RobotBaseProfile, combine_extras: bool = False) -> None:
+        type_hints = get_type_hints(type(self))
+        base_field_names = [f.name for f in dataclasses.fields(self)]
+
+        for f in dataclasses.fields(config):
+            if f.name.startswith("extra_"):
+                if f.name not in base_field_names:
+                    continue
+
+                new = self._verified_value(f.name, getattr(config, f.name), type_hints[f.name[6:]], config)
+                if new is None:
+                    continue
+
+                old_field_name = f.name if combine_extras else f.name[6:]
+
+                old = getattr(self, old_field_name)
+                if old is None:
+                    setattr(self, old_field_name, new)
+                else:
+                    if isinstance(old, dict):
+                        if any(True for e in new.values() if isinstance(e, BaseOptions)):
+                            for key, value in new.items():
+                                if isinstance(value, BaseOptions) and key in old:
+                                    old[key].add_options(value, True)
+                                else:
+                                    old[key] = value
+                        else:
+                            setattr(self, old_field_name, {**old, **new})
+                    elif isinstance(old, list):
+                        setattr(self, old_field_name, [*old, *new])
+                    elif isinstance(old, tuple):
+                        setattr(self, old_field_name, (*old, *new))
+                    else:
+                        setattr(self, old_field_name, new)
+                continue
+
+            if f.name not in base_field_names:
+                continue
+
+            if combine_extras:
+                if "extra_" + f.name in base_field_names and getattr(config, f.name, None) is not None:
+                    setattr(self, "extra_" + f.name, None)
+
+            if getattr(config, f"extra_{f.name}", None) is not None and not combine_extras:
+                continue
+
+            new = self._verified_value(f.name, getattr(config, f.name), type_hints[f.name], config)
+            if new is not None:
+                setattr(self, f.name, new)
+
+
+# start generated code
+
 
 @dataclass
-class Profile(BaseProfile):
-    """Robot Framework Configuration Profile."""
+class CommonOptions(BaseOptions):
+    """Common options for all _robot_ commands."""
+
+    # argumentfile
+    # console
+    console_colors: Optional[Literal["auto", "on", "ansi", "off"]] = field(
+        description="""\
+            Use colors on console output or not.
+            auto: use colors when output not redirected (default)
+            on:   always use colors
+            ansi: like `on` but use ANSI colors also on Windows
+            off:  disable colors altogether
+
+            ---
+            corresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_
+            """,
+        robot_name="consolecolors",
+        robot_priority=500,
+        robot_short_name="C",
+    )
+    # consolemarkers
+    # consolewidth
+    # debugfile
+    doc: Optional[str] = field(
+        description="""\
+            Set the documentation of the top level suite.
+            Simple formatting is supported (e.g. *bold*). If the
+            documentation contains spaces, it must be quoted.
+            If the value is path to an existing file, actual
+            documentation is read from that file.
+
+            Examples:
+
+            ```
+            --doc "Very *good* example"
+            --doc doc_from_file.txt
+            ```
+
+            ---
+            corresponds to the `-D --doc documentation` option of _robot_
+            """,
+        robot_name="doc",
+        robot_priority=500,
+        robot_short_name="D",
+    )
+    # dotted
+    # dryrun
+    excludes: Optional[List[str]] = field(
+        description="""\
+            Select test cases not to run by tag. These tests are
+            not run even if included with --include. Tags are
+            matched using same rules as with --include.
+
+            ---
+            corresponds to the `-e --exclude tag *` option of _robot_
+            """,
+        robot_name="exclude",
+        robot_priority=500,
+        robot_short_name="e",
+    )
+    # exitonerror
+    # exitonfailure
+    expand_keywords: Optional[List[Union[str, Literal["name:<pattern>", "tag:<pattern>"]]]] = field(
+        description="""\
+            Matching keywords will be automatically expanded in
+            the log file. Matching against keyword name or tags
+            work using same rules as with --removekeywords.
+
+            Examples:
+
+            ```
+            --expandkeywords name:BuiltIn.Log
+            --expandkeywords tag:expand
+            ```
+
+            ---
+            corresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_
+            """,
+        robot_name="expandkeywords",
+        robot_priority=500,
+    )
+    # extension
+    flatten_keywords: Optional[
+        List[Union[str, Literal["for", "while", "iteration", "name:<pattern>", "tag:<pattern>"]]]
+    ] = field(
+        description="""\
+            Flattens matching keywords in the generated log file.
+            Matching keywords get all log messages from their
+            child keywords and children are discarded otherwise.
+            for:     flatten FOR loops fully
+            while:   flatten WHILE loops fully
+            iteration: flatten FOR/WHILE loop iterations
+            foritem: deprecated alias for `iteration`
+            name:<pattern>:  flatten matched keywords using same
+            matching rules as with
+            `--removekeywords name:<pattern>`
+            tag:<pattern>:  flatten matched keywords using same
+            matching rules as with
+            `--removekeywords tag:<pattern>`
+
+            ---
+            corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_
+            """,
+        robot_name="flattenkeywords",
+        robot_priority=500,
+    )
+    # help
+    includes: Optional[List[str]] = field(
+        description="""\
+            Select tests by tag. Similarly as name with --test,
+            tag is case and space insensitive and it is possible
+            to use patterns with `*`, `?` and `[]` as wildcards.
+            Tags and patterns can also be combined together with
+            `AND`, `OR`, and `NOT` operators.
+
+            Examples:
+
+            ```
+            --include foo --include bar*
+            --include fooANDbar*
+            ```
+
+            ---
+            corresponds to the `-i --include tag *` option of _robot_
+            """,
+        robot_name="include",
+        robot_priority=500,
+        robot_short_name="i",
+    )
+    # language
+    # listener
+    log: Optional[str] = field(
+        description="""\
+            HTML log file. Can be disabled by giving a special
+            value `NONE`. Default: log.html
+
+            Examples:
+
+            ```
+            `--log mylog.html`, `-l NONE`
+            ```
+
+            ---
+            corresponds to the `-l --log file` option of _robot_
+            """,
+        robot_name="log",
+        robot_priority=500,
+        robot_short_name="l",
+    )
+    # loglevel
+    log_title: Optional[str] = field(
+        description="""\
+            Title for the generated log file. The default title
+            is `<SuiteName> Log`.
+
+            ---
+            corresponds to the `--logtitle title` option of _robot_
+            """,
+        robot_name="logtitle",
+        robot_priority=500,
+    )
+    # maxassignlength
+    # maxerrorlines
+    metadata: Optional[Dict[str, str]] = field(
+        description="""\
+            Set metadata of the top level suite. Value can
+            contain formatting and be read from a file similarly
+            as --doc. Example: --metadata Version:1.2
+
+            ---
+            corresponds to the `-M --metadata name:value *` option of _robot_
+            """,
+        robot_name="metadata",
+        robot_priority=500,
+        robot_short_name="M",
+    )
+    name: Optional[str] = field(
+        description="""\
+            Set the name of the top level suite. By default the
+            name is created based on the executed file or
+            directory.
+
+            ---
+            corresponds to the `-N --name name` option of _robot_
+            """,
+        robot_name="name",
+        robot_priority=500,
+        robot_short_name="N",
+    )
+    no_status_rc: Union[bool, Flag, None] = field(
+        description="""\
+            Sets the return code to zero regardless of failures
+            in test cases. Error codes are returned normally.
+
+            ---
+            corresponds to the `--nostatusrc` option of _robot_
+            """,
+        robot_name="statusrc",
+        robot_priority=500,
+        robot_is_flag=True,
+        robot_flag_default=False,
+    )
+    # output
+    output_dir: Optional[str] = field(
+        description="""\
+            Where to create output files. The default is the
+            directory where tests are run from and the given path
+            is considered relative to that unless it is absolute.
+
+            ---
+            corresponds to the `-d --outputdir dir` option of _robot_
+            """,
+        robot_name="outputdir",
+        robot_priority=500,
+        robot_short_name="d",
+    )
+    pre_rebot_modifiers: Optional[Dict[str, List[str]]] = field(
+        description="""\
+            Class to programmatically modify the result
+            model before creating reports and logs.
+
+            ---
+            corresponds to the `--prerebotmodifier class *` option of _robot_
+            """,
+        robot_name="prerebotmodifier",
+        robot_priority=500,
+    )
+    # prerunmodifier
+    python_path: Optional[List[str]] = field(
+        description="""\
+            Additional locations (directories, ZIPs) where to
+            search libraries and other extensions when they are
+            imported. Multiple paths can be given by separating
+            them with a colon (`:`) or by using this option
+            several times. Given path can also be a glob pattern
+            matching multiple paths.
+
+            Examples:
+
+            ```
+            --pythonpath libs/
+            --pythonpath /opt/libs:libraries.zip
+            ```
+
+            ---
+            corresponds to the `-P --pythonpath path *` option of _robot_
+            """,
+        robot_name="pythonpath",
+        robot_priority=500,
+        robot_short_name="P",
+    )
+    # quiet
+    # randomize
+    remove_keywords: Optional[
+        List[Union[str, Literal["all", "passed", "for", "wuks", "name:<pattern>", "tag:<pattern>"]]]
+    ] = field(
+        description="""\
+            Remove keyword data from the generated log file.
+            Keywords containing warnings are not removed except
+            in the `all` mode.
+            all:     remove data from all keywords
+            passed:  remove data only from keywords in passed
+            test cases and suites
+            for:     remove passed iterations from for loops
+            while:   remove passed iterations from while loops
+            wuks:    remove all but the last failing keyword
+            inside `BuiltIn.Wait Until Keyword Succeeds`
+            name:<pattern>:  remove data from keywords that match
+            the given pattern. The pattern is matched
+            against the full name of the keyword (e.g.
+            'MyLib.Keyword', 'resource.Second Keyword'),
+            is case, space, and underscore insensitive,
+            and may contain `*`, `?` and `[]` wildcards.
+
+            Examples:
+
+            ```
+            --removekeywords name:Lib.HugeKw
+            --removekeywords name:myresource.*
+            ```
+
+
+            tag:<pattern>:  remove data from keywords that match
+            the given pattern. Tags are case and space
+            insensitive and patterns can contain `*`,
+            `?` and `[]` wildcards. Tags and patterns
+            can also be combined together with `AND`,
+            `OR`, and `NOT` operators.
+
+            Examples:
+
+            ```
+            --removekeywords foo
+            --removekeywords fooANDbar*
+            ```
+
+            ---
+            corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
+            """,
+        robot_name="removekeywords",
+        robot_priority=500,
+    )
+    report: Optional[str] = field(
+        description="""\
+            HTML report file. Can be disabled with `NONE`
+            similarly as --log. Default: report.html
+
+            ---
+            corresponds to the `-r --report file` option of _robot_
+            """,
+        robot_name="report",
+        robot_priority=500,
+        robot_short_name="r",
+    )
+    report_background: Optional[str] = field(
+        description="""\
+            Background colors to use in the report file.
+            Given in format `passed:failed:skipped` where the
+            `:skipped` part can be omitted. Both color names and
+            codes work.
+
+            Examples:
+
+            ```
+            --reportbackground green:red:yellow
+            --reportbackground #00E:#E00
+            ```
+
+            ---
+            corresponds to the `--reportbackground colors` option of _robot_
+            """,
+        robot_name="reportbackground",
+        robot_priority=500,
+    )
+    report_title: Optional[str] = field(
+        description="""\
+            Title for the generated report file. The default
+            title is `<SuiteName> Report`.
+
+            ---
+            corresponds to the `--reporttitle title` option of _robot_
+            """,
+        robot_name="reporttitle",
+        robot_priority=500,
+    )
+    # rerunfailed
+    # rerunfailedsuites
+    rpa: Union[bool, Flag, None] = field(
+        description="""\
+            Turn on the generic automation mode. Mainly affects
+            terminology so that "test" is replaced with "task"
+            in logs and reports. By default the mode is got
+            from test/task header in data files.
+
+            ---
+            corresponds to the `--rpa` option of _robot_
+            """,
+        robot_name="rpa",
+        robot_priority=500,
+        robot_is_flag=True,
+    )
+    # runemptysuite
+    set_tag: Optional[List[str]] = field(
+        description="""\
+            Sets given tag(s) to all executed tests.
+
+            ---
+            corresponds to the `-G --settag tag *` option of _robot_
+            """,
+        robot_name="settag",
+        robot_priority=500,
+        robot_short_name="G",
+    )
+    # skip
+    # skiponfailure
+    # skipteardownonexit
+    split_log: Union[bool, Flag, None] = field(
+        description="""\
+            Split the log file into smaller pieces that open in
+            browsers transparently.
+
+            ---
+            corresponds to the `--splitlog` option of _robot_
+            """,
+        robot_name="splitlog",
+        robot_priority=500,
+        robot_is_flag=True,
+    )
+    suites: Optional[List[str]] = field(
+        description="""\
+            Select suites by name. When this option is used with
+            --test, --include or --exclude, only tests in
+            matching suites and also matching other filtering
+            criteria are selected. Name can be a simple pattern
+            similarly as with --test and it can contain parent
+            name separated with a dot. For example, `-s X.Y`
+            selects suite `Y` only if its parent is `X`.
+
+            ---
+            corresponds to the `-s --suite name *` option of _robot_
+            """,
+        robot_name="suite",
+        robot_priority=500,
+        robot_short_name="s",
+    )
+    suite_stat_level: Optional[int] = field(
+        description="""\
+            How many levels to show in `Statistics by Suite`
+            in log and report. By default all suite levels are
+            shown. Example:  --suitestatlevel 3
+
+            ---
+            corresponds to the `--suitestatlevel level` option of _robot_
+            """,
+        robot_name="suitestatlevel",
+        robot_priority=500,
+    )
+    tag_doc: Optional[Dict[str, str]] = field(
+        description="""\
+            Add documentation to tags matching the given
+            pattern. Documentation is shown in `Test Details` and
+            also as a tooltip in `Statistics by Tag`. Pattern can
+            use `*`, `?` and `[]` as wildcards like --test.
+            Documentation can contain formatting like --doc.
+
+            Examples:
+
+            ```
+            --tagdoc mytag:Example
+            --tagdoc "owner-*:Original author"
+            ```
+
+            ---
+            corresponds to the `--tagdoc pattern:doc *` option of _robot_
+            """,
+        robot_name="tagdoc",
+        robot_priority=500,
+    )
+    tag_stat_combine: Optional[Dict[str, str]] = field(
+        description="""\
+            Create combined statistics based on tags.
+            These statistics are added into `Statistics by Tag`.
+            If the optional `name` is not given, name of the
+            combined tag is got from the specified tags. Tags are
+            matched using the same rules as with --include.
+
+            Examples:
+
+            ```
+            --tagstatcombine requirement-*
+            --tagstatcombine tag1ANDtag2:My_name
+            ```
+
+            ---
+            corresponds to the `--tagstatcombine tags:name *` option of _robot_
+            """,
+        robot_name="tagstatcombine",
+        robot_priority=500,
+    )
+    tag_stat_exclude: Optional[List[str]] = field(
+        description="""\
+            Exclude matching tags from `Statistics by Tag`.
+            This option can be used with --tagstatinclude
+            similarly as --exclude is used with --include.
+
+            ---
+            corresponds to the `--tagstatexclude tag *` option of _robot_
+            """,
+        robot_name="tagstatexclude",
+        robot_priority=500,
+    )
+    tag_stat_include: Optional[List[str]] = field(
+        description="""\
+            Include only matching tags in `Statistics by Tag`
+            in log and report. By default all tags are shown.
+            Given tag can be a pattern like with --include.
+
+            ---
+            corresponds to the `--tagstatinclude tag *` option of _robot_
+            """,
+        robot_name="tagstatinclude",
+        robot_priority=500,
+    )
+    tag_stat_link: Optional[Dict[str, str]] = field(
+        description="""\
+            Add external links into `Statistics by
+            Tag`. Pattern can use `*`, `?` and `[]` as wildcards
+            like --test. Characters matching to `*` and `?`
+            wildcards can be used in link and title with syntax
+            %N, where N is index of the match (starting from 1).
+
+            Examples:
+
+            ```
+            --tagstatlink mytag:http://my.domain:Title
+            --tagstatlink "bug-*:http://url/id=%1:Issue Tracker"
+            ```
+
+            ---
+            corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
+            """,
+        robot_name="tagstatlink",
+        robot_priority=500,
+    )
+    tasks: Optional[List[str]] = field(
+        description="""\
+            Alias to --test. Especially applicable with --rpa.
+
+            ---
+            corresponds to the `--task name *` option of _robot_
+            """,
+        robot_name="task",
+        robot_priority=500,
+    )
+    tests: Optional[List[str]] = field(
+        description="""\
+            Select tests by name or by long name containing also
+            parent suite name like `Parent.Test`. Name is case
+            and space insensitive and it can also be a simple
+            pattern where `*` matches anything, `?` matches any
+            single character, and `[chars]` matches one character
+            in brackets.
+
+            ---
+            corresponds to the `-t --test name *` option of _robot_
+            """,
+        robot_name="test",
+        robot_priority=500,
+        robot_short_name="t",
+    )
+    timestamp_outputs: Union[bool, Flag, None] = field(
+        description="""\
+            When this option is used, timestamp in a format
+            `YYYYMMDD-hhmmss` is added to all generated output
+            files between their basename and extension. For
+            example `-T -o output.xml -r report.html -l none`
+            creates files like `output-20070503-154410.xml` and
+            `report-20070503-154410.html`.
+
+            ---
+            corresponds to the `-T --timestampoutputs` option of _robot_
+            """,
+        robot_name="timestampoutputs",
+        robot_priority=500,
+        robot_short_name="T",
+        robot_is_flag=True,
+    )
+    # variable
+    # variablefile
+    xunit: Optional[str] = field(
+        description="""\
+            xUnit compatible result file. Not created unless this
+            option is specified.
+
+            ---
+            corresponds to the `-x --xunit file` option of _robot_
+            """,
+        robot_name="xunit",
+        robot_priority=500,
+        robot_short_name="x",
+    )
+
+
+@dataclass
+class CommonExtraOptions(BaseOptions):
+    """Extra common options for all _robot_ commands."""
+
+    extra_excludes: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --exclude option.
+
+            ---
+
+            Select test cases not to run by tag. These tests are
+            not run even if included with --include. Tags are
+            matched using same rules as with --include.
+
+            ---
+            corresponds to the `-e --exclude tag *` option of _robot_
+            """,
+    )
+    extra_expand_keywords: Optional[List[Union[str, Literal["name:<pattern>", "tag:<pattern>"]]]] = field(
+        description="""\
+            Appends entries to the --expandkeywords option.
+
+            ---
+
+            Matching keywords will be automatically expanded in
+            the log file. Matching against keyword name or tags
+            work using same rules as with --removekeywords.
+
+            Examples:
+
+            ```
+            --expandkeywords name:BuiltIn.Log
+            --expandkeywords tag:expand
+            ```
+
+            ---
+            corresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_
+            """,
+    )
+    extra_flatten_keywords: Optional[
+        List[Union[str, Literal["for", "while", "iteration", "name:<pattern>", "tag:<pattern>"]]]
+    ] = field(
+        description="""\
+            Appends entries to the --flattenkeywords option.
+
+            ---
+
+            Flattens matching keywords in the generated log file.
+            Matching keywords get all log messages from their
+            child keywords and children are discarded otherwise.
+            for:     flatten FOR loops fully
+            while:   flatten WHILE loops fully
+            iteration: flatten FOR/WHILE loop iterations
+            foritem: deprecated alias for `iteration`
+            name:<pattern>:  flatten matched keywords using same
+            matching rules as with
+            `--removekeywords name:<pattern>`
+            tag:<pattern>:  flatten matched keywords using same
+            matching rules as with
+            `--removekeywords tag:<pattern>`
+
+            ---
+            corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_
+            """,
+    )
+    extra_includes: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --include option.
+
+            ---
+
+            Select tests by tag. Similarly as name with --test,
+            tag is case and space insensitive and it is possible
+            to use patterns with `*`, `?` and `[]` as wildcards.
+            Tags and patterns can also be combined together with
+            `AND`, `OR`, and `NOT` operators.
+
+            Examples:
+
+            ```
+            --include foo --include bar*
+            --include fooANDbar*
+            ```
+
+            ---
+            corresponds to the `-i --include tag *` option of _robot_
+            """,
+    )
+    extra_metadata: Optional[Dict[str, str]] = field(
+        description="""\
+            Appends entries to the --metadata option.
+
+            ---
+
+            Set metadata of the top level suite. Value can
+            contain formatting and be read from a file similarly
+            as --doc. Example: --metadata Version:1.2
+
+            ---
+            corresponds to the `-M --metadata name:value *` option of _robot_
+            """,
+    )
+    extra_pre_rebot_modifiers: Optional[Dict[str, List[str]]] = field(
+        description="""\
+            Appends entries to the --prerebotmodifier option.
+
+            ---
+
+            Class to programmatically modify the result
+            model before creating reports and logs.
+
+            ---
+            corresponds to the `--prerebotmodifier class *` option of _robot_
+            """,
+    )
+    extra_python_path: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --pythonpath option.
+
+            ---
+
+            Additional locations (directories, ZIPs) where to
+            search libraries and other extensions when they are
+            imported. Multiple paths can be given by separating
+            them with a colon (`:`) or by using this option
+            several times. Given path can also be a glob pattern
+            matching multiple paths.
+
+            Examples:
+
+            ```
+            --pythonpath libs/
+            --pythonpath /opt/libs:libraries.zip
+            ```
+
+            ---
+            corresponds to the `-P --pythonpath path *` option of _robot_
+            """,
+    )
+    extra_remove_keywords: Optional[
+        List[Union[str, Literal["all", "passed", "for", "wuks", "name:<pattern>", "tag:<pattern>"]]]
+    ] = field(
+        description="""\
+            Appends entries to the --removekeywords option.
+
+            ---
+
+            Remove keyword data from the generated log file.
+            Keywords containing warnings are not removed except
+            in the `all` mode.
+            all:     remove data from all keywords
+            passed:  remove data only from keywords in passed
+            test cases and suites
+            for:     remove passed iterations from for loops
+            while:   remove passed iterations from while loops
+            wuks:    remove all but the last failing keyword
+            inside `BuiltIn.Wait Until Keyword Succeeds`
+            name:<pattern>:  remove data from keywords that match
+            the given pattern. The pattern is matched
+            against the full name of the keyword (e.g.
+            'MyLib.Keyword', 'resource.Second Keyword'),
+            is case, space, and underscore insensitive,
+            and may contain `*`, `?` and `[]` wildcards.
+
+            Examples:
+
+            ```
+            --removekeywords name:Lib.HugeKw
+            --removekeywords name:myresource.*
+            ```
+
+
+            tag:<pattern>:  remove data from keywords that match
+            the given pattern. Tags are case and space
+            insensitive and patterns can contain `*`,
+            `?` and `[]` wildcards. Tags and patterns
+            can also be combined together with `AND`,
+            `OR`, and `NOT` operators.
+
+            Examples:
+
+            ```
+            --removekeywords foo
+            --removekeywords fooANDbar*
+            ```
+
+            ---
+            corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
+            """,
+    )
+    extra_set_tag: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --settag option.
+
+            ---
+
+            Sets given tag(s) to all executed tests.
+
+            ---
+            corresponds to the `-G --settag tag *` option of _robot_
+            """,
+    )
+    extra_suites: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --suite option.
+
+            ---
+
+            Select suites by name. When this option is used with
+            --test, --include or --exclude, only tests in
+            matching suites and also matching other filtering
+            criteria are selected. Name can be a simple pattern
+            similarly as with --test and it can contain parent
+            name separated with a dot. For example, `-s X.Y`
+            selects suite `Y` only if its parent is `X`.
+
+            ---
+            corresponds to the `-s --suite name *` option of _robot_
+            """,
+    )
+    extra_tag_doc: Optional[Dict[str, str]] = field(
+        description="""\
+            Appends entries to the --tagdoc option.
+
+            ---
+
+            Add documentation to tags matching the given
+            pattern. Documentation is shown in `Test Details` and
+            also as a tooltip in `Statistics by Tag`. Pattern can
+            use `*`, `?` and `[]` as wildcards like --test.
+            Documentation can contain formatting like --doc.
+
+            Examples:
+
+            ```
+            --tagdoc mytag:Example
+            --tagdoc "owner-*:Original author"
+            ```
+
+            ---
+            corresponds to the `--tagdoc pattern:doc *` option of _robot_
+            """,
+    )
+    extra_tag_stat_combine: Optional[Dict[str, str]] = field(
+        description="""\
+            Appends entries to the --tagstatcombine option.
+
+            ---
+
+            Create combined statistics based on tags.
+            These statistics are added into `Statistics by Tag`.
+            If the optional `name` is not given, name of the
+            combined tag is got from the specified tags. Tags are
+            matched using the same rules as with --include.
+
+            Examples:
+
+            ```
+            --tagstatcombine requirement-*
+            --tagstatcombine tag1ANDtag2:My_name
+            ```
+
+            ---
+            corresponds to the `--tagstatcombine tags:name *` option of _robot_
+            """,
+    )
+    extra_tag_stat_exclude: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --tagstatexclude option.
+
+            ---
+
+            Exclude matching tags from `Statistics by Tag`.
+            This option can be used with --tagstatinclude
+            similarly as --exclude is used with --include.
+
+            ---
+            corresponds to the `--tagstatexclude tag *` option of _robot_
+            """,
+    )
+    extra_tag_stat_include: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --tagstatinclude option.
+
+            ---
+
+            Include only matching tags in `Statistics by Tag`
+            in log and report. By default all tags are shown.
+            Given tag can be a pattern like with --include.
+
+            ---
+            corresponds to the `--tagstatinclude tag *` option of _robot_
+            """,
+    )
+    extra_tag_stat_link: Optional[Dict[str, str]] = field(
+        description="""\
+            Appends entries to the --tagstatlink option.
+
+            ---
+
+            Add external links into `Statistics by
+            Tag`. Pattern can use `*`, `?` and `[]` as wildcards
+            like --test. Characters matching to `*` and `?`
+            wildcards can be used in link and title with syntax
+            %N, where N is index of the match (starting from 1).
+
+            Examples:
+
+            ```
+            --tagstatlink mytag:http://my.domain:Title
+            --tagstatlink "bug-*:http://url/id=%1:Issue Tracker"
+            ```
+
+            ---
+            corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
+            """,
+    )
+    extra_tasks: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --task option.
+
+            ---
+
+            Alias to --test. Especially applicable with --rpa.
+
+            ---
+            corresponds to the `--task name *` option of _robot_
+            """,
+    )
+    extra_tests: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --test option.
+
+            ---
+
+            Select tests by name or by long name containing also
+            parent suite name like `Parent.Test`. Name is case
+            and space insensitive and it can also be a simple
+            pattern where `*` matches anything, `?` matches any
+            single character, and `[chars]` matches one character
+            in brackets.
+
+            ---
+            corresponds to the `-t --test name *` option of _robot_
+            """,
+    )
+
+
+@dataclass
+class RobotOptions(BaseOptions):
+    """Options for _robot_ command."""
+
+    # argumentfile
+    console: Optional[Literal["verbose", "dotted", "skipped", "quiet", "none"]] = field(
+        description="""\
+            How to report execution on the console.
+            verbose:  report every suite and test (default)
+            dotted:   only show `.` for passed test, `s` for
+            skipped tests, and `F` for failed tests
+            quiet:    no output except for errors and warnings
+            none:     no output whatsoever
+
+            ---
+            corresponds to the `--console type` option of _robot_
+            """,
+        robot_name="console",
+        robot_priority=500,
+    )
+    # consolecolors
+    console_markers: Optional[Literal["auto", "on", "off"]] = field(
+        description="""\
+            Show markers on the console when top level
+            keywords in a test case end. Values have same
+            semantics as with --consolecolors.
+
+            ---
+            corresponds to the `-K --consolemarkers auto|on|off` option of _robot_
+            """,
+        robot_name="consolemarkers",
+        robot_priority=500,
+        robot_short_name="K",
+    )
+    console_width: Optional[int] = field(
+        description="""\
+            Width of the console output. Default is 78.
+
+            ---
+            corresponds to the `-W --consolewidth chars` option of _robot_
+            """,
+        robot_name="consolewidth",
+        robot_priority=500,
+        robot_short_name="W",
+    )
+    debug_file: Optional[str] = field(
+        description="""\
+            Debug file written during execution. Not created
+            unless this option is specified.
+
+            ---
+            corresponds to the `-b --debugfile file` option of _robot_
+            """,
+        robot_name="debugfile",
+        robot_priority=500,
+        robot_short_name="b",
+    )
+    # doc
+    dotted: Union[bool, Flag, None] = field(
+        description="""\
+            Shortcut for `--console dotted`.
+
+            ---
+            corresponds to the `-. --dotted` option of _robot_
+            """,
+        robot_name="dotted",
+        robot_priority=500,
+        robot_short_name=".",
+        robot_is_flag=True,
+    )
+    dry_run: Union[bool, Flag, None] = field(
+        description="""\
+            Verifies test data and runs tests so that library
+            keywords are not executed.
+
+            ---
+            corresponds to the `--dryrun` option of _robot_
+            """,
+        robot_name="dryrun",
+        robot_priority=500,
+        robot_is_flag=True,
+    )
+    # exclude
+    exit_on_error: Union[bool, Flag, None] = field(
+        description="""\
+            Stops test execution if any error occurs when parsing
+            test data, importing libraries, and so on.
+
+            ---
+            corresponds to the `--exitonerror` option of _robot_
+            """,
+        robot_name="exitonerror",
+        robot_priority=500,
+        robot_is_flag=True,
+    )
+    exit_on_failure: Union[bool, Flag, None] = field(
+        description="""\
+            Stops test execution if any test fails.
+
+            ---
+            corresponds to the `-X --exitonfailure` option of _robot_
+            """,
+        robot_name="exitonfailure",
+        robot_priority=500,
+        robot_short_name="X",
+        robot_is_flag=True,
+    )
+    # expandkeywords
+    extensions: Optional[str] = field(
+        description="""\
+            Parse only files with this extension when executing
+            a directory. Has no effect when running individual
+            files or when using resource files. If more than one
+            extension is needed, separate them with a colon.
+
+            Examples:
+
+            ```
+            `--extension txt`, `--extension robot:txt`
+            ```
+
+
+            Only `*.robot` files are parsed by default.
+
+            ---
+            corresponds to the `-F --extension value` option of _robot_
+            """,
+        robot_name="extension",
+        robot_priority=500,
+        robot_short_name="F",
+    )
+    # flattenkeywords
+    # help
+    # include
+    languages: Optional[List[str]] = field(
+        description="""\
+            Activate localization. `lang` can be a name or a code
+            of a built-in language, or a path or a module name of
+            a custom language file.
+
+            ---
+            corresponds to the `--language lang *` option of _robot_
+            """,
+        robot_name="language",
+        robot_priority=500,
+    )
+    listeners: Optional[Dict[str, List[str]]] = field(
+        description="""\
+            A class for monitoring test execution. Gets
+            notifications e.g. when tests start and end.
+            Arguments to the listener class can be given after
+            the name using a colon or a semicolon as a separator.
+
+            Examples:
+
+            ```
+            --listener MyListenerClass
+            --listener path/to/Listener.py:arg1:arg2
+            ```
+
+            ---
+            corresponds to the `--listener class *` option of _robot_
+            """,
+        robot_name="listener",
+        robot_priority=500,
+    )
+    # log
+    log_level: Optional[str] = field(
+        description="""\
+            Threshold level for logging. Available levels: TRACE,
+            DEBUG, INFO (default), WARN, NONE (no logging). Use
+            syntax `LOGLEVEL:DEFAULT` to define the default
+            visible log level in log files.
+
+            Examples:
+
+            ```
+            --loglevel DEBUG
+            --loglevel DEBUG:INFO
+            ```
+
+            ---
+            corresponds to the `-L --loglevel level` option of _robot_
+            """,
+        robot_name="loglevel",
+        robot_priority=500,
+        robot_short_name="L",
+    )
+    # logtitle
+    max_assign_length: Optional[int] = field(
+        description="""\
+            Maximum number of characters to show in log
+            when variables are assigned. Zero or negative values
+            can be used to avoid showing assigned values at all.
+            Default is 200.
+
+            ---
+            corresponds to the `--maxassignlength characters` option of _robot_
+            """,
+        robot_name="maxassignlength",
+        robot_priority=500,
+    )
+    max_error_lines: Optional[int] = field(
+        description="""\
+            Maximum number of error message lines to show in
+            report when tests fail. Default is 40, minimum is 10
+            and `NONE` can be used to show the full message.
+
+            ---
+            corresponds to the `--maxerrorlines lines` option of _robot_
+            """,
+        robot_name="maxerrorlines",
+        robot_priority=500,
+    )
+    # metadata
+    # name
+    # statusrc
+    output: Optional[str] = field(
+        description="""\
+            XML output file. Given path, similarly as paths given
+            to --log, --report, --xunit, and --debugfile, is
+            relative to --outputdir unless given as an absolute
+            path. Other output files are created based on XML
+            output files after the test execution and XML outputs
+            can also be further processed with Rebot tool. Can be
+            disabled by giving a special value `NONE`.
+            Default: output.xml
+
+            ---
+            corresponds to the `-o --output file` option of _robot_
+            """,
+        robot_name="output",
+        robot_priority=500,
+        robot_short_name="o",
+    )
+    # outputdir
+    # prerebotmodifier
+    pre_run_modifiers: Optional[Dict[str, List[str]]] = field(
+        description="""\
+            Class to programmatically modify the suite
+            structure before execution.
+
+            ---
+            corresponds to the `--prerunmodifier class *` option of _robot_
+            """,
+        robot_name="prerunmodifier",
+        robot_priority=500,
+    )
+    # pythonpath
+    quiet: Union[bool, Flag, None] = field(
+        description="""\
+            Shortcut for `--console quiet`.
+
+            ---
+            corresponds to the `--quiet` option of _robot_
+            """,
+        robot_name="quiet",
+        robot_priority=500,
+        robot_is_flag=True,
+    )
+    randomize: Optional[Optional[Union[str, Literal["all", "suites", "tests", "none"]]]] = field(
+        description="""\
+            Randomizes the test execution order.
+            all:    randomizes both suites and tests
+            suites: randomizes suites
+            tests:  randomizes tests
+            none:   no randomization (default)
+            Use syntax `VALUE:SEED` to give a custom random seed.
+            The seed must be an integer.
+
+            Examples:
+
+            ```
+            --randomize all
+            --randomize tests:1234
+            ```
+
+            ---
+            corresponds to the `--randomize all|suites|tests|none` option of _robot_
+            """,
+        robot_name="randomize",
+        robot_priority=500,
+    )
+    # removekeywords
+    # report
+    # reportbackground
+    # reporttitle
+    re_run_failed: Optional[str] = field(
+        description="""\
+            Select failed tests from an earlier output file to be
+            re-executed. Equivalent to selecting same tests
+            individually using --test.
+
+            ---
+            corresponds to the `-R --rerunfailed output` option of _robot_
+            """,
+        robot_name="rerunfailed",
+        robot_priority=500,
+        robot_short_name="R",
+    )
+    re_run_failed_suites: Optional[str] = field(
+        description="""\
+            Select failed suites from an earlier output
+            file to be re-executed.
+
+            ---
+            corresponds to the `-S --rerunfailedsuites output` option of _robot_
+            """,
+        robot_name="rerunfailedsuites",
+        robot_priority=500,
+        robot_short_name="S",
+    )
+    # rpa
+    run_empty_suite: Union[bool, Flag, None] = field(
+        description="""\
+            Executes suite even if it contains no tests. Useful
+            e.g. with --include/--exclude when it is not an error
+            that no test matches the condition.
+
+            ---
+            corresponds to the `--runemptysuite` option of _robot_
+            """,
+        robot_name="runemptysuite",
+        robot_priority=500,
+        robot_is_flag=True,
+    )
+    # settag
+    skip: Optional[List[str]] = field(
+        description="""\
+            Tests having given tag will be skipped. Tag can be
+            a pattern.
+
+            ---
+            corresponds to the `--skip tag *` option of _robot_
+            """,
+        robot_name="skip",
+        robot_priority=500,
+    )
+    skip_on_failure: Optional[List[str]] = field(
+        description="""\
+            Tests having given tag will be skipped if they fail.
+            Tag can be a pattern
+
+            ---
+            corresponds to the `--skiponfailure tag *` option of _robot_
+            """,
+        robot_name="skiponfailure",
+        robot_priority=500,
+    )
+    skip_teardown_on_exit: Union[bool, Flag, None] = field(
+        description="""\
+            Causes teardowns to be skipped if test execution is
+            stopped prematurely.
+
+            ---
+            corresponds to the `--skipteardownonexit` option of _robot_
+            """,
+        robot_name="skipteardownonexit",
+        robot_priority=500,
+        robot_is_flag=True,
+    )
+    # splitlog
+    # suite
+    # suitestatlevel
+    # tagdoc
+    # tagstatcombine
+    # tagstatexclude
+    # tagstatinclude
+    # tagstatlink
+    # task
+    # test
+    # timestampoutputs
+    variables: Optional[Dict[str, str]] = field(
+        description="""\
+            Set variables in the test data. Only scalar
+            variables with string value are supported and name is
+            given without `${}`. See --variablefile for a more
+            powerful variable setting mechanism.
+
+            Examples:
+
+            ```
+            --variable str:Hello       =>  ${str} = `Hello`
+            -v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`
+            -v x: -v y:42              =>  ${x} = ``, ${y} = `42`
+            ```
+
+            ---
+            corresponds to the `-v --variable name:value *` option of _robot_
+            """,
+        robot_name="variable",
+        robot_priority=500,
+        robot_short_name="v",
+    )
+    variable_files: Optional[List[str]] = field(
+        description="""\
+            Python or YAML file file to read variables from.
+            Possible arguments to the variable file can be given
+            after the path using colon or semicolon as separator.
+
+            Examples:
+
+            ```
+            --variablefile path/vars.yaml
+            --variablefile environment.py:testing
+            ```
+
+            ---
+            corresponds to the `-V --variablefile path *` option of _robot_
+            """,
+        robot_name="variablefile",
+        robot_priority=500,
+        robot_short_name="V",
+    )
+    # xunit
+
+
+@dataclass
+class RobotExtraOptions(BaseOptions):
+    """Extra options for _robot_ command."""
+
+    extra_languages: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --language option.
+
+            ---
+
+            Activate localization. `lang` can be a name or a code
+            of a built-in language, or a path or a module name of
+            a custom language file.
+
+            ---
+            corresponds to the `--language lang *` option of _robot_
+            """,
+    )
+    extra_listeners: Optional[Dict[str, List[str]]] = field(
+        description="""\
+            Appends entries to the --listener option.
+
+            ---
+
+            A class for monitoring test execution. Gets
+            notifications e.g. when tests start and end.
+            Arguments to the listener class can be given after
+            the name using a colon or a semicolon as a separator.
+
+            Examples:
+
+            ```
+            --listener MyListenerClass
+            --listener path/to/Listener.py:arg1:arg2
+            ```
+
+            ---
+            corresponds to the `--listener class *` option of _robot_
+            """,
+    )
+    extra_pre_run_modifiers: Optional[Dict[str, List[str]]] = field(
+        description="""\
+            Appends entries to the --prerunmodifier option.
+
+            ---
+
+            Class to programmatically modify the suite
+            structure before execution.
+
+            ---
+            corresponds to the `--prerunmodifier class *` option of _robot_
+            """,
+    )
+    extra_skip: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --skip option.
+
+            ---
+
+            Tests having given tag will be skipped. Tag can be
+            a pattern.
+
+            ---
+            corresponds to the `--skip tag *` option of _robot_
+            """,
+    )
+    extra_skip_on_failure: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --skiponfailure option.
+
+            ---
+
+            Tests having given tag will be skipped if they fail.
+            Tag can be a pattern
+
+            ---
+            corresponds to the `--skiponfailure tag *` option of _robot_
+            """,
+    )
+    extra_variables: Optional[Dict[str, str]] = field(
+        description="""\
+            Appends entries to the --variable option.
+
+            ---
+
+            Set variables in the test data. Only scalar
+            variables with string value are supported and name is
+            given without `${}`. See --variablefile for a more
+            powerful variable setting mechanism.
+
+            Examples:
+
+            ```
+            --variable str:Hello       =>  ${str} = `Hello`
+            -v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`
+            -v x: -v y:42              =>  ${x} = ``, ${y} = `42`
+            ```
+
+            ---
+            corresponds to the `-v --variable name:value *` option of _robot_
+            """,
+    )
+    extra_variable_files: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --variablefile option.
+
+            ---
+
+            Python or YAML file file to read variables from.
+            Possible arguments to the variable file can be given
+            after the path using colon or semicolon as separator.
+
+            Examples:
+
+            ```
+            --variablefile path/vars.yaml
+            --variablefile environment.py:testing
+            ```
+
+            ---
+            corresponds to the `-V --variablefile path *` option of _robot_
+            """,
+    )
+
+
+@dataclass
+class RebotOptions(BaseOptions):
+    """Options for _rebot_ command."""
+
+    # argumentfile
+    # consolecolors
+    # doc
+    end_time: Optional[str] = field(
+        description="""\
+            Same as --starttime but for end time. If both options
+            are used, elapsed time of the suite is calculated
+            based on them. For combined suites, it is otherwise
+            calculated by adding elapsed times of the combined
+            suites together.
+
+            ---
+            corresponds to the `--endtime timestamp` option of _robot_
+            """,
+        robot_name="endtime",
+        robot_priority=500,
+    )
+    # exclude
+    # expandkeywords
+    # flattenkeywords
+    # help
+    # include
+    # log
+    log_level: Optional[str] = field(
+        description="""\
+            Threshold for selecting messages. Available levels:
+            TRACE (default), DEBUG, INFO, WARN, NONE (no msgs).
+            Use syntax `LOGLEVEL:DEFAULT` to define the default
+            visible log level in log files.
+
+            Examples:
+
+            ```
+            --loglevel DEBUG
+            --loglevel DEBUG:INFO
+            ```
+
+            ---
+            corresponds to the `-L --loglevel level` option of _robot_
+            """,
+        robot_name="loglevel",
+        robot_priority=500,
+        robot_short_name="L",
+    )
+    # logtitle
+    merge: Union[bool, Flag, None] = field(
+        description="""\
+            When combining results, merge outputs together
+            instead of putting them under a new top level suite.
+            Example: rebot --merge orig.xml rerun.xml
+
+            ---
+            corresponds to the `-R --merge` option of _robot_
+            """,
+        robot_name="merge",
+        robot_priority=500,
+        robot_short_name="R",
+        robot_is_flag=True,
+    )
+    # metadata
+    # name
+    # statusrc
+    output: Optional[str] = field(
+        description="""\
+            XML output file. Not created unless this option is
+            specified. Given path, similarly as paths given to
+            --log, --report and --xunit, is relative to
+            --outputdir unless given as an absolute path.
+
+            ---
+            corresponds to the `-o --output file` option of _robot_
+            """,
+        robot_name="output",
+        robot_priority=500,
+        robot_short_name="o",
+    )
+    # outputdir
+    # prerebotmodifier
+    process_empty_suite: Union[bool, Flag, None] = field(
+        description="""\
+            Processes output also if the top level suite is
+            empty. Useful e.g. with --include/--exclude when it
+            is not an error that there are no matches.
+            Use --skiponfailure when starting execution instead.
+
+            ---
+            corresponds to the `--processemptysuite` option of _robot_
+            """,
+        robot_name="processemptysuite",
+        robot_priority=500,
+        robot_is_flag=True,
+    )
+    # pythonpath
+    # removekeywords
+    # report
+    # reportbackground
+    # reporttitle
+    # rpa
+    # settag
+    # splitlog
+    start_time: Optional[str] = field(
+        description="""\
+            Set execution start time. Timestamp must be given in
+            format `2007-10-01 15:12:42.268` where all separators
+            are optional (e.g. `20071001151242268` is ok too) and
+            parts from milliseconds to hours can be omitted if
+            they are zero (e.g. `2007-10-01`). This can be used
+            to override start time of a single suite or to set
+            start time for a combined suite, which would
+            otherwise be `N/A`.
+
+            ---
+            corresponds to the `--starttime timestamp` option of _robot_
+            """,
+        robot_name="starttime",
+        robot_priority=500,
+    )
+    # suite
+    # suitestatlevel
+    # tagdoc
+    # tagstatcombine
+    # tagstatexclude
+    # tagstatinclude
+    # tagstatlink
+    # task
+    # test
+    # timestampoutputs
+    # xunit
+
+
+@dataclass
+class LibDocOptions(BaseOptions):
+    """Options for _libdoc_ command."""
+
+    doc_format: Optional[Literal["ROBOT", "HTML", "TEXT", "REST"]] = field(
+        description="""\
+            Specifies the source documentation format. Possible
+            values are Robot Framework's documentation format,
+            HTML, plain text, and reStructuredText. The default
+            value can be specified in library source code and
+            the initial default value is ROBOT.
+
+            ---
+            corresponds to the `-F --docformat ROBOT|HTML|TEXT|REST` option of _robot_
+            """,
+        robot_name="docformat",
+        robot_priority=500,
+        robot_short_name="F",
+    )
+    format: Optional[Literal["HTML", "XML", "JSON", "LIBSPEC"]] = field(
+        description="""\
+            Specifies whether to generate an HTML output for
+            humans or a machine readable spec file in XML or JSON
+            format. The LIBSPEC format means XML spec with
+            documentations converted to HTML. The default format
+            is got from the output file extension.
+
+            ---
+            corresponds to the `-f --format HTML|XML|JSON|LIBSPEC` option of _robot_
+            """,
+        robot_name="format",
+        robot_priority=500,
+        robot_short_name="f",
+    )
+    name: Optional[str] = field(
+        description="""\
+            Sets the name of the documented library or resource.
+
+            ---
+            corresponds to the `-n --name name` option of _robot_
+            """,
+        robot_name="name",
+        robot_priority=500,
+        robot_short_name="n",
+    )
+    python_path: Optional[List[str]] = field(
+        description="""\
+            Additional locations where to search for libraries
+            and resources.
+
+            ---
+            corresponds to the `-P --pythonpath path *` option of _robot_
+            """,
+        robot_name="pythonpath",
+        robot_priority=500,
+        robot_short_name="P",
+    )
+    quiet: Union[bool, Flag, None] = field(
+        description="""\
+            Do not print the path of the generated output file
+            to the console. New in RF 4.0.
+
+            ---
+            corresponds to the `--quiet` option of _robot_
+            """,
+        robot_name="quiet",
+        robot_priority=500,
+        robot_is_flag=True,
+    )
+    spec_doc_format: Optional[Literal["RAW", "HTML"]] = field(
+        description="""\
+            Specifies the documentation format used with XML and
+            JSON spec files. RAW means preserving the original
+            documentation format and HTML means converting
+            documentation to HTML. The default is RAW with XML
+            spec files and HTML with JSON specs and when using
+            the special LIBSPEC format. New in RF 4.0.
+
+            ---
+            corresponds to the `-s --specdocformat RAW|HTML` option of _robot_
+            """,
+        robot_name="specdocformat",
+        robot_priority=500,
+        robot_short_name="s",
+    )
+    theme: Optional[Literal["DARK", "LIGHT", "NONE"]] = field(
+        description="""\
+            Use dark or light HTML theme. If this option is not
+            used, or the value is NONE, the theme is selected
+            based on the browser color scheme. New in RF 6.0.
+
+            ---
+            corresponds to the `--theme DARK|LIGHT|NONE` option of _robot_
+            """,
+        robot_name="theme",
+        robot_priority=500,
+    )
+    # version
+
+
+@dataclass
+class LibDocExtraOptions(BaseOptions):
+    """Options for _libdoc_ command."""
+
+    extra_python_path: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --pythonpath option.
+
+            ---
+
+            Additional locations where to search for libraries
+            and resources.
+
+            ---
+            corresponds to the `-P --pythonpath path *` option of _robot_
+            """,
+    )
+
+
+# end generated code
+
+
+@dataclass
+class RebotProfile(RebotOptions, CommonOptions, CommonExtraOptions):
+    pass
+
+
+@dataclass
+class LibDocProfile(LibDocOptions, LibDocExtraOptions):
+    pass
+
+
+@dataclass
+class RobotBaseProfile(CommonOptions, CommonExtraOptions, RobotOptions, RobotExtraOptions):
+    """Base profile for Robot Framework."""
+
+    @classmethod
+    def _encode_case(cls, s: str) -> str:
+        return s.replace("_", "-")
+
+    @classmethod
+    def _decode_case(cls, s: str) -> str:
+        return s.replace("-", "_")
+
+    args: Optional[List[str]] = field(
+        description="""\
+            Arguments to be passed to _robot_.
+
+            Examples:
+            ```toml
+            args = ["-t", "abc"]
+            ```
+            """,
+        robot_priority=1000,
+    )
+    paths: Union[str, List[str], None] = field(
+        description="""\
+            Specifies the paths where robot/robotcode should discover tests.
+            If no paths are given at the command line this value is used.
+
+            Examples:
+            ```toml
+            paths = ["tests"]
+            ```
+
+            ---
+            Corresponds to the `paths` argument of __robot__.
+            """
+    )
+    env: Optional[Dict[str, str]] = field(
+        description="""\
+            Define environment variables to be set before running tests.
+
+            Examples:
+            ```toml
+            [env]
+            TEST_VAR = "test"
+            SECRET = "password"
+            ```
+            """,
+    )
+
+    rebot: Optional[RebotProfile] = field(
+        description="""\
+            Options to be passed to _rebot_.
+            """
+    )
+
+    libdoc: Optional[LibDocProfile] = field(
+        description="""\
+            Options to be passed to _libdoc_.
+        """
+    )
+
+
+@dataclass
+class RobotExtraBaseProfile(RobotBaseProfile):
+    """Base profile for Robot Framework with Extras."""
+
+    extra_args: Optional[List[str]] = field(
+        description="""\
+            Append extra arguments to be passed to _robot_.
+            """,
+    )
+
+    extra_env: Optional[Dict[str, str]] = field(
+        description="""\
+            Append extra environment variables to be set before tests.
+            """,
+    )
+
+    extra_paths: Union[str, List[str], None] = field(
+        description="""\
+            Append extra entries to the paths argument.
+
+            Examples:
+            ```toml
+            paths = ["tests"]
+            ```
+            """
+    )
+
+
+@dataclass
+class RobotProfile(RobotExtraBaseProfile):
+    """Robot Framework configuration profile."""
 
     description: Optional[str] = field(description="Description of the profile.")
     detached: Optional[bool] = field(
@@ -316,69 +2006,10 @@ class Profile(BaseProfile):
             """,
     )
 
-    extra_args: Optional[List[str]] = field(
-        description="""\
-            Extra arguments to be passed to Robot Framework
-
-            Use this to append these paths to the inherited python path instead of overwriting them.
-
-            Examples:
-            ```toml
-            extra-args = ["-t", "abc"]
-            ```
-            """,
-    )
-
-    extra_variables: Optional[Dict[str, Any]] = field(
-        description="""\
-            Set extra variables in the test data. Only scalar
-            variables with string value are supported and name is
-            given without `${}`
-
-            Use this to append these variables to the inherited variables instead of overwriting them.
-
-            Examples:
-            ```toml
-            [profiles.dummy.extra-variables]
-            TEST_VAR = "test"
-            SECRET = "password"
-            ```
-            """,
-    )
-
-    extra_env: Optional[Dict[str, str]] = field(
-        description="""\
-            Define extra environment variables to be set before tests.
-
-            Examples:
-            ```toml
-            [profiles.dummy.env]
-            TEST_VAR = "test"
-            SECRET = "password"
-            ```
-            """,
-    )
-
-    extra_python_path: Optional[List[str]] = field(
-        description="""\
-            Extra additional locations (directories) where
-            to search test libraries and other extensions when
-            they are imported. Given path can also be a glob
-            pattern matching multiple paths.
-
-            Use this to append these paths to the inherited python path instead of overwriting them.
-
-            Examples:
-            ```toml
-            extra-python-path = ["./lib", "./resources"]
-            ```
-            """,
-    )
-
 
 @dataclass
-class RobotConfig(BaseProfile):
-    """Robot Framework Configuration."""
+class RobotConfig(RobotExtraBaseProfile):
+    """Robot Framework configuration."""
 
     default_profile: Union[str, List[str], None] = field(
         description="""\
@@ -394,29 +2025,28 @@ class RobotConfig(BaseProfile):
             ```
             """,
     )
-    profiles: Optional[Dict[str, Profile]] = field(
-        metadata={"description": "Execution Profiles."},
+    profiles: Optional[Dict[str, RobotProfile]] = field(
+        metadata={"description": "Execution profiles."},
+    )
+    extra_profiles: Optional[Dict[str, RobotProfile]] = field(
+        metadata={"description": "Extra execution profiles."},
     )
 
-    @staticmethod
-    def _verified_value(name: str, value: Any, types: Union[type, Tuple[type, ...]], target: Any) -> Any:
-        errors = validate_types(types, value)
-        if errors:
-            raise TypeValidationError("Dataclass Type Validation Error", target=target, errors={name: errors})
-        return value
+    tool: Any = field(
+        metadata={"description": "Tool configuration."},
+    )
 
-    def get_profile(self, *names: str, verbose_callback: Callable[..., None] = None) -> BaseProfile:
-        type_hints = get_type_hints(BaseProfile)
+    def get_profile(self, *names: str, verbose_callback: Callable[..., None] = None) -> RobotBaseProfile:
+        type_hints = get_type_hints(RobotBaseProfile)
+        base_field_names = [f.name for f in dataclasses.fields(RobotBaseProfile)]
 
-        result = BaseProfile(
+        result = RobotBaseProfile(
             **{
                 f.name: self._verified_value(f.name, new, type_hints[f.name], self)
-                for f in dataclasses.fields(BaseProfile)
+                for f in dataclasses.fields(RobotBaseProfile)
                 if (new := getattr(self, f.name)) is not None
             }
         )
-
-        base_field_names = [f.name for f in dataclasses.fields(BaseProfile)]
 
         profiles = self.profiles or {}
 
@@ -427,7 +2057,7 @@ class RobotConfig(BaseProfile):
             default_profile = [self.default_profile] if isinstance(self.default_profile, str) else self.default_profile
 
             if verbose_callback and default_profile:
-                verbose_callback(f"Using default profiles {', '.join( default_profile)}.")
+                verbose_callback(f"Using default profiles: {', '.join( default_profile)}.")
 
             names = (*(default_profile or ()),)
 
@@ -441,7 +2071,7 @@ class RobotConfig(BaseProfile):
                 verbose_callback(f'Using profile "{profile_name}".')
 
             if profile.detached:
-                result = BaseProfile()
+                result = RobotBaseProfile()
 
             for f in dataclasses.fields(profile):
                 if f.name.startswith("extra_"):

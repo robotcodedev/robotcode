@@ -64,7 +64,7 @@ markdown_extensions:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
   - pymdownx.highlight:
-      auto_title: true
+      auto_title: false
       linenums_style: pymdownx-inline
       use_pygments: true
   - pymdownx.inlinehilite
@@ -93,6 +93,7 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tilde
+  - mkdocs-click
 
 extra:
   consent:
@@ -114,3 +115,6 @@ nav:
   - Home: index.md
   - Features: features.md
   - Installation: installation.md
+  - CLI:
+    - About: cli/about.md
+    - Reference: cli/reference.md

@@ -27,17 +27,6 @@ if __name__ == "__main__":
             if field is not None:
                 if "description" in field.metadata:
                     description = field.metadata["description"]
-                if "robot_name" in field.metadata and field.metadata["robot_name"]:
-                    description += (
-                        ("\n" if description else "")
-                        + "Corresponds to the "
-                        + (
-                            field.metadata["robot_name"][1:]
-                            if field.metadata["robot_name"].startswith("+")
-                            else field.metadata["robot_name"]
-                        )
-                        + "option of __robot__."
-                    )
 
             if description:
                 return apischema.schema(title=title, description=description)
@@ -70,11 +59,6 @@ if __name__ == "__main__":
         all_refs=True,
         schema=base_schema,
     )
-
-    # schema["x-taplo-info"] = {
-    #     "authors": ["d-biehl (https://github.com/d-biehl)"],
-    #     "patterns": ["^(.*(/|\\\\)robot\\.toml|robot\\.toml)$"],
-    # }
 
     json_str = json.dumps(schema, indent=2, sort_keys=True)
     pathlib.Path("etc", "robot.toml.json").write_text(json_str, "utf-8")

@@ -21,6 +21,9 @@ from ..__version__ import __version__
 def analyze(
     ctx: click.Context,
 ) -> Union[str, int, None]:
-    """Analyzes a Robot Framework project."""
+    """Analyzes a Robot Framework project.
+
+    TODO: This is not implemented yet.
+    """
     click.echo("Not implemented yet")
     return 0

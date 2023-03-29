@@ -78,18 +78,18 @@ matrix.rf.dependencies = [
 ]
 
 [envs.lint]
-skip-install = true
-extra-dependencies = ["tomli>=2.0.0"]
+#skip-install = true
+#extra-dependencies = ["tomli>=2.0.0"]
 features = ["all"]
 
 [envs.lint.scripts]
 typing = ["mypy --install-types --non-interactive {args:.}"]
 style = ["ruff .", "black --check --diff ."]
-fmt = ["ruff --fix .", "black .", "style"]
+fmt = ["black .", "ruff --fix .", "style"]
 all = ["style", "typing"]
 
 [envs.pages]
-detached = true
+#detached = true
 dependencies = [
   "mkdocs>=1.4.2",
   "mkdocs-material",

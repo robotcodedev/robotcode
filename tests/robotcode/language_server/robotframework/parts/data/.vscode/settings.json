@@ -24,7 +24,7 @@
         // // "--log-language-server"
         // "--call-tracing"
     ],
-    "robotcode.robocop.enabled": false,
+    "robotcode.robocop.enabled": true,
     // "robotcode.debug.groupOutput": false,
     // "robotcode.robot.args": [
     //     "-L", "TRACE"

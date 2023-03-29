@@ -3,7 +3,7 @@ from typing import Any, Dict
 import pytest
 
 from robotcode.core.dataclasses import TypeValidationError, as_dict, from_dict
-from robotcode.robot.config.model import Mode, RobotConfig
+from robotcode.robot.config.model import RobotConfig
 
 
 @pytest.mark.parametrize(
@@ -26,24 +26,22 @@ def test_robot_config_can_created_from_dict() -> None:
         "args": ["--argument"],
         "python-path": ["asd"],
         "env": {},
-        "variables": {"a": 1},
+        "variables": {"a": "1"},
         "variable-files": [],
         "paths": [],
         "console": None,
         "output-dir": None,
-        "output-file": None,
-        "log-file": None,
+        "output": None,
+        "log": None,
         "debug_file": None,
         "log-level": None,
         "languages": [],
-        "parsers": {},
         "pre-run-modifiers": {},
         "pre-rebot-modifiers": {},
         "listeners": {},
-        "mode": "default",
+        "rpa": True,
     }
     model = from_dict(data, RobotConfig)
-    data["mode"] = Mode.DEFAULT
     model_dict = as_dict(model)
     for key in data:
         assert model_dict[key.replace("-", "_")] == data[key]

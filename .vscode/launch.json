@@ -44,15 +44,27 @@
 			"module": "robotcode.cli",
 			"justMyCode": false,
 			"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data",
+			// "env": {
+			// 	"ROBOTCODE_COLOR": "1",
+			// },
 			"args": [
-				//"-v",
-				"-p",
-				"firefox",
-				//"--dry",
-				// "run",
+				"--verbose",
+				"--dry",
+				// "-p",
+				// "firefox",
+				// "--dry",
+				// "robot",
+				// "--",
+				// "--help"
 				// "tests1"
-				"config",
-				"show"
+				// "profiles",
+
+				// "show",
+				// "list",
+				// "--format",
+				// "toml"
+				"rebot",
+
 			]
 		},
 		{
