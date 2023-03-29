@@ -11,6 +11,7 @@ copyright: >
 
 theme:
   name: material
+  custom_dir: overrides
   language: en
   icon:
     repo: fontawesome/brands/github
@@ -107,6 +108,13 @@ extra:
       - accept
       - reject
       - manage
+  version:
+    provider: mike
+    default: latest
+
+plugins:
+  - mike:
+      canonical_version: latest
 
 extra_css:
   - stylesheets/extra.css
@@ -116,5 +124,5 @@ nav:
   - Features: features.md
   - Installation: installation.md
   - CLI:
-    - About: cli/about.md
-    - Reference: cli/reference.md
+      - About: cli/about.md
+      - Reference: cli/reference.md

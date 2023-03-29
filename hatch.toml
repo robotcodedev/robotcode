@@ -90,7 +90,7 @@ all = ["style", "typing"]
 
 [envs.pages]
 #detached = true
-dependencies = [
+extra-dependencies = [
   "mkdocs>=1.4.2",
   "mkdocs-material",
   # Plugins
@@ -105,10 +105,13 @@ dependencies = [
   "pymdown-extensions~=9.6.0",
   # Necessary for syntax highlighting in code blocks
   "pygments",
+  "mike",
 ]
 
 [envs.pages.scripts]
 build = ["mkdocs build"]
+deploy = ["python scripts/deploy_docs.py"]
+
 
 [envs.build]
 detached = true
