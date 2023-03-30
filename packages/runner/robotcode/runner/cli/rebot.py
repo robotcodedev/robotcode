@@ -83,7 +83,7 @@ def rebot(
         if config_files:
             app.verbose(lambda: f"Found configuration files:\n    {', '.join(str(f[0]) for f in config_files)}")
             try:
-                profile = load_config_from_path(*config_files).get_profile(
+                profile = load_config_from_path(*config_files).combine_profiles(
                     *app.config.profiles if app.config.profiles else [],
                     verbose_callback=app.verbose if app.config.verbose else None,
                 )

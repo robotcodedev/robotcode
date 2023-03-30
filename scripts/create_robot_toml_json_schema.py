@@ -19,7 +19,7 @@ if __name__ == "__main__":
         )
 
     def field_base_schema(tp: Any, name: str, alias: str) -> Optional[apischema.schemas.Schema]:
-        title = alias.replace("_", " ").capitalize()
+        title = name.replace("_", " ").capitalize()
         tp = typing.get_origin(tp) or tp  # tp can be generic
         if is_dataclass(tp):
             field = next((x for x in fields(tp) if x.name == name), None)

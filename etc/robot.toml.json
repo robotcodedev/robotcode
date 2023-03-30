@@ -6,6 +6,22 @@
     }
   ],
   "definitions": {
+    "Condition": {
+      "additionalProperties": false,
+      "description": "Condition(if_: 'str')",
+      "properties": {
+        "if": {
+          "description": "Condition to evaluate. This must be a Python \"eval\" expression.\nFor security reasons, only certain expressions and functions are allowed.\n\nExamples:\n```toml\nif = \"re.match(r'^\\d+$', environ.get('TEST_VAR', ''))\"\nif = \"platform.system() == 'Linux'\"\n```\n",
+          "title": "If ",
+          "type": "string"
+        }
+      },
+      "required": [
+        "if"
+      ],
+      "title": "Condition",
+      "type": "object"
+    },
     "LibDocProfile": {
       "additionalProperties": false,
       "description": "LibDocProfile(extra_python_path: 'Optional[List[str]]' = None, doc_format: \"Optional[Literal['ROBOT', 'HTML', 'TEXT', 'REST']]\" = None, format: \"Optional[Literal['HTML', 'XML', 'JSON', 'LIBSPEC']]\" = None, name: 'Optional[str]' = None, python_path: 'Optional[List[str]]' = None, quiet: 'Union[bool, Flag, None]' = None, spec_doc_format: \"Optional[Literal['RAW', 'HTML']]\" = None, theme: \"Optional[Literal['DARK', 'LIGHT', 'NONE']]\" = None)",
@@ -2267,7 +2283,7 @@
         },
         "detached": {
           "default": null,
-          "description": "If the profile should be detached.\"\nDetached means it is not inherited from the main profile.\n",
+          "description": "The profile should be detached.\"\nDetached means it is not inherited from the main profile.\n",
           "title": "Detached",
           "type": [
             "boolean",
@@ -2324,6 +2340,22 @@
           "default": null,
           "description": "Verifies test data and runs tests so that library\nkeywords are not executed.\n\n---\ncorresponds to the `--dryrun` option of _robot_\n",
           "title": "Dry run"
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/Condition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "If enabled the profile is used. You can also use and `if` condition\nto calculate the enabled state.\n\nExamples:\n```toml\n# alway disabled\nenabled = false\n```\n\n```toml\n# enabled if TEST_VAR is set\nenabled = { if = 'env.get(\"CI\") == \"true\"' }\n```\n",
+          "title": "Enabled"
         },
         "env": {
           "additionalProperties": {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import os
 import re
 from pathlib import Path
@@ -61,10 +62,15 @@ def _glob_pattern_to_re(pattern: str) -> str:
     return result
 
 
+@functools.lru_cache(maxsize=256)
+def _compile_glob_pattern(pattern: str) -> re.Pattern[str]:
+    return re.compile(_glob_pattern_to_re(pattern))
+
+
 class Pattern:
     def __init__(self, pattern: str) -> None:
         self.pattern = pattern
-        self._re_pattern = re.compile(_glob_pattern_to_re(pattern))
+        self._re_pattern = _compile_glob_pattern(pattern)
 
     def matches(self, path: Union[Path, str, os.PathLike[Any]]) -> bool:
         if not isinstance(path, Path):

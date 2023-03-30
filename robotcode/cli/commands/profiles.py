@@ -39,7 +39,9 @@ def show(
         raise click.ClickException("Cannot find any configuration file. 😥")
 
     try:
-        profile = load_config_from_path(*config_files).get_profile(*(app.config.profiles or []))
+        profile = load_config_from_path(*config_files).combine_profiles(
+            *(app.config.profiles or []), verbose_callback=app.verbose
+        )
 
         app.print_dict(as_dict(profile, remove_defaults=True), format)
 

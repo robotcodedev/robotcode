@@ -1,4 +1,4 @@
-default-profile = "firefox"
+default-profiles = "firefox"
 
 #extra-args = ["--profile", "default"]
 #[extra-profiles.abc]

@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import dataclasses
+import fnmatch
+import os
+import platform
+import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union, get_type_hints
 
 from robotcode.core.dataclasses import TypeValidationError, ValidateMixin, validate_types
+from robotcode.core.utils.safe_eval import safe_eval
 
 
 class Flag(str, Enum):
@@ -31,7 +36,9 @@ def field(
     robot_is_flag: Optional[bool] = None,
     robot_flag_default: Optional[bool] = None,
     robot_priority: Optional[int] = None,
+    alias: Optional[str] = None,
     convert: Optional[Callable[[Any, Any], Any]] = None,
+    no_default: bool = False,
     **kwargs: Any,
 ) -> Any:
     metadata = kwargs.get("metadata", {})
@@ -56,10 +63,14 @@ def field(
     if robot_priority is not None:
         metadata["robot_priority"] = robot_priority
 
+    if alias is not None:
+        metadata["alias"] = alias
+        metadata["_apischema_alias"] = alias
+
     if metadata:
         kwargs["metadata"] = metadata
 
-    if "default_factory" not in kwargs:
+    if "default_factory" not in kwargs and not no_default:
         kwargs["default"] = None
 
     return dataclasses.field(*args, **kwargs)
@@ -67,6 +78,14 @@ def field(
 
 @dataclass
 class BaseOptions(ValidateMixin):
+    @classmethod
+    def _encode_case(cls, s: str) -> str:
+        return s.replace("_", "-")
+
+    @classmethod
+    def _decode_case(cls, s: str) -> str:
+        return s.replace("-", "_")
+
     """Base class for all options."""
 
     def build_command_line(self) -> List[str]:
@@ -1907,14 +1926,6 @@ class LibDocProfile(LibDocOptions, LibDocExtraOptions):
 class RobotBaseProfile(CommonOptions, CommonExtraOptions, RobotOptions, RobotExtraOptions):
     """Base profile for Robot Framework."""
 
-    @classmethod
-    def _encode_case(cls, s: str) -> str:
-        return s.replace("_", "-")
-
-    @classmethod
-    def _decode_case(cls, s: str) -> str:
-        return s.replace("-", "_")
-
     args: Optional[List[str]] = field(
         description="""\
             Arguments to be passed to _robot_.
@@ -1994,16 +2005,67 @@ class RobotExtraBaseProfile(RobotBaseProfile):
     )
 
 
+class EvaluationError(Exception):
+    """Evaluation error."""
+
+    def __init__(self, expression: str, message: str):
+        super().__init__(f"Evaluation of '{expression}' failed: {message}")
+        self.expr = expression
+
+
+@dataclass
+class Condition:
+    if_: str = field(
+        description="""\
+            Condition to evaluate. This must be a Python "eval" expression.
+            For security reasons, only certain expressions and functions are allowed.
+
+            Examples:
+            ```toml
+            if = "re.match(r'^\\d+$', environ.get('TEST_VAR', ''))"
+            if = "platform.system() == 'Linux'"
+            ```
+            """,
+        alias="if",
+        no_default=True,
+    )
+
+    def evaluate(self) -> bool:
+        try:
+            return bool(safe_eval(self.if_, {"env": os.environ, "re": re, "platform": platform}))
+        except Exception as e:
+            raise EvaluationError(self.if_, str(e)) from e
+
+
 @dataclass
 class RobotProfile(RobotExtraBaseProfile):
     """Robot Framework configuration profile."""
 
     description: Optional[str] = field(description="Description of the profile.")
+
     detached: Optional[bool] = field(
         description="""\
-            If the profile should be detached."
+            The profile should be detached."
             Detached means it is not inherited from the main profile.
             """,
+    )
+
+    enabled: Union[bool, Condition, None] = field(
+        description="""\
+            If enabled the profile is used. You can also use and `if` condition
+            to calculate the enabled state.
+
+            Examples:
+            ```toml
+            # alway disabled
+            enabled = false
+            ```
+
+            ```toml
+            # enabled if TEST_VAR is set
+            enabled = { if = 'env.get("CI") == "true"' }
+            ```
+            """
     )
 
 
@@ -2036,7 +2098,7 @@ class RobotConfig(RobotExtraBaseProfile):
         metadata={"description": "Tool configuration."},
     )
 
-    def get_profile(self, *names: str, verbose_callback: Callable[..., None] = None) -> RobotBaseProfile:
+    def combine_profiles(self, *names: str, verbose_callback: Callable[..., None] = None) -> RobotBaseProfile:
         type_hints = get_type_hints(RobotBaseProfile)
         base_field_names = [f.name for f in dataclasses.fields(RobotBaseProfile)]
 
@@ -2061,11 +2123,36 @@ class RobotConfig(RobotExtraBaseProfile):
 
             names = (*(default_profile or ()),)
 
-        for profile_name in names:
-            if profile_name not in profiles:
-                raise ValueError(f'Profile "{profile_name}" is not defined.')
+        selected_profiles: List[str] = []
 
+        for name in names:
+            profile_names = [p for p in profiles.keys() if fnmatch.fnmatchcase(p, name)]
+
+            if not profile_names:
+                raise ValueError(f"Can't find any profiles matching the pattern '{name}''.")
+
+            for v in profile_names:
+                if v in selected_profiles:
+                    continue
+                selected_profiles.append(v)
+
+        if verbose_callback:
+            verbose_callback(f"Select profiles {', '.join(selected_profiles)}")
+
+        for profile_name in selected_profiles:
             profile = profiles[profile_name]
+
+            try:
+                if profile.enabled is not None and (
+                    isinstance(profile.enabled, Condition) and not profile.enabled.evaluate() or not profile.enabled
+                ):
+                    if verbose_callback:
+                        verbose_callback(f'Skipping profile "{profile_name}" because it\'s  disabled.')
+                    continue
+            except EvaluationError as e:
+                if verbose_callback:
+                    verbose_callback(f'Skipping profile "{profile_name}" because: {e}')
+                continue
 
             if verbose_callback:
                 verbose_callback(f'Using profile "{profile_name}".')
