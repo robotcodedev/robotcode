@@ -4,6 +4,15 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.31.0 (2023-03-30)
+### Feature
+* Profiles can now be enabled or disabled, also with a condition. Profiles can now also be selected with a wildcard pattern. ([`4282f02`](https://github.com/d-biehl/robotcode/commit/4282f02bab4b483d74d486e983ec9a1f606fd3d7))
+* New commands robot, rebot, libdoc for robotcode.runner ([`25027fa`](https://github.com/d-biehl/robotcode/commit/25027faf3e3b7bb14596d90dd0ec1f43af922522))
+* **robotcode:** Add commands to get informations about configurations and profiles ([`edc4ee5`](https://github.com/d-biehl/robotcode/commit/edc4ee5e5b41f397918b9476ec7e6e09f0bfe53c))
+
+### Documentation
+* Introduce mike for versioned documentation ([`4c6e9ac`](https://github.com/d-biehl/robotcode/commit/4c6e9ac0830830c80a543bb197b39f19f32a1203))
+
 ## v0.30.0 (2023-03-22)
 ### Feature
 * **robotcode-runner:** Robotcode-runner now supports all features, but not all robot options are supported ([`1b7affb`](https://github.com/d-biehl/robotcode/commit/1b7affbf954dbec8eaf924557272105e59eb5c84))
