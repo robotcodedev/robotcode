@@ -38,7 +38,7 @@ MyListener = ["firefox", "c:\\test\\blah"]
 HEADLESS = "true"
 
 [profiles.ci-browser]
-enabled = { if = 'env.get("CI") == "true"' }
+enabled = { if = 'environ.get("CI") == "true"' }
 extra-variables = { BROWSER = "chromium" }
 
 [tool.robotcode-analyzer]

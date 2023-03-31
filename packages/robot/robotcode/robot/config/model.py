@@ -1892,7 +1892,7 @@ class LibDocOptions(BaseOptions):
 
 @dataclass
 class LibDocExtraOptions(BaseOptions):
-    """Options for _libdoc_ command."""
+    """Extra options for _libdoc_ command."""
 
     extra_python_path: Optional[List[str]] = field(
         description="""\
@@ -1909,17 +1909,208 @@ class LibDocExtraOptions(BaseOptions):
     )
 
 
+@dataclass
+class TestDocOptions(BaseOptions):
+    """Options for _testdoc_ command."""
+
+    # argumentfile
+    doc: Optional[str] = field(
+        description="""\
+            Override the documentation of the top level suite.
+
+            ---
+            corresponds to the `-D --doc document` option of _robot_
+            """,
+        robot_name="doc",
+        robot_priority=500,
+        robot_short_name="D",
+    )
+    excludes: Optional[List[str]] = field(
+        description="""\
+            Exclude tests by tags.
+
+            ---
+            corresponds to the `-e --exclude tag *` option of _robot_
+            """,
+        robot_name="exclude",
+        robot_priority=500,
+        robot_short_name="e",
+    )
+    includes: Optional[List[str]] = field(
+        description="""\
+            Include tests by tags.
+
+            ---
+            corresponds to the `-i --include tag *` option of _robot_
+            """,
+        robot_name="include",
+        robot_priority=500,
+        robot_short_name="i",
+    )
+    metadata: Optional[Dict[str, str]] = field(
+        description="""\
+            Set/override metadata of the top level suite.
+
+            ---
+            corresponds to the `-M --metadata name:value *` option of _robot_
+            """,
+        robot_name="metadata",
+        robot_priority=500,
+        robot_short_name="M",
+    )
+    name: Optional[str] = field(
+        description="""\
+            Override the name of the top level suite.
+
+            ---
+            corresponds to the `-N --name name` option of _robot_
+            """,
+        robot_name="name",
+        robot_priority=500,
+        robot_short_name="N",
+    )
+    set_tag: Optional[List[str]] = field(
+        description="""\
+            Set given tag(s) to all test cases.
+
+            ---
+            corresponds to the `-G --settag tag *` option of _robot_
+            """,
+        robot_name="settag",
+        robot_priority=500,
+        robot_short_name="G",
+    )
+    suites: Optional[List[str]] = field(
+        description="""\
+            Include suites by name.
+
+            ---
+            corresponds to the `-s --suite name *` option of _robot_
+            """,
+        robot_name="suite",
+        robot_priority=500,
+        robot_short_name="s",
+    )
+    tests: Optional[List[str]] = field(
+        description="""\
+            Include tests by name.
+
+            ---
+            corresponds to the `-t --test name *` option of _robot_
+            """,
+        robot_name="test",
+        robot_priority=500,
+        robot_short_name="t",
+    )
+    title: Optional[str] = field(
+        description="""\
+            Set the title of the generated documentation.
+            Underscores in the title are converted to spaces.
+            The default title is the name of the top level suite.
+
+            ---
+            corresponds to the `-T --title title` option of _robot_
+            """,
+        robot_name="title",
+        robot_priority=500,
+        robot_short_name="T",
+    )
+
+
+@dataclass
+class TestDocExtraOptions(BaseOptions):
+    """Extra options for _testdoc_ command."""
+
+    extra_excludes: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --exclude option.
+
+            ---
+
+            Exclude tests by tags.
+
+            ---
+            corresponds to the `-e --exclude tag *` option of _robot_
+            """,
+    )
+    extra_includes: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --include option.
+
+            ---
+
+            Include tests by tags.
+
+            ---
+            corresponds to the `-i --include tag *` option of _robot_
+            """,
+    )
+    extra_metadata: Optional[Dict[str, str]] = field(
+        description="""\
+            Appends entries to the --metadata option.
+
+            ---
+
+            Set/override metadata of the top level suite.
+
+            ---
+            corresponds to the `-M --metadata name:value *` option of _robot_
+            """,
+    )
+    extra_set_tag: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --settag option.
+
+            ---
+
+            Set given tag(s) to all test cases.
+
+            ---
+            corresponds to the `-G --settag tag *` option of _robot_
+            """,
+    )
+    extra_suites: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --suite option.
+
+            ---
+
+            Include suites by name.
+
+            ---
+            corresponds to the `-s --suite name *` option of _robot_
+            """,
+    )
+    extra_tests: Optional[List[str]] = field(
+        description="""\
+            Appends entries to the --test option.
+
+            ---
+
+            Include tests by name.
+
+            ---
+            corresponds to the `-t --test name *` option of _robot_
+            """,
+    )
+
+
 # end generated code
 
 
 @dataclass
 class RebotProfile(RebotOptions, CommonOptions, CommonExtraOptions):
-    pass
+    """Profile for _rebot_ command."""
 
 
 @dataclass
 class LibDocProfile(LibDocOptions, LibDocExtraOptions):
-    pass
+    """Profile for _libdoc_ command."""
+
+
+@dataclass
+class TestDocProfile(TestDocOptions, TestDocExtraOptions):
+    """Profile for _testdoc_ command."""
 
 
 @dataclass
@@ -1973,6 +2164,12 @@ class RobotBaseProfile(CommonOptions, CommonExtraOptions, RobotOptions, RobotExt
     libdoc: Optional[LibDocProfile] = field(
         description="""\
             Options to be passed to _libdoc_.
+        """
+    )
+
+    testdoc: Optional[TestDocProfile] = field(
+        description="""\
+            Options to be passed to _testdoc_.
         """
     )
 

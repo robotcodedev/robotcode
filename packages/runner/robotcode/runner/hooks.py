@@ -4,9 +4,9 @@ import click
 
 from robotcode.plugin import hookimpl
 
-from .cli import libdoc, rebot, robot
+from .cli import libdoc, rebot, robot, testdoc
 
 
 @hookimpl
 def hatch_register_cli_commands() -> List[click.Command]:
-    return [robot, rebot, libdoc]
+    return [robot, rebot, libdoc, testdoc]

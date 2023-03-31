@@ -24,7 +24,7 @@
     },
     "LibDocProfile": {
       "additionalProperties": false,
-      "description": "LibDocProfile(extra_python_path: 'Optional[List[str]]' = None, doc_format: \"Optional[Literal['ROBOT', 'HTML', 'TEXT', 'REST']]\" = None, format: \"Optional[Literal['HTML', 'XML', 'JSON', 'LIBSPEC']]\" = None, name: 'Optional[str]' = None, python_path: 'Optional[List[str]]' = None, quiet: 'Union[bool, Flag, None]' = None, spec_doc_format: \"Optional[Literal['RAW', 'HTML']]\" = None, theme: \"Optional[Literal['DARK', 'LIGHT', 'NONE']]\" = None)",
+      "description": "Profile for _libdoc_ command.",
       "properties": {
         "doc-format": {
           "description": "Specifies the source documentation format. Possible\nvalues are Robot Framework's documentation format,\nHTML, plain text, and reStructuredText. The default\nvalue can be specified in library source code and\nthe initial default value is ROBOT.\n\n---\ncorresponds to the `-F --docformat ROBOT|HTML|TEXT|REST` option of _robot_\n",
@@ -139,7 +139,7 @@
     },
     "RebotProfile": {
       "additionalProperties": false,
-      "description": "RebotProfile(extra_excludes: 'Optional[List[str]]' = None, extra_expand_keywords: \"Optional[List[Union[str, Literal['name:<pattern>', 'tag:<pattern>']]]]\" = None, extra_flatten_keywords: \"Optional[List[Union[str, Literal['for', 'while', 'iteration', 'name:<pattern>', 'tag:<pattern>']]]]\" = None, extra_includes: 'Optional[List[str]]' = None, extra_metadata: 'Optional[Dict[str, str]]' = None, extra_pre_rebot_modifiers: 'Optional[Dict[str, List[str]]]' = None, extra_python_path: 'Optional[List[str]]' = None, extra_remove_keywords: \"Optional[List[Union[str, Literal['all', 'passed', 'for', 'wuks', 'name:<pattern>', 'tag:<pattern>']]]]\" = None, extra_set_tag: 'Optional[List[str]]' = None, extra_suites: 'Optional[List[str]]' = None, extra_tag_doc: 'Optional[Dict[str, str]]' = None, extra_tag_stat_combine: 'Optional[Dict[str, str]]' = None, extra_tag_stat_exclude: 'Optional[List[str]]' = None, extra_tag_stat_include: 'Optional[List[str]]' = None, extra_tag_stat_link: 'Optional[Dict[str, str]]' = None, extra_tasks: 'Optional[List[str]]' = None, extra_tests: 'Optional[List[str]]' = None, console_colors: \"Optional[Literal['auto', 'on', 'ansi', 'off']]\" = None, doc: 'Optional[str]' = None, excludes: 'Optional[List[str]]' = None, expand_keywords: \"Optional[List[Union[str, Literal['name:<pattern>', 'tag:<pattern>']]]]\" = None, flatten_keywords: \"Optional[List[Union[str, Literal['for', 'while', 'iteration', 'name:<pattern>', 'tag:<pattern>']]]]\" = None, includes: 'Optional[List[str]]' = None, log: 'Optional[str]' = None, log_title: 'Optional[str]' = None, metadata: 'Optional[Dict[str, str]]' = None, name: 'Optional[str]' = None, no_status_rc: 'Union[bool, Flag, None]' = None, output_dir: 'Optional[str]' = None, pre_rebot_modifiers: 'Optional[Dict[str, List[str]]]' = None, python_path: 'Optional[List[str]]' = None, remove_keywords: \"Optional[List[Union[str, Literal['all', 'passed', 'for', 'wuks', 'name:<pattern>', 'tag:<pattern>']]]]\" = None, report: 'Optional[str]' = None, report_background: 'Optional[str]' = None, report_title: 'Optional[str]' = None, rpa: 'Union[bool, Flag, None]' = None, set_tag: 'Optional[List[str]]' = None, split_log: 'Union[bool, Flag, None]' = None, suites: 'Optional[List[str]]' = None, suite_stat_level: 'Optional[int]' = None, tag_doc: 'Optional[Dict[str, str]]' = None, tag_stat_combine: 'Optional[Dict[str, str]]' = None, tag_stat_exclude: 'Optional[List[str]]' = None, tag_stat_include: 'Optional[List[str]]' = None, tag_stat_link: 'Optional[Dict[str, str]]' = None, tasks: 'Optional[List[str]]' = None, tests: 'Optional[List[str]]' = None, timestamp_outputs: 'Union[bool, Flag, None]' = None, xunit: 'Optional[str]' = None, end_time: 'Optional[str]' = None, log_level: 'Optional[str]' = None, merge: 'Union[bool, Flag, None]' = None, output: 'Optional[str]' = None, process_empty_suite: 'Union[bool, Flag, None]' = None, start_time: 'Optional[str]' = None)",
+      "description": "Profile for _rebot_ command.",
       "properties": {
         "console-colors": {
           "description": "Use colors on console output or not.\nauto: use colors when output not redirected (default)\non:   always use colors\nansi: like `on` but use ANSI colors also on Windows\noff:  disable colors altogether\n\n---\ncorresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_\n",
@@ -2121,6 +2121,19 @@
             "null"
           ]
         },
+        "testdoc": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TestDocProfile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Options to be passed to _testdoc_.\n",
+          "title": "Testdoc"
+        },
         "tests": {
           "default": null,
           "description": "Select tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
@@ -3411,6 +3424,19 @@
             "null"
           ]
         },
+        "testdoc": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TestDocProfile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Options to be passed to _testdoc_.\n",
+          "title": "Testdoc"
+        },
         "tests": {
           "default": null,
           "description": "Select tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
@@ -3479,6 +3505,185 @@
         }
       },
       "title": "RobotProfile",
+      "type": "object"
+    },
+    "TestDocProfile": {
+      "additionalProperties": false,
+      "description": "Profile for _testdoc_ command.",
+      "properties": {
+        "doc": {
+          "default": null,
+          "description": "Override the documentation of the top level suite.\n\n---\ncorresponds to the `-D --doc document` option of _robot_\n",
+          "title": "Doc",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "excludes": {
+          "default": null,
+          "description": "Exclude tests by tags.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Excludes",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "extra-excludes": {
+          "default": null,
+          "description": "Appends entries to the --exclude option.\n\n---\n\nExclude tests by tags.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Extra excludes",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "extra-includes": {
+          "default": null,
+          "description": "Appends entries to the --include option.\n\n---\n\nInclude tests by tags.\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Extra includes",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "extra-metadata": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": null,
+          "description": "Appends entries to the --metadata option.\n\n---\n\nSet/override metadata of the top level suite.\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
+          "title": "Extra metadata",
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "extra-set-tag": {
+          "default": null,
+          "description": "Appends entries to the --settag option.\n\n---\n\nSet given tag(s) to all test cases.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Extra set tag",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "extra-suites": {
+          "default": null,
+          "description": "Appends entries to the --suite option.\n\n---\n\nInclude suites by name.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Extra suites",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "extra-tests": {
+          "default": null,
+          "description": "Appends entries to the --test option.\n\n---\n\nInclude tests by name.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Extra tests",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "includes": {
+          "default": null,
+          "description": "Include tests by tags.\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Includes",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "metadata": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": null,
+          "description": "Set/override metadata of the top level suite.\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
+          "title": "Metadata",
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "name": {
+          "default": null,
+          "description": "Override the name of the top level suite.\n\n---\ncorresponds to the `-N --name name` option of _robot_\n",
+          "title": "Name",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "set-tag": {
+          "default": null,
+          "description": "Set given tag(s) to all test cases.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Set tag",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "suites": {
+          "default": null,
+          "description": "Include suites by name.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Suites",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "tests": {
+          "default": null,
+          "description": "Include tests by name.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Tests",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "title": {
+          "default": null,
+          "description": "Set the title of the generated documentation.\nUnderscores in the title are converted to spaces.\nThe default title is the name of the top level suite.\n\n---\ncorresponds to the `-T --title title` option of _robot_\n",
+          "title": "Title",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "title": "TestDocProfile",
       "type": "object"
     }
   },

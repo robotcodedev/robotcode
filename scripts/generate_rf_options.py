@@ -6,6 +6,7 @@ from robot.conf import RebotSettings, RobotSettings
 from robot.libdoc import USAGE as LIBDOC_USAGE
 from robot.rebot import USAGE as REBOT_USAGE
 from robot.run import USAGE as ROBOT_USAGE
+from robot.testdoc import USAGE as TESTDOC_USAGE
 
 from robotcode.core.dataclasses import to_snake_case
 
@@ -64,7 +65,7 @@ def generate(
     in_examples = False
 
     for line in usage_splitted:
-        if line.startswith((" -", "    --")):
+        if line.startswith((" -", "  -", "    --")):
             if current_line is not None:
                 if in_examples:
                     in_examples = False
@@ -180,7 +181,7 @@ def generate(
                 output.append(
                     f"    {name}"
                     f': {get_type(name, internal_options[long_name]["default"], v, is_flag, extra)} = field(\n'
-                    f'        description="""\\\n{create_desc(v, extra)}\n            """,\n'
+                    f'        description="""\\\n{create_desc(v, extra)}\n            """,'
                 )
                 if not extra:
                     output.append(f'        robot_name="{long_name}",')
@@ -253,6 +254,7 @@ libdoc_options: Dict[str, Tuple[str, Any]] = {
     "PythonPath": ("pythonpath", []),
     "Quiet": ("quiet", False),
 }
+
 output.append("")
 output.append("")
 output.append("@dataclass")
@@ -271,12 +273,47 @@ output.append("")
 output.append("")
 output.append("@dataclass")
 output.append("class LibDocExtraOptions(BaseOptions):")
-output.append('    """Options for _libdoc_ command."""')
+output.append('    """Extra options for _libdoc_ command."""')
 output.append("")
 generate(
     output,
     LIBDOC_USAGE,
     libdoc_options,
+    extra_cmd_options,
+    extra=True,
+)
+
+
+testdoc_options: Dict[str, Tuple[str, Any]] = {
+    "Title": ("title", None),
+    "Name": ("name", None),
+    "Format": ("format", None),
+    **RobotSettings._cli_opts,
+}
+output.append("")
+output.append("")
+output.append("@dataclass")
+output.append("class TestDocOptions(BaseOptions):")
+output.append('    """Options for _testdoc_ command."""')
+output.append("")
+extra_cmd_options = generate(
+    output,
+    TESTDOC_USAGE,
+    testdoc_options,
+    None,
+    extra=False,
+)
+
+output.append("")
+output.append("")
+output.append("@dataclass")
+output.append("class TestDocExtraOptions(BaseOptions):")
+output.append('    """Extra options for _testdoc_ command."""')
+output.append("")
+generate(
+    output,
+    TESTDOC_USAGE,
+    testdoc_options,
     extra_cmd_options,
     extra=True,
 )
