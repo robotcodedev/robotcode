@@ -8,7 +8,7 @@
   "definitions": {
     "Condition": {
       "additionalProperties": false,
-      "description": "Condition(if_: 'str')",
+      "description": "Condition to evaluate.",
       "properties": {
         "if": {
           "description": "Condition to evaluate. This must be a Python \"eval\" expression.\nFor security reasons, only certain expressions and functions are allowed.\n\nExamples:\n```toml\nif = \"re.match(r'^\\d+$', environ.get('TEST_VAR', ''))\"\nif = \"platform.system() == 'Linux'\"\n```\n",
@@ -44,7 +44,14 @@
           "default": null,
           "description": "Appends entries to the --pythonpath option.\n\n---\n\nAdditional locations where to search for libraries\nand resources.\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra python path",
           "type": [
@@ -67,19 +74,33 @@
           ]
         },
         "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Sets the name of the documented library or resource.\n\n---\ncorresponds to the `-n --name name` option of _robot_\n",
-          "title": "Name",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Name"
         },
         "python-path": {
           "default": null,
           "description": "Additional locations where to search for libraries\nand resources.\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Python path",
           "type": [
@@ -137,6 +158,22 @@
       "title": "LibDocProfile",
       "type": "object"
     },
+    "NamePattern": {
+      "additionalProperties": false,
+      "description": "Name pattern to match.",
+      "properties": {
+        "name": {
+          "description": "Name pattern to match. This is a glob pattern, where ``*`` matches any number of characters\n",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "NamePattern",
+      "type": "object"
+    },
     "RebotProfile": {
       "additionalProperties": false,
       "description": "Profile for _rebot_ command.",
@@ -156,28 +193,49 @@
           ]
         },
         "doc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Set the documentation of the top level suite.\nSimple formatting is supported (e.g. *bold*). If the\ndocumentation contains spaces, it must be quoted.\nIf the value is path to an existing file, actual\ndocumentation is read from that file.\n\nExamples:\n\n```\n--doc \"Very *good* example\"\n--doc doc_from_file.txt\n```\n\n---\ncorresponds to the `-D --doc documentation` option of _robot_\n",
-          "title": "Doc",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Doc"
         },
         "end-time": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Same as --starttime but for end time. If both options\nare used, elapsed time of the suite is calculated\nbased on them. For combined suites, it is otherwise\ncalculated by adding elapsed times of the combined\nsuites together.\n\n---\ncorresponds to the `--endtime timestamp` option of _robot_\n",
-          "title": "End time",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "End time"
         },
         "excludes": {
           "default": null,
           "description": "Select test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Excludes",
           "type": [
@@ -186,18 +244,15 @@
           ]
         },
         "expand-keywords": {
+          "default": null,
           "description": "Matching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\n---\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/definitions/NamePattern"
               },
               {
-                "enum": [
-                  "name:<pattern>",
-                  "tag:<pattern>"
-                ],
-                "type": "string"
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -211,7 +266,14 @@
           "default": null,
           "description": "Appends entries to the --exclude option.\n\n---\n\nSelect test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra excludes",
           "type": [
@@ -220,18 +282,15 @@
           ]
         },
         "extra-expand-keywords": {
+          "default": null,
           "description": "Appends entries to the --expandkeywords option.\n\n---\n\nMatching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\n---\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/definitions/NamePattern"
               },
               {
-                "enum": [
-                  "name:<pattern>",
-                  "tag:<pattern>"
-                ],
-                "type": "string"
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -252,11 +311,15 @@
                 "enum": [
                   "for",
                   "while",
-                  "iteration",
-                  "name:<pattern>",
-                  "tag:<pattern>"
+                  "iteration"
                 ],
                 "type": "string"
+              },
+              {
+                "$ref": "#/definitions/NamePattern"
+              },
+              {
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -270,7 +333,14 @@
           "default": null,
           "description": "Appends entries to the --include option.\n\n---\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra includes",
           "type": [
@@ -280,7 +350,14 @@
         },
         "extra-metadata": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Appends entries to the --metadata option.\n\n---\n\nSet metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
@@ -293,7 +370,14 @@
         "extra-pre-rebot-modifiers": {
           "additionalProperties": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
             },
             "type": "array"
           },
@@ -309,7 +393,14 @@
           "default": null,
           "description": "Appends entries to the --pythonpath option.\n\n---\n\nAdditional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra python path",
           "type": [
@@ -322,18 +413,19 @@
           "items": {
             "anyOf": [
               {
-                "type": "string"
-              },
-              {
                 "enum": [
                   "all",
                   "passed",
                   "for",
-                  "wuks",
-                  "name:<pattern>",
-                  "tag:<pattern>"
+                  "wuks"
                 ],
                 "type": "string"
+              },
+              {
+                "$ref": "#/definitions/NamePattern"
+              },
+              {
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -347,7 +439,14 @@
           "default": null,
           "description": "Appends entries to the --settag option.\n\n---\n\nSets given tag(s) to all executed tests.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra set tag",
           "type": [
@@ -359,7 +458,14 @@
           "default": null,
           "description": "Appends entries to the --suite option.\n\n---\n\nSelect suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra suites",
           "type": [
@@ -369,7 +475,14 @@
         },
         "extra-tag-doc": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Appends entries to the --tagdoc option.\n\n---\n\nAdd documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\n---\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
@@ -380,14 +493,24 @@
           ]
         },
         "extra-tag-stat-combine": {
-          "additionalProperties": {
-            "type": "string"
-          },
           "default": null,
           "description": "Appends entries to the --tagstatcombine option.\n\n---\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\n---\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              }
+            ]
+          },
           "title": "Extra tag stat combine",
           "type": [
-            "object",
+            "array",
             "null"
           ]
         },
@@ -395,7 +518,14 @@
           "default": null,
           "description": "Appends entries to the --tagstatexclude option.\n\n---\n\nExclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\n---\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra tag stat exclude",
           "type": [
@@ -407,7 +537,14 @@
           "default": null,
           "description": "Appends entries to the --tagstatinclude option.\n\n---\n\nInclude only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\n---\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra tag stat include",
           "type": [
@@ -417,7 +554,14 @@
         },
         "extra-tag-stat-link": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Appends entries to the --tagstatlink option.\n\n---\n\nAdd external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\n---\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
@@ -431,7 +575,14 @@
           "default": null,
           "description": "Appends entries to the --task option.\n\n---\n\nAlias to --test. Especially applicable with --rpa.\n\n---\ncorresponds to the `--task name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra tasks",
           "type": [
@@ -443,7 +594,14 @@
           "default": null,
           "description": "Appends entries to the --test option.\n\n---\n\nSelect tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra tests",
           "type": [
@@ -462,11 +620,15 @@
                 "enum": [
                   "for",
                   "while",
-                  "iteration",
-                  "name:<pattern>",
-                  "tag:<pattern>"
+                  "iteration"
                 ],
                 "type": "string"
+              },
+              {
+                "$ref": "#/definitions/NamePattern"
+              },
+              {
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -480,7 +642,14 @@
           "default": null,
           "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Includes",
           "type": [
@@ -489,31 +658,52 @@
           ]
         },
         "log": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "HTML log file. Can be disabled by giving a special\nvalue `NONE`. Default: log.html\n\nExamples:\n\n```\n`--log mylog.html`, `-l NONE`\n```\n\n---\ncorresponds to the `-l --log file` option of _robot_\n",
-          "title": "Log",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Log"
         },
         "log-level": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Threshold for selecting messages. Available levels:\nTRACE (default), DEBUG, INFO, WARN, NONE (no msgs).\nUse syntax `LOGLEVEL:DEFAULT` to define the default\nvisible log level in log files.\n\nExamples:\n\n```\n--loglevel DEBUG\n--loglevel DEBUG:INFO\n```\n\n---\ncorresponds to the `-L --loglevel level` option of _robot_\n",
-          "title": "Log level",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Log level"
         },
         "log-title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Title for the generated log file. The default title\nis `<SuiteName> Log`.\n\n---\ncorresponds to the `--logtitle title` option of _robot_\n",
-          "title": "Log title",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Log title"
         },
         "merge": {
           "anyOf": [
@@ -538,7 +728,14 @@
         },
         "metadata": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Set metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
@@ -549,13 +746,20 @@
           ]
         },
         "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Set the name of the top level suite. By default the\nname is created based on the executed file or\ndirectory.\n\n---\ncorresponds to the `-N --name name` option of _robot_\n",
-          "title": "Name",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Name"
         },
         "no-status-rc": {
           "anyOf": [
@@ -579,27 +783,48 @@
           "title": "No status rc"
         },
         "output": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "XML output file. Not created unless this option is\nspecified. Given path, similarly as paths given to\n--log, --report and --xunit, is relative to\n--outputdir unless given as an absolute path.\n\n---\ncorresponds to the `-o --output file` option of _robot_\n",
-          "title": "Output",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Output"
         },
         "output-dir": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n\n---\ncorresponds to the `-d --outputdir dir` option of _robot_\n",
-          "title": "Output dir",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Output dir"
         },
         "pre-rebot-modifiers": {
           "additionalProperties": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
             },
             "type": "array"
           },
@@ -636,7 +861,14 @@
           "default": null,
           "description": "Additional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Python path",
           "type": [
@@ -649,18 +881,19 @@
           "items": {
             "anyOf": [
               {
-                "type": "string"
-              },
-              {
                 "enum": [
                   "all",
                   "passed",
                   "for",
-                  "wuks",
-                  "name:<pattern>",
-                  "tag:<pattern>"
+                  "wuks"
                 ],
                 "type": "string"
+              },
+              {
+                "$ref": "#/definitions/NamePattern"
+              },
+              {
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -671,31 +904,52 @@
           ]
         },
         "report": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "HTML report file. Can be disabled with `NONE`\nsimilarly as --log. Default: report.html\n\n---\ncorresponds to the `-r --report file` option of _robot_\n",
-          "title": "Report",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Report"
         },
         "report-background": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Background colors to use in the report file.\nGiven in format `passed:failed:skipped` where the\n`:skipped` part can be omitted. Both color names and\ncodes work.\n\nExamples:\n\n```\n--reportbackground green:red:yellow\n--reportbackground #00E:#E00\n```\n\n---\ncorresponds to the `--reportbackground colors` option of _robot_\n",
-          "title": "Report background",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Report background"
         },
         "report-title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Title for the generated report file. The default\ntitle is `<SuiteName> Report`.\n\n---\ncorresponds to the `--reporttitle title` option of _robot_\n",
-          "title": "Report title",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Report title"
         },
         "rpa": {
           "anyOf": [
@@ -722,7 +976,14 @@
           "default": null,
           "description": "Sets given tag(s) to all executed tests.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Set tag",
           "type": [
@@ -752,13 +1013,20 @@
           "title": "Split log"
         },
         "start-time": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Set execution start time. Timestamp must be given in\nformat `2007-10-01 15:12:42.268` where all separators\nare optional (e.g. `20071001151242268` is ok too) and\nparts from milliseconds to hours can be omitted if\nthey are zero (e.g. `2007-10-01`). This can be used\nto override start time of a single suite or to set\nstart time for a combined suite, which would\notherwise be `N/A`.\n\n---\ncorresponds to the `--starttime timestamp` option of _robot_\n",
-          "title": "Start time",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Start time"
         },
         "suite-stat-level": {
           "default": null,
@@ -773,7 +1041,14 @@
           "default": null,
           "description": "Select suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Suites",
           "type": [
@@ -783,7 +1058,14 @@
         },
         "tag-doc": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Add documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\n---\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
@@ -794,14 +1076,24 @@
           ]
         },
         "tag-stat-combine": {
-          "additionalProperties": {
-            "type": "string"
-          },
           "default": null,
           "description": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\n---\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              }
+            ]
+          },
           "title": "Tag stat combine",
           "type": [
-            "object",
+            "array",
             "null"
           ]
         },
@@ -809,7 +1101,14 @@
           "default": null,
           "description": "Exclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\n---\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Tag stat exclude",
           "type": [
@@ -821,7 +1120,14 @@
           "default": null,
           "description": "Include only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\n---\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Tag stat include",
           "type": [
@@ -831,7 +1137,14 @@
         },
         "tag-stat-link": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Add external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\n---\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
@@ -845,7 +1158,14 @@
           "default": null,
           "description": "Alias to --test. Especially applicable with --rpa.\n\n---\ncorresponds to the `--task name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Tasks",
           "type": [
@@ -857,7 +1177,14 @@
           "default": null,
           "description": "Select tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Tests",
           "type": [
@@ -887,13 +1214,20 @@
           "title": "Timestamp outputs"
         },
         "xunit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "xUnit compatible result file. Not created unless this\noption is specified.\n\n---\ncorresponds to the `-x --xunit file` option of _robot_\n",
-          "title": "Xunit",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Xunit"
         }
       },
       "title": "RebotProfile",
@@ -967,15 +1301,22 @@
           ]
         },
         "debug-file": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Debug file written during execution. Not created\nunless this option is specified.\n\n---\ncorresponds to the `-b --debugfile file` option of _robot_\n",
-          "title": "Debug file",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Debug file"
         },
-        "default-profile": {
+        "default-profiles": {
           "anyOf": [
             {
               "type": "string"
@@ -991,17 +1332,24 @@
             }
           ],
           "default": null,
-          "description": "Selects the Default profile if no profile is given at command line.\n\nExamples:\n```toml\ndefault_profile = \"default\"\n```\n\n```toml\ndefault_profile = [\"default\", \"Firefox\"]\n```\n",
-          "title": "Default profile"
+          "description": "Selects the Default profile if no profile is given at command line.\n\nExamples:\n```toml\ndefault_profiles = \"default\"\n```\n\n```toml\ndefault_profiles = [\"default\", \"Firefox\"]\n```\n",
+          "title": "Default profiles"
         },
         "doc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Set the documentation of the top level suite.\nSimple formatting is supported (e.g. *bold*). If the\ndocumentation contains spaces, it must be quoted.\nIf the value is path to an existing file, actual\ndocumentation is read from that file.\n\nExamples:\n\n```\n--doc \"Very *good* example\"\n--doc doc_from_file.txt\n```\n\n---\ncorresponds to the `-D --doc documentation` option of _robot_\n",
-          "title": "Doc",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Doc"
         },
         "dotted": {
           "anyOf": [
@@ -1061,7 +1409,14 @@
           "default": null,
           "description": "Select test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Excludes",
           "type": [
@@ -1112,18 +1467,15 @@
           "title": "Exit on failure"
         },
         "expand-keywords": {
+          "default": null,
           "description": "Matching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\n---\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/definitions/NamePattern"
               },
               {
-                "enum": [
-                  "name:<pattern>",
-                  "tag:<pattern>"
-                ],
-                "type": "string"
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -1134,13 +1486,20 @@
           ]
         },
         "extensions": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Parse only files with this extension when executing\na directory. Has no effect when running individual\nfiles or when using resource files. If more than one\nextension is needed, separate them with a colon.\n\nExamples:\n\n```\n`--extension txt`, `--extension robot:txt`\n```\n\n\nOnly `*.robot` files are parsed by default.\n\n---\ncorresponds to the `-F --extension value` option of _robot_\n",
-          "title": "Extensions",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Extensions"
         },
         "extra-args": {
           "default": null,
@@ -1170,7 +1529,14 @@
           "default": null,
           "description": "Appends entries to the --exclude option.\n\n---\n\nSelect test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra excludes",
           "type": [
@@ -1179,18 +1545,15 @@
           ]
         },
         "extra-expand-keywords": {
+          "default": null,
           "description": "Appends entries to the --expandkeywords option.\n\n---\n\nMatching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\n---\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/definitions/NamePattern"
               },
               {
-                "enum": [
-                  "name:<pattern>",
-                  "tag:<pattern>"
-                ],
-                "type": "string"
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -1211,11 +1574,15 @@
                 "enum": [
                   "for",
                   "while",
-                  "iteration",
-                  "name:<pattern>",
-                  "tag:<pattern>"
+                  "iteration"
                 ],
                 "type": "string"
+              },
+              {
+                "$ref": "#/definitions/NamePattern"
+              },
+              {
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -1229,7 +1596,14 @@
           "default": null,
           "description": "Appends entries to the --include option.\n\n---\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra includes",
           "type": [
@@ -1241,7 +1615,14 @@
           "default": null,
           "description": "Appends entries to the --language option.\n\n---\n\nActivate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\n---\ncorresponds to the `--language lang *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra languages",
           "type": [
@@ -1252,7 +1633,14 @@
         "extra-listeners": {
           "additionalProperties": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
             },
             "type": "array"
           },
@@ -1266,7 +1654,14 @@
         },
         "extra-metadata": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Appends entries to the --metadata option.\n\n---\n\nSet metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
@@ -1298,7 +1693,14 @@
         "extra-pre-rebot-modifiers": {
           "additionalProperties": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
             },
             "type": "array"
           },
@@ -1313,7 +1715,14 @@
         "extra-pre-run-modifiers": {
           "additionalProperties": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
             },
             "type": "array"
           },
@@ -1340,7 +1749,14 @@
           "default": null,
           "description": "Appends entries to the --pythonpath option.\n\n---\n\nAdditional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra python path",
           "type": [
@@ -1353,18 +1769,19 @@
           "items": {
             "anyOf": [
               {
-                "type": "string"
-              },
-              {
                 "enum": [
                   "all",
                   "passed",
                   "for",
-                  "wuks",
-                  "name:<pattern>",
-                  "tag:<pattern>"
+                  "wuks"
                 ],
                 "type": "string"
+              },
+              {
+                "$ref": "#/definitions/NamePattern"
+              },
+              {
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -1378,7 +1795,14 @@
           "default": null,
           "description": "Appends entries to the --settag option.\n\n---\n\nSets given tag(s) to all executed tests.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra set tag",
           "type": [
@@ -1390,7 +1814,14 @@
           "default": null,
           "description": "Appends entries to the --skip option.\n\n---\n\nTests having given tag will be skipped. Tag can be\na pattern.\n\n---\ncorresponds to the `--skip tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra skip",
           "type": [
@@ -1402,7 +1833,14 @@
           "default": null,
           "description": "Appends entries to the --skiponfailure option.\n\n---\n\nTests having given tag will be skipped if they fail.\nTag can be a pattern\n\n---\ncorresponds to the `--skiponfailure tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra skip on failure",
           "type": [
@@ -1414,7 +1852,14 @@
           "default": null,
           "description": "Appends entries to the --suite option.\n\n---\n\nSelect suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra suites",
           "type": [
@@ -1424,7 +1869,14 @@
         },
         "extra-tag-doc": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Appends entries to the --tagdoc option.\n\n---\n\nAdd documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\n---\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
@@ -1435,14 +1887,24 @@
           ]
         },
         "extra-tag-stat-combine": {
-          "additionalProperties": {
-            "type": "string"
-          },
           "default": null,
           "description": "Appends entries to the --tagstatcombine option.\n\n---\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\n---\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              }
+            ]
+          },
           "title": "Extra tag stat combine",
           "type": [
-            "object",
+            "array",
             "null"
           ]
         },
@@ -1450,7 +1912,14 @@
           "default": null,
           "description": "Appends entries to the --tagstatexclude option.\n\n---\n\nExclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\n---\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra tag stat exclude",
           "type": [
@@ -1462,7 +1931,14 @@
           "default": null,
           "description": "Appends entries to the --tagstatinclude option.\n\n---\n\nInclude only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\n---\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra tag stat include",
           "type": [
@@ -1472,7 +1948,14 @@
         },
         "extra-tag-stat-link": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Appends entries to the --tagstatlink option.\n\n---\n\nAdd external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\n---\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
@@ -1486,7 +1969,14 @@
           "default": null,
           "description": "Appends entries to the --task option.\n\n---\n\nAlias to --test. Especially applicable with --rpa.\n\n---\ncorresponds to the `--task name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra tasks",
           "type": [
@@ -1498,7 +1988,14 @@
           "default": null,
           "description": "Appends entries to the --test option.\n\n---\n\nSelect tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra tests",
           "type": [
@@ -1510,7 +2007,14 @@
           "default": null,
           "description": "Appends entries to the --variablefile option.\n\n---\n\nPython or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```\n--variablefile path/vars.yaml\n--variablefile environment.py:testing\n```\n\n---\ncorresponds to the `-V --variablefile path *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra variable files",
           "type": [
@@ -1520,7 +2024,14 @@
         },
         "extra-variables": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Appends entries to the --variable option.\n\n---\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\n---\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
@@ -1541,11 +2052,15 @@
                 "enum": [
                   "for",
                   "while",
-                  "iteration",
-                  "name:<pattern>",
-                  "tag:<pattern>"
+                  "iteration"
                 ],
                 "type": "string"
+              },
+              {
+                "$ref": "#/definitions/NamePattern"
+              },
+              {
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -1559,7 +2074,14 @@
           "default": null,
           "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Includes",
           "type": [
@@ -1571,7 +2093,14 @@
           "default": null,
           "description": "Activate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\n---\ncorresponds to the `--language lang *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Languages",
           "type": [
@@ -1594,7 +2123,14 @@
         "listeners": {
           "additionalProperties": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
             },
             "type": "array"
           },
@@ -1607,31 +2143,52 @@
           ]
         },
         "log": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "HTML log file. Can be disabled by giving a special\nvalue `NONE`. Default: log.html\n\nExamples:\n\n```\n`--log mylog.html`, `-l NONE`\n```\n\n---\ncorresponds to the `-l --log file` option of _robot_\n",
-          "title": "Log",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Log"
         },
         "log-level": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Threshold level for logging. Available levels: TRACE,\nDEBUG, INFO (default), WARN, NONE (no logging). Use\nsyntax `LOGLEVEL:DEFAULT` to define the default\nvisible log level in log files.\n\nExamples:\n\n```\n--loglevel DEBUG\n--loglevel DEBUG:INFO\n```\n\n---\ncorresponds to the `-L --loglevel level` option of _robot_\n",
-          "title": "Log level",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Log level"
         },
         "log-title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Title for the generated log file. The default title\nis `<SuiteName> Log`.\n\n---\ncorresponds to the `--logtitle title` option of _robot_\n",
-          "title": "Log title",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Log title"
         },
         "max-assign-length": {
           "default": null,
@@ -1653,7 +2210,14 @@
         },
         "metadata": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Set metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
@@ -1664,13 +2228,20 @@
           ]
         },
         "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Set the name of the top level suite. By default the\nname is created based on the executed file or\ndirectory.\n\n---\ncorresponds to the `-N --name name` option of _robot_\n",
-          "title": "Name",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Name"
         },
         "no-status-rc": {
           "anyOf": [
@@ -1694,22 +2265,36 @@
           "title": "No status rc"
         },
         "output": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "XML output file. Given path, similarly as paths given\nto --log, --report, --xunit, and --debugfile, is\nrelative to --outputdir unless given as an absolute\npath. Other output files are created based on XML\noutput files after the test execution and XML outputs\ncan also be further processed with Rebot tool. Can be\ndisabled by giving a special value `NONE`.\nDefault: output.xml\n\n---\ncorresponds to the `-o --output file` option of _robot_\n",
-          "title": "Output",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Output"
         },
         "output-dir": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n\n---\ncorresponds to the `-d --outputdir dir` option of _robot_\n",
-          "title": "Output dir",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Output dir"
         },
         "paths": {
           "anyOf": [
@@ -1733,7 +2318,14 @@
         "pre-rebot-modifiers": {
           "additionalProperties": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
             },
             "type": "array"
           },
@@ -1748,7 +2340,14 @@
         "pre-run-modifiers": {
           "additionalProperties": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
             },
             "type": "array"
           },
@@ -1775,7 +2374,14 @@
           "default": null,
           "description": "Additional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Python path",
           "type": [
@@ -1826,22 +2432,36 @@
           "title": "Randomize"
         },
         "re-run-failed": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Select failed tests from an earlier output file to be\nre-executed. Equivalent to selecting same tests\nindividually using --test.\n\n---\ncorresponds to the `-R --rerunfailed output` option of _robot_\n",
-          "title": "Re run failed",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Re run failed"
         },
         "re-run-failed-suites": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Select failed suites from an earlier output\nfile to be re-executed.\n\n---\ncorresponds to the `-S --rerunfailedsuites output` option of _robot_\n",
-          "title": "Re run failed suites",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Re run failed suites"
         },
         "rebot": {
           "anyOf": [
@@ -1860,18 +2480,19 @@
           "items": {
             "anyOf": [
               {
-                "type": "string"
-              },
-              {
                 "enum": [
                   "all",
                   "passed",
                   "for",
-                  "wuks",
-                  "name:<pattern>",
-                  "tag:<pattern>"
+                  "wuks"
                 ],
                 "type": "string"
+              },
+              {
+                "$ref": "#/definitions/NamePattern"
+              },
+              {
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -1882,31 +2503,52 @@
           ]
         },
         "report": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "HTML report file. Can be disabled with `NONE`\nsimilarly as --log. Default: report.html\n\n---\ncorresponds to the `-r --report file` option of _robot_\n",
-          "title": "Report",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Report"
         },
         "report-background": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Background colors to use in the report file.\nGiven in format `passed:failed:skipped` where the\n`:skipped` part can be omitted. Both color names and\ncodes work.\n\nExamples:\n\n```\n--reportbackground green:red:yellow\n--reportbackground #00E:#E00\n```\n\n---\ncorresponds to the `--reportbackground colors` option of _robot_\n",
-          "title": "Report background",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Report background"
         },
         "report-title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Title for the generated report file. The default\ntitle is `<SuiteName> Report`.\n\n---\ncorresponds to the `--reporttitle title` option of _robot_\n",
-          "title": "Report title",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Report title"
         },
         "rpa": {
           "anyOf": [
@@ -1954,7 +2596,14 @@
           "default": null,
           "description": "Sets given tag(s) to all executed tests.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Set tag",
           "type": [
@@ -1966,7 +2615,14 @@
           "default": null,
           "description": "Tests having given tag will be skipped. Tag can be\na pattern.\n\n---\ncorresponds to the `--skip tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Skip",
           "type": [
@@ -1978,7 +2634,14 @@
           "default": null,
           "description": "Tests having given tag will be skipped if they fail.\nTag can be a pattern\n\n---\ncorresponds to the `--skiponfailure tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Skip on failure",
           "type": [
@@ -2041,7 +2704,14 @@
           "default": null,
           "description": "Select suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Suites",
           "type": [
@@ -2051,7 +2721,14 @@
         },
         "tag-doc": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Add documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\n---\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
@@ -2062,14 +2739,24 @@
           ]
         },
         "tag-stat-combine": {
-          "additionalProperties": {
-            "type": "string"
-          },
           "default": null,
           "description": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\n---\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              }
+            ]
+          },
           "title": "Tag stat combine",
           "type": [
-            "object",
+            "array",
             "null"
           ]
         },
@@ -2077,7 +2764,14 @@
           "default": null,
           "description": "Exclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\n---\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Tag stat exclude",
           "type": [
@@ -2089,7 +2783,14 @@
           "default": null,
           "description": "Include only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\n---\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Tag stat include",
           "type": [
@@ -2099,7 +2800,14 @@
         },
         "tag-stat-link": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Add external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\n---\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
@@ -2113,7 +2821,14 @@
           "default": null,
           "description": "Alias to --test. Especially applicable with --rpa.\n\n---\ncorresponds to the `--task name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Tasks",
           "type": [
@@ -2138,7 +2853,14 @@
           "default": null,
           "description": "Select tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Tests",
           "type": [
@@ -2176,7 +2898,14 @@
           "default": null,
           "description": "Python or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```\n--variablefile path/vars.yaml\n--variablefile environment.py:testing\n```\n\n---\ncorresponds to the `-V --variablefile path *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Variable files",
           "type": [
@@ -2186,7 +2915,14 @@
         },
         "variables": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\n---\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
@@ -2197,13 +2933,20 @@
           ]
         },
         "xunit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "xUnit compatible result file. Not created unless this\noption is specified.\n\n---\ncorresponds to the `-x --xunit file` option of _robot_\n",
-          "title": "Xunit",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Xunit"
         }
       },
       "title": "RobotConfig",
@@ -2277,13 +3020,20 @@
           ]
         },
         "debug-file": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Debug file written during execution. Not created\nunless this option is specified.\n\n---\ncorresponds to the `-b --debugfile file` option of _robot_\n",
-          "title": "Debug file",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Debug file"
         },
         "description": {
           "default": null,
@@ -2304,13 +3054,20 @@
           ]
         },
         "doc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Set the documentation of the top level suite.\nSimple formatting is supported (e.g. *bold*). If the\ndocumentation contains spaces, it must be quoted.\nIf the value is path to an existing file, actual\ndocumentation is read from that file.\n\nExamples:\n\n```\n--doc \"Very *good* example\"\n--doc doc_from_file.txt\n```\n\n---\ncorresponds to the `-D --doc documentation` option of _robot_\n",
-          "title": "Doc",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Doc"
         },
         "dotted": {
           "anyOf": [
@@ -2367,7 +3124,7 @@
             }
           ],
           "default": null,
-          "description": "If enabled the profile is used. You can also use and `if` condition\nto calculate the enabled state.\n\nExamples:\n```toml\n# alway disabled\nenabled = false\n```\n\n```toml\n# enabled if TEST_VAR is set\nenabled = { if = 'env.get(\"CI\") == \"true\"' }\n```\n",
+          "description": "If enabled the profile is used. You can also use and `if` condition\nto calculate the enabled state.\n\nExamples:\n```toml\n# alway disabled\nenabled = false\n```\n\n```toml\n# enabled if TEST_VAR is set\nenabled = { if = 'environ.get(\"CI\") == \"true\"' }\n```\n",
           "title": "Enabled"
         },
         "env": {
@@ -2386,7 +3143,14 @@
           "default": null,
           "description": "Select test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Excludes",
           "type": [
@@ -2437,18 +3201,15 @@
           "title": "Exit on failure"
         },
         "expand-keywords": {
+          "default": null,
           "description": "Matching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\n---\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/definitions/NamePattern"
               },
               {
-                "enum": [
-                  "name:<pattern>",
-                  "tag:<pattern>"
-                ],
-                "type": "string"
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -2459,13 +3220,20 @@
           ]
         },
         "extensions": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Parse only files with this extension when executing\na directory. Has no effect when running individual\nfiles or when using resource files. If more than one\nextension is needed, separate them with a colon.\n\nExamples:\n\n```\n`--extension txt`, `--extension robot:txt`\n```\n\n\nOnly `*.robot` files are parsed by default.\n\n---\ncorresponds to the `-F --extension value` option of _robot_\n",
-          "title": "Extensions",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Extensions"
         },
         "extra-args": {
           "default": null,
@@ -2495,7 +3263,14 @@
           "default": null,
           "description": "Appends entries to the --exclude option.\n\n---\n\nSelect test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra excludes",
           "type": [
@@ -2504,18 +3279,15 @@
           ]
         },
         "extra-expand-keywords": {
+          "default": null,
           "description": "Appends entries to the --expandkeywords option.\n\n---\n\nMatching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\n---\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/definitions/NamePattern"
               },
               {
-                "enum": [
-                  "name:<pattern>",
-                  "tag:<pattern>"
-                ],
-                "type": "string"
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -2536,11 +3308,15 @@
                 "enum": [
                   "for",
                   "while",
-                  "iteration",
-                  "name:<pattern>",
-                  "tag:<pattern>"
+                  "iteration"
                 ],
                 "type": "string"
+              },
+              {
+                "$ref": "#/definitions/NamePattern"
+              },
+              {
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -2554,7 +3330,14 @@
           "default": null,
           "description": "Appends entries to the --include option.\n\n---\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra includes",
           "type": [
@@ -2566,7 +3349,14 @@
           "default": null,
           "description": "Appends entries to the --language option.\n\n---\n\nActivate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\n---\ncorresponds to the `--language lang *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra languages",
           "type": [
@@ -2577,7 +3367,14 @@
         "extra-listeners": {
           "additionalProperties": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
             },
             "type": "array"
           },
@@ -2591,7 +3388,14 @@
         },
         "extra-metadata": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Appends entries to the --metadata option.\n\n---\n\nSet metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
@@ -2623,7 +3427,14 @@
         "extra-pre-rebot-modifiers": {
           "additionalProperties": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
             },
             "type": "array"
           },
@@ -2638,7 +3449,14 @@
         "extra-pre-run-modifiers": {
           "additionalProperties": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
             },
             "type": "array"
           },
@@ -2654,7 +3472,14 @@
           "default": null,
           "description": "Appends entries to the --pythonpath option.\n\n---\n\nAdditional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra python path",
           "type": [
@@ -2667,18 +3492,19 @@
           "items": {
             "anyOf": [
               {
-                "type": "string"
-              },
-              {
                 "enum": [
                   "all",
                   "passed",
                   "for",
-                  "wuks",
-                  "name:<pattern>",
-                  "tag:<pattern>"
+                  "wuks"
                 ],
                 "type": "string"
+              },
+              {
+                "$ref": "#/definitions/NamePattern"
+              },
+              {
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -2692,7 +3518,14 @@
           "default": null,
           "description": "Appends entries to the --settag option.\n\n---\n\nSets given tag(s) to all executed tests.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra set tag",
           "type": [
@@ -2704,7 +3537,14 @@
           "default": null,
           "description": "Appends entries to the --skip option.\n\n---\n\nTests having given tag will be skipped. Tag can be\na pattern.\n\n---\ncorresponds to the `--skip tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra skip",
           "type": [
@@ -2716,7 +3556,14 @@
           "default": null,
           "description": "Appends entries to the --skiponfailure option.\n\n---\n\nTests having given tag will be skipped if they fail.\nTag can be a pattern\n\n---\ncorresponds to the `--skiponfailure tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra skip on failure",
           "type": [
@@ -2728,7 +3575,14 @@
           "default": null,
           "description": "Appends entries to the --suite option.\n\n---\n\nSelect suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra suites",
           "type": [
@@ -2738,7 +3592,14 @@
         },
         "extra-tag-doc": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Appends entries to the --tagdoc option.\n\n---\n\nAdd documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\n---\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
@@ -2749,14 +3610,24 @@
           ]
         },
         "extra-tag-stat-combine": {
-          "additionalProperties": {
-            "type": "string"
-          },
           "default": null,
           "description": "Appends entries to the --tagstatcombine option.\n\n---\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\n---\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              }
+            ]
+          },
           "title": "Extra tag stat combine",
           "type": [
-            "object",
+            "array",
             "null"
           ]
         },
@@ -2764,7 +3635,14 @@
           "default": null,
           "description": "Appends entries to the --tagstatexclude option.\n\n---\n\nExclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\n---\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra tag stat exclude",
           "type": [
@@ -2776,7 +3654,14 @@
           "default": null,
           "description": "Appends entries to the --tagstatinclude option.\n\n---\n\nInclude only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\n---\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra tag stat include",
           "type": [
@@ -2786,7 +3671,14 @@
         },
         "extra-tag-stat-link": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Appends entries to the --tagstatlink option.\n\n---\n\nAdd external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\n---\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
@@ -2800,7 +3692,14 @@
           "default": null,
           "description": "Appends entries to the --task option.\n\n---\n\nAlias to --test. Especially applicable with --rpa.\n\n---\ncorresponds to the `--task name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra tasks",
           "type": [
@@ -2812,7 +3711,14 @@
           "default": null,
           "description": "Appends entries to the --test option.\n\n---\n\nSelect tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra tests",
           "type": [
@@ -2824,7 +3730,14 @@
           "default": null,
           "description": "Appends entries to the --variablefile option.\n\n---\n\nPython or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```\n--variablefile path/vars.yaml\n--variablefile environment.py:testing\n```\n\n---\ncorresponds to the `-V --variablefile path *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra variable files",
           "type": [
@@ -2834,7 +3747,14 @@
         },
         "extra-variables": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Appends entries to the --variable option.\n\n---\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\n---\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
@@ -2855,11 +3775,15 @@
                 "enum": [
                   "for",
                   "while",
-                  "iteration",
-                  "name:<pattern>",
-                  "tag:<pattern>"
+                  "iteration"
                 ],
                 "type": "string"
+              },
+              {
+                "$ref": "#/definitions/NamePattern"
+              },
+              {
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -2873,7 +3797,14 @@
           "default": null,
           "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Includes",
           "type": [
@@ -2885,7 +3816,14 @@
           "default": null,
           "description": "Activate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\n---\ncorresponds to the `--language lang *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Languages",
           "type": [
@@ -2908,7 +3846,14 @@
         "listeners": {
           "additionalProperties": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
             },
             "type": "array"
           },
@@ -2921,31 +3866,52 @@
           ]
         },
         "log": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "HTML log file. Can be disabled by giving a special\nvalue `NONE`. Default: log.html\n\nExamples:\n\n```\n`--log mylog.html`, `-l NONE`\n```\n\n---\ncorresponds to the `-l --log file` option of _robot_\n",
-          "title": "Log",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Log"
         },
         "log-level": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Threshold level for logging. Available levels: TRACE,\nDEBUG, INFO (default), WARN, NONE (no logging). Use\nsyntax `LOGLEVEL:DEFAULT` to define the default\nvisible log level in log files.\n\nExamples:\n\n```\n--loglevel DEBUG\n--loglevel DEBUG:INFO\n```\n\n---\ncorresponds to the `-L --loglevel level` option of _robot_\n",
-          "title": "Log level",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Log level"
         },
         "log-title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Title for the generated log file. The default title\nis `<SuiteName> Log`.\n\n---\ncorresponds to the `--logtitle title` option of _robot_\n",
-          "title": "Log title",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Log title"
         },
         "max-assign-length": {
           "default": null,
@@ -2967,7 +3933,14 @@
         },
         "metadata": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Set metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
@@ -2978,13 +3951,20 @@
           ]
         },
         "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Set the name of the top level suite. By default the\nname is created based on the executed file or\ndirectory.\n\n---\ncorresponds to the `-N --name name` option of _robot_\n",
-          "title": "Name",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Name"
         },
         "no-status-rc": {
           "anyOf": [
@@ -3008,22 +3988,36 @@
           "title": "No status rc"
         },
         "output": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "XML output file. Given path, similarly as paths given\nto --log, --report, --xunit, and --debugfile, is\nrelative to --outputdir unless given as an absolute\npath. Other output files are created based on XML\noutput files after the test execution and XML outputs\ncan also be further processed with Rebot tool. Can be\ndisabled by giving a special value `NONE`.\nDefault: output.xml\n\n---\ncorresponds to the `-o --output file` option of _robot_\n",
-          "title": "Output",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Output"
         },
         "output-dir": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n\n---\ncorresponds to the `-d --outputdir dir` option of _robot_\n",
-          "title": "Output dir",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Output dir"
         },
         "paths": {
           "anyOf": [
@@ -3047,7 +4041,14 @@
         "pre-rebot-modifiers": {
           "additionalProperties": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
             },
             "type": "array"
           },
@@ -3062,7 +4063,14 @@
         "pre-run-modifiers": {
           "additionalProperties": {
             "items": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
             },
             "type": "array"
           },
@@ -3074,11 +4082,27 @@
             "null"
           ]
         },
+        "precedence": {
+          "default": null,
+          "description": "Precedence of the profile. Lower values are executed first. If not set the order is undefined.\n",
+          "title": "Precedence",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
         "python-path": {
           "default": null,
           "description": "Additional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Python path",
           "type": [
@@ -3129,22 +4153,36 @@
           "title": "Randomize"
         },
         "re-run-failed": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Select failed tests from an earlier output file to be\nre-executed. Equivalent to selecting same tests\nindividually using --test.\n\n---\ncorresponds to the `-R --rerunfailed output` option of _robot_\n",
-          "title": "Re run failed",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Re run failed"
         },
         "re-run-failed-suites": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Select failed suites from an earlier output\nfile to be re-executed.\n\n---\ncorresponds to the `-S --rerunfailedsuites output` option of _robot_\n",
-          "title": "Re run failed suites",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Re run failed suites"
         },
         "rebot": {
           "anyOf": [
@@ -3163,18 +4201,19 @@
           "items": {
             "anyOf": [
               {
-                "type": "string"
-              },
-              {
                 "enum": [
                   "all",
                   "passed",
                   "for",
-                  "wuks",
-                  "name:<pattern>",
-                  "tag:<pattern>"
+                  "wuks"
                 ],
                 "type": "string"
+              },
+              {
+                "$ref": "#/definitions/NamePattern"
+              },
+              {
+                "$ref": "#/definitions/TagPattern"
               }
             ]
           },
@@ -3185,31 +4224,52 @@
           ]
         },
         "report": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "HTML report file. Can be disabled with `NONE`\nsimilarly as --log. Default: report.html\n\n---\ncorresponds to the `-r --report file` option of _robot_\n",
-          "title": "Report",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Report"
         },
         "report-background": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Background colors to use in the report file.\nGiven in format `passed:failed:skipped` where the\n`:skipped` part can be omitted. Both color names and\ncodes work.\n\nExamples:\n\n```\n--reportbackground green:red:yellow\n--reportbackground #00E:#E00\n```\n\n---\ncorresponds to the `--reportbackground colors` option of _robot_\n",
-          "title": "Report background",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Report background"
         },
         "report-title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Title for the generated report file. The default\ntitle is `<SuiteName> Report`.\n\n---\ncorresponds to the `--reporttitle title` option of _robot_\n",
-          "title": "Report title",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Report title"
         },
         "rpa": {
           "anyOf": [
@@ -3257,7 +4317,14 @@
           "default": null,
           "description": "Sets given tag(s) to all executed tests.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Set tag",
           "type": [
@@ -3269,7 +4336,14 @@
           "default": null,
           "description": "Tests having given tag will be skipped. Tag can be\na pattern.\n\n---\ncorresponds to the `--skip tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Skip",
           "type": [
@@ -3281,7 +4355,14 @@
           "default": null,
           "description": "Tests having given tag will be skipped if they fail.\nTag can be a pattern\n\n---\ncorresponds to the `--skiponfailure tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Skip on failure",
           "type": [
@@ -3344,7 +4425,14 @@
           "default": null,
           "description": "Select suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Suites",
           "type": [
@@ -3354,7 +4442,14 @@
         },
         "tag-doc": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Add documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\n---\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
@@ -3365,14 +4460,24 @@
           ]
         },
         "tag-stat-combine": {
-          "additionalProperties": {
-            "type": "string"
-          },
           "default": null,
           "description": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\n---\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              }
+            ]
+          },
           "title": "Tag stat combine",
           "type": [
-            "object",
+            "array",
             "null"
           ]
         },
@@ -3380,7 +4485,14 @@
           "default": null,
           "description": "Exclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\n---\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Tag stat exclude",
           "type": [
@@ -3392,7 +4504,14 @@
           "default": null,
           "description": "Include only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\n---\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Tag stat include",
           "type": [
@@ -3402,7 +4521,14 @@
         },
         "tag-stat-link": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Add external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\n---\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
@@ -3416,7 +4542,14 @@
           "default": null,
           "description": "Alias to --test. Especially applicable with --rpa.\n\n---\ncorresponds to the `--task name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Tasks",
           "type": [
@@ -3441,7 +4574,14 @@
           "default": null,
           "description": "Select tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Tests",
           "type": [
@@ -3474,7 +4614,14 @@
           "default": null,
           "description": "Python or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```\n--variablefile path/vars.yaml\n--variablefile environment.py:testing\n```\n\n---\ncorresponds to the `-V --variablefile path *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Variable files",
           "type": [
@@ -3484,7 +4631,14 @@
         },
         "variables": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\n---\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
@@ -3495,16 +4649,55 @@
           ]
         },
         "xunit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "xUnit compatible result file. Not created unless this\noption is specified.\n\n---\ncorresponds to the `-x --xunit file` option of _robot_\n",
-          "title": "Xunit",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Xunit"
         }
       },
       "title": "RobotProfile",
+      "type": "object"
+    },
+    "StringExpression": {
+      "additionalProperties": false,
+      "description": "Expression to evaluate to a string.",
+      "properties": {
+        "expr": {
+          "description": "Condition to evaluate. This must be a Python \"eval\" expression.\nFor security reasons, only certain expressions and functions are allowed.\n\nExamples:\n```toml\nif = \"re.match(r'^\\d+$', environ.get('TEST_VAR', ''))\"\nif = \"platform.system() == 'Linux'\"\n```\n",
+          "title": "Expr",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expr"
+      ],
+      "title": "StringExpression",
+      "type": "object"
+    },
+    "TagPattern": {
+      "additionalProperties": false,
+      "description": "Tag pattern to match.",
+      "properties": {
+        "tag": {
+          "description": "Tag pattern to match. This is a glob pattern, where ``*`` matches any number of characters\n",
+          "title": "Tag",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tag"
+      ],
+      "title": "TagPattern",
       "type": "object"
     },
     "TestDocProfile": {
@@ -3512,19 +4705,33 @@
       "description": "Profile for _testdoc_ command.",
       "properties": {
         "doc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Override the documentation of the top level suite.\n\n---\ncorresponds to the `-D --doc document` option of _robot_\n",
-          "title": "Doc",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Doc"
         },
         "excludes": {
           "default": null,
           "description": "Exclude tests by tags.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Excludes",
           "type": [
@@ -3536,7 +4743,14 @@
           "default": null,
           "description": "Appends entries to the --exclude option.\n\n---\n\nExclude tests by tags.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra excludes",
           "type": [
@@ -3548,7 +4762,14 @@
           "default": null,
           "description": "Appends entries to the --include option.\n\n---\n\nInclude tests by tags.\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra includes",
           "type": [
@@ -3558,7 +4779,14 @@
         },
         "extra-metadata": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Appends entries to the --metadata option.\n\n---\n\nSet/override metadata of the top level suite.\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
@@ -3572,7 +4800,14 @@
           "default": null,
           "description": "Appends entries to the --settag option.\n\n---\n\nSet given tag(s) to all test cases.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra set tag",
           "type": [
@@ -3584,7 +4819,14 @@
           "default": null,
           "description": "Appends entries to the --suite option.\n\n---\n\nInclude suites by name.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra suites",
           "type": [
@@ -3596,7 +4838,14 @@
           "default": null,
           "description": "Appends entries to the --test option.\n\n---\n\nInclude tests by name.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Extra tests",
           "type": [
@@ -3608,7 +4857,14 @@
           "default": null,
           "description": "Include tests by tags.\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Includes",
           "type": [
@@ -3618,7 +4874,14 @@
         },
         "metadata": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Set/override metadata of the top level suite.\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
@@ -3629,19 +4892,33 @@
           ]
         },
         "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Override the name of the top level suite.\n\n---\ncorresponds to the `-N --name name` option of _robot_\n",
-          "title": "Name",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Name"
         },
         "set-tag": {
           "default": null,
           "description": "Set given tag(s) to all test cases.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Set tag",
           "type": [
@@ -3653,7 +4930,14 @@
           "default": null,
           "description": "Include suites by name.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Suites",
           "type": [
@@ -3665,7 +4949,14 @@
           "default": null,
           "description": "Include tests by name.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "title": "Tests",
           "type": [
@@ -3674,13 +4965,20 @@
           ]
         },
         "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Set the title of the generated documentation.\nUnderscores in the title are converted to spaces.\nThe default title is the name of the top level suite.\n\n---\ncorresponds to the `-T --title title` option of _robot_\n",
-          "title": "Title",
-          "type": [
-            "string",
-            "null"
-          ]
+          "title": "Title"
         }
       },
       "title": "TestDocProfile",

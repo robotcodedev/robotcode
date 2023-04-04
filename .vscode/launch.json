@@ -47,6 +47,9 @@
 			// "env": {
 			// 	"ROBOTCODE_COLOR": "1",
 			// },
+			"env": {
+				"CMD_VAR_LONG": "long",
+			},
 			"args": [
 				"--verbose",
 				"--dry",
@@ -63,8 +66,9 @@
 				// "list",
 				// "--format",
 				// "toml"
-				"rebot",
-
+				"profiles",
+				"show",
+				"--no-evaluate"
 			]
 		},
 		{

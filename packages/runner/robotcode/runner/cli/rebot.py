@@ -8,8 +8,9 @@ from robot.rebot import USAGE, Rebot
 from robot.version import get_full_version
 
 from robotcode.plugin import Application, pass_application
-from robotcode.robot.config.loader import find_project_root, get_config_files_from_folder, load_config_from_path
-from robotcode.robot.config.model import RebotProfile, RobotBaseProfile
+from robotcode.robot.config.loader import load_config_from_path
+from robotcode.robot.config.model import RebotProfile
+from robotcode.robot.config.utils import get_config_files
 
 from ..__version__ import __version__
 
@@ -27,7 +28,7 @@ class RebotEx(Rebot):
             line_end = "\n"
             raise Information(
                 "Dry run, not executing any commands. "
-                f"Would execute libdoc with the following arguments:\n"
+                f"Would execute libdoc with the following options and arguments:\n"
                 f'{line_end.join((*(f"{k} = {repr(v)}" for k, v in options.items()) ,*arguments))}'
             )
 
@@ -73,28 +74,18 @@ def rebot(
     except (DataError, Information):
         pass
 
-    root_folder, discovered_by = find_project_root(*(robot_arguments or []))
-    app.verbose(lambda: f"Found project root at:\n    {root_folder} ({discovered_by.value})")
+    config_files, root_folder, _ = get_config_files(
+        robot_arguments, app.config.config_files, raise_on_error=False, verbose_callback=app.verbose
+    )
 
-    profile: Optional[RobotBaseProfile] = None
-
-    if root_folder is not None:
-        config_files = get_config_files_from_folder(root_folder)
-        if config_files:
-            app.verbose(lambda: f"Found configuration files:\n    {', '.join(str(f[0]) for f in config_files)}")
-            try:
-                profile = load_config_from_path(*config_files).combine_profiles(
-                    *app.config.profiles if app.config.profiles else [],
-                    verbose_callback=app.verbose if app.config.verbose else None,
-                )
-            except (TypeError, ValueError) as e:
-                raise click.ClickException(str(e)) from e
-
-        else:
-            app.verbose("No configuration files found.")
-
-    if profile is None:
-        profile = RobotBaseProfile()
+    try:
+        profile = (
+            load_config_from_path(*config_files)
+            .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose)
+            .evaluated()
+        )
+    except (TypeError, ValueError) as e:
+        raise click.ClickException(str(e)) from e
 
     rebot_options = profile.rebot
     if rebot_options is None:
@@ -102,15 +93,19 @@ def rebot(
 
     rebot_options.add_options(profile)
 
-    options = rebot_options.build_command_line()
+    try:
+        options = rebot_options.build_command_line()
+    except (TypeError, ValueError) as e:
+        raise click.ClickException(str(e)) from e
 
     if profile.env:
         for k, v in profile.env.items():
             os.environ[k] = v
             app.verbose(lambda: f"Set environment variable {k} to {v}")
+
     try:
         app.verbose(
-            lambda: " Executing robot with the following options:\n    "
+            lambda: "Executing rebot with the following options:\n    "
             + " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
         )
         return cast(

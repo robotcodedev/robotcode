@@ -8,8 +8,8 @@ from robot.run import USAGE, RobotFramework
 from robot.version import get_full_version
 
 from robotcode.plugin import Application, pass_application
-from robotcode.robot.config.loader import find_project_root, get_config_files_from_folder, load_config_from_path
-from robotcode.robot.config.model import RobotBaseProfile
+from robotcode.robot.config.loader import load_config_from_path
+from robotcode.robot.config.utils import get_config_files
 
 from ..__version__ import __version__
 
@@ -41,7 +41,7 @@ class RobotFrameworkEx(RobotFramework):
             line_end = "\n"
             raise Information(
                 "Dry run, not executing any commands. "
-                f"Would execute robot with the following arguments:\n"
+                f"Would execute robot with the following options and arguments:\n"
                 f'{line_end.join((*(f"{k} = {repr(v)}" for k, v in options.items()) ,*arguments))}'
             )
 
@@ -80,34 +80,23 @@ def robot(
     Use "-- --help" to see the robot help.
     """
 
-    robot_arguments = None
+    robot_arguments: Optional[List[Union[str, Path]]] = None
     try:
         _, robot_arguments = RobotFramework().parse_arguments(robot_options_and_args)
     except (DataError, Information):
         pass
 
-    root_folder, discovered_by = find_project_root(*(robot_arguments or []))
-    app.verbose(lambda: f"Found project root at:\n    {root_folder} ({discovered_by.value})")
-
-    profile: Optional[RobotBaseProfile] = None
-
-    if root_folder is not None:
-        config_files = get_config_files_from_folder(root_folder)
-        if config_files:
-            app.verbose(lambda: f"Found configuration files:\n    {', '.join(str(f[0]) for f in config_files)}")
-            try:
-                profile = load_config_from_path(*config_files).combine_profiles(
-                    *app.config.profiles if app.config.profiles else [],
-                    verbose_callback=app.verbose if app.config.verbose else None,
-                )
-            except (TypeError, ValueError) as e:
-                raise click.ClickException(str(e)) from e
-
-        else:
-            app.verbose("No configuration files found.")
-
-    if profile is None:
-        profile = RobotBaseProfile()
+    config_files, root_folder, _ = get_config_files(
+        robot_arguments, app.config.config_files, raise_on_error=False, verbose_callback=app.verbose
+    )
+    try:
+        profile = (
+            load_config_from_path(*config_files)
+            .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose)
+            .evaluated()
+        )
+    except (TypeError, ValueError) as e:
+        raise click.ClickException(str(e)) from e
 
     options = profile.build_command_line()
 
@@ -115,9 +104,10 @@ def robot(
         for k, v in profile.env.items():
             os.environ[k] = v
             app.verbose(lambda: f"Set environment variable {k} to {v}")
+
     try:
         app.verbose(
-            lambda: " Executing robot with the following options:\n    "
+            lambda: "Executing robot with the following options:\n    "
             + " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
         )
         return cast(

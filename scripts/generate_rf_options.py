@@ -19,11 +19,13 @@ OPTIONS_RE = re.compile(
 
 type_templates = {
     "console": 'Literal["verbose", "dotted", "skipped", "quiet", "none"]',
-    "listeners": "Dict[str, List[str]]",
-    "parser": "Dict[str, List[str]]",
-    "pre_rebot_modifiers": "Dict[str, List[str]]",
-    "pre_run_modifiers": "Dict[str, List[str]]",
-    "randomize": 'Optional[Union[str, Literal["all", "suites", "tests", "none"]]]',
+    "listeners": "Dict[str, List[Union[str, StringExpression]]]",
+    "parser": "Dict[str, List[Union[str, StringExpression]]]",
+    "pre_rebot_modifiers": "Dict[str, List[Union[str, StringExpression]]]",
+    "pre_run_modifiers": "Dict[str, List[Union[str, StringExpression]]]",
+    "randomize": 'Union[str, Literal["all", "suites", "tests", "none"]]',
+    "tag_stat_combine": "List[Union[str, Dict[str, str]]]",
+    "flatten_keywords": 'Optional[List[Union[str, Literal["for", "while", "iteration"], NamePattern, TagPattern]]]',
 }
 
 name_corrections = {
@@ -141,14 +143,27 @@ def generate(
 
         base_type = "str" if value is None or isinstance(value, (tuple, list)) else type(value).__name__
 
+        if base_type == "str":
+            base_type = "Union[str, StringExpression]"
+
         if param := option.get("param", None):
             if len((param_splitted := param.split("|"))) > 1:
-                needs_str = "Union[str, " if any(True for x in param_splitted if ":" in x) else ""
+                has_literal = [x for x in param_splitted if ":" not in x]
+                has_pattern = [x for x in param_splitted if ":" in x]
                 base_type = (
-                    f"{needs_str}Literal["
-                    + ", ".join([f'"{x}"' for x in param_splitted])
-                    + "]"
-                    + ("]" if needs_str else "")
+                    ("Union[" if has_literal and has_pattern or len(has_pattern) > 1 else "")
+                    + (("Literal[" + ", ".join([f'"{x}"' for x in has_literal]) + "]") if has_literal else "")
+                    + (
+                        (
+                            (", " if has_literal else "")
+                            + ", ".join(
+                                (x.split(":")[0].capitalize() + x.split(":")[1][1:-1].capitalize()) for x in has_pattern
+                            )
+                        )
+                        if has_pattern
+                        else ""
+                    )
+                    + ("]" if has_literal and has_pattern or len(has_pattern) > 1 else "")
                 )
 
             elif len((param_splitted := param.split(":"))) > 1:
@@ -159,7 +174,6 @@ def generate(
 
         return f"Optional[{base_type}]"
 
-    # cmd_options.pop("--rpa")
     def build_class_fields(output: List[str], opts: Dict[str, Any], extra: bool = False) -> Dict[str, Any]:
         result = {}
 
@@ -193,8 +207,6 @@ def generate(
                         if not flag_default:
                             output.append(f"        robot_flag_default={flag_default},")
                 output.append("    )")
-            else:
-                output.append(f"    # {long_name}")
 
         return result
 

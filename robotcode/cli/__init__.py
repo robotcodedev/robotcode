@@ -18,10 +18,14 @@ from .commands import config, profiles
 @click.option(
     "-c",
     "--config",
-    "config_file",
+    "config_files",
     type=click.Path(exists=True, path_type=Path),
+    multiple=True,
     show_envvar=True,
-    help="Config file to use.",
+    help="""\
+        Config file to use. Can be specified multiple times.
+        If not specified, the default config file is used.
+        """,
 )
 @click.option(
     "-p",
@@ -49,7 +53,7 @@ from .commands import config, profiles
 def robotcode(
     app: Application,
     ctx: click.Context,
-    config_file: Optional[Path],
+    config_files: Optional[List[Path]],
     profiles: Optional[List[str]],
     dry: bool,
     verbose: bool,
@@ -65,7 +69,7 @@ def robotcode(
     A CLI tool for Robot Framework.
 
     """
-    app.config.config_file = config_file
+    app.config.config_files = config_files
     app.config.profiles = profiles
     app.config.dry = dry
     app.config.verbose = verbose

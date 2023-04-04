@@ -193,12 +193,12 @@ def test_profiles_enabled_can_be_an_condition() -> None:
         extra-args = ["devel"]
 
         [profiles.another-ci]
-        enabled={if='env.get("ANOTHER-CI") == "true"'}
+        enabled={if='environ.get("ANOTHER-CI") == "true"'}
         description = "Another CI profile"
         extra-args = ["another-ci"]
 
         [profiles.ci]
-        enabled={if='env.get("CI") == "true"'}
+        enabled={if='environ.get("CI") == "true"'}
         description = "CI profile"
         extra-args = ["ci"]
         """
@@ -227,17 +227,73 @@ def test_profiles_enabled_cant_be_an_invalid_condition() -> None:
         extra-args = ["devel"]
 
         [profiles.another-ci]
-        enabled={if='env.get("ANOTHER-CI") == "true"'}
+        enabled={if='environ.get("ANOTHER-CI") == "true"'}
         description = "Another CI profile"
         extra-args = ["another-ci"]
 
         [profiles.ci]
-        enabled={if='env.get("CI") = "true"'}
+        enabled={if='environ.get("CI") = "true"'}
         description = "CI profile"
         extra-args = ["ci"]
         """
     config = loads_config_from_robot_toml(data)
     os.environ["CI"] = "true"
+    with pytest.raises(ValueError, match=".*invalid syntax.*"):
+        config.combine_profiles("*")
+
+
+def test_profiles_precedence_defines_the_order() -> None:
+    data = """\
+        args = ["orig"]
+
+        [profiles.default]
+        extra-args = ["default"]
+        precedence = 4
+
+        [profiles.devel]
+        extra-args = ["devel"]
+        precedence = 3
+
+        [profiles.another-ci]
+        extra-args = ["another-ci"]
+        precedence = 2
+
+        [profiles.ci]
+        extra-args = ["ci"]
+        precedence = 1
+        """
+    config = loads_config_from_robot_toml(data)
     profile = config.combine_profiles("*")
-    assert profile
-    assert profile.args == ["orig", "default"]
+    assert profile.args == ["orig", "ci", "another-ci", "devel", "default"]
+
+
+def test_profiles_tag_stat_combine_generates_correct() -> None:
+    data = """\
+        tag-stat-combine = ["tag1:tag2", {"tag3" = "tag4"}]
+        extra-tag-stat-combine = ["tag1:tag2", {"tag3" = "tag4"}]
+        """
+    config = loads_config_from_robot_toml(data)
+    cmd_line = config.combine_profiles().evaluated().build_command_line()
+    assert cmd_line == ["--tagstatcombine", "tag1:tag2", "--tagstatcombine", "tag3:tag4"]
+
+
+def test_profiles_flatten_keywords_supports_literals_and_patterns() -> None:
+    data = """\
+        flatten_keywords = ["for", "while", "iteration", {"name" = "tag4"}, {tag="tag5"}, "foritem"]
+        """
+    config = loads_config_from_robot_toml(data)
+    cmd_line = config.combine_profiles().evaluated().build_command_line()
+    assert cmd_line == [
+        "--flattenkeywords",
+        "for",
+        "--flattenkeywords",
+        "while",
+        "--flattenkeywords",
+        "iteration",
+        "--flattenkeywords",
+        "name:tag4",
+        "--flattenkeywords",
+        "tag:tag5",
+        "--flattenkeywords",
+        "foritem",
+    ]

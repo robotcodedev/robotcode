@@ -10,8 +10,9 @@ from robotcode.robot.config.loader import (
     find_project_root,
     load_config_from_path,
 )
+from robotcode.robot.config.utils import get_config_files
 
-from ._common import format_option, get_config_files
+from ._common import format_option
 
 
 @click.group(
@@ -44,9 +45,7 @@ def show(
 ) -> Union[str, int, None]:
     """Shows Robot Framework configuration."""
 
-    config_files = get_config_files(app.config, paths, app.verbose)
-    if not config_files:
-        raise click.ClickException("Cannot find any configuration file. 😥")
+    config_files, _, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
 
     try:
         if single:
@@ -76,14 +75,16 @@ def files(
 ) -> Union[str, int, None]:
     """Shows Robot Framework configuration files."""
 
-    config_files = get_config_files(app.config, paths, app.verbose)
+    try:
+        config_files, _, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
 
-    if config_files:
         for config_file, _ in config_files:
             click.echo(config_file)
+
         return 0
 
-    raise click.ClickException("No configuration found. 😥")
+    except FileNotFoundError as e:
+        raise click.ClickException(str(e)) from e
 
 
 @config.command

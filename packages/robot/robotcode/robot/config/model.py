@@ -1,13 +1,24 @@
-from __future__ import annotations
-
 import dataclasses
+import datetime
 import fnmatch
 import os
 import platform
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union, get_type_hints
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Tuple,
+    Union,
+    get_type_hints,
+)
+
+from typing_extensions import Self
 
 from robotcode.core.dataclasses import TypeValidationError, ValidateMixin, validate_types
 from robotcode.core.utils.safe_eval import safe_eval
@@ -76,6 +87,115 @@ def field(
     return dataclasses.field(*args, **kwargs)
 
 
+class EvaluationError(Exception):
+    """Evaluation error."""
+
+    def __init__(self, expression: str, message: str):
+        super().__init__(f"Evaluation of {repr(expression)} failed: {message}")
+        self.expr = expression
+
+
+SAFE_GLOBALS = {
+    "environ": os.environ,
+    "re": re,
+    "platform": platform,
+    "datetime": datetime.datetime,
+    "date": datetime.date,
+    "time": datetime.time,
+    "timedelta": datetime.timedelta,
+    "timezone": datetime.timezone,
+}
+
+
+@dataclass
+class Expression:
+    """Expression to evaluate."""
+
+    expr: str = field(
+        description="""\
+            Condition to evaluate. This must be a Python "eval" expression.
+            For security reasons, only certain expressions and functions are allowed.
+
+            Examples:
+            ```toml
+            if = "re.match(r'^\\d+$', environ.get('TEST_VAR', ''))"
+            if = "platform.system() == 'Linux'"
+            ```
+            """,
+        no_default=True,
+    )
+
+    def evaluate(self) -> Any:
+        try:
+            return safe_eval(self.expr, SAFE_GLOBALS)
+        except Exception as e:
+            raise EvaluationError(self.expr, str(e)) from e
+
+
+@dataclass
+class StringExpression(Expression):
+    """Expression to evaluate to a string."""
+
+    def evaluate(self) -> str:
+        return str(super().evaluate())
+
+
+@dataclass
+class Condition:
+    """Condition to evaluate."""
+
+    if_: str = field(
+        description="""\
+            Condition to evaluate. This must be a Python "eval" expression.
+            For security reasons, only certain expressions and functions are allowed.
+
+            Examples:
+            ```toml
+            if = "re.match(r'^\\d+$', environ.get('TEST_VAR', ''))"
+            if = "platform.system() == 'Linux'"
+            ```
+            """,
+        alias="if",
+        no_default=True,
+    )
+
+    def evaluate(self) -> bool:
+        try:
+            return bool(safe_eval(self.if_, SAFE_GLOBALS))
+        except Exception as e:
+            raise EvaluationError(self.if_, str(e)) from e
+
+
+@dataclass()
+class NamePattern(ValidateMixin):
+    """Name pattern to match."""
+
+    name: str = field(
+        description="""\
+            Name pattern to match. This is a glob pattern, where ``*`` matches any number of characters
+            """,
+        no_default=True,
+    )
+
+    def __str__(self) -> str:
+        return f"name:{self.name}"
+
+
+@dataclass()
+class TagPattern(ValidateMixin):
+    """Tag pattern to match."""
+
+    tag: str = field(
+        description="""\
+            Tag pattern to match. This is a glob pattern, where ``*`` matches any number of characters
+            """,
+        no_default=True,
+    )
+
+    def __str__(self) -> str:
+        return f"tag:{self.tag}"
+
+
 @dataclass
 class BaseOptions(ValidateMixin):
     @classmethod
@@ -97,47 +217,47 @@ class BaseOptions(ValidateMixin):
             key=lambda f: f.metadata.get("robot_priority", 0),
         )
 
-        def append_name(field: dataclasses.Field[Any], add_flag: Optional[str] = None) -> None:
+        def append_name(field: "dataclasses.Field[Any]", add_flag: Optional[str] = None) -> None:
             if "robot_short_name" in field.metadata:
                 result.append(f"-{field.metadata['robot_short_name']}")
             elif "robot_name" in field.metadata:
                 result.append(f"--{'no' if add_flag else ''}{field.metadata['robot_name']}")
 
         for field in sorted_fields:
-            value = getattr(self, field.name)
-            if value is None:
-                continue
-
-            if field.metadata.get("robot_is_flag", False):
-                if value is None or value == Flag.DEFAULT:
+            try:
+                value = getattr(self, field.name)
+                if value is None:
                     continue
 
-                append_name(field, bool(value) != field.metadata.get("robot_flag_default", True))
-
-                continue
-
-            if isinstance(value, list):
-                for item in value:
-                    append_name(field)
-                    result.append(str(item))
-            elif isinstance(value, dict):
-                for key, item in value.items():
-                    append_name(field)
-                    if isinstance(item, list):
-                        separator = ";" if any(True for s in item if ":" in s) else ":"
-                        result.append(f"{key}{separator}{separator.join(item)}")
-                    else:
-                        result.append(f"{key}:{item}")
-            else:
-                if field.metadata.get("robot_name", "").startswith("+"):
-                    if str(value) == "default":
+                if field.metadata.get("robot_is_flag", False):
+                    if value is None or value == Flag.DEFAULT:
                         continue
 
-                    result.append(f"--{str(value)}")
+                    append_name(field, bool(value) != field.metadata.get("robot_flag_default", True))
+
                     continue
 
-                append_name(field)
-                result.append(str(value))
+                if isinstance(value, list):
+                    for item in value:
+                        append_name(field)
+                        if isinstance(item, dict):
+                            for k, v in item.items():
+                                result.append(f"{k}:{v}")
+                        else:
+                            result.append(str(item))
+                elif isinstance(value, dict):
+                    for key, item in value.items():
+                        append_name(field)
+                        if isinstance(item, list):
+                            separator = ";" if any(True for s in item if ":" in s) else ":"
+                            result.append(f"{key}{separator}{separator.join(item)}")
+                        else:
+                            result.append(f"{key}:{item}")
+                else:
+                    append_name(field)
+                    result.append(str(value))
+            except EvaluationError as e:
+                raise ValueError(f"Evaluation of '{field.name}' failed: {str(e)}") from e
 
         return result
 
@@ -148,7 +268,7 @@ class BaseOptions(ValidateMixin):
             raise TypeValidationError("Dataclass Type Validation Error", target=target, errors={name: errors})
         return value
 
-    def add_options(self, config: RobotBaseProfile, combine_extras: bool = False) -> None:
+    def add_options(self, config: "BaseOptions", combine_extras: bool = False) -> None:
         type_hints = get_type_hints(type(self))
         base_field_names = [f.name for f in dataclasses.fields(self)]
 
@@ -198,6 +318,31 @@ class BaseOptions(ValidateMixin):
             if new is not None:
                 setattr(self, f.name, new)
 
+    def evaluated(self) -> Self:
+        result = dataclasses.replace(self)
+        for f in dataclasses.fields(result):
+            try:
+                if isinstance(getattr(result, f.name), Expression):
+                    setattr(result, f.name, getattr(result, f.name).evaluate())
+                elif isinstance(getattr(result, f.name), list):
+                    setattr(
+                        result,
+                        f.name,
+                        [e.evaluate() if isinstance(e, Expression) else e for e in getattr(result, f.name)],
+                    )
+                elif isinstance(getattr(result, f.name), dict):
+                    setattr(
+                        result,
+                        f.name,
+                        {
+                            k: e.evaluate() if isinstance(e, Expression) else e
+                            for k, e in getattr(result, f.name).items()
+                        },
+                    )
+            except EvaluationError as e:
+                raise ValueError(f"Evaluation of '{f.name}' failed: {str(e)}") from e
+        return result
+
 
 # start generated code
 
@@ -206,8 +351,6 @@ class BaseOptions(ValidateMixin):
 class CommonOptions(BaseOptions):
     """Common options for all _robot_ commands."""
 
-    # argumentfile
-    # console
     console_colors: Optional[Literal["auto", "on", "ansi", "off"]] = field(
         description="""\
             Use colors on console output or not.
@@ -223,10 +366,7 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="C",
     )
-    # consolemarkers
-    # consolewidth
-    # debugfile
-    doc: Optional[str] = field(
+    doc: Optional[Union[str, StringExpression]] = field(
         description="""\
             Set the documentation of the top level suite.
             Simple formatting is supported (e.g. *bold*). If the
@@ -248,9 +388,7 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="D",
     )
-    # dotted
-    # dryrun
-    excludes: Optional[List[str]] = field(
+    excludes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Select test cases not to run by tag. These tests are
             not run even if included with --include. Tags are
@@ -263,9 +401,7 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="e",
     )
-    # exitonerror
-    # exitonfailure
-    expand_keywords: Optional[List[Union[str, Literal["name:<pattern>", "tag:<pattern>"]]]] = field(
+    expand_keywords: Optional[List[Union[NamePattern, TagPattern]]] = field(
         description="""\
             Matching keywords will be automatically expanded in
             the log file. Matching against keyword name or tags
@@ -284,9 +420,8 @@ class CommonOptions(BaseOptions):
         robot_name="expandkeywords",
         robot_priority=500,
     )
-    # extension
     flatten_keywords: Optional[
-        List[Union[str, Literal["for", "while", "iteration", "name:<pattern>", "tag:<pattern>"]]]
+        Optional[List[Union[str, Literal["for", "while", "iteration"], NamePattern, TagPattern]]]
     ] = field(
         description="""\
             Flattens matching keywords in the generated log file.
@@ -309,8 +444,7 @@ class CommonOptions(BaseOptions):
         robot_name="flattenkeywords",
         robot_priority=500,
     )
-    # help
-    includes: Optional[List[str]] = field(
+    includes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Select tests by tag. Similarly as name with --test,
             tag is case and space insensitive and it is possible
@@ -332,9 +466,7 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="i",
     )
-    # language
-    # listener
-    log: Optional[str] = field(
+    log: Optional[Union[str, StringExpression]] = field(
         description="""\
             HTML log file. Can be disabled by giving a special
             value `NONE`. Default: log.html
@@ -352,8 +484,7 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="l",
     )
-    # loglevel
-    log_title: Optional[str] = field(
+    log_title: Optional[Union[str, StringExpression]] = field(
         description="""\
             Title for the generated log file. The default title
             is `<SuiteName> Log`.
@@ -364,9 +495,7 @@ class CommonOptions(BaseOptions):
         robot_name="logtitle",
         robot_priority=500,
     )
-    # maxassignlength
-    # maxerrorlines
-    metadata: Optional[Dict[str, str]] = field(
+    metadata: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Set metadata of the top level suite. Value can
             contain formatting and be read from a file similarly
@@ -379,7 +508,7 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="M",
     )
-    name: Optional[str] = field(
+    name: Optional[Union[str, StringExpression]] = field(
         description="""\
             Set the name of the top level suite. By default the
             name is created based on the executed file or
@@ -405,8 +534,7 @@ class CommonOptions(BaseOptions):
         robot_is_flag=True,
         robot_flag_default=False,
     )
-    # output
-    output_dir: Optional[str] = field(
+    output_dir: Optional[Union[str, StringExpression]] = field(
         description="""\
             Where to create output files. The default is the
             directory where tests are run from and the given path
@@ -419,7 +547,7 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="d",
     )
-    pre_rebot_modifiers: Optional[Dict[str, List[str]]] = field(
+    pre_rebot_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
             Class to programmatically modify the result
             model before creating reports and logs.
@@ -430,8 +558,7 @@ class CommonOptions(BaseOptions):
         robot_name="prerebotmodifier",
         robot_priority=500,
     )
-    # prerunmodifier
-    python_path: Optional[List[str]] = field(
+    python_path: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Additional locations (directories, ZIPs) where to
             search libraries and other extensions when they are
@@ -454,11 +581,7 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="P",
     )
-    # quiet
-    # randomize
-    remove_keywords: Optional[
-        List[Union[str, Literal["all", "passed", "for", "wuks", "name:<pattern>", "tag:<pattern>"]]]
-    ] = field(
+    remove_keywords: Optional[List[Union[Literal["all", "passed", "for", "wuks"], NamePattern, TagPattern]]] = field(
         description="""\
             Remove keyword data from the generated log file.
             Keywords containing warnings are not removed except
@@ -505,7 +628,7 @@ class CommonOptions(BaseOptions):
         robot_name="removekeywords",
         robot_priority=500,
     )
-    report: Optional[str] = field(
+    report: Optional[Union[str, StringExpression]] = field(
         description="""\
             HTML report file. Can be disabled with `NONE`
             similarly as --log. Default: report.html
@@ -517,7 +640,7 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="r",
     )
-    report_background: Optional[str] = field(
+    report_background: Optional[Union[str, StringExpression]] = field(
         description="""\
             Background colors to use in the report file.
             Given in format `passed:failed:skipped` where the
@@ -537,7 +660,7 @@ class CommonOptions(BaseOptions):
         robot_name="reportbackground",
         robot_priority=500,
     )
-    report_title: Optional[str] = field(
+    report_title: Optional[Union[str, StringExpression]] = field(
         description="""\
             Title for the generated report file. The default
             title is `<SuiteName> Report`.
@@ -548,8 +671,6 @@ class CommonOptions(BaseOptions):
         robot_name="reporttitle",
         robot_priority=500,
     )
-    # rerunfailed
-    # rerunfailedsuites
     rpa: Union[bool, Flag, None] = field(
         description="""\
             Turn on the generic automation mode. Mainly affects
@@ -564,8 +685,7 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_is_flag=True,
     )
-    # runemptysuite
-    set_tag: Optional[List[str]] = field(
+    set_tag: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Sets given tag(s) to all executed tests.
 
@@ -576,9 +696,6 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="G",
     )
-    # skip
-    # skiponfailure
-    # skipteardownonexit
     split_log: Union[bool, Flag, None] = field(
         description="""\
             Split the log file into smaller pieces that open in
@@ -591,7 +708,7 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_is_flag=True,
     )
-    suites: Optional[List[str]] = field(
+    suites: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Select suites by name. When this option is used with
             --test, --include or --exclude, only tests in
@@ -620,7 +737,7 @@ class CommonOptions(BaseOptions):
         robot_name="suitestatlevel",
         robot_priority=500,
     )
-    tag_doc: Optional[Dict[str, str]] = field(
+    tag_doc: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Add documentation to tags matching the given
             pattern. Documentation is shown in `Test Details` and
@@ -641,7 +758,7 @@ class CommonOptions(BaseOptions):
         robot_name="tagdoc",
         robot_priority=500,
     )
-    tag_stat_combine: Optional[Dict[str, str]] = field(
+    tag_stat_combine: Optional[List[Union[str, Dict[str, str]]]] = field(
         description="""\
             Create combined statistics based on tags.
             These statistics are added into `Statistics by Tag`.
@@ -662,7 +779,7 @@ class CommonOptions(BaseOptions):
         robot_name="tagstatcombine",
         robot_priority=500,
     )
-    tag_stat_exclude: Optional[List[str]] = field(
+    tag_stat_exclude: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Exclude matching tags from `Statistics by Tag`.
             This option can be used with --tagstatinclude
@@ -674,7 +791,7 @@ class CommonOptions(BaseOptions):
         robot_name="tagstatexclude",
         robot_priority=500,
     )
-    tag_stat_include: Optional[List[str]] = field(
+    tag_stat_include: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Include only matching tags in `Statistics by Tag`
             in log and report. By default all tags are shown.
@@ -686,7 +803,7 @@ class CommonOptions(BaseOptions):
         robot_name="tagstatinclude",
         robot_priority=500,
     )
-    tag_stat_link: Optional[Dict[str, str]] = field(
+    tag_stat_link: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Add external links into `Statistics by
             Tag`. Pattern can use `*`, `?` and `[]` as wildcards
@@ -707,7 +824,7 @@ class CommonOptions(BaseOptions):
         robot_name="tagstatlink",
         robot_priority=500,
     )
-    tasks: Optional[List[str]] = field(
+    tasks: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Alias to --test. Especially applicable with --rpa.
 
@@ -717,7 +834,7 @@ class CommonOptions(BaseOptions):
         robot_name="task",
         robot_priority=500,
     )
-    tests: Optional[List[str]] = field(
+    tests: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Select tests by name or by long name containing also
             parent suite name like `Parent.Test`. Name is case
@@ -750,9 +867,7 @@ class CommonOptions(BaseOptions):
         robot_short_name="T",
         robot_is_flag=True,
     )
-    # variable
-    # variablefile
-    xunit: Optional[str] = field(
+    xunit: Optional[Union[str, StringExpression]] = field(
         description="""\
             xUnit compatible result file. Not created unless this
             option is specified.
@@ -770,7 +885,7 @@ class CommonOptions(BaseOptions):
 class CommonExtraOptions(BaseOptions):
     """Extra common options for all _robot_ commands."""
 
-    extra_excludes: Optional[List[str]] = field(
+    extra_excludes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --exclude option.
 
@@ -784,7 +899,7 @@ class CommonExtraOptions(BaseOptions):
             corresponds to the `-e --exclude tag *` option of _robot_
             """,
     )
-    extra_expand_keywords: Optional[List[Union[str, Literal["name:<pattern>", "tag:<pattern>"]]]] = field(
+    extra_expand_keywords: Optional[List[Union[NamePattern, TagPattern]]] = field(
         description="""\
             Appends entries to the --expandkeywords option.
 
@@ -806,7 +921,7 @@ class CommonExtraOptions(BaseOptions):
             """,
     )
     extra_flatten_keywords: Optional[
-        List[Union[str, Literal["for", "while", "iteration", "name:<pattern>", "tag:<pattern>"]]]
+        Optional[List[Union[str, Literal["for", "while", "iteration"], NamePattern, TagPattern]]]
     ] = field(
         description="""\
             Appends entries to the --flattenkeywords option.
@@ -831,7 +946,7 @@ class CommonExtraOptions(BaseOptions):
             corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_
             """,
     )
-    extra_includes: Optional[List[str]] = field(
+    extra_includes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --include option.
 
@@ -854,7 +969,7 @@ class CommonExtraOptions(BaseOptions):
             corresponds to the `-i --include tag *` option of _robot_
             """,
     )
-    extra_metadata: Optional[Dict[str, str]] = field(
+    extra_metadata: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --metadata option.
 
@@ -868,7 +983,7 @@ class CommonExtraOptions(BaseOptions):
             corresponds to the `-M --metadata name:value *` option of _robot_
             """,
     )
-    extra_pre_rebot_modifiers: Optional[Dict[str, List[str]]] = field(
+    extra_pre_rebot_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
             Appends entries to the --prerebotmodifier option.
 
@@ -881,7 +996,7 @@ class CommonExtraOptions(BaseOptions):
             corresponds to the `--prerebotmodifier class *` option of _robot_
             """,
     )
-    extra_python_path: Optional[List[str]] = field(
+    extra_python_path: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --pythonpath option.
 
@@ -906,7 +1021,7 @@ class CommonExtraOptions(BaseOptions):
             """,
     )
     extra_remove_keywords: Optional[
-        List[Union[str, Literal["all", "passed", "for", "wuks", "name:<pattern>", "tag:<pattern>"]]]
+        List[Union[Literal["all", "passed", "for", "wuks"], NamePattern, TagPattern]]
     ] = field(
         description="""\
             Appends entries to the --removekeywords option.
@@ -956,7 +1071,7 @@ class CommonExtraOptions(BaseOptions):
             corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
             """,
     )
-    extra_set_tag: Optional[List[str]] = field(
+    extra_set_tag: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --settag option.
 
@@ -968,7 +1083,7 @@ class CommonExtraOptions(BaseOptions):
             corresponds to the `-G --settag tag *` option of _robot_
             """,
     )
-    extra_suites: Optional[List[str]] = field(
+    extra_suites: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --suite option.
 
@@ -986,7 +1101,7 @@ class CommonExtraOptions(BaseOptions):
             corresponds to the `-s --suite name *` option of _robot_
             """,
     )
-    extra_tag_doc: Optional[Dict[str, str]] = field(
+    extra_tag_doc: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --tagdoc option.
 
@@ -1009,7 +1124,7 @@ class CommonExtraOptions(BaseOptions):
             corresponds to the `--tagdoc pattern:doc *` option of _robot_
             """,
     )
-    extra_tag_stat_combine: Optional[Dict[str, str]] = field(
+    extra_tag_stat_combine: Optional[List[Union[str, Dict[str, str]]]] = field(
         description="""\
             Appends entries to the --tagstatcombine option.
 
@@ -1032,7 +1147,7 @@ class CommonExtraOptions(BaseOptions):
             corresponds to the `--tagstatcombine tags:name *` option of _robot_
             """,
     )
-    extra_tag_stat_exclude: Optional[List[str]] = field(
+    extra_tag_stat_exclude: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --tagstatexclude option.
 
@@ -1046,7 +1161,7 @@ class CommonExtraOptions(BaseOptions):
             corresponds to the `--tagstatexclude tag *` option of _robot_
             """,
     )
-    extra_tag_stat_include: Optional[List[str]] = field(
+    extra_tag_stat_include: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --tagstatinclude option.
 
@@ -1060,7 +1175,7 @@ class CommonExtraOptions(BaseOptions):
             corresponds to the `--tagstatinclude tag *` option of _robot_
             """,
     )
-    extra_tag_stat_link: Optional[Dict[str, str]] = field(
+    extra_tag_stat_link: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --tagstatlink option.
 
@@ -1083,7 +1198,7 @@ class CommonExtraOptions(BaseOptions):
             corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
             """,
     )
-    extra_tasks: Optional[List[str]] = field(
+    extra_tasks: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --task option.
 
@@ -1095,7 +1210,7 @@ class CommonExtraOptions(BaseOptions):
             corresponds to the `--task name *` option of _robot_
             """,
     )
-    extra_tests: Optional[List[str]] = field(
+    extra_tests: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --test option.
 
@@ -1118,7 +1233,6 @@ class CommonExtraOptions(BaseOptions):
 class RobotOptions(BaseOptions):
     """Options for _robot_ command."""
 
-    # argumentfile
     console: Optional[Literal["verbose", "dotted", "skipped", "quiet", "none"]] = field(
         description="""\
             How to report execution on the console.
@@ -1134,7 +1248,6 @@ class RobotOptions(BaseOptions):
         robot_name="console",
         robot_priority=500,
     )
-    # consolecolors
     console_markers: Optional[Literal["auto", "on", "off"]] = field(
         description="""\
             Show markers on the console when top level
@@ -1159,7 +1272,7 @@ class RobotOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="W",
     )
-    debug_file: Optional[str] = field(
+    debug_file: Optional[Union[str, StringExpression]] = field(
         description="""\
             Debug file written during execution. Not created
             unless this option is specified.
@@ -1171,7 +1284,6 @@ class RobotOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="b",
     )
-    # doc
     dotted: Union[bool, Flag, None] = field(
         description="""\
             Shortcut for `--console dotted`.
@@ -1196,7 +1308,6 @@ class RobotOptions(BaseOptions):
         robot_priority=500,
         robot_is_flag=True,
     )
-    # exclude
     exit_on_error: Union[bool, Flag, None] = field(
         description="""\
             Stops test execution if any error occurs when parsing
@@ -1221,8 +1332,7 @@ class RobotOptions(BaseOptions):
         robot_short_name="X",
         robot_is_flag=True,
     )
-    # expandkeywords
-    extensions: Optional[str] = field(
+    extensions: Optional[Union[str, StringExpression]] = field(
         description="""\
             Parse only files with this extension when executing
             a directory. Has no effect when running individual
@@ -1245,10 +1355,7 @@ class RobotOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="F",
     )
-    # flattenkeywords
-    # help
-    # include
-    languages: Optional[List[str]] = field(
+    languages: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Activate localization. `lang` can be a name or a code
             of a built-in language, or a path or a module name of
@@ -1260,7 +1367,7 @@ class RobotOptions(BaseOptions):
         robot_name="language",
         robot_priority=500,
     )
-    listeners: Optional[Dict[str, List[str]]] = field(
+    listeners: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
             A class for monitoring test execution. Gets
             notifications e.g. when tests start and end.
@@ -1280,8 +1387,7 @@ class RobotOptions(BaseOptions):
         robot_name="listener",
         robot_priority=500,
     )
-    # log
-    log_level: Optional[str] = field(
+    log_level: Optional[Union[str, StringExpression]] = field(
         description="""\
             Threshold level for logging. Available levels: TRACE,
             DEBUG, INFO (default), WARN, NONE (no logging). Use
@@ -1302,7 +1408,6 @@ class RobotOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="L",
     )
-    # logtitle
     max_assign_length: Optional[int] = field(
         description="""\
             Maximum number of characters to show in log
@@ -1328,10 +1433,7 @@ class RobotOptions(BaseOptions):
         robot_name="maxerrorlines",
         robot_priority=500,
     )
-    # metadata
-    # name
-    # statusrc
-    output: Optional[str] = field(
+    output: Optional[Union[str, StringExpression]] = field(
         description="""\
             XML output file. Given path, similarly as paths given
             to --log, --report, --xunit, and --debugfile, is
@@ -1349,9 +1451,7 @@ class RobotOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="o",
     )
-    # outputdir
-    # prerebotmodifier
-    pre_run_modifiers: Optional[Dict[str, List[str]]] = field(
+    pre_run_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
             Class to programmatically modify the suite
             structure before execution.
@@ -1362,7 +1462,6 @@ class RobotOptions(BaseOptions):
         robot_name="prerunmodifier",
         robot_priority=500,
     )
-    # pythonpath
     quiet: Union[bool, Flag, None] = field(
         description="""\
             Shortcut for `--console quiet`.
@@ -1374,7 +1473,7 @@ class RobotOptions(BaseOptions):
         robot_priority=500,
         robot_is_flag=True,
     )
-    randomize: Optional[Optional[Union[str, Literal["all", "suites", "tests", "none"]]]] = field(
+    randomize: Optional[Union[str, Literal["all", "suites", "tests", "none"]]] = field(
         description="""\
             Randomizes the test execution order.
             all:    randomizes both suites and tests
@@ -1397,11 +1496,7 @@ class RobotOptions(BaseOptions):
         robot_name="randomize",
         robot_priority=500,
     )
-    # removekeywords
-    # report
-    # reportbackground
-    # reporttitle
-    re_run_failed: Optional[str] = field(
+    re_run_failed: Optional[Union[str, StringExpression]] = field(
         description="""\
             Select failed tests from an earlier output file to be
             re-executed. Equivalent to selecting same tests
@@ -1414,7 +1509,7 @@ class RobotOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="R",
     )
-    re_run_failed_suites: Optional[str] = field(
+    re_run_failed_suites: Optional[Union[str, StringExpression]] = field(
         description="""\
             Select failed suites from an earlier output
             file to be re-executed.
@@ -1426,7 +1521,6 @@ class RobotOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="S",
     )
-    # rpa
     run_empty_suite: Union[bool, Flag, None] = field(
         description="""\
             Executes suite even if it contains no tests. Useful
@@ -1440,8 +1534,7 @@ class RobotOptions(BaseOptions):
         robot_priority=500,
         robot_is_flag=True,
     )
-    # settag
-    skip: Optional[List[str]] = field(
+    skip: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Tests having given tag will be skipped. Tag can be
             a pattern.
@@ -1452,7 +1545,7 @@ class RobotOptions(BaseOptions):
         robot_name="skip",
         robot_priority=500,
     )
-    skip_on_failure: Optional[List[str]] = field(
+    skip_on_failure: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Tests having given tag will be skipped if they fail.
             Tag can be a pattern
@@ -1475,18 +1568,7 @@ class RobotOptions(BaseOptions):
         robot_priority=500,
         robot_is_flag=True,
     )
-    # splitlog
-    # suite
-    # suitestatlevel
-    # tagdoc
-    # tagstatcombine
-    # tagstatexclude
-    # tagstatinclude
-    # tagstatlink
-    # task
-    # test
-    # timestampoutputs
-    variables: Optional[Dict[str, str]] = field(
+    variables: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Set variables in the test data. Only scalar
             variables with string value are supported and name is
@@ -1508,7 +1590,7 @@ class RobotOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="v",
     )
-    variable_files: Optional[List[str]] = field(
+    variable_files: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Python or YAML file file to read variables from.
             Possible arguments to the variable file can be given
@@ -1528,14 +1610,13 @@ class RobotOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="V",
     )
-    # xunit
 
 
 @dataclass
 class RobotExtraOptions(BaseOptions):
     """Extra options for _robot_ command."""
 
-    extra_languages: Optional[List[str]] = field(
+    extra_languages: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --language option.
 
@@ -1549,7 +1630,7 @@ class RobotExtraOptions(BaseOptions):
             corresponds to the `--language lang *` option of _robot_
             """,
     )
-    extra_listeners: Optional[Dict[str, List[str]]] = field(
+    extra_listeners: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
             Appends entries to the --listener option.
 
@@ -1571,7 +1652,7 @@ class RobotExtraOptions(BaseOptions):
             corresponds to the `--listener class *` option of _robot_
             """,
     )
-    extra_pre_run_modifiers: Optional[Dict[str, List[str]]] = field(
+    extra_pre_run_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
             Appends entries to the --prerunmodifier option.
 
@@ -1584,7 +1665,7 @@ class RobotExtraOptions(BaseOptions):
             corresponds to the `--prerunmodifier class *` option of _robot_
             """,
     )
-    extra_skip: Optional[List[str]] = field(
+    extra_skip: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --skip option.
 
@@ -1597,7 +1678,7 @@ class RobotExtraOptions(BaseOptions):
             corresponds to the `--skip tag *` option of _robot_
             """,
     )
-    extra_skip_on_failure: Optional[List[str]] = field(
+    extra_skip_on_failure: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --skiponfailure option.
 
@@ -1610,7 +1691,7 @@ class RobotExtraOptions(BaseOptions):
             corresponds to the `--skiponfailure tag *` option of _robot_
             """,
     )
-    extra_variables: Optional[Dict[str, str]] = field(
+    extra_variables: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --variable option.
 
@@ -1633,7 +1714,7 @@ class RobotExtraOptions(BaseOptions):
             corresponds to the `-v --variable name:value *` option of _robot_
             """,
     )
-    extra_variable_files: Optional[List[str]] = field(
+    extra_variable_files: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --variablefile option.
 
@@ -1660,10 +1741,7 @@ class RobotExtraOptions(BaseOptions):
 class RebotOptions(BaseOptions):
     """Options for _rebot_ command."""
 
-    # argumentfile
-    # consolecolors
-    # doc
-    end_time: Optional[str] = field(
+    end_time: Optional[Union[str, StringExpression]] = field(
         description="""\
             Same as --starttime but for end time. If both options
             are used, elapsed time of the suite is calculated
@@ -1677,13 +1755,7 @@ class RebotOptions(BaseOptions):
         robot_name="endtime",
         robot_priority=500,
     )
-    # exclude
-    # expandkeywords
-    # flattenkeywords
-    # help
-    # include
-    # log
-    log_level: Optional[str] = field(
+    log_level: Optional[Union[str, StringExpression]] = field(
         description="""\
             Threshold for selecting messages. Available levels:
             TRACE (default), DEBUG, INFO, WARN, NONE (no msgs).
@@ -1704,7 +1776,6 @@ class RebotOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="L",
     )
-    # logtitle
     merge: Union[bool, Flag, None] = field(
         description="""\
             When combining results, merge outputs together
@@ -1719,10 +1790,7 @@ class RebotOptions(BaseOptions):
         robot_short_name="R",
         robot_is_flag=True,
     )
-    # metadata
-    # name
-    # statusrc
-    output: Optional[str] = field(
+    output: Optional[Union[str, StringExpression]] = field(
         description="""\
             XML output file. Not created unless this option is
             specified. Given path, similarly as paths given to
@@ -1736,8 +1804,6 @@ class RebotOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="o",
     )
-    # outputdir
-    # prerebotmodifier
     process_empty_suite: Union[bool, Flag, None] = field(
         description="""\
             Processes output also if the top level suite is
@@ -1752,15 +1818,7 @@ class RebotOptions(BaseOptions):
         robot_priority=500,
         robot_is_flag=True,
     )
-    # pythonpath
-    # removekeywords
-    # report
-    # reportbackground
-    # reporttitle
-    # rpa
-    # settag
-    # splitlog
-    start_time: Optional[str] = field(
+    start_time: Optional[Union[str, StringExpression]] = field(
         description="""\
             Set execution start time. Timestamp must be given in
             format `2007-10-01 15:12:42.268` where all separators
@@ -1777,17 +1835,6 @@ class RebotOptions(BaseOptions):
         robot_name="starttime",
         robot_priority=500,
     )
-    # suite
-    # suitestatlevel
-    # tagdoc
-    # tagstatcombine
-    # tagstatexclude
-    # tagstatinclude
-    # tagstatlink
-    # task
-    # test
-    # timestampoutputs
-    # xunit
 
 
 @dataclass
@@ -1824,7 +1871,7 @@ class LibDocOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="f",
     )
-    name: Optional[str] = field(
+    name: Optional[Union[str, StringExpression]] = field(
         description="""\
             Sets the name of the documented library or resource.
 
@@ -1835,7 +1882,7 @@ class LibDocOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="n",
     )
-    python_path: Optional[List[str]] = field(
+    python_path: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Additional locations where to search for libraries
             and resources.
@@ -1887,14 +1934,13 @@ class LibDocOptions(BaseOptions):
         robot_name="theme",
         robot_priority=500,
     )
-    # version
 
 
 @dataclass
 class LibDocExtraOptions(BaseOptions):
     """Extra options for _libdoc_ command."""
 
-    extra_python_path: Optional[List[str]] = field(
+    extra_python_path: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --pythonpath option.
 
@@ -1913,8 +1959,7 @@ class LibDocExtraOptions(BaseOptions):
 class TestDocOptions(BaseOptions):
     """Options for _testdoc_ command."""
 
-    # argumentfile
-    doc: Optional[str] = field(
+    doc: Optional[Union[str, StringExpression]] = field(
         description="""\
             Override the documentation of the top level suite.
 
@@ -1925,7 +1970,7 @@ class TestDocOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="D",
     )
-    excludes: Optional[List[str]] = field(
+    excludes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Exclude tests by tags.
 
@@ -1936,7 +1981,7 @@ class TestDocOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="e",
     )
-    includes: Optional[List[str]] = field(
+    includes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Include tests by tags.
 
@@ -1947,7 +1992,7 @@ class TestDocOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="i",
     )
-    metadata: Optional[Dict[str, str]] = field(
+    metadata: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Set/override metadata of the top level suite.
 
@@ -1958,7 +2003,7 @@ class TestDocOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="M",
     )
-    name: Optional[str] = field(
+    name: Optional[Union[str, StringExpression]] = field(
         description="""\
             Override the name of the top level suite.
 
@@ -1969,7 +2014,7 @@ class TestDocOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="N",
     )
-    set_tag: Optional[List[str]] = field(
+    set_tag: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Set given tag(s) to all test cases.
 
@@ -1980,7 +2025,7 @@ class TestDocOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="G",
     )
-    suites: Optional[List[str]] = field(
+    suites: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Include suites by name.
 
@@ -1991,7 +2036,7 @@ class TestDocOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="s",
     )
-    tests: Optional[List[str]] = field(
+    tests: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Include tests by name.
 
@@ -2002,7 +2047,7 @@ class TestDocOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="t",
     )
-    title: Optional[str] = field(
+    title: Optional[Union[str, StringExpression]] = field(
         description="""\
             Set the title of the generated documentation.
             Underscores in the title are converted to spaces.
@@ -2021,7 +2066,7 @@ class TestDocOptions(BaseOptions):
 class TestDocExtraOptions(BaseOptions):
     """Extra options for _testdoc_ command."""
 
-    extra_excludes: Optional[List[str]] = field(
+    extra_excludes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --exclude option.
 
@@ -2033,7 +2078,7 @@ class TestDocExtraOptions(BaseOptions):
             corresponds to the `-e --exclude tag *` option of _robot_
             """,
     )
-    extra_includes: Optional[List[str]] = field(
+    extra_includes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --include option.
 
@@ -2045,7 +2090,7 @@ class TestDocExtraOptions(BaseOptions):
             corresponds to the `-i --include tag *` option of _robot_
             """,
     )
-    extra_metadata: Optional[Dict[str, str]] = field(
+    extra_metadata: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --metadata option.
 
@@ -2057,7 +2102,7 @@ class TestDocExtraOptions(BaseOptions):
             corresponds to the `-M --metadata name:value *` option of _robot_
             """,
     )
-    extra_set_tag: Optional[List[str]] = field(
+    extra_set_tag: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --settag option.
 
@@ -2069,7 +2114,7 @@ class TestDocExtraOptions(BaseOptions):
             corresponds to the `-G --settag tag *` option of _robot_
             """,
     )
-    extra_suites: Optional[List[str]] = field(
+    extra_suites: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --suite option.
 
@@ -2081,7 +2126,7 @@ class TestDocExtraOptions(BaseOptions):
             corresponds to the `-s --suite name *` option of _robot_
             """,
     )
-    extra_tests: Optional[List[str]] = field(
+    extra_tests: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --test option.
 
@@ -2202,38 +2247,6 @@ class RobotExtraBaseProfile(RobotBaseProfile):
     )
 
 
-class EvaluationError(Exception):
-    """Evaluation error."""
-
-    def __init__(self, expression: str, message: str):
-        super().__init__(f"Evaluation of '{expression}' failed: {message}")
-        self.expr = expression
-
-
-@dataclass
-class Condition:
-    if_: str = field(
-        description="""\
-            Condition to evaluate. This must be a Python "eval" expression.
-            For security reasons, only certain expressions and functions are allowed.
-
-            Examples:
-            ```toml
-            if = "re.match(r'^\\d+$', environ.get('TEST_VAR', ''))"
-            if = "platform.system() == 'Linux'"
-            ```
-            """,
-        alias="if",
-        no_default=True,
-    )
-
-    def evaluate(self) -> bool:
-        try:
-            return bool(safe_eval(self.if_, {"env": os.environ, "re": re, "platform": platform}))
-        except Exception as e:
-            raise EvaluationError(self.if_, str(e)) from e
-
-
 @dataclass
 class RobotProfile(RobotExtraBaseProfile):
     """Robot Framework configuration profile."""
@@ -2260,9 +2273,15 @@ class RobotProfile(RobotExtraBaseProfile):
 
             ```toml
             # enabled if TEST_VAR is set
-            enabled = { if = 'env.get("CI") == "true"' }
+            enabled = { if = 'environ.get("CI") == "true"' }
             ```
             """
+    )
+
+    precedence: Optional[int] = field(
+        description="""\
+        Precedence of the profile. Lower values are executed first. If not set the order is undefined.
+        """
     )
 
 
@@ -2270,17 +2289,17 @@ class RobotProfile(RobotExtraBaseProfile):
 class RobotConfig(RobotExtraBaseProfile):
     """Robot Framework configuration."""
 
-    default_profile: Union[str, List[str], None] = field(
+    default_profiles: Union[str, List[str], None] = field(
         description="""\
             Selects the Default profile if no profile is given at command line.
 
             Examples:
             ```toml
-            default_profile = "default"
+            default_profiles = "default"
             ```
 
             ```toml
-            default_profile = ["default", "Firefox"]
+            default_profiles = ["default", "Firefox"]
             ```
             """,
     )
@@ -2295,6 +2314,35 @@ class RobotConfig(RobotExtraBaseProfile):
         metadata={"description": "Tool configuration."},
     )
 
+    def select_profiles(self, *names: str, verbose_callback: Callable[..., None] = None) -> Dict[str, RobotProfile]:
+        result: Dict[str, RobotProfile] = {}
+
+        profiles = self.profiles or {}
+
+        if not names:
+            if verbose_callback:
+                verbose_callback("No profiles given, try to check if there are default profiles specified.")
+
+            default_profile = (
+                [self.default_profiles] if isinstance(self.default_profiles, str) else self.default_profiles
+            )
+
+            if verbose_callback and default_profile:
+                verbose_callback(f"Using default profiles: {', '.join( default_profile)}.")
+
+            names = (*(default_profile or ()),)
+
+        for name in names:
+            profile_names = [p for p in profiles.keys() if fnmatch.fnmatchcase(p, name)]
+
+            if not profile_names:
+                raise ValueError(f"Can't find any profiles matching the pattern '{name}''.")
+
+            for v in profile_names:
+                result.update({v: profiles[v]})
+
+        return result
+
     def combine_profiles(self, *names: str, verbose_callback: Callable[..., None] = None) -> RobotBaseProfile:
         type_hints = get_type_hints(RobotBaseProfile)
         base_field_names = [f.name for f in dataclasses.fields(RobotBaseProfile)]
@@ -2307,38 +2355,14 @@ class RobotConfig(RobotExtraBaseProfile):
             }
         )
 
-        profiles = self.profiles or {}
-
-        if not names:
-            if verbose_callback:
-                verbose_callback('No profiles given, try to check if there are default profiles specified".')
-
-            default_profile = [self.default_profile] if isinstance(self.default_profile, str) else self.default_profile
-
-            if verbose_callback and default_profile:
-                verbose_callback(f"Using default profiles: {', '.join( default_profile)}.")
-
-            names = (*(default_profile or ()),)
-
-        selected_profiles: List[str] = []
-
-        for name in names:
-            profile_names = [p for p in profiles.keys() if fnmatch.fnmatchcase(p, name)]
-
-            if not profile_names:
-                raise ValueError(f"Can't find any profiles matching the pattern '{name}''.")
-
-            for v in profile_names:
-                if v in selected_profiles:
-                    continue
-                selected_profiles.append(v)
-
+        selected_profiles = self.select_profiles(*names, verbose_callback=verbose_callback)
         if verbose_callback:
-            verbose_callback(f"Select profiles {', '.join(selected_profiles)}")
+            if selected_profiles:
+                verbose_callback(f"Select profiles: {', '.join(selected_profiles.keys())}")
+            else:
+                verbose_callback("No profiles selected.")
 
-        for profile_name in selected_profiles:
-            profile = profiles[profile_name]
-
+        for profile_name, profile in sorted(selected_profiles.items(), key=lambda x: x[1].precedence or 0):
             try:
                 if profile.enabled is not None and (
                     isinstance(profile.enabled, Condition) and not profile.enabled.evaluate() or not profile.enabled
@@ -2347,9 +2371,7 @@ class RobotConfig(RobotExtraBaseProfile):
                         verbose_callback(f'Skipping profile "{profile_name}" because it\'s  disabled.')
                     continue
             except EvaluationError as e:
-                if verbose_callback:
-                    verbose_callback(f'Skipping profile "{profile_name}" because: {e}')
-                continue
+                raise ValueError(f'Error evaluating "enabled" condition for profile "{profile_name}": {e}') from e
 
             if verbose_callback:
                 verbose_callback(f'Using profile "{profile_name}".')

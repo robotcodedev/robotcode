@@ -52,7 +52,7 @@ def _load_config_data_from_path(__path: Path) -> RobotConfig:
     if __path.name == ROBOT_TOML or __path.name == LOCAL_ROBOT_TOML:
         return loads_config_from_robot_toml(__path.read_text("utf-8"))
 
-    raise ValueError(f"Unknown config file name: {__path.name}")
+    raise ValueError(f"Unknown config file type: {__path.name}")
 
 
 def load_config_from_path(*__paths: Union[Path, Tuple[Path, ConfigType]]) -> RobotConfig:

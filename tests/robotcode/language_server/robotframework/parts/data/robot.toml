@@ -2,8 +2,14 @@ paths = "tests"
 args = []
 python-path = ["./lib", "./resources"]
 
-output-dir = "results"
+output-dir = { expr = "f'results/run-{datetime.now().strftime(\"%d-%m-%Y-%H.%M.%S\")}'" }
 rpa = true
+flatten-keywords = [
+    { name = "My Keyword" },
+    { tag = "my-tag" },
+    "name:My Keyword",
+]
+expand-keywords = [{ name = "My Keyword" }, { tag = "my-tag" }]
 
 [rebot]
 merge = "on"
@@ -15,9 +21,9 @@ format = "HTML"
 ENV_VAR = "1"
 
 [variables]
-CMD_VAR = "1"
+CMD_VAR = { expr = "1+2*5" }
 CMD_VAR_LONG = "a test"
-
+ANOTHER_VAR = { expr = "environ.get('CMD_VAR_LONG', 'default')" }
 
 [profiles.firefox.rebot]
 merge = "on"

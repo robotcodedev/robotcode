@@ -324,11 +324,20 @@ def from_dict(
                     return cast(_T, v)
 
     raise TypeError(
-        f"Cant convert value {repr(value)} of type {type(value).__name__} to type " + repr(types[0])
-        if len(types) == 1
-        else " | ".join(
-            ((getattr(e, "__name__", None) or str(e) if e is not type(None) else "None") if e is not None else "None")
-            for e in types
+        f"Cant convert value {repr(value)} of type {type(value).__name__} to type(s) "
+        + (
+            repr(types[0])
+            if len(types) == 1
+            else " | ".join(
+                (
+                    (getattr(e, "__name__", None) or str(e) if e is not type(None) else "None")
+                    if get_origin(e) is not Literal
+                    else repr(e).replace("typing.", "")
+                    if e is not None
+                    else "None"
+                )
+                for e in types
+            )
         )
         + "."
     )

@@ -33,7 +33,7 @@ class OutputFormat(str, Enum):
 
 @dataclass
 class CommonConfig:
-    config_file: Optional[Path] = None
+    config_files: Optional[List[Path]] = None
     profiles: Optional[List[str]] = None
     dry: bool = False
     verbose: bool = False
