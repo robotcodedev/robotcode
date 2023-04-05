@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.32.2 (2023-04-05)
+### Fix
+* Update git versions script ([`fb16818`](https://github.com/d-biehl/robotcode/commit/fb16818b61068659b8607eee585a705d8e2caf26))
+
 ## v0.32.1 (2023-04-05)
 ### Fix
 * Dataclasses from dict respects Literals also for Python 3.8 and 3.9 ([`73b7b1c`](https://github.com/d-biehl/robotcode/commit/73b7b1c64e6842249d8278d71ccea76f8118b810))
