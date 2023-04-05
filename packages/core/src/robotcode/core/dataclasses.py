@@ -260,6 +260,9 @@ def from_dict(
             args = get_args(t)
             origin = get_origin(t)
 
+            if origin is Literal:
+                continue
+
             cased_value: Dict[str, Any] = {__decode_case(t, k): v for k, v in value.items()}
             type_hints = get_type_hints(origin or t)
             try:
