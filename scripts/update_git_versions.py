@@ -29,7 +29,7 @@ def main() -> None:
     version = get_version()
     version_files = list(Path("packages").rglob("__version__.py"))
 
-    for f in [Path("robotcode/cli/__version__.py"), *version_files]:
+    for f in [Path("src/robotcode/cli/__version__.py"), *version_files]:
         replace_in_file(
             f,
             re.compile(r"""(^_*version_*\s*=\s*['"])([^'"]*)(['"])""", re.MULTILINE),
