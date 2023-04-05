@@ -4,6 +4,11 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.32.0 (2023-04-05)
+### Feature
+* Allow expression for str options, better handling of tag:<pattern>, name:<pattern> options ([`d037ddb`](https://github.com/d-biehl/robotcode/commit/d037ddbd9d44ccbb501af3854cf8a7d7df607ddd))
+* Add command for robots _testdoc_ ([`dd6d758`](https://github.com/d-biehl/robotcode/commit/dd6d7583f5075b35823b83b8a7aa828507904013))
+
 ## v0.31.0 (2023-03-30)
 ### Feature
 * Profiles can now be enabled or disabled, also with a condition. Profiles can now also be selected with a wildcard pattern. ([`4282f02`](https://github.com/d-biehl/robotcode/commit/4282f02bab4b483d74d486e983ec9a1f606fd3d7))
