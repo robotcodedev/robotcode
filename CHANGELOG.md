@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.32.1 (2023-04-05)
+### Fix
+* Dataclasses from dict respects Literals also for Python 3.8 and 3.9 ([`73b7b1c`](https://github.com/d-biehl/robotcode/commit/73b7b1c64e6842249d8278d71ccea76f8118b810))
+
 ## v0.32.0 (2023-04-05)
 ### Feature
 * Allow expression for str options, better handling of tag:<pattern>, name:<pattern> options ([`d037ddb`](https://github.com/d-biehl/robotcode/commit/d037ddbd9d44ccbb501af3854cf8a7d7df607ddd))
