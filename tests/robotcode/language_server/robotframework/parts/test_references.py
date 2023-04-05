@@ -4,7 +4,6 @@ from pathlib import Path
 import pytest
 import yaml
 from pytest_regtest import RegTestFixture
-
 from robotcode.language_server.common.lsp_types import (
     Location,
     Position,
@@ -14,6 +13,7 @@ from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
+
 from tests.robotcode.language_server.robotframework.tools import (
     GeneratedTestData,
     generate_test_id,

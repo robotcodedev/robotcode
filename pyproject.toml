@@ -75,7 +75,7 @@ lint = ["robotframework-robocop>=2.0.0"]
 tidy = ["robotframework-tidy>=2.0.0"]
 rest = ["docutils"]
 colored = ["rich"]
-tomlw = ["tomli-w"]
+toml = ["tomli-w"]
 all = [
   "robotcode-debugger",
   "robotcode-language-server",
@@ -92,16 +92,16 @@ all = [
 
 [tool.semantic_release]
 version_variable = [
-  "robotcode/cli/__version__.py:__version__",
-  "packages/core/robotcode/core/__version__.py:__version__",
-  "packages/debugger/robotcode/debugger/__version__.py:__version__",
-  "packages/jsonrpc2/robotcode/jsonrpc2/__version__.py:__version__",
-  "packages/language_server/robotcode/language_server/__version__.py:__version__",
-  "packages/modifiers/robotcode/modifiers/__version__.py:__version__",
-  "packages/plugin/robotcode/plugin/__version__.py:__version__",
-  "packages/runner/robotcode/runner/__version__.py:__version__",
-  "packages/analyze/robotcode/analyze/__version__.py:__version__",
-  "packages/robot/robotcode/robot/__version__.py:__version__",
+  "src/robotcode/cli/__version__.py:__version__",
+  "packages/core/src/robotcode/core/__version__.py:__version__",
+  "packages/debugger/src/robotcode/debugger/__version__.py:__version__",
+  "packages/jsonrpc2/src/robotcode/jsonrpc2/__version__.py:__version__",
+  "packages/language_server/src/robotcode/language_server/__version__.py:__version__",
+  "packages/modifiers/src/robotcode/modifiers/__version__.py:__version__",
+  "packages/plugin/src/robotcode/plugin/__version__.py:__version__",
+  "packages/runner/src/robotcode/runner/__version__.py:__version__",
+  "packages/analyze/src/robotcode/analyze/__version__.py:__version__",
+  "packages/robot/src/robotcode/robot/__version__.py:__version__",
 ]
 version_pattern = ['package.json:"version": "{version}"']
 branch = "main"
@@ -199,7 +199,7 @@ select = [
 
 
 [tool.mypy]
-python_version = 3.8
+python_version = "3.8"
 strict = true
 warn_redundant_casts = true
 warn_unused_ignores = true
@@ -222,17 +222,19 @@ exclude = [
 ]
 mypy_path = [
   "typings",
-  "packages/core",
-  "packages/debugger",
-  "packages/jsonrpc2",
-  "packages/language_server",
-  "packages/modifiers",
-  "packages/plugin",
-  "packages/robot",
-  "packages/runner",
-  "packages/analyze",
+  "src",
+  "packages/core/src",
+  "packages/debugger/src",
+  "packages/jsonrpc2/src",
+  "packages/language_server/src",
+  "packages/modifiers/src",
+  "packages/plugin/src",
+  "packages/robot/src",
+  "packages/runner/src",
+  "packages/analyze/src",
 ]
 explicit_package_bases = true
+namespace_packages = true
 
 
 [[tool.mypy.overrides]]

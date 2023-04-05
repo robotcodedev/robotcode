@@ -2,7 +2,6 @@ import asyncio
 from typing import Any, Dict, Iterator, List, Optional, cast
 
 import pytest
-
 from robotcode.core.dataclasses import as_dict, as_json
 from robotcode.jsonrpc2.protocol import (
     JsonRPCError,

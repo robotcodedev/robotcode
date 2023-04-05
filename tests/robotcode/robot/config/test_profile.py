@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from robotcode.robot.config.loader import loads_config_from_robot_toml
 
 

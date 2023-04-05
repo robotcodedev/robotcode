@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 import yaml
-
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )

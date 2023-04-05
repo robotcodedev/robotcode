@@ -41,14 +41,18 @@ Issues = "https://github.com/d-biehl/robotcode/issues"
 Source = "https://github.com/d-biehl/robotcode"
 
 [tool.hatch.version]
-path = "robotcode/robot/__version__.py"
+path = "src/robotcode/robot/__version__.py"
+
+[tool.hatch.build]
+dev-mode-dirs = ["src"]
+
+[tool.hatch.build.targets.wheel]
+only-include = ["src/robotcode"]
+sources = ["src"]
+
+[tool.hatch.build.targets.sdist]
+only-include = ["src"]
 
 [tool.hatch.envs.build]
 detached = true
 python = "38"
-
-[tool.hatch.build.targets.sdist]
-only-include = ["robotcode"]
-
-[tool.hatch.build.targets.wheel]
-only-include = ["robotcode"]

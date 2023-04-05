@@ -1,11 +1,16 @@
 [version]
-path = "robotcode/cli/__version__.py"
+path = "src/robotcode/cli/__version__.py"
 
-[build.targets.sdist]
-only-include = ["robotcode", "CHANGELOG.md"]
+[build]
+dev-mode-dirs = ["src"]
 
 [build.targets.wheel]
-only-include = ["robotcode"]
+only-include = ["src/robotcode"]
+sources = ["src"]
+
+[build.targets.sdist]
+only-include = ["src", "CHANGELOG.md"]
+
 
 [envs.default]
 dependencies = [
@@ -114,6 +119,7 @@ deploy = ["python scripts/deploy_docs.py"]
 
 
 [envs.build]
+skip-install = true
 detached = true
 python = "38"
 dependencies = ["GitPython", "semantic-version"]

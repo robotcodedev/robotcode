@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Iterator, Tuple
 
 import pytest
-
 from robotcode.robot.config.loader import DiscoverdBy, find_project_root, get_config_files_from_folder
 
 

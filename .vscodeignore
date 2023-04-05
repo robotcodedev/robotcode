@@ -46,9 +46,13 @@ playground
 coverage.xml
 .python-version
 
+# mkdocs
+docs
+overrides
+site
+
 # others
 scripts
-doc
 
 **/.robotcode_cache
 
