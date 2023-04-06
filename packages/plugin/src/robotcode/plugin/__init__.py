@@ -113,5 +113,30 @@ class Application:
 
         return
 
+    def echo(
+        self, message: Union[str, Callable[[], Any], None], file: Optional[IO[AnyStr]] = None, nl: bool = True
+    ) -> None:
+        click.secho(
+            message() if callable(message) else message,
+            file=file,
+            nl=nl,
+            color=self.colored,
+        )
+
+    def echo_as_markdown(self, text: str) -> None:
+        if self.colored:
+            try:
+                from rich.console import Console
+                from rich.markdown import Markdown
+
+                Console().print(Markdown(text, justify="left"))
+
+                return
+            except ImportError:
+                if self.config.colored_output == ColoredOutput.YES:
+                    self.warning('Package "rich" is required to use colored output.')
+
+        click.echo(text)
+
 
 pass_application = click.make_pass_decorator(Application, ensure=True)

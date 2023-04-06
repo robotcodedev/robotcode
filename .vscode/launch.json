@@ -61,14 +61,14 @@
 				// "--help"
 				// "tests1"
 				// "profiles",
-
 				// "show",
 				// "list",
 				// "--format",
 				// "toml"
-				"profiles",
-				"show",
-				"--no-evaluate"
+				"config",
+				"info",
+				"desc",
+				"*"
 			]
 		},
 		{

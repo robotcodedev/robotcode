@@ -24,4 +24,4 @@ if __name__ == "__main__":
 
     from robotcode.cli import robotcode
 
-    sys.exit(robotcode())
+    sys.exit(robotcode(windows_expand_args=False))

@@ -358,7 +358,6 @@ class CommonOptions(BaseOptions):
             ansi: like `on` but use ANSI colors also on Windows
             off:  disable colors altogether
 
-            ---
             corresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_
             """,
         robot_name="consolecolors",
@@ -380,7 +379,6 @@ class CommonOptions(BaseOptions):
             --doc doc_from_file.txt
             ```
 
-            ---
             corresponds to the `-D --doc documentation` option of _robot_
             """,
         robot_name="doc",
@@ -393,14 +391,13 @@ class CommonOptions(BaseOptions):
             not run even if included with --include. Tags are
             matched using same rules as with --include.
 
-            ---
             corresponds to the `-e --exclude tag *` option of _robot_
             """,
         robot_name="exclude",
         robot_priority=500,
         robot_short_name="e",
     )
-    expand_keywords: Optional[List[Union[NamePattern, TagPattern]]] = field(
+    expand_keywords: Optional[List[Union[str, NamePattern, TagPattern]]] = field(
         description="""\
             Matching keywords will be automatically expanded in
             the log file. Matching against keyword name or tags
@@ -413,15 +410,12 @@ class CommonOptions(BaseOptions):
             --expandkeywords tag:expand
             ```
 
-            ---
             corresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_
             """,
         robot_name="expandkeywords",
         robot_priority=500,
     )
-    flatten_keywords: Optional[
-        Optional[List[Union[str, Literal["for", "while", "iteration"], NamePattern, TagPattern]]]
-    ] = field(
+    flatten_keywords: Optional[List[Union[str, Literal["for", "while", "iteration"], NamePattern, TagPattern]]] = field(
         description="""\
             Flattens matching keywords in the generated log file.
             Matching keywords get all log messages from their
@@ -437,7 +431,6 @@ class CommonOptions(BaseOptions):
             matching rules as with
             `--removekeywords tag:<pattern>`
 
-            ---
             corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_
             """,
         robot_name="flattenkeywords",
@@ -458,7 +451,6 @@ class CommonOptions(BaseOptions):
             --include fooANDbar*
             ```
 
-            ---
             corresponds to the `-i --include tag *` option of _robot_
             """,
         robot_name="include",
@@ -476,7 +468,6 @@ class CommonOptions(BaseOptions):
             `--log mylog.html`, `-l NONE`
             ```
 
-            ---
             corresponds to the `-l --log file` option of _robot_
             """,
         robot_name="log",
@@ -488,7 +479,6 @@ class CommonOptions(BaseOptions):
             Title for the generated log file. The default title
             is `<SuiteName> Log`.
 
-            ---
             corresponds to the `--logtitle title` option of _robot_
             """,
         robot_name="logtitle",
@@ -500,7 +490,6 @@ class CommonOptions(BaseOptions):
             contain formatting and be read from a file similarly
             as --doc. Example: --metadata Version:1.2
 
-            ---
             corresponds to the `-M --metadata name:value *` option of _robot_
             """,
         robot_name="metadata",
@@ -513,7 +502,6 @@ class CommonOptions(BaseOptions):
             name is created based on the executed file or
             directory.
 
-            ---
             corresponds to the `-N --name name` option of _robot_
             """,
         robot_name="name",
@@ -525,7 +513,6 @@ class CommonOptions(BaseOptions):
             Sets the return code to zero regardless of failures
             in test cases. Error codes are returned normally.
 
-            ---
             corresponds to the `--nostatusrc` option of _robot_
             """,
         robot_name="statusrc",
@@ -539,7 +526,6 @@ class CommonOptions(BaseOptions):
             directory where tests are run from and the given path
             is considered relative to that unless it is absolute.
 
-            ---
             corresponds to the `-d --outputdir dir` option of _robot_
             """,
         robot_name="outputdir",
@@ -551,7 +537,6 @@ class CommonOptions(BaseOptions):
             Class to programmatically modify the result
             model before creating reports and logs.
 
-            ---
             corresponds to the `--prerebotmodifier class *` option of _robot_
             """,
         robot_name="prerebotmodifier",
@@ -573,14 +558,15 @@ class CommonOptions(BaseOptions):
             --pythonpath /opt/libs:libraries.zip
             ```
 
-            ---
             corresponds to the `-P --pythonpath path *` option of _robot_
             """,
         robot_name="pythonpath",
         robot_priority=500,
         robot_short_name="P",
     )
-    remove_keywords: Optional[List[Union[Literal["all", "passed", "for", "wuks"], NamePattern, TagPattern]]] = field(
+    remove_keywords: Optional[
+        List[Union[str, Literal["all", "passed", "for", "wuks"], NamePattern, TagPattern]]
+    ] = field(
         description="""\
             Remove keyword data from the generated log file.
             Keywords containing warnings are not removed except
@@ -621,7 +607,6 @@ class CommonOptions(BaseOptions):
             --removekeywords fooANDbar*
             ```
 
-            ---
             corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
             """,
         robot_name="removekeywords",
@@ -632,7 +617,6 @@ class CommonOptions(BaseOptions):
             HTML report file. Can be disabled with `NONE`
             similarly as --log. Default: report.html
 
-            ---
             corresponds to the `-r --report file` option of _robot_
             """,
         robot_name="report",
@@ -653,7 +637,6 @@ class CommonOptions(BaseOptions):
             --reportbackground #00E:#E00
             ```
 
-            ---
             corresponds to the `--reportbackground colors` option of _robot_
             """,
         robot_name="reportbackground",
@@ -664,7 +647,6 @@ class CommonOptions(BaseOptions):
             Title for the generated report file. The default
             title is `<SuiteName> Report`.
 
-            ---
             corresponds to the `--reporttitle title` option of _robot_
             """,
         robot_name="reporttitle",
@@ -677,7 +659,6 @@ class CommonOptions(BaseOptions):
             in logs and reports. By default the mode is got
             from test/task header in data files.
 
-            ---
             corresponds to the `--rpa` option of _robot_
             """,
         robot_name="rpa",
@@ -688,7 +669,6 @@ class CommonOptions(BaseOptions):
         description="""\
             Sets given tag(s) to all executed tests.
 
-            ---
             corresponds to the `-G --settag tag *` option of _robot_
             """,
         robot_name="settag",
@@ -700,7 +680,6 @@ class CommonOptions(BaseOptions):
             Split the log file into smaller pieces that open in
             browsers transparently.
 
-            ---
             corresponds to the `--splitlog` option of _robot_
             """,
         robot_name="splitlog",
@@ -717,7 +696,6 @@ class CommonOptions(BaseOptions):
             name separated with a dot. For example, `-s X.Y`
             selects suite `Y` only if its parent is `X`.
 
-            ---
             corresponds to the `-s --suite name *` option of _robot_
             """,
         robot_name="suite",
@@ -730,7 +708,6 @@ class CommonOptions(BaseOptions):
             in log and report. By default all suite levels are
             shown. Example:  --suitestatlevel 3
 
-            ---
             corresponds to the `--suitestatlevel level` option of _robot_
             """,
         robot_name="suitestatlevel",
@@ -751,7 +728,6 @@ class CommonOptions(BaseOptions):
             --tagdoc "owner-*:Original author"
             ```
 
-            ---
             corresponds to the `--tagdoc pattern:doc *` option of _robot_
             """,
         robot_name="tagdoc",
@@ -772,7 +748,6 @@ class CommonOptions(BaseOptions):
             --tagstatcombine tag1ANDtag2:My_name
             ```
 
-            ---
             corresponds to the `--tagstatcombine tags:name *` option of _robot_
             """,
         robot_name="tagstatcombine",
@@ -784,7 +759,6 @@ class CommonOptions(BaseOptions):
             This option can be used with --tagstatinclude
             similarly as --exclude is used with --include.
 
-            ---
             corresponds to the `--tagstatexclude tag *` option of _robot_
             """,
         robot_name="tagstatexclude",
@@ -796,7 +770,6 @@ class CommonOptions(BaseOptions):
             in log and report. By default all tags are shown.
             Given tag can be a pattern like with --include.
 
-            ---
             corresponds to the `--tagstatinclude tag *` option of _robot_
             """,
         robot_name="tagstatinclude",
@@ -817,7 +790,6 @@ class CommonOptions(BaseOptions):
             --tagstatlink "bug-*:http://url/id=%1:Issue Tracker"
             ```
 
-            ---
             corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
             """,
         robot_name="tagstatlink",
@@ -827,7 +799,6 @@ class CommonOptions(BaseOptions):
         description="""\
             Alias to --test. Especially applicable with --rpa.
 
-            ---
             corresponds to the `--task name *` option of _robot_
             """,
         robot_name="task",
@@ -842,7 +813,6 @@ class CommonOptions(BaseOptions):
             single character, and `[chars]` matches one character
             in brackets.
 
-            ---
             corresponds to the `-t --test name *` option of _robot_
             """,
         robot_name="test",
@@ -858,7 +828,6 @@ class CommonOptions(BaseOptions):
             creates files like `output-20070503-154410.xml` and
             `report-20070503-154410.html`.
 
-            ---
             corresponds to the `-T --timestampoutputs` option of _robot_
             """,
         robot_name="timestampoutputs",
@@ -871,7 +840,6 @@ class CommonOptions(BaseOptions):
             xUnit compatible result file. Not created unless this
             option is specified.
 
-            ---
             corresponds to the `-x --xunit file` option of _robot_
             """,
         robot_name="xunit",
@@ -888,21 +856,16 @@ class CommonExtraOptions(BaseOptions):
         description="""\
             Appends entries to the --exclude option.
 
-            ---
-
             Select test cases not to run by tag. These tests are
             not run even if included with --include. Tags are
             matched using same rules as with --include.
 
-            ---
             corresponds to the `-e --exclude tag *` option of _robot_
             """,
     )
-    extra_expand_keywords: Optional[List[Union[NamePattern, TagPattern]]] = field(
+    extra_expand_keywords: Optional[List[Union[str, NamePattern, TagPattern]]] = field(
         description="""\
             Appends entries to the --expandkeywords option.
-
-            ---
 
             Matching keywords will be automatically expanded in
             the log file. Matching against keyword name or tags
@@ -915,17 +878,14 @@ class CommonExtraOptions(BaseOptions):
             --expandkeywords tag:expand
             ```
 
-            ---
             corresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_
             """,
     )
     extra_flatten_keywords: Optional[
-        Optional[List[Union[str, Literal["for", "while", "iteration"], NamePattern, TagPattern]]]
+        List[Union[str, Literal["for", "while", "iteration"], NamePattern, TagPattern]]
     ] = field(
         description="""\
             Appends entries to the --flattenkeywords option.
-
-            ---
 
             Flattens matching keywords in the generated log file.
             Matching keywords get all log messages from their
@@ -941,15 +901,12 @@ class CommonExtraOptions(BaseOptions):
             matching rules as with
             `--removekeywords tag:<pattern>`
 
-            ---
             corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_
             """,
     )
     extra_includes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --include option.
-
-            ---
 
             Select tests by tag. Similarly as name with --test,
             tag is case and space insensitive and it is possible
@@ -964,7 +921,6 @@ class CommonExtraOptions(BaseOptions):
             --include fooANDbar*
             ```
 
-            ---
             corresponds to the `-i --include tag *` option of _robot_
             """,
     )
@@ -972,13 +928,10 @@ class CommonExtraOptions(BaseOptions):
         description="""\
             Appends entries to the --metadata option.
 
-            ---
-
             Set metadata of the top level suite. Value can
             contain formatting and be read from a file similarly
             as --doc. Example: --metadata Version:1.2
 
-            ---
             corresponds to the `-M --metadata name:value *` option of _robot_
             """,
     )
@@ -986,20 +939,15 @@ class CommonExtraOptions(BaseOptions):
         description="""\
             Appends entries to the --prerebotmodifier option.
 
-            ---
-
             Class to programmatically modify the result
             model before creating reports and logs.
 
-            ---
             corresponds to the `--prerebotmodifier class *` option of _robot_
             """,
     )
     extra_python_path: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --pythonpath option.
-
-            ---
 
             Additional locations (directories, ZIPs) where to
             search libraries and other extensions when they are
@@ -1015,17 +963,14 @@ class CommonExtraOptions(BaseOptions):
             --pythonpath /opt/libs:libraries.zip
             ```
 
-            ---
             corresponds to the `-P --pythonpath path *` option of _robot_
             """,
     )
     extra_remove_keywords: Optional[
-        List[Union[Literal["all", "passed", "for", "wuks"], NamePattern, TagPattern]]
+        List[Union[str, Literal["all", "passed", "for", "wuks"], NamePattern, TagPattern]]
     ] = field(
         description="""\
             Appends entries to the --removekeywords option.
-
-            ---
 
             Remove keyword data from the generated log file.
             Keywords containing warnings are not removed except
@@ -1066,7 +1011,6 @@ class CommonExtraOptions(BaseOptions):
             --removekeywords fooANDbar*
             ```
 
-            ---
             corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
             """,
     )
@@ -1074,19 +1018,14 @@ class CommonExtraOptions(BaseOptions):
         description="""\
             Appends entries to the --settag option.
 
-            ---
-
             Sets given tag(s) to all executed tests.
 
-            ---
             corresponds to the `-G --settag tag *` option of _robot_
             """,
     )
     extra_suites: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --suite option.
-
-            ---
 
             Select suites by name. When this option is used with
             --test, --include or --exclude, only tests in
@@ -1096,15 +1035,12 @@ class CommonExtraOptions(BaseOptions):
             name separated with a dot. For example, `-s X.Y`
             selects suite `Y` only if its parent is `X`.
 
-            ---
             corresponds to the `-s --suite name *` option of _robot_
             """,
     )
     extra_tag_doc: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --tagdoc option.
-
-            ---
 
             Add documentation to tags matching the given
             pattern. Documentation is shown in `Test Details` and
@@ -1119,15 +1055,12 @@ class CommonExtraOptions(BaseOptions):
             --tagdoc "owner-*:Original author"
             ```
 
-            ---
             corresponds to the `--tagdoc pattern:doc *` option of _robot_
             """,
     )
     extra_tag_stat_combine: Optional[List[Union[str, Dict[str, str]]]] = field(
         description="""\
             Appends entries to the --tagstatcombine option.
-
-            ---
 
             Create combined statistics based on tags.
             These statistics are added into `Statistics by Tag`.
@@ -1142,7 +1075,6 @@ class CommonExtraOptions(BaseOptions):
             --tagstatcombine tag1ANDtag2:My_name
             ```
 
-            ---
             corresponds to the `--tagstatcombine tags:name *` option of _robot_
             """,
     )
@@ -1150,13 +1082,10 @@ class CommonExtraOptions(BaseOptions):
         description="""\
             Appends entries to the --tagstatexclude option.
 
-            ---
-
             Exclude matching tags from `Statistics by Tag`.
             This option can be used with --tagstatinclude
             similarly as --exclude is used with --include.
 
-            ---
             corresponds to the `--tagstatexclude tag *` option of _robot_
             """,
     )
@@ -1164,21 +1093,16 @@ class CommonExtraOptions(BaseOptions):
         description="""\
             Appends entries to the --tagstatinclude option.
 
-            ---
-
             Include only matching tags in `Statistics by Tag`
             in log and report. By default all tags are shown.
             Given tag can be a pattern like with --include.
 
-            ---
             corresponds to the `--tagstatinclude tag *` option of _robot_
             """,
     )
     extra_tag_stat_link: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --tagstatlink option.
-
-            ---
 
             Add external links into `Statistics by
             Tag`. Pattern can use `*`, `?` and `[]` as wildcards
@@ -1193,7 +1117,6 @@ class CommonExtraOptions(BaseOptions):
             --tagstatlink "bug-*:http://url/id=%1:Issue Tracker"
             ```
 
-            ---
             corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
             """,
     )
@@ -1201,19 +1124,14 @@ class CommonExtraOptions(BaseOptions):
         description="""\
             Appends entries to the --task option.
 
-            ---
-
             Alias to --test. Especially applicable with --rpa.
 
-            ---
             corresponds to the `--task name *` option of _robot_
             """,
     )
     extra_tests: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --test option.
-
-            ---
 
             Select tests by name or by long name containing also
             parent suite name like `Parent.Test`. Name is case
@@ -1222,7 +1140,6 @@ class CommonExtraOptions(BaseOptions):
             single character, and `[chars]` matches one character
             in brackets.
 
-            ---
             corresponds to the `-t --test name *` option of _robot_
             """,
     )
@@ -1241,7 +1158,6 @@ class RobotOptions(BaseOptions):
             quiet:    no output except for errors and warnings
             none:     no output whatsoever
 
-            ---
             corresponds to the `--console type` option of _robot_
             """,
         robot_name="console",
@@ -1253,7 +1169,6 @@ class RobotOptions(BaseOptions):
             keywords in a test case end. Values have same
             semantics as with --consolecolors.
 
-            ---
             corresponds to the `-K --consolemarkers auto|on|off` option of _robot_
             """,
         robot_name="consolemarkers",
@@ -1264,7 +1179,6 @@ class RobotOptions(BaseOptions):
         description="""\
             Width of the console output. Default is 78.
 
-            ---
             corresponds to the `-W --consolewidth chars` option of _robot_
             """,
         robot_name="consolewidth",
@@ -1276,7 +1190,6 @@ class RobotOptions(BaseOptions):
             Debug file written during execution. Not created
             unless this option is specified.
 
-            ---
             corresponds to the `-b --debugfile file` option of _robot_
             """,
         robot_name="debugfile",
@@ -1287,7 +1200,6 @@ class RobotOptions(BaseOptions):
         description="""\
             Shortcut for `--console dotted`.
 
-            ---
             corresponds to the `-. --dotted` option of _robot_
             """,
         robot_name="dotted",
@@ -1300,7 +1212,6 @@ class RobotOptions(BaseOptions):
             Verifies test data and runs tests so that library
             keywords are not executed.
 
-            ---
             corresponds to the `--dryrun` option of _robot_
             """,
         robot_name="dryrun",
@@ -1312,7 +1223,6 @@ class RobotOptions(BaseOptions):
             Stops test execution if any error occurs when parsing
             test data, importing libraries, and so on.
 
-            ---
             corresponds to the `--exitonerror` option of _robot_
             """,
         robot_name="exitonerror",
@@ -1323,7 +1233,6 @@ class RobotOptions(BaseOptions):
         description="""\
             Stops test execution if any test fails.
 
-            ---
             corresponds to the `-X --exitonfailure` option of _robot_
             """,
         robot_name="exitonfailure",
@@ -1347,7 +1256,6 @@ class RobotOptions(BaseOptions):
 
             Only `*.robot` files are parsed by default.
 
-            ---
             corresponds to the `-F --extension value` option of _robot_
             """,
         robot_name="extension",
@@ -1360,7 +1268,6 @@ class RobotOptions(BaseOptions):
             of a built-in language, or a path or a module name of
             a custom language file.
 
-            ---
             corresponds to the `--language lang *` option of _robot_
             """,
         robot_name="language",
@@ -1380,7 +1287,6 @@ class RobotOptions(BaseOptions):
             --listener path/to/Listener.py:arg1:arg2
             ```
 
-            ---
             corresponds to the `--listener class *` option of _robot_
             """,
         robot_name="listener",
@@ -1400,7 +1306,6 @@ class RobotOptions(BaseOptions):
             --loglevel DEBUG:INFO
             ```
 
-            ---
             corresponds to the `-L --loglevel level` option of _robot_
             """,
         robot_name="loglevel",
@@ -1414,7 +1319,6 @@ class RobotOptions(BaseOptions):
             can be used to avoid showing assigned values at all.
             Default is 200.
 
-            ---
             corresponds to the `--maxassignlength characters` option of _robot_
             """,
         robot_name="maxassignlength",
@@ -1426,7 +1330,6 @@ class RobotOptions(BaseOptions):
             report when tests fail. Default is 40, minimum is 10
             and `NONE` can be used to show the full message.
 
-            ---
             corresponds to the `--maxerrorlines lines` option of _robot_
             """,
         robot_name="maxerrorlines",
@@ -1443,7 +1346,6 @@ class RobotOptions(BaseOptions):
             disabled by giving a special value `NONE`.
             Default: output.xml
 
-            ---
             corresponds to the `-o --output file` option of _robot_
             """,
         robot_name="output",
@@ -1455,7 +1357,6 @@ class RobotOptions(BaseOptions):
             Class to programmatically modify the suite
             structure before execution.
 
-            ---
             corresponds to the `--prerunmodifier class *` option of _robot_
             """,
         robot_name="prerunmodifier",
@@ -1465,7 +1366,6 @@ class RobotOptions(BaseOptions):
         description="""\
             Shortcut for `--console quiet`.
 
-            ---
             corresponds to the `--quiet` option of _robot_
             """,
         robot_name="quiet",
@@ -1489,7 +1389,6 @@ class RobotOptions(BaseOptions):
             --randomize tests:1234
             ```
 
-            ---
             corresponds to the `--randomize all|suites|tests|none` option of _robot_
             """,
         robot_name="randomize",
@@ -1501,7 +1400,6 @@ class RobotOptions(BaseOptions):
             re-executed. Equivalent to selecting same tests
             individually using --test.
 
-            ---
             corresponds to the `-R --rerunfailed output` option of _robot_
             """,
         robot_name="rerunfailed",
@@ -1513,7 +1411,6 @@ class RobotOptions(BaseOptions):
             Select failed suites from an earlier output
             file to be re-executed.
 
-            ---
             corresponds to the `-S --rerunfailedsuites output` option of _robot_
             """,
         robot_name="rerunfailedsuites",
@@ -1526,7 +1423,6 @@ class RobotOptions(BaseOptions):
             e.g. with --include/--exclude when it is not an error
             that no test matches the condition.
 
-            ---
             corresponds to the `--runemptysuite` option of _robot_
             """,
         robot_name="runemptysuite",
@@ -1538,7 +1434,6 @@ class RobotOptions(BaseOptions):
             Tests having given tag will be skipped. Tag can be
             a pattern.
 
-            ---
             corresponds to the `--skip tag *` option of _robot_
             """,
         robot_name="skip",
@@ -1549,7 +1444,6 @@ class RobotOptions(BaseOptions):
             Tests having given tag will be skipped if they fail.
             Tag can be a pattern
 
-            ---
             corresponds to the `--skiponfailure tag *` option of _robot_
             """,
         robot_name="skiponfailure",
@@ -1560,7 +1454,6 @@ class RobotOptions(BaseOptions):
             Causes teardowns to be skipped if test execution is
             stopped prematurely.
 
-            ---
             corresponds to the `--skipteardownonexit` option of _robot_
             """,
         robot_name="skipteardownonexit",
@@ -1582,7 +1475,6 @@ class RobotOptions(BaseOptions):
             -v x: -v y:42              =>  ${x} = ``, ${y} = `42`
             ```
 
-            ---
             corresponds to the `-v --variable name:value *` option of _robot_
             """,
         robot_name="variable",
@@ -1602,7 +1494,6 @@ class RobotOptions(BaseOptions):
             --variablefile environment.py:testing
             ```
 
-            ---
             corresponds to the `-V --variablefile path *` option of _robot_
             """,
         robot_name="variablefile",
@@ -1619,21 +1510,16 @@ class RobotExtraOptions(BaseOptions):
         description="""\
             Appends entries to the --language option.
 
-            ---
-
             Activate localization. `lang` can be a name or a code
             of a built-in language, or a path or a module name of
             a custom language file.
 
-            ---
-            corresponds to the `--language lang *` option of _robot_
+            corresponds to the `--language lang *` option of _rebot_
             """,
     )
     extra_listeners: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
             Appends entries to the --listener option.
-
-            ---
 
             A class for monitoring test execution. Gets
             notifications e.g. when tests start and end.
@@ -1647,54 +1533,42 @@ class RobotExtraOptions(BaseOptions):
             --listener path/to/Listener.py:arg1:arg2
             ```
 
-            ---
-            corresponds to the `--listener class *` option of _robot_
+            corresponds to the `--listener class *` option of _rebot_
             """,
     )
     extra_pre_run_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
             Appends entries to the --prerunmodifier option.
 
-            ---
-
             Class to programmatically modify the suite
             structure before execution.
 
-            ---
-            corresponds to the `--prerunmodifier class *` option of _robot_
+            corresponds to the `--prerunmodifier class *` option of _rebot_
             """,
     )
     extra_skip: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --skip option.
 
-            ---
-
             Tests having given tag will be skipped. Tag can be
             a pattern.
 
-            ---
-            corresponds to the `--skip tag *` option of _robot_
+            corresponds to the `--skip tag *` option of _rebot_
             """,
     )
     extra_skip_on_failure: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --skiponfailure option.
 
-            ---
-
             Tests having given tag will be skipped if they fail.
             Tag can be a pattern
 
-            ---
-            corresponds to the `--skiponfailure tag *` option of _robot_
+            corresponds to the `--skiponfailure tag *` option of _rebot_
             """,
     )
     extra_variables: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --variable option.
-
-            ---
 
             Set variables in the test data. Only scalar
             variables with string value are supported and name is
@@ -1709,15 +1583,12 @@ class RobotExtraOptions(BaseOptions):
             -v x: -v y:42              =>  ${x} = ``, ${y} = `42`
             ```
 
-            ---
-            corresponds to the `-v --variable name:value *` option of _robot_
+            corresponds to the `-v --variable name:value *` option of _rebot_
             """,
     )
     extra_variable_files: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --variablefile option.
-
-            ---
 
             Python or YAML file file to read variables from.
             Possible arguments to the variable file can be given
@@ -1730,8 +1601,7 @@ class RobotExtraOptions(BaseOptions):
             --variablefile environment.py:testing
             ```
 
-            ---
-            corresponds to the `-V --variablefile path *` option of _robot_
+            corresponds to the `-V --variablefile path *` option of _rebot_
             """,
     )
 
@@ -1748,8 +1618,7 @@ class RebotOptions(BaseOptions):
             calculated by adding elapsed times of the combined
             suites together.
 
-            ---
-            corresponds to the `--endtime timestamp` option of _robot_
+            corresponds to the `--endtime timestamp` option of _rebot_
             """,
         robot_name="endtime",
         robot_priority=500,
@@ -1768,8 +1637,7 @@ class RebotOptions(BaseOptions):
             --loglevel DEBUG:INFO
             ```
 
-            ---
-            corresponds to the `-L --loglevel level` option of _robot_
+            corresponds to the `-L --loglevel level` option of _rebot_
             """,
         robot_name="loglevel",
         robot_priority=500,
@@ -1781,8 +1649,7 @@ class RebotOptions(BaseOptions):
             instead of putting them under a new top level suite.
             Example: rebot --merge orig.xml rerun.xml
 
-            ---
-            corresponds to the `-R --merge` option of _robot_
+            corresponds to the `-R --merge` option of _rebot_
             """,
         robot_name="merge",
         robot_priority=500,
@@ -1796,8 +1663,7 @@ class RebotOptions(BaseOptions):
             --log, --report and --xunit, is relative to
             --outputdir unless given as an absolute path.
 
-            ---
-            corresponds to the `-o --output file` option of _robot_
+            corresponds to the `-o --output file` option of _rebot_
             """,
         robot_name="output",
         robot_priority=500,
@@ -1810,8 +1676,7 @@ class RebotOptions(BaseOptions):
             is not an error that there are no matches.
             Use --skiponfailure when starting execution instead.
 
-            ---
-            corresponds to the `--processemptysuite` option of _robot_
+            corresponds to the `--processemptysuite` option of _rebot_
             """,
         robot_name="processemptysuite",
         robot_priority=500,
@@ -1828,8 +1693,7 @@ class RebotOptions(BaseOptions):
             start time for a combined suite, which would
             otherwise be `N/A`.
 
-            ---
-            corresponds to the `--starttime timestamp` option of _robot_
+            corresponds to the `--starttime timestamp` option of _rebot_
             """,
         robot_name="starttime",
         robot_priority=500,
@@ -1848,8 +1712,7 @@ class LibDocOptions(BaseOptions):
             value can be specified in library source code and
             the initial default value is ROBOT.
 
-            ---
-            corresponds to the `-F --docformat ROBOT|HTML|TEXT|REST` option of _robot_
+            corresponds to the `-F --docformat ROBOT|HTML|TEXT|REST` option of _libdoc_
             """,
         robot_name="docformat",
         robot_priority=500,
@@ -1863,8 +1726,7 @@ class LibDocOptions(BaseOptions):
             documentations converted to HTML. The default format
             is got from the output file extension.
 
-            ---
-            corresponds to the `-f --format HTML|XML|JSON|LIBSPEC` option of _robot_
+            corresponds to the `-f --format HTML|XML|JSON|LIBSPEC` option of _libdoc_
             """,
         robot_name="format",
         robot_priority=500,
@@ -1874,8 +1736,7 @@ class LibDocOptions(BaseOptions):
         description="""\
             Sets the name of the documented library or resource.
 
-            ---
-            corresponds to the `-n --name name` option of _robot_
+            corresponds to the `-n --name name` option of _libdoc_
             """,
         robot_name="name",
         robot_priority=500,
@@ -1886,8 +1747,7 @@ class LibDocOptions(BaseOptions):
             Additional locations where to search for libraries
             and resources.
 
-            ---
-            corresponds to the `-P --pythonpath path *` option of _robot_
+            corresponds to the `-P --pythonpath path *` option of _libdoc_
             """,
         robot_name="pythonpath",
         robot_priority=500,
@@ -1898,8 +1758,7 @@ class LibDocOptions(BaseOptions):
             Do not print the path of the generated output file
             to the console. New in RF 4.0.
 
-            ---
-            corresponds to the `--quiet` option of _robot_
+            corresponds to the `--quiet` option of _libdoc_
             """,
         robot_name="quiet",
         robot_priority=500,
@@ -1914,8 +1773,7 @@ class LibDocOptions(BaseOptions):
             spec files and HTML with JSON specs and when using
             the special LIBSPEC format. New in RF 4.0.
 
-            ---
-            corresponds to the `-s --specdocformat RAW|HTML` option of _robot_
+            corresponds to the `-s --specdocformat RAW|HTML` option of _libdoc_
             """,
         robot_name="specdocformat",
         robot_priority=500,
@@ -1927,8 +1785,7 @@ class LibDocOptions(BaseOptions):
             used, or the value is NONE, the theme is selected
             based on the browser color scheme. New in RF 6.0.
 
-            ---
-            corresponds to the `--theme DARK|LIGHT|NONE` option of _robot_
+            corresponds to the `--theme DARK|LIGHT|NONE` option of _libdoc_
             """,
         robot_name="theme",
         robot_priority=500,
@@ -1943,13 +1800,10 @@ class LibDocExtraOptions(BaseOptions):
         description="""\
             Appends entries to the --pythonpath option.
 
-            ---
-
             Additional locations where to search for libraries
             and resources.
 
-            ---
-            corresponds to the `-P --pythonpath path *` option of _robot_
+            corresponds to the `-P --pythonpath path *` option of _libdoc_
             """,
     )
 
@@ -1962,8 +1816,7 @@ class TestDocOptions(BaseOptions):
         description="""\
             Override the documentation of the top level suite.
 
-            ---
-            corresponds to the `-D --doc document` option of _robot_
+            corresponds to the `-D --doc document` option of _testdoc_
             """,
         robot_name="doc",
         robot_priority=500,
@@ -1973,8 +1826,7 @@ class TestDocOptions(BaseOptions):
         description="""\
             Exclude tests by tags.
 
-            ---
-            corresponds to the `-e --exclude tag *` option of _robot_
+            corresponds to the `-e --exclude tag *` option of _testdoc_
             """,
         robot_name="exclude",
         robot_priority=500,
@@ -1984,8 +1836,7 @@ class TestDocOptions(BaseOptions):
         description="""\
             Include tests by tags.
 
-            ---
-            corresponds to the `-i --include tag *` option of _robot_
+            corresponds to the `-i --include tag *` option of _testdoc_
             """,
         robot_name="include",
         robot_priority=500,
@@ -1995,8 +1846,7 @@ class TestDocOptions(BaseOptions):
         description="""\
             Set/override metadata of the top level suite.
 
-            ---
-            corresponds to the `-M --metadata name:value *` option of _robot_
+            corresponds to the `-M --metadata name:value *` option of _testdoc_
             """,
         robot_name="metadata",
         robot_priority=500,
@@ -2006,8 +1856,7 @@ class TestDocOptions(BaseOptions):
         description="""\
             Override the name of the top level suite.
 
-            ---
-            corresponds to the `-N --name name` option of _robot_
+            corresponds to the `-N --name name` option of _testdoc_
             """,
         robot_name="name",
         robot_priority=500,
@@ -2017,8 +1866,7 @@ class TestDocOptions(BaseOptions):
         description="""\
             Set given tag(s) to all test cases.
 
-            ---
-            corresponds to the `-G --settag tag *` option of _robot_
+            corresponds to the `-G --settag tag *` option of _testdoc_
             """,
         robot_name="settag",
         robot_priority=500,
@@ -2028,8 +1876,7 @@ class TestDocOptions(BaseOptions):
         description="""\
             Include suites by name.
 
-            ---
-            corresponds to the `-s --suite name *` option of _robot_
+            corresponds to the `-s --suite name *` option of _testdoc_
             """,
         robot_name="suite",
         robot_priority=500,
@@ -2039,8 +1886,7 @@ class TestDocOptions(BaseOptions):
         description="""\
             Include tests by name.
 
-            ---
-            corresponds to the `-t --test name *` option of _robot_
+            corresponds to the `-t --test name *` option of _testdoc_
             """,
         robot_name="test",
         robot_priority=500,
@@ -2052,8 +1898,7 @@ class TestDocOptions(BaseOptions):
             Underscores in the title are converted to spaces.
             The default title is the name of the top level suite.
 
-            ---
-            corresponds to the `-T --title title` option of _robot_
+            corresponds to the `-T --title title` option of _testdoc_
             """,
         robot_name="title",
         robot_priority=500,
@@ -2069,72 +1914,54 @@ class TestDocExtraOptions(BaseOptions):
         description="""\
             Appends entries to the --exclude option.
 
-            ---
-
             Exclude tests by tags.
 
-            ---
-            corresponds to the `-e --exclude tag *` option of _robot_
+            corresponds to the `-e --exclude tag *` option of _testdoc_
             """,
     )
     extra_includes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --include option.
 
-            ---
-
             Include tests by tags.
 
-            ---
-            corresponds to the `-i --include tag *` option of _robot_
+            corresponds to the `-i --include tag *` option of _testdoc_
             """,
     )
     extra_metadata: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --metadata option.
 
-            ---
-
             Set/override metadata of the top level suite.
 
-            ---
-            corresponds to the `-M --metadata name:value *` option of _robot_
+            corresponds to the `-M --metadata name:value *` option of _testdoc_
             """,
     )
     extra_set_tag: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --settag option.
 
-            ---
-
             Set given tag(s) to all test cases.
 
-            ---
-            corresponds to the `-G --settag tag *` option of _robot_
+            corresponds to the `-G --settag tag *` option of _testdoc_
             """,
     )
     extra_suites: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --suite option.
 
-            ---
-
             Include suites by name.
 
-            ---
-            corresponds to the `-s --suite name *` option of _robot_
+            corresponds to the `-s --suite name *` option of _testdoc_
             """,
     )
     extra_tests: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Appends entries to the --test option.
 
-            ---
-
             Include tests by name.
 
-            ---
-            corresponds to the `-t --test name *` option of _robot_
+            corresponds to the `-t --test name *` option of _testdoc_
             """,
     )
 
@@ -2182,7 +2009,6 @@ class RobotBaseProfile(CommonOptions, CommonExtraOptions, RobotOptions, RobotExt
             paths = ["tests"]
             ```
 
-            ---
             Corresponds to the `paths` argument of __robot__.
             """
     )

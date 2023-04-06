@@ -27,7 +27,7 @@
       "description": "Profile for _libdoc_ command.",
       "properties": {
         "doc-format": {
-          "description": "Specifies the source documentation format. Possible\nvalues are Robot Framework's documentation format,\nHTML, plain text, and reStructuredText. The default\nvalue can be specified in library source code and\nthe initial default value is ROBOT.\n\n---\ncorresponds to the `-F --docformat ROBOT|HTML|TEXT|REST` option of _robot_\n",
+          "description": "Specifies the source documentation format. Possible\nvalues are Robot Framework's documentation format,\nHTML, plain text, and reStructuredText. The default\nvalue can be specified in library source code and\nthe initial default value is ROBOT.\n\ncorresponds to the `-F --docformat ROBOT|HTML|TEXT|REST` option of _libdoc_\n",
           "enum": [
             "ROBOT",
             "HTML",
@@ -42,7 +42,7 @@
         },
         "extra-python-path": {
           "default": null,
-          "description": "Appends entries to the --pythonpath option.\n\n---\n\nAdditional locations where to search for libraries\nand resources.\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
+          "description": "Appends entries to the --pythonpath option.\n\nAdditional locations where to search for libraries\nand resources.\n\ncorresponds to the `-P --pythonpath path *` option of _libdoc_\n",
           "items": {
             "anyOf": [
               {
@@ -60,7 +60,7 @@
           ]
         },
         "format": {
-          "description": "Specifies whether to generate an HTML output for\nhumans or a machine readable spec file in XML or JSON\nformat. The LIBSPEC format means XML spec with\ndocumentations converted to HTML. The default format\nis got from the output file extension.\n\n---\ncorresponds to the `-f --format HTML|XML|JSON|LIBSPEC` option of _robot_\n",
+          "description": "Specifies whether to generate an HTML output for\nhumans or a machine readable spec file in XML or JSON\nformat. The LIBSPEC format means XML spec with\ndocumentations converted to HTML. The default format\nis got from the output file extension.\n\ncorresponds to the `-f --format HTML|XML|JSON|LIBSPEC` option of _libdoc_\n",
           "enum": [
             "HTML",
             "XML",
@@ -86,12 +86,12 @@
             }
           ],
           "default": null,
-          "description": "Sets the name of the documented library or resource.\n\n---\ncorresponds to the `-n --name name` option of _robot_\n",
+          "description": "Sets the name of the documented library or resource.\n\ncorresponds to the `-n --name name` option of _libdoc_\n",
           "title": "Name"
         },
         "python-path": {
           "default": null,
-          "description": "Additional locations where to search for libraries\nand resources.\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
+          "description": "Additional locations where to search for libraries\nand resources.\n\ncorresponds to the `-P --pythonpath path *` option of _libdoc_\n",
           "items": {
             "anyOf": [
               {
@@ -126,11 +126,11 @@
             }
           ],
           "default": null,
-          "description": "Do not print the path of the generated output file\nto the console. New in RF 4.0.\n\n---\ncorresponds to the `--quiet` option of _robot_\n",
+          "description": "Do not print the path of the generated output file\nto the console. New in RF 4.0.\n\ncorresponds to the `--quiet` option of _libdoc_\n",
           "title": "Quiet"
         },
         "spec-doc-format": {
-          "description": "Specifies the documentation format used with XML and\nJSON spec files. RAW means preserving the original\ndocumentation format and HTML means converting\ndocumentation to HTML. The default is RAW with XML\nspec files and HTML with JSON specs and when using\nthe special LIBSPEC format. New in RF 4.0.\n\n---\ncorresponds to the `-s --specdocformat RAW|HTML` option of _robot_\n",
+          "description": "Specifies the documentation format used with XML and\nJSON spec files. RAW means preserving the original\ndocumentation format and HTML means converting\ndocumentation to HTML. The default is RAW with XML\nspec files and HTML with JSON specs and when using\nthe special LIBSPEC format. New in RF 4.0.\n\ncorresponds to the `-s --specdocformat RAW|HTML` option of _libdoc_\n",
           "enum": [
             "RAW",
             "HTML"
@@ -142,7 +142,7 @@
           ]
         },
         "theme": {
-          "description": "Use dark or light HTML theme. If this option is not\nused, or the value is NONE, the theme is selected\nbased on the browser color scheme. New in RF 6.0.\n\n---\ncorresponds to the `--theme DARK|LIGHT|NONE` option of _robot_\n",
+          "description": "Use dark or light HTML theme. If this option is not\nused, or the value is NONE, the theme is selected\nbased on the browser color scheme. New in RF 6.0.\n\ncorresponds to the `--theme DARK|LIGHT|NONE` option of _libdoc_\n",
           "enum": [
             "DARK",
             "LIGHT",
@@ -179,7 +179,7 @@
       "description": "Profile for _rebot_ command.",
       "properties": {
         "console-colors": {
-          "description": "Use colors on console output or not.\nauto: use colors when output not redirected (default)\non:   always use colors\nansi: like `on` but use ANSI colors also on Windows\noff:  disable colors altogether\n\n---\ncorresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_\n",
+          "description": "Use colors on console output or not.\nauto: use colors when output not redirected (default)\non:   always use colors\nansi: like `on` but use ANSI colors also on Windows\noff:  disable colors altogether\n\ncorresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_\n",
           "enum": [
             "auto",
             "on",
@@ -205,7 +205,7 @@
             }
           ],
           "default": null,
-          "description": "Set the documentation of the top level suite.\nSimple formatting is supported (e.g. *bold*). If the\ndocumentation contains spaces, it must be quoted.\nIf the value is path to an existing file, actual\ndocumentation is read from that file.\n\nExamples:\n\n```\n--doc \"Very *good* example\"\n--doc doc_from_file.txt\n```\n\n---\ncorresponds to the `-D --doc documentation` option of _robot_\n",
+          "description": "Set the documentation of the top level suite.\nSimple formatting is supported (e.g. *bold*). If the\ndocumentation contains spaces, it must be quoted.\nIf the value is path to an existing file, actual\ndocumentation is read from that file.\n\nExamples:\n\n```\n--doc \"Very *good* example\"\n--doc doc_from_file.txt\n```\n\ncorresponds to the `-D --doc documentation` option of _robot_\n",
           "title": "Doc"
         },
         "end-time": {
@@ -221,12 +221,12 @@
             }
           ],
           "default": null,
-          "description": "Same as --starttime but for end time. If both options\nare used, elapsed time of the suite is calculated\nbased on them. For combined suites, it is otherwise\ncalculated by adding elapsed times of the combined\nsuites together.\n\n---\ncorresponds to the `--endtime timestamp` option of _robot_\n",
+          "description": "Same as --starttime but for end time. If both options\nare used, elapsed time of the suite is calculated\nbased on them. For combined suites, it is otherwise\ncalculated by adding elapsed times of the combined\nsuites together.\n\ncorresponds to the `--endtime timestamp` option of _rebot_\n",
           "title": "End time"
         },
         "excludes": {
           "default": null,
-          "description": "Select test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
+          "description": "Select test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -245,9 +245,12 @@
         },
         "expand-keywords": {
           "default": null,
-          "description": "Matching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\n---\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Matching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
+              {
+                "type": "string"
+              },
               {
                 "$ref": "#/definitions/NamePattern"
               },
@@ -264,7 +267,7 @@
         },
         "extra-excludes": {
           "default": null,
-          "description": "Appends entries to the --exclude option.\n\n---\n\nSelect test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
+          "description": "Appends entries to the --exclude option.\n\nSelect test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -283,9 +286,12 @@
         },
         "extra-expand-keywords": {
           "default": null,
-          "description": "Appends entries to the --expandkeywords option.\n\n---\n\nMatching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\n---\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --expandkeywords option.\n\nMatching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
+              {
+                "type": "string"
+              },
               {
                 "$ref": "#/definitions/NamePattern"
               },
@@ -301,7 +307,7 @@
           ]
         },
         "extra-flatten-keywords": {
-          "description": "Appends entries to the --flattenkeywords option.\n\n---\n\nFlattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\n---\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --flattenkeywords option.\n\nFlattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -331,7 +337,7 @@
         },
         "extra-includes": {
           "default": null,
-          "description": "Appends entries to the --include option.\n\n---\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "description": "Appends entries to the --include option.\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -360,7 +366,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --metadata option.\n\n---\n\nSet metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
+          "description": "Appends entries to the --metadata option.\n\nSet metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
           "title": "Extra metadata",
           "type": [
             "object",
@@ -382,7 +388,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Appends entries to the --prerebotmodifier option.\n\n---\n\nClass to programmatically modify the result\nmodel before creating reports and logs.\n\n---\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
+          "description": "Appends entries to the --prerebotmodifier option.\n\nClass to programmatically modify the result\nmodel before creating reports and logs.\n\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
           "title": "Extra pre rebot modifiers",
           "type": [
             "object",
@@ -391,7 +397,7 @@
         },
         "extra-python-path": {
           "default": null,
-          "description": "Appends entries to the --pythonpath option.\n\n---\n\nAdditional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
+          "description": "Appends entries to the --pythonpath option.\n\nAdditional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -409,9 +415,12 @@
           ]
         },
         "extra-remove-keywords": {
-          "description": "Appends entries to the --removekeywords option.\n\n---\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\n---\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
+              {
+                "type": "string"
+              },
               {
                 "enum": [
                   "all",
@@ -437,7 +446,7 @@
         },
         "extra-set-tag": {
           "default": null,
-          "description": "Appends entries to the --settag option.\n\n---\n\nSets given tag(s) to all executed tests.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
+          "description": "Appends entries to the --settag option.\n\nSets given tag(s) to all executed tests.\n\ncorresponds to the `-G --settag tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -456,7 +465,7 @@
         },
         "extra-suites": {
           "default": null,
-          "description": "Appends entries to the --suite option.\n\n---\n\nSelect suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
+          "description": "Appends entries to the --suite option.\n\nSelect suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\ncorresponds to the `-s --suite name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -485,7 +494,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --tagdoc option.\n\n---\n\nAdd documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\n---\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
+          "description": "Appends entries to the --tagdoc option.\n\nAdd documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
           "title": "Extra tag doc",
           "type": [
             "object",
@@ -494,7 +503,7 @@
         },
         "extra-tag-stat-combine": {
           "default": null,
-          "description": "Appends entries to the --tagstatcombine option.\n\n---\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\n---\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "description": "Appends entries to the --tagstatcombine option.\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -516,7 +525,7 @@
         },
         "extra-tag-stat-exclude": {
           "default": null,
-          "description": "Appends entries to the --tagstatexclude option.\n\n---\n\nExclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\n---\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
+          "description": "Appends entries to the --tagstatexclude option.\n\nExclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -535,7 +544,7 @@
         },
         "extra-tag-stat-include": {
           "default": null,
-          "description": "Appends entries to the --tagstatinclude option.\n\n---\n\nInclude only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\n---\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
+          "description": "Appends entries to the --tagstatinclude option.\n\nInclude only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -564,7 +573,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --tagstatlink option.\n\n---\n\nAdd external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\n---\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
+          "description": "Appends entries to the --tagstatlink option.\n\nAdd external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
           "title": "Extra tag stat link",
           "type": [
             "object",
@@ -573,7 +582,7 @@
         },
         "extra-tasks": {
           "default": null,
-          "description": "Appends entries to the --task option.\n\n---\n\nAlias to --test. Especially applicable with --rpa.\n\n---\ncorresponds to the `--task name *` option of _robot_\n",
+          "description": "Appends entries to the --task option.\n\nAlias to --test. Especially applicable with --rpa.\n\ncorresponds to the `--task name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -592,7 +601,7 @@
         },
         "extra-tests": {
           "default": null,
-          "description": "Appends entries to the --test option.\n\n---\n\nSelect tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
+          "description": "Appends entries to the --test option.\n\nSelect tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\ncorresponds to the `-t --test name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -610,7 +619,7 @@
           ]
         },
         "flatten-keywords": {
-          "description": "Flattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\n---\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Flattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -640,7 +649,7 @@
         },
         "includes": {
           "default": null,
-          "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -670,7 +679,7 @@
             }
           ],
           "default": null,
-          "description": "HTML log file. Can be disabled by giving a special\nvalue `NONE`. Default: log.html\n\nExamples:\n\n```\n`--log mylog.html`, `-l NONE`\n```\n\n---\ncorresponds to the `-l --log file` option of _robot_\n",
+          "description": "HTML log file. Can be disabled by giving a special\nvalue `NONE`. Default: log.html\n\nExamples:\n\n```\n`--log mylog.html`, `-l NONE`\n```\n\ncorresponds to the `-l --log file` option of _robot_\n",
           "title": "Log"
         },
         "log-level": {
@@ -686,7 +695,7 @@
             }
           ],
           "default": null,
-          "description": "Threshold for selecting messages. Available levels:\nTRACE (default), DEBUG, INFO, WARN, NONE (no msgs).\nUse syntax `LOGLEVEL:DEFAULT` to define the default\nvisible log level in log files.\n\nExamples:\n\n```\n--loglevel DEBUG\n--loglevel DEBUG:INFO\n```\n\n---\ncorresponds to the `-L --loglevel level` option of _robot_\n",
+          "description": "Threshold for selecting messages. Available levels:\nTRACE (default), DEBUG, INFO, WARN, NONE (no msgs).\nUse syntax `LOGLEVEL:DEFAULT` to define the default\nvisible log level in log files.\n\nExamples:\n\n```\n--loglevel DEBUG\n--loglevel DEBUG:INFO\n```\n\ncorresponds to the `-L --loglevel level` option of _rebot_\n",
           "title": "Log level"
         },
         "log-title": {
@@ -702,7 +711,7 @@
             }
           ],
           "default": null,
-          "description": "Title for the generated log file. The default title\nis `<SuiteName> Log`.\n\n---\ncorresponds to the `--logtitle title` option of _robot_\n",
+          "description": "Title for the generated log file. The default title\nis `<SuiteName> Log`.\n\ncorresponds to the `--logtitle title` option of _robot_\n",
           "title": "Log title"
         },
         "merge": {
@@ -723,7 +732,7 @@
             }
           ],
           "default": null,
-          "description": "When combining results, merge outputs together\ninstead of putting them under a new top level suite.\nExample: rebot --merge orig.xml rerun.xml\n\n---\ncorresponds to the `-R --merge` option of _robot_\n",
+          "description": "When combining results, merge outputs together\ninstead of putting them under a new top level suite.\nExample: rebot --merge orig.xml rerun.xml\n\ncorresponds to the `-R --merge` option of _rebot_\n",
           "title": "Merge"
         },
         "metadata": {
@@ -738,7 +747,7 @@
             ]
           },
           "default": null,
-          "description": "Set metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
+          "description": "Set metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
           "title": "Metadata",
           "type": [
             "object",
@@ -758,7 +767,7 @@
             }
           ],
           "default": null,
-          "description": "Set the name of the top level suite. By default the\nname is created based on the executed file or\ndirectory.\n\n---\ncorresponds to the `-N --name name` option of _robot_\n",
+          "description": "Set the name of the top level suite. By default the\nname is created based on the executed file or\ndirectory.\n\ncorresponds to the `-N --name name` option of _robot_\n",
           "title": "Name"
         },
         "no-status-rc": {
@@ -779,7 +788,7 @@
             }
           ],
           "default": null,
-          "description": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\n---\ncorresponds to the `--nostatusrc` option of _robot_\n",
+          "description": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\ncorresponds to the `--nostatusrc` option of _robot_\n",
           "title": "No status rc"
         },
         "output": {
@@ -795,7 +804,7 @@
             }
           ],
           "default": null,
-          "description": "XML output file. Not created unless this option is\nspecified. Given path, similarly as paths given to\n--log, --report and --xunit, is relative to\n--outputdir unless given as an absolute path.\n\n---\ncorresponds to the `-o --output file` option of _robot_\n",
+          "description": "XML output file. Not created unless this option is\nspecified. Given path, similarly as paths given to\n--log, --report and --xunit, is relative to\n--outputdir unless given as an absolute path.\n\ncorresponds to the `-o --output file` option of _rebot_\n",
           "title": "Output"
         },
         "output-dir": {
@@ -811,7 +820,7 @@
             }
           ],
           "default": null,
-          "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n\n---\ncorresponds to the `-d --outputdir dir` option of _robot_\n",
+          "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n\ncorresponds to the `-d --outputdir dir` option of _robot_\n",
           "title": "Output dir"
         },
         "pre-rebot-modifiers": {
@@ -829,7 +838,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Class to programmatically modify the result\nmodel before creating reports and logs.\n\n---\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
+          "description": "Class to programmatically modify the result\nmodel before creating reports and logs.\n\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
           "title": "Pre rebot modifiers",
           "type": [
             "object",
@@ -854,12 +863,12 @@
             }
           ],
           "default": null,
-          "description": "Processes output also if the top level suite is\nempty. Useful e.g. with --include/--exclude when it\nis not an error that there are no matches.\nUse --skiponfailure when starting execution instead.\n\n---\ncorresponds to the `--processemptysuite` option of _robot_\n",
+          "description": "Processes output also if the top level suite is\nempty. Useful e.g. with --include/--exclude when it\nis not an error that there are no matches.\nUse --skiponfailure when starting execution instead.\n\ncorresponds to the `--processemptysuite` option of _rebot_\n",
           "title": "Process empty suite"
         },
         "python-path": {
           "default": null,
-          "description": "Additional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
+          "description": "Additional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -877,9 +886,12 @@
           ]
         },
         "remove-keywords": {
-          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\n---\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
+              {
+                "type": "string"
+              },
               {
                 "enum": [
                   "all",
@@ -916,7 +928,7 @@
             }
           ],
           "default": null,
-          "description": "HTML report file. Can be disabled with `NONE`\nsimilarly as --log. Default: report.html\n\n---\ncorresponds to the `-r --report file` option of _robot_\n",
+          "description": "HTML report file. Can be disabled with `NONE`\nsimilarly as --log. Default: report.html\n\ncorresponds to the `-r --report file` option of _robot_\n",
           "title": "Report"
         },
         "report-background": {
@@ -932,7 +944,7 @@
             }
           ],
           "default": null,
-          "description": "Background colors to use in the report file.\nGiven in format `passed:failed:skipped` where the\n`:skipped` part can be omitted. Both color names and\ncodes work.\n\nExamples:\n\n```\n--reportbackground green:red:yellow\n--reportbackground #00E:#E00\n```\n\n---\ncorresponds to the `--reportbackground colors` option of _robot_\n",
+          "description": "Background colors to use in the report file.\nGiven in format `passed:failed:skipped` where the\n`:skipped` part can be omitted. Both color names and\ncodes work.\n\nExamples:\n\n```\n--reportbackground green:red:yellow\n--reportbackground #00E:#E00\n```\n\ncorresponds to the `--reportbackground colors` option of _robot_\n",
           "title": "Report background"
         },
         "report-title": {
@@ -948,7 +960,7 @@
             }
           ],
           "default": null,
-          "description": "Title for the generated report file. The default\ntitle is `<SuiteName> Report`.\n\n---\ncorresponds to the `--reporttitle title` option of _robot_\n",
+          "description": "Title for the generated report file. The default\ntitle is `<SuiteName> Report`.\n\ncorresponds to the `--reporttitle title` option of _robot_\n",
           "title": "Report title"
         },
         "rpa": {
@@ -969,12 +981,12 @@
             }
           ],
           "default": null,
-          "description": "Turn on the generic automation mode. Mainly affects\nterminology so that \"test\" is replaced with \"task\"\nin logs and reports. By default the mode is got\nfrom test/task header in data files.\n\n---\ncorresponds to the `--rpa` option of _robot_\n",
+          "description": "Turn on the generic automation mode. Mainly affects\nterminology so that \"test\" is replaced with \"task\"\nin logs and reports. By default the mode is got\nfrom test/task header in data files.\n\ncorresponds to the `--rpa` option of _robot_\n",
           "title": "Rpa"
         },
         "set-tag": {
           "default": null,
-          "description": "Sets given tag(s) to all executed tests.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
+          "description": "Sets given tag(s) to all executed tests.\n\ncorresponds to the `-G --settag tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1009,7 +1021,7 @@
             }
           ],
           "default": null,
-          "description": "Split the log file into smaller pieces that open in\nbrowsers transparently.\n\n---\ncorresponds to the `--splitlog` option of _robot_\n",
+          "description": "Split the log file into smaller pieces that open in\nbrowsers transparently.\n\ncorresponds to the `--splitlog` option of _robot_\n",
           "title": "Split log"
         },
         "start-time": {
@@ -1025,12 +1037,12 @@
             }
           ],
           "default": null,
-          "description": "Set execution start time. Timestamp must be given in\nformat `2007-10-01 15:12:42.268` where all separators\nare optional (e.g. `20071001151242268` is ok too) and\nparts from milliseconds to hours can be omitted if\nthey are zero (e.g. `2007-10-01`). This can be used\nto override start time of a single suite or to set\nstart time for a combined suite, which would\notherwise be `N/A`.\n\n---\ncorresponds to the `--starttime timestamp` option of _robot_\n",
+          "description": "Set execution start time. Timestamp must be given in\nformat `2007-10-01 15:12:42.268` where all separators\nare optional (e.g. `20071001151242268` is ok too) and\nparts from milliseconds to hours can be omitted if\nthey are zero (e.g. `2007-10-01`). This can be used\nto override start time of a single suite or to set\nstart time for a combined suite, which would\notherwise be `N/A`.\n\ncorresponds to the `--starttime timestamp` option of _rebot_\n",
           "title": "Start time"
         },
         "suite-stat-level": {
           "default": null,
-          "description": "How many levels to show in `Statistics by Suite`\nin log and report. By default all suite levels are\nshown. Example:  --suitestatlevel 3\n\n---\ncorresponds to the `--suitestatlevel level` option of _robot_\n",
+          "description": "How many levels to show in `Statistics by Suite`\nin log and report. By default all suite levels are\nshown. Example:  --suitestatlevel 3\n\ncorresponds to the `--suitestatlevel level` option of _robot_\n",
           "title": "Suite stat level",
           "type": [
             "integer",
@@ -1039,7 +1051,7 @@
         },
         "suites": {
           "default": null,
-          "description": "Select suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
+          "description": "Select suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\ncorresponds to the `-s --suite name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1068,7 +1080,7 @@
             ]
           },
           "default": null,
-          "description": "Add documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\n---\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
+          "description": "Add documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
           "title": "Tag doc",
           "type": [
             "object",
@@ -1077,7 +1089,7 @@
         },
         "tag-stat-combine": {
           "default": null,
-          "description": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\n---\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "description": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1099,7 +1111,7 @@
         },
         "tag-stat-exclude": {
           "default": null,
-          "description": "Exclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\n---\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
+          "description": "Exclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1118,7 +1130,7 @@
         },
         "tag-stat-include": {
           "default": null,
-          "description": "Include only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\n---\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
+          "description": "Include only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1147,7 +1159,7 @@
             ]
           },
           "default": null,
-          "description": "Add external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\n---\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
+          "description": "Add external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
           "title": "Tag stat link",
           "type": [
             "object",
@@ -1156,7 +1168,7 @@
         },
         "tasks": {
           "default": null,
-          "description": "Alias to --test. Especially applicable with --rpa.\n\n---\ncorresponds to the `--task name *` option of _robot_\n",
+          "description": "Alias to --test. Especially applicable with --rpa.\n\ncorresponds to the `--task name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1175,7 +1187,7 @@
         },
         "tests": {
           "default": null,
-          "description": "Select tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
+          "description": "Select tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\ncorresponds to the `-t --test name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1210,7 +1222,7 @@
             }
           ],
           "default": null,
-          "description": "When this option is used, timestamp in a format\n`YYYYMMDD-hhmmss` is added to all generated output\nfiles between their basename and extension. For\nexample `-T -o output.xml -r report.html -l none`\ncreates files like `output-20070503-154410.xml` and\n`report-20070503-154410.html`.\n\n---\ncorresponds to the `-T --timestampoutputs` option of _robot_\n",
+          "description": "When this option is used, timestamp in a format\n`YYYYMMDD-hhmmss` is added to all generated output\nfiles between their basename and extension. For\nexample `-T -o output.xml -r report.html -l none`\ncreates files like `output-20070503-154410.xml` and\n`report-20070503-154410.html`.\n\ncorresponds to the `-T --timestampoutputs` option of _robot_\n",
           "title": "Timestamp outputs"
         },
         "xunit": {
@@ -1226,7 +1238,7 @@
             }
           ],
           "default": null,
-          "description": "xUnit compatible result file. Not created unless this\noption is specified.\n\n---\ncorresponds to the `-x --xunit file` option of _robot_\n",
+          "description": "xUnit compatible result file. Not created unless this\noption is specified.\n\ncorresponds to the `-x --xunit file` option of _robot_\n",
           "title": "Xunit"
         }
       },
@@ -1250,7 +1262,7 @@
           ]
         },
         "console": {
-          "description": "How to report execution on the console.\nverbose:  report every suite and test (default)\ndotted:   only show `.` for passed test, `s` for\nskipped tests, and `F` for failed tests\nquiet:    no output except for errors and warnings\nnone:     no output whatsoever\n\n---\ncorresponds to the `--console type` option of _robot_\n",
+          "description": "How to report execution on the console.\nverbose:  report every suite and test (default)\ndotted:   only show `.` for passed test, `s` for\nskipped tests, and `F` for failed tests\nquiet:    no output except for errors and warnings\nnone:     no output whatsoever\n\ncorresponds to the `--console type` option of _robot_\n",
           "enum": [
             "verbose",
             "dotted",
@@ -1265,7 +1277,7 @@
           ]
         },
         "console-colors": {
-          "description": "Use colors on console output or not.\nauto: use colors when output not redirected (default)\non:   always use colors\nansi: like `on` but use ANSI colors also on Windows\noff:  disable colors altogether\n\n---\ncorresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_\n",
+          "description": "Use colors on console output or not.\nauto: use colors when output not redirected (default)\non:   always use colors\nansi: like `on` but use ANSI colors also on Windows\noff:  disable colors altogether\n\ncorresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_\n",
           "enum": [
             "auto",
             "on",
@@ -1279,7 +1291,7 @@
           ]
         },
         "console-markers": {
-          "description": "Show markers on the console when top level\nkeywords in a test case end. Values have same\nsemantics as with --consolecolors.\n\n---\ncorresponds to the `-K --consolemarkers auto|on|off` option of _robot_\n",
+          "description": "Show markers on the console when top level\nkeywords in a test case end. Values have same\nsemantics as with --consolecolors.\n\ncorresponds to the `-K --consolemarkers auto|on|off` option of _robot_\n",
           "enum": [
             "auto",
             "on",
@@ -1293,7 +1305,7 @@
         },
         "console-width": {
           "default": null,
-          "description": "Width of the console output. Default is 78.\n\n---\ncorresponds to the `-W --consolewidth chars` option of _robot_\n",
+          "description": "Width of the console output. Default is 78.\n\ncorresponds to the `-W --consolewidth chars` option of _robot_\n",
           "title": "Console width",
           "type": [
             "integer",
@@ -1313,7 +1325,7 @@
             }
           ],
           "default": null,
-          "description": "Debug file written during execution. Not created\nunless this option is specified.\n\n---\ncorresponds to the `-b --debugfile file` option of _robot_\n",
+          "description": "Debug file written during execution. Not created\nunless this option is specified.\n\ncorresponds to the `-b --debugfile file` option of _robot_\n",
           "title": "Debug file"
         },
         "default-profiles": {
@@ -1348,7 +1360,7 @@
             }
           ],
           "default": null,
-          "description": "Set the documentation of the top level suite.\nSimple formatting is supported (e.g. *bold*). If the\ndocumentation contains spaces, it must be quoted.\nIf the value is path to an existing file, actual\ndocumentation is read from that file.\n\nExamples:\n\n```\n--doc \"Very *good* example\"\n--doc doc_from_file.txt\n```\n\n---\ncorresponds to the `-D --doc documentation` option of _robot_\n",
+          "description": "Set the documentation of the top level suite.\nSimple formatting is supported (e.g. *bold*). If the\ndocumentation contains spaces, it must be quoted.\nIf the value is path to an existing file, actual\ndocumentation is read from that file.\n\nExamples:\n\n```\n--doc \"Very *good* example\"\n--doc doc_from_file.txt\n```\n\ncorresponds to the `-D --doc documentation` option of _robot_\n",
           "title": "Doc"
         },
         "dotted": {
@@ -1369,7 +1381,7 @@
             }
           ],
           "default": null,
-          "description": "Shortcut for `--console dotted`.\n\n---\ncorresponds to the `-. --dotted` option of _robot_\n",
+          "description": "Shortcut for `--console dotted`.\n\ncorresponds to the `-. --dotted` option of _robot_\n",
           "title": "Dotted"
         },
         "dry-run": {
@@ -1390,7 +1402,7 @@
             }
           ],
           "default": null,
-          "description": "Verifies test data and runs tests so that library\nkeywords are not executed.\n\n---\ncorresponds to the `--dryrun` option of _robot_\n",
+          "description": "Verifies test data and runs tests so that library\nkeywords are not executed.\n\ncorresponds to the `--dryrun` option of _robot_\n",
           "title": "Dry run"
         },
         "env": {
@@ -1407,7 +1419,7 @@
         },
         "excludes": {
           "default": null,
-          "description": "Select test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
+          "description": "Select test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1442,7 +1454,7 @@
             }
           ],
           "default": null,
-          "description": "Stops test execution if any error occurs when parsing\ntest data, importing libraries, and so on.\n\n---\ncorresponds to the `--exitonerror` option of _robot_\n",
+          "description": "Stops test execution if any error occurs when parsing\ntest data, importing libraries, and so on.\n\ncorresponds to the `--exitonerror` option of _robot_\n",
           "title": "Exit on error"
         },
         "exit-on-failure": {
@@ -1463,14 +1475,17 @@
             }
           ],
           "default": null,
-          "description": "Stops test execution if any test fails.\n\n---\ncorresponds to the `-X --exitonfailure` option of _robot_\n",
+          "description": "Stops test execution if any test fails.\n\ncorresponds to the `-X --exitonfailure` option of _robot_\n",
           "title": "Exit on failure"
         },
         "expand-keywords": {
           "default": null,
-          "description": "Matching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\n---\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Matching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
+              {
+                "type": "string"
+              },
               {
                 "$ref": "#/definitions/NamePattern"
               },
@@ -1498,7 +1513,7 @@
             }
           ],
           "default": null,
-          "description": "Parse only files with this extension when executing\na directory. Has no effect when running individual\nfiles or when using resource files. If more than one\nextension is needed, separate them with a colon.\n\nExamples:\n\n```\n`--extension txt`, `--extension robot:txt`\n```\n\n\nOnly `*.robot` files are parsed by default.\n\n---\ncorresponds to the `-F --extension value` option of _robot_\n",
+          "description": "Parse only files with this extension when executing\na directory. Has no effect when running individual\nfiles or when using resource files. If more than one\nextension is needed, separate them with a colon.\n\nExamples:\n\n```\n`--extension txt`, `--extension robot:txt`\n```\n\n\nOnly `*.robot` files are parsed by default.\n\ncorresponds to the `-F --extension value` option of _robot_\n",
           "title": "Extensions"
         },
         "extra-args": {
@@ -1527,7 +1542,7 @@
         },
         "extra-excludes": {
           "default": null,
-          "description": "Appends entries to the --exclude option.\n\n---\n\nSelect test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
+          "description": "Appends entries to the --exclude option.\n\nSelect test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1546,9 +1561,12 @@
         },
         "extra-expand-keywords": {
           "default": null,
-          "description": "Appends entries to the --expandkeywords option.\n\n---\n\nMatching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\n---\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --expandkeywords option.\n\nMatching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
+              {
+                "type": "string"
+              },
               {
                 "$ref": "#/definitions/NamePattern"
               },
@@ -1564,7 +1582,7 @@
           ]
         },
         "extra-flatten-keywords": {
-          "description": "Appends entries to the --flattenkeywords option.\n\n---\n\nFlattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\n---\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --flattenkeywords option.\n\nFlattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1594,7 +1612,7 @@
         },
         "extra-includes": {
           "default": null,
-          "description": "Appends entries to the --include option.\n\n---\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "description": "Appends entries to the --include option.\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1613,7 +1631,7 @@
         },
         "extra-languages": {
           "default": null,
-          "description": "Appends entries to the --language option.\n\n---\n\nActivate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\n---\ncorresponds to the `--language lang *` option of _robot_\n",
+          "description": "Appends entries to the --language option.\n\nActivate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\ncorresponds to the `--language lang *` option of _rebot_\n",
           "items": {
             "anyOf": [
               {
@@ -1645,7 +1663,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Appends entries to the --listener option.\n\n---\n\nA class for monitoring test execution. Gets\nnotifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListenerClass\n--listener path/to/Listener.py:arg1:arg2\n```\n\n---\ncorresponds to the `--listener class *` option of _robot_\n",
+          "description": "Appends entries to the --listener option.\n\nA class for monitoring test execution. Gets\nnotifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListenerClass\n--listener path/to/Listener.py:arg1:arg2\n```\n\ncorresponds to the `--listener class *` option of _rebot_\n",
           "title": "Extra listeners",
           "type": [
             "object",
@@ -1664,7 +1682,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --metadata option.\n\n---\n\nSet metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
+          "description": "Appends entries to the --metadata option.\n\nSet metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
           "title": "Extra metadata",
           "type": [
             "object",
@@ -1705,7 +1723,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Appends entries to the --prerebotmodifier option.\n\n---\n\nClass to programmatically modify the result\nmodel before creating reports and logs.\n\n---\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
+          "description": "Appends entries to the --prerebotmodifier option.\n\nClass to programmatically modify the result\nmodel before creating reports and logs.\n\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
           "title": "Extra pre rebot modifiers",
           "type": [
             "object",
@@ -1727,7 +1745,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Appends entries to the --prerunmodifier option.\n\n---\n\nClass to programmatically modify the suite\nstructure before execution.\n\n---\ncorresponds to the `--prerunmodifier class *` option of _robot_\n",
+          "description": "Appends entries to the --prerunmodifier option.\n\nClass to programmatically modify the suite\nstructure before execution.\n\ncorresponds to the `--prerunmodifier class *` option of _rebot_\n",
           "title": "Extra pre run modifiers",
           "type": [
             "object",
@@ -1747,7 +1765,7 @@
         },
         "extra-python-path": {
           "default": null,
-          "description": "Appends entries to the --pythonpath option.\n\n---\n\nAdditional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
+          "description": "Appends entries to the --pythonpath option.\n\nAdditional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1765,9 +1783,12 @@
           ]
         },
         "extra-remove-keywords": {
-          "description": "Appends entries to the --removekeywords option.\n\n---\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\n---\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
+              {
+                "type": "string"
+              },
               {
                 "enum": [
                   "all",
@@ -1793,7 +1814,7 @@
         },
         "extra-set-tag": {
           "default": null,
-          "description": "Appends entries to the --settag option.\n\n---\n\nSets given tag(s) to all executed tests.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
+          "description": "Appends entries to the --settag option.\n\nSets given tag(s) to all executed tests.\n\ncorresponds to the `-G --settag tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1812,7 +1833,7 @@
         },
         "extra-skip": {
           "default": null,
-          "description": "Appends entries to the --skip option.\n\n---\n\nTests having given tag will be skipped. Tag can be\na pattern.\n\n---\ncorresponds to the `--skip tag *` option of _robot_\n",
+          "description": "Appends entries to the --skip option.\n\nTests having given tag will be skipped. Tag can be\na pattern.\n\ncorresponds to the `--skip tag *` option of _rebot_\n",
           "items": {
             "anyOf": [
               {
@@ -1831,7 +1852,7 @@
         },
         "extra-skip-on-failure": {
           "default": null,
-          "description": "Appends entries to the --skiponfailure option.\n\n---\n\nTests having given tag will be skipped if they fail.\nTag can be a pattern\n\n---\ncorresponds to the `--skiponfailure tag *` option of _robot_\n",
+          "description": "Appends entries to the --skiponfailure option.\n\nTests having given tag will be skipped if they fail.\nTag can be a pattern\n\ncorresponds to the `--skiponfailure tag *` option of _rebot_\n",
           "items": {
             "anyOf": [
               {
@@ -1850,7 +1871,7 @@
         },
         "extra-suites": {
           "default": null,
-          "description": "Appends entries to the --suite option.\n\n---\n\nSelect suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
+          "description": "Appends entries to the --suite option.\n\nSelect suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\ncorresponds to the `-s --suite name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1879,7 +1900,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --tagdoc option.\n\n---\n\nAdd documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\n---\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
+          "description": "Appends entries to the --tagdoc option.\n\nAdd documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
           "title": "Extra tag doc",
           "type": [
             "object",
@@ -1888,7 +1909,7 @@
         },
         "extra-tag-stat-combine": {
           "default": null,
-          "description": "Appends entries to the --tagstatcombine option.\n\n---\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\n---\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "description": "Appends entries to the --tagstatcombine option.\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1910,7 +1931,7 @@
         },
         "extra-tag-stat-exclude": {
           "default": null,
-          "description": "Appends entries to the --tagstatexclude option.\n\n---\n\nExclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\n---\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
+          "description": "Appends entries to the --tagstatexclude option.\n\nExclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1929,7 +1950,7 @@
         },
         "extra-tag-stat-include": {
           "default": null,
-          "description": "Appends entries to the --tagstatinclude option.\n\n---\n\nInclude only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\n---\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
+          "description": "Appends entries to the --tagstatinclude option.\n\nInclude only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1958,7 +1979,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --tagstatlink option.\n\n---\n\nAdd external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\n---\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
+          "description": "Appends entries to the --tagstatlink option.\n\nAdd external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
           "title": "Extra tag stat link",
           "type": [
             "object",
@@ -1967,7 +1988,7 @@
         },
         "extra-tasks": {
           "default": null,
-          "description": "Appends entries to the --task option.\n\n---\n\nAlias to --test. Especially applicable with --rpa.\n\n---\ncorresponds to the `--task name *` option of _robot_\n",
+          "description": "Appends entries to the --task option.\n\nAlias to --test. Especially applicable with --rpa.\n\ncorresponds to the `--task name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1986,7 +2007,7 @@
         },
         "extra-tests": {
           "default": null,
-          "description": "Appends entries to the --test option.\n\n---\n\nSelect tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
+          "description": "Appends entries to the --test option.\n\nSelect tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\ncorresponds to the `-t --test name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2005,7 +2026,7 @@
         },
         "extra-variable-files": {
           "default": null,
-          "description": "Appends entries to the --variablefile option.\n\n---\n\nPython or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```\n--variablefile path/vars.yaml\n--variablefile environment.py:testing\n```\n\n---\ncorresponds to the `-V --variablefile path *` option of _robot_\n",
+          "description": "Appends entries to the --variablefile option.\n\nPython or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```\n--variablefile path/vars.yaml\n--variablefile environment.py:testing\n```\n\ncorresponds to the `-V --variablefile path *` option of _rebot_\n",
           "items": {
             "anyOf": [
               {
@@ -2034,7 +2055,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --variable option.\n\n---\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\n---\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
+          "description": "Appends entries to the --variable option.\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\ncorresponds to the `-v --variable name:value *` option of _rebot_\n",
           "title": "Extra variables",
           "type": [
             "object",
@@ -2042,7 +2063,7 @@
           ]
         },
         "flatten-keywords": {
-          "description": "Flattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\n---\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Flattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2072,7 +2093,7 @@
         },
         "includes": {
           "default": null,
-          "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2091,7 +2112,7 @@
         },
         "languages": {
           "default": null,
-          "description": "Activate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\n---\ncorresponds to the `--language lang *` option of _robot_\n",
+          "description": "Activate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\ncorresponds to the `--language lang *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2135,7 +2156,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "A class for monitoring test execution. Gets\nnotifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListenerClass\n--listener path/to/Listener.py:arg1:arg2\n```\n\n---\ncorresponds to the `--listener class *` option of _robot_\n",
+          "description": "A class for monitoring test execution. Gets\nnotifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListenerClass\n--listener path/to/Listener.py:arg1:arg2\n```\n\ncorresponds to the `--listener class *` option of _robot_\n",
           "title": "Listeners",
           "type": [
             "object",
@@ -2155,7 +2176,7 @@
             }
           ],
           "default": null,
-          "description": "HTML log file. Can be disabled by giving a special\nvalue `NONE`. Default: log.html\n\nExamples:\n\n```\n`--log mylog.html`, `-l NONE`\n```\n\n---\ncorresponds to the `-l --log file` option of _robot_\n",
+          "description": "HTML log file. Can be disabled by giving a special\nvalue `NONE`. Default: log.html\n\nExamples:\n\n```\n`--log mylog.html`, `-l NONE`\n```\n\ncorresponds to the `-l --log file` option of _robot_\n",
           "title": "Log"
         },
         "log-level": {
@@ -2171,7 +2192,7 @@
             }
           ],
           "default": null,
-          "description": "Threshold level for logging. Available levels: TRACE,\nDEBUG, INFO (default), WARN, NONE (no logging). Use\nsyntax `LOGLEVEL:DEFAULT` to define the default\nvisible log level in log files.\n\nExamples:\n\n```\n--loglevel DEBUG\n--loglevel DEBUG:INFO\n```\n\n---\ncorresponds to the `-L --loglevel level` option of _robot_\n",
+          "description": "Threshold level for logging. Available levels: TRACE,\nDEBUG, INFO (default), WARN, NONE (no logging). Use\nsyntax `LOGLEVEL:DEFAULT` to define the default\nvisible log level in log files.\n\nExamples:\n\n```\n--loglevel DEBUG\n--loglevel DEBUG:INFO\n```\n\ncorresponds to the `-L --loglevel level` option of _robot_\n",
           "title": "Log level"
         },
         "log-title": {
@@ -2187,12 +2208,12 @@
             }
           ],
           "default": null,
-          "description": "Title for the generated log file. The default title\nis `<SuiteName> Log`.\n\n---\ncorresponds to the `--logtitle title` option of _robot_\n",
+          "description": "Title for the generated log file. The default title\nis `<SuiteName> Log`.\n\ncorresponds to the `--logtitle title` option of _robot_\n",
           "title": "Log title"
         },
         "max-assign-length": {
           "default": null,
-          "description": "Maximum number of characters to show in log\nwhen variables are assigned. Zero or negative values\ncan be used to avoid showing assigned values at all.\nDefault is 200.\n\n---\ncorresponds to the `--maxassignlength characters` option of _robot_\n",
+          "description": "Maximum number of characters to show in log\nwhen variables are assigned. Zero or negative values\ncan be used to avoid showing assigned values at all.\nDefault is 200.\n\ncorresponds to the `--maxassignlength characters` option of _robot_\n",
           "title": "Max assign length",
           "type": [
             "integer",
@@ -2201,7 +2222,7 @@
         },
         "max-error-lines": {
           "default": null,
-          "description": "Maximum number of error message lines to show in\nreport when tests fail. Default is 40, minimum is 10\nand `NONE` can be used to show the full message.\n\n---\ncorresponds to the `--maxerrorlines lines` option of _robot_\n",
+          "description": "Maximum number of error message lines to show in\nreport when tests fail. Default is 40, minimum is 10\nand `NONE` can be used to show the full message.\n\ncorresponds to the `--maxerrorlines lines` option of _robot_\n",
           "title": "Max error lines",
           "type": [
             "integer",
@@ -2220,7 +2241,7 @@
             ]
           },
           "default": null,
-          "description": "Set metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
+          "description": "Set metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
           "title": "Metadata",
           "type": [
             "object",
@@ -2240,7 +2261,7 @@
             }
           ],
           "default": null,
-          "description": "Set the name of the top level suite. By default the\nname is created based on the executed file or\ndirectory.\n\n---\ncorresponds to the `-N --name name` option of _robot_\n",
+          "description": "Set the name of the top level suite. By default the\nname is created based on the executed file or\ndirectory.\n\ncorresponds to the `-N --name name` option of _robot_\n",
           "title": "Name"
         },
         "no-status-rc": {
@@ -2261,7 +2282,7 @@
             }
           ],
           "default": null,
-          "description": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\n---\ncorresponds to the `--nostatusrc` option of _robot_\n",
+          "description": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\ncorresponds to the `--nostatusrc` option of _robot_\n",
           "title": "No status rc"
         },
         "output": {
@@ -2277,7 +2298,7 @@
             }
           ],
           "default": null,
-          "description": "XML output file. Given path, similarly as paths given\nto --log, --report, --xunit, and --debugfile, is\nrelative to --outputdir unless given as an absolute\npath. Other output files are created based on XML\noutput files after the test execution and XML outputs\ncan also be further processed with Rebot tool. Can be\ndisabled by giving a special value `NONE`.\nDefault: output.xml\n\n---\ncorresponds to the `-o --output file` option of _robot_\n",
+          "description": "XML output file. Given path, similarly as paths given\nto --log, --report, --xunit, and --debugfile, is\nrelative to --outputdir unless given as an absolute\npath. Other output files are created based on XML\noutput files after the test execution and XML outputs\ncan also be further processed with Rebot tool. Can be\ndisabled by giving a special value `NONE`.\nDefault: output.xml\n\ncorresponds to the `-o --output file` option of _robot_\n",
           "title": "Output"
         },
         "output-dir": {
@@ -2293,7 +2314,7 @@
             }
           ],
           "default": null,
-          "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n\n---\ncorresponds to the `-d --outputdir dir` option of _robot_\n",
+          "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n\ncorresponds to the `-d --outputdir dir` option of _robot_\n",
           "title": "Output dir"
         },
         "paths": {
@@ -2312,7 +2333,7 @@
             }
           ],
           "default": null,
-          "description": "Specifies the paths where robot/robotcode should discover tests.\nIf no paths are given at the command line this value is used.\n\nExamples:\n```toml\npaths = [\"tests\"]\n```\n\n---\nCorresponds to the `paths` argument of __robot__.\n",
+          "description": "Specifies the paths where robot/robotcode should discover tests.\nIf no paths are given at the command line this value is used.\n\nExamples:\n```toml\npaths = [\"tests\"]\n```\n\nCorresponds to the `paths` argument of __robot__.\n",
           "title": "Paths"
         },
         "pre-rebot-modifiers": {
@@ -2330,7 +2351,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Class to programmatically modify the result\nmodel before creating reports and logs.\n\n---\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
+          "description": "Class to programmatically modify the result\nmodel before creating reports and logs.\n\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
           "title": "Pre rebot modifiers",
           "type": [
             "object",
@@ -2352,7 +2373,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Class to programmatically modify the suite\nstructure before execution.\n\n---\ncorresponds to the `--prerunmodifier class *` option of _robot_\n",
+          "description": "Class to programmatically modify the suite\nstructure before execution.\n\ncorresponds to the `--prerunmodifier class *` option of _robot_\n",
           "title": "Pre run modifiers",
           "type": [
             "object",
@@ -2372,7 +2393,7 @@
         },
         "python-path": {
           "default": null,
-          "description": "Additional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
+          "description": "Additional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2407,7 +2428,7 @@
             }
           ],
           "default": null,
-          "description": "Shortcut for `--console quiet`.\n\n---\ncorresponds to the `--quiet` option of _robot_\n",
+          "description": "Shortcut for `--console quiet`.\n\ncorresponds to the `--quiet` option of _robot_\n",
           "title": "Quiet"
         },
         "randomize": {
@@ -2428,7 +2449,7 @@
               "type": "null"
             }
           ],
-          "description": "Randomizes the test execution order.\nall:    randomizes both suites and tests\nsuites: randomizes suites\ntests:  randomizes tests\nnone:   no randomization (default)\nUse syntax `VALUE:SEED` to give a custom random seed.\nThe seed must be an integer.\n\nExamples:\n\n```\n--randomize all\n--randomize tests:1234\n```\n\n---\ncorresponds to the `--randomize all|suites|tests|none` option of _robot_\n",
+          "description": "Randomizes the test execution order.\nall:    randomizes both suites and tests\nsuites: randomizes suites\ntests:  randomizes tests\nnone:   no randomization (default)\nUse syntax `VALUE:SEED` to give a custom random seed.\nThe seed must be an integer.\n\nExamples:\n\n```\n--randomize all\n--randomize tests:1234\n```\n\ncorresponds to the `--randomize all|suites|tests|none` option of _robot_\n",
           "title": "Randomize"
         },
         "re-run-failed": {
@@ -2444,7 +2465,7 @@
             }
           ],
           "default": null,
-          "description": "Select failed tests from an earlier output file to be\nre-executed. Equivalent to selecting same tests\nindividually using --test.\n\n---\ncorresponds to the `-R --rerunfailed output` option of _robot_\n",
+          "description": "Select failed tests from an earlier output file to be\nre-executed. Equivalent to selecting same tests\nindividually using --test.\n\ncorresponds to the `-R --rerunfailed output` option of _robot_\n",
           "title": "Re run failed"
         },
         "re-run-failed-suites": {
@@ -2460,7 +2481,7 @@
             }
           ],
           "default": null,
-          "description": "Select failed suites from an earlier output\nfile to be re-executed.\n\n---\ncorresponds to the `-S --rerunfailedsuites output` option of _robot_\n",
+          "description": "Select failed suites from an earlier output\nfile to be re-executed.\n\ncorresponds to the `-S --rerunfailedsuites output` option of _robot_\n",
           "title": "Re run failed suites"
         },
         "rebot": {
@@ -2476,9 +2497,12 @@
           "title": "Rebot"
         },
         "remove-keywords": {
-          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\n---\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
+              {
+                "type": "string"
+              },
               {
                 "enum": [
                   "all",
@@ -2515,7 +2539,7 @@
             }
           ],
           "default": null,
-          "description": "HTML report file. Can be disabled with `NONE`\nsimilarly as --log. Default: report.html\n\n---\ncorresponds to the `-r --report file` option of _robot_\n",
+          "description": "HTML report file. Can be disabled with `NONE`\nsimilarly as --log. Default: report.html\n\ncorresponds to the `-r --report file` option of _robot_\n",
           "title": "Report"
         },
         "report-background": {
@@ -2531,7 +2555,7 @@
             }
           ],
           "default": null,
-          "description": "Background colors to use in the report file.\nGiven in format `passed:failed:skipped` where the\n`:skipped` part can be omitted. Both color names and\ncodes work.\n\nExamples:\n\n```\n--reportbackground green:red:yellow\n--reportbackground #00E:#E00\n```\n\n---\ncorresponds to the `--reportbackground colors` option of _robot_\n",
+          "description": "Background colors to use in the report file.\nGiven in format `passed:failed:skipped` where the\n`:skipped` part can be omitted. Both color names and\ncodes work.\n\nExamples:\n\n```\n--reportbackground green:red:yellow\n--reportbackground #00E:#E00\n```\n\ncorresponds to the `--reportbackground colors` option of _robot_\n",
           "title": "Report background"
         },
         "report-title": {
@@ -2547,7 +2571,7 @@
             }
           ],
           "default": null,
-          "description": "Title for the generated report file. The default\ntitle is `<SuiteName> Report`.\n\n---\ncorresponds to the `--reporttitle title` option of _robot_\n",
+          "description": "Title for the generated report file. The default\ntitle is `<SuiteName> Report`.\n\ncorresponds to the `--reporttitle title` option of _robot_\n",
           "title": "Report title"
         },
         "rpa": {
@@ -2568,7 +2592,7 @@
             }
           ],
           "default": null,
-          "description": "Turn on the generic automation mode. Mainly affects\nterminology so that \"test\" is replaced with \"task\"\nin logs and reports. By default the mode is got\nfrom test/task header in data files.\n\n---\ncorresponds to the `--rpa` option of _robot_\n",
+          "description": "Turn on the generic automation mode. Mainly affects\nterminology so that \"test\" is replaced with \"task\"\nin logs and reports. By default the mode is got\nfrom test/task header in data files.\n\ncorresponds to the `--rpa` option of _robot_\n",
           "title": "Rpa"
         },
         "run-empty-suite": {
@@ -2589,12 +2613,12 @@
             }
           ],
           "default": null,
-          "description": "Executes suite even if it contains no tests. Useful\ne.g. with --include/--exclude when it is not an error\nthat no test matches the condition.\n\n---\ncorresponds to the `--runemptysuite` option of _robot_\n",
+          "description": "Executes suite even if it contains no tests. Useful\ne.g. with --include/--exclude when it is not an error\nthat no test matches the condition.\n\ncorresponds to the `--runemptysuite` option of _robot_\n",
           "title": "Run empty suite"
         },
         "set-tag": {
           "default": null,
-          "description": "Sets given tag(s) to all executed tests.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
+          "description": "Sets given tag(s) to all executed tests.\n\ncorresponds to the `-G --settag tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2613,7 +2637,7 @@
         },
         "skip": {
           "default": null,
-          "description": "Tests having given tag will be skipped. Tag can be\na pattern.\n\n---\ncorresponds to the `--skip tag *` option of _robot_\n",
+          "description": "Tests having given tag will be skipped. Tag can be\na pattern.\n\ncorresponds to the `--skip tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2632,7 +2656,7 @@
         },
         "skip-on-failure": {
           "default": null,
-          "description": "Tests having given tag will be skipped if they fail.\nTag can be a pattern\n\n---\ncorresponds to the `--skiponfailure tag *` option of _robot_\n",
+          "description": "Tests having given tag will be skipped if they fail.\nTag can be a pattern\n\ncorresponds to the `--skiponfailure tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2667,7 +2691,7 @@
             }
           ],
           "default": null,
-          "description": "Causes teardowns to be skipped if test execution is\nstopped prematurely.\n\n---\ncorresponds to the `--skipteardownonexit` option of _robot_\n",
+          "description": "Causes teardowns to be skipped if test execution is\nstopped prematurely.\n\ncorresponds to the `--skipteardownonexit` option of _robot_\n",
           "title": "Skip teardown on exit"
         },
         "split-log": {
@@ -2688,12 +2712,12 @@
             }
           ],
           "default": null,
-          "description": "Split the log file into smaller pieces that open in\nbrowsers transparently.\n\n---\ncorresponds to the `--splitlog` option of _robot_\n",
+          "description": "Split the log file into smaller pieces that open in\nbrowsers transparently.\n\ncorresponds to the `--splitlog` option of _robot_\n",
           "title": "Split log"
         },
         "suite-stat-level": {
           "default": null,
-          "description": "How many levels to show in `Statistics by Suite`\nin log and report. By default all suite levels are\nshown. Example:  --suitestatlevel 3\n\n---\ncorresponds to the `--suitestatlevel level` option of _robot_\n",
+          "description": "How many levels to show in `Statistics by Suite`\nin log and report. By default all suite levels are\nshown. Example:  --suitestatlevel 3\n\ncorresponds to the `--suitestatlevel level` option of _robot_\n",
           "title": "Suite stat level",
           "type": [
             "integer",
@@ -2702,7 +2726,7 @@
         },
         "suites": {
           "default": null,
-          "description": "Select suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
+          "description": "Select suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\ncorresponds to the `-s --suite name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2731,7 +2755,7 @@
             ]
           },
           "default": null,
-          "description": "Add documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\n---\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
+          "description": "Add documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
           "title": "Tag doc",
           "type": [
             "object",
@@ -2740,7 +2764,7 @@
         },
         "tag-stat-combine": {
           "default": null,
-          "description": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\n---\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "description": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2762,7 +2786,7 @@
         },
         "tag-stat-exclude": {
           "default": null,
-          "description": "Exclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\n---\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
+          "description": "Exclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2781,7 +2805,7 @@
         },
         "tag-stat-include": {
           "default": null,
-          "description": "Include only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\n---\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
+          "description": "Include only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2810,7 +2834,7 @@
             ]
           },
           "default": null,
-          "description": "Add external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\n---\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
+          "description": "Add external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
           "title": "Tag stat link",
           "type": [
             "object",
@@ -2819,7 +2843,7 @@
         },
         "tasks": {
           "default": null,
-          "description": "Alias to --test. Especially applicable with --rpa.\n\n---\ncorresponds to the `--task name *` option of _robot_\n",
+          "description": "Alias to --test. Especially applicable with --rpa.\n\ncorresponds to the `--task name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2851,7 +2875,7 @@
         },
         "tests": {
           "default": null,
-          "description": "Select tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
+          "description": "Select tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\ncorresponds to the `-t --test name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2886,7 +2910,7 @@
             }
           ],
           "default": null,
-          "description": "When this option is used, timestamp in a format\n`YYYYMMDD-hhmmss` is added to all generated output\nfiles between their basename and extension. For\nexample `-T -o output.xml -r report.html -l none`\ncreates files like `output-20070503-154410.xml` and\n`report-20070503-154410.html`.\n\n---\ncorresponds to the `-T --timestampoutputs` option of _robot_\n",
+          "description": "When this option is used, timestamp in a format\n`YYYYMMDD-hhmmss` is added to all generated output\nfiles between their basename and extension. For\nexample `-T -o output.xml -r report.html -l none`\ncreates files like `output-20070503-154410.xml` and\n`report-20070503-154410.html`.\n\ncorresponds to the `-T --timestampoutputs` option of _robot_\n",
           "title": "Timestamp outputs"
         },
         "tool": {
@@ -2896,7 +2920,7 @@
         },
         "variable-files": {
           "default": null,
-          "description": "Python or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```\n--variablefile path/vars.yaml\n--variablefile environment.py:testing\n```\n\n---\ncorresponds to the `-V --variablefile path *` option of _robot_\n",
+          "description": "Python or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```\n--variablefile path/vars.yaml\n--variablefile environment.py:testing\n```\n\ncorresponds to the `-V --variablefile path *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2925,7 +2949,7 @@
             ]
           },
           "default": null,
-          "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\n---\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
+          "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
           "title": "Variables",
           "type": [
             "object",
@@ -2945,7 +2969,7 @@
             }
           ],
           "default": null,
-          "description": "xUnit compatible result file. Not created unless this\noption is specified.\n\n---\ncorresponds to the `-x --xunit file` option of _robot_\n",
+          "description": "xUnit compatible result file. Not created unless this\noption is specified.\n\ncorresponds to the `-x --xunit file` option of _robot_\n",
           "title": "Xunit"
         }
       },
@@ -2969,7 +2993,7 @@
           ]
         },
         "console": {
-          "description": "How to report execution on the console.\nverbose:  report every suite and test (default)\ndotted:   only show `.` for passed test, `s` for\nskipped tests, and `F` for failed tests\nquiet:    no output except for errors and warnings\nnone:     no output whatsoever\n\n---\ncorresponds to the `--console type` option of _robot_\n",
+          "description": "How to report execution on the console.\nverbose:  report every suite and test (default)\ndotted:   only show `.` for passed test, `s` for\nskipped tests, and `F` for failed tests\nquiet:    no output except for errors and warnings\nnone:     no output whatsoever\n\ncorresponds to the `--console type` option of _robot_\n",
           "enum": [
             "verbose",
             "dotted",
@@ -2984,7 +3008,7 @@
           ]
         },
         "console-colors": {
-          "description": "Use colors on console output or not.\nauto: use colors when output not redirected (default)\non:   always use colors\nansi: like `on` but use ANSI colors also on Windows\noff:  disable colors altogether\n\n---\ncorresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_\n",
+          "description": "Use colors on console output or not.\nauto: use colors when output not redirected (default)\non:   always use colors\nansi: like `on` but use ANSI colors also on Windows\noff:  disable colors altogether\n\ncorresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_\n",
           "enum": [
             "auto",
             "on",
@@ -2998,7 +3022,7 @@
           ]
         },
         "console-markers": {
-          "description": "Show markers on the console when top level\nkeywords in a test case end. Values have same\nsemantics as with --consolecolors.\n\n---\ncorresponds to the `-K --consolemarkers auto|on|off` option of _robot_\n",
+          "description": "Show markers on the console when top level\nkeywords in a test case end. Values have same\nsemantics as with --consolecolors.\n\ncorresponds to the `-K --consolemarkers auto|on|off` option of _robot_\n",
           "enum": [
             "auto",
             "on",
@@ -3012,7 +3036,7 @@
         },
         "console-width": {
           "default": null,
-          "description": "Width of the console output. Default is 78.\n\n---\ncorresponds to the `-W --consolewidth chars` option of _robot_\n",
+          "description": "Width of the console output. Default is 78.\n\ncorresponds to the `-W --consolewidth chars` option of _robot_\n",
           "title": "Console width",
           "type": [
             "integer",
@@ -3032,7 +3056,7 @@
             }
           ],
           "default": null,
-          "description": "Debug file written during execution. Not created\nunless this option is specified.\n\n---\ncorresponds to the `-b --debugfile file` option of _robot_\n",
+          "description": "Debug file written during execution. Not created\nunless this option is specified.\n\ncorresponds to the `-b --debugfile file` option of _robot_\n",
           "title": "Debug file"
         },
         "description": {
@@ -3066,7 +3090,7 @@
             }
           ],
           "default": null,
-          "description": "Set the documentation of the top level suite.\nSimple formatting is supported (e.g. *bold*). If the\ndocumentation contains spaces, it must be quoted.\nIf the value is path to an existing file, actual\ndocumentation is read from that file.\n\nExamples:\n\n```\n--doc \"Very *good* example\"\n--doc doc_from_file.txt\n```\n\n---\ncorresponds to the `-D --doc documentation` option of _robot_\n",
+          "description": "Set the documentation of the top level suite.\nSimple formatting is supported (e.g. *bold*). If the\ndocumentation contains spaces, it must be quoted.\nIf the value is path to an existing file, actual\ndocumentation is read from that file.\n\nExamples:\n\n```\n--doc \"Very *good* example\"\n--doc doc_from_file.txt\n```\n\ncorresponds to the `-D --doc documentation` option of _robot_\n",
           "title": "Doc"
         },
         "dotted": {
@@ -3087,7 +3111,7 @@
             }
           ],
           "default": null,
-          "description": "Shortcut for `--console dotted`.\n\n---\ncorresponds to the `-. --dotted` option of _robot_\n",
+          "description": "Shortcut for `--console dotted`.\n\ncorresponds to the `-. --dotted` option of _robot_\n",
           "title": "Dotted"
         },
         "dry-run": {
@@ -3108,7 +3132,7 @@
             }
           ],
           "default": null,
-          "description": "Verifies test data and runs tests so that library\nkeywords are not executed.\n\n---\ncorresponds to the `--dryrun` option of _robot_\n",
+          "description": "Verifies test data and runs tests so that library\nkeywords are not executed.\n\ncorresponds to the `--dryrun` option of _robot_\n",
           "title": "Dry run"
         },
         "enabled": {
@@ -3141,7 +3165,7 @@
         },
         "excludes": {
           "default": null,
-          "description": "Select test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
+          "description": "Select test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3176,7 +3200,7 @@
             }
           ],
           "default": null,
-          "description": "Stops test execution if any error occurs when parsing\ntest data, importing libraries, and so on.\n\n---\ncorresponds to the `--exitonerror` option of _robot_\n",
+          "description": "Stops test execution if any error occurs when parsing\ntest data, importing libraries, and so on.\n\ncorresponds to the `--exitonerror` option of _robot_\n",
           "title": "Exit on error"
         },
         "exit-on-failure": {
@@ -3197,14 +3221,17 @@
             }
           ],
           "default": null,
-          "description": "Stops test execution if any test fails.\n\n---\ncorresponds to the `-X --exitonfailure` option of _robot_\n",
+          "description": "Stops test execution if any test fails.\n\ncorresponds to the `-X --exitonfailure` option of _robot_\n",
           "title": "Exit on failure"
         },
         "expand-keywords": {
           "default": null,
-          "description": "Matching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\n---\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Matching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
+              {
+                "type": "string"
+              },
               {
                 "$ref": "#/definitions/NamePattern"
               },
@@ -3232,7 +3259,7 @@
             }
           ],
           "default": null,
-          "description": "Parse only files with this extension when executing\na directory. Has no effect when running individual\nfiles or when using resource files. If more than one\nextension is needed, separate them with a colon.\n\nExamples:\n\n```\n`--extension txt`, `--extension robot:txt`\n```\n\n\nOnly `*.robot` files are parsed by default.\n\n---\ncorresponds to the `-F --extension value` option of _robot_\n",
+          "description": "Parse only files with this extension when executing\na directory. Has no effect when running individual\nfiles or when using resource files. If more than one\nextension is needed, separate them with a colon.\n\nExamples:\n\n```\n`--extension txt`, `--extension robot:txt`\n```\n\n\nOnly `*.robot` files are parsed by default.\n\ncorresponds to the `-F --extension value` option of _robot_\n",
           "title": "Extensions"
         },
         "extra-args": {
@@ -3261,7 +3288,7 @@
         },
         "extra-excludes": {
           "default": null,
-          "description": "Appends entries to the --exclude option.\n\n---\n\nSelect test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
+          "description": "Appends entries to the --exclude option.\n\nSelect test cases not to run by tag. These tests are\nnot run even if included with --include. Tags are\nmatched using same rules as with --include.\n\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3280,9 +3307,12 @@
         },
         "extra-expand-keywords": {
           "default": null,
-          "description": "Appends entries to the --expandkeywords option.\n\n---\n\nMatching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\n---\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --expandkeywords option.\n\nMatching keywords will be automatically expanded in\nthe log file. Matching against keyword name or tags\nwork using same rules as with --removekeywords.\n\nExamples:\n\n```\n--expandkeywords name:BuiltIn.Log\n--expandkeywords tag:expand\n```\n\ncorresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
+              {
+                "type": "string"
+              },
               {
                 "$ref": "#/definitions/NamePattern"
               },
@@ -3298,7 +3328,7 @@
           ]
         },
         "extra-flatten-keywords": {
-          "description": "Appends entries to the --flattenkeywords option.\n\n---\n\nFlattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\n---\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --flattenkeywords option.\n\nFlattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3328,7 +3358,7 @@
         },
         "extra-includes": {
           "default": null,
-          "description": "Appends entries to the --include option.\n\n---\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "description": "Appends entries to the --include option.\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3347,7 +3377,7 @@
         },
         "extra-languages": {
           "default": null,
-          "description": "Appends entries to the --language option.\n\n---\n\nActivate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\n---\ncorresponds to the `--language lang *` option of _robot_\n",
+          "description": "Appends entries to the --language option.\n\nActivate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\ncorresponds to the `--language lang *` option of _rebot_\n",
           "items": {
             "anyOf": [
               {
@@ -3379,7 +3409,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Appends entries to the --listener option.\n\n---\n\nA class for monitoring test execution. Gets\nnotifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListenerClass\n--listener path/to/Listener.py:arg1:arg2\n```\n\n---\ncorresponds to the `--listener class *` option of _robot_\n",
+          "description": "Appends entries to the --listener option.\n\nA class for monitoring test execution. Gets\nnotifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListenerClass\n--listener path/to/Listener.py:arg1:arg2\n```\n\ncorresponds to the `--listener class *` option of _rebot_\n",
           "title": "Extra listeners",
           "type": [
             "object",
@@ -3398,7 +3428,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --metadata option.\n\n---\n\nSet metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
+          "description": "Appends entries to the --metadata option.\n\nSet metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
           "title": "Extra metadata",
           "type": [
             "object",
@@ -3439,7 +3469,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Appends entries to the --prerebotmodifier option.\n\n---\n\nClass to programmatically modify the result\nmodel before creating reports and logs.\n\n---\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
+          "description": "Appends entries to the --prerebotmodifier option.\n\nClass to programmatically modify the result\nmodel before creating reports and logs.\n\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
           "title": "Extra pre rebot modifiers",
           "type": [
             "object",
@@ -3461,7 +3491,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Appends entries to the --prerunmodifier option.\n\n---\n\nClass to programmatically modify the suite\nstructure before execution.\n\n---\ncorresponds to the `--prerunmodifier class *` option of _robot_\n",
+          "description": "Appends entries to the --prerunmodifier option.\n\nClass to programmatically modify the suite\nstructure before execution.\n\ncorresponds to the `--prerunmodifier class *` option of _rebot_\n",
           "title": "Extra pre run modifiers",
           "type": [
             "object",
@@ -3470,7 +3500,7 @@
         },
         "extra-python-path": {
           "default": null,
-          "description": "Appends entries to the --pythonpath option.\n\n---\n\nAdditional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
+          "description": "Appends entries to the --pythonpath option.\n\nAdditional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3488,9 +3518,12 @@
           ]
         },
         "extra-remove-keywords": {
-          "description": "Appends entries to the --removekeywords option.\n\n---\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\n---\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
+              {
+                "type": "string"
+              },
               {
                 "enum": [
                   "all",
@@ -3516,7 +3549,7 @@
         },
         "extra-set-tag": {
           "default": null,
-          "description": "Appends entries to the --settag option.\n\n---\n\nSets given tag(s) to all executed tests.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
+          "description": "Appends entries to the --settag option.\n\nSets given tag(s) to all executed tests.\n\ncorresponds to the `-G --settag tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3535,7 +3568,7 @@
         },
         "extra-skip": {
           "default": null,
-          "description": "Appends entries to the --skip option.\n\n---\n\nTests having given tag will be skipped. Tag can be\na pattern.\n\n---\ncorresponds to the `--skip tag *` option of _robot_\n",
+          "description": "Appends entries to the --skip option.\n\nTests having given tag will be skipped. Tag can be\na pattern.\n\ncorresponds to the `--skip tag *` option of _rebot_\n",
           "items": {
             "anyOf": [
               {
@@ -3554,7 +3587,7 @@
         },
         "extra-skip-on-failure": {
           "default": null,
-          "description": "Appends entries to the --skiponfailure option.\n\n---\n\nTests having given tag will be skipped if they fail.\nTag can be a pattern\n\n---\ncorresponds to the `--skiponfailure tag *` option of _robot_\n",
+          "description": "Appends entries to the --skiponfailure option.\n\nTests having given tag will be skipped if they fail.\nTag can be a pattern\n\ncorresponds to the `--skiponfailure tag *` option of _rebot_\n",
           "items": {
             "anyOf": [
               {
@@ -3573,7 +3606,7 @@
         },
         "extra-suites": {
           "default": null,
-          "description": "Appends entries to the --suite option.\n\n---\n\nSelect suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
+          "description": "Appends entries to the --suite option.\n\nSelect suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\ncorresponds to the `-s --suite name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3602,7 +3635,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --tagdoc option.\n\n---\n\nAdd documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\n---\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
+          "description": "Appends entries to the --tagdoc option.\n\nAdd documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
           "title": "Extra tag doc",
           "type": [
             "object",
@@ -3611,7 +3644,7 @@
         },
         "extra-tag-stat-combine": {
           "default": null,
-          "description": "Appends entries to the --tagstatcombine option.\n\n---\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\n---\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "description": "Appends entries to the --tagstatcombine option.\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3633,7 +3666,7 @@
         },
         "extra-tag-stat-exclude": {
           "default": null,
-          "description": "Appends entries to the --tagstatexclude option.\n\n---\n\nExclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\n---\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
+          "description": "Appends entries to the --tagstatexclude option.\n\nExclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3652,7 +3685,7 @@
         },
         "extra-tag-stat-include": {
           "default": null,
-          "description": "Appends entries to the --tagstatinclude option.\n\n---\n\nInclude only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\n---\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
+          "description": "Appends entries to the --tagstatinclude option.\n\nInclude only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3681,7 +3714,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --tagstatlink option.\n\n---\n\nAdd external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\n---\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
+          "description": "Appends entries to the --tagstatlink option.\n\nAdd external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
           "title": "Extra tag stat link",
           "type": [
             "object",
@@ -3690,7 +3723,7 @@
         },
         "extra-tasks": {
           "default": null,
-          "description": "Appends entries to the --task option.\n\n---\n\nAlias to --test. Especially applicable with --rpa.\n\n---\ncorresponds to the `--task name *` option of _robot_\n",
+          "description": "Appends entries to the --task option.\n\nAlias to --test. Especially applicable with --rpa.\n\ncorresponds to the `--task name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3709,7 +3742,7 @@
         },
         "extra-tests": {
           "default": null,
-          "description": "Appends entries to the --test option.\n\n---\n\nSelect tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
+          "description": "Appends entries to the --test option.\n\nSelect tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\ncorresponds to the `-t --test name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3728,7 +3761,7 @@
         },
         "extra-variable-files": {
           "default": null,
-          "description": "Appends entries to the --variablefile option.\n\n---\n\nPython or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```\n--variablefile path/vars.yaml\n--variablefile environment.py:testing\n```\n\n---\ncorresponds to the `-V --variablefile path *` option of _robot_\n",
+          "description": "Appends entries to the --variablefile option.\n\nPython or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```\n--variablefile path/vars.yaml\n--variablefile environment.py:testing\n```\n\ncorresponds to the `-V --variablefile path *` option of _rebot_\n",
           "items": {
             "anyOf": [
               {
@@ -3757,7 +3790,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --variable option.\n\n---\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\n---\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
+          "description": "Appends entries to the --variable option.\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\ncorresponds to the `-v --variable name:value *` option of _rebot_\n",
           "title": "Extra variables",
           "type": [
             "object",
@@ -3765,7 +3798,7 @@
           ]
         },
         "flatten-keywords": {
-          "description": "Flattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\n---\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Flattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3795,7 +3828,7 @@
         },
         "includes": {
           "default": null,
-          "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3814,7 +3847,7 @@
         },
         "languages": {
           "default": null,
-          "description": "Activate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\n---\ncorresponds to the `--language lang *` option of _robot_\n",
+          "description": "Activate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\ncorresponds to the `--language lang *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3858,7 +3891,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "A class for monitoring test execution. Gets\nnotifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListenerClass\n--listener path/to/Listener.py:arg1:arg2\n```\n\n---\ncorresponds to the `--listener class *` option of _robot_\n",
+          "description": "A class for monitoring test execution. Gets\nnotifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListenerClass\n--listener path/to/Listener.py:arg1:arg2\n```\n\ncorresponds to the `--listener class *` option of _robot_\n",
           "title": "Listeners",
           "type": [
             "object",
@@ -3878,7 +3911,7 @@
             }
           ],
           "default": null,
-          "description": "HTML log file. Can be disabled by giving a special\nvalue `NONE`. Default: log.html\n\nExamples:\n\n```\n`--log mylog.html`, `-l NONE`\n```\n\n---\ncorresponds to the `-l --log file` option of _robot_\n",
+          "description": "HTML log file. Can be disabled by giving a special\nvalue `NONE`. Default: log.html\n\nExamples:\n\n```\n`--log mylog.html`, `-l NONE`\n```\n\ncorresponds to the `-l --log file` option of _robot_\n",
           "title": "Log"
         },
         "log-level": {
@@ -3894,7 +3927,7 @@
             }
           ],
           "default": null,
-          "description": "Threshold level for logging. Available levels: TRACE,\nDEBUG, INFO (default), WARN, NONE (no logging). Use\nsyntax `LOGLEVEL:DEFAULT` to define the default\nvisible log level in log files.\n\nExamples:\n\n```\n--loglevel DEBUG\n--loglevel DEBUG:INFO\n```\n\n---\ncorresponds to the `-L --loglevel level` option of _robot_\n",
+          "description": "Threshold level for logging. Available levels: TRACE,\nDEBUG, INFO (default), WARN, NONE (no logging). Use\nsyntax `LOGLEVEL:DEFAULT` to define the default\nvisible log level in log files.\n\nExamples:\n\n```\n--loglevel DEBUG\n--loglevel DEBUG:INFO\n```\n\ncorresponds to the `-L --loglevel level` option of _robot_\n",
           "title": "Log level"
         },
         "log-title": {
@@ -3910,12 +3943,12 @@
             }
           ],
           "default": null,
-          "description": "Title for the generated log file. The default title\nis `<SuiteName> Log`.\n\n---\ncorresponds to the `--logtitle title` option of _robot_\n",
+          "description": "Title for the generated log file. The default title\nis `<SuiteName> Log`.\n\ncorresponds to the `--logtitle title` option of _robot_\n",
           "title": "Log title"
         },
         "max-assign-length": {
           "default": null,
-          "description": "Maximum number of characters to show in log\nwhen variables are assigned. Zero or negative values\ncan be used to avoid showing assigned values at all.\nDefault is 200.\n\n---\ncorresponds to the `--maxassignlength characters` option of _robot_\n",
+          "description": "Maximum number of characters to show in log\nwhen variables are assigned. Zero or negative values\ncan be used to avoid showing assigned values at all.\nDefault is 200.\n\ncorresponds to the `--maxassignlength characters` option of _robot_\n",
           "title": "Max assign length",
           "type": [
             "integer",
@@ -3924,7 +3957,7 @@
         },
         "max-error-lines": {
           "default": null,
-          "description": "Maximum number of error message lines to show in\nreport when tests fail. Default is 40, minimum is 10\nand `NONE` can be used to show the full message.\n\n---\ncorresponds to the `--maxerrorlines lines` option of _robot_\n",
+          "description": "Maximum number of error message lines to show in\nreport when tests fail. Default is 40, minimum is 10\nand `NONE` can be used to show the full message.\n\ncorresponds to the `--maxerrorlines lines` option of _robot_\n",
           "title": "Max error lines",
           "type": [
             "integer",
@@ -3943,7 +3976,7 @@
             ]
           },
           "default": null,
-          "description": "Set metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
+          "description": "Set metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
           "title": "Metadata",
           "type": [
             "object",
@@ -3963,7 +3996,7 @@
             }
           ],
           "default": null,
-          "description": "Set the name of the top level suite. By default the\nname is created based on the executed file or\ndirectory.\n\n---\ncorresponds to the `-N --name name` option of _robot_\n",
+          "description": "Set the name of the top level suite. By default the\nname is created based on the executed file or\ndirectory.\n\ncorresponds to the `-N --name name` option of _robot_\n",
           "title": "Name"
         },
         "no-status-rc": {
@@ -3984,7 +4017,7 @@
             }
           ],
           "default": null,
-          "description": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\n---\ncorresponds to the `--nostatusrc` option of _robot_\n",
+          "description": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\ncorresponds to the `--nostatusrc` option of _robot_\n",
           "title": "No status rc"
         },
         "output": {
@@ -4000,7 +4033,7 @@
             }
           ],
           "default": null,
-          "description": "XML output file. Given path, similarly as paths given\nto --log, --report, --xunit, and --debugfile, is\nrelative to --outputdir unless given as an absolute\npath. Other output files are created based on XML\noutput files after the test execution and XML outputs\ncan also be further processed with Rebot tool. Can be\ndisabled by giving a special value `NONE`.\nDefault: output.xml\n\n---\ncorresponds to the `-o --output file` option of _robot_\n",
+          "description": "XML output file. Given path, similarly as paths given\nto --log, --report, --xunit, and --debugfile, is\nrelative to --outputdir unless given as an absolute\npath. Other output files are created based on XML\noutput files after the test execution and XML outputs\ncan also be further processed with Rebot tool. Can be\ndisabled by giving a special value `NONE`.\nDefault: output.xml\n\ncorresponds to the `-o --output file` option of _robot_\n",
           "title": "Output"
         },
         "output-dir": {
@@ -4016,7 +4049,7 @@
             }
           ],
           "default": null,
-          "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n\n---\ncorresponds to the `-d --outputdir dir` option of _robot_\n",
+          "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n\ncorresponds to the `-d --outputdir dir` option of _robot_\n",
           "title": "Output dir"
         },
         "paths": {
@@ -4035,7 +4068,7 @@
             }
           ],
           "default": null,
-          "description": "Specifies the paths where robot/robotcode should discover tests.\nIf no paths are given at the command line this value is used.\n\nExamples:\n```toml\npaths = [\"tests\"]\n```\n\n---\nCorresponds to the `paths` argument of __robot__.\n",
+          "description": "Specifies the paths where robot/robotcode should discover tests.\nIf no paths are given at the command line this value is used.\n\nExamples:\n```toml\npaths = [\"tests\"]\n```\n\nCorresponds to the `paths` argument of __robot__.\n",
           "title": "Paths"
         },
         "pre-rebot-modifiers": {
@@ -4053,7 +4086,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Class to programmatically modify the result\nmodel before creating reports and logs.\n\n---\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
+          "description": "Class to programmatically modify the result\nmodel before creating reports and logs.\n\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
           "title": "Pre rebot modifiers",
           "type": [
             "object",
@@ -4075,7 +4108,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Class to programmatically modify the suite\nstructure before execution.\n\n---\ncorresponds to the `--prerunmodifier class *` option of _robot_\n",
+          "description": "Class to programmatically modify the suite\nstructure before execution.\n\ncorresponds to the `--prerunmodifier class *` option of _robot_\n",
           "title": "Pre run modifiers",
           "type": [
             "object",
@@ -4093,7 +4126,7 @@
         },
         "python-path": {
           "default": null,
-          "description": "Additional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\n---\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
+          "description": "Additional locations (directories, ZIPs) where to\nsearch libraries and other extensions when they are\nimported. Multiple paths can be given by separating\nthem with a colon (`:`) or by using this option\nseveral times. Given path can also be a glob pattern\nmatching multiple paths.\n\nExamples:\n\n```\n--pythonpath libs/\n--pythonpath /opt/libs:libraries.zip\n```\n\ncorresponds to the `-P --pythonpath path *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -4128,7 +4161,7 @@
             }
           ],
           "default": null,
-          "description": "Shortcut for `--console quiet`.\n\n---\ncorresponds to the `--quiet` option of _robot_\n",
+          "description": "Shortcut for `--console quiet`.\n\ncorresponds to the `--quiet` option of _robot_\n",
           "title": "Quiet"
         },
         "randomize": {
@@ -4149,7 +4182,7 @@
               "type": "null"
             }
           ],
-          "description": "Randomizes the test execution order.\nall:    randomizes both suites and tests\nsuites: randomizes suites\ntests:  randomizes tests\nnone:   no randomization (default)\nUse syntax `VALUE:SEED` to give a custom random seed.\nThe seed must be an integer.\n\nExamples:\n\n```\n--randomize all\n--randomize tests:1234\n```\n\n---\ncorresponds to the `--randomize all|suites|tests|none` option of _robot_\n",
+          "description": "Randomizes the test execution order.\nall:    randomizes both suites and tests\nsuites: randomizes suites\ntests:  randomizes tests\nnone:   no randomization (default)\nUse syntax `VALUE:SEED` to give a custom random seed.\nThe seed must be an integer.\n\nExamples:\n\n```\n--randomize all\n--randomize tests:1234\n```\n\ncorresponds to the `--randomize all|suites|tests|none` option of _robot_\n",
           "title": "Randomize"
         },
         "re-run-failed": {
@@ -4165,7 +4198,7 @@
             }
           ],
           "default": null,
-          "description": "Select failed tests from an earlier output file to be\nre-executed. Equivalent to selecting same tests\nindividually using --test.\n\n---\ncorresponds to the `-R --rerunfailed output` option of _robot_\n",
+          "description": "Select failed tests from an earlier output file to be\nre-executed. Equivalent to selecting same tests\nindividually using --test.\n\ncorresponds to the `-R --rerunfailed output` option of _robot_\n",
           "title": "Re run failed"
         },
         "re-run-failed-suites": {
@@ -4181,7 +4214,7 @@
             }
           ],
           "default": null,
-          "description": "Select failed suites from an earlier output\nfile to be re-executed.\n\n---\ncorresponds to the `-S --rerunfailedsuites output` option of _robot_\n",
+          "description": "Select failed suites from an earlier output\nfile to be re-executed.\n\ncorresponds to the `-S --rerunfailedsuites output` option of _robot_\n",
           "title": "Re run failed suites"
         },
         "rebot": {
@@ -4197,9 +4230,12 @@
           "title": "Rebot"
         },
         "remove-keywords": {
-          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\n---\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
+              {
+                "type": "string"
+              },
               {
                 "enum": [
                   "all",
@@ -4236,7 +4272,7 @@
             }
           ],
           "default": null,
-          "description": "HTML report file. Can be disabled with `NONE`\nsimilarly as --log. Default: report.html\n\n---\ncorresponds to the `-r --report file` option of _robot_\n",
+          "description": "HTML report file. Can be disabled with `NONE`\nsimilarly as --log. Default: report.html\n\ncorresponds to the `-r --report file` option of _robot_\n",
           "title": "Report"
         },
         "report-background": {
@@ -4252,7 +4288,7 @@
             }
           ],
           "default": null,
-          "description": "Background colors to use in the report file.\nGiven in format `passed:failed:skipped` where the\n`:skipped` part can be omitted. Both color names and\ncodes work.\n\nExamples:\n\n```\n--reportbackground green:red:yellow\n--reportbackground #00E:#E00\n```\n\n---\ncorresponds to the `--reportbackground colors` option of _robot_\n",
+          "description": "Background colors to use in the report file.\nGiven in format `passed:failed:skipped` where the\n`:skipped` part can be omitted. Both color names and\ncodes work.\n\nExamples:\n\n```\n--reportbackground green:red:yellow\n--reportbackground #00E:#E00\n```\n\ncorresponds to the `--reportbackground colors` option of _robot_\n",
           "title": "Report background"
         },
         "report-title": {
@@ -4268,7 +4304,7 @@
             }
           ],
           "default": null,
-          "description": "Title for the generated report file. The default\ntitle is `<SuiteName> Report`.\n\n---\ncorresponds to the `--reporttitle title` option of _robot_\n",
+          "description": "Title for the generated report file. The default\ntitle is `<SuiteName> Report`.\n\ncorresponds to the `--reporttitle title` option of _robot_\n",
           "title": "Report title"
         },
         "rpa": {
@@ -4289,7 +4325,7 @@
             }
           ],
           "default": null,
-          "description": "Turn on the generic automation mode. Mainly affects\nterminology so that \"test\" is replaced with \"task\"\nin logs and reports. By default the mode is got\nfrom test/task header in data files.\n\n---\ncorresponds to the `--rpa` option of _robot_\n",
+          "description": "Turn on the generic automation mode. Mainly affects\nterminology so that \"test\" is replaced with \"task\"\nin logs and reports. By default the mode is got\nfrom test/task header in data files.\n\ncorresponds to the `--rpa` option of _robot_\n",
           "title": "Rpa"
         },
         "run-empty-suite": {
@@ -4310,12 +4346,12 @@
             }
           ],
           "default": null,
-          "description": "Executes suite even if it contains no tests. Useful\ne.g. with --include/--exclude when it is not an error\nthat no test matches the condition.\n\n---\ncorresponds to the `--runemptysuite` option of _robot_\n",
+          "description": "Executes suite even if it contains no tests. Useful\ne.g. with --include/--exclude when it is not an error\nthat no test matches the condition.\n\ncorresponds to the `--runemptysuite` option of _robot_\n",
           "title": "Run empty suite"
         },
         "set-tag": {
           "default": null,
-          "description": "Sets given tag(s) to all executed tests.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
+          "description": "Sets given tag(s) to all executed tests.\n\ncorresponds to the `-G --settag tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -4334,7 +4370,7 @@
         },
         "skip": {
           "default": null,
-          "description": "Tests having given tag will be skipped. Tag can be\na pattern.\n\n---\ncorresponds to the `--skip tag *` option of _robot_\n",
+          "description": "Tests having given tag will be skipped. Tag can be\na pattern.\n\ncorresponds to the `--skip tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -4353,7 +4389,7 @@
         },
         "skip-on-failure": {
           "default": null,
-          "description": "Tests having given tag will be skipped if they fail.\nTag can be a pattern\n\n---\ncorresponds to the `--skiponfailure tag *` option of _robot_\n",
+          "description": "Tests having given tag will be skipped if they fail.\nTag can be a pattern\n\ncorresponds to the `--skiponfailure tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -4388,7 +4424,7 @@
             }
           ],
           "default": null,
-          "description": "Causes teardowns to be skipped if test execution is\nstopped prematurely.\n\n---\ncorresponds to the `--skipteardownonexit` option of _robot_\n",
+          "description": "Causes teardowns to be skipped if test execution is\nstopped prematurely.\n\ncorresponds to the `--skipteardownonexit` option of _robot_\n",
           "title": "Skip teardown on exit"
         },
         "split-log": {
@@ -4409,12 +4445,12 @@
             }
           ],
           "default": null,
-          "description": "Split the log file into smaller pieces that open in\nbrowsers transparently.\n\n---\ncorresponds to the `--splitlog` option of _robot_\n",
+          "description": "Split the log file into smaller pieces that open in\nbrowsers transparently.\n\ncorresponds to the `--splitlog` option of _robot_\n",
           "title": "Split log"
         },
         "suite-stat-level": {
           "default": null,
-          "description": "How many levels to show in `Statistics by Suite`\nin log and report. By default all suite levels are\nshown. Example:  --suitestatlevel 3\n\n---\ncorresponds to the `--suitestatlevel level` option of _robot_\n",
+          "description": "How many levels to show in `Statistics by Suite`\nin log and report. By default all suite levels are\nshown. Example:  --suitestatlevel 3\n\ncorresponds to the `--suitestatlevel level` option of _robot_\n",
           "title": "Suite stat level",
           "type": [
             "integer",
@@ -4423,7 +4459,7 @@
         },
         "suites": {
           "default": null,
-          "description": "Select suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
+          "description": "Select suites by name. When this option is used with\n--test, --include or --exclude, only tests in\nmatching suites and also matching other filtering\ncriteria are selected. Name can be a simple pattern\nsimilarly as with --test and it can contain parent\nname separated with a dot. For example, `-s X.Y`\nselects suite `Y` only if its parent is `X`.\n\ncorresponds to the `-s --suite name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -4452,7 +4488,7 @@
             ]
           },
           "default": null,
-          "description": "Add documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\n---\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
+          "description": "Add documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
           "title": "Tag doc",
           "type": [
             "object",
@@ -4461,7 +4497,7 @@
         },
         "tag-stat-combine": {
           "default": null,
-          "description": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\n---\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "description": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```\n--tagstatcombine requirement-*\n--tagstatcombine tag1ANDtag2:My_name\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -4483,7 +4519,7 @@
         },
         "tag-stat-exclude": {
           "default": null,
-          "description": "Exclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\n---\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
+          "description": "Exclude matching tags from `Statistics by Tag`.\nThis option can be used with --tagstatinclude\nsimilarly as --exclude is used with --include.\n\ncorresponds to the `--tagstatexclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -4502,7 +4538,7 @@
         },
         "tag-stat-include": {
           "default": null,
-          "description": "Include only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\n---\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
+          "description": "Include only matching tags in `Statistics by Tag`\nin log and report. By default all tags are shown.\nGiven tag can be a pattern like with --include.\n\ncorresponds to the `--tagstatinclude tag *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -4531,7 +4567,7 @@
             ]
           },
           "default": null,
-          "description": "Add external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\n---\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
+          "description": "Add external links into `Statistics by\nTag`. Pattern can use `*`, `?` and `[]` as wildcards\nlike --test. Characters matching to `*` and `?`\nwildcards can be used in link and title with syntax\n%N, where N is index of the match (starting from 1).\n\nExamples:\n\n```\n--tagstatlink mytag:http://my.domain:Title\n--tagstatlink \"bug-*:http://url/id=%1:Issue Tracker\"\n```\n\ncorresponds to the `--tagstatlink pattern:link:title *` option of _robot_\n",
           "title": "Tag stat link",
           "type": [
             "object",
@@ -4540,7 +4576,7 @@
         },
         "tasks": {
           "default": null,
-          "description": "Alias to --test. Especially applicable with --rpa.\n\n---\ncorresponds to the `--task name *` option of _robot_\n",
+          "description": "Alias to --test. Especially applicable with --rpa.\n\ncorresponds to the `--task name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -4572,7 +4608,7 @@
         },
         "tests": {
           "default": null,
-          "description": "Select tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
+          "description": "Select tests by name or by long name containing also\nparent suite name like `Parent.Test`. Name is case\nand space insensitive and it can also be a simple\npattern where `*` matches anything, `?` matches any\nsingle character, and `[chars]` matches one character\nin brackets.\n\ncorresponds to the `-t --test name *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -4607,12 +4643,12 @@
             }
           ],
           "default": null,
-          "description": "When this option is used, timestamp in a format\n`YYYYMMDD-hhmmss` is added to all generated output\nfiles between their basename and extension. For\nexample `-T -o output.xml -r report.html -l none`\ncreates files like `output-20070503-154410.xml` and\n`report-20070503-154410.html`.\n\n---\ncorresponds to the `-T --timestampoutputs` option of _robot_\n",
+          "description": "When this option is used, timestamp in a format\n`YYYYMMDD-hhmmss` is added to all generated output\nfiles between their basename and extension. For\nexample `-T -o output.xml -r report.html -l none`\ncreates files like `output-20070503-154410.xml` and\n`report-20070503-154410.html`.\n\ncorresponds to the `-T --timestampoutputs` option of _robot_\n",
           "title": "Timestamp outputs"
         },
         "variable-files": {
           "default": null,
-          "description": "Python or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```\n--variablefile path/vars.yaml\n--variablefile environment.py:testing\n```\n\n---\ncorresponds to the `-V --variablefile path *` option of _robot_\n",
+          "description": "Python or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```\n--variablefile path/vars.yaml\n--variablefile environment.py:testing\n```\n\ncorresponds to the `-V --variablefile path *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -4641,7 +4677,7 @@
             ]
           },
           "default": null,
-          "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\n---\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
+          "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
           "title": "Variables",
           "type": [
             "object",
@@ -4661,7 +4697,7 @@
             }
           ],
           "default": null,
-          "description": "xUnit compatible result file. Not created unless this\noption is specified.\n\n---\ncorresponds to the `-x --xunit file` option of _robot_\n",
+          "description": "xUnit compatible result file. Not created unless this\noption is specified.\n\ncorresponds to the `-x --xunit file` option of _robot_\n",
           "title": "Xunit"
         }
       },
@@ -4717,12 +4753,12 @@
             }
           ],
           "default": null,
-          "description": "Override the documentation of the top level suite.\n\n---\ncorresponds to the `-D --doc document` option of _robot_\n",
+          "description": "Override the documentation of the top level suite.\n\ncorresponds to the `-D --doc document` option of _testdoc_\n",
           "title": "Doc"
         },
         "excludes": {
           "default": null,
-          "description": "Exclude tests by tags.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
+          "description": "Exclude tests by tags.\n\ncorresponds to the `-e --exclude tag *` option of _testdoc_\n",
           "items": {
             "anyOf": [
               {
@@ -4741,7 +4777,7 @@
         },
         "extra-excludes": {
           "default": null,
-          "description": "Appends entries to the --exclude option.\n\n---\n\nExclude tests by tags.\n\n---\ncorresponds to the `-e --exclude tag *` option of _robot_\n",
+          "description": "Appends entries to the --exclude option.\n\nExclude tests by tags.\n\ncorresponds to the `-e --exclude tag *` option of _testdoc_\n",
           "items": {
             "anyOf": [
               {
@@ -4760,7 +4796,7 @@
         },
         "extra-includes": {
           "default": null,
-          "description": "Appends entries to the --include option.\n\n---\n\nInclude tests by tags.\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "description": "Appends entries to the --include option.\n\nInclude tests by tags.\n\ncorresponds to the `-i --include tag *` option of _testdoc_\n",
           "items": {
             "anyOf": [
               {
@@ -4789,7 +4825,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --metadata option.\n\n---\n\nSet/override metadata of the top level suite.\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
+          "description": "Appends entries to the --metadata option.\n\nSet/override metadata of the top level suite.\n\ncorresponds to the `-M --metadata name:value *` option of _testdoc_\n",
           "title": "Extra metadata",
           "type": [
             "object",
@@ -4798,7 +4834,7 @@
         },
         "extra-set-tag": {
           "default": null,
-          "description": "Appends entries to the --settag option.\n\n---\n\nSet given tag(s) to all test cases.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
+          "description": "Appends entries to the --settag option.\n\nSet given tag(s) to all test cases.\n\ncorresponds to the `-G --settag tag *` option of _testdoc_\n",
           "items": {
             "anyOf": [
               {
@@ -4817,7 +4853,7 @@
         },
         "extra-suites": {
           "default": null,
-          "description": "Appends entries to the --suite option.\n\n---\n\nInclude suites by name.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
+          "description": "Appends entries to the --suite option.\n\nInclude suites by name.\n\ncorresponds to the `-s --suite name *` option of _testdoc_\n",
           "items": {
             "anyOf": [
               {
@@ -4836,7 +4872,7 @@
         },
         "extra-tests": {
           "default": null,
-          "description": "Appends entries to the --test option.\n\n---\n\nInclude tests by name.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
+          "description": "Appends entries to the --test option.\n\nInclude tests by name.\n\ncorresponds to the `-t --test name *` option of _testdoc_\n",
           "items": {
             "anyOf": [
               {
@@ -4855,7 +4891,7 @@
         },
         "includes": {
           "default": null,
-          "description": "Include tests by tags.\n\n---\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "description": "Include tests by tags.\n\ncorresponds to the `-i --include tag *` option of _testdoc_\n",
           "items": {
             "anyOf": [
               {
@@ -4884,7 +4920,7 @@
             ]
           },
           "default": null,
-          "description": "Set/override metadata of the top level suite.\n\n---\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
+          "description": "Set/override metadata of the top level suite.\n\ncorresponds to the `-M --metadata name:value *` option of _testdoc_\n",
           "title": "Metadata",
           "type": [
             "object",
@@ -4904,12 +4940,12 @@
             }
           ],
           "default": null,
-          "description": "Override the name of the top level suite.\n\n---\ncorresponds to the `-N --name name` option of _robot_\n",
+          "description": "Override the name of the top level suite.\n\ncorresponds to the `-N --name name` option of _testdoc_\n",
           "title": "Name"
         },
         "set-tag": {
           "default": null,
-          "description": "Set given tag(s) to all test cases.\n\n---\ncorresponds to the `-G --settag tag *` option of _robot_\n",
+          "description": "Set given tag(s) to all test cases.\n\ncorresponds to the `-G --settag tag *` option of _testdoc_\n",
           "items": {
             "anyOf": [
               {
@@ -4928,7 +4964,7 @@
         },
         "suites": {
           "default": null,
-          "description": "Include suites by name.\n\n---\ncorresponds to the `-s --suite name *` option of _robot_\n",
+          "description": "Include suites by name.\n\ncorresponds to the `-s --suite name *` option of _testdoc_\n",
           "items": {
             "anyOf": [
               {
@@ -4947,7 +4983,7 @@
         },
         "tests": {
           "default": null,
-          "description": "Include tests by name.\n\n---\ncorresponds to the `-t --test name *` option of _robot_\n",
+          "description": "Include tests by name.\n\ncorresponds to the `-t --test name *` option of _testdoc_\n",
           "items": {
             "anyOf": [
               {
@@ -4977,7 +5013,7 @@
             }
           ],
           "default": null,
-          "description": "Set the title of the generated documentation.\nUnderscores in the title are converted to spaces.\nThe default title is the name of the top level suite.\n\n---\ncorresponds to the `-T --title title` option of _robot_\n",
+          "description": "Set the title of the generated documentation.\nUnderscores in the title are converted to spaces.\nThe default title is the name of the top level suite.\n\ncorresponds to the `-T --title title` option of _testdoc_\n",
           "title": "Title"
         }
       },

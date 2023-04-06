@@ -127,7 +127,7 @@ def __get_config(obj: Any, entry_protocol: Type[_T]) -> _T:
     return cast(_T, __get_default_config())
 
 
-def __encode_case(obj: Any, field: dataclasses.Field) -> str:  # type: ignore
+def encode_case(obj: Any, field: dataclasses.Field) -> str:  # type: ignore
     alias = field.metadata.get("alias", None)
     if alias:
         return str(alias)
@@ -135,7 +135,7 @@ def __encode_case(obj: Any, field: dataclasses.Field) -> str:  # type: ignore
     return __get_config(obj, HasCaseEncoder)._encode_case(field.name)  # type: ignore
 
 
-def __decode_case(type: Type[_T], name: str) -> str:
+def decode_case(type: Type[_T], name: str) -> str:
     if dataclasses.is_dataclass(type):
         field = next(
             (f for f in dataclasses.fields(type) if f.metadata.get("alias", None) == name),
@@ -153,7 +153,7 @@ def __default(o: Any) -> Any:
             name: value
             for name, value, field in (
                 (
-                    __encode_case(o, field),
+                    encode_case(o, field),
                     getattr(o, field.name),
                     field,
                 )
@@ -263,7 +263,7 @@ def from_dict(
             if origin is Literal:
                 continue
 
-            cased_value: Dict[str, Any] = {__decode_case(t, k): v for k, v in value.items()}
+            cased_value: Dict[str, Any] = {decode_case(t, k): v for k, v in value.items()}
             type_hints = get_type_hints(origin or t)
             try:
                 signature = inspect.signature(origin or t)

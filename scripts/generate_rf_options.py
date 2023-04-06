@@ -24,7 +24,6 @@ type_templates = {
     "pre_run_modifiers": "Dict[str, List[Union[str, StringExpression]]]",
     "randomize": 'Union[str, Literal["all", "suites", "tests", "none"]]',
     "tag_stat_combine": "List[Union[str, Dict[str, str]]]",
-    "flatten_keywords": 'Optional[List[Union[str, Literal["for", "while", "iteration"], NamePattern, TagPattern]]]',
 }
 
 name_corrections = {
@@ -52,6 +51,7 @@ def generate(
     options: Dict[str, Any],
     cmd_options: Optional[Dict[str, Dict[str, str]]] = None,
     extra: bool = False,
+    tool: str = "robot",
 ) -> Optional[Dict[str, Dict[str, str]]]:
     usage_splitted = usage.splitlines()
 
@@ -108,11 +108,11 @@ def generate(
 
     def create_desc(v: Dict[str, str], extra: bool = False) -> str:
         if extra:
-            result = f"            Appends entries to the {v['long']} option.\n\n            ---\n\n"
+            result = f"            Appends entries to the {v['long']} option.\n\n"
         else:
             result = ""
         result += (
-            "\n".join(f"            {v}".rstrip() for v in v["desc"].splitlines()) + "\n\n            ---\n"
+            "\n".join(f"            {v}".rstrip() for v in v["desc"].splitlines()) + "\n\n"
             "            corresponds to the "
             f"`{v['short'] or ''}"
             f"{' ' if v['short'] else ''}"
@@ -121,7 +121,7 @@ def generate(
             f"{v['param'] or ''}"
             f"{' ' if v['star'] else ''}"
             f"{v['star'] or ''}`"
-            " option of _robot_"
+            f" option of _{tool}_"
         )
 
         return result
@@ -150,7 +150,7 @@ def generate(
                 has_literal = [x for x in param_splitted if ":" not in x]
                 has_pattern = [x for x in param_splitted if ":" in x]
                 base_type = (
-                    ("Union[" if has_literal and has_pattern or len(has_pattern) > 1 else "")
+                    ("Union[str, " if has_literal and has_pattern or len(has_pattern) > 1 else "")
                     + (("Literal[" + ", ".join([f'"{x}"' for x in has_literal]) + "]") if has_literal else "")
                     + (
                         (
@@ -245,7 +245,7 @@ output.append("@dataclass")
 output.append("class RobotExtraOptions(BaseOptions):")
 output.append('    """Extra options for _robot_ command."""')
 output.append("")
-generate(output, ROBOT_USAGE, RobotSettings._extra_cli_opts, extra_cmd_options, extra=True)
+generate(output, ROBOT_USAGE, RobotSettings._extra_cli_opts, extra_cmd_options, extra=True, tool="rebot")
 
 output.append("")
 output.append("")
@@ -253,7 +253,7 @@ output.append("@dataclass")
 output.append("class RebotOptions(BaseOptions):")
 output.append('    """Options for _rebot_ command."""')
 output.append("")
-extra_cmd_options = generate(output, REBOT_USAGE, RebotSettings._extra_cli_opts, None, extra=False)
+extra_cmd_options = generate(output, REBOT_USAGE, RebotSettings._extra_cli_opts, None, extra=False, tool="rebot")
 
 
 libdoc_options: Dict[str, Tuple[str, Any]] = {
@@ -272,13 +272,7 @@ output.append("@dataclass")
 output.append("class LibDocOptions(BaseOptions):")
 output.append('    """Options for _libdoc_ command."""')
 output.append("")
-extra_cmd_options = generate(
-    output,
-    LIBDOC_USAGE,
-    libdoc_options,
-    None,
-    extra=False,
-)
+extra_cmd_options = generate(output, LIBDOC_USAGE, libdoc_options, None, extra=False, tool="libdoc")
 
 output.append("")
 output.append("")
@@ -286,13 +280,7 @@ output.append("@dataclass")
 output.append("class LibDocExtraOptions(BaseOptions):")
 output.append('    """Extra options for _libdoc_ command."""')
 output.append("")
-generate(
-    output,
-    LIBDOC_USAGE,
-    libdoc_options,
-    extra_cmd_options,
-    extra=True,
-)
+generate(output, LIBDOC_USAGE, libdoc_options, extra_cmd_options, extra=True, tool="libdoc")
 
 
 testdoc_options: Dict[str, Tuple[str, Any]] = {
@@ -307,13 +295,7 @@ output.append("@dataclass")
 output.append("class TestDocOptions(BaseOptions):")
 output.append('    """Options for _testdoc_ command."""')
 output.append("")
-extra_cmd_options = generate(
-    output,
-    TESTDOC_USAGE,
-    testdoc_options,
-    None,
-    extra=False,
-)
+extra_cmd_options = generate(output, TESTDOC_USAGE, testdoc_options, None, extra=False, tool="testdoc")
 
 output.append("")
 output.append("")
@@ -321,15 +303,9 @@ output.append("@dataclass")
 output.append("class TestDocExtraOptions(BaseOptions):")
 output.append('    """Extra options for _testdoc_ command."""')
 output.append("")
-generate(
-    output,
-    TESTDOC_USAGE,
-    testdoc_options,
-    extra_cmd_options,
-    extra=True,
-)
+generate(output, TESTDOC_USAGE, testdoc_options, extra_cmd_options, extra=True, tool="testdoc")
 
-model_file = Path("packages/robot/robotcode/robot/config/model.py")
+model_file = Path("packages/robot/src/robotcode/robot/config/model.py")
 original_lines = model_file.read_text().splitlines()
 
 start_line = original_lines.index("# start generated code")
