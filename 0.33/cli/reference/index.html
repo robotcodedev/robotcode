@@ -824,11 +824,12 @@ You're not viewing the latest version.
 </ul>
 <h3 id="robotcode-config-files">robotcode config files<a class="headerlink" href="#robotcode-config-files" title="Permanent link">&para;</a></h3>
 <p>Shows Robot Framework configuration files.</p>
-<p>Takes a list of PATHS or if no paths are given, takes the current working directory,
+<p>Takes a list of PATHS or if no PATHS are given, takes the current working directory,
 to search for configuration files and prints them.</p>
-<p>Examples:
-    robotcode config files
-    robotcode config files tests/acceptance/first.robot</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>robotcode config files
+robotcode config files tests/acceptance/first.robot
+</code></pre></div>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code>robotcode config files [OPTIONS] [PATHS]...
 </code></pre></div>
@@ -850,13 +851,14 @@ to search for configuration files and prints them.</p>
 </ul>
 <h4 id="robotcode-config-info-desc">robotcode config info desc<a class="headerlink" href="#robotcode-config-info-desc" title="Permanent link">&para;</a></h4>
 <p>Shows the description of the specified configuration settings.</p>
-<p>If no NAME is gibven shows the description of all possible configuration settings.
+<p>If no NAME is given shows the description of all possible configuration settings.
 Wildcards are supported.</p>
-<p>Examples:
-    robotcode config info desc
-    robotcode config info desc python-path
-    robotcode config info desc rebot.*
-    robotcode config info desc <em>tag</em></p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>robotcode config info desc
+robotcode config info desc python-path
+robotcode config info desc rebot.*
+robotcode config info desc *tag*
+</code></pre></div>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code>robotcode config info desc [OPTIONS] [NAME]...
 </code></pre></div>
@@ -866,10 +868,11 @@ Wildcards are supported.</p>
 <h4 id="robotcode-config-info-list">robotcode config info list<a class="headerlink" href="#robotcode-config-info-list" title="Permanent link">&para;</a></h4>
 <p>Lists all possible configuration settings.</p>
 <p>If NAME is given searches for given name. Wildcards are supported.</p>
-<p>Examples:
-    robotcode config info list
-    robotcode config info list rebot.*
-    robotcode config info list <em>tag</em></p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>robotcode config info list
+robotcode config info list rebot.*
+robotcode config info list *tag*
+</code></pre></div>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code>robotcode config info list [OPTIONS] [NAME]...
 </code></pre></div>
@@ -878,11 +881,12 @@ Wildcards are supported.</p>
 </code></pre></div>
 <h3 id="robotcode-config-root">robotcode config root<a class="headerlink" href="#robotcode-config-root" title="Permanent link">&para;</a></h3>
 <p>Shows the root of the Robot Framework project.</p>
-<p>Takes a list of PATHS or if no paths are given, takes the current working directory,
+<p>Takes a list of PATHS or if no PATHS are given, takes the current working directory,
 to search for the root of the project and prints this.</p>
-<p>Examples:
-    robotcode config root
-    robotcode config root tests/acceptance/first.robot</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>robotcode config root
+robotcode config root tests/acceptance/first.robot
+</code></pre></div>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code>robotcode config root [OPTIONS] [PATHS]...
 </code></pre></div>
@@ -891,12 +895,13 @@ to search for the root of the project and prints this.</p>
 </code></pre></div>
 <h3 id="robotcode-config-show">robotcode config show<a class="headerlink" href="#robotcode-config-show" title="Permanent link">&para;</a></h3>
 <p>Shows the Robot Framework configuration.</p>
-<p>Takes a list of PATHS or if no paths are given, takes the current working directory,
+<p>Takes a list of PATHS or if no PATHS are given, takes the current working directory,
 to search for configuration files and prints the current configuration.</p>
 <p>Examples:
-    robotcode config show
-    robotcode config show tests/acceptance/first.robot
-    robotcode config show --format json</p>
+<div class="highlight"><pre><span></span><code>robotcode config show
+robotcode config show tests/acceptance/first.robot
+robotcode config show --format json
+</code></pre></div></p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code>robotcode config show [OPTIONS] [PATHS]...
 </code></pre></div>
