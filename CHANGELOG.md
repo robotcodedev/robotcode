@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.32.3 (2023-04-07)
+### Fix
+* Correct formatting with robotframework-tidy, also support tidy 4.0 reruns now, closes #124 ([`3b4c0e8`](https://github.com/d-biehl/robotcode/commit/3b4c0e87dec4a1cb62800ccd70c3d7b01b9e7ce9))
+
 ## v0.32.2 (2023-04-05)
 ### Fix
 * Update git versions script ([`fb16818`](https://github.com/d-biehl/robotcode/commit/fb16818b61068659b8607eee585a705d8e2caf26))
