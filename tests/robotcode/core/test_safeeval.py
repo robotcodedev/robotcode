@@ -47,7 +47,7 @@ def test_safe_eval_should_not_allow_builtin_names(expression: str) -> None:
     ("expression", "result"),
     [
         ("'PATH' in environ", True),
-        ("bool(re.match('\\d+', '1234'))", True),
+        (r"bool(re.match('\\d+', '1234'))", True),
     ],
 )
 def test_safe_eval_simple_should_support_custom_globals(expression: str, result: Any) -> None:
