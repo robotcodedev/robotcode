@@ -95,8 +95,6 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         range: Optional[Range] = None,
         **further_options: Any,
     ) -> Optional[List[TextEdit]]:
-        from difflib import SequenceMatcher
-
         from robotidy.version import __version__
 
         try:
@@ -111,7 +109,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 robot_tidy = get_robotidy(document.uri.to_path(), None)
 
                 if range is not None:
-                    robot_tidy.config.formatting.start_line = range.start.line
+                    robot_tidy.config.formatting.start_line = range.start.line + 1
                     robot_tidy.config.formatting.end_line = range.end.line + 1
 
                 disabler_finder = RegisterDisablers(
@@ -121,7 +119,11 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 disabler_finder.visit(model)
                 if disabler_finder.file_disabled:
                     return None
-                changed, _, new = robot_tidy.transform(model, disabler_finder.disablers)
+
+                if robotidy_version >= (4, 0):
+                    _, _, new, _ = robot_tidy.transform_until_stable(model, disabler_finder)
+                else:
+                    _, _, new = robot_tidy.transform(model, disabler_finder.disablers)
 
             else:
                 from robotidy.api import RobotidyAPI
@@ -129,7 +131,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 robot_tidy = RobotidyAPI(document.uri.to_path(), None)
 
                 if range is not None:
-                    robot_tidy.formatting_config.start_line = range.start.line
+                    robot_tidy.formatting_config.start_line = range.start.line + 1
                     robot_tidy.formatting_config.end_line = range.end.line + 1
 
                 if robotidy_version >= (2, 2):
@@ -142,42 +144,25 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                     disabler_finder.visit(model)
                     if disabler_finder.file_disabled:
                         return None
-                    changed, _, new = robot_tidy.transform(model, disabler_finder.disablers)
+                    _, _, new = robot_tidy.transform(model, disabler_finder.disablers)
                 else:
-                    changed, _, new = robot_tidy.transform(model)
+                    _, _, new = robot_tidy.transform(model)
 
-            if not changed:
+            if new.text == document.text():
                 return None
 
-            new_lines = self.RE_LINEBREAKS.split(new.text)
-
-            result: List[TextEdit] = []
-            matcher = SequenceMatcher(a=document.get_lines(), b=new_lines, autojunk=False)
-            for code, old_start, old_end, new_start, new_end in matcher.get_opcodes():
-                if code == "insert" or code == "replace":
-                    result.append(
-                        TextEdit(
-                            range=Range(
-                                start=Position(line=old_start, character=0),
-                                end=Position(line=old_end, character=0),
-                            ),
-                            new_text=os.linesep.join(new_lines[new_start:new_end]) + os.linesep,
-                        )
-                    )
-
-                elif code == "delete":
-                    result.append(
-                        TextEdit(
-                            range=Range(
-                                start=Position(line=old_start, character=0),
-                                end=Position(line=old_end, character=0),
-                            ),
-                            new_text="",
-                        )
-                    )
-
-            if result:
-                return result
+            return [
+                TextEdit(
+                    range=Range(
+                        start=Position(line=0, character=0),
+                        end=Position(
+                            line=len(document.get_lines()),
+                            character=len((document.get_lines())[-1]),
+                        ),
+                    ),
+                    new_text=new.text,
+                )
+            ]
 
         except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
             raise
