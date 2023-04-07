@@ -47,14 +47,16 @@ def show(
     """\
     Shows the Robot Framework configuration.
 
-    Takes a list of PATHS or if no paths are given, takes the current working directory,
+    Takes a list of PATHS or if no PATHS are given, takes the current working directory,
     to search for configuration files and prints the current configuration.
 
     \b
     Examples:
-        robotcode config show
-        robotcode config show tests/acceptance/first.robot
-        robotcode config show --format json
+    ```
+    robotcode config show
+    robotcode config show tests/acceptance/first.robot
+    robotcode config show --format json
+    ```
     """
 
     config_files, _, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
@@ -88,13 +90,16 @@ def files(
     """\
     Shows Robot Framework configuration files.
 
-    Takes a list of PATHS or if no paths are given, takes the current working directory,
+    Takes a list of PATHS or if no PATHS are given, takes the current working directory,
     to search for configuration files and prints them.
 
     \b
     Examples:
-        robotcode config files
-        robotcode config files tests/acceptance/first.robot
+
+    ```
+    robotcode config files
+    robotcode config files tests/acceptance/first.robot
+    ```
     """
 
     try:
@@ -119,13 +124,16 @@ def root(
     """\
     Shows the root of the Robot Framework project.
 
-    Takes a list of PATHS or if no paths are given, takes the current working directory,
+    Takes a list of PATHS or if no PATHS are given, takes the current working directory,
     to search for the root of the project and prints this.
 
     \b
     Examples:
-        robotcode config root
-        robotcode config root tests/acceptance/first.robot
+
+    ```
+    robotcode config root
+    robotcode config root tests/acceptance/first.robot
+    ```
     """
 
     root_folder, discovered_by = find_project_root(*(paths or []))
@@ -189,9 +197,12 @@ def list(app: Application, name: Optional[List[str]] = None) -> Union[str, int, 
 
     \b
     Examples:
-        robotcode config info list
-        robotcode config info list rebot.*
-        robotcode config info list *tag*
+
+    ```
+    robotcode config info list
+    robotcode config info list rebot.*
+    robotcode config info list *tag*
+    ```
     """
     if not name:
         name = ["*"]
@@ -213,16 +224,18 @@ def desc(app: Application, name: Optional[List[str]] = None) -> Union[str, int, 
     """\
     Shows the description of the specified configuration settings.
 
-    If no NAME is gibven shows the description of all possible configuration settings.
+    If no NAME is given shows the description of all possible configuration settings.
     Wildcards are supported.
 
     \b
     Examples:
-        robotcode config info desc
-        robotcode config info desc python-path
-        robotcode config info desc rebot.*
-        robotcode config info desc *tag*
 
+    ```
+    robotcode config info desc
+    robotcode config info desc python-path
+    robotcode config info desc rebot.*
+    robotcode config info desc *tag*
+    ```
     """
     if not name:
         name = ["*"]
