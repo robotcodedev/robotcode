@@ -157,7 +157,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                         start=Position(line=0, character=0),
                         end=Position(
                             line=len(document.get_lines()),
-                            character=len((document.get_lines())[-1]),
+                            character=0,
                         ),
                     ),
                     new_text=new.text,
@@ -201,7 +201,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                         start=Position(line=0, character=0),
                         end=Position(
                             line=len(document.get_lines()),
-                            character=len((document.get_lines())[-1]),
+                            character=0,
                         ),
                     ),
                     new_text=s.getvalue(),
