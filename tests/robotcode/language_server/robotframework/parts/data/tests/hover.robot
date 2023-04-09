@@ -187,6 +187,10 @@ nineth
     duplicated.duplicated keyword
 #   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  duplicated keyword
 
+tenth
+    🤖🤖    🥴🥶
+#   ^^^^ a keyword with emoji
+
 *** Keywords ***
 a keyword
     Run Keyword    log    hi

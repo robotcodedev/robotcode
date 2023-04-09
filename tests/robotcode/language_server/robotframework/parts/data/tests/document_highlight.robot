@@ -65,6 +65,13 @@ fifth
     again a keyword with params    1
     a keyword with args    a=2    a long name=99    a_short_name=342
 
+
+sixth
+    🤖🤖    🥴🥶
+#   ^^^^ a keyword with emoji 1
+    🤖🤖    🥴🥶
+#   ^^^^ a keyword with emoji 2
+
 *** Keywords ***
 a keyword with params
     [Arguments]    ${A VAR}=${A VAR}

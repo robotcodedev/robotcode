@@ -55,7 +55,12 @@ class SelectionRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
         if document is None:
             return None
 
-        for result in await self.collect(self, document, positions, callback_filter=language_id_filter(document)):
+        for result in await self.collect(
+            self,
+            document,
+            [document.position_from_utf16(p) for p in positions],
+            callback_filter=language_id_filter(document),
+        ):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -63,7 +68,15 @@ class SelectionRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
                 if result is not None:
                     results.extend(result)
 
-        if len(results) == 0:
+        if not results:
             return None
+
+        def traverse(selection_range: SelectionRange, doc: TextDocument) -> None:
+            selection_range.range = doc.range_to_utf16(selection_range.range)
+            if selection_range.parent is not None:
+                traverse(selection_range.parent, doc)
+
+        for result in results:
+            traverse(result, document)
 
         return results

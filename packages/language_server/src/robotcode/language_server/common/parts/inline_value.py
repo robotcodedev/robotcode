@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from asyncio import CancelledError
-from typing import TYPE_CHECKING, Any, Final, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Final, List, Optional
 
 from robotcode.core.async_tools import async_tasking_event, threaded
 from robotcode.core.logging import LoggingDescriptor
@@ -19,7 +19,6 @@ from robotcode.language_server.common.lsp_types import (
     InlineValueContext,
     InlineValueParams,
     InlineValueRegistrationOptions,
-    Position,
     Range,
     ServerCapabilities,
     TextDocumentFilterType1,
@@ -66,7 +65,7 @@ class InlineValueProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
     async def _text_document_inline_value(
         self,
         text_document: TextDocumentIdentifier,
-        range: Union[Range, List[Position]],
+        range: Range,
         context: InlineValueContext,
         *args: Any,
         **kwargs: Any,
@@ -76,7 +75,9 @@ class InlineValueProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         if document is None:
             return None
 
-        for result in await self.collect(self, document, range, context, callback_filter=language_id_filter(document)):
+        for result in await self.collect(
+            self, document, document.range_from_utf16(range), context, callback_filter=language_id_filter(document)
+        ):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -84,8 +85,11 @@ class InlineValueProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                 if result is not None:
                     results += result
 
-        if len(results) == 0:
+        if not results:
             return None
+
+        for result in results:
+            result.range = document.range_to_utf16(result.range)
 
         return results
 

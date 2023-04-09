@@ -60,7 +60,11 @@ class ReferencesProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             return None
 
         for result in await self.collect(
-            self, document, position, context, callback_filter=language_id_filter(document)
+            self,
+            document,
+            document.position_from_utf16(position),
+            context,
+            callback_filter=language_id_filter(document),
         ):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
@@ -69,7 +73,12 @@ class ReferencesProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 if result is not None:
                     locations.extend(result)
 
-        if len(locations) == 0:
+        if not locations:
             return None
+
+        for location in locations:
+            doc = await self.parent.documents.get(location.uri)
+            if doc is not None:
+                location.range = doc.range_to_utf16(location.range)
 
         return locations

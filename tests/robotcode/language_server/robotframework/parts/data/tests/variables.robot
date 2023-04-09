@@ -11,6 +11,7 @@ ${ZZ}    ${}
 ${UU}    @{}
 ${DD}    ${DD+1}    # TODO recursiv variable definition
 ${aaa    1
+${🧨🧨}    🎉🎉
 
 *** Test Cases ***
 first

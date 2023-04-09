@@ -59,7 +59,7 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         for result in await self.collect(
             self,
             document,
-            position,
+            document.position_from_utf16(position),
             callback_filter=language_id_filter(document),
         ):
             if isinstance(result, BaseException):
@@ -69,8 +69,12 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 if result is not None:
                     results.append(result)
 
+        for result in results:
+            if result.range is not None:
+                result.range = document.range_to_utf16(result.range)
+
         if len(results) > 0 and results[-1].contents:
-            # TODO: can we combine hover results?
+            # TODO: how can we combine hover results?
 
             return results[-1]
 

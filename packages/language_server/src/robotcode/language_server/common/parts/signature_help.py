@@ -84,7 +84,7 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilitie
         for result in await self.collect(
             self,
             document,
-            position,
+            document.position_from_utf16(position),
             context,
             callback_filter=language_id_filter(document),
         ):

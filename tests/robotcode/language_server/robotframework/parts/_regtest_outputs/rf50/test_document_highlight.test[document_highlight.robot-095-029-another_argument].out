@@ -1,0 +1,50 @@
+data: !GeneratedTestData
+  character: 29
+  line: 95
+  name: another argument
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 30
+      line: 95
+    start:
+      character: 29
+      line: 95
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 48
+      line: 95
+    start:
+      character: 47
+      line: 95
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 14
+      line: 101
+    start:
+      character: 13
+      line: 101
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 52
+      line: 106
+    start:
+      character: 51
+      line: 106
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 48
+      line: 108
+    start:
+      character: 47
+      line: 108

@@ -1,0 +1,41 @@
+data: !GeneratedTestData
+  character: 18
+  line: 71
+  name: Embedded keyword in teardown
+result:
+- !Location
+  range:
+    end:
+      character: 44
+      line: 69
+    start:
+      character: 15
+      line: 69
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 50
+      line: 71
+    start:
+      character: 18
+      line: 71
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 34
+      line: 74
+    start:
+      character: 4
+      line: 74
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 20
+      line: 111
+    start:
+      character: 0
+      line: 111
+  uri: tests/references.robot

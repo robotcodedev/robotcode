@@ -1,0 +1,23 @@
+data: !GeneratedTestData
+  character: 42
+  line: 113
+  name: embedded argument usage
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 37
+      line: 111
+    start:
+      character: 32
+      line: 111
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 43
+      line: 113
+    start:
+      character: 38
+      line: 113

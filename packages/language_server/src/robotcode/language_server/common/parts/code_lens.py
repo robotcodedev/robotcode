@@ -61,10 +61,13 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 if result is not None:
                     results.extend(result)
 
-        if len(results) > 0:
-            return results
+        if not results:
+            return None
 
-        return None
+        for result in results:
+            result.range = document.range_to_utf16(result.range)
+
+        return results
 
     @rpc_method(name="codeLens/resolve", param_type=CodeLens)
     @threaded()

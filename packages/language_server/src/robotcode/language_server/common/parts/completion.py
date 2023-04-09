@@ -15,9 +15,11 @@ from robotcode.language_server.common.lsp_types import (
     CompletionList,
     CompletionOptions,
     CompletionParams,
+    InsertReplaceEdit,
     Position,
     ServerCapabilities,
     TextDocumentIdentifier,
+    TextEdit,
 )
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 from robotcode.language_server.common.text_document import TextDocument
@@ -89,7 +91,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         for result in await self.collect(
             self,
             document,
-            position,
+            document.position_from_utf16(position),
             context,
             callback_filter=language_id_filter(document),
         ):
@@ -100,23 +102,41 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 if result is not None:
                     results.append(result)
 
-        if len(results) > 0:
-            if any(e for e in results if isinstance(e, CompletionList)):
-                result = CompletionList(
-                    is_incomplete=any(e for e in results if isinstance(e, CompletionList) and e.is_incomplete),
-                    items=list(chain(*[r.items if isinstance(r, CompletionList) else r for r in results])),
-                )
-                if len(result.items) == 0:
-                    return None
-                return result
+        if not results:
+            return None
 
-            result = list(chain(*[k for k in results if isinstance(k, list)]))
-            if len(result) == 0:
+        for result in results:
+            if isinstance(result, CompletionList):
+                for item in result.items:
+                    if item.text_edit is not None:
+                        self.update_completion_item_to_utf16(document, item)
+
+            elif isinstance(result, list):
+                for item in result:
+                    if item.text_edit is not None:
+                        self.update_completion_item_to_utf16(document, item)
+
+        if any(e for e in results if isinstance(e, CompletionList)):
+            result = CompletionList(
+                is_incomplete=any(e for e in results if isinstance(e, CompletionList) and e.is_incomplete),
+                items=list(chain(*[r.items if isinstance(r, CompletionList) else r for r in results])),
+            )
+            if len(result.items) == 0:
                 return None
-
             return result
 
-        return None
+        result = list(chain(*[k for k in results if isinstance(k, list)]))
+        if not result:
+            return None
+
+        return result
+
+    def update_completion_item_to_utf16(self, document: TextDocument, item: CompletionItem) -> None:
+        if isinstance(item.text_edit, TextEdit):
+            item.text_edit.range = document.range_to_utf16(item.text_edit.range)
+        elif isinstance(item.text_edit, InsertReplaceEdit):
+            item.text_edit.insert = document.range_to_utf16(item.text_edit.insert)
+            item.text_edit.replace = document.range_to_utf16(item.text_edit.replace)
 
     @rpc_method(name="completionItem/resolve", param_type=CompletionItem)
     @threaded()
@@ -136,10 +156,11 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 if result is not None:
                     results.append(result)
 
-        if len(results) > 0:
-            if len(results) > 1:
-                self._logger.warning("More then one resolve result. Use the last one.")
+        if not results:
+            return params
 
-            return results[-1]
+        if len(results) > 1:
+            self._logger.warning("More then one resolve result. Use the last one.")
+        result = results[-1]
 
-        return params
+        return result

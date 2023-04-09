@@ -147,6 +147,22 @@ result:
         tags: []
         type: test
         uri: tests/code_action_show_documentation.robot
+      - children: null
+        description: null
+        error: null
+        id: Data.Tests.Code Action Show Documentation.sixth;86
+        label: sixth
+        longname: Data.Tests.Code Action Show Documentation.sixth
+        range:
+          end:
+            character: 0
+            line: 85
+          start:
+            character: 0
+            line: 85
+        tags: []
+        type: test
+        uri: tests/code_action_show_documentation.robot
       description: null
       error: null
       id: Data.Tests.Code Action Show Documentation
@@ -579,6 +595,22 @@ result:
         tags: []
         type: test
         uri: tests/document_highlight.robot
+      - children: null
+        description: null
+        error: null
+        id: Data.Tests.Document Highlight.sixth;69
+        label: sixth
+        longname: Data.Tests.Document Highlight.sixth
+        range:
+          end:
+            character: 0
+            line: 68
+          start:
+            character: 0
+            line: 68
+        tags: []
+        type: test
+        uri: tests/document_highlight.robot
       description: null
       error: null
       id: Data.Tests.Document Highlight
@@ -739,6 +771,22 @@ result:
         tags: []
         type: test
         uri: tests/foldingrange.robot
+      - children: null
+        description: null
+        error: null
+        id: "Data.Tests.Foldingrange.\U0001F690\U0001F693\U0001F6FA\U0001F699;32"
+        label: "\U0001F690\U0001F693\U0001F6FA\U0001F699"
+        longname: "Data.Tests.Foldingrange.\U0001F690\U0001F693\U0001F6FA\U0001F699"
+        range:
+          end:
+            character: 0
+            line: 31
+          start:
+            character: 0
+            line: 31
+        tags: []
+        type: test
+        uri: tests/foldingrange.robot
       description: null
       error: null
       id: Data.Tests.Foldingrange
@@ -816,6 +864,22 @@ result:
           start:
             character: 0
             line: 94
+        tags: []
+        type: test
+        uri: tests/goto.robot
+      - children: null
+        description: null
+        error: null
+        id: Data.Tests.Goto.forth;98
+        label: forth
+        longname: Data.Tests.Goto.forth
+        range:
+          end:
+            character: 0
+            line: 97
+          start:
+            character: 0
+            line: 97
         tags: []
         type: test
         uri: tests/goto.robot
@@ -979,6 +1043,22 @@ result:
         tags: []
         type: test
         uri: tests/hover.robot
+      - children: null
+        description: null
+        error: null
+        id: Data.Tests.Hover.tenth;190
+        label: tenth
+        longname: Data.Tests.Hover.tenth
+        range:
+          end:
+            character: 0
+            line: 189
+          start:
+            character: 0
+            line: 189
+        tags: []
+        type: test
+        uri: tests/hover.robot
       description: null
       error: null
       id: Data.Tests.Hover
@@ -1030,80 +1110,96 @@ result:
       - children: null
         description: null
         error: null
-        id: Data.Tests.References.first;30
+        id: Data.Tests.References.first;32
         label: first
         longname: Data.Tests.References.first
         range:
           end:
             character: 0
-            line: 29
+            line: 31
           start:
             character: 0
-            line: 29
+            line: 31
         tags: []
         type: test
         uri: tests/references.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.References.second;45
+        id: Data.Tests.References.second;47
         label: second
         longname: Data.Tests.References.second
         range:
           end:
             character: 0
-            line: 44
+            line: 46
           start:
             character: 0
-            line: 44
+            line: 46
         tags: []
         type: test
         uri: tests/references.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.References.third;51
+        id: Data.Tests.References.third;53
         label: third
         longname: Data.Tests.References.third
         range:
           end:
             character: 0
-            line: 50
+            line: 52
           start:
             character: 0
-            line: 50
+            line: 52
         tags: []
         type: test
         uri: tests/references.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.References.forth;57
+        id: Data.Tests.References.forth;59
         label: forth
         longname: Data.Tests.References.forth
         range:
           end:
             character: 0
-            line: 56
+            line: 58
           start:
             character: 0
-            line: 56
+            line: 58
         tags: []
         type: test
         uri: tests/references.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.References.fifth;67
+        id: Data.Tests.References.fifth;69
         label: fifth
         longname: Data.Tests.References.fifth
         range:
           end:
             character: 0
-            line: 66
+            line: 68
           start:
             character: 0
-            line: 66
+            line: 68
+        tags: []
+        type: test
+        uri: tests/references.robot
+      - children: null
+        description: null
+        error: null
+        id: Data.Tests.References.sixth;103
+        label: sixth
+        longname: Data.Tests.References.sixth
+        range:
+          end:
+            character: 0
+            line: 102
+          start:
+            character: 0
+            line: 102
         tags: []
         type: test
         uri: tests/references.robot
@@ -1783,224 +1879,224 @@ result:
       - children: null
         description: null
         error: null
-        id: Data.Tests.Variables.first;16
+        id: Data.Tests.Variables.first;17
         label: first
         longname: Data.Tests.Variables.first
         range:
           end:
             character: 0
-            line: 15
+            line: 16
           start:
             character: 0
-            line: 15
+            line: 16
         tags: []
         type: test
         uri: tests/variables.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.Variables.second;50
+        id: Data.Tests.Variables.second;51
         label: second
         longname: Data.Tests.Variables.second
         range:
           end:
             character: 0
-            line: 49
+            line: 50
           start:
             character: 0
-            line: 49
+            line: 50
         tags: []
         type: test
         uri: tests/variables.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.Variables.third;58
+        id: Data.Tests.Variables.third;59
         label: third
         longname: Data.Tests.Variables.third
         range:
           end:
             character: 0
-            line: 57
+            line: 58
           start:
             character: 0
-            line: 57
+            line: 58
         tags: []
         type: test
         uri: tests/variables.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.Variables.fourth;73
+        id: Data.Tests.Variables.fourth;74
         label: fourth
         longname: Data.Tests.Variables.fourth
         range:
           end:
             character: 0
-            line: 72
+            line: 73
           start:
             character: 0
-            line: 72
+            line: 73
         tags: []
         type: test
         uri: tests/variables.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.Variables.fifth;81
+        id: Data.Tests.Variables.fifth;82
         label: fifth
         longname: Data.Tests.Variables.fifth
         range:
           end:
             character: 0
-            line: 80
+            line: 81
           start:
             character: 0
-            line: 80
+            line: 81
         tags: []
         type: test
         uri: tests/variables.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.Variables.sixth;97
+        id: Data.Tests.Variables.sixth;98
         label: sixth
         longname: Data.Tests.Variables.sixth
         range:
           end:
             character: 0
-            line: 96
+            line: 97
           start:
             character: 0
-            line: 96
+            line: 97
         tags: []
         type: test
         uri: tests/variables.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.Variables.seventh;114
+        id: Data.Tests.Variables.seventh;115
         label: seventh
         longname: Data.Tests.Variables.seventh
         range:
           end:
             character: 0
-            line: 113
+            line: 114
           start:
             character: 0
-            line: 113
+            line: 114
         tags: []
         type: test
         uri: tests/variables.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.Variables.tc;126
+        id: Data.Tests.Variables.tc;127
         label: tc
         longname: Data.Tests.Variables.tc
         range:
           end:
             character: 0
-            line: 125
+            line: 126
           start:
             character: 0
-            line: 125
+            line: 126
         tags: []
         type: test
         uri: tests/variables.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.Variables.templated;132
+        id: Data.Tests.Variables.templated;133
         label: templated
         longname: Data.Tests.Variables.templated
         range:
           end:
             character: 0
-            line: 131
+            line: 132
           start:
             character: 0
-            line: 131
+            line: 132
         tags: []
         type: test
         uri: tests/variables.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.Variables.templated with embedded;137
+        id: Data.Tests.Variables.templated with embedded;138
         label: templated with embedded
         longname: Data.Tests.Variables.templated with embedded
         range:
           end:
             character: 0
-            line: 136
+            line: 137
           start:
             character: 0
-            line: 136
+            line: 137
         tags: []
         type: test
         uri: tests/variables.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.Variables.templated with embedded;142
+        id: Data.Tests.Variables.templated with embedded;143
         label: templated with embedded
         longname: Data.Tests.Variables.templated with embedded
         range:
           end:
             character: 0
-            line: 141
+            line: 142
           start:
             character: 0
-            line: 141
+            line: 142
         tags: []
         type: test
         uri: tests/variables.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.Variables.templated with embedded not defined;148
+        id: Data.Tests.Variables.templated with embedded not defined;149
         label: templated with embedded not defined
         longname: Data.Tests.Variables.templated with embedded not defined
         range:
           end:
             character: 0
-            line: 147
+            line: 148
           start:
             character: 0
-            line: 147
+            line: 148
         tags: []
         type: test
         uri: tests/variables.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.Variables.environmentvars;153
+        id: Data.Tests.Variables.environmentvars;154
         label: environmentvars
         longname: Data.Tests.Variables.environmentvars
         range:
           end:
             character: 0
-            line: 152
+            line: 153
           start:
             character: 0
-            line: 152
+            line: 153
         tags: []
         type: test
         uri: tests/variables.robot
       - children: null
         description: null
         error: null
-        id: Data.Tests.Variables.named arguments;156
+        id: Data.Tests.Variables.named arguments;157
         label: named arguments
         longname: Data.Tests.Variables.named arguments
         range:
           end:
             character: 0
-            line: 155
+            line: 156
           start:
             character: 0
-            line: 155
+            line: 156
         tags: []
         type: test
         uri: tests/variables.robot

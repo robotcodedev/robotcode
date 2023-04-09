@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 24
-  line: 86
-  name: Ambiguous Embedded keyword with regex a to z
-result: null

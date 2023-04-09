@@ -457,6 +457,16 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                 result = cast(DiagnosticsResult, result_any)
 
                 data.id = str(uuid.uuid4())
+
+                if result.diagnostics is not None:
+                    for d in result.diagnostics:
+                        d.range = document.range_to_utf16(d.range)
+
+                        for r in d.related_information or []:
+                            doc = await self.parent.documents.get(r.location.uri)
+                            if doc is not None:
+                                r.location.range = doc.range_to_utf16(r.location.range)
+
                 data.entries[result.key] = result.diagnostics
                 if result.diagnostics is not None:
                     collected_keys.append(result.key)

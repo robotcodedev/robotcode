@@ -86,7 +86,7 @@ async def protocol(request: Any) -> AsyncIterator[RobotLanguageServerProtocol]:
 @pytest.mark.usefixtures("event_loop")
 async def test_document(request: Any) -> AsyncIterator[TextDocument]:
     data_path = Path(request.param)
-    data = data_path.read_text()
+    data = data_path.read_text("utf-8")
 
     document = TextDocument(
         document_uri=data_path.absolute().as_uri(), language_id="robotframework", version=1, text=data

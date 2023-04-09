@@ -104,7 +104,7 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilit
         symbol_informations: List[SymbolInformation] = []
 
         document = await self.parent.documents.get(text_document.uri)
-        if not document:
+        if document is None:
             return None
 
         for result in await self.collect(self, document, callback_filter=language_id_filter(document)):
@@ -121,6 +121,22 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilit
                         self._logger.warning(
                             "Result contains DocumentSymbol and SymbolInformation results, result is skipped."
                         )
+        if document_symbols:
+
+            def traverse(symbol: DocumentSymbol, doc: TextDocument) -> None:
+                symbol.range = doc.range_to_utf16(symbol.range)
+                symbol.selection_range = doc.range_to_utf16(symbol.selection_range)
+                for child in symbol.children or []:
+                    traverse(child, doc)
+
+            for symbol in document_symbols:
+                traverse(symbol, document)
+
+        if symbol_informations:
+            for symbol_information in symbol_informations:
+                doc = await self.parent.documents.get(symbol_information.location.uri)
+                if doc is not None:
+                    symbol_information.location.range = doc.range_to_utf16(symbol_information.location.range)
 
         if document_symbols and symbol_informations:
             self._logger.warning(

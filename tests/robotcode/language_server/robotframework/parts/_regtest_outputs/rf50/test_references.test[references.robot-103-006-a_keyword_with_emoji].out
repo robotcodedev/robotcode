@@ -1,0 +1,86 @@
+data: !GeneratedTestData
+  character: 6
+  line: 103
+  name: a keyword with emoji
+result:
+- !Location
+  range:
+    end:
+      character: 2
+      line: 21
+    start:
+      character: 0
+      line: 21
+  uri: resources/firstresource.resource
+- !Location
+  range:
+    end:
+      character: 6
+      line: 86
+    start:
+      character: 4
+      line: 86
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 6
+      line: 88
+    start:
+      character: 4
+      line: 88
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 6
+      line: 69
+    start:
+      character: 4
+      line: 69
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 6
+      line: 71
+    start:
+      character: 4
+      line: 71
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 6
+      line: 98
+    start:
+      character: 4
+      line: 98
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 6
+      line: 190
+    start:
+      character: 4
+      line: 190
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 6
+      line: 103
+    start:
+      character: 4
+      line: 103
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 20
+      line: 105
+    start:
+      character: 18
+      line: 105
+  uri: tests/references.robot

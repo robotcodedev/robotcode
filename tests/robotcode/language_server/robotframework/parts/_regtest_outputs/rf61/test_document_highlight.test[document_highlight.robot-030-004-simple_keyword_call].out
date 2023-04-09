@@ -26,70 +26,70 @@ result:
   range:
     end:
       character: 7
-      line: 72
+      line: 79
     start:
       character: 4
-      line: 72
+      line: 79
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 74
+      line: 81
     start:
       character: 4
-      line: 74
+      line: 81
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 82
+      line: 89
     start:
       character: 4
-      line: 82
+      line: 89
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 84
+      line: 91
     start:
       character: 4
-      line: 84
+      line: 91
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 92
+      line: 99
     start:
       character: 4
-      line: 92
+      line: 99
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 94
+      line: 101
     start:
       character: 4
-      line: 94
+      line: 101
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 96
+      line: 103
     start:
       character: 4
-      line: 96
+      line: 103
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 106
+      line: 113
     start:
       character: 4
-      line: 106
+      line: 113

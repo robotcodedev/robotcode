@@ -62,6 +62,7 @@ from robotcode.language_server.common.lsp_types import (
     RenameFilesParams,
     ServerCapabilities,
     ServerCapabilitiesWorkspaceType,
+    TextDocumentEdit,
     TextEdit,
     WatchKind,
     WorkspaceEdit,
@@ -509,6 +510,20 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
                 # TODO: implement own filewatcher if not supported by language server client
 
     async def apply_edit(self, edit: WorkspaceEdit, label: Optional[str] = None) -> ApplyWorkspaceEditResult:
+        if edit.changes:
+            for uri, changes in edit.changes.items():
+                if changes:
+                    doc = await self.parent.documents.get(uri)
+                    for change in changes:
+                        if doc is not None:
+                            change.range = doc.range_to_utf16(change.range)
+        if edit.document_changes:
+            for doc_change in [v for v in edit.document_changes if isinstance(v, TextDocumentEdit)]:
+                doc = await self.parent.documents.get(doc_change.text_document.uri)
+                if doc is not None:
+                    for e in doc_change.edits:
+                        e.range = doc.range_to_utf16(e.range)
+
         r = await self.parent.send_request_async(
             "workspace/applyEdit",
             ApplyWorkspaceEditParams(edit, label),

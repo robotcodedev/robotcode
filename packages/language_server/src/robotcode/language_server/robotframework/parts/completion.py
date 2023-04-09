@@ -942,7 +942,11 @@ class CompletionCollector(ModelHelperMixin):
 
         if len(nodes_at_position) > 1 and isinstance(nodes_at_position[0], HasTokens):
             node = nodes_at_position[0]
+
             tokens_at_position = get_tokens_at_position(node, position)
+            if not tokens_at_position:
+                return None
+
             token_at_position = tokens_at_position[-1]
 
             if isinstance(node, Arguments):

@@ -63,7 +63,7 @@ class InlayHintProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         for result in await self.collect(
             self,
             document,
-            range,
+            document.range_from_utf16(range),
             callback_filter=language_id_filter(document),
         ):
             if isinstance(result, BaseException):
@@ -73,7 +73,11 @@ class InlayHintProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 if result is not None:
                     results.extend(result)
 
-        if len(results) > 0:
+        if results:
+            for result in results:
+                result.position = document.position_to_utf16(result.position)
+                # TODO: resolve
+
             return results
 
         return None

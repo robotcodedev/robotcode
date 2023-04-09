@@ -40,6 +40,7 @@ KEYWORD_WITH_ARGS_TEMPLATE = Template(
 ${name}
     [Arguments]    ${args}
     Fail
+
 """
 )
 
@@ -47,6 +48,7 @@ KEYWORD_TEMPLATE = Template(
     """\
 ${name}
     Fail
+
 """
 )
 

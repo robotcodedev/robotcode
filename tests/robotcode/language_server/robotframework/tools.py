@@ -22,7 +22,7 @@ def generate_tests_from_source_document(
     path: Path,
 ) -> Iterator[Union[Tuple[Path, GeneratedTestData], Any]]:
     current_line = 0
-    for line, text in enumerate(path.read_text().splitlines()):
+    for line, text in enumerate(path.read_text(encoding="utf-8").splitlines()):
         match = TEST_EXPRESSION_LINE.match(text)
         if match:
             name = match.group("name").strip()

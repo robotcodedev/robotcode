@@ -11,7 +11,52 @@ from robotcode.core.async_tools import async_event, create_sub_task
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.uri import Uri
 
-from .lsp_types import DocumentUri, Range
+from .lsp_types import DocumentUri, Position, Range
+
+
+def is_multibyte_char(char: str) -> bool:
+    return ord(char) > 0xFFFF
+
+
+def position_from_utf16(lines: List[str], position: Position) -> Position:
+    if position.line >= len(lines):
+        return position
+
+    utf32_offset = 0
+    utf16_counter = 0
+
+    for c in lines[position.line]:
+        utf16_counter += 2 if is_multibyte_char(c) else 1
+
+        if utf16_counter > position.character:
+            break
+
+        utf32_offset += 1
+
+    return Position(line=position.line, character=utf32_offset)
+
+
+def position_to_utf16(lines: List[str], position: Position) -> Position:
+    if position.line >= len(lines):
+        return position
+
+    utf16_counter = 0
+
+    for i, c in enumerate(lines[position.line]):
+        if i >= position.character:
+            break
+
+        utf16_counter += 2 if is_multibyte_char(c) else 1
+
+    return Position(line=position.line, character=utf16_counter)
+
+
+def range_from_utf16(lines: List[str], range: Range) -> Range:
+    return Range(start=position_from_utf16(lines, range.start), end=position_from_utf16(lines, range.end))
+
+
+def range_to_utf16(lines: List[str], range: Range) -> Range:
+    return Range(start=position_to_utf16(lines, range.start), end=position_to_utf16(lines, range.end))
 
 
 class InvalidRangeError(Exception):
@@ -115,7 +160,7 @@ class TextDocument:
 
                 lines = self.__get_lines()
 
-                (start_line, start_col), (end_line, end_col) = range
+                (start_line, start_col), (end_line, end_col) = range_from_utf16(lines, range)
 
                 if start_line == len(lines):
                     self._text = self._text + text
@@ -259,3 +304,15 @@ class TextDocument:
     def clear(self) -> None:
         with self._lock:
             self._clear()
+
+    def position_from_utf16(self, position: Position) -> Position:
+        return position_from_utf16(self.get_lines(), position)
+
+    def position_to_utf16(self, position: Position) -> Position:
+        return position_to_utf16(self.get_lines(), position)
+
+    def range_from_utf16(self, range: Range) -> Range:
+        return range_from_utf16(self.get_lines(), range)
+
+    def range_to_utf16(self, range: Range) -> Range:
+        return range_to_utf16(self.get_lines(), range)

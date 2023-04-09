@@ -82,8 +82,12 @@ fifth
     add bananas to pocket    # robotcode: ignore
 #   ^^^^^^^^^^^^^^^^^^^^^ error multiple keywords ignored
     add bananas and apples to pocket
-    add bananas and apples to pocket
 
+sixth
+    🤖🤖    🥴🥶
+#   ^^^^ a keyword with emoji 1
+    🤖🤖    🥴🥶
+#   ^^^^ a keyword with emoji 2
 *** Keywords ***
 do something ${type}
 #^^^^^^^^^^^^^^^^^^^ keyword definition with embedded arguments

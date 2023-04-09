@@ -13,7 +13,7 @@ result:
 - !FoldingRange
   collapsed_text: null
   end_character: 1
-  end_line: 30
+  end_line: 35
   kind: section
   start_character: 0
   start_line: 5
@@ -55,21 +55,28 @@ result:
 - !FoldingRange
   collapsed_text: null
   end_character: 1
-  end_line: 37
-  kind: section
+  end_line: 35
+  kind: testcase
   start_character: 0
   start_line: 31
 - !FoldingRange
   collapsed_text: null
   end_character: 1
-  end_line: 37
+  end_line: 42
+  kind: section
+  start_character: 0
+  start_line: 36
+- !FoldingRange
+  collapsed_text: null
+  end_character: 1
+  end_line: 42
   kind: keyword
   start_character: 0
-  start_line: 34
+  start_line: 39
 - !FoldingRange
   collapsed_text: null
   end_character: 15
-  end_line: 45
+  end_line: 50
   kind: comment
   start_character: 0
-  start_line: 38
+  start_line: 43

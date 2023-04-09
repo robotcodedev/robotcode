@@ -24,6 +24,7 @@ from robotcode.core.async_itertools import async_dropwhile, async_takewhile
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.language_server.common.decorators import language_id
 from robotcode.language_server.common.lsp_types import (
+    Position,
     Range,
     SemanticTokenModifiers,
     SemanticTokens,
@@ -32,7 +33,7 @@ from robotcode.language_server.common.lsp_types import (
     SemanticTokensPartialResult,
     SemanticTokenTypes,
 )
-from robotcode.language_server.common.text_document import TextDocument
+from robotcode.language_server.common.text_document import TextDocument, range_to_utf16
 from robotcode.language_server.robotframework.diagnostics.library_doc import (
     ALL_RUN_KEYWORDS_MATCHERS,
     BUILTIN_LIBRARY_NAME,
@@ -309,7 +310,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                             token.lineno, col_offset + last_index, 1, RobotSemTokenTypes.VARIABLE_END, sem_mod
                         )
 
-                        if length - last_index > 0:
+                        if length - last_index - 1 > 0:
                             yield SemTokenInfo.from_token(
                                 token, sem_type, sem_mod, col_offset + last_index + 1, length - last_index - 1
                             )
@@ -740,6 +741,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     @_logger.call
     async def _collect_internal(
         self,
+        document: TextDocument,
         model: ast.AST,
         range: Optional[Range],
         namespace: Namespace,
@@ -847,6 +849,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                     for token in node.tokens:
                         yield token, node
 
+        lines = document.get_lines()
+
         async for robot_token, robot_node in async_takewhile(
             lambda t: range is None or token_in_range(t[0], range),
             async_dropwhile(
@@ -861,21 +865,34 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             async for token in self.generate_sem_tokens(
                 robot_token, robot_node, namespace, builtin_library_doc, libraries_matchers, resources_matchers
             ):
+                if token.length == 0:
+                    continue
+
+                token_range = range_to_utf16(
+                    lines,
+                    Range(
+                        start=Position(line=token.lineno - 1, character=token.col_offset),
+                        end=Position(line=token.lineno - 1, character=token.col_offset + token.length),
+                    ),
+                )
+                token_col_offset = token_range.start.character
+                token_length = token_range.end.character - token_range.start.character
+
                 current_line = token.lineno - 1
 
                 data.append(current_line - last_line)
 
                 if last_line != current_line:
-                    last_col = token.col_offset
+                    last_col = token_col_offset
                     data.append(last_col)
                 else:
-                    delta = token.col_offset - last_col
+                    delta = token_col_offset - last_col
                     data.append(delta)
                     last_col += delta
 
                 last_line = current_line
 
-                data.append(token.length)
+                data.append(token_length)
 
                 data.append(self.parent.semantic_tokens.token_types.index(token.sem_token_type))
 
@@ -909,6 +926,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         )
 
         return await self._collect_internal(
+            document,
             model,
             range,
             namespace,

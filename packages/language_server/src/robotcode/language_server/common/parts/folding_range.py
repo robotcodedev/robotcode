@@ -11,6 +11,7 @@ from robotcode.language_server.common.has_extend_capabilities import HasExtendCa
 from robotcode.language_server.common.lsp_types import (
     FoldingRange,
     FoldingRangeParams,
+    Position,
     ServerCapabilities,
     TextDocumentIdentifier,
 )
@@ -53,6 +54,17 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities
                 if result is not None:
                     results += result
 
-        if len(results) == 0:
+        if not results:
             return None
+
+        for result in results:
+            if result.start_character is not None:
+                result.start_character = document.position_to_utf16(
+                    Position(result.start_line, result.start_character)
+                ).character
+            if result.end_character is not None:
+                result.end_character = document.position_to_utf16(
+                    Position(result.end_line, result.end_character)
+                ).character
+
         return results

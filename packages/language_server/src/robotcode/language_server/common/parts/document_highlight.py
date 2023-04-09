@@ -54,7 +54,9 @@ class DocumentHighlightProtocolPart(LanguageServerProtocolPart, HasExtendCapabil
         if document is None:
             return None
 
-        for result in await self.collect(self, document, position, callback_filter=language_id_filter(document)):
+        for result in await self.collect(
+            self, document, document.position_from_utf16(position), callback_filter=language_id_filter(document)
+        ):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -64,5 +66,8 @@ class DocumentHighlightProtocolPart(LanguageServerProtocolPart, HasExtendCapabil
 
         if len(highlights) == 0:
             return None
+
+        for highlight in highlights:
+            highlight.range = document.range_to_utf16(highlight.range)
 
         return highlights

@@ -140,6 +140,11 @@ class WindowProtocolPart(LanguageServerProtocolPart):
         take_focus: Optional[bool] = None,
         selection: Optional[Range] = None,
     ) -> bool:
+        if selection is not None:
+            doc = await self.parent.documents.get(uri)
+            if doc is not None:
+                selection = doc.range_to_utf16(selection)
+
         r = await self.parent.send_request_async(
             "window/showDocument",
             ShowDocumentParams(uri=uri, external=external, take_focus=take_focus, selection=selection),

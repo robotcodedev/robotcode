@@ -95,6 +95,10 @@ a templated Test
 third
     just another keyword with params
 
+forth
+    🤖🤖    🥴🥶
+#   ^^ a keyword with emoji
+
 *** Keywords ***
 a simple keyword
 #^^^^^^^^^^^^^^^ a simple keyword

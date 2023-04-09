@@ -178,53 +178,53 @@ result:
   range:
     end:
       character: 29
-      line: 30
+      line: 32
     start:
       character: 15
-      line: 30
+      line: 32
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 40
-      line: 32
+      line: 34
     start:
       character: 26
-      line: 32
+      line: 34
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 18
-      line: 36
+      line: 38
     start:
       character: 4
-      line: 36
+      line: 38
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 26
-      line: 38
+      line: 40
     start:
       character: 12
-      line: 38
+      line: 40
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 32
-      line: 45
+      line: 47
     start:
       character: 18
-      line: 45
+      line: 47
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 40
-      line: 51
+      line: 53
     start:
       character: 26
-      line: 51
+      line: 53
   uri: tests/references.robot

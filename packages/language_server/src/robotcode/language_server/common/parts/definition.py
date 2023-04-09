@@ -59,7 +59,9 @@ class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         if document is None:
             return None
 
-        for result in await self.collect(self, document, position, callback_filter=language_id_filter(document)):
+        for result in await self.collect(
+            self, document, document.position_from_utf16(position), callback_filter=language_id_filter(document)
+        ):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -73,8 +75,24 @@ class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                                 locations.append(e)
                             elif isinstance(e, LocationLink):
                                 location_links.append(e)
+
         if len(locations) == 0 and len(location_links) == 0:
             return None
+
+        if locations:
+            for location in locations:
+                doc = await self.parent.documents.get(location.uri)
+                if doc is not None:
+                    location.range = doc.range_to_utf16(location.range)
+
+        if location_links:
+            for location_link in location_links:
+                doc = await self.parent.documents.get(location_link.target_uri)
+                if doc is not None:
+                    location_link.target_range = doc.range_to_utf16(location_link.target_range)
+                    location_link.target_selection_range = doc.range_to_utf16(location_link.target_selection_range)
+                if location_link.origin_selection_range is not None:
+                    location_link.origin_selection_range = document.range_to_utf16(location_link.origin_selection_range)
 
         if len(locations) > 0 and len(location_links) == 0:
             if len(locations) == 1:

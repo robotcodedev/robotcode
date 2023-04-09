@@ -18,3 +18,10 @@ some failing keyword
 a keyword with args
     [Arguments]    ${a}    ${a long name}=    ${a_short_name}=default
     No Operation
+
+🤖🤖
+    [Documentation]    this is a keyword with emoji in the name
+    ...
+    ...    and some more documentation with 🚎🚐🚓🛺🚙🛻🚖🛴🚲🛼🛹🦼🦽
+    [Arguments]    ${🐓}    ${😎😋😙😙}=    ${🧟‍♂️🛃🫅🏿👸🏿}=🧨✨🎉👔
+    Log    hello from 🤖🤖 ${🐓} ${😎😋😙😙} ${🧟‍♂️🛃🫅🏿👸🏿}

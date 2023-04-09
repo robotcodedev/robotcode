@@ -75,10 +75,16 @@ class CodeActionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         if document is None:
             return None
 
+        for c in context.diagnostics:
+            c.range = document.range_from_utf16(c.range)
+            if c.related_information is not None:
+                for r in c.related_information:
+                    r.location.range = document.range_from_utf16(r.location.range)
+
         for result in await self.collect(
             self,
             document,
-            range,
+            document.range_from_utf16(range),
             context,
             callback_filter=language_id_filter(document),
         ):
@@ -89,10 +95,10 @@ class CodeActionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 if result is not None:
                     results.extend(result)
 
-        if len(results) > 0:
-            return results
+        if not results:
+            return None
 
-        return None
+        return results
 
     @rpc_method(name="textDocument/codeAction/resolve", param_type=CodeAction)
     @threaded()

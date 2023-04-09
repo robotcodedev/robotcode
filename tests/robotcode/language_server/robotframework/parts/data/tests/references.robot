@@ -25,6 +25,8 @@ ${a var}    hello
 ${LIB_ARG}    from lib
 # ^^^^^^^ another simple var
 ${bananas}    apples
+${🧨🧨}    🎉🎉
+# ^^^^^ a var with emoji
 
 *** Test Cases ***
 first
@@ -84,13 +86,27 @@ fifth
     do add ${bananas} and to my bag
 #   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Embedded keyword with variable
 
+    do add ${🧨🧨} and to my bag
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Embedded keyword with emojii variable
+
     add bananas to pocket
 #   ^^^^^^^^^^^^^^^^^^^^^  Ambiguous Embedded keyword with regex a to z
     add bananas to pocket    # robotcode: ignore
 #   ^^^^^^^^^^^^^^^^^^^^^  Invalid Embedded keyword with regex a to z ignored
     add bananas and apples to pocket
 #   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Embedded keyword with regex a to z and space
-    add bananas and apples to pocket
+
+    add bananas and apples to 🦼🛹🛼
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Embedded keyword with emoji
+
+
+sixth
+    🤖🤖  🐓=🥴🥶
+#   ^^^^ a keyword with emoji
+    firstresource.🤖🤖  🐓=${🧨🧨}    🧟‍♂️🛃🫅🏿👸🏿=${🧨🧨}+${🧨🧨}  #  test
+#   ^^^^^^^^^^^^^^^^^^  a keyword with namespace and emoji
+#                           ^^^^^^  a variable with emoji
+
 
 *** Keywords ***
 do something ${type}

@@ -10,7 +10,7 @@ flatten-keywords = [
     "name:My Keyword",
 ]
 #expand-keywords = [{ name = "My Keyword" }, { tag = "my-tag" }]
-expand-keywords = "name:My Keyword"
+expand-keywords = [{ "name" = "My Keyword" }]
 rebot.merge = "on"
 libdoc.format = "HTML"
 

@@ -57,7 +57,9 @@ class LinkedEditingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabi
         if document is None:
             return None
 
-        for result in await self.collect(self, document, position, callback_filter=language_id_filter(document)):
+        for result in await self.collect(
+            self, document, document.position_from_utf16(position), callback_filter=language_id_filter(document)
+        ):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -67,4 +69,4 @@ class LinkedEditingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabi
                     if result.word_pattern is not None:
                         word_pattern = result.word_pattern
 
-        return LinkedEditingRanges(linked_ranges, word_pattern)
+        return LinkedEditingRanges([document.range_to_utf16(r) for r in linked_ranges], word_pattern)

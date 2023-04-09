@@ -1,0 +1,18 @@
+data: !GeneratedTestData
+  character: 4
+  line: 86
+  name: a keyword with emoji 1
+result:
+- !CodeAction
+  command:
+    arguments:
+    - <removed>
+    command: robotcode.showDocumentation
+    title: Open Documentation
+  data: null
+  diagnostics: null
+  disabled: null
+  edit: null
+  is_preferred: null
+  kind: source.openDocumentation
+  title: Open Documentation

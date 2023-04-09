@@ -15,9 +15,12 @@ from robotcode.language_server.common.lsp_types import (
     Position,
     PrepareRenameParams,
     PrepareRenameResult,
+    PrepareRenameResultType1,
+    Range,
     RenameOptions,
     RenameParams,
     ServerCapabilities,
+    TextDocumentEdit,
     TextDocumentIdentifier,
     WorkspaceEdit,
 )
@@ -76,7 +79,7 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         for result in await self.collect(
             self,
             document,
-            position,
+            document.position_from_utf16(position),
             new_name,
             callback_filter=language_id_filter(document),
         ):
@@ -87,8 +90,23 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 if result is not None:
                     edits.append(result)
 
-        if len(edits) == 0:
+        if not edits:
             return None
+
+        for we in edits:
+            if we.changes:
+                for uri, changes in we.changes.items():
+                    if changes:
+                        doc = await self.parent.documents.get(uri)
+                        for change in changes:
+                            if doc is not None:
+                                change.range = doc.range_to_utf16(change.range)
+            if we.document_changes:
+                for doc_change in [v for v in we.document_changes if isinstance(v, TextDocumentEdit)]:
+                    doc = await self.parent.documents.get(doc_change.text_document.uri)
+                    if doc is not None:
+                        for edit in doc_change.edits:
+                            edit.range = doc.range_to_utf16(edit.range)
 
         result = WorkspaceEdit()
         for we in edits:
@@ -125,7 +143,7 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             return None
 
         for result in await self.collect_prepare(
-            self, document, position, callback_filter=language_id_filter(document)
+            self, document, document.position_from_utf16(position), callback_filter=language_id_filter(document)
         ):
             if isinstance(result, BaseException):
                 if isinstance(result, CantRenameError):
@@ -137,7 +155,13 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 if result is not None:
                     results.append(result)
 
-        if len(results) == 0:
+        if not results:
             return None
 
-        return results[-1]
+        result = results[-1]
+        if isinstance(result, Range):
+            result = document.range_to_utf16(result)
+        elif isinstance(result, PrepareRenameResultType1):
+            result.range = document.range_to_utf16(result.range)
+
+        return result
