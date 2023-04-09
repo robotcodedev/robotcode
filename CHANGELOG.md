@@ -4,6 +4,13 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.33.0 (2023-04-09)
+### Feature
+* Improved Handling of UTF-16 encoded multibyte characters, e.g. emojis are now handled correctly ([`d17e79c`](https://github.com/d-biehl/robotcode/commit/d17e79c258837cc24c9f69f30358c4a7c1adfed9))
+
+### Fix
+* End positions on formatting ([`a87ba80`](https://github.com/d-biehl/robotcode/commit/a87ba805ad800f91067c912fa6984605ec1bebe4))
+
 ## v0.32.3 (2023-04-07)
 ### Fix
 * Correct formatting with robotframework-tidy, also support tidy 4.0 reruns now, closes #124 ([`3b4c0e8`](https://github.com/d-biehl/robotcode/commit/3b4c0e87dec4a1cb62800ccd70c3d7b01b9e7ce9))
