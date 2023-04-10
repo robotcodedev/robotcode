@@ -77,11 +77,11 @@
     "tomlValidation": [
       {
         "fileMatch": "robot.toml",
-        "url": "http://localhost:8000/etc/robot.toml.json"
+        "url": "https://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.toml.json"
       },
       {
         "fileMatch": ".robot.toml",
-        "url": "http://localhost:8000/etc/robot.toml.json"
+        "url": "https://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.toml.json"
       }
     ],
     "configurationDefaults": {
