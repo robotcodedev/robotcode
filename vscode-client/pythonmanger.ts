@@ -100,7 +100,7 @@ export class PythonManager {
     );
 
     this._checkRobotVersionMain = this.extensionContext.asAbsolutePath(
-      path.join("bundled", "tool", "check_robot_version.py")
+      path.join("bundled", "tool", "utils", "check_robot_version.py")
     );
   }
 
