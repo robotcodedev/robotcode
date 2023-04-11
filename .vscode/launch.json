@@ -52,7 +52,7 @@
 			},
 			"args": [
 				"--verbose",
-				"--dry",
+				// "--dry",
 				// "-p",
 				// "firefox",
 				// "--dry",
@@ -65,10 +65,14 @@
 				// "list",
 				// "--format",
 				// "toml"
-				"config",
-				"info",
-				"desc",
-				"*"
+				"robot",
+				"-t", "first",
+				"-ZLN", "Data.Tests.Playground.first",
+				"--name", "blahblah",
+				"-ZLN", "Data.Tests.Playground.second",
+				"--doc", "uchda",
+				"-ZEL", "Data.Tests.Playground.third",
+				"."
 			]
 		},
 		{
