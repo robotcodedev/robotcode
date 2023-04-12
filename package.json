@@ -1229,22 +1229,22 @@
   "devDependencies": {
     "@types/node": "^18.15.11",
     "@types/vscode": "^1.74.0",
-    "@typescript-eslint/eslint-plugin": "^5.57.1",
-    "@typescript-eslint/parser": "^5.57.1",
+    "@typescript-eslint/eslint-plugin": "^5.58.0",
+    "@typescript-eslint/parser": "^5.58.0",
     "@vscode/debugadapter-testsupport": "^1.59.0",
     "@vscode/test-electron": "^2.3.0",
-    "eslint": "^8.37.0",
+    "eslint": "^8.38.0",
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-import": "^2.27.5",
     "eslint-plugin-jsx-a11y": "^6.7.1",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^4.2.1",
+    "@vscode/vsce": "^2.19.0",
     "ovsx": "^0.8.0",
     "prettier": "^2.8.7",
     "ts-loader": "^9.4.2",
     "typescript": "^5.0.4",
-    "@vscode/vsce": "^2.18.0",
-    "webpack": "^5.78.0",
+    "webpack": "^5.79.0",
     "webpack-cli": "^5.0.1"
   }
 }
