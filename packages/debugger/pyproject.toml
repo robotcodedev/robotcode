@@ -25,11 +25,18 @@ classifiers = [
   "Framework :: Robot Framework",
   "Framework :: Robot Framework :: Tool",
 ]
-dependencies = ["robotcode-jsonrpc2", "robotframework>=4.1.0"]
 dynamic = ["version"]
+dependencies = [
+  "robotframework>=4.1.0",
+  "robotcode-jsonrpc2",
+  "robotcode-runner",
+]
 
 [project.optional-dependencies]
 debugpy = ["debugpy"]
+
+[project.entry-points.robotcode]
+debugger = "robotcode.debugger.hooks"
 
 [project.scripts]
 'robotcode.debugger' = 'robotcode.debugger.__main__:main'

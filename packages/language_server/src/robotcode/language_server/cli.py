@@ -7,6 +7,7 @@ from logging.handlers import RotatingFileHandler
 from typing import Optional
 
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.types import ServerMode
 from robotcode.core.utils.debugpy import start_debugpy
 
 from .__version__ import __version__
@@ -32,12 +33,12 @@ def get_log_handler(logfile: str) -> logging.FileHandler:
 
 
 def run_server(mode: str, port: int, pipe_name: Optional[str]) -> int:
-    from robotcode.jsonrpc2.server import JsonRpcServerMode, TcpParams
+    from robotcode.core.types import TcpParams
 
     from .robotframework.server import RobotLanguageServer
 
     with RobotLanguageServer(
-        mode=JsonRpcServerMode(mode),
+        mode=ServerMode(mode),
         tcp_params=TcpParams("127.0.0.1", port),
         pipe_name=pipe_name,
     ) as server:

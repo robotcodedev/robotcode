@@ -24,4 +24,7 @@ if __name__ == "__main__":
 
     from robotcode.cli import robotcode
 
-    sys.exit(robotcode(windows_expand_args=False))
+    robotcode(
+        windows_expand_args=False,
+        default_map={"launcher_script": str(pathlib.Path(__file__).parent)},
+    )

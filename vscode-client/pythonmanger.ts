@@ -69,8 +69,8 @@ export class PythonManager {
     return this._pythonLanguageServerMain;
   }
 
-  public get pythonDebugAdapterMain(): string {
-    return this._pythonDebugAdapterMain;
+  public get robotCodeMain(): string {
+    return this._robotCodeMain;
   }
 
   public get checkRobotVersionMain(): string {
@@ -82,8 +82,8 @@ export class PythonManager {
   }
 
   _pythonLanguageServerMain: string;
-  _pythonDebugAdapterMain: string;
   _checkRobotVersionMain: string;
+  _robotCodeMain: string;
   _pythonVersionScript = "import sys; print(sys.version_info[:2]>=(3,8))";
 
   _pythonExtension: vscode.Extension<PythonExtensionApi> | undefined;
@@ -95,13 +95,12 @@ export class PythonManager {
     this._pythonLanguageServerMain = this.extensionContext.asAbsolutePath(
       path.join("bundled", "tool", "language_server")
     );
-    this._pythonDebugAdapterMain = this.extensionContext.asAbsolutePath(
-      path.join("bundled", "tool", "debugger", "launcher")
-    );
 
     this._checkRobotVersionMain = this.extensionContext.asAbsolutePath(
       path.join("bundled", "tool", "utils", "check_robot_version.py")
     );
+
+    this._robotCodeMain = this.extensionContext.asAbsolutePath(path.join("bundled", "tool", "robotcode"));
   }
 
   async dispose(): Promise<void> {

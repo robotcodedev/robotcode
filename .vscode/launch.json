@@ -52,27 +52,33 @@
 			},
 			"args": [
 				"--verbose",
-				// "--dry",
-				// "-p",
-				// "firefox",
-				// "--dry",
-				// "robot",
-				// "--",
-				// "--help"
-				// "tests1"
-				// "profiles",
-				// "show",
-				// "list",
-				// "--format",
-				// "toml"
-				"robot",
-				"-t", "first",
-				"-ZLN", "Data.Tests.Playground.first",
-				"--name", "blahblah",
-				"-ZLN", "Data.Tests.Playground.second",
-				"--doc", "uchda",
-				"-ZEL", "Data.Tests.Playground.third",
-				"."
+				// "robot"
+				// "debug-launch",
+				// "--pipe-server",
+				// "\\\\.\\pipe\\926ab05cd224ef08dc3aec29eda1ba61"
+				"debug",
+				"--",
+				"--help"
+			]
+		},
+		{
+			"name": "Python: RobotCode Tool",
+			"type": "python",
+			"request": "launch",
+			"program": "${workspaceFolder}/bundled/tool/robotcode",
+			"justMyCode": false,
+			"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data",
+			// "env": {
+			// 	"ROBOTCODE_COLOR": "1",
+			// },
+			"env": {
+				"CMD_VAR_LONG": "long",
+			},
+			"args": [
+				"--verbose",
+				"debug-launch",
+				"--pipe-server",
+				"\\\\.\\pipe\\926ab05cd224ef08dc3aec29eda1ba61"
 			]
 		},
 		{

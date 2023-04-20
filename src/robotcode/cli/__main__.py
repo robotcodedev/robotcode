@@ -1,6 +1,8 @@
-import sys
-
-if __name__ == "__main__":
+def main() -> None:
     from . import robotcode
 
-    sys.exit(robotcode(windows_expand_args=False))
+    robotcode(max_content_width=120, windows_expand_args=False)
+
+
+if __name__ == "__main__":
+    main()

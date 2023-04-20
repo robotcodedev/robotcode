@@ -1,14 +1,20 @@
 from __future__ import annotations
 
 import asyncio
+import itertools
 import os
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.core.utils.version import Version, create_version_from_str
-from robotcode.debugger.client import DAPClient, DAPClientError
-from robotcode.debugger.dap_types import (
+from robotcode.core.types import ServerMode, TcpParams
+from robotcode.jsonrpc2.protocol import rpc_method
+from robotcode.jsonrpc2.server import JsonRPCServer
+from robotcode.robot.utils import get_robot_version
+
+from ..cli import DEBUGGER_DEFAULT_PORT, DEBUGPY_DEFAULT_PORT
+from ..dap_types import (
     AttachRequest,
     AttachRequestArguments,
     Capabilities,
@@ -33,20 +39,8 @@ from robotcode.debugger.dap_types import (
     TerminatedEvent,
     TerminateRequest,
 )
-from robotcode.debugger.protocol import DebugAdapterProtocol
-from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
-
-_robot_version: Optional[Version] = None
-
-
-def get_robot_version() -> Version:
-    global _robot_version
-    if _robot_version is None:
-        import robot.version
-
-        _robot_version = create_version_from_str(robot.version.get_version())
-    return _robot_version
+from ..protocol import DebugAdapterProtocol
+from .client import DAPClient, DAPClientError
 
 
 class OutputProtocol(asyncio.SubprocessProtocol):
@@ -145,6 +139,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         request: str,
         python: str,
         cwd: str = ".",
+        profiles: Optional[List[str]] = None,
         target: Optional[str] = None,
         paths: Optional[List[str]] = None,
         args: Optional[List[str]] = None,
@@ -158,6 +153,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         debuggerArgs: Optional[List[str]] = None,  # noqa: N803
         debuggerTimeout: Optional[int] = None,  # noqa: N803
         attachPython: Optional[bool] = False,  # noqa: N803
+        attachPythonPort: Optional[int] = None,  # noqa: N803
         variables: Optional[Dict[str, Any]] = None,
         outputDir: Optional[str] = None,  # noqa: N803
         outputMessages: Optional[bool] = False,  # noqa: N803
@@ -172,6 +168,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         arguments: Optional[LaunchRequestArguments] = None,
         include: Optional[List[str]] = None,
         exclude: Optional[List[str]] = None,
+        robotCodeArgs: Optional[List[str]] = None,  # noqa: N803
         *_args: Any,
         **_kwargs: Any,
     ) -> None:
@@ -179,41 +176,49 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
 
         connect_timeout = launcherTimeout or 10
 
-        port = find_free_port()
+        port = find_free_port(DEBUGGER_DEFAULT_PORT)
 
         debugger_script = (
             Path(Path(__file__).parent.parent) if self.debugger_script is None else Path(self.debugger_script)
         )
 
-        run_args = [python, "-u", str(debugger_script)]
-
-        run_args += ["-p", str(port)]
-
-        run_args += ["-w"]
-
-        if debuggerTimeout is not None:
-            run_args += ["-t", str(debuggerTimeout)]
+        run_args = [
+            python,
+            str(debugger_script),
+            *itertools.chain.from_iterable(["--profile", p] for p in profiles or []),
+            *(robotCodeArgs or []),
+            "debug",
+        ]
 
         if no_debug:
-            run_args += ["-n"]
+            run_args += ["--no-debug"]
+
+        if port != DEBUGGER_DEFAULT_PORT:
+            run_args += ["--tcp", str(port)]
+
+        if debuggerTimeout is not None:
+            run_args += ["wait-for-client-timeout", str(debuggerTimeout)]
 
         if attachPython and not no_debug:
-            run_args += ["-d", "-dp", str(find_free_port()), "-dw"]
+            run_args += ["--debugpy"]
+
+            if attachPythonPort is not None and attachPythonPort != DEBUGPY_DEFAULT_PORT:
+                run_args += ["--debugpy-port", str(attachPythonPort or 0)]
 
         if outputMessages:
-            run_args += ["-om"]
+            run_args += ["--output-messages"]
 
-        if outputLog:
-            run_args += ["-ol"]
+        if not outputLog:
+            run_args += ["--no-output-log"]
 
         if outputTimestamps:
-            run_args += ["-ot"]
+            run_args += ["--output-timestamps"]
 
         if groupOutput:
-            run_args += ["-og"]
+            run_args += ["--group-output"]
 
         if stopOnEntry:
-            run_args += ["-soe"]
+            run_args += ["--stop-on-entry"]
 
         run_args += debuggerArgs or []
 
@@ -301,13 +306,26 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
             raise ValueError(f'Unknown console type "{console}".')
 
         self.client = DAPClient(self, TcpParams(None, port))
+        self.client.on_closed.add(self._client_on_closed)
         try:
             await self.client.connect(connect_timeout)
-        except asyncio.TimeoutError:
-            raise asyncio.TimeoutError("Can't connect to debugger.")
+        except asyncio.TimeoutError as e:
+            self._logger.exception(e)
+
+            if self.loop is not None:
+                self.loop.call_later(0, sys.exit, 255)
+            else:
+                sys.exit(255)
+
+            raise asyncio.TimeoutError("Can't connect to debugger.") from e
 
         if self._initialize_arguments is not None:
             await self.client.protocol.send_request_async(InitializeRequest(arguments=self._initialize_arguments))
+
+    def _client_on_closed(self, sender: Any) -> None:
+        self._logger.info("Client closed.")
+        if self.loop is not None:
+            self.loop.call_later(1, self.loop.stop)
 
     @rpc_method(name="configurationDone", param_type=ConfigurationDoneArguments)
     async def _configuration_done(
@@ -337,30 +355,33 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
             self.send_event(Event("terminateRequested"))
             await self.send_event_async(TerminatedEvent())
 
+    @_logger.call
     async def handle_unknown_command(self, message: Request) -> Any:
         if self.connected:
-            self._logger.debug("Forward request to client...")
+            self._logger.debug(lambda: f"Unknown request, forward to client: {message}")
 
             return await self.client.protocol.send_request_async(message)
 
         return await super().handle_unknown_command(message)
 
 
-TCP_DEFAULT_PORT = 6611
-
-
 class LauncherServer(JsonRPCServer[LauncherDebugAdapterProtocol]):
     def __init__(
         self,
-        mode: JsonRpcServerMode = JsonRpcServerMode.STDIO,
-        tcp_params: TcpParams = TcpParams(None, TCP_DEFAULT_PORT),
+        mode: ServerMode = ServerMode.STDIO,
+        tcp_params: TcpParams = TcpParams(None, 0),
+        pipe_name: Optional[str] = None,
         debugger_script: Optional[str] = None,
     ):
         super().__init__(
             mode=mode,
             tcp_params=tcp_params,
+            pipe_name=pipe_name,
         )
         self.debugger_script = debugger_script
+        self.protocol: Optional[LauncherDebugAdapterProtocol] = None
 
     def create_protocol(self) -> LauncherDebugAdapterProtocol:
-        return LauncherDebugAdapterProtocol(debugger_script=self.debugger_script)
+        self.protocol = LauncherDebugAdapterProtocol(debugger_script=self.debugger_script)
+
+        return self.protocol

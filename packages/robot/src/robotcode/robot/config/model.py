@@ -2161,7 +2161,7 @@ class RobotConfig(RobotExtraBaseProfile):
             profile_names = [p for p in profiles.keys() if fnmatch.fnmatchcase(p, name)]
 
             if not profile_names:
-                raise ValueError(f"Can't find any profiles matching the pattern '{name}''.")
+                raise ValueError(f"Can't find any profiles matching the pattern '{name}'.")
 
             for v in profile_names:
                 result.update({v: profiles[v]})

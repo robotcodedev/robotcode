@@ -3,27 +3,34 @@ from __future__ import annotations
 import asyncio
 from typing import Any, Optional, Sequence
 
+from robotcode.core.event import event
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.jsonrpc2.server import TcpParams
+from robotcode.core.types import TcpParams
 
-from .dap_types import Event
-from .protocol import DebugAdapterProtocol
+from ..dap_types import Event
+from ..protocol import DebugAdapterProtocol
 
 
 class DAPClientProtocol(DebugAdapterProtocol):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: DebugAdapterProtocol) -> None:
+    def __init__(self, parent: DebugAdapterProtocol, client: "DAPClient") -> None:
         super().__init__()
         self.parent = parent
+        self.client = client
         self.exited = False
         self.terminated = False
 
+    @_logger.call
     def handle_event(self, message: Event) -> None:
         if message.event == "exited":
             self.exited = True
+
         elif message.event == "terminated":
             self.terminated = True
+            if self.exited:
+                self.client.close()
+
         self.parent.send_event(Event(event=message.event, body=message.body))
 
 
@@ -32,25 +39,36 @@ class DAPClientError(Exception):
 
 
 class DAPClient:
+    _logger = LoggingDescriptor()
+
     def __init__(self, parent: DebugAdapterProtocol, tcp_params: TcpParams = TcpParams(None, 0)) -> None:
         self.parent = parent
         self.tcp_params = tcp_params
         self._protocol: Optional[DAPClientProtocol] = None
         self._transport: Optional[asyncio.BaseTransport] = None
 
+    @event
+    def on_closed(sender) -> None:
+        ...
+
+    @_logger.call
     def close(self) -> None:
         if self._transport is not None:
             self._transport.close()
             self._transport = None
             self._protocol = None
 
+        self.on_closed(self)
+
     def __del__(self) -> None:
         self.close()
 
+    @_logger.call
     async def on_connection_lost(self, sender: Any, exc: Optional[BaseException]) -> None:
         if sender == self._protocol:
             self._protocol = None
 
+    @_logger.call
     async def connect(self, timeout: float = 5) -> DAPClientProtocol:
         async def wait() -> None:
             while self._protocol is None:
@@ -83,7 +101,7 @@ class DAPClient:
         return self.protocol
 
     def _create_protocol(self) -> DAPClientProtocol:
-        return DAPClientProtocol(self.parent)
+        return DAPClientProtocol(self.parent, self)
 
     @property
     def connected(self) -> bool:
@@ -91,8 +109,6 @@ class DAPClient:
 
     @property
     def protocol(self) -> DAPClientProtocol:
-        import inspect
-
         if self._protocol is None:
-            raise DAPClientError(f"Client is not connected. {inspect.stack()[1][3]}")
+            raise DAPClientError("Client is not connected.")
         return self._protocol

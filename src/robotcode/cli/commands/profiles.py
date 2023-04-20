@@ -1,10 +1,10 @@
 from pathlib import Path
-from typing import List, Union
+from typing import List
 
 import click
 from robotcode.core.dataclasses import as_dict
-from robotcode.plugin import Application, OutputFormat, pass_application
-from robotcode.plugin.click_helper import add_options
+from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
+from robotcode.plugin.click_helper.helper import add_options
 from robotcode.robot.config.loader import (
     load_config_from_path,
 )
@@ -17,10 +17,8 @@ from ._common import format_option, format_option_flat
     invoke_without_command=False,
 )
 @pass_application
-def profiles(app: Application) -> Union[str, int, None]:
-    """Commands to give informations about Robot Framework profiles."""
-
-    return 0
+def profiles(app: Application) -> None:
+    """View profile informations."""
 
 
 @profiles.command
@@ -35,7 +33,7 @@ def show(
     format: OutputFormat,
     no_evaluate: bool,
     paths: List[Path],
-) -> Union[str, int, None]:
+) -> None:
     """Shows the given Robot Framework profile."""
     try:
         config_files, _, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
@@ -50,9 +48,7 @@ def show(
         app.print_dict(as_dict(config, remove_defaults=True), format)
 
     except (TypeError, ValueError, FileNotFoundError) as e:
-        raise click.ClickException(str(e)) from e
-
-    return 0
+        raise UnknownError(str(e)) from e
 
 
 @profiles.command
@@ -63,7 +59,7 @@ def list(
     app: Application,
     format: OutputFormat,
     paths: List[Path],
-) -> Union[str, int, None]:
+) -> None:
     """List the defined profiles in the given Robot Framework configuration."""
 
     try:
@@ -90,6 +86,4 @@ def list(
             app.print_dict(result, format)
 
     except (TypeError, ValueError, FileNotFoundError) as e:
-        raise click.ClickException(str(e)) from e
-
-    return 0
+        raise UnknownError(str(e)) from e

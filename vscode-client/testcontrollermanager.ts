@@ -217,6 +217,10 @@ export class TestControllerManager {
               this.OnRobotLogMessageEvent(event.session.configuration.runId, event.body as RobotLogMessageEvent);
               break;
             }
+            case "robotMessage": {
+              this.OnRobotLogMessageEvent(event.session.configuration.runId, event.body as RobotLogMessageEvent);
+              break;
+            }
           }
         }
       }),
@@ -917,18 +921,18 @@ export class TestControllerManager {
 
     const run = this.testRuns.get(runId);
 
+    let location: vscode.Location | undefined = undefined;
+
     if (run !== undefined) {
-      // TODO add location to appendOutput, VSCode testextension is buggy at this time
-      // const location =
-      //   event.source !== undefined
-      //     ? new vscode.Location(
-      //         vscode.Uri.file(event.source),
-      //         new vscode.Range(
-      //           new vscode.Position((event.lineno ?? 1) - 1, event.column ?? 0),
-      //           new vscode.Position(event.lineno ?? 1, event.column ?? 0)
-      //         )
-      //       )
-      //     : undefined;
+      location = event.source
+        ? new vscode.Location(
+            vscode.Uri.file(event.source),
+            new vscode.Range(
+              new vscode.Position((event.lineno ?? 1) - 1, event.column ?? 0),
+              new vscode.Position(event.lineno ?? 1, event.column ?? 0)
+            )
+          )
+        : undefined;
 
       let style = (s: string) => s;
       switch (event.level) {
@@ -938,12 +942,14 @@ export class TestControllerManager {
         case "ERROR":
           style = red;
           break;
+        case "FAIL":
+          style = red;
+          break;
       }
 
       run.appendOutput(
-        style(`${event.level}: ${event.message.replaceAll("\n", "\r\n")}` + "\r\n"),
-        // location,
-        undefined,
+        `${style(event.level)}: ${event.message.replaceAll("\n", "\r\n")}` + "\r\n",
+        location,
         event.itemId !== undefined ? this.findTestItemById(event.itemId) : undefined
       );
     }

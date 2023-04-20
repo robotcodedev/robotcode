@@ -5,6 +5,7 @@ import os
 import pathlib
 import re
 import threading
+import traceback
 import weakref
 from collections import deque
 from enum import Enum
@@ -25,6 +26,11 @@ from typing import (
     Union,
 )
 
+from robot.errors import VariableError
+from robot.running import EXECUTION_CONTEXTS, Keyword
+from robot.running.userkeyword import UserKeywordHandler
+from robot.utils import NormalizedDict
+from robot.variables import evaluate_expression
 from robotcode.core.event import event
 from robotcode.core.logging import LoggingDescriptor
 
@@ -250,7 +256,7 @@ class Debugger:
         self.hit_counts: Dict[HitCountEntry, int] = {}
         self.last_fail_message: Optional[str] = None
         self.stop_on_entry = False
-        self.no_debug = False
+        self._debug = True
         self.terminated = False
         self.terminated_requested = False
         self.attached = False
@@ -265,7 +271,11 @@ class Debugger:
 
     @property
     def debug(self) -> bool:
-        return not self.no_debug
+        return self._debug
+
+    @debug.setter
+    def debug(self, value: bool) -> None:
+        self._debug = value
 
     @property
     def robot_report_file(self) -> Optional[str]:
@@ -446,9 +456,6 @@ class Debugger:
         return []
 
     def process_start_state(self, source: str, line_no: int, type: str, status: str) -> None:
-        from robot.running.context import EXECUTION_CONTEXTS
-        from robot.variables.evaluation import evaluate_expression
-
         if self.state == State.Stopped:
             return
 
@@ -666,9 +673,6 @@ class Debugger:
         kwname: Optional[str] = None,
         longname: Optional[str] = None,
     ) -> StackFrameEntry:
-        from robot.running.context import EXECUTION_CONTEXTS
-        from robot.running.userkeyword import UserKeywordHandler
-
         path = pathlib.Path(source) if source is not None else None
         is_file = path is not None and path.is_file()
         if path is not None and not is_file and type in ["SETUP", "TEARDOWN"]:
@@ -720,8 +724,6 @@ class Debugger:
         *,
         handler: Any = None,
     ) -> None:
-        from robot.running.userkeyword import UserKeywordHandler
-
         self.full_stack_frames.popleft()
 
         if type in ["KEYWORD"] and source is None and line is None and column is None:
@@ -821,8 +823,6 @@ class Debugger:
         self.remove_stackframe_entry(longname, type, source, line_no)
 
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
-        from robot.running.context import EXECUTION_CONTEXTS
-
         status = attributes.get("status", "")
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", None)
@@ -871,8 +871,6 @@ class Debugger:
         return r is None
 
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
-        from robot.running.context import EXECUTION_CONTEXTS
-
         type = attributes.get("type", None)
         if self.debug:
             status = attributes.get("status", "")
@@ -1008,6 +1006,8 @@ class Debugger:
         if self.output_log:
             self._send_log_event(message["timestamp"], level, msg, OutputCategory.CONSOLE)
 
+    RE_FILE_LINE_MATCHER = re.compile(r".+\sin\sfile\s'(?P<file>.*)'\son\sline\s(?P<line>\d+):.*")
+
     def _send_log_event(self, timestamp: str, level: str, msg: str, category: Union[OutputCategory, str]) -> None:
         current_frame = self.full_stack_frames[0] if self.full_stack_frames else None
         source = (
@@ -1015,7 +1015,13 @@ class Debugger:
             if current_frame and current_frame.is_file and current_frame.source
             else None
         )
+
         line = current_frame.line if current_frame else None
+
+        match = self.RE_FILE_LINE_MATCHER.match(msg)
+        if match:
+            source = Source(path=str(self.map_path_to_client(match.group("file"))))
+            line = int(match.group("line"))
 
         self.send_event(
             self,
@@ -1101,8 +1107,6 @@ class Debugger:
         count: Optional[int] = None,
         format: Optional[ValueFormat] = None,
     ) -> List[Variable]:
-        from robot.utils.normalizing import NormalizedDict
-
         result = NormalizedDict(ignore="_")
 
         entry = next(
@@ -1190,12 +1194,6 @@ class Debugger:
         context: Union[EvaluateArgumentContext, str, None] = None,
         format: Optional[ValueFormat] = None,
     ) -> EvaluateResult:
-        from robot.errors import VariableError
-        from robot.running.context import EXECUTION_CONTEXTS
-        from robot.running.model import Keyword
-        from robot.variables.evaluation import evaluate_expression
-        from robot.variables.replacer import VariableReplacer
-
         if not expression:
             return EvaluateResult(result="")
 
@@ -1265,7 +1263,7 @@ class Debugger:
 
             elif self.IS_VARIABLE_RE.match(expression.strip()):
                 try:
-                    result = VariableReplacer(vars.store).replace_scalar(expression)
+                    result = vars.replace_scalar(expression)
                 except VariableError:
                     if context is not None and (
                         isinstance(context, EvaluateArgumentContext)
@@ -1291,15 +1289,15 @@ class Debugger:
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
-            result = e
+            self._logger.exception(e)
+            result = traceback.format_exc()
+            # result = e
 
         return EvaluateResult(repr(result), repr(type(result)))
 
     def set_variable(
         self, variables_reference: int, name: str, value: str, format: Optional[ValueFormat] = None
     ) -> SetVariableResult:
-        from robot.variables.evaluation import evaluate_expression
-
         entry = next(
             (
                 v

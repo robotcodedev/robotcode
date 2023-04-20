@@ -62,7 +62,7 @@ Issues = "https://github.com/d-biehl/robotcode/issues"
 Source = "https://github.com/d-biehl/robotcode"
 
 [project.scripts]
-robotcode = "robotcode.cli:robotcode"
+robotcode = "robotcode.cli.__main__:main"
 
 
 [project.optional-dependencies]

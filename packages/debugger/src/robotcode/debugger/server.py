@@ -4,8 +4,9 @@ from typing import Any, Callable, Dict, List, Literal, Optional, Union
 
 from robotcode.core import async_tools
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.types import ServerMode, TcpParams
 from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
+from robotcode.jsonrpc2.server import JsonRPCServer
 
 from .dap_types import (
     AttachRequestArguments,
@@ -119,13 +120,13 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         return self._connected
 
     @_logger.call
-    async def wait_for_initialized(self, timeout: float = 60) -> bool:
+    async def wait_for_initialized(self, timeout: float = 30) -> bool:
         await asyncio.wait_for(self._initialized_event.wait(), timeout)
 
         return self._initialized
 
     @_logger.call
-    async def wait_for_disconnected(self, timeout: float = 60) -> bool:
+    async def wait_for_disconnected(self, timeout: float = 30) -> bool:
         await asyncio.wait_for(self._disconnected_event.wait(), timeout)
 
         return self._connected
@@ -379,11 +380,14 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
 class DebugAdapterServer(JsonRPCServer[DebugAdapterServerProtocol]):
     def __init__(
         self,
+        mode: ServerMode = ServerMode.TCP,
         tcp_params: TcpParams = TcpParams(None, TCP_DEFAULT_PORT),
+        pipe_name: Optional[str] = None,
     ):
         super().__init__(
-            mode=JsonRpcServerMode.TCP,
+            mode=mode,
             tcp_params=tcp_params,
+            pipe_name=pipe_name,
         )
         self.protocol = DebugAdapterServerProtocol()
 

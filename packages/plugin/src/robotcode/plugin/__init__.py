@@ -1,3 +1,4 @@
+import sys
 from dataclasses import dataclass
 from enum import Enum, unique
 from pathlib import Path
@@ -11,6 +12,12 @@ __all__ = ["hookimpl", "CommonConfig", "pass_application"]
 
 F = TypeVar("F", bound=Callable[..., Any])
 hookimpl = cast(Callable[[F], F], pluggy.HookimplMarker("robotcode"))
+
+
+class UnknownError(click.ClickException):
+    """An unknown error occurred."""
+
+    exit_code = 255
 
 
 @unique
@@ -37,6 +44,7 @@ class CommonConfig:
     dry: bool = False
     verbose: bool = False
     colored_output: ColoredOutput = ColoredOutput.AUTO
+    launcher_script: Optional[str] = None
 
 
 class Application:
@@ -126,8 +134,18 @@ class Application:
     def echo_as_markdown(self, text: str) -> None:
         if self.colored:
             try:
-                from rich.console import Console
-                from rich.markdown import Markdown
+                from rich.console import Console, ConsoleOptions, RenderResult
+                from rich.markdown import Heading, Markdown
+                from rich.text import Text
+
+                class MyHeading(Heading):
+                    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+                        for result in super().__rich_console__(console, options):
+                            cast(Text, result).justify = "left"
+
+                            yield result
+
+                Markdown.elements["heading_open"] = MyHeading
 
                 Console().print(Markdown(text, justify="left"))
 
@@ -137,6 +155,14 @@ class Application:
                     self.warning('Package "rich" is required to use colored output.')
 
         click.echo(text)
+
+    def keyboard_interrupt(self) -> None:
+        self.verbose("Aborted!", file=sys.stderr)
+        sys.exit(253)
+
+    def exit(self, code: int = 0) -> None:
+        self.verbose(f"Exit with code {code}")
+        sys.exit(code)
 
 
 pass_application = click.make_pass_decorator(Application, ensure=True)

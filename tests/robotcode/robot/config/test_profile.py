@@ -109,7 +109,7 @@ def test_if_profile_is_not_defined_an_error_is_raised() -> None:
     """
     config = loads_config_from_robot_toml(data)
 
-    with pytest.raises(ValueError, match="Can't find any profiles matching the pattern 'nonexistent''."):
+    with pytest.raises(ValueError, match="Can't find any profiles matching the pattern 'nonexistent'."):
         config.combine_profiles("nonexistent")
 
 

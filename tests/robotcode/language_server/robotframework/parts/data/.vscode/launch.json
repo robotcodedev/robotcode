@@ -37,9 +37,24 @@
             "presentation": {
                 "hidden": true
             },
-            "attachPython": false,
+            "attachPython": true,
             "pythonConfiguration": "RobotCode: Python",
-            //"target": "asd"
+            "robotCodeArgs": [
+                "-v",
+                // "--log",
+                // "--log-level=TRACE",
+                // "--log-calls"
+            ],
+            "profiles": [
+                "ci*",
+                "firefox",
+                "headless"
+            ],
+            // "args": [
+            //     "--loglevel",
+            //     "TRACE:TRACE",
+            // ],
+            "internalConsoleOptions": "neverOpen"
         },
         {
             "name": "RobotCode: Python",

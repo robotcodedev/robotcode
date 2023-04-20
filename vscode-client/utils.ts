@@ -1,3 +1,5 @@
+import * as fs from "fs";
+
 export async function sleep(timeout: number): Promise<number> {
   return new Promise<number>((resolve) => {
     setTimeout(() => resolve(timeout), timeout);
@@ -190,4 +192,17 @@ export class WeakValueSet<V extends object> implements Set<V> {
   }
 
   readonly [Symbol.toStringTag]: string = "WeakValueSet";
+}
+
+export async function waitForFile(file: string, timeout = 30000): Promise<boolean> {
+  const exists = () => fs.existsSync(file);
+  const deadline = Date.now() + timeout;
+
+  let result: boolean;
+
+  while (!(result = exists()) && Date.now() < deadline) {
+    await sleep(100);
+  }
+
+  return result;
 }

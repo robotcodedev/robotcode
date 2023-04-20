@@ -34,8 +34,8 @@ extra-python-path = ["./lib/firefox"]
 [profiles.firefox.extra-variables]
 BROWSER = "firefox"
 
-[profiles.firefox.extra-listeners]
-MyListener = ["firefox", "c:\\test\\blah"]
+# [profiles.firefox.extra-listeners]
+# MyListener = ["firefox", "c:\\test\\blah"]
 
 [profiles.headless.extra-variables]
 HEADLESS = "true"

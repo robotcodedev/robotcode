@@ -1,6 +1,10 @@
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Union, cast
+
+from robot import result, running
+from robot.model import Message
 
 from .dap_types import Event, Model
 from .debugger import Debugger
@@ -17,9 +21,7 @@ class RobotExecutionEventBody(Model):
 class ListenerV2:
     ROBOT_LISTENER_API_VERSION = "2"
 
-    def __init__(self, no_debug: bool = False) -> None:
-        self.no_debug = no_debug
-        self.debug = not no_debug
+    def __init__(self) -> None:
         self.failed_keywords: Optional[List[Dict[str, Any]]] = None
         self.last_fail_message: Optional[str] = None
 
@@ -121,30 +123,104 @@ class ListenerV2:
 
                 self.failed_keywords.insert(0, {"message": self.last_fail_message, **attributes})
 
+    RE_FILE_LINE_MATCHER = re.compile(r".+\sin\sfile\s'(?P<file>.*)'\son\sline\s(?P<line>\d+):(?P<message>.*)")
+
     def log_message(self, message: Dict[str, Any]) -> None:
-        current_frame = Debugger.instance().full_stack_frames[0] if Debugger.instance().full_stack_frames else None
+        if message["level"] in ["FAIL", "ERROR", "WARN"]:
+            current_frame = Debugger.instance().full_stack_frames[0] if Debugger.instance().full_stack_frames else None
 
-        if message["level"] == "FAIL":
-            self.last_fail_message = message["message"]
-            Debugger.instance().last_fail_message = self.last_fail_message
+            if message["level"] == "FAIL":
+                self.last_fail_message = message["message"]
+                Debugger.instance().last_fail_message = self.last_fail_message
 
-        source = current_frame.source if current_frame else None
-        line = current_frame.line if current_frame else None
-        column = current_frame.column if current_frame else None
+            source = current_frame.source if current_frame else None
+            line = current_frame.line if current_frame else None
+            column = current_frame.column if current_frame else None
 
-        name = next((e.name for e in Debugger.instance().full_stack_frames if e.type in ["SUITE", "TEST"]), None)
+            item_id = next(
+                (
+                    (
+                        f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname}"
+                        if item.type == "SUITE"
+                        else f"{Path(item.source).resolve() if item.source is not None else ''};"
+                        f"{item.longname};{item.line}"
+                    )
+                    for item in Debugger.instance().full_stack_frames
+                    if item.type in ["SUITE", "TEST"]
+                ),
+                None,
+            )
 
-        Debugger.instance().send_event(
-            self,
-            Event(
-                event="robotLog",
-                body={"itemId": name, "source": source, "lineno": line, "column": column, **dict(message)},
-            ),
-        )
+            msg = None
+            match = self.RE_FILE_LINE_MATCHER.match(message["message"])
+            if match:
+                source = match.group("file")
+                line = int(match.group("line"))
+                msg = match.group("message")
+                column = 0
+
+            Debugger.instance().send_event(
+                self,
+                Event(
+                    event="robotLog",
+                    body={
+                        "itemId": item_id,
+                        "source": source,
+                        "lineno": line,
+                        "column": column,
+                        **dict(message),
+                        **({"message": msg} if msg else {}),
+                    },
+                ),
+            )
 
         Debugger.instance().log_message(message)
 
     def message(self, message: Dict[str, Any]) -> None:
+        if message["level"] in ["FAIL", "ERROR", "WARN"]:
+            current_frame = Debugger.instance().full_stack_frames[0] if Debugger.instance().full_stack_frames else None
+
+            source = current_frame.source if current_frame else None
+            line = current_frame.line if current_frame else None
+            column = current_frame.column if current_frame else None
+
+            item_id = next(
+                (
+                    (
+                        f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname}"
+                        if item.type == "SUITE"
+                        else f"{Path(item.source).resolve() if item.source is not None else ''};"
+                        f"{item.longname};{item.line}"
+                    )
+                    for item in Debugger.instance().full_stack_frames
+                    if item.type in ["SUITE", "TEST"]
+                ),
+                None,
+            )
+
+            msg = None
+            match = self.RE_FILE_LINE_MATCHER.match(message["message"])
+            if match:
+                source = match.group("file")
+                line = int(match.group("line"))
+                msg = match.group("message")
+                column = 0
+
+            Debugger.instance().send_event(
+                self,
+                Event(
+                    event="robotMessage",
+                    body={
+                        "itemId": item_id,
+                        "source": source,
+                        "lineno": line,
+                        "column": column,
+                        **dict(message),
+                        **({"message": msg} if msg else {}),
+                    },
+                ),
+            )
+
         Debugger.instance().message(message)
 
     def library_import(self, name: str, attributes: Dict[str, Any]) -> None:
@@ -181,17 +257,17 @@ class ListenerV3:
     def __init__(self) -> None:
         self._event_sended = False
 
-    def start_suite(self, data: Any, result: Any) -> None:
-        from robot.running import TestCase, TestSuite
+    def start_suite(self, data: running.TestSuite, result: result.TestSuite) -> None:
+        """Called when a suite starts."""
 
-        def enqueue(item: Union[TestSuite, TestCase]) -> Iterator[str]:
-            if isinstance(item, TestSuite):
+        def enqueue(item: Union[running.TestSuite, running.TestCase]) -> Iterator[str]:
+            if isinstance(item, running.TestSuite):
+                yield f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname}"
+
                 for s in item.suites:
                     yield from enqueue(s)
                 for s in item.tests:
                     yield from enqueue(s)
-
-                yield f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname}"
                 return
 
             yield f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname};{item.lineno}"
@@ -199,7 +275,7 @@ class ListenerV3:
         if self._event_sended:
             return
 
-        items = list(reversed(list(enqueue(cast(TestSuite, data)))))
+        items = list(reversed(list(enqueue(cast(running.TestSuite, data)))))
 
         Debugger.instance().send_event(
             self,
@@ -211,11 +287,17 @@ class ListenerV3:
 
         self._event_sended = True
 
-    def end_suite(self, data: Any, result: Any) -> None:
+    def end_suite(self, data: running.TestSuite, result: result.TestSuite) -> None:
         pass
 
-    def start_test(self, data: Any, result: Any) -> None:
+    def start_test(self, data: running.TestCase, result: result.TestCase) -> None:
         pass
 
-    def end_test(self, data: Any, result: Any) -> None:
+    def end_test(self, data: running.TestCase, result: result.TestCase) -> None:
+        pass
+
+    def log_message(self, message: Message) -> None:
+        pass
+
+    def message(self, message: Message) -> None:
         pass

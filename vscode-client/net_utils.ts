@@ -52,3 +52,23 @@ export async function getAvailablePort(hosts: string[], port?: number): Promise<
 
   return port;
 }
+
+export async function isPortOpen(port: number, host: string): Promise<boolean> {
+  return new Promise((resolve, _reject) => {
+    const socket = new net.Socket();
+
+    const onError = () => {
+      socket.destroy();
+      resolve(false);
+    };
+
+    socket.setTimeout(1000);
+    socket.once("error", onError);
+    socket.once("timeout", onError);
+
+    socket.connect(port, host, () => {
+      socket.end();
+      resolve(true);
+    });
+  });
+}

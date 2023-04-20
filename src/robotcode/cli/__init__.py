@@ -1,7 +1,9 @@
+import logging
 from pathlib import Path
 from typing import List, Optional
 
 import click
+from robotcode.core.logging import LoggingDescriptor
 from robotcode.plugin import Application, ColoredOutput, pass_application
 from robotcode.plugin.manager import PluginManager
 
@@ -13,7 +15,6 @@ from .commands import config, profiles
     context_settings={"auto_envvar_prefix": "ROBOTCODE"},
     invoke_without_command=False,
 )
-@click.version_option(version=__version__, prog_name="robotcode")
 @click.option(
     "-c",
     "--config",
@@ -46,17 +47,52 @@ from .commands import config, profiles
     help="Whether or not to display colored output (default is auto-detection).",
     show_envvar=True,
 )
-@click.option("-v", "--verbose", is_flag=True, help="Enables verbose mode.")
-@click.pass_context
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    help="Enables verbose mode.",
+    show_envvar=True,
+)
+@click.option(
+    "--log",
+    is_flag=True,
+    help="Enables logging.",
+    show_envvar=True,
+)
+@click.option(
+    "--log-level",
+    type=click.Choice(["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    help="Sets the log level.",
+    default="CRITICAL",
+    show_default=True,
+    show_envvar=True,
+)
+@click.option(
+    "--log-calls",
+    is_flag=True,
+    help="Enables logging of method/function calls.",
+    show_envvar=True,
+)
+@click.option(
+    "--launcher-script",
+    hidden=True,
+    type=str,
+    help="Path to the launcher script. This is an internal option.",
+)
+@click.version_option(version=__version__, prog_name="robotcode")
 @pass_application
 def robotcode(
     app: Application,
-    ctx: click.Context,
     config_files: Optional[List[Path]],
     profiles: Optional[List[str]],
     dry: bool,
     verbose: bool,
     color: Optional[bool],
+    log: bool,
+    log_level: str,
+    log_calls: bool,
+    launcher_script: Optional[str] = None,
 ) -> None:
     """\b
      _____       _           _    _____          _
@@ -72,12 +108,21 @@ def robotcode(
     app.config.profiles = profiles
     app.config.dry = dry
     app.config.verbose = verbose
+
     if color is None:
         app.config.colored_output = ColoredOutput.AUTO
     elif color:
         app.config.colored_output = ColoredOutput.YES
     else:
         app.config.colored_output = ColoredOutput.NO
+
+    app.config.launcher_script = launcher_script
+
+    if log:
+        if log_calls:
+            LoggingDescriptor.set_call_tracing(True)
+
+        logging.basicConfig(level=log_level, format="%(name)s:%(levelname)s: %(message)s")
 
 
 robotcode.add_command(config)
@@ -86,16 +131,6 @@ robotcode.add_command(profiles)
 for p in PluginManager().cli_commands:
     for c in p:
         robotcode.add_command(c)
-
-
-@robotcode.command()
-@click.pass_context
-def debug(ctx: click.Context) -> None:
-    """TODO: Debug a Robot Framework run.
-
-    TODO: This is not implemented yet.
-    """
-    click.echo("TODO")
 
 
 @robotcode.command()

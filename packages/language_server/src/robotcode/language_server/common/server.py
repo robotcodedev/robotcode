@@ -1,7 +1,8 @@
 import abc
 from typing import Optional, TypeVar
 
-from robotcode.jsonrpc2.server import JsonRPCServer, JsonRpcServerMode, TcpParams
+from robotcode.core.types import ServerMode, TcpParams
+from robotcode.jsonrpc2.server import JsonRPCServer
 
 from .protocol import LanguageServerProtocol
 
@@ -15,7 +16,7 @@ TProtocol = TypeVar("TProtocol", bound=LanguageServerProtocol)
 class LanguageServerBase(JsonRPCServer[TProtocol], abc.ABC):
     def __init__(
         self,
-        mode: JsonRpcServerMode = JsonRpcServerMode.STDIO,
+        mode: ServerMode = ServerMode.STDIO,
         tcp_params: TcpParams = TcpParams(None, TCP_DEFAULT_PORT),
         pipe_name: Optional[str] = None,
     ):

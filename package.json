@@ -324,6 +324,15 @@
         "title": "RobotCode",
         "type": "object",
         "properties": {
+          "robotcode.extraArgs": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "Specifies the arguments to be passed to the `robotcode` command line tool (i.e.: [`--log`, `--log-level=TRACE`, `--log-calls`]). Requires a VSCode restart to take effect.",
+            "scope": "resource"
+          },
           "robotcode.python": {
             "type": "string",
             "default": "",
@@ -362,35 +371,36 @@
             "markdownDescription": "Specifies the arguments to be passed to the language server (i.e.: [`--log`, `--log-file=~/robotcode.log`]). Requires a VSCode restart to take effect.",
             "scope": "resource"
           },
-          "robotcode.debugAdapter.mode": {
+          "robotcode.debugLauncher.mode": {
             "type": "string",
-            "default": "stdio",
+            "default": "pipe-server",
             "description": "Specifies the mode the debug adapter is started. Requires a VSCode restart to take effect.",
             "enum": [
               "stdio",
-              "tcp"
+              "tcp",
+              "pipe-server"
             ],
             "scope": "resource"
           },
-          "robotcode.debugAdapter.tcpPort": {
+          "robotcode.debugLauncher.tcpPort": {
             "type": "number",
             "default": 0,
             "description": "If the port is specified, connect to the debug adapter previously started at the given port. Requires a VSCode restart to take effect.",
             "scope": "resource"
           },
-          "robotcode.debugAdapter.host": {
+          "robotcode.debugLauncher.host": {
             "type": "string",
             "default": null,
             "description": "If the host is specified, connect to the debug adapter previously started at the given host. Requires a VSCode restart to take effect.",
             "scope": "resource"
           },
-          "robotcode.debugAdapter.args": {
+          "robotcode.debugLauncher.args": {
             "type": "array",
             "default": [],
             "items": {
               "type": "string"
             },
-            "markdownDescription": "Specifies the arguments to be passed to the debug adapter (i.e.: [`--log`, `--log-file=~/debug-adapter.log`]). Requires a VSCode restart to take effect.",
+            "markdownDescription": "Specifies the arguments to be passed to the debug adapter. Requires a VSCode restart to take effect.",
             "scope": "resource"
           },
           "robotcode.robot.args": {
@@ -849,6 +859,11 @@
                 "description": "Attach also the python debugger if a robot test starts.",
                 "default": false
               },
+              "attachPythonPort": {
+                "type": "number",
+                "description": "The port the python debugger (debugpy) should use.",
+                "default": 5678
+              },
               "pythonConfiguration": {
                 "type": [
                   "object",
@@ -869,13 +884,21 @@
                 "markdownDescription": "The `.robot` file or a folder containing `.robot` files to be launched.",
                 "default": "${file}"
               },
+              "profiles": {
+                "type": "array",
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "markdownDescription": "Specifies the profiles to be used for execution. Corresponds to the '--profile' option of __robotcode__."
+              },
               "paths": {
                 "type": "array",
                 "default": [],
                 "items": {
                   "type": "string"
                 },
-                "markdownDescription": "Specifies the paths where robot should discover tests. Corresponds to the 'paths' option of __robot__."
+                "markdownDescription": "Specifies the paths where robot should discover tests. Corresponds to the 'paths' argument of __robot__."
               },
               "args": {
                 "type": "array",
@@ -932,6 +955,11 @@
                 "type": "boolean",
                 "description": "Attach also the python debugger if a robot test starts.",
                 "default": false
+              },
+              "attachPythonPort": {
+                "type": "number",
+                "description": "The port the python debugger (debugpy) should use.",
+                "default": 5678
               },
               "pythonConfiguration": {
                 "type": [
@@ -1000,6 +1028,11 @@
                 "type": "number",
                 "description": "Timeout the debugger waits for a client connection.",
                 "default": 10
+              },
+              "robotCodeArgs": {
+                "type": "array",
+                "description": "Extra command line arguments passed to robotcode.",
+                "default": []
               },
               "outputDir": {
                 "type": "string",
@@ -1222,7 +1255,6 @@
     "ms-python.python"
   ],
   "dependencies": {
-    "@vscode/debugadapter": "^1.59.0",
     "ansi-colors": "^4.1.3",
     "vscode-languageclient": "^8.1.0"
   },
@@ -1231,7 +1263,6 @@
     "@types/vscode": "^1.74.0",
     "@typescript-eslint/eslint-plugin": "^5.58.0",
     "@typescript-eslint/parser": "^5.58.0",
-    "@vscode/debugadapter-testsupport": "^1.59.0",
     "@vscode/test-electron": "^2.3.0",
     "eslint": "^8.38.0",
     "eslint-config-prettier": "^8.8.0",

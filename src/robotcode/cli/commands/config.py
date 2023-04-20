@@ -1,12 +1,12 @@
 import dataclasses
 import fnmatch
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 import click
 from robotcode.core.dataclasses import as_dict, encode_case
-from robotcode.plugin import Application, OutputFormat, pass_application
-from robotcode.plugin.click_helper import add_options
+from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
+from robotcode.plugin.click_helper.helper import add_options
 from robotcode.robot.config.loader import (
     find_project_root,
     load_config_from_path,
@@ -23,12 +23,10 @@ from ._common import format_option
 @pass_application
 def config(
     app: Application,
-) -> Union[str, int, None]:
+) -> None:
     """\
-    Commands to give informations about Robot Framework configuration.
+    View configuration information.
     """
-
-    return 0
 
 
 @config.command
@@ -43,7 +41,7 @@ def show(
     format: OutputFormat,
     single: bool,
     paths: List[Path],
-) -> Union[str, int, None]:
+) -> None:
     """\
     Shows the Robot Framework configuration.
 
@@ -68,16 +66,14 @@ def show(
                 click.secho(f"File: {file}")
                 app.print_dict(as_dict(config, remove_defaults=True), format)
 
-            return 0
+            return
 
         config = load_config_from_path(*config_files)
 
         app.print_dict(as_dict(config, remove_defaults=True), format)
 
     except (TypeError, ValueError) as e:
-        raise click.ClickException(str(e)) from e
-
-    return 0
+        raise UnknownError(str(e)) from e
 
 
 @config.command
@@ -86,7 +82,7 @@ def show(
 def files(
     app: Application,
     paths: List[Path],
-) -> Union[str, int, None]:
+) -> None:
     """\
     Shows Robot Framework configuration files.
 
@@ -108,10 +104,8 @@ def files(
         for config_file, _ in config_files:
             click.echo(config_file)
 
-        return 0
-
     except FileNotFoundError as e:
-        raise click.ClickException(str(e)) from e
+        raise UnknownError(str(e)) from e
 
 
 @config.command
@@ -120,7 +114,7 @@ def files(
 def root(
     app: Application,
     paths: List[Path],
-) -> Union[str, int, None]:
+) -> None:
     """\
     Shows the root of the Robot Framework project.
 
@@ -143,14 +137,11 @@ def root(
 
     click.echo(f"{root_folder} (discovered by {discovered_by})")
 
-    return 0
-
 
 @config.group
 @pass_application
-def info(app: Application) -> Union[str, int, None]:
+def info(app: Application) -> None:
     """Shows informations about possible configuration settings."""
-    return 0
 
 
 def get_config_fields() -> Dict[str, Dict[str, str]]:
@@ -189,7 +180,7 @@ def get_config_fields() -> Dict[str, Dict[str, str]]:
 @info.command()
 @click.argument("name", type=str, nargs=-1)
 @pass_application
-def list(app: Application, name: Optional[List[str]] = None) -> Union[str, int, None]:
+def list(app: Application, name: Optional[List[str]] = None) -> None:
     """\
     Lists all possible configuration settings.
 
@@ -214,13 +205,11 @@ def list(app: Application, name: Optional[List[str]] = None) -> Union[str, int, 
             if fnmatch.fnmatchcase(field, n):
                 app.echo(field)
 
-    return 0
-
 
 @info.command()
 @click.argument("name", type=str, nargs=-1)
 @pass_application
-def desc(app: Application, name: Optional[List[str]] = None) -> Union[str, int, None]:
+def desc(app: Application, name: Optional[List[str]] = None) -> None:
     """\
     Shows the description of the specified configuration settings.
 
@@ -250,5 +239,3 @@ def desc(app: Application, name: Optional[List[str]] = None) -> Union[str, int, 
                 output += value["description"] + "\n\n"
 
                 app.echo_as_markdown(output)
-
-    return 0

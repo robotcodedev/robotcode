@@ -50,7 +50,7 @@ class RobotFrameworkEx(RobotFramework):
         if self.root_folder is not None:
             os.chdir(self.root_folder)
 
-        super().main(arguments, **options)
+        return super().main(arguments, **options)
 
 
 @click.command(
@@ -59,6 +59,14 @@ class RobotFrameworkEx(RobotFramework):
         "ignore_unknown_options": True,
     },
     add_help_option=True,
+    epilog='Use "-- --help" to see `robot` help.',
+)
+@click.option("--by-longname", type=str, multiple=True, help="Select tests/tasks or suites by longname.")
+@click.option(
+    "--exclude-by-longname",
+    type=str,
+    multiple=True,
+    help="Excludes tests/tasks or suites by longname.",
 )
 @click.version_option(
     version=__version__,
@@ -66,30 +74,17 @@ class RobotFrameworkEx(RobotFramework):
     prog_name="RobotCode Runner",
     message=f"%(prog)s %(version)s\n{USAGE.splitlines()[0].split(' -- ')[0].strip()} {get_full_version()}",
 )
-@click.option(
-    "longname", "-ZLN", "--by-longname", type=str, multiple=True, help="Select tests/tasks or suites by longname."
-)
-@click.option(
-    "exclude_longname",
-    "-ZEL",
-    "--exclude-by-longname",
-    type=str,
-    multiple=True,
-    help="Excludes tests/tasks or suites by longname.",
-)
 @click.argument("robot_options_and_args", nargs=-1, type=click.Path())
 @pass_application
 def robot(
     app: Application,
-    longname: Tuple[str, ...],
-    exclude_longname: Tuple[str, ...],
+    by_longname: Tuple[str, ...],
+    exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
-) -> Union[str, int, None]:
-    """Runs "robot" with the selected configuration, profiles, options and arguments.
+) -> None:
+    """Runs `robot` with the selected configuration, profiles, options and arguments.
 
-    The options and arguments are passed to "robot" as is.
-
-    Use "-- --help" to see the robot help.
+    The options and arguments are passed to `robot` as is.
     """
 
     robot_arguments: Optional[List[Union[str, Path]]] = None
@@ -112,25 +107,26 @@ def robot(
 
     options = profile.build_command_line()
 
-    if longname:
-        sep = ";" if any(True for l in longname if ":" in l) else ":"
-        options += ("--prerunmodifier", f"robotcode.modifiers.ByLongName:{sep.join(longname)}")
+    if by_longname:
+        sep = ";" if any(True for l in by_longname if ":" in l) else ":"
+        options += ("--prerunmodifier", f"robotcode.modifiers.ByLongName:{sep.join(by_longname)}")
 
-    if exclude_longname:
-        sep = ";" if any(True for l in exclude_longname if ":" in l) else ":"
-        options += ("--prerunmodifier", f"robotcode.modifiers.ExcludedByLongName:{sep.join(exclude_longname)}")
+    if exclude_by_longname:
+        sep = ";" if any(True for l in exclude_by_longname if ":" in l) else ":"
+        options += ("--prerunmodifier", f"robotcode.modifiers.ExcludedByLongName:{sep.join(exclude_by_longname)}")
 
     if profile.env:
         for k, v in profile.env.items():
             os.environ[k] = v
             app.verbose(lambda: f"Set environment variable {k} to {v}")
 
-    try:
-        app.verbose(
-            lambda: "Executing robot with the following options:\n    "
-            + " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
-        )
-        return cast(
+    app.verbose(
+        lambda: "Executing robot with the following options:\n    "
+        + " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
+    )
+
+    app.exit(
+        cast(
             int,
             RobotFrameworkEx(
                 [] if profile.paths is None else profile.paths if isinstance(profile.paths, list) else [profile.paths],
@@ -141,5 +137,4 @@ def robot(
                 exit=False,
             ),
         )
-    except SystemExit as e:
-        return cast(int, e.code)
+    )

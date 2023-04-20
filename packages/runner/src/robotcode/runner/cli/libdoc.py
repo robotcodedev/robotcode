@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, Optional, Tuple, Union, cast
+from typing import Any, Optional, Tuple, cast
 
 import click
 from robot.errors import DataError, Information
@@ -37,7 +37,7 @@ class LibDocEx(LibDoc):
         if self.root_folder is not None:
             os.chdir(self.root_folder)
 
-        super().main(arguments, **options)
+        return super().main(arguments, **options)
 
 
 @click.command(
@@ -46,6 +46,7 @@ class LibDocEx(LibDoc):
         "ignore_unknown_options": True,
     },
     add_help_option=True,
+    epilog='Use "-- --help" to see the `libdoc` help.',
 )
 @click.version_option(
     version=__version__,
@@ -58,12 +59,10 @@ class LibDocEx(LibDoc):
 def libdoc(
     app: Application,
     robot_options_and_args: Tuple[str, ...],
-) -> Union[str, int, None]:
-    """Runs "libdoc" with the selected configuration, profiles, options and arguments.
+) -> None:
+    """Runs `libdoc` with the selected configuration, profiles, options and arguments.
 
-    The options and arguments are passed to "libdoc" as is.
-
-    Use "-- --help" to see the libdoc help.
+    The options and arguments are passed to `libdoc` as is.
     """
 
     robot_arguments = None
@@ -97,14 +96,14 @@ def libdoc(
             os.environ[k] = v
             app.verbose(lambda: f"Set environment variable {k} to {v}")
 
-    try:
-        app.verbose(
-            lambda: "Executing libdoc robot with the following options:\n    "
-            + " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
-        )
-        return cast(
+    app.verbose(
+        lambda: "Executing libdoc robot with the following options:\n    "
+        + " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
+    )
+
+    app.exit(
+        cast(
             int,
             LibDocEx(app.config.dry, root_folder).execute_cli((*options, *robot_options_and_args), exit=False),
         )
-    except SystemExit as e:
-        return cast(int, e.code)
+    )
