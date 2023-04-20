@@ -4,6 +4,13 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.34.0 (2023-04-20)
+### Feature
+* **debugger:** Refactored robotcode debugger to support debugging/running tests with robotcode's configurations and profiles, also command line tool changes. ([`69131e6`](https://github.com/d-biehl/robotcode/commit/69131e6a65fd82de7db1f445bfd0b6991bfac951))
+
+### Fix
+* Correct toml json schema urls ([`bf4def7`](https://github.com/d-biehl/robotcode/commit/bf4def70e487437c3629085485688c540f792d54))
+
 ## v0.33.0 (2023-04-09)
 ### Feature
 * Improved Handling of UTF-16 encoded multibyte characters, e.g. emojis are now handled correctly ([`d17e79c`](https://github.com/d-biehl/robotcode/commit/d17e79c258837cc24c9f69f30358c4a7c1adfed9))
