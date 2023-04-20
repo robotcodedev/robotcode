@@ -1,3 +1,5 @@
+# ruff: noqa: RUF009
+
 import dataclasses
 import datetime
 import fnmatch

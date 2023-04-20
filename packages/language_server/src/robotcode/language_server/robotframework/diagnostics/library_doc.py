@@ -17,7 +17,6 @@ from typing import (
     AbstractSet,
     Any,
     Callable,
-    ClassVar,
     Dict,
     Iterable,
     Iterator,
@@ -615,6 +614,9 @@ class LibraryType(Enum):
 
 ROBOT_DEFAULT_SCOPE = "TEST"
 
+RE_INLINE_LINK = re.compile(r"([\`])((?:\1|.)+?)\1", re.VERBOSE)
+RE_HEADERS = re.compile(r"^(#{2,9})\s+(\S.*)$", re.MULTILINE)
+
 
 @dataclass
 class LibraryDoc:
@@ -747,22 +749,15 @@ class LibraryDoc:
 
         return None
 
-    _inline_link: ClassVar[re.Pattern] = re.compile(  # type: ignore
-        r"([\`])((?:\1|.)+?)\1",
-        re.VERBOSE,
-    )
-
-    _headers: ClassVar[re.Pattern] = re.compile(r"^(#{2,9})\s+(\S.*)$", re.MULTILINE)  # type: ignore
-
     def _link_inline_links(self, text: str) -> str:
-        headers = [v.group(2) for v in self._headers.finditer(text)]
+        headers = [v.group(2) for v in RE_HEADERS.finditer(text)]
 
         def repl(m: re.Match) -> str:  # type: ignore
             if m.group(2) in headers:
                 return f"[{str(m.group(2))}](\\#{str(m.group(2)).lower().replace(' ', '-')})"
             return str(m.group(0))
 
-        return str(self._inline_link.sub(repl, text))
+        return str(RE_INLINE_LINK.sub(repl, text))
 
     def _get_doc_for_keywords(self, header_level: int = 2) -> str:
         result = ""
