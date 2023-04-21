@@ -25,7 +25,11 @@ classifiers = [
   "Framework :: Robot Framework",
   "Framework :: Robot Framework :: Tool",
 ]
-dependencies = ["robotframework>=4.1.0", "robotcode-plugin", "robotcode-robot"]
+dependencies = [
+  "robotframework>=4.1.0",
+  "robotcode-plugin==0.34.0",
+  "robotcode-robot==0.34.0",
+]
 dynamic = ["version"]
 
 [project.entry-points.robotcode]

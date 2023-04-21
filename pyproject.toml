@@ -49,7 +49,7 @@ classifiers = [
   "Framework :: Robot Framework :: Tool",
 ]
 requires-python = ">=3.8"
-dependencies = ["robotcode-plugin", "robotcode-robot"]
+dependencies = ["robotcode-plugin==0.34.0", "robotcode-robot==0.34.0"]
 dynamic = ["version"]
 
 
@@ -77,10 +77,10 @@ rest = ["docutils"]
 colored = ["rich"]
 toml = ["tomli-w"]
 all = [
-  "robotcode-debugger",
-  "robotcode-language-server",
-  "robotcode-runner",
-  "robotcode-analyze",
+  "robotcode-debugger==0.34.0",
+  "robotcode-language-server==0.34.0",
+  "robotcode-runner==0.34.0",
+  "robotcode-analyze==0.34.0",
   "PyYAML>=5.4",
   "robotframework-robocop>=2.0.0",
   "robotframework-tidy>=2.0.0",
@@ -93,17 +93,29 @@ all = [
 [tool.semantic_release]
 version_variable = [
   "src/robotcode/cli/__version__.py:__version__",
+  "packages/analyze/src/robotcode/analyze/__version__.py:__version__",
   "packages/core/src/robotcode/core/__version__.py:__version__",
   "packages/debugger/src/robotcode/debugger/__version__.py:__version__",
   "packages/jsonrpc2/src/robotcode/jsonrpc2/__version__.py:__version__",
   "packages/language_server/src/robotcode/language_server/__version__.py:__version__",
   "packages/modifiers/src/robotcode/modifiers/__version__.py:__version__",
   "packages/plugin/src/robotcode/plugin/__version__.py:__version__",
-  "packages/runner/src/robotcode/runner/__version__.py:__version__",
-  "packages/analyze/src/robotcode/analyze/__version__.py:__version__",
   "packages/robot/src/robotcode/robot/__version__.py:__version__",
+  "packages/runner/src/robotcode/runner/__version__.py:__version__",
 ]
-version_pattern = ['package.json:"version": "{version}"']
+version_pattern = [
+  'package.json:"version": "{version}"',
+  "packages/analyze/pyproject.toml:\"robotcode-\\S+=={version}\"",
+  "packages/core/pyproject.toml:\"robotcode-\\S+=={version}\"",
+  "packages/debugger/pyproject.toml:\"robotcode-\\S+=={version}\"",
+  "packages/jsonrpc2/pyproject.toml:\"robotcode-\\S+=={version}\"",
+  "packages/language_server/pyproject.toml:\"robotcode-\\S+=={version}\"",
+  "packages/modifiers/pyproject.toml:\"robotcode-\\S+=={version}\"",
+  "packages/plugin/pyproject.toml:\"robotcode-\\S+=={version}\"",
+  "packages/robot/pyproject.toml:\"robotcode-\\S+=={version}\"",
+  "packages/runner/pyproject.toml:\"robotcode-\\S+=={version}\"",
+  "pyproject.toml:\"robotcode-\\S+=={version}\"",
+]
 branch = "main"
 upload_to_release = false
 upload_to_repository = false
