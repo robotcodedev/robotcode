@@ -47,7 +47,7 @@ def main() -> None:
     for f in [Path("pyproject.toml"), *pyproject_files]:
         replace_in_file(
             f,
-            re.compile(r'("robotcode\S+==)([0-9]+\.[0-9]+\.[0-9]+.*)(")', re.MULTILINE),
+            re.compile(r'("robotcode\S*==)([0-9]+\.[0-9]+\.[0-9]+.*)(")', re.MULTILINE),
             rf"\g<1>{version or ''}\g<3>",
         )
 

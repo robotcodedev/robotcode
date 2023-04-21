@@ -105,16 +105,16 @@ version_variable = [
 ]
 version_pattern = [
   'package.json:"version": "{version}"',
-  "packages/analyze/pyproject.toml:\"robotcode\\S+=={version}\"",
-  "packages/core/pyproject.toml:\"robotcode\\S+=={version}\"",
-  "packages/debugger/pyproject.toml:\"robotcode\\S+=={version}\"",
-  "packages/jsonrpc2/pyproject.toml:\"robotcode\\S+=={version}\"",
-  "packages/language_server/pyproject.toml:\"robotcode\\S+=={version}\"",
-  "packages/modifiers/pyproject.toml:\"robotcode\\S+=={version}\"",
-  "packages/plugin/pyproject.toml:\"robotcode\\S+=={version}\"",
-  "packages/robot/pyproject.toml:\"robotcode\\S+=={version}\"",
-  "packages/runner/pyproject.toml:\"robotcode\\S+=={version}\"",
-  "pyproject.toml:\"robotcode\\S+=={version}\"",
+  "packages/analyze/pyproject.toml:\"robotcode\\S*=={version}\"",
+  "packages/core/pyproject.toml:\"robotcode\\S*=={version}\"",
+  "packages/debugger/pyproject.toml:\"robotcode\\S*=={version}\"",
+  "packages/jsonrpc2/pyproject.toml:\"robotcode\\S*=={version}\"",
+  "packages/language_server/pyproject.toml:\"robotcode\\S*=={version}\"",
+  "packages/modifiers/pyproject.toml:\"robotcode\\S*=={version}\"",
+  "packages/plugin/pyproject.toml:\"robotcode\\S*=={version}\"",
+  "packages/robot/pyproject.toml:\"robotcode\\S*=={version}\"",
+  "packages/runner/pyproject.toml:\"robotcode\\S*=={version}\"",
+  "pyproject.toml:\"robotcode\\S*=={version}\"",
 ]
 branch = "main"
 upload_to_release = false
