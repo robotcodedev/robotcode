@@ -384,7 +384,7 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
         rb"(?:[^\r\n]*\r\n)*"
         rb"(Content-Length: ?(?P<length>\d+)\r\n)"
         rb"((Content-Type: ?(?P<content_type>[^\r\n;]+)"
-        rb"(; *(charset=(?P<charset>[^\r\n]+))?)?\r\n)|(?:[^\r\n]+\r\n))*"
+        rb"(; *(charset=(?P<charset>[^\r\n]+))?)?\r\n)|(?:[^\r\n]+\r\n))?"
         rb"\r\n(?P<body>.*)",
         re.DOTALL,
     )
