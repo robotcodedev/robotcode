@@ -42,6 +42,15 @@ def main() -> None:
         rf"\g<1>{version or ''}\g<3>",
     )
 
+    pyproject_files = list(Path("packages").rglob("pyproject.toml"))
+
+    for f in [Path("pyproject.toml"), *pyproject_files]:
+        replace_in_file(
+            f,
+            re.compile(r'("robotcode-\S+==)([0-9]+\.[0-9]+\.[0-9]+.*)(")', re.MULTILINE),
+            rf"\g<1>{version or ''}\g<3>",
+        )
+
 
 if __name__ == "__main__":
     main()
