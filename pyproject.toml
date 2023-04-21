@@ -66,10 +66,10 @@ robotcode = "robotcode.cli.__main__:main"
 
 
 [project.optional-dependencies]
-debugger = ["robotcode-debugger"]
-languageserver = ["robotcode-language-server"]
-runner = ["robotcode-runner"]
-analyze = ["robotcode-analyze"]
+debugger = ["robotcode-debugger==0.34.0"]
+languageserver = ["robotcode-language-server==0.34.0"]
+runner = ["robotcode-runner==0.34.0"]
+analyze = ["robotcode-analyze==0.34.0"]
 yaml = ["PyYAML>=5.4"]
 lint = ["robotframework-robocop>=2.0.0"]
 tidy = ["robotframework-tidy>=2.0.0"]
