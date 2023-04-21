@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.34.1 (2023-04-21)
+### Fix
+* Some code scanning alerts ([`61771f8`](https://github.com/d-biehl/robotcode/commit/61771f82ba42100f798a7cf9ae494959ea9af77e))
+
 ## v0.34.0 (2023-04-20)
 ### Feature
 * **debugger:** Refactored robotcode debugger to support debugging/running tests with robotcode's configurations and profiles, also command line tool changes. ([`69131e6`](https://github.com/d-biehl/robotcode/commit/69131e6a65fd82de7db1f445bfd0b6991bfac951))
