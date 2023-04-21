@@ -29,7 +29,7 @@ dependencies = [
   "apischema",
 ]
 features = ["all"]
-pre-install-commands = ["python ./scripts/install_packages.py"]
+pre-install-commands = ["install-packages"]
 
 
 [envs.default.scripts]
@@ -38,7 +38,8 @@ no-cov = "cov --no-cov {args}"
 test = "pytest {args}"
 test-reset = "test --regtest-reset"
 install-bundled-editable = "python ./scripts/install_bundled_editable.py"
-create_json_schema = "python ./scripts/create_robot_toml_json_schema.py"
+create-json-schema = "python ./scripts/create_robot_toml_json_schema.py"
+install-packages = "python ./scripts/install_packages.py"
 
 [envs.devel]
 python = "38"
