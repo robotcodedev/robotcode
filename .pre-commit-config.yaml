@@ -5,20 +5,21 @@ default_stages: [commit, push]
 repos:
   - repo: local
     hooks:
+      - id: lint_package_update
+        name: Update package for lint environment
+        entry: hatch run lint:install-packages
+        pass_filenames: false
+        language: system
       - id: python_style
         name: Check Python Style
         entry: hatch run lint:style
         pass_filenames: false
         language: system
-  - repo: local
-    hooks:
       - id: python_typing
         name: Check Python Typing
         entry: hatch run lint:typing
         pass_filenames: false
         language: system
-  - repo: local
-    hooks:
       - id: eslint
         name: Check JavaScript Style and Typing
         entry: npm run lint
