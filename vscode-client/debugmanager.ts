@@ -316,7 +316,7 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
       env: {},
     };
 
-    const args: string[] = [this.pythonManager.robotCodeMain, ...robotcodeExtraArgs, ...launchArgs];
+    const args: string[] = ["-u", this.pythonManager.robotCodeMain, ...robotcodeExtraArgs, ...launchArgs];
 
     this.outputChannel.appendLine(`Starting debug launcher with command: ${pythonCommand} ${args.join(" ")}`);
 
@@ -337,6 +337,7 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
         );
       }
     });
+
     return p;
   }
 }

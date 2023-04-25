@@ -373,12 +373,17 @@
           },
           "robotcode.debugLauncher.mode": {
             "type": "string",
-            "default": "pipe-server",
-            "description": "Specifies the mode the debug adapter is started. Requires a VSCode restart to take effect.",
+            "default": "stdio",
+            "description": "Specifies the mode the debug launcher is started. Requires a VSCode restart to take effect.",
             "enum": [
               "stdio",
               "tcp",
               "pipe-server"
+            ],
+            "markdownEnumDescriptions": [
+              "The debug launcher communicates via stdio streams.",
+              "The debug launcher communicates via tcp streams.",
+              "The debug launcher communicates via pipe streams. **This maybe not work on Windows and Python versions < 3.10**."
             ],
             "scope": "resource"
           },

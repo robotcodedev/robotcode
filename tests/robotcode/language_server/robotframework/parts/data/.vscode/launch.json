@@ -41,9 +41,9 @@
             "pythonConfiguration": "RobotCode: Python",
             "robotCodeArgs": [
                 "-v",
-                // "--log",
-                // "--log-level=TRACE",
-                // "--log-calls"
+                "--log",
+                "--log-level=TRACE",
+                "--log-calls"
             ],
             "profiles": [
                 "ci*",

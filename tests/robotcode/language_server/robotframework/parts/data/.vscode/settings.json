@@ -41,10 +41,9 @@
         "**/lib/alibrary.py"
     ],
     "robotcode.extraArgs": [
-        // "--log",
-        // "--log-level",
-        // "TRACE",
-        // "--log-calls"
+        "--log",
+        "--log-level",
+        "TRACE",
+        "--log-calls"
     ],
-    "robotcode.debugLauncher.mode": "pipe-server"
 }

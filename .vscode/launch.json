@@ -51,7 +51,7 @@
 				"CMD_VAR_LONG": "long",
 			},
 			"args": [
-				// "--verbose",
+				"--verbose",
 				// "robot"
 				// "debug-launch",
 				// "--pipe-server",
@@ -59,7 +59,10 @@
 				// "debug",
 				// "--",
 				// "--help"
-				"run"
+				// "run"
+				"debug-launch",
+				"--pipe-server",
+				"\\\\.\\pipe\\df1029c255ced57faea2f0227c1170365"
 			]
 		},
 		{
