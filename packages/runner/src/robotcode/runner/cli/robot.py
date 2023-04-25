@@ -7,6 +7,7 @@ from robot.errors import DataError, Information
 from robot.run import USAGE, RobotFramework
 from robot.version import get_full_version
 from robotcode.plugin import Application, pass_application
+from robotcode.plugin.click_helper.aliases import AliasedCommand
 from robotcode.robot.config.loader import load_config_from_path
 from robotcode.robot.config.utils import get_config_files
 
@@ -54,6 +55,8 @@ class RobotFrameworkEx(RobotFramework):
 
 
 @click.command(
+    cls=AliasedCommand,
+    aliases=["run"],
     context_settings={
         "allow_extra_args": True,
         "ignore_unknown_options": True,
@@ -85,6 +88,11 @@ def robot(
     """Runs `robot` with the selected configuration, profiles, options and arguments.
 
     The options and arguments are passed to `robot` as is.
+
+    Examples:
+    ```
+    robotcode run
+    ```
     """
 
     robot_arguments: Optional[List[Union[str, Path]]] = None

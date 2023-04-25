@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 import click
 from robotcode.core.dataclasses import as_dict, encode_case
 from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
-from robotcode.plugin.click_helper.helper import add_options
+from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.config.loader import (
     find_project_root,
     load_config_from_path,

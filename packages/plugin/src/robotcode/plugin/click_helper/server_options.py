@@ -3,7 +3,7 @@ from typing import Optional, Sequence, Set, Tuple
 import click
 from robotcode.core.types import ServerMode
 from robotcode.plugin import Application
-from robotcode.plugin.click_helper.helper import (
+from robotcode.plugin.click_helper.types import (
     AddressesPort,
     AddressParamType,
     AddressPortParamType,
@@ -13,7 +13,7 @@ from robotcode.plugin.click_helper.helper import (
     PortParamType,
 )
 
-from .helper import FC
+from .types import FC
 
 
 def server_options(

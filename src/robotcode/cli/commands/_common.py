@@ -1,6 +1,6 @@
 import click
 from robotcode.plugin import OutputFormat
-from robotcode.plugin.click_helper.helper import EnumChoice
+from robotcode.plugin.click_helper.types import EnumChoice
 
 format_option = click.option(
     "-f",

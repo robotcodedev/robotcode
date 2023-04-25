@@ -4,7 +4,7 @@ from typing import List
 import click
 from robotcode.core.dataclasses import as_dict
 from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
-from robotcode.plugin.click_helper.helper import add_options
+from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.config.loader import (
     load_config_from_path,
 )

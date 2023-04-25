@@ -5,6 +5,7 @@ from typing import List, Optional
 import click
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.plugin import Application, ColoredOutput, pass_application
+from robotcode.plugin.click_helper.aliases import AliasedGroup
 from robotcode.plugin.manager import PluginManager
 
 from .__version__ import __version__
@@ -12,6 +13,7 @@ from .commands import config, profiles
 
 
 @click.group(
+    cls=AliasedGroup,
     context_settings={"auto_envvar_prefix": "ROBOTCODE"},
     invoke_without_command=False,
 )

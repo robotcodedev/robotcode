@@ -4,11 +4,11 @@ from typing import Optional, Sequence, Tuple
 import click
 from robotcode.core.types import ServerMode
 from robotcode.plugin import Application, UnknownError, pass_application
-from robotcode.plugin.click_helper.helper import (
+from robotcode.plugin.click_helper.server_options import resolve_server_options, server_options
+from robotcode.plugin.click_helper.types import (
     AddressesPort,
     add_options,
 )
-from robotcode.plugin.click_helper.server_options import resolve_server_options, server_options
 
 from .__version__ import __version__
 from .run import run_debugger
