@@ -4,6 +4,13 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.35.0 (2023-04-25)
+### Feature
+* **runner:** Add `run` alias for `robot` command in cli ([`9b782cc`](https://github.com/d-biehl/robotcode/commit/9b782ccfa0f8cd74bc5166a0c816e63dc1840796))
+
+### Fix
+* **debug-launcher:** Switch back to `stdio` communication, because this does not work on Windows with python <3.8 ([`6b0e96e`](https://github.com/d-biehl/robotcode/commit/6b0e96efebeec42d014f81d70573fc075a19bd5f))
+
 ## v0.34.1 (2023-04-21)
 ### Fix
 * Some code scanning alerts ([`61771f8`](https://github.com/d-biehl/robotcode/commit/61771f82ba42100f798a7cf9ae494959ea9af77e))
