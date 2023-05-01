@@ -64,6 +64,17 @@ interface PythonExtensionApi {
   };
 }
 
+export interface RobotCodeProfileInfo {
+  name: string;
+  description: string;
+  selected: boolean;
+}
+
+export interface RobotCodeProfilesResult {
+  profiles: RobotCodeProfileInfo[];
+  messages: string[] | undefined;
+}
+
 export class PythonManager {
   public get pythonLanguageServerMain(): string {
     return this._pythonLanguageServerMain;
@@ -168,11 +179,47 @@ export class PythonManager {
 
     if (res.status == 0 && res.stdout && res.stdout.trimEnd() === "True") return true;
 
-    this.outputChannel.appendLine(`checkRobotVersion: ${res.stdout}`);
-    this.outputChannel.appendLine(`checkRobotVersion: ${res.stderr}`);
+    const stdout = res.stdout;
+    if (stdout) this.outputChannel.appendLine(`checkRobotVersion: ${stdout}`);
+    const stderr = res.stderr;
+    if (stderr) this.outputChannel.appendLine(`checkRobotVersion: ${stderr}`);
 
     if (res.status != 0) return undefined;
 
     return false;
+  }
+
+  public getRobotCodeProfiles(folder: vscode.WorkspaceFolder, profiles?: string[]): RobotCodeProfilesResult {
+    const pythonCommand = this.getPythonCommand(folder);
+    if (pythonCommand === undefined) throw new Error("Can't find python executable.");
+
+    const res = spawnSync(
+      pythonCommand,
+      [
+        "-u",
+        "-X",
+        "utf8",
+        this.robotCodeMain,
+        "--format",
+        "json",
+        "--no-color",
+        ...(profiles === undefined ? [] : profiles.flatMap((v) => ["--profile", v])),
+        "profiles",
+        "list",
+      ],
+      {
+        encoding: "utf-8",
+        cwd: folder.uri.fsPath,
+      }
+    );
+
+    if (res.status == 0 && res.stdout) return JSON.parse(res.stdout) as RobotCodeProfilesResult;
+
+    const stdout = res.stdout;
+    if (stdout) this.outputChannel.appendLine(`getRobotCodeProfiles: ${stdout}`);
+    const stderr = res.stderr;
+    if (stderr) this.outputChannel.appendLine(`getRobotCodeProfiles: ${stderr}`);
+
+    throw new Error(stdout + "\n" + stderr);
   }
 }

@@ -6,7 +6,7 @@ from typing import Any, AsyncIterator, cast
 import pytest
 import pytest_asyncio
 from robotcode.core.dataclasses import as_dict
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     ClientCapabilities,
     FoldingRangeClientCapabilities,
     HoverClientCapabilities,
@@ -70,7 +70,8 @@ async def protocol(request: Any) -> AsyncIterator[RobotLanguageServerProtocol]:
                     },
                 ),
                 analysis=AnalysisConfig(diagnostic_mode=DiagnosticsMode.OFF),
-            )
+            ),
+            encode=False,
         )
     }
 

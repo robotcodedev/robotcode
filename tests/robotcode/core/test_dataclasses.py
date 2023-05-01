@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 
 import pytest
 
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     CallHierarchyClientCapabilities,
     ClientCapabilities,
     WindowClientCapabilities,

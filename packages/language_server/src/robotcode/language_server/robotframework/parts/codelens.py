@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, cast
 
 from robotcode.core.async_tools import create_sub_task
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.lsp.types import CodeLens, Command
 from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.lsp_types import CodeLens, Command
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import AnalysisConfig
 from robotcode.language_server.robotframework.diagnostics.library_doc import KeywordDoc

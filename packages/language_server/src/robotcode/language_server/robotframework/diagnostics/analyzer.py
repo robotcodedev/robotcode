@@ -8,8 +8,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union, cast
 
-from robotcode.core.uri import Uri
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     CodeDescription,
     Diagnostic,
     DiagnosticRelatedInformation,
@@ -19,6 +18,7 @@ from robotcode.language_server.common.lsp_types import (
     Position,
     Range,
 )
+from robotcode.core.uri import Uri
 from robotcode.language_server.robotframework.parts.model_helper import ModelHelperMixin
 from robotcode.language_server.robotframework.utils.ast_utils import (
     HasTokens,

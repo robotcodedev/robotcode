@@ -17,9 +17,9 @@ from typing import (
 )
 
 from robotcode.core.async_tools import Lock, async_tasking_event, check_canceled_sync
+from robotcode.core.lsp.types import MessageType
 from robotcode.core.uri import Uri
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.lsp_types import MessageType
 from robotcode.language_server.common.parts.workspace import WorkspaceFolder
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import RobotCodeConfig, RobotConfig

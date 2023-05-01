@@ -18,7 +18,7 @@ from typing import (
     Union,
 )
 
-from robotcode.language_server.common.lsp_types import Position
+from robotcode.core.lsp.types import Position
 from robotcode.language_server.robotframework.diagnostics.entities import (
     VariableDefinition,
     VariableNotFoundDefinition,

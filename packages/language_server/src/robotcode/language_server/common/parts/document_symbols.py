@@ -17,10 +17,7 @@ from typing import (
 
 from robotcode.core.async_tools import async_tasking_event, threaded
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     DocumentSymbol,
     DocumentSymbolClientCapabilitiesSymbolKindType,
     DocumentSymbolClientCapabilitiesTagSupportType,
@@ -30,6 +27,9 @@ from robotcode.language_server.common.lsp_types import (
     SymbolInformation,
     TextDocumentIdentifier,
 )
+from robotcode.jsonrpc2.protocol import rpc_method
+from robotcode.language_server.common.decorators import language_id_filter
+from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 from robotcode.language_server.common.text_document import TextDocument
 

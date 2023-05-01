@@ -20,11 +20,7 @@ from robotcode.core.async_tools import (
     threaded,
 )
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.core.uri import Uri
-from robotcode.jsonrpc2.protocol import JsonRPCErrorException, rpc_method
-from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     Diagnostic,
     DiagnosticOptions,
     DiagnosticServerCancellationData,
@@ -40,6 +36,10 @@ from robotcode.language_server.common.lsp_types import (
     WorkspaceDiagnosticParams,
     WorkspaceDiagnosticReport,
 )
+from robotcode.core.uri import Uri
+from robotcode.jsonrpc2.protocol import JsonRPCErrorException, rpc_method
+from robotcode.language_server.common.decorators import language_id_filter
+from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 from robotcode.language_server.common.text_document import TextDocument
 

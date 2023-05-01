@@ -1,20 +1,19 @@
 import dataclasses
 import fnmatch
+import os
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import click
-from robotcode.core.dataclasses import as_dict, encode_case
+from robotcode.core.dataclasses import encode_case
 from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
-from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.config.loader import (
+    DiscoverdBy,
     find_project_root,
     load_config_from_path,
 )
 from robotcode.robot.config.model import LibDocProfile, RebotProfile, RobotConfig, TestDocProfile
 from robotcode.robot.config.utils import get_config_files
-
-from ._common import format_option
 
 
 @click.group(
@@ -30,7 +29,6 @@ def config(
 
 
 @config.command
-@add_options(format_option)
 @click.option(
     "-s", "--single", "single", is_flag=True, default=False, help="Shows single files, not the combined config."
 )
@@ -38,7 +36,6 @@ def config(
 @pass_application
 def show(
     app: Application,
-    format: OutputFormat,
     single: bool,
     paths: List[Path],
 ) -> None:
@@ -53,10 +50,9 @@ def show(
     ```
     robotcode config show
     robotcode config show tests/acceptance/first.robot
-    robotcode config show --format json
+    robotcode --format json config show
     ```
     """
-
     config_files, _, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
 
     try:
@@ -64,13 +60,13 @@ def show(
             for file, _ in config_files:
                 config = load_config_from_path(file)
                 click.secho(f"File: {file}")
-                app.print_dict(as_dict(config, remove_defaults=True), format)
+                app.print_data(config, remove_defaults=True)
 
             return
 
         config = load_config_from_path(*config_files)
 
-        app.print_dict(as_dict(config, remove_defaults=True), format)
+        app.print_data(config, remove_defaults=True, default_output_format=OutputFormat.TOML)
 
     except (TypeError, ValueError) as e:
         raise UnknownError(str(e)) from e
@@ -99,10 +95,30 @@ def files(
     """
 
     try:
-        config_files, _, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
+        config_files, _, discovered_by = get_config_files(
+            paths,
+            app.config.config_files,
+            verbose_callback=app.verbose,
+            raise_on_error=app.config.output_format is None or app.config.output_format == OutputFormat.TEXT,
+        )
 
-        for config_file, _ in config_files:
-            click.echo(config_file)
+        result: Dict[str, Any] = {
+            "files": [{"path": str(file), "type": type} for file, type in config_files],
+        }
+
+        messages = []
+        if discovered_by == DiscoverdBy.NOT_FOUND:
+            messages += ["Cannot detect root folder. 😥"]
+        elif not config_files:
+            messages += ["Cannot find any configuration file. 😥"]
+        if messages:
+            result["messages"] = messages
+
+        if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+            for entry in result["files"]:
+                app.echo(entry["path"])
+        else:
+            app.print_data(result)
 
     except FileNotFoundError as e:
         raise UnknownError(str(e)) from e
@@ -132,10 +148,24 @@ def root(
 
     root_folder, discovered_by = find_project_root(*(paths or []))
 
-    if root_folder is None:
-        raise click.ClickException("Cannot detect root folder for project. 😥")
+    if root_folder is None and (app.config.output_format is None or app.config.output_format == OutputFormat.TEXT):
+        raise click.ClickException("Cannot detect root folder. 😥")
 
-    click.echo(f"{root_folder} (discovered by {discovered_by})")
+    result: Dict[str, Any] = {
+        "root": {"path": str(root_folder) if root_folder is not None else None, "discoverdBy": discovered_by}
+    }
+
+    messages = []
+    if discovered_by == DiscoverdBy.NOT_FOUND:
+        messages += ["Cannot detect root folder. 😥"]
+
+    if messages:
+        result["messages"] = messages
+
+    if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+        click.echo(f"{root_folder} (discovered by {discovered_by.value})")
+    else:
+        app.print_data(result)
 
 
 @config.group
@@ -200,10 +230,16 @@ def list(app: Application, name: Optional[List[str]] = None) -> None:
 
     config_fields = get_config_fields()
 
+    result = []
     for n in name:
         for field in config_fields.keys():
             if fnmatch.fnmatchcase(field, n):
-                app.echo(field)
+                result.append(field)
+
+    if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+        app.echo_via_pager(os.linesep.join(result))
+    else:
+        app.print_data({"output": result})
 
 
 @info.command()
@@ -229,13 +265,26 @@ def desc(app: Application, name: Optional[List[str]] = None) -> None:
     if not name:
         name = ["*"]
 
-    config_fields = get_config_fields()
+    config_fields = [
+        (field, value)
+        for field, value in get_config_fields().items()
+        if any(fnmatch.fnmatchcase(field, n) for n in name)
+    ]
 
-    for n in name:
-        for field, value in config_fields.items():
-            if fnmatch.fnmatchcase(field, n):
-                output = f"## {field}\n\n"
-                output += f"Type: {value['type']}\n\n"
-                output += value["description"] + "\n\n"
+    if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+        output = ""
+        for field, value in config_fields:
+            output += f"## {field}\n\n"
+            output += f"Type: {value['type']}\n\n"
+            output += value["description"] + "\n\n"
 
-                app.echo_as_markdown(output)
+        app.echo_as_markdown(output)
+    else:
+        app.print_data(
+            {
+                "output": [
+                    {"name": field, "type": value["type"], "description": value["description"]}
+                    for field, value in config_fields
+                ]
+            }
+        )

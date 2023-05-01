@@ -5,8 +5,7 @@ from string import Template
 from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.language_server.common.decorators import code_action_kinds, command, language_id
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     AnnotatedTextEdit,
     ChangeAnnotation,
     CodeAction,
@@ -21,6 +20,7 @@ from robotcode.language_server.common.lsp_types import (
     TextDocumentEdit,
     WorkspaceEdit,
 )
+from robotcode.language_server.common.decorators import code_action_kinds, command, language_id
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.utils.ast_utils import Token, get_node_at_position, range_from_node
 from robotcode.language_server.robotframework.utils.async_ast import AsyncVisitor

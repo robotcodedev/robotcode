@@ -17,9 +17,9 @@ from typing import (
 from robotcode.core.async_cache import AsyncSimpleLRUCache
 from robotcode.core.async_tools import async_event, threaded
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.lsp.types import FileEvent, Location, Position, ReferenceContext, WatchKind
 from robotcode.core.uri import Uri
 from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.lsp_types import FileEvent, Location, Position, ReferenceContext, WatchKind
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.diagnostics.entities import LocalVariableDefinition, VariableDefinition
 from robotcode.language_server.robotframework.diagnostics.library_doc import (

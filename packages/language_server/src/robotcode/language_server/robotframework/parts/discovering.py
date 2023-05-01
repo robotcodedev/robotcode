@@ -11,14 +11,14 @@ from typing import TYPE_CHECKING, Any, Iterator, List, Optional, cast
 from robotcode.core.async_tools import check_canceled, check_canceled_sync, threaded
 from robotcode.core.dataclasses import CamelSnakeMixin
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.core.uri import Uri
-from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     DocumentUri,
     Position,
     Range,
     TextDocumentIdentifier,
 )
+from robotcode.core.uri import Uri
+from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.robotframework.configuration import RobotConfig
 from robotcode.language_server.robotframework.utils.async_ast import AsyncVisitor
 

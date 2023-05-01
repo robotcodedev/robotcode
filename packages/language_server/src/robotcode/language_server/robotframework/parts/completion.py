@@ -25,8 +25,7 @@ from typing import (
 
 from robotcode.core.async_itertools import async_chain, async_chain_iterator
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.language_server.common.decorators import language_id, trigger_characters
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     CompletionContext,
     CompletionItem,
     CompletionItemKind,
@@ -39,6 +38,7 @@ from robotcode.language_server.common.lsp_types import (
     Range,
     TextEdit,
 )
+from robotcode.language_server.common.decorators import language_id, trigger_characters
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import CompletionConfig
 from robotcode.language_server.robotframework.diagnostics.entities import VariableDefinitionType

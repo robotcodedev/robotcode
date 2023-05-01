@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 from robotcode.core.async_tools import check_canceled, create_sub_task, threaded
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, DiagnosticTag, Position, Range
 from robotcode.core.uri import Uri
 from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.lsp_types import Diagnostic, DiagnosticSeverity, DiagnosticTag, Position, Range
 from robotcode.language_server.common.parts.diagnostics import DiagnosticsResult
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import AnalysisConfig

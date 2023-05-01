@@ -9,9 +9,8 @@ from typing import Any, Awaitable, Callable, Dict, Final, List, Optional, TypeVa
 
 from robotcode.core.async_tools import async_event, create_sub_task
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.lsp.types import DocumentUri, Position, Range
 from robotcode.core.uri import Uri
-
-from .lsp_types import DocumentUri, Position, Range
 
 
 def is_multibyte_char(char: str) -> bool:

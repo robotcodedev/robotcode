@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.lsp.types import Position, SelectionRange
 from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.lsp_types import Position, SelectionRange
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.utils.ast_utils import (
     HasTokens,

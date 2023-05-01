@@ -32,13 +32,7 @@ from robotcode.core.async_tools import (
 )
 from robotcode.core.dataclasses import CamelSnakeMixin, from_dict
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.core.uri import Uri
-from robotcode.core.utils.path import path_is_relative_to
-from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.common.has_extend_capabilities import (
-    HasExtendCapabilities,
-)
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     ApplyWorkspaceEditParams,
     ApplyWorkspaceEditResult,
     ConfigurationItem,
@@ -69,8 +63,14 @@ from robotcode.language_server.common.lsp_types import (
     WorkspaceFoldersChangeEvent,
     WorkspaceFoldersServerCapabilities,
 )
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     WorkspaceFolder as TypesWorkspaceFolder,
+)
+from robotcode.core.uri import Uri
+from robotcode.core.utils.path import path_is_relative_to
+from robotcode.jsonrpc2.protocol import rpc_method
+from robotcode.language_server.common.has_extend_capabilities import (
+    HasExtendCapabilities,
 )
 
 from .protocol_part import LanguageServerProtocolPart

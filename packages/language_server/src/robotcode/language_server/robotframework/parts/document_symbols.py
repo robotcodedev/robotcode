@@ -5,8 +5,8 @@ import itertools
 from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.lsp.types import DocumentSymbol, SymbolInformation, SymbolKind
 from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.lsp_types import DocumentSymbol, SymbolInformation, SymbolKind
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.utils.ast_utils import (
     Token,

@@ -5,18 +5,7 @@ from typing import Any, ClassVar, Final, List, NamedTuple, Optional, Set, Union
 
 from robotcode.core.async_tools import Event, async_event
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.jsonrpc2.protocol import (
-    JsonRPCErrorException,
-    JsonRPCErrors,
-    JsonRPCException,
-    JsonRPCProtocol,
-    ProtocolPartDescriptor,
-    rpc_method,
-)
-from robotcode.jsonrpc2.server import JsonRPCServer
-
-from .has_extend_capabilities import HasExtendCapabilities
-from .lsp_types import (
+from robotcode.core.lsp.types import (
     CancelParams,
     ClientCapabilities,
     InitializedParams,
@@ -39,6 +28,17 @@ from .lsp_types import (
     UnregistrationParams,
     WorkspaceFolder,
 )
+from robotcode.jsonrpc2.protocol import (
+    JsonRPCErrorException,
+    JsonRPCErrors,
+    JsonRPCException,
+    JsonRPCProtocol,
+    ProtocolPartDescriptor,
+    rpc_method,
+)
+from robotcode.jsonrpc2.server import JsonRPCServer
+
+from .has_extend_capabilities import HasExtendCapabilities
 from .parts.code_action import CodeActionProtocolPart
 from .parts.code_lens import CodeLensProtocolPart
 from .parts.commands import CommandsProtocolPart

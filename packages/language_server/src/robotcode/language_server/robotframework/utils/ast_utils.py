@@ -14,7 +14,7 @@ from typing import (
     runtime_checkable,
 )
 
-from robotcode.language_server.common.lsp_types import Position, Range
+from robotcode.core.lsp.types import Position, Range
 
 from . import async_ast
 

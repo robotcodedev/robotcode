@@ -7,8 +7,8 @@ from robotcode.core.async_itertools import async_next
 from robotcode.core.async_tools import run_coroutine_in_thread, threaded
 from robotcode.core.dataclasses import CamelSnakeMixin
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.lsp.types import Position, Range, TextDocumentIdentifier
 from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.common.lsp_types import Position, Range, TextDocumentIdentifier
 from robotcode.language_server.robotframework.utils.ast_utils import (
     HasTokens,
     get_nodes_at_position,

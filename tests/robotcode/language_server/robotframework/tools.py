@@ -64,7 +64,7 @@ def dump_enum(dumper: yaml.Dumper, data: Enum) -> yaml.Node:
 
 
 def dump_model(dumper: yaml.Dumper, data: Any) -> yaml.Node:
-    return dumper.represent_mapping(f"!{type(data).__qualname__}", as_dict(data))
+    return dumper.represent_mapping(f"!{type(data).__qualname__}", as_dict(data, encode=False))
 
 
 yaml.add_multi_representer(Enum, dump_enum)

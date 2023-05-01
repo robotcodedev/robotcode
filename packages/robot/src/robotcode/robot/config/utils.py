@@ -20,13 +20,13 @@ def get_config_files(
 
     if root_folder is None:
         if raise_on_error:
-            raise FileNotFoundError("Cannot detect root folder for project. 😥")
+            raise FileNotFoundError("Cannot detect root folder. 😥")
         if verbose_callback:
-            verbose_callback("Cannot detect root folder for project. 😥")
+            verbose_callback("Cannot detect root folder. 😥")
         return [], None, DiscoverdBy.NOT_FOUND
 
     if verbose_callback:
-        verbose_callback(f"Found project root at:\n    {root_folder} ({discovered_by.value})")
+        verbose_callback(f"Found root at:\n    {root_folder} ({discovered_by.value})")
 
     if config_files:
         if verbose_callback:

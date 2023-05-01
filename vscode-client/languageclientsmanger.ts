@@ -103,6 +103,11 @@ export class LanguageClientsManager {
     return this._onClientStateChangedEmitter.event;
   }
 
+  // eslint-disable-next-line class-methods-use-this
+  public get fileExtensions(): string[] {
+    return ["robot", "resource"];
+  }
+
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
     public readonly pythonManager: PythonManager,
@@ -550,7 +555,7 @@ export class LanguageClientsManager {
     if (uri === undefined) {
       for (const f of vscode.workspace.workspaceFolders || []) {
         const robotFiles = await vscode.workspace.findFiles(
-          new vscode.RelativePattern(f, "**/*.{robot,resource}"),
+          new vscode.RelativePattern(f, `**/*.{${this.fileExtensions.join(",")}}}`),
           undefined,
           1
         );

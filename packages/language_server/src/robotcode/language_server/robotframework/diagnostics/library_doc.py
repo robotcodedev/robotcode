@@ -29,7 +29,7 @@ from typing import (
     cast,
 )
 
-from robotcode.language_server.common.lsp_types import Position, Range
+from robotcode.core.lsp.types import Position, Range
 from robotcode.language_server.robotframework.utils.ast_utils import (
     Token,
     range_from_token,

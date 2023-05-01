@@ -19,10 +19,7 @@ from typing import (
 
 from robotcode.core.async_tools import Lock, async_event, async_tasking_event, create_sub_task
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.core.uri import Uri
-from robotcode.jsonrpc2.protocol import JsonRPCException, rpc_method
-from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     DidChangeTextDocumentParams,
     DidCloseTextDocumentParams,
     DidOpenTextDocumentParams,
@@ -43,6 +40,9 @@ from robotcode.language_server.common.lsp_types import (
     WatchKind,
     WillSaveTextDocumentParams,
 )
+from robotcode.core.uri import Uri
+from robotcode.jsonrpc2.protocol import JsonRPCException, rpc_method
+from robotcode.language_server.common.decorators import language_id_filter
 from robotcode.language_server.common.text_document import TextDocument
 
 from .protocol_part import LanguageServerProtocolPart

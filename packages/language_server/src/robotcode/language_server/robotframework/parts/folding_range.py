@@ -4,8 +4,8 @@ import ast
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.lsp.types import FoldingRange
 from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.lsp_types import FoldingRange
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.utils.async_ast import AsyncVisitor
 

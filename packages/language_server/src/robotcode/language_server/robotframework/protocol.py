@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional
 
 from robotcode.core.dataclasses import CamelSnakeMixin, from_dict
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.lsp.types import InitializeError
 from robotcode.jsonrpc2.protocol import JsonRPCErrorException, JsonRPCErrors, ProtocolPartDescriptor
-from robotcode.language_server.common.lsp_types import InitializeError
 from robotcode.language_server.common.parts.document_symbols import symbol_information_label
 from robotcode.language_server.common.protocol import LanguageDefinition, LanguageServerProtocol
 

@@ -4,8 +4,9 @@ from typing import List, Optional
 
 import click
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.plugin import Application, ColoredOutput, pass_application
+from robotcode.plugin import Application, ColoredOutput, OutputFormat, pass_application
 from robotcode.plugin.click_helper.aliases import AliasedGroup
+from robotcode.plugin.click_helper.types import EnumChoice
 from robotcode.plugin.manager import PluginManager
 
 from .__version__ import __version__
@@ -41,12 +42,28 @@ from .commands import config, profiles
         If not specified, the default profile is used.
         """,
 )
+@click.option(
+    "-f",
+    "--format",
+    "format",
+    type=EnumChoice(OutputFormat),
+    default=None,
+    help="Set the output format.",
+    show_default=True,
+)
 @click.option("-d", "--dry", is_flag=True, show_envvar=True, help="Dry run, do not execute any commands.")
 @click.option(
     "--color / --no-color",
     "color",
     default=None,
     help="Whether or not to display colored output (default is auto-detection).",
+    show_envvar=True,
+)
+@click.option(
+    "--pager / --no-pager",
+    "pager",
+    default=True,
+    help="Whether or not use a pager to display long text or data.",
     show_envvar=True,
 )
 @click.option(
@@ -88,9 +105,11 @@ def robotcode(
     app: Application,
     config_files: Optional[List[Path]],
     profiles: Optional[List[str]],
+    format: Optional[OutputFormat],
     dry: bool,
     verbose: bool,
     color: Optional[bool],
+    pager: Optional[bool],
     log: bool,
     log_level: str,
     log_calls: bool,
@@ -117,7 +136,8 @@ def robotcode(
         app.config.colored_output = ColoredOutput.YES
     else:
         app.config.colored_output = ColoredOutput.NO
-
+    app.config.pager = pager
+    app.config.output_format = format
     app.config.launcher_script = launcher_script
 
     if log:

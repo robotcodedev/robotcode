@@ -1,12 +1,13 @@
+import dataclasses
 import sys
 from dataclasses import dataclass
 from enum import Enum, unique
 from pathlib import Path
-from typing import IO, Any, AnyStr, Callable, Dict, List, Optional, TypeVar, Union, cast
+from typing import IO, Any, AnyStr, Callable, Iterable, List, Optional, TypeVar, Union, cast
 
 import click
 import pluggy
-from robotcode.core.dataclasses import as_json
+from robotcode.core.dataclasses import as_dict, as_json
 
 __all__ = ["hookimpl", "CommonConfig", "pass_application"]
 
@@ -31,7 +32,8 @@ class ColoredOutput(str, Enum):
 class OutputFormat(str, Enum):
     TOML = "toml"
     JSON = "json"
-    FLAT = "flat"
+    JSON_INDENT = "json-indent"
+    TEXT = "text"
 
     def __str__(self) -> str:
         return self.value
@@ -45,6 +47,8 @@ class CommonConfig:
     verbose: bool = False
     colored_output: ColoredOutput = ColoredOutput.AUTO
     launcher_script: Optional[str] = None
+    output_format: Optional[OutputFormat] = None
+    pager: Optional[bool] = None
 
 
 class Application:
@@ -88,47 +92,72 @@ class Application:
             fg="bright_yellow",
         )
 
-    def print_dict(self, config: Dict[str, Any], format: OutputFormat) -> None:
+    def print_data(
+        self, data: Any, remove_defaults: bool = True, default_output_format: Optional[OutputFormat] = None
+    ) -> None:
+        format = self.config.output_format or default_output_format or OutputFormat.TEXT
+
         text = None
-        if format == "toml":
+        if format == OutputFormat.TOML:
             try:
                 import tomli_w
 
-                text = tomli_w.dumps(config)
+                text = tomli_w.dumps(
+                    as_dict(data, remove_defaults=remove_defaults)
+                    if dataclasses.is_dataclass(data)
+                    else data
+                    if isinstance(data, dict)
+                    else {data: data}
+                )
             except ImportError:
                 self.warning("Package 'tomli_w' is required to use TOML output. Using JSON format instead.")
                 format = OutputFormat.JSON
 
         if text is None:
-            text = as_json(config, indent=True)
+            if format in [OutputFormat.JSON, OutputFormat.JSON_INDENT]:
+                text = as_json(data, indent=format == OutputFormat.JSON_INDENT, compact=format == OutputFormat.TEXT)
+            else:
+                text = str(data)
 
         if not text:
             return
 
-        if self.colored:
+        if self.colored and format != OutputFormat.TEXT:
             try:
                 from rich.console import Console
                 from rich.syntax import Syntax
 
-                Console().print(Syntax(text, format, background_color="default"))
+                if format == OutputFormat.JSON_INDENT:
+                    format = OutputFormat.JSON
+                console = Console(soft_wrap=True)
+                if self.config.pager:
+                    with console.pager(styles=True, links=True):
+                        console.print(Syntax(text, format, background_color="default"))
+                else:
+                    console.print(Syntax(text, format, background_color="default"))
 
                 return
             except ImportError:
                 if self.config.colored_output == ColoredOutput.YES:
                     self.warning('Package "rich" is required to use colored output.')
 
-        click.echo(text)
+        self.echo(text)
 
         return
 
     def echo(
-        self, message: Union[str, Callable[[], Any], None], file: Optional[IO[AnyStr]] = None, nl: bool = True
+        self,
+        message: Union[str, Callable[[], Any], None],
+        file: Optional[IO[AnyStr]] = None,
+        nl: bool = True,
+        err: bool = False,
     ) -> None:
         click.secho(
             message() if callable(message) else message,
             file=file,
             nl=nl,
             color=self.colored,
+            err=err,
         )
 
     def echo_as_markdown(self, text: str) -> None:
@@ -147,14 +176,33 @@ class Application:
 
                 Markdown.elements["heading_open"] = MyHeading
 
-                Console().print(Markdown(text, justify="left"))
-
+                console = Console()
+                if self.config.pager:
+                    with console.pager(styles=self.colored, links=self.colored):
+                        console.print(Markdown(text, justify="left"))
+                else:
+                    console.print(Markdown(text, justify="left"))
                 return
             except ImportError:
                 if self.config.colored_output == ColoredOutput.YES:
                     self.warning('Package "rich" is required to use colored output.')
 
-        click.echo(text)
+        self.echo_via_pager(text)
+
+    def echo_via_pager(
+        self,
+        text_or_generator: Union[Iterable[str], Callable[[], Iterable[str]], str],
+        color: Optional[bool] = None,
+    ) -> None:
+        if not self.config.pager:
+            text = (
+                text_or_generator
+                if isinstance(text_or_generator, str)
+                else "".join(text_or_generator() if callable(text_or_generator) else text_or_generator)
+            )
+            click.echo(text, color=color if color is not None else self.colored)
+        else:
+            click.echo_via_pager(text_or_generator, color=color if color is not None else self.colored)
 
     def keyboard_interrupt(self) -> None:
         self.verbose("Aborted!", file=sys.stderr)

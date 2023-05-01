@@ -2,8 +2,7 @@ import contextlib
 import uuid
 from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, List, Optional
 
-from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     URI,
     LogMessageParams,
     MessageActionItem,
@@ -21,6 +20,7 @@ from robotcode.language_server.common.lsp_types import (
     WorkDoneProgressEnd,
     WorkDoneProgressReport,
 )
+from robotcode.jsonrpc2.protocol import rpc_method
 
 from .protocol_part import LanguageServerProtocolPart
 

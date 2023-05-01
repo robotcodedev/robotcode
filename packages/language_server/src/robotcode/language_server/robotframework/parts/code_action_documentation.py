@@ -17,17 +17,17 @@ from urllib.parse import parse_qs, urlparse
 from robotcode.core.async_tools import threaded
 from robotcode.core.dataclasses import CamelSnakeMixin
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.core.uri import Uri
-from robotcode.core.utils.net import find_free_port
-from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.common.decorators import code_action_kinds, language_id
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     CodeAction,
     CodeActionContext,
     CodeActionKind,
     Command,
     Range,
 )
+from robotcode.core.uri import Uri
+from robotcode.core.utils.net import find_free_port
+from robotcode.jsonrpc2.protocol import rpc_method
+from robotcode.language_server.common.decorators import code_action_kinds, language_id
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import (
     DocumentationServerConfig,

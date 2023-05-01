@@ -1,6 +1,6 @@
 from typing import Protocol, runtime_checkable
 
-from .lsp_types import ServerCapabilities
+from robotcode.core.lsp.types import ServerCapabilities
 
 __all__ = ["HasExtendCapabilities"]
 

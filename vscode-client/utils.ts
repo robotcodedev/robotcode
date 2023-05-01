@@ -206,3 +206,10 @@ export async function waitForFile(file: string, timeout = 30000): Promise<boolea
 
   return result;
 }
+
+export async function filterAsync<T>(arr: readonly T[], predicate: (value: T) => Promise<boolean>): Promise<T[]> {
+  return await arr.reduce(
+    async (memo: T[] | Promise<T[]>, e: T) => ((await predicate(e)) ? [...(await memo), e] : memo),
+    []
+  );
+}

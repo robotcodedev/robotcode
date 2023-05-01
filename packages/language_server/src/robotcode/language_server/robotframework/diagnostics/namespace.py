@@ -30,8 +30,7 @@ from typing import (
 
 from robotcode.core.async_tools import Lock, async_event
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.core.uri import Uri
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     CodeDescription,
     Diagnostic,
     DiagnosticRelatedInformation,
@@ -42,6 +41,7 @@ from robotcode.language_server.common.lsp_types import (
     Position,
     Range,
 )
+from robotcode.core.uri import Uri
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.languages import Languages
 from robotcode.language_server.robotframework.utils.ast_utils import (

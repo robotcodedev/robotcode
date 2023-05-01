@@ -4,6 +4,7 @@
 import { red, yellow } from "ansi-colors";
 import * as vscode from "vscode";
 import { DebugManager } from "./debugmanager";
+
 import {
   ClientState,
   LanguageClientsManager,
@@ -11,7 +12,8 @@ import {
   toVsCodeRange,
   SUPPORTED_LANGUAGES,
 } from "./languageclientsmanger";
-import { Mutex, sleep, WeakValueMap } from "./utils";
+import { filterAsync, Mutex, sleep, WeakValueMap } from "./utils";
+import { CONFIG_SECTION } from "./config";
 
 interface RobotExecutionAttributes {
   id: string | undefined;
@@ -114,7 +116,12 @@ export class TestControllerManager {
       true
     );
 
-    this.runProfile.configureHandler = () => this.configureRunProfile();
+    this.runProfile.configureHandler = () => {
+      this.configureRunProfile().then(
+        (_) => undefined,
+        (_) => undefined
+      );
+    };
 
     this.dryRunProfile = this.testController.createRunProfile(
       "Dry Run",
@@ -130,7 +137,12 @@ export class TestControllerManager {
       true
     );
 
-    this.debugProfile.configureHandler = () => this.configureRunProfile();
+    this.debugProfile.configureHandler = () => {
+      this.configureRunProfile().then(
+        (_) => undefined,
+        (_) => undefined
+      );
+    };
 
     this.dryRunDebugProfile = this.testController.createRunProfile(
       "Dry Debug",
@@ -139,7 +151,9 @@ export class TestControllerManager {
       false
     );
 
-    const fileWatcher = vscode.workspace.createFileSystemWatcher("**/*.{robot,resource}");
+    const fileWatcher = vscode.workspace.createFileSystemWatcher(
+      `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}`
+    );
     fileWatcher.onDidCreate((uri) => this.refreshUri(uri, "create"));
     fileWatcher.onDidDelete((uri) => this.refreshUri(uri, "delete"));
     fileWatcher.onDidChange((uri) => this.refreshUri(uri, "change"));
@@ -233,31 +247,78 @@ export class TestControllerManager {
     );
   }
 
-  // eslint-disable-next-line class-methods-use-this
-  private configureRunProfile() {
-    vscode.window
-      .showQuickPick(
-        [
-          { label: "Chrome", picked: true, description: "Run Tests with Chrome browser" },
-          { label: "Firefox", picked: false, description: "Run Tests with Firefox browser" },
-          { label: "TestDB", picked: false, description: "Run Tests on Test Database" },
-          { label: "ProdDB", picked: false, description: "Run Tests on Production Database" },
-          { label: "NoHeadless", picked: false, description: "Do not run in headless mode" },
-        ],
-        {
-          title: "Select Execution Profile (Teaser: comming soon...)",
-          canPickMany: true,
-        }
-      )
-      .then(
-        (result) => {
-          vscode.window.showInformationMessage(`Selected: ${result?.map((v) => v.label).join(", ") || "<None>"}`).then(
-            () => undefined,
-            () => undefined
-          );
-        },
-        () => undefined
+  private async configureRunProfile(): Promise<void> {
+    if (vscode.workspace.workspaceFolders === undefined || vscode.workspace.workspaceFolders?.length === 0) return;
+
+    const folders = await filterAsync(
+      vscode.workspace.workspaceFolders,
+      async (v) =>
+        (
+          await vscode.workspace.findFiles(
+            new vscode.RelativePattern(v, `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}}`),
+            null,
+            1
+          )
+        ).length > 0
+    );
+
+    if (folders.length === 0) {
+      await vscode.window.showWarningMessage("No workspaces with Robot Framework files found.");
+      return;
+    }
+
+    const workspaceFolder =
+      folders.length > 1
+        ? (
+            await vscode.window.showQuickPick(
+              folders.map((v) => {
+                return {
+                  label: v.name,
+                  description: v.uri.toString(),
+                  value: v,
+                };
+              }),
+              { title: "Select Workspace Folder" }
+            )
+          )?.value
+        : folders[0];
+
+    if (!workspaceFolder) return;
+
+    try {
+      const config = vscode.workspace.getConfiguration(CONFIG_SECTION, workspaceFolder);
+      const result = this.languageClientsManager.pythonManager.getRobotCodeProfiles(
+        workspaceFolder,
+        config.get("run.profiles", undefined)
       );
+
+      if (result.profiles.length === 0 && result.messages) {
+        await vscode.window.showWarningMessage(result.messages.join("\n"));
+        return;
+      }
+
+      const options = result.profiles.map((p) => {
+        return { label: p.name, description: p.description, picked: p.selected };
+      });
+
+      const profiles = await vscode.window.showQuickPick([...options], {
+        title: `Select Execution Profiles for folder "${workspaceFolder.name}"`,
+        canPickMany: true,
+      });
+      if (profiles === undefined) return;
+
+      await config.update(
+        "run.profiles",
+        profiles.map((p) => p.label),
+        vscode.ConfigurationTarget.WorkspaceFolder
+      );
+    } catch (e) {
+      await vscode.window.showErrorMessage("Error while getting profiles, is this a robot project?", {
+        modal: true,
+        detail: (e as Error).toString(),
+      });
+      this.outputChannel.show(true);
+    }
   }
 
   private removeWorkspaceFolderItems(folder: vscode.WorkspaceFolder) {

@@ -1,8 +1,6 @@
 # pyright: reportMissingTypeArgument=true, reportMissingParameterType=true
-import copy
 import dataclasses
 import enum
-import functools
 import inspect
 import itertools
 import json
@@ -45,27 +43,42 @@ _RE_SNAKE_CASE_1 = re.compile(r"[\-\.\s]")
 _RE_SNAKE_CASE_2 = re.compile(r"[A-Z]")
 
 
-@functools.lru_cache(1024)
+__not_valid = object()
+
+__to_snake_case_cache: Dict[str, str] = {}
+
+
 def to_snake_case(s: str) -> str:
-    s = _RE_SNAKE_CASE_1.sub("_", s)
-    if not s:
-        return s
-    return s[0].lower() + _RE_SNAKE_CASE_2.sub(lambda matched: "_" + matched.group(0).lower(), s[1:])
+    result = __to_snake_case_cache.get(s, __not_valid)
+    if result is __not_valid:
+        s = _RE_SNAKE_CASE_1.sub("_", s)
+        if not s:
+            result = s
+        else:
+            result = s[0].lower() + _RE_SNAKE_CASE_2.sub(lambda matched: "_" + matched.group(0).lower(), s[1:])
+        __to_snake_case_cache[s] = result
+    return cast(str, result)
 
 
 _RE_CAMEL_CASE_1 = re.compile(r"^[\-_\.]")
 _RE_CAMEL_CASE_2 = re.compile(r"[\-_\.\s]([a-z])")
 
+__to_snake_camel_cache: Dict[str, str] = {}
 
-@functools.lru_cache(1024)
+
 def to_camel_case(s: str) -> str:
-    s = _RE_CAMEL_CASE_1.sub("", str(s))
-    if not s:
-        return s
-    return str(s[0]).lower() + _RE_CAMEL_CASE_2.sub(
-        lambda matched: str(matched.group(1)).upper(),
-        s[1:],
-    )
+    result = __to_snake_camel_cache.get(s, __not_valid)
+    if result is __not_valid:
+        s = _RE_CAMEL_CASE_1.sub("", s)
+        if not s:
+            result = s
+        else:
+            result = str(s[0]).lower() + _RE_CAMEL_CASE_2.sub(
+                lambda matched: str(matched.group(1)).upper(),
+                s[1:],
+            )
+        __to_snake_camel_cache[s] = result
+    return cast(str, result)
 
 
 class CamelSnakeMixin:
@@ -110,21 +123,13 @@ class DefaultConfig:
         return s
 
 
-__default_config: Optional[DefaultConfig] = None
-
-
-def __get_default_config() -> DefaultConfig:
-    global __default_config
-
-    if __default_config is None:
-        __default_config = DefaultConfig()
-    return __default_config
+__default_config = DefaultConfig()
 
 
 def __get_config(obj: Any, entry_protocol: Type[_T]) -> _T:
     if isinstance(obj, entry_protocol):
         return obj
-    return cast(_T, __get_default_config())
+    return cast(_T, __default_config)
 
 
 def encode_case(obj: Any, field: dataclasses.Field) -> str:  # type: ignore
@@ -357,15 +362,24 @@ def from_json(
 
 
 def as_dict(
-    value: Any, *, remove_defaults: bool = False, dict_factory: Callable[[Any], Dict[str, Any]] = dict
+    value: Any,
+    *,
+    remove_defaults: bool = False,
+    dict_factory: Callable[[Any], Dict[str, Any]] = dict,
+    encode: bool = True,
 ) -> Dict[str, Any]:
     if not dataclasses.is_dataclass(value):
         raise TypeError("as_dict() should be called on dataclass instances")
 
-    return cast(Dict[str, Any], _as_dict_inner(value, remove_defaults, dict_factory))
+    return cast(Dict[str, Any], _as_dict_inner(value, remove_defaults, dict_factory, encode))
 
 
-def _as_dict_inner(value: Any, remove_defaults: bool, dict_factory: Callable[[Any], Dict[str, Any]]) -> Any:
+def _as_dict_inner(
+    value: Any,
+    remove_defaults: bool,
+    dict_factory: Callable[[Any], Dict[str, Any]],
+    encode: bool = True,
+) -> Any:
     if dataclasses.is_dataclass(value):
         result = []
         for f in dataclasses.fields(value):
@@ -373,7 +387,7 @@ def _as_dict_inner(value: Any, remove_defaults: bool, dict_factory: Callable[[An
 
             if remove_defaults and v == f.default:
                 continue
-            result.append((f.name, v))
+            result.append((encode_case(value, f) if encode else f.name, v))
         return dict_factory(result)
 
     if isinstance(value, tuple) and hasattr(value, "_fields"):
@@ -388,7 +402,7 @@ def _as_dict_inner(value: Any, remove_defaults: bool, dict_factory: Callable[[An
             for k, v in value.items()
         )
 
-    return copy.deepcopy(value)
+    return value
 
 
 class TypeValidationError(Exception):

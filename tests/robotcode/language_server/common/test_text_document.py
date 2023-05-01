@@ -1,6 +1,6 @@
 import pytest
 from robotcode.core.async_tools import check_canceled
-from robotcode.language_server.common.lsp_types import Position, Range
+from robotcode.core.lsp.types import Position, Range
 from robotcode.language_server.common.text_document import (
     InvalidRangeError,
     TextDocument,

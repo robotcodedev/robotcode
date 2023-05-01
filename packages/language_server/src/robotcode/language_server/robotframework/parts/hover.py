@@ -17,8 +17,8 @@ from typing import (
 
 from robotcode.core.async_itertools import async_next
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.lsp.types import Hover, MarkupContent, MarkupKind, Position
 from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.lsp_types import Hover, MarkupContent, MarkupKind, Position
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.utils.ast_utils import (
     HasTokens,

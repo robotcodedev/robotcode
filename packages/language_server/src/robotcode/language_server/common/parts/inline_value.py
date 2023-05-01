@@ -5,15 +5,7 @@ from typing import TYPE_CHECKING, Any, Final, List, Optional
 
 from robotcode.core.async_tools import async_tasking_event, threaded
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.common.decorators import (
-    HasLanguageId,
-    language_id_filter,
-)
-from robotcode.language_server.common.has_extend_capabilities import (
-    HasExtendCapabilities,
-)
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     DocumentSelector,
     InlineValue,
     InlineValueContext,
@@ -23,6 +15,14 @@ from robotcode.language_server.common.lsp_types import (
     ServerCapabilities,
     TextDocumentFilterType1,
     TextDocumentIdentifier,
+)
+from robotcode.jsonrpc2.protocol import rpc_method
+from robotcode.language_server.common.decorators import (
+    HasLanguageId,
+    language_id_filter,
+)
+from robotcode.language_server.common.has_extend_capabilities import (
+    HasExtendCapabilities,
 )
 from robotcode.language_server.common.parts.protocol_part import (
     LanguageServerProtocolPart,

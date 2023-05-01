@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 import yaml
 from pytest_regtest import RegTestFixture
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     Location,
     Position,
     ReferenceContext,

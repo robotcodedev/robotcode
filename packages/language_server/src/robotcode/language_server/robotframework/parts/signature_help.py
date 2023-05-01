@@ -15,8 +15,7 @@ from typing import (
 )
 
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.language_server.common.decorators import language_id, retrigger_characters, trigger_characters
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     MarkupContent,
     MarkupKind,
     ParameterInformation,
@@ -25,6 +24,7 @@ from robotcode.language_server.common.lsp_types import (
     SignatureHelpContext,
     SignatureInformation,
 )
+from robotcode.language_server.common.decorators import language_id, retrigger_characters, trigger_characters
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.diagnostics.library_doc import KeywordDoc, LibraryDoc
 from robotcode.language_server.robotframework.parts.model_helper import ModelHelperMixin

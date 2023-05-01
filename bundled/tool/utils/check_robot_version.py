@@ -22,6 +22,6 @@ if __name__ == "__main__":
         os.getenv("LS_IMPORT_STRATEGY", "useBundled"),
     )
 
-    from robotcode.language_server.robotframework.utils.version import get_robot_version
+    from robotcode.robot.utils import get_robot_version
 
-    print(get_robot_version() >= (4, 0))
+    print(get_robot_version() >= (4, 1))

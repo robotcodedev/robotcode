@@ -5,8 +5,8 @@ from typing import List, Union, cast
 import pytest
 import yaml
 from pytest_regtest import RegTestFixture
+from robotcode.core.lsp.types import Location, LocationLink, Position
 from robotcode.core.uri import Uri
-from robotcode.language_server.common.lsp_types import Location, LocationLink, Position
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,

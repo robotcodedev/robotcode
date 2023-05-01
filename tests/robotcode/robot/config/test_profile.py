@@ -6,7 +6,7 @@ from robotcode.robot.config.loader import loads_config_from_robot_toml
 
 def test_can_parse_profiles() -> None:
     data = """\
-        python_path = ["abc", "def"]
+        python-path = ["abc", "def"]
 
         [variables]
         a="1"
@@ -20,6 +20,7 @@ def test_can_parse_profiles() -> None:
         args = ["devel"]
     """
     config = loads_config_from_robot_toml(data)
+    assert config.python_path == ["abc", "def"]
     assert config.profiles
     assert config.profiles["default"].description == "Default profile"
     assert config.profiles["devel"].description == "Development profile"
@@ -59,7 +60,7 @@ def test_options_defined_in_profile_overrides_the_default_option() -> None:
 def test_extra_options_defined_in_profile_appends_to_default_option() -> None:
     data = """\
         args = ["orig"]
-        python_path = ["abc", "def"]
+        python-path = ["abc", "def"]
 
         [variables]
         a="1"
@@ -94,7 +95,7 @@ def test_extra_options_defined_in_profile_appends_to_default_option() -> None:
 def test_if_profile_is_not_defined_an_error_is_raised() -> None:
     data = """\
         args = ["orig"]
-        python_path = ["abc", "def"]
+        python-path = ["abc", "def"]
 
         [variables]
         a="1"
@@ -116,7 +117,7 @@ def test_if_profile_is_not_defined_an_error_is_raised() -> None:
 def test_profiles_can_be_selected_by_wildcards() -> None:
     data = """\
         args = ["orig"]
-        python_path = ["abc", "def"]
+        python-path = ["abc", "def"]
 
         [variables]
         a="1"
@@ -148,7 +149,7 @@ def test_profiles_can_be_selected_by_wildcards() -> None:
 def test_profiles_can_be_disabled() -> None:
     data = """\
         args = ["orig"]
-        python_path = ["abc", "def"]
+        python-path = ["abc", "def"]
 
         [variables]
         a="1"
@@ -177,7 +178,7 @@ def test_profiles_can_be_disabled() -> None:
 def test_profiles_enabled_can_be_an_condition() -> None:
     data = """\
         args = ["orig"]
-        python_path = ["abc", "def"]
+        python-path = ["abc", "def"]
 
         [variables]
         a="1"
@@ -211,7 +212,7 @@ def test_profiles_enabled_can_be_an_condition() -> None:
 def test_profiles_enabled_cant_be_an_invalid_condition() -> None:
     data = """\
         args = ["orig"]
-        python_path = ["abc", "def"]
+        python-path = ["abc", "def"]
 
         [variables]
         a="1"

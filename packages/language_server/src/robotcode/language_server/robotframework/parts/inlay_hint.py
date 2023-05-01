@@ -4,8 +4,8 @@ import ast
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Type, cast
 
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.lsp.types import InlayHint, InlayHintKind, Range
 from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.lsp_types import InlayHint, InlayHintKind, Range
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import InlayHintsConfig
 from robotcode.language_server.robotframework.diagnostics.library_doc import KeywordArgumentKind

@@ -9,16 +9,16 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Final, List, O
 from robotcode.core.async_tools import threaded
 from robotcode.core.dataclasses import from_dict
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.jsonrpc2.protocol import JsonRPCErrorException, rpc_method
-from robotcode.language_server.common.decorators import IsCommand, get_command_name
-from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
-from robotcode.language_server.common.lsp_types import (
+from robotcode.core.lsp.types import (
     ErrorCodes,
     ExecuteCommandOptions,
     ExecuteCommandParams,
     LSPAny,
     ServerCapabilities,
 )
+from robotcode.jsonrpc2.protocol import JsonRPCErrorException, rpc_method
+from robotcode.language_server.common.decorators import IsCommand, get_command_name
+from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 
 if TYPE_CHECKING:

@@ -544,6 +544,15 @@
             "description": "Defines if the report or log file should be opened after a run.",
             "scope": "resource"
           },
+          "robotcode.run.profiles": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "Specifies the profiles to be used for execution. Corresponds to the '--profile' option of __robotcode__.",
+            "scope": "resource"
+          },
           "robotcode.debug.defaultConfiguration": {
             "type": "object",
             "default": {},

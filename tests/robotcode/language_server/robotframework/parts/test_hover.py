@@ -5,7 +5,7 @@ from typing import Optional
 import pytest
 import yaml
 from pytest_regtest import RegTestFixture
-from robotcode.language_server.common.lsp_types import Hover, MarkupContent, Position
+from robotcode.core.lsp.types import Hover, MarkupContent, Position
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
