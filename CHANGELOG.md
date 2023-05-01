@@ -4,6 +4,11 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.36.0 (2023-05-01)
+### Feature
+* Simple `discover all` command ([`a1d8b84`](https://github.com/d-biehl/robotcode/commit/a1d8b84349193be58432ec883e1c5dbf0887f64e))
+* Select run profiles in test explorer ([`a7f8408`](https://github.com/d-biehl/robotcode/commit/a7f840801656b96fc5dca68b69a112c17f7a08bc))
+
 ## v0.35.0 (2023-04-25)
 ### Feature
 * **runner:** Add `run` alias for `robot` command in cli ([`9b782cc`](https://github.com/d-biehl/robotcode/commit/9b782ccfa0f8cd74bc5166a0c816e63dc1840796))
