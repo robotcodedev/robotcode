@@ -232,7 +232,7 @@ def all(
                     for child in item.children:
                         yield from print(child, indent + 2)
 
-            click.echo_via_pager(print(collector.result))
+            app.echo_via_pager(print(collector.result))
         else:
             app.print_data(collector.result, remove_defaults=True)
     except DataError as err:
