@@ -1,6 +1,6 @@
 import dataclasses
-import fnmatch
 import os
+from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -87,7 +87,6 @@ def files(
 
     \b
     Examples:
-
     ```
     robotcode config files
     robotcode config files tests/acceptance/first.robot
@@ -139,7 +138,6 @@ def root(
 
     \b
     Examples:
-
     ```
     robotcode config root
     robotcode config root tests/acceptance/first.robot
@@ -218,7 +216,6 @@ def list(app: Application, name: Optional[List[str]] = None) -> None:
 
     \b
     Examples:
-
     ```
     robotcode config info list
     robotcode config info list rebot.*
@@ -233,13 +230,13 @@ def list(app: Application, name: Optional[List[str]] = None) -> None:
     result = []
     for n in name:
         for field in config_fields.keys():
-            if fnmatch.fnmatchcase(field, n):
+            if fnmatchcase(field, n):
                 result.append(field)
 
     if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
         app.echo_via_pager(os.linesep.join(result))
     else:
-        app.print_data({"output": result})
+        app.print_data({"names": result})
 
 
 @info.command()
@@ -254,7 +251,6 @@ def desc(app: Application, name: Optional[List[str]] = None) -> None:
 
     \b
     Examples:
-
     ```
     robotcode config info desc
     robotcode config info desc python-path
@@ -266,9 +262,7 @@ def desc(app: Application, name: Optional[List[str]] = None) -> None:
         name = ["*"]
 
     config_fields = [
-        (field, value)
-        for field, value in get_config_fields().items()
-        if any(fnmatch.fnmatchcase(field, n) for n in name)
+        (field, value) for field, value in get_config_fields().items() if any(fnmatchcase(field, n) for n in name)
     ]
 
     if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
@@ -282,7 +276,7 @@ def desc(app: Application, name: Optional[List[str]] = None) -> None:
     else:
         app.print_data(
             {
-                "output": [
+                "descriptions": [
                     {"name": field, "type": value["type"], "description": value["description"]}
                     for field, value in config_fields
                 ]

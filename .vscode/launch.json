@@ -15,29 +15,6 @@
 			"justMyCode": false
 		},
 		{
-			"name": "Python: RobotCode.Runner",
-			"type": "python",
-			"request": "launch",
-			"module": "robotcode.runner",
-			"justMyCode": false,
-			"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data",
-			"args": [
-				"tests1"
-			]
-			// "args": [
-			// 	"-d",
-			// 	"results",
-			// 	"-P",
-			// 	"./lib",
-			// 	"-P",
-			// 	"resources",
-			// 	"-v",
-			// 	"NAME:value",
-			// 	"--dryrun",
-			// 	"tests"
-			// ]
-		},
-		{
 			"name": "Python: RobotCode",
 			"type": "python",
 			"request": "launch",
@@ -61,8 +38,9 @@
 				// "--",
 				// "--help"
 				// "run"
-				"--format", "json",
-				"--no-color",
+				//"--format", "json-indent",
+				//"--no-color",
+				//"--no-pager",
 				"config", "info", "desc",
 				// "discover",
 				// "all",

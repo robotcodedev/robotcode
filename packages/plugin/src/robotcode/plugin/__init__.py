@@ -141,7 +141,10 @@ class Application:
                 if self.config.colored_output == ColoredOutput.YES:
                     self.warning('Package "rich" is required to use colored output.')
 
-        self.echo(text)
+        if self.config.pager:
+            self.echo_via_pager(text)
+        else:
+            self.echo(text)
 
         return
 
@@ -176,12 +179,14 @@ class Application:
 
                 Markdown.elements["heading_open"] = MyHeading
 
+                markdown = Markdown(text, justify="left", code_theme="default")
+
                 console = Console()
                 if self.config.pager:
-                    with console.pager(styles=self.colored, links=self.colored):
-                        console.print(Markdown(text, justify="left"))
+                    with console.pager(styles=True, links=True):
+                        console.print(markdown)
                 else:
-                    console.print(Markdown(text, justify="left"))
+                    console.print(markdown)
                 return
             except ImportError:
                 if self.config.colored_output == ColoredOutput.YES:
