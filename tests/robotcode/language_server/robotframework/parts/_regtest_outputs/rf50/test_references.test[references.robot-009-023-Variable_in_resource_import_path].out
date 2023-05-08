@@ -151,8 +151,8 @@ result:
   range:
     end:
       character: 19
-      line: 17
+      line: 18
     start:
       character: 13
-      line: 17
+      line: 18
   uri: tests/variables.robot

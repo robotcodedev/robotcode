@@ -400,12 +400,16 @@ class _VariablesEntry(_ImportEntry):
         self,
         name: str,
         args: Tuple[Any, ...],
+        working_dir: str,
+        base_dir: str,
         parent: ImportsManager,
-        get_variables_doc_coroutine: Callable[[], Coroutine[Any, Any, VariablesDoc]],
+        get_variables_doc_coroutine: Callable[[str, Tuple[Any, ...], str, str], Coroutine[Any, Any, VariablesDoc]],
     ) -> None:
         super().__init__(parent)
         self.name = name
         self.args = args
+        self.working_dir = working_dir
+        self.base_dir = base_dir
         self._get_variables_doc_coroutine = get_variables_doc_coroutine
         self._lib_doc: Optional[VariablesDoc] = None
 
@@ -438,7 +442,7 @@ class _VariablesEntry(_ImportEntry):
             return None
 
     async def _update(self) -> None:
-        self._lib_doc = await self._get_variables_doc_coroutine()
+        self._lib_doc = await self._get_variables_doc_coroutine(self.name, self.args, self.working_dir, self.base_dir)
 
         if self._lib_doc is not None:
             self.file_watchers.append(
@@ -1225,7 +1229,7 @@ class ImportsManager:
             variables,
         )
 
-        async def _get_libdoc() -> VariablesDoc:
+        async def _get_libdoc(name: str, args: Tuple[Any, ...], working_dir: str, base_dir: str) -> VariablesDoc:
             meta, source = await self.get_variables_meta(
                 name,
                 base_dir,
@@ -1311,7 +1315,9 @@ class ImportsManager:
 
         async with self._variables_lock:
             if entry_key not in self._variables:
-                self._variables[entry_key] = _VariablesEntry(name, args, self, _get_libdoc)
+                self._variables[entry_key] = _VariablesEntry(
+                    name, resolved_args, str(self.folder.to_path()), base_dir, self, _get_libdoc
+                )
 
         entry = self._variables[entry_key]
 

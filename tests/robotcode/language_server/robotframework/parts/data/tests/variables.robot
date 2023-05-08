@@ -3,6 +3,7 @@ Suite Teardown      Run Keywords    Log    ${SUITE STATUS}    AND    Log    ${SU
 Test Setup    Log    ${TEST NAME}
 Variables    myvariables.py
 Variables    testvars.yml
+Variables    dynamicvars  ABC
 
 *** Variables ***
 ${pre_full_name}    ${PREV TEST NAME}_${PREV TEST STATUS}

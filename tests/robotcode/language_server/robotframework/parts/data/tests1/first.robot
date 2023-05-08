@@ -13,20 +13,13 @@ wip1
         Log    hi
     END
 
-# wip
-#     Wait Until Keyword Succeeds    5s    100ms    some failing keyword
+wop
+    [Tags]    duplicate
+    No Operation
 
-
-# first
-#     Log    blah
-#     some keyword
-#     Sleep    1s
-
-# second
-#     Fail
-
-# third
-#     some failing keyword
+wup
+    [Tags]    duplicate
+    No Operation
 
 *** Keywords ***
 some keyword
@@ -34,3 +27,8 @@ some keyword
 
 some failing keyword1
     Fail    asd
+
+
+abc ${def} hih
+    [Arguments]    ${b}
+    Log    hello ${def} ${b}
