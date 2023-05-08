@@ -485,12 +485,16 @@ class CompletionCollector(ModelHelperMixin):
         from robot.parsing.lexer.settings import (
             InitFileSettings,
             ResourceFileSettings,
-            TestCaseFileSettings,
         )
+
+        if get_robot_version() >= (6, 1):
+            from robot.parsing.lexer.settings import SuiteFileSettings
+        else:
+            from robot.parsing.lexer.settings import TestCaseFileSettings as SuiteFileSettings
 
         doc_type = await self.parent.documents_cache.get_document_type(self.document)
 
-        settings_class = TestCaseFileSettings
+        settings_class = SuiteFileSettings
         if doc_type == DocumentType.RESOURCE:
             settings_class = ResourceFileSettings
         elif doc_type == DocumentType.INIT:
