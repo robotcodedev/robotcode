@@ -1,18 +1,19 @@
-paths = "tests"
-args = []
+default-profiles = ["devel"]
+paths = ["."]
 python-path = ["./lib", "./resources"]
-
 output-dir = { expr = "f'results/run-{datetime.now().strftime(\"%d-%m-%Y-%H.%M.%S\")}'" }
-rpa = true
-flatten-keywords = [
-    { name = "My Keyword" },
-    { tag = "my-tag" },
-    "name:My Keyword",
-]
-#expand-keywords = [{ name = "My Keyword" }, { tag = "my-tag" }]
-expand-keywords = [{ "name" = "My Keyword" }]
-rebot.merge = "on"
-libdoc.format = "HTML"
+rpa = false
+
+# [parsers]
+# myparser = ["asd"]
+
+[pre-run-modifiers]
+DuplicateTests = []
+
+# [listeners]
+# MyListener = []
+# JiraListener = ["url=https://jira.com", "username=robot", "password=robot"]
+
 
 [env]
 ENV_VAR = "1"
@@ -22,20 +23,19 @@ CMD_VAR = { expr = "1+2*5" }
 CMD_VAR_LONG = "a test"
 ANOTHER_VAR = { expr = "environ.get('CMD_VAR_LONG', 'default')" }
 
-[profiles.firefox.rebot]
-merge = "on"
+[profiles.devel]
+description = "The devel profile"
+
+[profiles.devel.extra-variables]
+BROWSER = "chromium"
+API_URL = "http://localhost:8080"
+APP_URL = "http://localhost:3000"
 
 [profiles.firefox]
 description = "The firefox profile"
-rpa = "default"
-#extra-args = ["-."]
-extra-python-path = ["./lib/firefox"]
 
 [profiles.firefox.extra-variables]
 BROWSER = "firefox"
-
-# [profiles.firefox.extra-listeners]
-# MyListener = ["firefox", "c:\\test\\blah"]
 
 [profiles.headless.extra-variables]
 HEADLESS = "true"
@@ -44,9 +44,11 @@ HEADLESS = "true"
 enabled = { if = 'environ.get("CI") == "true"' }
 extra-variables = { BROWSER = "chromium" }
 
-[tool.robotcode-analyzer]
-asd = 1
-asdwe = 22
 
-[tool.robotcode-analyzer.asdq]
-disabled = true
+[profiles.prod.extra-variables]
+API_URL = "https://api.prod.company.com"
+APP_URL = "https://app.prod.company.com"
+
+[profiles.test1.extra-variables]
+API_URL = "https://api.test1.company.com"
+APP_URL = "https://app.test1.company.com"

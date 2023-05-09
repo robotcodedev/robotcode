@@ -388,7 +388,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Appends entries to the --prerebotmodifier option.\n\nClass to programmatically modify the result\nmodel before creating reports and logs.\n\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
+          "description": "Appends entries to the --prerebotmodifier option.\n\nClass to programmatically modify the result\nmodel before creating reports and logs. Accepts\narguments the same way as with --listener.\n\ncorresponds to the `--prerebotmodifier modifier *` option of _robot_\n",
           "title": "Extra pre rebot modifiers",
           "type": [
             "object",
@@ -838,7 +838,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Class to programmatically modify the result\nmodel before creating reports and logs.\n\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
+          "description": "Class to programmatically modify the result\nmodel before creating reports and logs. Accepts\narguments the same way as with --listener.\n\ncorresponds to the `--prerebotmodifier modifier *` option of _robot_\n",
           "title": "Pre rebot modifiers",
           "type": [
             "object",
@@ -1663,7 +1663,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Appends entries to the --listener option.\n\nA class for monitoring test execution. Gets\nnotifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListenerClass\n--listener path/to/Listener.py:arg1:arg2\n```\n\ncorresponds to the `--listener class *` option of _rebot_\n",
+          "description": "Appends entries to the --listener option.\n\nClass or module for monitoring test execution.\nGets notifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListener\n--listener path/to/Listener.py:arg1:arg2\n```\n\ncorresponds to the `--listener listener *` option of _rebot_\n",
           "title": "Extra listeners",
           "type": [
             "object",
@@ -1684,6 +1684,28 @@
           "default": null,
           "description": "Appends entries to the --metadata option.\n\nSet metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
           "title": "Extra metadata",
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "extra-parsers": {
+          "additionalProperties": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
+            },
+            "type": "array"
+          },
+          "default": null,
+          "description": "Appends entries to the --parser option.\n\nCustom parser class or module. Parser classes accept\narguments the same way as with --listener.\n\ncorresponds to the `--parser parser *` option of _rebot_\n",
+          "title": "Extra parsers",
           "type": [
             "object",
             "null"
@@ -1723,7 +1745,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Appends entries to the --prerebotmodifier option.\n\nClass to programmatically modify the result\nmodel before creating reports and logs.\n\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
+          "description": "Appends entries to the --prerebotmodifier option.\n\nClass to programmatically modify the result\nmodel before creating reports and logs. Accepts\narguments the same way as with --listener.\n\ncorresponds to the `--prerebotmodifier modifier *` option of _robot_\n",
           "title": "Extra pre rebot modifiers",
           "type": [
             "object",
@@ -1745,7 +1767,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Appends entries to the --prerunmodifier option.\n\nClass to programmatically modify the suite\nstructure before execution.\n\ncorresponds to the `--prerunmodifier class *` option of _rebot_\n",
+          "description": "Appends entries to the --prerunmodifier option.\n\nClass to programmatically modify the suite\nstructure before execution. Accepts arguments the\nsame way as with --listener.\n\ncorresponds to the `--prerunmodifier modifier *` option of _rebot_\n",
           "title": "Extra pre run modifiers",
           "type": [
             "object",
@@ -2156,7 +2178,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "A class for monitoring test execution. Gets\nnotifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListenerClass\n--listener path/to/Listener.py:arg1:arg2\n```\n\ncorresponds to the `--listener class *` option of _robot_\n",
+          "description": "Class or module for monitoring test execution.\nGets notifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListener\n--listener path/to/Listener.py:arg1:arg2\n```\n\ncorresponds to the `--listener listener *` option of _robot_\n",
           "title": "Listeners",
           "type": [
             "object",
@@ -2317,6 +2339,28 @@
           "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n\ncorresponds to the `-d --outputdir dir` option of _robot_\n",
           "title": "Output dir"
         },
+        "parsers": {
+          "additionalProperties": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
+            },
+            "type": "array"
+          },
+          "default": null,
+          "description": "Custom parser class or module. Parser classes accept\narguments the same way as with --listener.\n\ncorresponds to the `--parser parser *` option of _robot_\n",
+          "title": "Parsers",
+          "type": [
+            "object",
+            "null"
+          ]
+        },
         "paths": {
           "anyOf": [
             {
@@ -2351,7 +2395,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Class to programmatically modify the result\nmodel before creating reports and logs.\n\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
+          "description": "Class to programmatically modify the result\nmodel before creating reports and logs. Accepts\narguments the same way as with --listener.\n\ncorresponds to the `--prerebotmodifier modifier *` option of _robot_\n",
           "title": "Pre rebot modifiers",
           "type": [
             "object",
@@ -2373,7 +2417,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Class to programmatically modify the suite\nstructure before execution.\n\ncorresponds to the `--prerunmodifier class *` option of _robot_\n",
+          "description": "Class to programmatically modify the suite\nstructure before execution. Accepts arguments the\nsame way as with --listener.\n\ncorresponds to the `--prerunmodifier modifier *` option of _robot_\n",
           "title": "Pre run modifiers",
           "type": [
             "object",
@@ -3409,7 +3453,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Appends entries to the --listener option.\n\nA class for monitoring test execution. Gets\nnotifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListenerClass\n--listener path/to/Listener.py:arg1:arg2\n```\n\ncorresponds to the `--listener class *` option of _rebot_\n",
+          "description": "Appends entries to the --listener option.\n\nClass or module for monitoring test execution.\nGets notifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListener\n--listener path/to/Listener.py:arg1:arg2\n```\n\ncorresponds to the `--listener listener *` option of _rebot_\n",
           "title": "Extra listeners",
           "type": [
             "object",
@@ -3430,6 +3474,28 @@
           "default": null,
           "description": "Appends entries to the --metadata option.\n\nSet metadata of the top level suite. Value can\ncontain formatting and be read from a file similarly\nas --doc. Example: --metadata Version:1.2\n\ncorresponds to the `-M --metadata name:value *` option of _robot_\n",
           "title": "Extra metadata",
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "extra-parsers": {
+          "additionalProperties": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
+            },
+            "type": "array"
+          },
+          "default": null,
+          "description": "Appends entries to the --parser option.\n\nCustom parser class or module. Parser classes accept\narguments the same way as with --listener.\n\ncorresponds to the `--parser parser *` option of _rebot_\n",
+          "title": "Extra parsers",
           "type": [
             "object",
             "null"
@@ -3469,7 +3535,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Appends entries to the --prerebotmodifier option.\n\nClass to programmatically modify the result\nmodel before creating reports and logs.\n\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
+          "description": "Appends entries to the --prerebotmodifier option.\n\nClass to programmatically modify the result\nmodel before creating reports and logs. Accepts\narguments the same way as with --listener.\n\ncorresponds to the `--prerebotmodifier modifier *` option of _robot_\n",
           "title": "Extra pre rebot modifiers",
           "type": [
             "object",
@@ -3491,7 +3557,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Appends entries to the --prerunmodifier option.\n\nClass to programmatically modify the suite\nstructure before execution.\n\ncorresponds to the `--prerunmodifier class *` option of _rebot_\n",
+          "description": "Appends entries to the --prerunmodifier option.\n\nClass to programmatically modify the suite\nstructure before execution. Accepts arguments the\nsame way as with --listener.\n\ncorresponds to the `--prerunmodifier modifier *` option of _rebot_\n",
           "title": "Extra pre run modifiers",
           "type": [
             "object",
@@ -3891,7 +3957,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "A class for monitoring test execution. Gets\nnotifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListenerClass\n--listener path/to/Listener.py:arg1:arg2\n```\n\ncorresponds to the `--listener class *` option of _robot_\n",
+          "description": "Class or module for monitoring test execution.\nGets notifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```\n--listener MyListener\n--listener path/to/Listener.py:arg1:arg2\n```\n\ncorresponds to the `--listener listener *` option of _robot_\n",
           "title": "Listeners",
           "type": [
             "object",
@@ -4052,6 +4118,28 @@
           "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n\ncorresponds to the `-d --outputdir dir` option of _robot_\n",
           "title": "Output dir"
         },
+        "parsers": {
+          "additionalProperties": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/StringExpression"
+                }
+              ]
+            },
+            "type": "array"
+          },
+          "default": null,
+          "description": "Custom parser class or module. Parser classes accept\narguments the same way as with --listener.\n\ncorresponds to the `--parser parser *` option of _robot_\n",
+          "title": "Parsers",
+          "type": [
+            "object",
+            "null"
+          ]
+        },
         "paths": {
           "anyOf": [
             {
@@ -4086,7 +4174,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Class to programmatically modify the result\nmodel before creating reports and logs.\n\ncorresponds to the `--prerebotmodifier class *` option of _robot_\n",
+          "description": "Class to programmatically modify the result\nmodel before creating reports and logs. Accepts\narguments the same way as with --listener.\n\ncorresponds to the `--prerebotmodifier modifier *` option of _robot_\n",
           "title": "Pre rebot modifiers",
           "type": [
             "object",
@@ -4108,7 +4196,7 @@
             "type": "array"
           },
           "default": null,
-          "description": "Class to programmatically modify the suite\nstructure before execution.\n\ncorresponds to the `--prerunmodifier class *` option of _robot_\n",
+          "description": "Class to programmatically modify the suite\nstructure before execution. Accepts arguments the\nsame way as with --listener.\n\ncorresponds to the `--prerunmodifier modifier *` option of _robot_\n",
           "title": "Pre run modifiers",
           "type": [
             "object",

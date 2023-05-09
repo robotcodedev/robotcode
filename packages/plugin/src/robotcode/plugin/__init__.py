@@ -3,13 +3,21 @@ import sys
 from dataclasses import dataclass
 from enum import Enum, unique
 from pathlib import Path
-from typing import IO, Any, AnyStr, Callable, Iterable, List, Optional, TypeVar, Union, cast
+from typing import IO, Any, AnyStr, Callable, Iterable, Optional, Sequence, TypeVar, Union, cast
 
 import click
 import pluggy
 from robotcode.core.dataclasses import as_dict, as_json
 
-__all__ = ["hookimpl", "CommonConfig", "pass_application"]
+__all__ = [
+    "hookimpl",
+    "CommonConfig",
+    "pass_application",
+    "Application",
+    "UnknownError",
+    "OutputFormat",
+    "ColoredOutput",
+]
 
 F = TypeVar("F", bound=Callable[..., Any])
 hookimpl = cast(Callable[[F], F], pluggy.HookimplMarker("robotcode"))
@@ -41,11 +49,12 @@ class OutputFormat(str, Enum):
 
 @dataclass
 class CommonConfig:
-    config_files: Optional[List[Path]] = None
-    profiles: Optional[List[str]] = None
+    config_files: Optional[Sequence[Path]] = None
+    profiles: Optional[Sequence[str]] = None
     dry: bool = False
     verbose: bool = False
     colored_output: ColoredOutput = ColoredOutput.AUTO
+    default_paths: Optional[Sequence[str]] = None
     launcher_script: Optional[str] = None
     output_format: Optional[OutputFormat] = None
     pager: Optional[bool] = None

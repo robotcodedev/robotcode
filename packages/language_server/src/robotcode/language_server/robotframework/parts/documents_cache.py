@@ -53,7 +53,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         if get_robot_version() < (6, 0):
             return None
 
-        from robot.conf.languages import Languages as RobotLanguages  # pyright: reportMissingImports=false
+        from robot.conf.languages import Languages as RobotLanguages  # pyright: ignore[reportMissingImports]
 
         uri: Union[Uri, str]
 
@@ -98,7 +98,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         if get_robot_version() < (6, 0):
             return (None, None)
 
-        from robot.conf.languages import Languages as RobotLanguages
+        from robot.conf.languages import Languages as RobotLanguages  # pyright: ignore[reportMissingImports]
         from robot.parsing.model.blocks import File
 
         workspace_langs = await self.get_workspace_languages(document)
@@ -298,7 +298,10 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
                 yield t
 
-        model = _get_model(get_tokens, document.uri.to_path())
+        if get_robot_version() >= (6, 0):
+            model = _get_model(get_tokens, document.uri.to_path(), False, None, None)
+        else:
+            model = _get_model(get_tokens, document.uri.to_path(), False, None)
 
         setattr(model, "source", str(document.uri.to_path()))
         setattr(model, "model_type", document_type)

@@ -510,7 +510,8 @@ export class DebugManager {
       testLaunchConfig.target = "";
     }
 
-    const paths = config.get<Array<string>>("robot.paths", []);
+    let paths = config.get<string[]>("robot.paths", []);
+    paths = "paths" in testLaunchConfig ? [...(testLaunchConfig.paths as string[]), ...paths] : paths;
 
     return vscode.debug.startDebugging(
       folder,
@@ -518,11 +519,11 @@ export class DebugManager {
         ...testLaunchConfig,
         ...{
           type: "robotcode",
-          name: "RobotCode: Run Tests",
+          name: `RobotCode: Run Tests ${folder.name}`,
           request: "launch",
           cwd: folder?.uri.fsPath,
-          paths: "paths" in testLaunchConfig ? [...(testLaunchConfig.paths as Array<string>), ...paths] : paths,
-          args: "args" in testLaunchConfig ? [...(testLaunchConfig.args as Array<string>), ...args] : args,
+          paths: paths?.length > 0 ? paths : ["."],
+          args: "args" in testLaunchConfig ? [...(testLaunchConfig.args as string[]), ...args] : args,
           console:
             "console" in testLaunchConfig
               ? testLaunchConfig.console

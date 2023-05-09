@@ -37,19 +37,6 @@ export function toVsCodeRange(range: Range): vscode.Range {
 
 export const SUPPORTED_LANGUAGES = ["robotframework"];
 
-export interface RobotTestItem {
-  type: string;
-  id: string;
-  uri?: string;
-  children: RobotTestItem[] | undefined;
-  label: string;
-  longname: string;
-  description?: string;
-  range?: Range;
-  error?: string;
-  tags?: string[];
-}
-
 export interface EvaluatableExpression {
   range: Range;
 
@@ -572,71 +559,6 @@ export class LanguageClientsManager {
         // do noting
       }
     }
-  }
-
-  public async getTestsFromWorkspace(
-    workspaceFolder: vscode.WorkspaceFolder,
-    paths?: string[],
-    suites?: string[],
-    token?: vscode.CancellationToken
-  ): Promise<RobotTestItem[] | undefined> {
-    const robotFiles = await vscode.workspace.findFiles(
-      new vscode.RelativePattern(workspaceFolder, "**/*.robot"),
-      undefined,
-      1,
-      token
-    );
-
-    if (robotFiles.length === 0) {
-      return undefined;
-    }
-
-    const client = await this.getLanguageClientForResource(workspaceFolder.uri);
-
-    if (!client) return;
-
-    return (
-      (token
-        ? await client.sendRequest<RobotTestItem[]>(
-            "robot/discovering/getTestsFromWorkspace",
-            {
-              workspaceFolder: workspaceFolder.uri.toString(),
-              paths: paths,
-              suites,
-            },
-            token
-          )
-        : await client.sendRequest<RobotTestItem[]>("robot/discovering/getTestsFromWorkspace", {
-            workspaceFolder: workspaceFolder.uri.toString(),
-            paths: paths,
-          })) ?? undefined
-    );
-  }
-
-  public async getTestsFromDocument(
-    document: vscode.TextDocument,
-    base_name?: string,
-    token?: vscode.CancellationToken
-  ): Promise<RobotTestItem[] | undefined> {
-    const client = await this.getLanguageClientForResource(document.uri);
-
-    if (!client) return;
-
-    return (
-      (token
-        ? await client.sendRequest<RobotTestItem[]>(
-            "robot/discovering/getTestsFromDocument",
-            {
-              textDocument: { uri: document.uri.toString() },
-              base_name: base_name,
-            },
-            token
-          )
-        : await client.sendRequest<RobotTestItem[]>("robot/discovering/getTestsFromDocument", {
-            textDocument: { uri: document.uri.toString() },
-            base_name: base_name,
-          })) ?? undefined
-    );
   }
 
   public async openUriInDocumentationView(uri: vscode.Uri): Promise<void> {

@@ -94,6 +94,13 @@ from .commands import config, profiles
     show_envvar=True,
 )
 @click.option(
+    "--default-path",
+    "-dp",
+    type=click.Path(exists=False, resolve_path=False, path_type=str),
+    multiple=True,
+    help="Default path to use if no path is given or defined in a profile. Can be specified multiple times.",
+)
+@click.option(
     "--launcher-script",
     hidden=True,
     type=str,
@@ -113,6 +120,7 @@ def robotcode(
     log: bool,
     log_level: str,
     log_calls: bool,
+    default_path: Optional[List[str]],
     launcher_script: Optional[str] = None,
 ) -> None:
     """\b
@@ -139,6 +147,7 @@ def robotcode(
     app.config.pager = pager
     app.config.output_format = format
     app.config.launcher_script = launcher_script
+    app.config.default_paths = default_path
 
     if log:
         if log_calls:

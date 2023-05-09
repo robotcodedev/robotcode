@@ -165,10 +165,10 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         mode: Optional[str] = None,
         variableFiles: Optional[List[str]] = None,  # noqa: N803
         languages: Optional[List[str]] = None,
-        arguments: Optional[LaunchRequestArguments] = None,
         include: Optional[List[str]] = None,
         exclude: Optional[List[str]] = None,
         robotCodeArgs: Optional[List[str]] = None,  # noqa: N803
+        arguments: Optional[LaunchRequestArguments] = None,
         *_args: Any,
         **_kwargs: Any,
     ) -> None:
@@ -182,47 +182,48 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
             Path(Path(__file__).parent.parent) if self.debugger_script is None else Path(self.debugger_script)
         )
 
-        run_args = [
+        robotcode_run_args = [
             python,
             str(debugger_script),
             *itertools.chain.from_iterable(["--profile", p] for p in profiles or []),
+            *itertools.chain.from_iterable(["--default-path", p] for p in paths or []),
             *(robotCodeArgs or []),
             "debug",
         ]
 
         if no_debug:
-            run_args += ["--no-debug"]
+            robotcode_run_args += ["--no-debug"]
 
         if port != DEBUGGER_DEFAULT_PORT:
-            run_args += ["--tcp", str(port)]
+            robotcode_run_args += ["--tcp", str(port)]
 
         if debuggerTimeout is not None:
-            run_args += ["wait-for-client-timeout", str(debuggerTimeout)]
+            robotcode_run_args += ["wait-for-client-timeout", str(debuggerTimeout)]
 
         if attachPython and not no_debug:
-            run_args += ["--debugpy"]
+            robotcode_run_args += ["--debugpy"]
 
             if attachPythonPort is not None and attachPythonPort != DEBUGPY_DEFAULT_PORT:
-                run_args += ["--debugpy-port", str(attachPythonPort or 0)]
+                robotcode_run_args += ["--debugpy-port", str(attachPythonPort or 0)]
 
         if outputMessages:
-            run_args += ["--output-messages"]
+            robotcode_run_args += ["--output-messages"]
 
         if not outputLog:
-            run_args += ["--no-output-log"]
+            robotcode_run_args += ["--no-output-log"]
 
         if outputTimestamps:
-            run_args += ["--output-timestamps"]
+            robotcode_run_args += ["--output-timestamps"]
 
         if groupOutput:
-            run_args += ["--group-output"]
+            robotcode_run_args += ["--group-output"]
 
         if stopOnEntry:
-            run_args += ["--stop-on-entry"]
+            robotcode_run_args += ["--stop-on-entry"]
 
-        run_args += debuggerArgs or []
+        robotcode_run_args += debuggerArgs or []
 
-        run_args += ["--"]
+        run_args = []
 
         if get_robot_version() >= (6, 0) and languages:
             for lang in languages:
@@ -262,15 +263,11 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
 
         run_args += args or []
 
-        if paths:
-            for p in paths:
-                run_args.append(p)
-
         if target:
             run_args.append(target)
 
-        if target is not None and not paths and not target:
-            run_args.append(".")
+        if run_args:
+            run_args.insert(0, "--")
 
         env = {k: ("" if v is None else str(v)) for k, v in env.items()} if env else {}
 
@@ -279,7 +276,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
                 RunInTerminalRequest(
                     arguments=RunInTerminalRequestArguments(
                         cwd=cwd,
-                        args=run_args,
+                        args=[*robotcode_run_args, *run_args],
                         env=env,
                         kind=RunInTerminalKind.INTEGRATED
                         if console == "integratedTerminal"

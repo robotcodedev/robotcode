@@ -251,7 +251,7 @@ class BaseOptions(ValidateMixin):
                         append_name(field)
                         if isinstance(item, list):
                             separator = ";" if any(True for s in item if ":" in s) else ":"
-                            result.append(f"{key}{separator}{separator.join(item)}")
+                            result.append(f"{key}{separator if item else ''}{separator.join(item)}")
                         else:
                             result.append(f"{key}:{item}")
                 else:
@@ -537,9 +537,10 @@ class CommonOptions(BaseOptions):
     pre_rebot_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
             Class to programmatically modify the result
-            model before creating reports and logs.
+            model before creating reports and logs. Accepts
+            arguments the same way as with --listener.
 
-            corresponds to the `--prerebotmodifier class *` option of _robot_
+            corresponds to the `--prerebotmodifier modifier *` option of _robot_
             """,
         robot_name="prerebotmodifier",
         robot_priority=500,
@@ -942,9 +943,10 @@ class CommonExtraOptions(BaseOptions):
             Appends entries to the --prerebotmodifier option.
 
             Class to programmatically modify the result
-            model before creating reports and logs.
+            model before creating reports and logs. Accepts
+            arguments the same way as with --listener.
 
-            corresponds to the `--prerebotmodifier class *` option of _robot_
+            corresponds to the `--prerebotmodifier modifier *` option of _robot_
             """,
     )
     extra_python_path: Optional[List[Union[str, StringExpression]]] = field(
@@ -1277,19 +1279,19 @@ class RobotOptions(BaseOptions):
     )
     listeners: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
-            A class for monitoring test execution. Gets
-            notifications e.g. when tests start and end.
+            Class or module for monitoring test execution.
+            Gets notifications e.g. when tests start and end.
             Arguments to the listener class can be given after
             the name using a colon or a semicolon as a separator.
 
             Examples:
 
             ```
-            --listener MyListenerClass
+            --listener MyListener
             --listener path/to/Listener.py:arg1:arg2
             ```
 
-            corresponds to the `--listener class *` option of _robot_
+            corresponds to the `--listener listener *` option of _robot_
             """,
         robot_name="listener",
         robot_priority=500,
@@ -1354,12 +1356,23 @@ class RobotOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="o",
     )
+    parsers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
+        description="""\
+            Custom parser class or module. Parser classes accept
+            arguments the same way as with --listener.
+
+            corresponds to the `--parser parser *` option of _robot_
+            """,
+        robot_name="parser",
+        robot_priority=500,
+    )
     pre_run_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
             Class to programmatically modify the suite
-            structure before execution.
+            structure before execution. Accepts arguments the
+            same way as with --listener.
 
-            corresponds to the `--prerunmodifier class *` option of _robot_
+            corresponds to the `--prerunmodifier modifier *` option of _robot_
             """,
         robot_name="prerunmodifier",
         robot_priority=500,
@@ -1523,19 +1536,29 @@ class RobotExtraOptions(BaseOptions):
         description="""\
             Appends entries to the --listener option.
 
-            A class for monitoring test execution. Gets
-            notifications e.g. when tests start and end.
+            Class or module for monitoring test execution.
+            Gets notifications e.g. when tests start and end.
             Arguments to the listener class can be given after
             the name using a colon or a semicolon as a separator.
 
             Examples:
 
             ```
-            --listener MyListenerClass
+            --listener MyListener
             --listener path/to/Listener.py:arg1:arg2
             ```
 
-            corresponds to the `--listener class *` option of _rebot_
+            corresponds to the `--listener listener *` option of _rebot_
+            """,
+    )
+    extra_parsers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
+        description="""\
+            Appends entries to the --parser option.
+
+            Custom parser class or module. Parser classes accept
+            arguments the same way as with --listener.
+
+            corresponds to the `--parser parser *` option of _rebot_
             """,
     )
     extra_pre_run_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
@@ -1543,9 +1566,10 @@ class RobotExtraOptions(BaseOptions):
             Appends entries to the --prerunmodifier option.
 
             Class to programmatically modify the suite
-            structure before execution.
+            structure before execution. Accepts arguments the
+            same way as with --listener.
 
-            corresponds to the `--prerunmodifier class *` option of _rebot_
+            corresponds to the `--prerunmodifier modifier *` option of _rebot_
             """,
     )
     extra_skip: Optional[List[Union[str, StringExpression]]] = field(

@@ -39,12 +39,12 @@
             },
             "attachPython": true,
             "pythonConfiguration": "RobotCode: Python",
-            "robotCodeArgs": [
-                "-v",
-                "--log",
-                "--log-level=TRACE",
-                "--log-calls"
-            ],
+            // "robotCodeArgs": [
+            //     "-v",
+            //     "--log",
+            //     "--log-level=TRACE",
+            //     "--log-calls"
+            // ],
             "profiles": [
                 "ci*",
                 "firefox",

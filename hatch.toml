@@ -41,12 +41,19 @@ install-bundled-editable = "python ./scripts/install_bundled_editable.py"
 create-json-schema = "python ./scripts/create_robot_toml_json_schema.py"
 install-packages = "python ./scripts/install_packages.py"
 
+[envs.rfmaster]
+python = "310"
+extra-dependencies=[
+  "robotframework @ git+https://github.com/robotframework/robotframework.git"
+]
+
+
 [envs.devel]
 python = "38"
 
 [[envs.devel.matrix]]
 python = ["38", "39", "310", "311"]
-rf = ["rf41", "rf50", "rf60", "rf61a1"]
+rf = ["rf41", "rf50", "rf60", "rf61b1"]
 
 [envs.devel.overrides]
 matrix.rf.dependencies = [
@@ -59,13 +66,13 @@ matrix.rf.dependencies = [
   { value = "robotframework>6.0.0, <6.1", if = [
     "rf60",
   ] },
-  { value = "robotframework==6.1a1", if = [
-    "rf61a1",
+  { value = "robotframework==6.1b1", if = [
+    "rf61b1",
   ] },
 ]
 
 [[envs.test.matrix]]
-rf = ["rf41", "rf50", "rf60", "rf61a1"]
+rf = ["rf41", "rf50", "rf60", "rf61b1"]
 
 [envs.test.overrides]
 matrix.rf.dependencies = [
@@ -78,8 +85,8 @@ matrix.rf.dependencies = [
   { value = "robotframework>6.0.0, <6.1", if = [
     "rf60",
   ] },
-  { value = "robotframework==6.1a1", if = [
-    "rf61a1",
+  { value = "robotframework==6.1b1", if = [
+    "rf61b1",
   ] },
 ]
 

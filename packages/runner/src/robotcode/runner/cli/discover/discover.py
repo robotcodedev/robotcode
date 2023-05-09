@@ -1,83 +1,128 @@
 import os
+import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, List, Optional, Tuple, cast
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import click
-from robot.api.parsing import File, get_model
+import robot.running.model as running_model
 from robot.conf import RobotSettings
-from robot.errors import DATA_ERROR, DataError
-from robot.model import ModelModifier
+from robot.errors import DATA_ERROR, INFO_PRINTED, DataError, Information
+from robot.model import ModelModifier, TestCase, TestSuite
 from robot.model.visitor import SuiteVisitor
-from robot.output import LOGGER
-from robot.parsing.lexer.tokens import Token
-from robot.parsing.model.blocks import CommentSection
-from robot.parsing.model.statements import Error
-from robot.running.builder import RobotParser, TestSuiteBuilder
-from robot.running.model import TestCase, TestSuite
-from robotcode.core.lsp.types import DocumentUri, Position, Range
+from robot.output import LOGGER, Message
+from robot.running.builder import TestSuiteBuilder
+from robot.running.builder.builders import SuiteStructureParser
+from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, DocumentUri, Position, Range
 from robotcode.core.uri import Uri
-from robotcode.plugin import Application, OutputFormat, pass_application
+from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
 from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.utils import get_robot_version
 
 from ..robot import ROBOT_OPTIONS, RobotFrameworkEx, handle_robot_options
 
 
+class ErroneousTestSuite(running_model.TestSuite):
+    def __init__(self, *args: Any, error_message: str, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+
+
+__patched = False
+
+
 def _patch() -> None:
-    orig = RobotParser._build
+    global __patched
+    if __patched:
+        return
+    __patched = True
 
-    def my_get_model_v4(source: str, data_only: bool = False, curdir: Optional[str] = None) -> Any:
-        try:
-            return get_model(source, data_only, curdir)
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except DataError as e:
-            LOGGER.error(f"Error in file {source}: {e}")
-            return File(
-                source=source,
-                sections=[CommentSection(body=[Error.from_tokens([Token(Token.ERROR, error=str(e))])])],
-            )
+    if get_robot_version() <= (6, 1, 0, "a", 1, None):
+        if get_robot_version() > (5, 0) and get_robot_version() < (6, 0, 0) or get_robot_version() < (5, 0):
+            from robot.running.builder.testsettings import TestDefaults  # pyright: ignore[reportMissingImports]
+        else:
+            from robot.running.builder.settings import Defaults as TestDefaults  # pyright: ignore[reportMissingImports]
 
-    def my_get_model_v6(source: str, data_only: bool = False, curdir: Optional[str] = None, lang: Any = None) -> Any:
-        try:
-            return get_model(source, data_only, curdir, lang)
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except DataError as e:
-            LOGGER.error(f"Error in file {source}: {e}")
-            return File(
-                source=source,
-                languages=lang,
-                sections=[CommentSection(body=[Error.from_tokens([Token(Token.ERROR, error=str(e))])])],
-            )
+        old_validate_test_counts = TestSuiteBuilder._validate_test_counts
 
-    my_get_model = my_get_model_v4 if get_robot_version() < (6, 0) else my_get_model_v6
+        def _validate_test_counts(self: Any, suite: TestSuite, multisource: bool = False) -> None:
+            # we don't need this
+            try:
+                old_validate_test_counts(self, suite, multisource)
+            except DataError as e:
+                LOGGER.error(str(e))
 
-    def build(
-        self: Any,
-        suite: TestSuite,
-        source: str,
-        defaults: Any,
-        model: Any = None,
-        get_model: Any = my_get_model,
-    ) -> TestSuite:
-        return orig(self, suite, source, defaults, model, get_model)
+        TestSuiteBuilder._validate_test_counts = _validate_test_counts
 
-    RobotParser._build = build
+        old_build_suite_file = SuiteStructureParser._build_suite
 
-    def _validate_test_counts(self: Any, suite: TestSuite, multisource: bool = False) -> None:
-        # we don't need this
-        pass
+        def build_suite(self: SuiteStructureParser, structure: Any) -> Tuple[TestSuite, TestDefaults]:
+            try:
+                return old_build_suite_file(self, structure)  # type: ignore
+            except DataError as e:
+                LOGGER.error(str(e))
+                parent_defaults = self._stack[-1][-1] if self._stack else None
+                if get_robot_version() < (6, 1, 0, "a", 1, None):
+                    from robot.running.builder.parsers import format_name
 
-    TestSuiteBuilder._validate_test_counts = _validate_test_counts
+                    return ErroneousTestSuite(
+                        error_message=str(e), name=format_name(structure.source), source=structure.source
+                    ), TestDefaults(parent_defaults)
+
+                return ErroneousTestSuite(
+                    error_message=str(e), name=TestSuite.name_from_source(structure.source), source=structure.source
+                ), TestDefaults(parent_defaults)
+
+        SuiteStructureParser._build_suite = build_suite
+
+    elif get_robot_version() >= (6, 1, 0, "a", 1, None):
+        from robot.parsing.suitestructure import SuiteDirectory, SuiteFile
+        from robot.running.builder.settings import TestDefaults  # pyright: ignore[reportMissingImports]
+
+        old_validate_not_empty = TestSuiteBuilder._validate_not_empty
+
+        def _validate_not_empty(self: Any, suite: TestSuite, multi_source: bool = False) -> None:
+            try:
+                old_validate_not_empty(self, suite, multi_source)
+            except DataError as e:
+                LOGGER.error(str(e))
+
+        TestSuiteBuilder._validate_not_empty = _validate_not_empty
+
+        old_build_suite_file = SuiteStructureParser._build_suite_file
+
+        def build_suite_file(self: SuiteStructureParser, structure: SuiteFile) -> TestSuite:
+            try:
+                return old_build_suite_file(self, structure)
+            except DataError as e:
+                LOGGER.error(str(e))
+                return ErroneousTestSuite(
+                    error_message=str(e), name=TestSuite.name_from_source(structure.source), source=structure.source
+                )
+
+        SuiteStructureParser._build_suite_file = build_suite_file
+
+        old_build_suite_directory = SuiteStructureParser._build_suite_directory
+
+        def build_suite_directory(
+            self: SuiteStructureParser, structure: SuiteDirectory
+        ) -> Tuple[TestSuite, TestDefaults]:
+            try:
+                return old_build_suite_directory(self, structure)  # type: ignore
+            except DataError as e:
+                LOGGER.error(str(e))
+                return ErroneousTestSuite(
+                    error_message=str(e), name=TestSuite.name_from_source(structure.source), source=structure.source
+                ), TestDefaults(self.parent_defaults)
+
+        SuiteStructureParser._build_suite_directory = build_suite_directory
 
 
 @dataclass
 class TestItem:
     type: str
     id: str
-    label: str
+    name: str
     longname: str
     uri: Optional[DocumentUri] = None
     children: Optional[List["TestItem"]] = None
@@ -87,27 +132,53 @@ class TestItem:
     error: Optional[str] = None
 
 
+@dataclass
+class ResultItem:
+    items: List[TestItem]
+    diagnostics: Optional[Dict[str, List[Diagnostic]]] = None
+
+
+@dataclass
+class Statistics:
+    suites: int = 0
+    suites_with_tests: int = 0
+    tests: int = 0
+
+
 class Collector(SuiteVisitor):
     def __init__(self) -> None:
         super().__init__()
-        self.result: TestItem = TestItem(
+        self.all: TestItem = TestItem(
             type="workspace",
             id=str(Path.cwd().resolve()),
-            label=Path.cwd().name,
+            name=Path.cwd().name,
             longname=Path.cwd().name,
             uri=str(Uri.from_path(Path.cwd())),
         )
-        self._current = self.result
+        self._current = self.all
+        self.suites: List[TestItem] = []
+        self.tests: List[TestItem] = []
+        self.statistics = Statistics()
 
     def visit_suite(self, suite: TestSuite) -> None:
         item = TestItem(
             type="suite",
             id=f"{Path(suite.source).resolve() if suite.source is not None else ''};{suite.longname}",
-            label=suite.name,
+            name=suite.name,
             longname=suite.longname,
             uri=str(Uri.from_path(suite.source)) if suite.source else None,
+            range=Range(
+                start=Position(line=0, character=0),
+                end=Position(line=0, character=0),
+            )
+            if suite.source and Path(suite.source).is_file()
+            else None,
             children=[],
+            error=suite.error_message if isinstance(suite, ErroneousTestSuite) else None,
         )
+
+        self.suites.append(item)
+
         if self._current.children is None:
             self._current.children = []
         self._current.children.append(item)
@@ -119,28 +190,35 @@ class Collector(SuiteVisitor):
         finally:
             self._current = old_current
 
+        self.statistics.suites += 1
+        if suite.tests:
+            self.statistics.suites_with_tests += 1
+
     def visit_test(self, test: TestCase) -> None:
         if self._current.children is None:
             self._current.children = []
-        self._current.children.append(
-            TestItem(
-                type="test",
-                id=f"{Path(test.source).resolve() if test.source is not None else ''};"
-                f"{test.longname};{test.lineno}",
-                label=test.name,
-                longname=test.longname,
-                uri=str(Uri.from_path(test.source)) if test.source else None,
-                range=Range(
-                    start=Position(line=test.lineno - 1, character=0),
-                    end=Position(line=test.lineno - 1, character=0),
-                ),
-                tags=list(test.tags) if test.tags else None,
-            )
+        item = TestItem(
+            type="test",
+            id=f"{Path(test.source).resolve() if test.source is not None else ''};{test.longname};{test.lineno}",
+            name=test.name,
+            longname=test.longname,
+            uri=str(Uri.from_path(test.source)) if test.source else None,
+            range=Range(
+                start=Position(line=test.lineno - 1, character=0),
+                end=Position(line=test.lineno - 1, character=0),
+            ),
+            tags=list(test.tags) if test.tags else None,
         )
+
+        self.tests.append(item)
+        self._current.children.append(item)
+
+        self.statistics.tests += 1
 
 
 @click.group(invoke_without_command=False)
-def discover() -> None:
+@pass_application
+def discover(app: Application) -> None:
     """\
     Commands to discover informations about the current project.
 
@@ -151,6 +229,132 @@ def discover() -> None:
     robotcode --profile regression discover tests
     ```
     """
+
+
+RE_IN_FILE_LINE_MATCHER = re.compile(r".+\sin\sfile\s'(?P<file>.*)'\son\sline\s(?P<line>\d+):(?P<message>.*)")
+RE_PARSING_FAILED_MATCHER = re.compile(r"Parsing\s'(?P<file>.*)'\sfailed:(?P<message>.*)")
+
+
+class DiagnosticsLogger:
+    def __init__(self) -> None:
+        self.messages: List[Message] = []
+
+    def message(self, msg: Message) -> None:
+        if msg.level in ("WARN", "ERROR"):
+            self.messages.append(msg)
+
+
+def build_diagnostics(messages: List[Message]) -> Dict[str, List[Diagnostic]]:
+    result: Dict[str, List[Diagnostic]] = {}
+
+    def add_diagnostic(
+        message: Message, source_uri: Optional[str] = None, line: Optional[int] = None, text: Optional[str] = None
+    ) -> None:
+        source_uri = str(Uri.from_path(Path(source_uri) if source_uri else Path.cwd()))
+
+        if source_uri not in result:
+            result[source_uri] = []
+
+        result[source_uri].append(
+            Diagnostic(
+                range=Range(
+                    start=Position(line=(line or 1) - 1, character=0),
+                    end=Position(line=(line or 1) - 1, character=0),
+                ),
+                message=text or message.message,
+                severity=DiagnosticSeverity.ERROR if message.level == "ERROR" else DiagnosticSeverity.WARNING,
+                source="robotcode.discover",
+                code="discover",
+            )
+        )
+
+    for message in messages:
+        if match := RE_IN_FILE_LINE_MATCHER.match(message.message):
+            add_diagnostic(message, match.group("file"), int(match.group("line")), text=match.group("message").strip())
+        elif match := RE_PARSING_FAILED_MATCHER.match(message.message):
+            add_diagnostic(message, match.group("file"), text=match.group("message").strip())
+        else:
+            add_diagnostic(message)
+
+    return result
+
+
+def handle_options(
+    app: Application,
+    by_longname: Tuple[str, ...],
+    exclude_by_longname: Tuple[str, ...],
+    robot_options_and_args: Tuple[str, ...],
+) -> Tuple[TestSuite, Optional[Dict[str, List[Diagnostic]]]]:
+    root_folder, profile, cmd_options = handle_robot_options(
+        app, by_longname, exclude_by_longname, robot_options_and_args
+    )
+
+    try:
+        _patch()
+
+        options, arguments = RobotFrameworkEx(
+            app,
+            [*(app.config.default_paths if app.config.default_paths else ())]
+            if profile.paths is None
+            else profile.paths
+            if isinstance(profile.paths, list)
+            else [profile.paths],
+            app.config.dry,
+            root_folder,
+        ).parse_arguments((*cmd_options, *robot_options_and_args))
+
+        settings = RobotSettings(options)
+
+        LOGGER.register_console_logger(**settings.console_output_config)
+
+        diagnostics_logger = DiagnosticsLogger()
+        LOGGER.register_logger(diagnostics_logger)
+
+        if get_robot_version() >= (5, 0):
+            if settings.pythonpath:
+                sys.path = settings.pythonpath + sys.path
+
+        if get_robot_version() > (6, 1, 0, "a", 1, None):
+            builder = TestSuiteBuilder(
+                settings["SuiteNames"],
+                custom_parsers=settings.parsers,
+                included_extensions=settings.extension,
+                rpa=settings.rpa,
+                lang=settings.languages,
+                allow_empty_suite=settings.run_empty_suite,
+            )
+        elif get_robot_version() >= (6, 0, 0):
+            builder = TestSuiteBuilder(
+                settings["SuiteNames"],
+                included_extensions=settings.extension,
+                rpa=settings.rpa,
+                lang=settings.languages,
+                allow_empty_suite=settings.run_empty_suite,
+            )
+        else:
+            builder = TestSuiteBuilder(
+                settings["SuiteNames"],
+                included_extensions=settings.extension,
+                rpa=settings.rpa,
+                allow_empty_suite=settings.run_empty_suite,
+            )
+
+        suite = builder.build(*arguments)
+        settings.rpa = suite.rpa
+        if settings.pre_run_modifiers:
+            suite.visit(ModelModifier(settings.pre_run_modifiers, settings.run_empty_suite, LOGGER))
+        suite.configure(**settings.suite_config)
+
+        return suite, build_diagnostics(diagnostics_logger.messages)
+
+    except Information as err:
+        app.echo(str(err))
+        app.exit(INFO_PRINTED)
+    except DataError as err:
+        LOGGER.error(err)
+        app.exit(DATA_ERROR)
+
+    raise UnknownError("Unexpected error happened.")
 
 
 @discover.command(
@@ -181,67 +385,54 @@ def all(
     ```
     """
 
-    root_folder, profile, cmd_options = handle_robot_options(
-        app, by_longname, exclude_by_longname, robot_options_and_args
-    )
+    suite, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
-    try:
-        options, arguments = RobotFrameworkEx(
-            app,
-            [] if profile.paths is None else profile.paths if isinstance(profile.paths, list) else [profile.paths],
-            app.config.dry,
-            root_folder,
-        ).parse_arguments((*cmd_options, *robot_options_and_args))
+    collector = Collector()
+    suite.visit(collector)
 
-        settings = RobotSettings(options)
-
-        LOGGER.register_console_logger(**settings.console_output_config)
-
-        _patch()
-
-        if get_robot_version() >= (6, 0, 0):
-            builder = TestSuiteBuilder(
-                settings["SuiteNames"],
-                included_extensions=settings.extension,
-                rpa=settings.rpa,
-                lang=settings.languages,
-                allow_empty_suite=settings.run_empty_suite,
-            )
-        else:
-            builder = TestSuiteBuilder(
-                settings["SuiteNames"],
-                included_extensions=settings.extension,
-                rpa=settings.rpa,
-                allow_empty_suite=settings.run_empty_suite,
-            )
-
-        suite = cast(TestSuite, builder.build(*arguments))
-        settings.rpa = suite.rpa
-        if settings.pre_run_modifiers:
-            suite.visit(ModelModifier(settings.pre_run_modifiers, settings.run_empty_suite, LOGGER))
-        suite.configure(**settings.suite_config)
-
-        collector = Collector()
-        suite.visit(collector)
-
+    if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+            tests_or_tasks = "Tasks" if suite.rpa else "Tests"
 
             def print(item: TestItem, indent: int = 0) -> Iterable[str]:
-                yield f"{'  ' * indent}{item.label}{os.linesep}"
+                yield (
+                    f"{'  ' * indent}"
+                    f"{item.type.capitalize() if item.type == 'suite' else tests_or_tasks.capitalize() }: "
+                    f"{item.name}{os.linesep}"
+                )
                 if item.children:
                     for child in item.children:
                         yield from print(child, indent + 2)
 
-            app.echo_via_pager(print(collector.result))
+                if indent == 0:
+                    yield os.linesep
+                    yield f"Summary:{os.linesep}"
+                    yield f"  Suites: {collector.statistics.suites}{os.linesep}"
+                    yield f"  Suites with {tests_or_tasks}: {collector.statistics.suites_with_tests}{os.linesep}"
+                    yield f"  {tests_or_tasks}: {collector.statistics.tests}{os.linesep}"
+
+            app.echo_via_pager(print(collector.all.children[0]))
+
         else:
-            app.print_data(collector.result, remove_defaults=True)
-    except DataError as err:
-        LOGGER.error(err)
-        app.exit(DATA_ERROR)
+            app.print_data(ResultItem([collector.all], diagnostics), remove_defaults=True)
 
 
-@discover.command()
-def tests() -> None:
+@discover.command(
+    context_settings={
+        "allow_extra_args": True,
+        "ignore_unknown_options": True,
+    },
+    add_help_option=True,
+    epilog='Use "-- --help" to see `robot` help.',
+)
+@add_options(*ROBOT_OPTIONS)
+@pass_application
+def tests(
+    app: Application,
+    by_longname: Tuple[str, ...],
+    exclude_by_longname: Tuple[str, ...],
+    robot_options_and_args: Tuple[str, ...],
+) -> None:
     """\
     Discover tests with the selected configuration, profiles, options and
     arguments.
@@ -254,9 +445,41 @@ def tests() -> None:
     ```
     """
 
+    suite, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
-@discover.command()
-def suites() -> None:
+    collector = Collector()
+    suite.visit(collector)
+
+    if collector.all.children:
+        if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+
+            def print(items: List[TestItem]) -> Iterable[str]:
+                for item in items:
+                    yield f"{item.longname}{os.linesep}"
+
+            if collector.tests:
+                app.echo_via_pager(print(collector.tests))
+
+        else:
+            app.print_data(ResultItem(collector.tests, diagnostics), remove_defaults=True)
+
+
+@discover.command(
+    context_settings={
+        "allow_extra_args": True,
+        "ignore_unknown_options": True,
+    },
+    add_help_option=True,
+    epilog='Use "-- --help" to see `robot` help.',
+)
+@add_options(*ROBOT_OPTIONS)
+@pass_application
+def suites(
+    app: Application,
+    by_longname: Tuple[str, ...],
+    exclude_by_longname: Tuple[str, ...],
+    robot_options_and_args: Tuple[str, ...],
+) -> None:
     """\
     Discover suites with the selected configuration, profiles, options and
     arguments.
@@ -268,3 +491,21 @@ def suites() -> None:
     robotcode --profile regression discover suites
     ```
     """
+
+    suite, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+
+    collector = Collector()
+    suite.visit(collector)
+
+    if collector.all.children:
+        if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+
+            def print(items: List[TestItem]) -> Iterable[str]:
+                for item in items:
+                    yield f"{item.longname}{os.linesep}"
+
+            if collector.suites:
+                app.echo_via_pager(print(collector.suites))
+
+        else:
+            app.print_data(ResultItem(collector.suites, diagnostics), remove_defaults=True)

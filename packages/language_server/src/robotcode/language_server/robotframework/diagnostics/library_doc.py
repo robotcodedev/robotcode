@@ -310,7 +310,7 @@ class ArgumentSpec:
                 self.defaults,
                 self.types,
             )
-
+        self.__robot_arguments.name = self.name
         resolver = ArgumentResolver(
             self.__robot_arguments,
             resolve_named=resolve_named,

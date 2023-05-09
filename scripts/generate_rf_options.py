@@ -19,7 +19,7 @@ OPTIONS_RE = re.compile(
 type_templates = {
     "console": 'Literal["verbose", "dotted", "skipped", "quiet", "none"]',
     "listeners": "Dict[str, List[Union[str, StringExpression]]]",
-    "parser": "Dict[str, List[Union[str, StringExpression]]]",
+    "parsers": "Dict[str, List[Union[str, StringExpression]]]",
     "pre_rebot_modifiers": "Dict[str, List[Union[str, StringExpression]]]",
     "pre_run_modifiers": "Dict[str, List[Union[str, StringExpression]]]",
     "randomize": 'Union[str, Literal["all", "suites", "tests", "none"]]',

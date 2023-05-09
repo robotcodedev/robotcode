@@ -19,7 +19,6 @@ from .parts.codelens import RobotCodeLensProtocolPart
 from .parts.completion import RobotCompletionProtocolPart
 from .parts.debugging_utils import RobotDebuggingUtilsProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
-from .parts.discovering import DiscoveringProtocolPart
 from .parts.document_highlight import RobotDocumentHighlightProtocolPart
 from .parts.document_symbols import RobotDocumentSymbolsProtocolPart
 from .parts.documents_cache import DocumentsCache
@@ -100,14 +99,13 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     robot_code_action_fixes = ProtocolPartDescriptor(RobotCodeActionFixesProtocolPart)
     robot_workspace = ProtocolPartDescriptor(RobotWorkspaceProtocolPart)
 
-    robot_discovering = ProtocolPartDescriptor(DiscoveringProtocolPart)
     robot_debugging_utils = ProtocolPartDescriptor(RobotDebuggingUtilsProtocolPart)
 
     name = "RobotCode Language Server"
     short_name = "RobotCode"
     version = __version__
 
-    file_extensions = {"robot", "resource", "py", "yaml", "yml", "feature"}
+    file_extensions = {"robot", "resource", "py", "yaml", "yml"}
 
     languages = [
         LanguageDefinition(

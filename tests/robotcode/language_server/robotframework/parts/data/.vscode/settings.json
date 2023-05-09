@@ -24,7 +24,7 @@
         // // "--log-language-server"
         // "--call-tracing"
     ],
-    "robotcode.robocop.enabled": true,
+    "robotcode.robocop.enabled": false,
     // "robotcode.debug.groupOutput": false,
     // "robotcode.robot.args": [
     //     "-L", "TRACE"
@@ -33,17 +33,17 @@
     // "robotcode.debug.outputMessages": true
     //"python.analysis.diagnosticMode": "workspace"
     //"robotcode.robot.paths": ["./tests", "./tests1"]
-    "robotcode.analysis.diagnosticMode": "workspace",
+    "robotcode.analysis.diagnosticMode": "openFilesOnly",
     "robotcode.analysis.progressMode": "detailed",
     "robotcode.analysis.cache.saveLocation": "workspaceFolder",
     "robotcode.analysis.cache.ignoredLibraries": [
         //"robot.libraries.Remote",
         "**/lib/alibrary.py"
     ],
-    "robotcode.extraArgs": [
-        "--log",
-        "--log-level",
-        "TRACE",
-        "--log-calls"
-    ],
+    // "robotcode.extraArgs": [
+    //     "--log",
+    //     "--log-level",
+    //     "TRACE",
+    //     "--log-calls"
+    // ],
 }

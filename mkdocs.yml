@@ -4,7 +4,7 @@ site_author: Daniel Biehl
 site_url: https://robotcode.io
 repo_url: https://github.com/d-biehl/robotcode
 repo_name: d-biehl/robotcode
-edit_uri: blob/master/docs
+edit_uri: blob/main/docs
 copyright: >
   <p>'Copyright &copy; Daniel Biehl 2022-present'</p>
   <p><a href="#__consent">Change cookie settings</a></p>
@@ -126,3 +126,4 @@ nav:
   - CLI:
       - About: cli/about.md
       - Reference: cli/reference.md
+      - Config: cli/config.md

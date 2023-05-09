@@ -27,7 +27,7 @@ class RobotFrameworkEx(RobotFramework):
         self._orig_cwd = Path.cwd()
 
     def parse_arguments(self, cli_args: Any) -> Any:
-        if self.root_folder is not None:
+        if self.root_folder is not None and Path.cwd() != self.root_folder:
             self.app.verbose(f"Changing working directory from {self._orig_cwd} to {self.root_folder}")
             os.chdir(self.root_folder)
 
@@ -121,7 +121,7 @@ def handle_robot_options(
             app.verbose(lambda: f"Set environment variable {k} to {v}")
 
     app.verbose(
-        lambda: "Executing robot with the following options:\n    "
+        lambda: "Executing robot with following options:\n    "
         + " ".join(f'"{o}"' for o in (cmd_options + list(robot_options_and_args)))
     )
 
@@ -165,7 +165,11 @@ def robot(
             int,
             RobotFrameworkEx(
                 app,
-                [] if profile.paths is None else profile.paths if isinstance(profile.paths, list) else [profile.paths],
+                [*(app.config.default_paths if app.config.default_paths else ())]
+                if profile.paths is None
+                else profile.paths
+                if isinstance(profile.paths, list)
+                else [profile.paths],
                 app.config.dry,
                 root_folder,
             ).execute_cli(

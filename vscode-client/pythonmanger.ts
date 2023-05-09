@@ -1,4 +1,4 @@
-import { spawnSync } from "child_process";
+import { spawn, spawnSync } from "child_process";
 import * as path from "path";
 import * as vscode from "vscode";
 import { CONFIG_SECTION } from "./config";
@@ -62,17 +62,6 @@ interface PythonExtensionApi {
       execCommand: string[] | undefined;
     };
   };
-}
-
-export interface RobotCodeProfileInfo {
-  name: string;
-  description: string;
-  selected: boolean;
-}
-
-export interface RobotCodeProfilesResult {
-  profiles: RobotCodeProfileInfo[];
-  messages: string[] | undefined;
 }
 
 export class PythonManager {
@@ -189,37 +178,76 @@ export class PythonManager {
     return false;
   }
 
-  public getRobotCodeProfiles(folder: vscode.WorkspaceFolder, profiles?: string[]): RobotCodeProfilesResult {
+  public async executeRobotCode(
+    folder: vscode.WorkspaceFolder,
+    args: string[],
+    token?: vscode.CancellationToken
+  ): Promise<unknown> {
     const pythonCommand = this.getPythonCommand(folder);
     if (pythonCommand === undefined) throw new Error("Can't find python executable.");
 
-    const res = spawnSync(
-      pythonCommand,
-      [
-        "-u",
-        "-X",
-        "utf8",
-        this.robotCodeMain,
-        "--format",
-        "json",
-        "--no-color",
-        ...(profiles === undefined ? [] : profiles.flatMap((v) => ["--profile", v])),
-        "profiles",
-        "list",
-      ],
-      {
-        encoding: "utf-8",
+    const final_args = [
+      "-u",
+      "-X",
+      "utf8",
+      this.robotCodeMain,
+      "--format",
+      "json",
+      "--no-color",
+      "--no-pager",
+      ...args,
+    ];
+
+    this.outputChannel.appendLine(`executeRobotCode: ${pythonCommand} ${final_args.join(" ")}`);
+
+    return new Promise((resolve, reject) => {
+      const abortController = new AbortController();
+
+      token?.onCancellationRequested(() => {
+        abortController.abort();
+      });
+
+      const { signal } = abortController;
+
+      const process = spawn(pythonCommand, final_args, {
         cwd: folder.uri.fsPath,
-      }
-    );
 
-    if (res.status == 0 && res.stdout) return JSON.parse(res.stdout) as RobotCodeProfilesResult;
+        signal,
+      });
 
-    const stdout = res.stdout;
-    if (stdout) this.outputChannel.appendLine(`getRobotCodeProfiles: ${stdout}`);
-    const stderr = res.stderr;
-    if (stderr) this.outputChannel.appendLine(`getRobotCodeProfiles: ${stderr}`);
+      let stdout = "";
+      let stderr = "";
 
-    throw new Error(stdout + "\n" + stderr);
+      process.stdout.setEncoding("utf8");
+      process.stderr.setEncoding("utf8");
+
+      process.stdout.on("data", (data) => {
+        stdout += data;
+      });
+
+      process.stderr.on("data", (data) => {
+        stderr += data;
+      });
+
+      process.on("error", (err) => {
+        reject(err);
+      });
+
+      process.on("exit", (code) => {
+        this.outputChannel.appendLine(`executeRobotCode: exit code ${code ?? "null"}`);
+        if (code === 0) {
+          try {
+            resolve(JSON.parse(stdout));
+          } catch (err) {
+            reject(err);
+          }
+        } else {
+          this.outputChannel.appendLine(`executeRobotCode: ${stdout}\n${stderr}`);
+          this.outputChannel.show(true);
+
+          reject(new Error(`Executing robotcode failed with code ${code ?? "null"}: ${stdout}\n${stderr}`));
+        }
+      });
+    });
   }
 }

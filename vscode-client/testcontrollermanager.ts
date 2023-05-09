@@ -5,15 +5,54 @@ import { red, yellow } from "ansi-colors";
 import * as vscode from "vscode";
 import { DebugManager } from "./debugmanager";
 
-import {
-  ClientState,
-  LanguageClientsManager,
-  RobotTestItem,
-  toVsCodeRange,
-  SUPPORTED_LANGUAGES,
-} from "./languageclientsmanger";
+import { ClientState, LanguageClientsManager, toVsCodeRange, SUPPORTED_LANGUAGES } from "./languageclientsmanger";
 import { filterAsync, Mutex, sleep, WeakValueMap } from "./utils";
 import { CONFIG_SECTION } from "./config";
+import { Range, Diagnostic, DiagnosticSeverity } from "vscode-languageclient/node";
+
+function diagnosticsSeverityToVsCode(severity?: DiagnosticSeverity): vscode.DiagnosticSeverity | undefined {
+  switch (severity) {
+    case DiagnosticSeverity.Error:
+      return vscode.DiagnosticSeverity.Error;
+    case DiagnosticSeverity.Warning:
+      return vscode.DiagnosticSeverity.Warning;
+    case DiagnosticSeverity.Information:
+      return vscode.DiagnosticSeverity.Information;
+    case DiagnosticSeverity.Hint:
+      return vscode.DiagnosticSeverity.Hint;
+    default:
+      return undefined;
+  }
+}
+
+interface RobotTestItem {
+  type: string;
+  id: string;
+  uri?: string;
+  children: RobotTestItem[] | undefined;
+  name: string;
+  longname: string;
+  description?: string;
+  range?: Range;
+  error?: string;
+  tags?: string[];
+}
+
+interface RobotCodeDiscoverResult {
+  items?: RobotTestItem[];
+  diagnostics?: { [Key: string]: Diagnostic[] };
+}
+
+interface RobotCodeProfileInfo {
+  name: string;
+  description: string;
+  selected: boolean;
+}
+
+interface RobotCodeProfilesResult {
+  profiles: RobotCodeProfileInfo[];
+  messages: string[] | undefined;
+}
 
 interface RobotExecutionAttributes {
   id: string | undefined;
@@ -69,6 +108,7 @@ class DidChangeEntry {
 
 class WorkspaceFolderEntry {
   private _valid: boolean;
+
   public get valid(): boolean {
     return this._valid;
   }
@@ -92,6 +132,7 @@ export class TestControllerManager {
   private readonly debugSessions = new Set<vscode.DebugSession>();
   private readonly didChangedTimer = new Map<string, DidChangeEntry>();
   private fileChangeTimer: DidChangeEntry | undefined;
+  private diagnosticCollection = vscode.languages.createDiagnosticCollection("robotCode discovery");
 
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
@@ -158,8 +199,15 @@ export class TestControllerManager {
     fileWatcher.onDidDelete((uri) => this.refreshUri(uri, "delete"));
     fileWatcher.onDidChange((uri) => this.refreshUri(uri, "change"));
 
+    const fileWatcher1 = vscode.workspace.createFileSystemWatcher(`**/{pyproject.toml,robot.toml,.robot.toml}`);
+    fileWatcher1.onDidCreate((uri) => this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(uri)));
+    fileWatcher1.onDidDelete((uri) => this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(uri)));
+    fileWatcher1.onDidChange((uri) => this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(uri)));
+
     this._disposables = vscode.Disposable.from(
+      this.diagnosticCollection,
       fileWatcher,
+      fileWatcher1,
       this.languageClientsManager.onClientStateChanged((event) => {
         switch (event.state) {
           case ClientState.Running: {
@@ -247,6 +295,21 @@ export class TestControllerManager {
     );
   }
 
+  public async getRobotCodeProfiles(
+    folder: vscode.WorkspaceFolder,
+    profiles?: string[]
+  ): Promise<RobotCodeProfilesResult> {
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+    const paths = config.get<string[] | undefined>("robot.paths", undefined);
+
+    return (await this.languageClientsManager.pythonManager.executeRobotCode(folder, [
+      ...(profiles === undefined ? [] : profiles.flatMap((v) => ["--profile", v])),
+      ...(paths?.length ? paths.flatMap((v) => ["--default-path", v]) : ["--default-path", "."]),
+      "profiles",
+      "list",
+    ])) as RobotCodeProfilesResult;
+  }
+
   private async configureRunProfile(): Promise<void> {
     if (vscode.workspace.workspaceFolders === undefined || vscode.workspace.workspaceFolders?.length === 0) return;
 
@@ -267,7 +330,7 @@ export class TestControllerManager {
       return;
     }
 
-    const workspaceFolder =
+    const folder =
       folders.length > 1
         ? (
             await vscode.window.showQuickPick(
@@ -283,14 +346,11 @@ export class TestControllerManager {
           )?.value
         : folders[0];
 
-    if (!workspaceFolder) return;
+    if (!folder) return;
 
     try {
-      const config = vscode.workspace.getConfiguration(CONFIG_SECTION, workspaceFolder);
-      const result = this.languageClientsManager.pythonManager.getRobotCodeProfiles(
-        workspaceFolder,
-        config.get("run.profiles", undefined)
-      );
+      const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+      const result = await this.getRobotCodeProfiles(folder, config.get("run.profiles", undefined));
 
       if (result.profiles.length === 0 && result.messages) {
         await vscode.window.showWarningMessage(result.messages.join("\n"));
@@ -302,7 +362,7 @@ export class TestControllerManager {
       });
 
       const profiles = await vscode.window.showQuickPick([...options], {
-        title: `Select Execution Profiles for folder "${workspaceFolder.name}"`,
+        title: `Select Execution Profiles for folder "${folder.name}"`,
         canPickMany: true,
       });
       if (profiles === undefined) return;
@@ -322,6 +382,12 @@ export class TestControllerManager {
   }
 
   private removeWorkspaceFolderItems(folder: vscode.WorkspaceFolder) {
+    this.diagnosticCollection.forEach((uri, _diagnostics, collection) => {
+      if (vscode.workspace.getWorkspaceFolder(uri) === folder) {
+        collection.delete(uri);
+      }
+    });
+
     if (this.robotTestItems.has(folder)) {
       const robotItems = this.robotTestItems.get(folder)?.items;
 
@@ -441,6 +507,114 @@ export class TestControllerManager {
 
   private testItems = new WeakValueMap<string, vscode.TestItem>();
 
+  private async discoverTests(
+    folder: vscode.WorkspaceFolder,
+    discoverArgs: string[],
+    extraArgs: string[],
+    token?: vscode.CancellationToken
+  ): Promise<RobotCodeDiscoverResult> {
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+    const profiles = config.get<string[]>("run.profiles", []);
+    const pythonPath = config.get<string[]>("robot.pythonPath", []);
+    const paths = config.get<string[] | undefined>("robot.paths", undefined);
+    const languages = config.get<string[]>("robot.languages", []);
+    const robotArgs = config.get<string[]>("robot.args", []);
+
+    const mode = config.get<string>("robot.mode", "default");
+    const mode_args: string[] = [];
+    switch (mode) {
+      case "default":
+        break;
+      case "norpa":
+        mode_args.push("--norpa");
+        break;
+      case "rpa":
+        mode_args.push("--rpa");
+        break;
+    }
+    return (await this.languageClientsManager.pythonManager.executeRobotCode(
+      folder,
+      [
+        ...(profiles === undefined ? [] : profiles.flatMap((v) => ["--profile", v])),
+        ...(paths?.length ? paths.flatMap((v) => ["--default-path", v]) : ["--default-path", "."]),
+        ...discoverArgs,
+        ...mode_args,
+        ...pythonPath.flatMap((v) => ["-P", v]),
+        ...languages.flatMap((v) => ["--language", v]),
+        ...robotArgs,
+        ...extraArgs,
+      ],
+      token
+    )) as RobotCodeDiscoverResult;
+  }
+
+  public async getTestsFromWorkspace(
+    folder: vscode.WorkspaceFolder,
+    token?: vscode.CancellationToken
+  ): Promise<RobotTestItem[] | undefined> {
+    try {
+      const result = await this.discoverTests(folder, ["discover", "all"], [], token);
+
+      this.diagnosticCollection.forEach((uri, _diagnostics, collection) => {
+        if (vscode.workspace.getWorkspaceFolder(uri) === folder) {
+          collection.delete(uri);
+        }
+      });
+
+      if (result?.diagnostics) {
+        for (const key of Object.keys(result?.diagnostics ?? {})) {
+          const diagnostics = result.diagnostics[key];
+          this.diagnosticCollection.set(
+            vscode.Uri.parse(key),
+            diagnostics.map((v) => {
+              const r = new vscode.Diagnostic(
+                toVsCodeRange(v.range),
+                v.message,
+                diagnosticsSeverityToVsCode(v.severity)
+              );
+              r.source = v.source;
+              r.code = v.code;
+              return r;
+            })
+          );
+        }
+      }
+      return result?.items;
+    } catch (e) {
+      console.error(e);
+      return [
+        {
+          name: folder.name,
+          type: "workspace",
+          id: folder.uri.fsPath,
+          uri: folder.uri.toString(),
+          longname: folder.name,
+          error: e?.toString() || "Unknown Error",
+          children: [],
+        },
+      ];
+    }
+  }
+
+  public async getTestsFromDocument(
+    document: vscode.TextDocument,
+    testItem: RobotTestItem,
+    token?: vscode.CancellationToken
+  ): Promise<RobotTestItem[] | undefined> {
+    const folder = vscode.workspace.getWorkspaceFolder(document.uri);
+    if (!folder) return undefined;
+
+    try {
+      const result = await this.discoverTests(folder, ["discover", "tests"], ["--suite", testItem?.longname], token);
+
+      return result?.items;
+    } catch (e) {
+      console.error(e);
+
+      return undefined;
+    }
+  }
+
   private async refreshItem(item?: vscode.TestItem, token?: vscode.CancellationToken): Promise<void> {
     if (token?.isCancellationRequested) return;
 
@@ -457,8 +631,7 @@ export class TestControllerManager {
           const openDoc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === item.uri?.toString());
 
           if (openDoc !== undefined) {
-            tests = await this.languageClientsManager.getTestsFromDocument(openDoc, robotItem.longname, token);
-
+            tests = await this.getTestsFromDocument(openDoc, robotItem, token);
             if (tests !== undefined) {
               for (const test of tests) {
                 const index = robotItem.children.findIndex((v) => v.id === test.id);
@@ -514,10 +687,7 @@ export class TestControllerManager {
         if (this.robotTestItems.get(folder) === undefined || !this.robotTestItems.get(folder)?.valid) {
           this.robotTestItems.set(
             folder,
-            new WorkspaceFolderEntry(
-              true,
-              await this.languageClientsManager.getTestsFromWorkspace(folder, undefined, undefined, token)
-            )
+            new WorkspaceFolderEntry(true, await this.getTestsFromWorkspace(folder, token))
           );
         }
 
@@ -528,7 +698,7 @@ export class TestControllerManager {
             addedIds.add(test.id);
             const newItem = this.addOrUpdateTestItem(undefined, test);
             await this.refreshItem(newItem, token);
-            if (newItem.canResolveChildren && newItem.children.size === 0) {
+            if (newItem.canResolveChildren && newItem.children.size === 0 && newItem.error === undefined) {
               addedIds.delete(newItem.id);
             }
           }
@@ -548,7 +718,7 @@ export class TestControllerManager {
     if (testItem === undefined) {
       testItem = this.testController.createTestItem(
         robotTestItem.id,
-        robotTestItem.label,
+        robotTestItem.name,
         robotTestItem.uri ? vscode.Uri.parse(robotTestItem.uri) : undefined
       );
 
@@ -566,8 +736,13 @@ export class TestControllerManager {
     if (robotTestItem.range !== undefined) {
       testItem.range = toVsCodeRange(robotTestItem.range);
     }
-    testItem.label = robotTestItem.label;
-    testItem.error = robotTestItem.error;
+    testItem.label = robotTestItem.name;
+    testItem.description = robotTestItem.description;
+    if (robotTestItem.error !== undefined) {
+      const error = new vscode.MarkdownString();
+      error.appendCodeblock(robotTestItem.error);
+      testItem.error = error;
+    }
 
     const tags = this.convertTags(robotTestItem.tags);
     if (tags) testItem.tags = tags;
@@ -705,7 +880,14 @@ export class TestControllerManager {
         if (!folders.has(ws)) {
           folders.set(ws, []);
         }
-        folders.get(ws)?.push(i);
+        const ritem = this.findRobotItem(i);
+        if (ritem?.type == "workspace") {
+          i.children.forEach((c) => {
+            folders.get(ws)?.push(c);
+          });
+        } else {
+          folders.get(ws)?.push(i);
+        }
       }
     }
     return folders;
@@ -726,10 +908,18 @@ export class TestControllerManager {
     token: vscode.CancellationToken,
     dryRun?: boolean
   ): Promise<void> {
-    let includedItems: vscode.TestItem[] = [];
+    const includedItems: vscode.TestItem[] = [];
 
     if (request.include) {
-      includedItems = Array.from(request.include);
+      //includedItems = Array.from(request.include);
+      request.include.forEach((v) => {
+        const robotTest = this.findRobotItem(v);
+        if (robotTest?.type === "workspace") {
+          v.children.forEach((v) => includedItems.push(v));
+        } else {
+          includedItems.push(v);
+        }
+      });
     } else {
       this.testController.items.forEach((test) => {
         const robotTest = this.findRobotItem(test);
@@ -779,8 +969,9 @@ export class TestControllerManager {
         workspaceItem = workspaceItem?.children.get(workspaceRobotItem.children[0].id);
       }
 
-      if (includedItems.length === 1 && includedItems[0] === workspaceItem && excluded.size === 0) {
-        run_started = run_started || (await DebugManager.runTests(workspace, [], [], [], runId, options, dryRun));
+      if (testItems.length === 1 && testItems[0] === workspaceItem && excluded.size === 0) {
+        const started = await DebugManager.runTests(workspace, [], [], [], runId, options, dryRun);
+        run_started = run_started || started;
       } else {
         const includedInWs = testItems
           .map((i) => {
@@ -827,18 +1018,18 @@ export class TestControllerManager {
           suiteName = workspaceRobotItem.children[0].longname;
         }
 
-        run_started =
-          run_started ||
-          (await DebugManager.runTests(
-            workspace,
-            Array.from(suites),
-            includedInWs,
-            excludedInWs,
-            runId,
-            options,
-            dryRun,
-            suiteName
-          ));
+        const started = await DebugManager.runTests(
+          workspace,
+          Array.from(suites),
+          includedInWs,
+          excludedInWs,
+          runId,
+          options,
+          dryRun,
+          suiteName
+        );
+
+        run_started = run_started || started;
       }
     }
 
