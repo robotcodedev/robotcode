@@ -511,6 +511,7 @@ export class TestControllerManager {
     folder: vscode.WorkspaceFolder,
     discoverArgs: string[],
     extraArgs: string[],
+    stdioData?: string,
     token?: vscode.CancellationToken
   ): Promise<RobotCodeDiscoverResult> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
@@ -544,6 +545,7 @@ export class TestControllerManager {
         ...robotArgs,
         ...extraArgs,
       ],
+      stdioData,
       token
     )) as RobotCodeDiscoverResult;
   }
@@ -553,7 +555,24 @@ export class TestControllerManager {
     token?: vscode.CancellationToken
   ): Promise<RobotTestItem[] | undefined> {
     try {
-      const result = await this.discoverTests(folder, ["discover", "all"], [], token);
+      const o: { [key: string]: string } = {};
+
+      for (const document of vscode.workspace.textDocuments) {
+        if (
+          SUPPORTED_LANGUAGES.includes(document.languageId) &&
+          vscode.workspace.getWorkspaceFolder(document.uri) === folder
+        ) {
+          o[document.fileName] = document.getText();
+        }
+      }
+
+      const result = await this.discoverTests(
+        folder,
+        ["discover", "--read-from-stdin", "all"],
+        [],
+        JSON.stringify(o),
+        token
+      );
 
       this.diagnosticCollection.forEach((uri, _diagnostics, collection) => {
         if (vscode.workspace.getWorkspaceFolder(uri) === folder) {
@@ -605,7 +624,16 @@ export class TestControllerManager {
     if (!folder) return undefined;
 
     try {
-      const result = await this.discoverTests(folder, ["discover", "tests"], ["--suite", testItem?.longname], token);
+      const o: { [key: string]: string } = {};
+      o[document.fileName] = document.getText();
+
+      const result = await this.discoverTests(
+        folder,
+        ["discover", "--read-from-stdin", "tests"],
+        ["--suite", testItem?.longname],
+        JSON.stringify(o),
+        token
+      );
 
       return result?.items;
     } catch (e) {

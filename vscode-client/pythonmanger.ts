@@ -181,8 +181,12 @@ export class PythonManager {
   public async executeRobotCode(
     folder: vscode.WorkspaceFolder,
     args: string[],
+    stdioData?: string,
     token?: vscode.CancellationToken
   ): Promise<unknown> {
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+    const robotCodeExtraArgs = config.get<string[]>("extraArgs", []);
+
     const pythonCommand = this.getPythonCommand(folder);
     if (pythonCommand === undefined) throw new Error("Can't find python executable.");
 
@@ -191,6 +195,7 @@ export class PythonManager {
       "-X",
       "utf8",
       this.robotCodeMain,
+      ...robotCodeExtraArgs,
       "--format",
       "json",
       "--no-color",
@@ -220,12 +225,18 @@ export class PythonManager {
 
       process.stdout.setEncoding("utf8");
       process.stderr.setEncoding("utf8");
+      if (stdioData !== undefined) {
+        process.stdin.cork();
+        process.stdin.write(stdioData, "utf8");
+        process.stdin.end();
+      }
 
       process.stdout.on("data", (data) => {
         stdout += data;
       });
 
       process.stderr.on("data", (data) => {
+        this.outputChannel.append(data as string);
         stderr += data;
       });
 

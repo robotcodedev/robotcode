@@ -3,7 +3,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import click
 import robot.running.model as running_model
@@ -14,6 +14,7 @@ from robot.model.visitor import SuiteVisitor
 from robot.output import LOGGER, Message
 from robot.running.builder import TestSuiteBuilder
 from robot.running.builder.builders import SuiteStructureParser
+from robotcode.core.dataclasses import from_json
 from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, DocumentUri, Position, Range
 from robotcode.core.uri import Uri
 from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
@@ -31,6 +32,9 @@ class ErroneousTestSuite(running_model.TestSuite):
 __patched = False
 
 
+_stdin_data: Optional[Dict[str, str]] = None
+
+
 def _patch() -> None:
     global __patched
     if __patched:
@@ -38,6 +42,8 @@ def _patch() -> None:
     __patched = True
 
     if get_robot_version() <= (6, 1, 0, "a", 1, None):
+        from robot.running.builder.parsers import RobotParser
+
         if get_robot_version() > (5, 0) and get_robot_version() < (6, 0, 0) or get_robot_version() < (5, 0):
             from robot.running.builder.testsettings import TestDefaults  # pyright: ignore[reportMissingImports]
         else:
@@ -75,8 +81,20 @@ def _patch() -> None:
 
         SuiteStructureParser._build_suite = build_suite
 
+        old_get_source = RobotParser._get_source
+
+        def _get_source(self: RobotParser, path: Path) -> Union[Path, str]:
+            if _stdin_data is not None and (data := _stdin_data.get(str(path))) is not None:
+                if data is not None:
+                    return data
+
+            return old_get_source(self, path)  # type: ignore
+
+        RobotParser._get_source = _get_source
+
     elif get_robot_version() >= (6, 1, 0, "a", 1, None):
         from robot.parsing.suitestructure import SuiteDirectory, SuiteFile
+        from robot.running.builder.parsers import RobotParser
         from robot.running.builder.settings import TestDefaults  # pyright: ignore[reportMissingImports]
 
         old_validate_not_empty = TestSuiteBuilder._validate_not_empty
@@ -116,6 +134,17 @@ def _patch() -> None:
                 ), TestDefaults(self.parent_defaults)
 
         SuiteStructureParser._build_suite_directory = build_suite_directory
+
+        old_get_source = RobotParser._get_source
+
+        def _get_source(self: RobotParser, path: Path) -> Union[Path, str]:
+            if _stdin_data is not None and (data := _stdin_data.get(str(path))) is not None:
+                if data is not None:
+                    return data
+
+            return old_get_source(self, path)  # type: ignore
+
+        RobotParser._get_source = _get_source
 
 
 @dataclass
@@ -217,8 +246,9 @@ class Collector(SuiteVisitor):
 
 
 @click.group(invoke_without_command=False)
+@click.option("--read-from-stdin", is_flag=True, help="Read file contents from stdin. This is an internal option.")
 @pass_application
-def discover(app: Application) -> None:
+def discover(app: Application, read_from_stdin: bool) -> None:
     """\
     Commands to discover informations about the current project.
 
@@ -229,6 +259,10 @@ def discover(app: Application) -> None:
     robotcode --profile regression discover tests
     ```
     """
+    if read_from_stdin:
+        global _stdin_data
+        _stdin_data = from_json(sys.stdin.buffer.read(), Dict[str, str], strict=True)
+        app.verbose(f"Read data from stdin: {repr(_stdin_data)}")
 
 
 RE_IN_FILE_LINE_MATCHER = re.compile(r".+\sin\sfile\s'(?P<file>.*)'\son\sline\s(?P<line>\d+):(?P<message>.*)")

@@ -73,7 +73,7 @@ class Application:
         message: Union[str, Callable[[], Any], None],
         file: Optional[IO[AnyStr]] = None,
         nl: bool = True,
-        err: bool = False,
+        err: bool = True,
     ) -> None:
         if self.config.verbose:
             click.secho(

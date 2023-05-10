@@ -38,7 +38,8 @@
 				// "--",
 				// "--help"
 				// "run"
-				"--format", "toml",
+				// "--format",
+				// "toml",
 				"--no-color",
 				"--no-pager",
 				"--default-path",
@@ -48,7 +49,8 @@
 				"all",
 				"--norpa",
 				// "--by-longname", "asd:dasd",
-				// "--suite",
+				"--suite",
+				"Data.Tests.Versions.Rf61.a suite with a custom Name"
 				// "Robotframework.Atest.Testdata.Variables",
 				//"."
 			]
