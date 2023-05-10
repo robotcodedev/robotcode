@@ -4,6 +4,15 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.37.0 (2023-05-10)
+### Feature
+* Reintroduce of updating the tests when typing ([`94053fc`](https://github.com/d-biehl/robotcode/commit/94053fca5ad40300c8e57bebbecc2523b7d26d94))
+* Test discovery now runs in a separate process with the `robotcode discover` command, this supports also prerunmodifiers and RF 6.1 custom parsers ([`ee5f0fb`](https://github.com/d-biehl/robotcode/commit/ee5f0fb8dd70232cc50b78e73b180adb906c57d2))
+
+### Fix
+* Some correction in completions for robotframework >= 6.1 ([`058e187`](https://github.com/d-biehl/robotcode/commit/058e187e587403f39657e5e23276b432996a4b07))
+* **langserver:** Resolving variables as variable import arguments does not work correctly ([`a7ba998`](https://github.com/d-biehl/robotcode/commit/a7ba9980279c95eea3bbb6891fa29eb5af26222e))
+
 ## v0.36.0 (2023-05-01)
 ### Feature
 * Simple `discover all` command ([`a1d8b84`](https://github.com/d-biehl/robotcode/commit/a1d8b84349193be58432ec883e1c5dbf0887f64e))
