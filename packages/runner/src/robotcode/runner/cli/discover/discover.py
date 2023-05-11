@@ -1,7 +1,9 @@
+import io
 import os
 import re
 import sys
 from dataclasses import dataclass
+from io import IOBase
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
@@ -14,6 +16,7 @@ from robot.model.visitor import SuiteVisitor
 from robot.output import LOGGER, Message
 from robot.running.builder import TestSuiteBuilder
 from robot.running.builder.builders import SuiteStructureParser
+from robot.utils.filereader import FileReader
 from robotcode.core.dataclasses import from_json
 from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, DocumentUri, Position, Range
 from robotcode.core.uri import Uri
@@ -42,8 +45,6 @@ def _patch() -> None:
     __patched = True
 
     if get_robot_version() <= (6, 1, 0, "a", 1, None):
-        from robot.running.builder.parsers import RobotParser
-
         if get_robot_version() > (5, 0) and get_robot_version() < (6, 0, 0) or get_robot_version() < (5, 0):
             from robot.running.builder.testsettings import TestDefaults  # pyright: ignore[reportMissingImports]
         else:
@@ -81,20 +82,8 @@ def _patch() -> None:
 
         SuiteStructureParser._build_suite = build_suite
 
-        old_get_source = RobotParser._get_source
-
-        def _get_source(self: RobotParser, path: Path) -> Union[Path, str]:
-            if _stdin_data is not None and (data := _stdin_data.get(str(path))) is not None:
-                if data is not None:
-                    return data
-
-            return old_get_source(self, path)  # type: ignore
-
-        RobotParser._get_source = _get_source
-
     elif get_robot_version() >= (6, 1, 0, "a", 1, None):
         from robot.parsing.suitestructure import SuiteDirectory, SuiteFile
-        from robot.running.builder.parsers import RobotParser
         from robot.running.builder.settings import TestDefaults  # pyright: ignore[reportMissingImports]
 
         old_validate_not_empty = TestSuiteBuilder._validate_not_empty
@@ -135,16 +124,18 @@ def _patch() -> None:
 
         SuiteStructureParser._build_suite_directory = build_suite_directory
 
-        old_get_source = RobotParser._get_source
+    old_get_file = FileReader._get_file
 
-        def _get_source(self: RobotParser, path: Path) -> Union[Path, str]:
+    def get_file(self: FileReader, source: Union[str, Path, IOBase], accept_text: bool) -> Tuple[io.IOBase, bool]:
+        path = self._get_path(source, accept_text)
+        if path:
             if _stdin_data is not None and (data := _stdin_data.get(str(path))) is not None:
                 if data is not None:
-                    return data
+                    return old_get_file(self, data, accept_text)  # type: ignore
 
-            return old_get_source(self, path)  # type: ignore
+        return old_get_file(self, source, accept_text)  # type: ignore
 
-        RobotParser._get_source = _get_source
+    FileReader._get_file = get_file
 
 
 @dataclass
@@ -284,7 +275,7 @@ def build_diagnostics(messages: List[Message]) -> Dict[str, List[Diagnostic]]:
     def add_diagnostic(
         message: Message, source_uri: Optional[str] = None, line: Optional[int] = None, text: Optional[str] = None
     ) -> None:
-        source_uri = str(Uri.from_path(Path(source_uri) if source_uri else Path.cwd()))
+        source_uri = str(Uri.from_path(Path(source_uri).absolute() if source_uri else Path.cwd()))
 
         if source_uri not in result:
             result[source_uri] = []

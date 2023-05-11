@@ -236,7 +236,6 @@ export class PythonManager {
       });
 
       process.stderr.on("data", (data) => {
-        this.outputChannel.append(data as string);
         stderr += data;
       });
 

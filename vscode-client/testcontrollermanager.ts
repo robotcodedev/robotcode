@@ -533,7 +533,7 @@ export class TestControllerManager {
         mode_args.push("--rpa");
         break;
     }
-    return (await this.languageClientsManager.pythonManager.executeRobotCode(
+    const result = (await this.languageClientsManager.pythonManager.executeRobotCode(
       folder,
       [
         ...(profiles === undefined ? [] : profiles.flatMap((v) => ["--profile", v])),
@@ -548,6 +548,23 @@ export class TestControllerManager {
       stdioData,
       token
     )) as RobotCodeDiscoverResult;
+
+    if (result?.diagnostics) {
+      for (const key of Object.keys(result?.diagnostics ?? {})) {
+        const diagnostics = result.diagnostics[key];
+        this.diagnosticCollection.set(
+          vscode.Uri.parse(key),
+          diagnostics.map((v) => {
+            const r = new vscode.Diagnostic(toVsCodeRange(v.range), v.message, diagnosticsSeverityToVsCode(v.severity));
+            r.source = v.source;
+            r.code = v.code;
+            return r;
+          })
+        );
+      }
+    }
+
+    return result;
   }
 
   public async getTestsFromWorkspace(
@@ -566,6 +583,12 @@ export class TestControllerManager {
         }
       }
 
+      this.diagnosticCollection.forEach((uri, _diagnostics, collection) => {
+        if (vscode.workspace.getWorkspaceFolder(uri) === folder) {
+          collection.delete(uri);
+        }
+      });
+
       const result = await this.discoverTests(
         folder,
         ["discover", "--read-from-stdin", "all"],
@@ -574,30 +597,6 @@ export class TestControllerManager {
         token
       );
 
-      this.diagnosticCollection.forEach((uri, _diagnostics, collection) => {
-        if (vscode.workspace.getWorkspaceFolder(uri) === folder) {
-          collection.delete(uri);
-        }
-      });
-
-      if (result?.diagnostics) {
-        for (const key of Object.keys(result?.diagnostics ?? {})) {
-          const diagnostics = result.diagnostics[key];
-          this.diagnosticCollection.set(
-            vscode.Uri.parse(key),
-            diagnostics.map((v) => {
-              const r = new vscode.Diagnostic(
-                toVsCodeRange(v.range),
-                v.message,
-                diagnosticsSeverityToVsCode(v.severity)
-              );
-              r.source = v.source;
-              r.code = v.code;
-              return r;
-            })
-          );
-        }
-      }
       return result?.items;
     } catch (e) {
       console.error(e);
@@ -626,6 +625,10 @@ export class TestControllerManager {
     try {
       const o: { [key: string]: string } = {};
       o[document.fileName] = document.getText();
+
+      if (this.diagnosticCollection.has(document.uri)) {
+        this.diagnosticCollection.delete(document.uri);
+      }
 
       const result = await this.discoverTests(
         folder,
@@ -767,9 +770,7 @@ export class TestControllerManager {
     testItem.label = robotTestItem.name;
     testItem.description = robotTestItem.description;
     if (robotTestItem.error !== undefined) {
-      const error = new vscode.MarkdownString();
-      error.appendCodeblock(robotTestItem.error);
-      testItem.error = error;
+      testItem.error = robotTestItem.error;
     }
 
     const tags = this.convertTags(robotTestItem.tags);
