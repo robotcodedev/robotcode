@@ -4,6 +4,10 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.37.1 (2023-05-11)
+### Fix
+* **discover:** Wrong filename in diagnostics message on update single document ([`dee91c4`](https://github.com/d-biehl/robotcode/commit/dee91c42a01f012efbf5e24a233fb80895ce0910))
+
 ## v0.37.0 (2023-05-10)
 ### Feature
 * Reintroduce of updating the tests when typing ([`94053fc`](https://github.com/d-biehl/robotcode/commit/94053fca5ad40300c8e57bebbecc2523b7d26d94))
