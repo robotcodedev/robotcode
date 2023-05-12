@@ -1,4 +1,3 @@
-import io
 import os
 import re
 import sys
@@ -126,14 +125,14 @@ def _patch() -> None:
 
     old_get_file = FileReader._get_file
 
-    def get_file(self: FileReader, source: Union[str, Path, IOBase], accept_text: bool) -> Tuple[io.IOBase, bool]:
+    def get_file(self: FileReader, source: Union[str, Path, IOBase], accept_text: bool) -> Any:
         path = self._get_path(source, accept_text)
         if path:
             if _stdin_data is not None and (data := _stdin_data.get(str(path))) is not None:
                 if data is not None:
-                    return old_get_file(self, data, accept_text)  # type: ignore
+                    return old_get_file(self, data, accept_text)
 
-        return old_get_file(self, source, accept_text)  # type: ignore
+        return old_get_file(self, source, accept_text)
 
     FileReader._get_file = get_file
 
