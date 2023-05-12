@@ -269,7 +269,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     async def _exit(self, *args: Any, **kwargs: Any) -> None:
         await self.on_exit(self)
 
-        raise SystemExit(0 if self.shutdown_received else 1)
+        exit(0 if self.shutdown_received else 1)
 
     @rpc_method(name="$/setTrace", param_type=SetTraceParams)
     @__logger.call
