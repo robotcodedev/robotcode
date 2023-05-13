@@ -15,7 +15,7 @@
   // "forwardPorts": [],
 
   // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "bash -i -c 'npm install --also-dev && hatch env create devel'",
+  "postCreateCommand": "bash -i -c 'npm install --also-dev && hatch config set dirs.env.virtual .hatch && hatch env create devel'",
 
   // Configure tool-specific properties.
   // "customizations": {},
