@@ -49,6 +49,6 @@ RUN pipx install hatch
 RUN pipx install python-semantic-release
 RUN pipx install pre-commit
 
-hatch config set dirs.env.virtual ".hatch"
+RUN hatch config set dirs.env.virtual ".hatch"
 
 ENV SHELL=/usr/bin/zsh
