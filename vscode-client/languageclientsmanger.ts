@@ -141,8 +141,9 @@ export class LanguageClientsManager {
     this.clients.clear();
 
     for (const client of clients) {
-      promises.push(client.stop(5000));
+      promises.push(client.dispose(5000));
     }
+    await sleep(500);
 
     return Promise.all(promises).then(
       (r) => {
@@ -160,7 +161,6 @@ export class LanguageClientsManager {
       (_) => undefined,
       (_) => undefined
     );
-
     this._disposables.dispose();
   }
 
@@ -509,7 +509,7 @@ export class LanguageClientsManager {
         this.clients.delete(workspaceFolder.uri.toString());
 
         if (client) {
-          await client.stop(5000);
+          await client.dispose(5000);
           await sleep(500);
         }
       } else {
