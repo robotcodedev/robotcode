@@ -610,7 +610,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                             await asyncio.sleep(0)
 
                     else:
-                        self.__logger.warning(lambda: f"Response {repr(entry)} loop is not running.")
+                        self.__logger.warning(lambda: f"Response {entry!r} loop is not running.")
 
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -726,7 +726,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
                 self.send_response(message.id, t.result())
             except asyncio.CancelledError:
-                self.__logger.debug(lambda: f"request message {repr(message)} canceled")
+                self.__logger.debug(lambda: f"request message {message!r} canceled")
                 self.send_error(JsonRPCErrors.REQUEST_CANCELLED, "Request canceled.", id=message.id)
             except (SystemExit, KeyboardInterrupt):
                 raise

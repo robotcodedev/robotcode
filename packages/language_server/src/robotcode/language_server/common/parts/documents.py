@@ -154,7 +154,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
         except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
             raise
         except BaseException as e:
-            raise CantReadDocumentError(f"Error reading document '{path}': {str(e)}") from e
+            raise CantReadDocumentError(f"Error reading document '{path}': {e!s}") from e
 
     @async_event
     async def on_read_document_text(sender, uri: Uri) -> Optional[str]:  # NOSONAR

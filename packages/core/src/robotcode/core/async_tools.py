@@ -523,7 +523,7 @@ class Lock:
 
                         time.sleep(0.001)
         else:
-            warnings.warn(f"Future {repr(fut)} loop is closed")
+            warnings.warn(f"Future {fut!r} loop is closed")
             self._waiters.remove(fut)
             self._wake_up_first()
 

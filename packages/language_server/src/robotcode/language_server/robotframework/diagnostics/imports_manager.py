@@ -174,8 +174,8 @@ class _LibrariesEntry(_ImportEntry):
 
     def __repr__(self) -> str:
         return (
-            f"{type(self).__qualname__}(name={repr(self.name)}, "
-            f"args={repr(self.args)}, file_watchers={repr(self.file_watchers)}, id={repr(id(self))}"
+            f"{type(self).__qualname__}(name={self.name!r}, "
+            f"args={self.args!r}, file_watchers={self.file_watchers!r}, id={id(self)!r}"
         )
 
     async def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
@@ -307,10 +307,7 @@ class _ResourcesEntry(_ImportEntry):
         self._lib_doc: Optional[LibraryDoc] = None
 
     def __repr__(self) -> str:
-        return (
-            f"{type(self).__qualname__}(name={repr(self.name)}, "
-            f"file_watchers={repr(self.file_watchers)}, id={repr(id(self))}"
-        )
+        return f"{type(self).__qualname__}(name={self.name!r}, file_watchers={self.file_watchers!r}, id={id(self)!r}"
 
     async def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
         async with self._lock:
@@ -415,8 +412,8 @@ class _VariablesEntry(_ImportEntry):
 
     def __repr__(self) -> str:
         return (
-            f"{type(self).__qualname__}(name={repr(self.name)}, "
-            f"args={repr(self.args)}, file_watchers={repr(self.file_watchers)}, id={repr(id(self))}"
+            f"{type(self).__qualname__}(name={self.name!r}, "
+            f"args={self.args!r}, file_watchers={self.file_watchers!r}, id={id(self)!r}"
         )
 
     async def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
@@ -996,7 +993,7 @@ class ImportsManager:
                 variables,
             )
 
-            self._logger.debug(lambda: f"Load Library {source}{repr(args)}")
+            self._logger.debug(lambda: f"Load Library {source}{args!r}")
             if meta is not None:
                 meta_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
                 if meta_file.exists():
@@ -1037,7 +1034,7 @@ class ImportsManager:
                 )
 
             if result.stdout:
-                self._logger.warning(lambda: f"stdout captured at loading library {name}{repr(args)}:\n{result.stdout}")
+                self._logger.warning(lambda: f"stdout captured at loading library {name}{args!r}:\n{result.stdout}")
             try:
                 if meta is not None:
                     meta_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
@@ -1053,7 +1050,7 @@ class ImportsManager:
 
                     meta_file.write_text(as_json(meta), "utf-8")
                 else:
-                    self._logger.debug(lambda: f"Skip caching library {name}{repr(args)}")
+                    self._logger.debug(lambda: f"Skip caching library {name}{args!r}")
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
@@ -1140,7 +1137,7 @@ class ImportsManager:
 
             def _log_creating_failed(self, handler: UserErrorHandler, error: BaseException) -> None:
                 err = Error(
-                    message=f"Creating keyword '{handler.name}' failed: {str(error)}",
+                    message=f"Creating keyword '{handler.name}' failed: {error!s}",
                     type_name=type(error).__qualname__,
                     source=self.current_kw.source if self.current_kw is not None else None,
                     line_no=self.current_kw.lineno if self.current_kw is not None else None,
@@ -1236,7 +1233,7 @@ class ImportsManager:
                 variables,
             )
 
-            self._logger.debug(lambda: f"Load variables {source}{repr(args)}")
+            self._logger.debug(lambda: f"Load variables {source}{args!r}")
             if meta is not None:
                 meta_file = Path(self.variables_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
                 if meta_file.exists():
@@ -1280,7 +1277,7 @@ class ImportsManager:
 
                 if result.stdout:
                     self._logger.warning(
-                        lambda: f"stdout captured at loading variables {name}{repr(args)}:\n{result.stdout}"
+                        lambda: f"stdout captured at loading variables {name}{args!r}:\n{result.stdout}"
                     )
 
                 try:
@@ -1297,7 +1294,7 @@ class ImportsManager:
                             raise RuntimeError(f"Cannot write spec file for variables '{name}' to '{spec_file}'") from e
                         meta_file.write_text(as_json(meta), "utf-8")
                     else:
-                        self._logger.debug(lambda: f"Skip caching variables {name}{repr(args)}")
+                        self._logger.debug(lambda: f"Skip caching variables {name}{args!r}")
                 except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException as e:

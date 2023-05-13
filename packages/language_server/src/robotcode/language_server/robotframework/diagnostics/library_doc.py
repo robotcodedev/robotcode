@@ -195,7 +195,7 @@ class KeywordMatcher:
         return self.name
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(name={repr(self.name)})"
+        return f"{type(self).__name__}(name={self.name!r})"
 
 
 RUN_KEYWORD_WITH_CONDITION_MATCHERS = [KeywordMatcher(e) for e in RUN_KEYWORD_WITH_CONDITION_NAMES]
@@ -456,9 +456,9 @@ class KeywordDoc(SourceEntity):
                     prefix = "**"
 
                 result += (
-                    f"\n| `{prefix}{str(a.name)}`"
+                    f"\n| `{prefix}{a.name!s}`"
                     f"| {'=' if a.default_value is not None else ''}"
-                    f"| {f'`{str(a.default_value)}`' if a.default_value else ''}"
+                    f"| {f'`{a.default_value!s}`' if a.default_value else ''}"
                     f"| {' or '.join(f'`<{s}>`' for s in a.types) if a.types is not None else ''} |"
                 )
 
@@ -754,7 +754,7 @@ class LibraryDoc:
 
         def repl(m: re.Match) -> str:  # type: ignore
             if m.group(2) in headers:
-                return f"[{str(m.group(2))}](\\#{str(m.group(2)).lower().replace(' ', '-')})"
+                return f"[{m.group(2)!s}](\\#{str(m.group(2)).lower().replace(' ', '-')})"
             return str(m.group(0))
 
         return str(RE_INLINE_LINK.sub(repl, text))

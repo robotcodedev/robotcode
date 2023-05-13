@@ -116,7 +116,7 @@ class FileWatcherEntry:
         return self.id
 
     def __repr__(self) -> str:
-        return f"{type(self).__qualname__}(id={repr(self.id)}, watchers={repr(self.watchers)})"
+        return f"{type(self).__qualname__}(id={self.id!r}, watchers={self.watchers!r})"
 
 
 class WorkspaceFolder:

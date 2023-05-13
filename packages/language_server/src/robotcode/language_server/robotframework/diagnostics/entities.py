@@ -152,7 +152,7 @@ class VariableMatcher:
         return self.name
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(name={repr(self.name)})"
+        return f"{type(self).__name__}(name={self.name!r})"
 
 
 class VariableDefinitionType(Enum):

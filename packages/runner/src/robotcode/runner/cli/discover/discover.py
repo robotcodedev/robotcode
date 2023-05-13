@@ -252,7 +252,7 @@ def discover(app: Application, read_from_stdin: bool) -> None:
     if read_from_stdin:
         global _stdin_data
         _stdin_data = from_json(sys.stdin.buffer.read(), Dict[str, str], strict=True)
-        app.verbose(f"Read data from stdin: {repr(_stdin_data)}")
+        app.verbose(f"Read data from stdin: {_stdin_data!r}")
 
 
 RE_IN_FILE_LINE_MATCHER = re.compile(r".+\sin\sfile\s'(?P<file>.*)'\son\sline\s(?P<line>\d+):(?P<message>.*)")

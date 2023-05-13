@@ -125,7 +125,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
 
                                     progress.begin()
                                     progress.report(
-                                        f"Load {str(name)}"
+                                        f"Load {name!s}"
                                         if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
                                         else None,
                                         current=i,
@@ -149,7 +149,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                             if config.analysis.progress_mode != AnalysisProgressMode.OFF:
                                 progress.begin()
                                 progress.report(
-                                    f"Initialize {str(name)}"
+                                    f"Initialize {name!s}"
                                     if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
                                     else None,
                                     current=i,

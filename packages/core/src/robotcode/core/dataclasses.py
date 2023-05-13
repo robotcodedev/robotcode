@@ -172,7 +172,7 @@ def __default(o: Any) -> Any:
     if isinstance(o, Set):
         return list(o)
 
-    raise TypeError(f"Cant' get default value for {type(o)} with value {repr(o)}")
+    raise TypeError(f"Cant' get default value for {type(o)} with value {o!r}")
 
 
 def as_json(obj: Any, indent: Optional[bool] = None, compact: Optional[bool] = None) -> str:
@@ -298,7 +298,7 @@ def from_dict(
                 match_type_hints = type_hints
             elif match_same_keys is not None and len(match_same_keys) == len(same_keys):
                 raise TypeError(
-                    f"Value {repr(value)} matches to more then one types of "
+                    f"Value {value!r} matches to more then one types of "
                     f"{repr(types[0].__name__) if len(types)==1 else ' | '.join(repr(e.__name__) for e in types)}."
                 )
 
@@ -317,7 +317,7 @@ def from_dict(
             try:
                 return match_(**params)
             except TypeError as ex:
-                raise TypeError(f"Can't initialize class {repr(match_)} with parameters {repr(params)}.") from ex
+                raise TypeError(f"Can't initialize class {match_!r} with parameters {params!r}.") from ex
 
     for t in types:
         args = get_args(t)
@@ -332,7 +332,7 @@ def from_dict(
                     return cast(_T, v)
 
     raise TypeError(
-        f"Cant convert value {repr(value)} of type {type(value).__name__} to type(s) "
+        f"Cant convert value {value!r} of type {type(value).__name__} to type(s) "
         + (
             repr(types[0])
             if len(types) == 1
@@ -415,13 +415,13 @@ class TypeValidationError(Exception):
         cls = self.class_
         cls_name = f"{cls.__module__}.{cls.__name__}" if cls.__module__ != "__main__" else cls.__name__
         attrs = ", ".join([repr(v) for v in self.args])
-        return f"{cls_name}({attrs}, errors={repr(self.errors)})"
+        return f"{cls_name}({attrs}, errors={self.errors!r})"
 
     def __str__(self) -> str:
         cls = self.class_
         cls_name = f"{cls.__module__}.{cls.__name__}" if cls.__module__ != "__main__" else cls.__name__
         s = cls_name
-        return f"{s} (errors = {repr(self.errors)})"
+        return f"{s} (errors = {self.errors!r})"
 
 
 def validate_types(expected_types: Union[type, Tuple[type, ...], None], value: Any) -> List[str]:

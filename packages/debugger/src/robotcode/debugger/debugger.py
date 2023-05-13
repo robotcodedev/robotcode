@@ -164,10 +164,7 @@ class StackFrameEntry:
         self.stack_frames: Deque[StackFrameEntry] = deque()
 
     def __repr__(self) -> str:
-        return (
-            f"StackFrameEntry({repr(self.name)}, {repr(self.type)}, "
-            f"{repr(self.source)}, {repr(self.line)}, {repr(self.column)})"
-        )
+        return f"StackFrameEntry({self.name!r}, {self.type!r}, {self.source!r}, {self.line!r}, {self.column!r})"
 
     def get_first_or_self(self) -> StackFrameEntry:
         if self.stack_frames:

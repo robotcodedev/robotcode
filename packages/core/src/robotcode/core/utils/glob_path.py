@@ -81,7 +81,7 @@ class Pattern:
         return self.pattern
 
     def __repr__(self) -> str:
-        return f"{type(self).__qualname__}(pattern={repr(self.pattern)}"
+        return f"{type(self).__qualname__}(pattern={self.pattern!r}"
 
 
 def globmatches(pattern: str, path: Union[Path, str, os.PathLike[Any]]) -> bool:

@@ -93,7 +93,7 @@ class Uri(Mapping[str, str]):
         return parse.urlunparse(tuple(self._parts))
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({repr(parse.urlunparse(tuple(self._parts)))})"
+        return f"{type(self).__name__}({parse.urlunparse(tuple(self._parts))!r})"
 
     def to_path(self) -> Path:
         if self._path is None:
@@ -112,7 +112,7 @@ class Uri(Mapping[str, str]):
         path = parse.unquote(self.path)
 
         if self._parts.scheme != "file":
-            raise InvalidUriError(f"Invalid URI scheme '{str(self)}'.")
+            raise InvalidUriError(f"Invalid URI scheme '{self!s}'.")
 
         if netloc and self._parts.scheme == "file":
             # unc path: file://shares/c$/far/boo

@@ -307,7 +307,7 @@ class LoggingDescriptor:
     def __repr__(self) -> str:
         logger = self.logger
         level = logging.getLevelName(logger.getEffectiveLevel())
-        return f"{self.__class__.__name__}(name={repr(logger.name)}, level={repr(level)})"
+        return f"{self.__class__.__name__}(name={logger.name!r}, level={level!r})"
 
     _call_tracing_enabled: ClassVar = (
         "ROBOT_CALL_TRACING_ENABLED" in os.environ and os.environ["ROBOT_CALL_TRACING_ENABLED"] != "0"
@@ -438,7 +438,7 @@ class LoggingDescriptor:
                         ", ".join(_repr(a) for a in message_args),
                         (", " if len(message_args) > 0 and len(wrapper_kwargs) > 0 else ""),
                         (
-                            ", ".join(f"{str(k)}={_repr(v)}" for k, v in wrapper_kwargs.items())
+                            ", ".join(f"{k!s}={_repr(v)}" for k, v in wrapper_kwargs.items())
                             if len(wrapper_kwargs) > 0
                             else ""
                         ),

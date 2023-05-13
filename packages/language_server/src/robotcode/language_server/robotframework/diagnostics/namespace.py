@@ -517,7 +517,7 @@ class LibraryEntry:
     def __str__(self) -> str:
         result = self.import_name
         if self.args:
-            result += f"  {str(self.args)}"
+            result += f"  {self.args!s}"
         if self.alias:
             result += f"  WITH NAME  {self.alias}"
         return result

@@ -136,7 +136,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         except BaseException as e:
             self._logger.exception(e)
             self.send_error(
-                f"Invalid Message: {type(e).__name__}: {str(e)} -> {str(body)}\n{traceback.format_exc()}",
+                f"Invalid Message: {type(e).__name__}: {e!s} -> {body!s}\n{traceback.format_exc()}",
                 error_message=Message(traceback.format_exc()),
             )
 
@@ -244,7 +244,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
             try:
                 self.send_response(message.seq, message.command, t.result())
             except asyncio.CancelledError:
-                self._logger.debug(lambda: f"request message {repr(message)} canceled")
+                self._logger.debug(lambda: f"request message {message!r} canceled")
             except (SystemExit, KeyboardInterrupt):
                 raise
             except DebugAdapterRPCErrorException as ex:

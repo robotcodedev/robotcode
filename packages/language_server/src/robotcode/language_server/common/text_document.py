@@ -109,12 +109,7 @@ class TextDocument:
         return self.__repr__()
 
     def __repr__(self) -> str:  # pragma: no cover
-        return (
-            f"TextDocument(uri={repr(self.uri)}, "
-            f"language_id={repr(self.language_id)}, "
-            f"version={repr(self._version)}"
-            f")"
-        )
+        return f"TextDocument(uri={self.uri!r}, language_id={self.language_id!r}, version={self._version!r})"
 
     def text(self) -> str:
         with self._lock:

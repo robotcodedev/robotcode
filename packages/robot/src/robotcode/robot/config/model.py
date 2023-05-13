@@ -92,7 +92,7 @@ class EvaluationError(Exception):
     """Evaluation error."""
 
     def __init__(self, expression: str, message: str):
-        super().__init__(f"Evaluation of {repr(expression)} failed: {message}")
+        super().__init__(f"Evaluation of {expression!r} failed: {message}")
         self.expr = expression
 
 
@@ -258,7 +258,7 @@ class BaseOptions(ValidateMixin):
                     append_name(field)
                     result.append(str(value))
             except EvaluationError as e:
-                raise ValueError(f"Evaluation of '{field.name}' failed: {str(e)}") from e
+                raise ValueError(f"Evaluation of '{field.name}' failed: {e!s}") from e
 
         return result
 
@@ -341,7 +341,7 @@ class BaseOptions(ValidateMixin):
                         },
                     )
             except EvaluationError as e:
-                raise ValueError(f"Evaluation of '{f.name}' failed: {str(e)}") from e
+                raise ValueError(f"Evaluation of '{f.name}' failed: {e!s}") from e
         return result
 
 
