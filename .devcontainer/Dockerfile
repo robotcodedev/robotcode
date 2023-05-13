@@ -34,7 +34,7 @@ RUN echo '' >> /etc/skel/.zshrc \
 RUN sudo -u aur yay -S --needed --noconfirm openssh python python-pip python-setuptools python-pipenv python-pipx nodejs npm npm-check-updates
 
 # configure python
-RUN sudo -u aur yay -S --needed --noconfirm python38 python39 python311
+RUN sudo -u aur yay -S --needed --noconfirm python38 python39 python310
 
 RUN echo '' >> /etc/skel/.zshrc \
     && echo 'if [ -d "$HOME/.local/bin" ] ; then' >> /etc/skel/.zshrc \
@@ -48,5 +48,7 @@ USER vscode
 RUN pipx install hatch
 RUN pipx install python-semantic-release
 RUN pipx install pre-commit
+
+hatch config set dirs.env.virtual ".hatch"
 
 ENV SHELL=/usr/bin/zsh

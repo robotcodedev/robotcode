@@ -15,7 +15,7 @@
   // "forwardPorts": [],
 
   // Use 'postCreateCommand' to run commands after the container is created.
-  // "postCreateCommand": "uname -a",
+  "postCreateCommand": "bash -i -c 'npm install --also-dev && hatch env create devel'",
 
   // Configure tool-specific properties.
   // "customizations": {},
@@ -66,7 +66,8 @@
         "git.enableSmartCommit": true,
         "python.analysis.diagnosticMode": "workspace",
         "ruff.importStrategy": "fromEnvironment",
-        "python.linting.enabled": true
+        "python.linting.enabled": true,
+        "python.venvPath": "${workspaceFolder}/.hatch"
       }
     }
   }
