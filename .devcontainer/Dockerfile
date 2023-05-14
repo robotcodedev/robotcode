@@ -1,8 +1,8 @@
+FROM archlinux:latest
+
 LABEL org.opencontainers.image.source=https://github.com/d-biehl/robotcode
 LABEL org.opencontainers.image.description="RobotCode Development Image"
 LABEL org.opencontainers.image.licenses=Apache-2.0
-
-FROM archlinux:latest
 
 # Update the repositories
 RUN	pacman -Syy
