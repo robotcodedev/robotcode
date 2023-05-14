@@ -2,11 +2,12 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 {
   "name": "robotcode devcontainer",
+  "image": "ghcr.io/d-biehl/robocode-dev:latest",
 
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
+  //"build": {
+  //   "dockerfile": "Dockerfile"
+  //},
 
   // Features to add to the dev container. More info: https://containers.dev/features.
   // "features": {},

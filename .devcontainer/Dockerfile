@@ -1,7 +1,7 @@
-FROM	 archlinux:latest
+FROM archlinux:latest
 
 # Update the repositories
-RUN	 pacman -Syy
+RUN	pacman -Syy
 
 RUN /bin/sh -c echo '[multilib]' >> /etc/pacman.conf && \
     pacman --noconfirm -Syyu && \
@@ -43,6 +43,12 @@ RUN echo '' >> /etc/skel/.zshrc \
 
 # create vscode user
 RUN useradd -l -u 33333 -G wheel -md /home/vscode -s /bin/zsh -p vscode vscode
+RUN passwd -d vscode && \
+    echo 'vscode ALL=(ALL) ALL' >> /etc/sudoers.d/aur && \
+    mkdir -p /home/vscode/.gnupg && \
+    echo 'standard-resolver' > /home/vscode/.gnupg/dirmngr.conf && \
+    chown -R vscode:vscode /home/vscode
+
 USER vscode
 
 RUN pipx install hatch
