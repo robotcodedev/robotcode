@@ -62,7 +62,7 @@ from .commands import config, profiles
 @click.option(
     "--pager / --no-pager",
     "pager",
-    default=True,
+    default=False,
     help="Whether or not use a pager to display long text or data.",
     show_envvar=True,
 )

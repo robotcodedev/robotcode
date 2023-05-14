@@ -20,8 +20,8 @@
 			"request": "launch",
 			"module": "robotcode.cli",
 			"justMyCode": false,
-			"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data/tests",
-			//"cwd": "C:\\develop\\robot\\robotframework",
+			//"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data/tests",
+			"cwd": "C:\\develop\\robot\\robotframework",
 			// "env": {
 			// 	"ROBOTCODE_COLOR": "1",
 			// },
@@ -46,13 +46,15 @@
 				".",
 				//"config", "info", "desc",
 				"discover",
-				"all",
-				"--norpa",
+				// "all",
+				// "--norpa",
 				// "--by-longname", "asd:dasd",
-				"--suite",
-				"Data.Tests.Versions.Rf61.a suite with a custom Name"
+				// "--suite",
+				// "Data.Tests.Versions.Rf61.a suite with a custom Name"
 				// "Robotframework.Atest.Testdata.Variables",
 				//"."
+				"tags",
+				"."
 			]
 		},
 		{

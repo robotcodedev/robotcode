@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+from collections import defaultdict
 from dataclasses import dataclass
 from io import IOBase
 from pathlib import Path
@@ -177,6 +178,7 @@ class Collector(SuiteVisitor):
         self._current = self.all
         self.suites: List[TestItem] = []
         self.tests: List[TestItem] = []
+        self.tags: Dict[str, List[TestItem]] = defaultdict(list)
         self.statistics = Statistics()
 
     def visit_suite(self, suite: TestSuite) -> None:
@@ -228,6 +230,8 @@ class Collector(SuiteVisitor):
             ),
             tags=list(test.tags) if test.tags else None,
         )
+        for tag in test.tags:
+            self.tags[str(tag)].append(item)
 
         self.tests.append(item)
         self._current.children.append(item)
@@ -533,3 +537,64 @@ def suites(
 
         else:
             app.print_data(ResultItem(collector.suites, diagnostics), remove_defaults=True)
+
+
+@dataclass
+class TagsResult:
+    tags: Dict[str, List[TestItem]]
+
+
+@discover.command(
+    context_settings={
+        "allow_extra_args": True,
+        "ignore_unknown_options": True,
+    },
+    add_help_option=True,
+    epilog='Use "-- --help" to see `robot` help.',
+)
+@add_options(*ROBOT_OPTIONS)
+@pass_application
+def tags(
+    app: Application,
+    by_longname: Tuple[str, ...],
+    exclude_by_longname: Tuple[str, ...],
+    robot_options_and_args: Tuple[str, ...],
+) -> None:
+    """\
+    Discover tags with the selected configuration, profiles, options and
+    arguments.
+
+    \b
+    Examples:
+    ```
+    robotcode discover tags
+    robotcode --profile regression discover tags
+
+    robotcode --profile regression discover tags -i wip
+    ```
+    """
+
+    suite, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+
+    collector = Collector()
+    suite.visit(collector)
+
+    if collector.all.children:
+        if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+
+            def print(tags: Dict[str, List[TestItem]]) -> Iterable[str]:
+                for tag, items in tags.items():
+                    yield f"{tag}{os.linesep}"
+                    # for item in items:
+                    #     yield f"  {item.longname}{os.linesep}"
+                    #     if item.uri:
+                    #         yield (
+                    #             f" ({Uri(item.uri).to_path()}{f':{item.range.start.line+1}' if item.range else ''})"
+                    #             f"{os.linesep}"
+                    #         )
+
+            if collector.suites:
+                app.echo_via_pager(print(collector.tags))
+
+        else:
+            app.print_data(TagsResult(collector.tags), remove_defaults=True)
