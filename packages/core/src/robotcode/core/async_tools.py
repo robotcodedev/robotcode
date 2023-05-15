@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import atexit
 import concurrent.futures
 import contextvars
 import functools
@@ -266,6 +267,13 @@ def check_canceled_sync() -> bool:
 
 
 __executor = ThreadPoolExecutor(thread_name_prefix="global_sub_asyncio")
+
+
+def shutdown_thread_pool_executor() -> None:
+    __executor.shutdown(wait=False)
+
+
+atexit.register(shutdown_thread_pool_executor)
 
 
 def run_in_thread(func: Callable[..., _T], /, *args: Any, **kwargs: Any) -> asyncio.Future[_T]:
