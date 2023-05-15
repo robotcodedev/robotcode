@@ -377,7 +377,6 @@ export class TestControllerManager {
         modal: true,
         detail: (e as Error).toString(),
       });
-      this.outputChannel.show(true);
     }
   }
 
@@ -571,6 +570,18 @@ export class TestControllerManager {
     folder: vscode.WorkspaceFolder,
     token?: vscode.CancellationToken
   ): Promise<RobotTestItem[] | undefined> {
+    // TODO do not use hardcoded file extensions
+    const robotFiles = await vscode.workspace.findFiles(
+      new vscode.RelativePattern(folder, "**/*.robot"),
+      undefined,
+      1,
+      token
+    );
+
+    if (robotFiles.length === 0) {
+      return undefined;
+    }
+
     try {
       const o: { [key: string]: string } = {};
 

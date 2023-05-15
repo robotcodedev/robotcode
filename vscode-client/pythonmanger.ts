@@ -253,7 +253,6 @@ export class PythonManager {
           }
         } else {
           this.outputChannel.appendLine(`executeRobotCode: ${stdout}\n${stderr}`);
-          this.outputChannel.show(true);
 
           reject(new Error(`Executing robotcode failed with code ${code ?? "null"}: ${stdout}\n${stderr}`));
         }
