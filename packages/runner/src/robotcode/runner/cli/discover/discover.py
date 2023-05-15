@@ -240,7 +240,9 @@ class Collector(SuiteVisitor):
 
 
 @click.group(invoke_without_command=False)
-@click.option("--read-from-stdin", is_flag=True, help="Read file contents from stdin. This is an internal option.")
+@click.option(
+    "--read-from-stdin", is_flag=True, help="Read file contents from stdin. This is an internal option.", hidden=True
+)
 @pass_application
 def discover(app: Application, read_from_stdin: bool) -> None:
     """\

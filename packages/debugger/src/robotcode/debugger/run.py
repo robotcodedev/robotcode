@@ -1,6 +1,5 @@
 import asyncio
 import functools
-import sys
 import threading
 import warnings
 from typing import (
@@ -222,8 +221,6 @@ async def run_debugger(
                 await run_coroutine_from_thread_async(server.protocol.exit, exit_code, loop=server.loop)
     except asyncio.CancelledError:
         pass
-    except ConnectionError as e:
-        print(e, file=sys.stderr)
     finally:
         if server.protocol.connected:
             await run_coroutine_from_thread_async(server.protocol.terminate, loop=server.loop)
