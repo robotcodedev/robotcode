@@ -4,6 +4,14 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.38.0 (2023-05-15)
+### Feature
+* New command `discover tags` ([`a8fbb22`](https://github.com/d-biehl/robotcode/commit/a8fbb22baaa1a667c786fb8c71c50cd76b6d6bc4))
+
+### Fix
+* Bring output console into view if robotcode discovery fails ([`8bcc147`](https://github.com/d-biehl/robotcode/commit/8bcc1477b1315a7bd385d159346dd6ca95c0e57f))
+* Use dispose instead of stop to exit language server instances ([`5aba99b`](https://github.com/d-biehl/robotcode/commit/5aba99b1ad551132e8f86c138cca28694dfec545))
+
 ## v0.37.1 (2023-05-11)
 ### Fix
 * **discover:** Wrong filename in diagnostics message on update single document ([`dee91c4`](https://github.com/d-biehl/robotcode/commit/dee91c42a01f012efbf5e24a233fb80895ce0910))
