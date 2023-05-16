@@ -10,23 +10,26 @@ repos:
         entry: hatch run lint:install-packages
         pass_filenames: false
         language: system
+        types:
+          - "python"
       - id: python_style
         name: Check Python Style
         entry: hatch run lint:style
         pass_filenames: false
         language: system
+        types:
+          - "python"
       - id: python_typing
         name: Check Python Typing
         entry: hatch run lint:typing
         pass_filenames: false
         language: system
-      - id: npm install --also-dev
-        name: Reinstall npm packages
-        entry: npm install --also-dev
-        pass_filenames: false
-        language: system
+        types:
+          - "python"
       - id: eslint
         name: Check JavaScript Style and Typing
         entry: npm run lint
         pass_filenames: false
         language: system
+        types:
+          - "javascript"
