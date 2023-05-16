@@ -20,6 +20,11 @@ repos:
         entry: hatch run lint:typing
         pass_filenames: false
         language: system
+      - id: npm install --also-dev
+        name: Reinstall npm packages
+        entry: npm install --also-dev
+        pass_filenames: false
+        language: system
       - id: eslint
         name: Check JavaScript Style and Typing
         entry: npm run lint
