@@ -4,6 +4,11 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.39.0 (2023-05-16)
+### Feature
+* New command `RobotCode: Select Execution Profiles` ([`78f5548`](https://github.com/d-biehl/robotcode/commit/78f554899a0c50c82deeac07fc921128beef778c))
+* Language server now is a robotcode cli plugin and can use config files and execution profiles ([`12308bb`](https://github.com/d-biehl/robotcode/commit/12308bbed1585b62885a8d699d8969a1310b7db3))
+
 ## v0.38.0 (2023-05-15)
 ### Feature
 * New command `discover tags` ([`a8fbb22`](https://github.com/d-biehl/robotcode/commit/a8fbb22baaa1a667c786fb8c71c50cd76b6d6bc4))
