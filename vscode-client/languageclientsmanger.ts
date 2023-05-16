@@ -100,7 +100,13 @@ export class LanguageClientsManager {
     public readonly pythonManager: PythonManager,
     public readonly outputChannel: vscode.OutputChannel
   ) {
+    const fileWatcher1 = vscode.workspace.createFileSystemWatcher(`**/{pyproject.toml,robot.toml,.robot.toml}`);
+    fileWatcher1.onDidCreate((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
+    fileWatcher1.onDidDelete((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
+    fileWatcher1.onDidChange((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
+
     this._disposables = vscode.Disposable.from(
+      fileWatcher1,
       this.pythonManager.pythonExtension?.exports.settings.onDidChangeExecutionDetails(async (uri) => {
         if (uri !== undefined) {
           const folder = vscode.workspace.getWorkspaceFolder(uri);
@@ -189,13 +195,20 @@ export class LanguageClientsManager {
     return serverOptions;
   }
 
-  private showErrorWithSelectPythonInterpreter(msg: string) {
+  private showErrorWithSelectPythonInterpreter(msg: string, folder: vscode.WorkspaceFolder) {
     this.outputChannel.appendLine(msg);
-    void vscode.window.showErrorMessage(msg, { title: "Select Python Interpreter", id: "select" }).then((item) => {
-      if (item && item.id === "select") {
-        void vscode.commands.executeCommand("python.setInterpreter");
-      }
-    });
+    void vscode.window
+      .showErrorMessage(msg, { title: "Select Python Interpreter", id: "select" }, { title: "Retry", id: "retry" })
+      .then((item) => {
+        if (item && item.id === "select") {
+          void vscode.commands.executeCommand("python.setInterpreter");
+        } else if (item && item.id === "retry") {
+          this.restart(folder.uri).then(
+            (_) => undefined,
+            (_) => undefined
+          );
+        }
+      });
   }
 
   private async getServerOptions(folder: vscode.WorkspaceFolder, mode: string): Promise<ServerOptions | undefined> {
@@ -211,7 +224,8 @@ export class LanguageClientsManager {
 
       this.showErrorWithSelectPythonInterpreter(
         `Can't find a valid python executable for workspace folder '${folder.name}'. ` +
-          "Check if python and the python extension is installed."
+          "Check if python and the python extension is installed.",
+        folder
       );
 
       return undefined;
@@ -222,7 +236,8 @@ export class LanguageClientsManager {
 
       this.showErrorWithSelectPythonInterpreter(
         `Invalid python version for workspace folder '${folder.name}'. Only python version >= 3.8 supported. ` +
-          "Please update to a newer python version or select a valid python environment."
+          "Please update to a newer python version or select a valid python environment.",
+        folder
       );
 
       return undefined;
@@ -234,7 +249,8 @@ export class LanguageClientsManager {
 
       this.showErrorWithSelectPythonInterpreter(
         `Robot Framework package not found in workspace folder '${folder.name}'. ` +
-          "Please install Robot Framework >= Version 4.0 to the current python environment or select a valid python environment."
+          "Please install Robot Framework >= Version 4.0 to the current python environment or select a valid python environment.",
+        folder
       );
 
       return undefined;
@@ -245,7 +261,8 @@ export class LanguageClientsManager {
 
       this.showErrorWithSelectPythonInterpreter(
         `Robot Framework version in workspace folder '${folder.name}' not supported. Only Robot Framework version >= 4.0.0 supported. ` +
-          "Please install or update Robot Framework >= Version 4.0 to the current python environment or select a valid python environment."
+          "Please install or update Robot Framework >= Version 4.0 to the current python environment or select a valid python environment.",
+        folder
       );
 
       return undefined;
@@ -253,9 +270,10 @@ export class LanguageClientsManager {
 
     this._pythonValidPythonAndRobotEnv.set(folder, true);
 
-    const serverArgs = config.get<string[]>("languageServer.args", []);
+    const robotCodeExtraArgs = config.get<string[]>("extraArgs", []);
 
-    const args: string[] = ["-u", this.pythonManager.pythonLanguageServerMain];
+    const args: string[] = ["-u", "-X", "utf8", this.pythonManager.robotCodeMain];
+    const serverArgs: string[] = [...robotCodeExtraArgs, "language-server"];
 
     const debug_args: string[] = ["--log"];
 
@@ -265,10 +283,12 @@ export class LanguageClientsManager {
       return getAvailablePort(["127.0.0.1"]);
     };
 
+    const profiles = config.get<string[]>("profiles", []).flatMap((v) => ["--profile", v]);
+
     return {
       run: {
         command: pythonCommand,
-        args: [...args, ...serverArgs],
+        args: [...args, ...profiles, ...serverArgs],
         options: {
           cwd: folder.uri.fsPath,
         },
@@ -280,7 +300,7 @@ export class LanguageClientsManager {
       },
       debug: {
         command: pythonCommand,
-        args: [...args, ...debug_args, ...serverArgs],
+        args: [...args, ...debug_args, ...profiles, ...serverArgs],
         options: {
           cwd: folder.uri.fsPath,
         },

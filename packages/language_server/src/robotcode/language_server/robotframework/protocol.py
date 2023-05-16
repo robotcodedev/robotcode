@@ -10,6 +10,7 @@ from robotcode.core.lsp.types import InitializeError
 from robotcode.jsonrpc2.protocol import JsonRPCErrorException, JsonRPCErrors, ProtocolPartDescriptor
 from robotcode.language_server.common.parts.document_symbols import symbol_information_label
 from robotcode.language_server.common.protocol import LanguageDefinition, LanguageServerProtocol
+from robotcode.robot.config.model import RobotBaseProfile
 
 from ..__version__ import __version__
 from .configuration import RobotConfig
@@ -121,8 +122,9 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         LanguageDefinition(id="markdown", extensions=[".md"]),
     ]
 
-    def __init__(self, server: "RobotLanguageServer"):
+    def __init__(self, server: "RobotLanguageServer", profile: Optional[RobotBaseProfile] = None):
         super().__init__(server)
+        self.profile = profile if profile is not None else RobotBaseProfile()
         self.options = Options()
         self.on_initialize.add(self._on_initialize)
         self.on_initialized.add(self._on_initialized)
@@ -169,6 +171,18 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     async def _on_initialized(self, sender: Any) -> None:
         for folder in self.workspace.workspace_folders:
             config: RobotConfig = await self.workspace.get_configuration(RobotConfig, folder.uri, request=False)
+            for k, v in (self.profile.env or {}).items():
+                os.environ[k] = v
+
+            for p in self.profile.python_path or []:
+                pa = Path(str(p))
+                if not pa.is_absolute():
+                    pa = Path(folder.uri.to_path(), pa)
+
+                absolute_path = str(pa.absolute())
+                if absolute_path not in sys.path:
+                    sys.path.insert(0, absolute_path)
+
             if config is not None:
                 if config.env:
                     for k, v in config.env.items():

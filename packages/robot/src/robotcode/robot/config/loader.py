@@ -1,7 +1,7 @@
 import sys
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Union
 
 from robotcode.core.dataclasses import from_dict
 
@@ -34,6 +34,18 @@ class ConfigType(str, Enum):
     CUSTOM_TOML = ".toml"
 
 
+class ConfigValueError(ValueError):
+    def __init__(self, path: Path, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.path = path
+
+
+class ConfigTypeError(TypeError):
+    def __init__(self, path: Path, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.path = path
+
+
 def loads_config_from_robot_toml(__s: str) -> RobotConfig:
     dict_data = tomllib.loads(__s)
     return from_dict(dict_data, RobotConfig)
@@ -46,13 +58,18 @@ def loads_config_from_pyproject_toml(__s: str) -> RobotConfig:
 
 
 def _load_config_data_from_path(__path: Path) -> RobotConfig:
-    if __path.name == PYPROJECT_TOML:
-        return loads_config_from_pyproject_toml(__path.read_text("utf-8"))
+    try:
+        if __path.name == PYPROJECT_TOML:
+            return loads_config_from_pyproject_toml(__path.read_text("utf-8"))
 
-    if __path.name == ROBOT_TOML or __path.name == LOCAL_ROBOT_TOML:
-        return loads_config_from_robot_toml(__path.read_text("utf-8"))
+        if __path.name == ROBOT_TOML or __path.name == LOCAL_ROBOT_TOML or __path.suffix == ".toml":
+            return loads_config_from_robot_toml(__path.read_text("utf-8"))
+        raise TypeError("Unknown config file type.")
 
-    raise ValueError(f"Unknown config file type: {__path.name}")
+    except ValueError as e:
+        raise ConfigValueError(__path, f'Parsing "{__path}" failed: {e}') from e
+    except TypeError as e:
+        raise ConfigTypeError(__path, f'Parsing "{__path}" failed: {e}') from e
 
 
 def load_config_from_path(*__paths: Union[Path, Tuple[Path, ConfigType]]) -> RobotConfig:

@@ -330,13 +330,22 @@
             "items": {
               "type": "string"
             },
-            "markdownDescription": "Specifies the arguments to be passed to the `robotcode` command line tool (i.e.: [`--log`, `--log-level=TRACE`, `--log-calls`]). Requires a VSCode restart to take effect.",
+            "markdownDescription": "Specifies extra arguments to be passed to the `robotcode` command line tool (i.e.: [`--log`, `--log-level=TRACE`, `--log-calls`]).",
+            "scope": "resource"
+          },
+          "robotcode.profiles": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "Specifies the execution profiles to be used. Corresponds to the '--profile' option of `robotcode` commandline tool.",
             "scope": "resource"
           },
           "robotcode.python": {
             "type": "string",
             "default": "",
-            "description": "Specifies the python executable to be used for RobotCode. If no path is specified, try to get it from \"python\" extension. Requires a VSCode restart to take effect.",
+            "description": "Specifies the python executable to be used for RobotCode. If no path is specified, try to get it from \"python\" extension.",
             "scope": "resource"
           },
           "robotcode.editor.4SpacesTab": {
@@ -347,7 +356,7 @@
           "robotcode.languageServer.mode": {
             "type": "string",
             "default": "pipe",
-            "description": "Specifies the mode the language server is started. Requires a VSCode restart to take effect.",
+            "description": "Specifies the mode the language server is started.",
             "enum": [
               "stdio",
               "pipe",
@@ -359,22 +368,13 @@
           "robotcode.languageServer.tcpPort": {
             "type": "number",
             "default": 0,
-            "description": "If the port is specified, connect to the language server previously started at the given port. Requires a VSCode restart to take effect.",
-            "scope": "resource"
-          },
-          "robotcode.languageServer.args": {
-            "type": "array",
-            "default": [],
-            "items": {
-              "type": "string"
-            },
-            "markdownDescription": "Specifies the arguments to be passed to the language server (i.e.: [`--log`, `--log-file=~/robotcode.log`]). Requires a VSCode restart to take effect.",
+            "description": "If the port is specified, connect to the language server previously started at the given port.",
             "scope": "resource"
           },
           "robotcode.debugLauncher.mode": {
             "type": "string",
             "default": "stdio",
-            "description": "Specifies the mode the debug launcher is started. Requires a VSCode restart to take effect.",
+            "description": "Specifies the mode the debug launcher is started.",
             "enum": [
               "stdio",
               "tcp",
@@ -390,13 +390,13 @@
           "robotcode.debugLauncher.tcpPort": {
             "type": "number",
             "default": 0,
-            "description": "If the port is specified, connect to the debug adapter previously started at the given port. Requires a VSCode restart to take effect.",
+            "description": "If the port is specified, connect to the debug adapter previously started at the given port.",
             "scope": "resource"
           },
           "robotcode.debugLauncher.host": {
             "type": "string",
             "default": null,
-            "description": "If the host is specified, connect to the debug adapter previously started at the given host. Requires a VSCode restart to take effect.",
+            "description": "If the host is specified, connect to the debug adapter previously started at the given host.",
             "scope": "resource"
           },
           "robotcode.debugLauncher.args": {
@@ -405,7 +405,7 @@
             "items": {
               "type": "string"
             },
-            "markdownDescription": "Specifies the arguments to be passed to the debug adapter. Requires a VSCode restart to take effect.",
+            "markdownDescription": "Specifies the arguments to be passed to the debug adapter.",
             "scope": "resource"
           },
           "robotcode.robot.args": {
@@ -542,15 +542,6 @@
             ],
             "default": "none",
             "description": "Defines if the report or log file should be opened after a run.",
-            "scope": "resource"
-          },
-          "robotcode.run.profiles": {
-            "type": "array",
-            "default": [],
-            "items": {
-              "type": "string"
-            },
-            "markdownDescription": "Specifies the profiles to be used for execution. Corresponds to the '--profile' option of __robotcode__.",
             "scope": "resource"
           },
           "robotcode.debug.defaultConfiguration": {

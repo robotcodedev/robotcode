@@ -3,7 +3,6 @@ paths = ["."]
 python-path = ["./lib", "./resources"]
 output-dir = { expr = "f'results/run-{datetime.now().strftime(\"%d-%m-%Y-%H.%M.%S\")}'" }
 
-
 rpa = false
 # [parsers]
 # myparser = ["asd"]

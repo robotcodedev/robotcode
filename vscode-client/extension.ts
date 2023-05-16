@@ -87,6 +87,8 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
       const affectedFolders = new Set<vscode.Uri>();
 
       for (const s of [
+        "robotcode.extraArgs",
+        "robotcode.profiles",
         "robotcode.python",
         "robotcode.languageServer",
         "robotcode.robot",

@@ -140,6 +140,9 @@ class StringExpression(Expression):
     def evaluate(self) -> str:
         return str(super().evaluate())
 
+    def __str__(self) -> str:
+        return self.evaluate()
+
 
 @dataclass
 class Condition:

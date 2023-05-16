@@ -332,7 +332,7 @@ def from_dict(
                     return cast(_T, v)
 
     raise TypeError(
-        f"Cant convert value {value!r} of type {type(value).__name__} to type(s) "
+        "Value must be of type `"
         + (
             repr(types[0])
             if len(types) == 1
@@ -347,7 +347,7 @@ def from_dict(
                 for e in types
             )
         )
-        + "."
+        + f"` but is `{type(value).__name__}`."
     )
 
 

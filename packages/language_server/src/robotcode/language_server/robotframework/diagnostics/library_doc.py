@@ -1058,7 +1058,7 @@ def resolve_robot_variables(
 
     if command_line_variables:
         for k1, v1 in command_line_variables.items():
-            result[f"${{{k1}}}"] = v1
+            result[k1] = v1
 
     if variables is not None:
         vars = [_Variable(k, v) for k, v in variables.items() if v is not None and not isinstance(v, NativeValue)]

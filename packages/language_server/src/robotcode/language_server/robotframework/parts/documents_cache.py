@@ -70,11 +70,10 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         if result is None:
             config = await self.parent.workspace.get_configuration(RobotConfig, folder.uri)
 
-            languages = config.languages
+            languages = [str(v) for v in self.parent.profile.languages or []]
+            languages += config.languages or []
 
-            if isinstance(languages, List) and len(languages) == 0:
-                languages = None
-            if languages is None:
+            if not languages:
                 return None
 
             result = RobotLanguages()

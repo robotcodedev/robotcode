@@ -544,8 +544,12 @@ class ImportsManager:
         self.parent_protocol.documents.did_change.add(self.resource_document_changed)
         self._command_line_variables: Optional[List[VariableDefinition]] = None
         self._command_line_variables_lock = Lock()
+        self._resolvable_command_line_variables: Optional[Dict[str, Any]] = None
+        self._resolvable_command_line_variables_lock = Lock()
 
         self._environment = dict(os.environ)
+        if self.parent_protocol.profile.env:
+            self._environment.update(self.parent_protocol.profile.env)
         self._environment.update(self.config.robot.env)
 
         self._library_files_cache = AsyncSimpleLRUCache()
@@ -567,15 +571,17 @@ class ImportsManager:
 
         async with self._command_line_variables_lock:
             if self._command_line_variables is None:
-                command_line_vars: List[VariableDefinition] = [
+                command_line_vars: List[VariableDefinition] = []
+                command_line_vars += [
                     CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=(v,))
-                    for k, v in self.config.robot.variables.items()
+                    for k, v in (self.parent_protocol.profile.variables or {}).items()
                 ]
-                for variable_file in self.config.robot.variable_files:
-                    name, args = split_args_from_name_or_path(variable_file)
+
+                for variable_file in self.parent_protocol.profile.variable_files or []:
+                    name, args = split_args_from_name_or_path(str(variable_file))
                     try:
                         lib_doc = await self.get_libdoc_for_variables_import(
-                            name, tuple(args), str(self.folder.to_path()), self
+                            name, tuple(args), str(self.folder.to_path()), self, resolve_command_line_vars=False
                         )
                         if lib_doc is not None:
                             command_line_vars += lib_doc.variables
@@ -583,11 +589,40 @@ class ImportsManager:
                     except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                         raise
                     except BaseException as e:
+                        # TODO add diagnostics
+                        self._logger.exception(e)
+
+                command_line_vars += [
+                    CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=(v,))
+                    for k, v in self.config.robot.variables.items()
+                ]
+                for variable_file in self.config.robot.variable_files:
+                    name, args = split_args_from_name_or_path(variable_file)
+                    try:
+                        lib_doc = await self.get_libdoc_for_variables_import(
+                            name, tuple(args), str(self.folder.to_path()), self, resolve_command_line_vars=False
+                        )
+                        if lib_doc is not None:
+                            command_line_vars += lib_doc.variables
+
+                    except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                        raise
+                    except BaseException as e:
+                        # TODO add diagnostics
                         self._logger.exception(e)
 
                 self._command_line_variables = command_line_vars
 
             return self._command_line_variables or []
+
+    async def get_resolvable_command_line_variables(self) -> Dict[str, Any]:
+        async with self._resolvable_command_line_variables_lock:
+            if self._resolvable_command_line_variables is None:
+                self._resolvable_command_line_variables = {
+                    v.name: v.value for v in (await self.get_command_line_variables()) if v.has_value
+                }
+
+            return self._resolvable_command_line_variables
 
     @async_tasking_event
     async def libraries_changed(sender, libraries: List[LibraryDoc]) -> None:  # NOSONAR
@@ -910,7 +945,7 @@ class ImportsManager:
                 name,
                 str(self.folder.to_path()),
                 base_dir,
-                self.config.robot.variables if self.config.robot is not None else None,
+                await self.get_resolvable_command_line_variables(),
                 variables,
             )
 
@@ -940,7 +975,7 @@ class ImportsManager:
                 name,
                 str(self.folder.to_path()),
                 base_dir,
-                self.config.robot.variables if self.config.robot is not None else None,
+                await self.get_resolvable_command_line_variables(),
                 variables,
                 file_type,
             )
@@ -959,7 +994,7 @@ class ImportsManager:
                 name,
                 str(self.folder.to_path()),
                 base_dir,
-                self.config.robot.variables if self.config.robot is not None else None,
+                await self.get_resolvable_command_line_variables(),
                 variables,
             )
 
@@ -1027,7 +1062,7 @@ class ImportsManager:
                         args,
                         working_dir,
                         base_dir,
-                        self.config.robot.variables if self.config.robot is not None else None,
+                        await self.get_resolvable_command_line_variables(),
                         variables,
                     ),
                     LOAD_LIBRARY_TIME_OUT,
@@ -1062,7 +1097,7 @@ class ImportsManager:
             args,
             str(self.folder.to_path()),
             base_dir,
-            self.config.robot.variables if self.config.robot is not None else None,
+            await self.get_resolvable_command_line_variables(),
             variables,
         )
         entry_key = _LibrariesEntryKey(source, resolved_args)
@@ -1219,6 +1254,7 @@ class ImportsManager:
         base_dir: str,
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
+        resolve_command_line_vars: bool = True,
     ) -> VariablesDoc:
         source = await self.find_variables(
             name,
@@ -1269,7 +1305,7 @@ class ImportsManager:
                         args,
                         str(self.folder.to_path()),
                         base_dir,
-                        self.config.robot.variables if self.config.robot is not None else None,
+                        await self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
                         variables,
                     ),
                     LOAD_LIBRARY_TIME_OUT,
@@ -1305,7 +1341,7 @@ class ImportsManager:
             args,
             str(self.folder.to_path()),
             base_dir,
-            self.config.robot.variables if self.config.robot is not None else None,
+            await self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
             variables,
         )
         entry_key = _VariablesEntryKey(source, resolved_args)
@@ -1393,7 +1429,7 @@ class ImportsManager:
             name,
             str(self.folder.to_path()),
             base_dir,
-            self.config.robot.variables if self.config.robot is not None else None,
+            await self.get_resolvable_command_line_variables(),
             variables,
         )
 
@@ -1404,7 +1440,7 @@ class ImportsManager:
             name,
             str(self.folder.to_path()),
             base_dir,
-            self.config.robot.variables if self.config.robot is not None else None,
+            await self.get_resolvable_command_line_variables(),
             variables,
         )
 
@@ -1415,15 +1451,15 @@ class ImportsManager:
             name,
             str(self.folder.to_path()),
             base_dir,
-            self.config.robot.variables if self.config.robot is not None else None,
+            await self.get_resolvable_command_line_variables(),
             variables,
         )
 
-    def resolve_variable(self, name: str, base_dir: str = ".", variables: Optional[Dict[str, Any]] = None) -> Any:
+    async def resolve_variable(self, name: str, base_dir: str = ".", variables: Optional[Dict[str, Any]] = None) -> Any:
         return resolve_variable(
             name,
             str(self.folder.to_path()),
             base_dir,
-            self.config.robot.variables if self.config.robot is not None else None,
+            await self.get_resolvable_command_line_variables(),
             variables,
         )

@@ -400,6 +400,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         robot_variables = resolve_robot_variables(
             str(namespace.imports_manager.folder.to_path()),
             str(base_dir),
+            await namespace.imports_manager.get_resolvable_command_line_variables(),
             variables=await namespace.get_resolvable_variables(),
         )
         try:

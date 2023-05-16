@@ -199,15 +199,9 @@ export class TestControllerManager {
     fileWatcher.onDidDelete((uri) => this.refreshUri(uri, "delete"));
     fileWatcher.onDidChange((uri) => this.refreshUri(uri, "change"));
 
-    const fileWatcher1 = vscode.workspace.createFileSystemWatcher(`**/{pyproject.toml,robot.toml,.robot.toml}`);
-    fileWatcher1.onDidCreate((uri) => this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(uri)));
-    fileWatcher1.onDidDelete((uri) => this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(uri)));
-    fileWatcher1.onDidChange((uri) => this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(uri)));
-
     this._disposables = vscode.Disposable.from(
       this.diagnosticCollection,
       fileWatcher,
-      fileWatcher1,
       this.languageClientsManager.onClientStateChanged((event) => {
         switch (event.state) {
           case ClientState.Running: {
@@ -350,7 +344,7 @@ export class TestControllerManager {
 
     try {
       const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
-      const result = await this.getRobotCodeProfiles(folder, config.get("run.profiles", undefined));
+      const result = await this.getRobotCodeProfiles(folder, config.get("profiles", undefined));
 
       if (result.profiles.length === 0 && result.messages) {
         await vscode.window.showWarningMessage(result.messages.join("\n"));
@@ -368,7 +362,7 @@ export class TestControllerManager {
       if (profiles === undefined) return;
 
       await config.update(
-        "run.profiles",
+        "profiles",
         profiles.map((p) => p.label),
         vscode.ConfigurationTarget.WorkspaceFolder
       );
@@ -514,7 +508,7 @@ export class TestControllerManager {
     token?: vscode.CancellationToken
   ): Promise<RobotCodeDiscoverResult> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
-    const profiles = config.get<string[]>("run.profiles", []);
+    const profiles = config.get<string[]>("profiles", []);
     const pythonPath = config.get<string[]>("robot.pythonPath", []);
     const paths = config.get<string[] | undefined>("robot.paths", undefined);
     const languages = config.get<string[]>("robot.languages", []);

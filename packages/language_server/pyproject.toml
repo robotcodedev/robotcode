@@ -25,11 +25,15 @@ classifiers = [
   "Framework :: Robot Framework",
   "Framework :: Robot Framework :: Tool",
 ]
-dependencies = ["robotframework>=4.1.0", "robotcode-jsonrpc2==0.38.0"]
+dependencies = [
+  "robotframework>=4.1.0",
+  "robotcode-jsonrpc2==0.38.0",
+  "robotcode==0.38.0",
+]
 dynamic = ["version"]
 
-[project.scripts]
-'robotcode.language_server' = 'robotcode.language_server.__main__:main'
+[project.entry-points.robotcode]
+langserver = "robotcode.language_server.hooks"
 
 [project.urls]
 Homepage = "https://robotcode.io"

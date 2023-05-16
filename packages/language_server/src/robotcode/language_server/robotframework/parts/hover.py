@@ -114,7 +114,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 if variable.has_value or variable.resolvable:
                     try:
                         value = reprlib.repr(
-                            namespace.imports_manager.resolve_variable(
+                            await namespace.imports_manager.resolve_variable(
                                 variable.name,
                                 str(document.uri.to_path().parent),
                                 await namespace.get_resolvable_variables(nodes, position),
@@ -164,7 +164,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
                 if variable.has_value or variable.resolvable:
                     try:
-                        value = namespace.imports_manager.resolve_variable(
+                        value = await namespace.imports_manager.resolve_variable(
                             variable.name,
                             str(document.uri.to_path().parent),
                             await namespace.get_resolvable_variables(nodes, position),
@@ -213,7 +213,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
                 if variable.has_value or variable.resolvable:
                     try:
-                        value = namespace.imports_manager.resolve_variable(
+                        value = await namespace.imports_manager.resolve_variable(
                             variable.name,
                             str(document.uri.to_path().parent),
                             await namespace.get_resolvable_variables(nodes, position),

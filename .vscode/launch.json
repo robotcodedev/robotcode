@@ -58,26 +58,6 @@
 			]
 		},
 		{
-			"name": "Python: RobotCode Tool",
-			"type": "python",
-			"request": "launch",
-			"program": "${workspaceFolder}/bundled/tool/robotcode",
-			"justMyCode": false,
-			"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data",
-			// "env": {
-			// 	"ROBOTCODE_COLOR": "1",
-			// },
-			"env": {
-				"CMD_VAR_LONG": "long",
-			},
-			"args": [
-				"--verbose",
-				"debug-launch",
-				"--pipe-server",
-				"\\\\.\\pipe\\926ab05cd224ef08dc3aec29eda1ba61"
-			]
-		},
-		{
 			"name": "Python: Attach using Process Id",
 			"type": "python",
 			"request": "attach",
@@ -157,110 +137,15 @@
 			"cwd": "${workspaceFolder}",
 		},
 		{
-			"name": "Python: robotcode.debugger",
+			"name": "Python: robotcode language_server",
 			"type": "python",
 			"request": "launch",
-			"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data",
-			"module": "robotcode.debugger",
+			"module": "robotcode.cli",
 			"justMyCode": false,
 			"args": [
-				"-p",
-				"6612",
-				"-b",
-				"localhost",
-				"-b",
-				"192.168.178.83",
-				"-w",
-				"--",
-				"-d",
-				"results",
-				"-P",
-				"./lib",
-				"-P",
-				"./resources",
-				//"C:\\tmp\\robottest\\tests\\bdd_style.robot"
-				"."
-			]
-		},
-		{
-			"name": "Python: robotcode.debugger.launcher tcp",
-			"type": "python",
-			"request": "launch",
-			"module": "robotcode.debugger.launcher",
-			"justMyCode": false,
-			"args": [
-				"--mode",
-				"tcp",
-				"--call-tracing",
-				"--log-config",
-				"log.ini"
-			]
-		},
-		{
-			"name": "Python: robotcode.debugger.launcher stdio",
-			"type": "python",
-			"request": "launch",
-			"module": "robotcode.debugger.launcher",
-			"justMyCode": false,
-			"args": [
-				"--mode",
-				"stdio"
-			]
-		},
-		{
-			"name": "Python: robotcode.language_server tcp",
-			"type": "python",
-			"request": "launch",
-			"module": "robotcode.language_server",
-			"justMyCode": false,
-			"args": [
-				"--mode",
-				"tcp",
-				"--log",
-				"--log-level",
-				"TRACE",
-				//"--log-json-rpc-data",
-				"--log-json-rpc",
-				//"--log-language-server",
-				//"--log-robotframework",
-				//"--debug-asyncio",
-				//"--log-asyncio"
-				//"--call-tracing",
-				// "--log-config",
-				// "log.ini"
-			]
-		},
-		{
-			"name": "Python: robotcode.language_server stdio",
-			"type": "python",
-			"request": "launch",
-			"module": "robotcode.language_server",
-			"justMyCode": false,
-			"args": [
-				"--mode",
-				"stdio",
-				"--log",
-				"--log-level",
-				"TRACE",
-				"--call-tracing",
-				"--log-json-rpc",
-				"--log-json-rpc-data",
-				"--log-language-server",
-				"--log-language-server-parts",
-				"--log-robotframework",
-				"--log-asyncio",
-				"--debug-asyncio"
-			]
-		},
-		{
-			"name": "Python: robot.libdoc",
-			"type": "python",
-			"request": "launch",
-			"module": "robot.libdoc",
-			"justMyCode": false,
-			"args": [
-				"./playground/second.py",
-				"list",
+				"language-server",
+				"--stdio",
+				"${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data/tests"
 			]
 		},
 		{

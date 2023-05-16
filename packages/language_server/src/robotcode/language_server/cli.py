@@ -1,251 +1,105 @@
-import argparse
-import logging
-import logging.config
 import os
-import pathlib
-from logging.handlers import RotatingFileHandler
-from typing import Optional
+from pathlib import Path
+from typing import Final, Optional, Sequence, Union
 
-from robotcode.core.logging import LoggingDescriptor
-from robotcode.core.types import ServerMode
-from robotcode.core.utils.debugpy import start_debugpy
+import click
+from robotcode.core.types import ServerMode, TcpParams
+from robotcode.plugin import Application, UnknownError, pass_application
+from robotcode.plugin.click_helper.options import resolve_server_options, server_options
+from robotcode.plugin.click_helper.types import (
+    AddressesPort,
+    add_options,
+)
+from robotcode.robot.config.loader import load_config_from_path
+from robotcode.robot.config.model import RobotBaseProfile
+from robotcode.robot.config.utils import get_config_files
 
 from .__version__ import __version__
 
-_logger = LoggingDescriptor(name=__package__)
+LANGUAGE_SERVER_DEFAULT_PORT: Final[int] = 6610
 
 
-def get_log_handler(logfile: str) -> logging.FileHandler:
-    log_fn = pathlib.Path(logfile)
-    roll_over = log_fn.exists()
-
-    handler = RotatingFileHandler(log_fn, backupCount=5)
-    formatter = logging.Formatter(
-        fmt="[%(levelname)-7s] %(asctime)s (%(name)s) %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-    handler.setFormatter(formatter)
-
-    if roll_over:
-        handler.doRollover()
-
-    return handler
-
-
-def run_server(mode: str, port: int, pipe_name: Optional[str]) -> int:
-    from robotcode.core.types import TcpParams
-
+def run_server(
+    mode: ServerMode,
+    addresses: Union[str, Sequence[str], None],
+    port: int,
+    pipe_name: Optional[str],
+    profile: Optional[RobotBaseProfile] = None,
+) -> None:
     from .robotframework.server import RobotLanguageServer
 
     with RobotLanguageServer(
-        mode=ServerMode(mode),
-        tcp_params=TcpParams("127.0.0.1", port),
-        pipe_name=pipe_name,
+        mode=mode, tcp_params=TcpParams(addresses or "127.0.0.1", port), pipe_name=pipe_name, profile=profile
     ) as server:
-        try:
-            server.run()
-        except SystemExit:
-            raise
-        except KeyboardInterrupt:
-            return 1
-        except BaseException as e:
-            _logger.exception(e)
-            return 1
-
-        return 0
+        server.run()
 
 
-def create_parser() -> argparse.ArgumentParser:
-    result = argparse.ArgumentParser(
-        description="RobotCode Language Server",
-        prog=__package__,
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+@click.command(
+    add_help_option=True,
+    epilog='Use "-- --help" to see `robot` help.',
+)
+@add_options(
+    *server_options(
+        ServerMode.STDIO,
+        default_port=LANGUAGE_SERVER_DEFAULT_PORT,
+        allowed_server_modes={
+            ServerMode.PIPE,
+            ServerMode.SOCKET,
+            ServerMode.STDIO,
+            ServerMode.TCP,
+        },
     )
+)
+@click.version_option(version=__version__, prog_name="RobotCode Language Server")
+@click.argument("paths", nargs=-1, type=click.Path(exists=True, file_okay=False))
+@pass_application
+@click.pass_context
+def language_server(
+    ctx: click.Context,
+    app: Application,
+    mode: ServerMode,
+    port: Optional[int],
+    bind: Optional[Sequence[str]],
+    pipe_name: Optional[str],
+    tcp: Optional[AddressesPort],
+    stdio: Optional[bool],
+    socket: Optional[AddressesPort],
+    pipe: Optional[str],
+    paths: Sequence[Path],
+) -> None:
+    """Run Robot Framework Language Server."""
 
-    result.add_argument("--version", action="store_true", help="shows the version and exits")
+    profile: Optional[RobotBaseProfile] = None
 
-    result.add_argument(
-        "-m",
-        "--mode",
-        default="stdio",
-        choices=["stdio", "pipe", "socket", "tcp"],
-        help="communication mode",
+    config_files, root_folder, _ = get_config_files(
+        paths, app.config.config_files, raise_on_error=False, verbose_callback=app.verbose
     )
+    if root_folder:
+        os.chdir(root_folder)
 
-    result.add_argument(
-        "--stdio",
-        action="store_true",
-        help="run in stdio mode (Shortcut for --mode=stdio)",
-    )
-    result.add_argument(
-        "--socket",
-        default=None,
-        help="run in socket mode (Shortcut for --mode=socket --port ...)",
-        type=int,
-    )
-    result.add_argument(
-        "--pipe",
-        default=None,
-        help="run in named pipe mode (Shortcut for --mode=pipe --pipe-name ...)",
-        type=str,
-    )
-
-    result.add_argument(
-        "-p",
-        "--port",
-        default=6610,
-        help="server listen port (mode socket and tcp)",
-        type=int,
-    )
-
-    result.add_argument("-pn", "--pipe-name", default=None, help="pipe name for pipe mode", type=str)
-
-    result.add_argument("--log", action="store_true", help="enable logging")
-    result.add_argument("--log-all", action="store_true", help="enable all log messages")
-    result.add_argument("--log-json-rpc", action="store_true", help="show json-rpc log messages")
-    result.add_argument(
-        "--log-json-rpc-data",
-        action="store_true",
-        help="show json-rpc-data log messages",
-    )
-    result.add_argument(
-        "--log-language-server",
-        action="store_true",
-        help="show language server log messages",
-    )
-    result.add_argument(
-        "--log-language-server-parts",
-        action="store_true",
-        help="show language server parts log messages",
-    )
-    result.add_argument(
-        "--log-robotframework",
-        action="store_true",
-        help="show robotframework language server log messages",
-    )
-    result.add_argument(
-        "--debug-asyncio",
-        action="store_true",
-        help="enable async io debugging messages",
-    )
-    result.add_argument("--log-asyncio", action="store_true", help="show asyncio log messages")
-    result.add_argument(
-        "--log-config",
-        default=None,
-        help="reads logging configuration from file",
-        metavar="FILE",
-    )
-    result.add_argument("--log-file", default=None, help="enables logging to file", metavar="FILE")
-    result.add_argument(
-        "--log-level",
-        default="WARNING",
-        help="sets the overall log level",
-        metavar="LEVEL",
-    )
-    result.add_argument(
-        "--call-tracing",
-        action="store_true",
-        help="enables log tracing of method calls",
-    )
-    result.add_argument(
-        "--call-tracing-default-level",
-        default="TRACE",
-        help="sets the default level for call tracing",
-        metavar="LEVEL",
-    )
-    result.add_argument("--debugpy", action="store_true", help="starts a debugpy session")
-    result.add_argument(
-        "--debugpy-port",
-        default=5678,
-        help="sets the port for debugpy session",
-        type=int,
-        metavar="PORT",
-    )
-    result.add_argument(
-        "--debugpy-wait-for-client",
-        action="store_true",
-        help="waits for debugpy client to connect",
-    )
-    return result
-
-
-DEFAULT_LOG_LEVEL = logging.ERROR
-
-
-def init_logging(args: argparse.Namespace) -> None:
-    log_level = logging._checkLevel(args.log_level) if args.log else logging.WARNING  # type: ignore
-
-    logging.basicConfig(level=log_level, format="%(name)s:%(levelname)s: %(message)s")
-
-    if args.log_file is not None:
-        _logger.logger.addHandler(get_log_handler(args.log_file))
-
-    if not args.log_all:
-        if not args.log_robotframework:
-            logging.getLogger("robotcode.language_server.robotframework").setLevel(DEFAULT_LOG_LEVEL)
-        if not args.log_language_server_parts:
-            logging.getLogger("robotcode.language_server.common.parts").setLevel(DEFAULT_LOG_LEVEL)
-        if not args.log_language_server:
-            logging.getLogger("robotcode.language_server.common").setLevel(DEFAULT_LOG_LEVEL)
-        if not args.log_json_rpc:
-            logging.getLogger("robotcode.jsonrpc2").setLevel(DEFAULT_LOG_LEVEL)
-        if not args.log_json_rpc_data:
-            logging.getLogger("robotcode.jsonrpc2.protocol.JsonRPCProtocol_data").setLevel(DEFAULT_LOG_LEVEL)
-        if not args.log_asyncio:
-            logging.getLogger("asyncio").setLevel(DEFAULT_LOG_LEVEL)
-
-
-def main() -> int:
-    parser = create_parser()
-
-    args = parser.parse_args()
-
-    if args.version:
-        print(__version__)
-        return 251  # 251 is the exit code for --version
-
-    if args.call_tracing:
-        LoggingDescriptor.set_call_tracing(True)
-    if args.call_tracing_default_level:
-        LoggingDescriptor.set_call_tracing_default_level(
-            logging._checkLevel(args.call_tracing_default_level)  # type: ignore
+    try:
+        profile = (
+            load_config_from_path(*config_files)
+            .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose)
+            .evaluated()
         )
+    except (TypeError, ValueError) as e:
+        app.echo(str(e), err=True)
 
-    if args.debug_asyncio:
-        os.environ["PYTHONASYNCIODEBUG"] = "1"
-        logging.getLogger("asyncio").level = logging.DEBUG
-    else:
-        logging.getLogger("asyncio").level = DEFAULT_LOG_LEVEL
-
-    if args.log:
-        if args.log_config is not None:
-            if not os.path.exists(args.log_config):
-                raise FileNotFoundError(f"Log-config file '{args.log_config}' not exists.")
-
-            logging.config.fileConfig(args.log_config, disable_existing_loggers=True)
-        else:
-            init_logging(args)
-
-    _logger.info(lambda: f"starting language server version={__version__}")
-    _logger.debug(lambda: f"args={args}")
-
-    if args.debugpy:
-        start_debugpy(args.debugpy_port, args.debugpy_wait_for_client)
-
-    mode = args.mode
-
-    if args.stdio:
-        mode = "stdio"
-
-    port = args.port
-
-    if args.socket is not None:
-        port = args.socket
-        mode = "socket"
-
-    pipe_name = args.pipe_name
-    if args.pipe is not None:
-        mode = "pipe"
-        pipe_name = args.pipe
-
-    return run_server(mode, port, pipe_name)
+    mode, port, bind, pipe_name = resolve_server_options(
+        ctx, app, mode, port, bind, pipe_name, tcp, socket, stdio, pipe, None
+    )
+    try:
+        run_server(
+            mode=mode,
+            addresses=bind,
+            port=port if port is not None else LANGUAGE_SERVER_DEFAULT_PORT,
+            pipe_name=pipe_name,
+            profile=profile,
+        )
+    except SystemExit:
+        raise
+    except KeyboardInterrupt:
+        app.keyboard_interrupt()
+    except Exception as e:
+        raise UnknownError(str(e)) from e
