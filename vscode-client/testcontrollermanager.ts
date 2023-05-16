@@ -285,6 +285,9 @@ export class TestControllerManager {
       }),
       vscode.commands.registerCommand("robotcode.debugCurrentFile", async (...args) => {
         await vscode.commands.executeCommand("testing.debugCurrentFile", ...args);
+      }),
+      vscode.commands.registerCommand("robotcode.selectExecutionProfiles", async () => {
+        await this.configureRunProfile();
       })
     );
   }
@@ -304,7 +307,7 @@ export class TestControllerManager {
     ])) as RobotCodeProfilesResult;
   }
 
-  private async configureRunProfile(): Promise<void> {
+  public async configureRunProfile(): Promise<void> {
     if (vscode.workspace.workspaceFolders === undefined || vscode.workspace.workspaceFolders?.length === 0) return;
 
     const folders = await filterAsync(
