@@ -269,7 +269,13 @@ def desc(app: Application, name: Optional[List[str]] = None) -> None:
         output = ""
         for field, value in config_fields:
             output += f"## {field}\n\n"
-            output += f"Type: {value['type']}\n\n"
+            type = (
+                value["type"]
+                .replace("typing.", "")
+                .replace("robotcode.robot.config.model.", "")
+                .replace("NoneType", "None")
+            )
+            output += f"Type: {type}\n\n"
             output += value["description"] + "\n\n"
 
         app.echo_as_markdown(output)

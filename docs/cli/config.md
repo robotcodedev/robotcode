@@ -1,6 +1,6 @@
 ## args
 
-Type: typing.Optional[typing.List[str]]
+Type: Optional[List[str]]
 
 Arguments to be passed to _robot_.
 
@@ -11,7 +11,7 @@ args = ["-t", "abc"]
 
 ## console
 
-Type: typing.Optional[typing.Literal['verbose', 'dotted', 'skipped', 'quiet', 'none']]
+Type: Optional[Literal['verbose', 'dotted', 'skipped', 'quiet', 'none']]
 
 How to report execution on the console.
 verbose:  report every suite and test (default)
@@ -24,7 +24,7 @@ corresponds to the `--console type` option of _robot_
 
 ## console-colors
 
-Type: typing.Optional[typing.Literal['auto', 'on', 'ansi', 'off']]
+Type: Optional[Literal['auto', 'on', 'ansi', 'off']]
 
 Use colors on console output or not.
 auto: use colors when output not redirected (default)
@@ -36,7 +36,7 @@ corresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_
 
 ## console-markers
 
-Type: typing.Optional[typing.Literal['auto', 'on', 'off']]
+Type: Optional[Literal['auto', 'on', 'off']]
 
 Show markers on the console when top level
 keywords in a test case end. Values have same
@@ -46,7 +46,7 @@ corresponds to the `-K --consolemarkers auto|on|off` option of _robot_
 
 ## console-width
 
-Type: typing.Optional[int]
+Type: Optional[int]
 
 Width of the console output. Default is 78.
 
@@ -54,7 +54,7 @@ corresponds to the `-W --consolewidth chars` option of _robot_
 
 ## debug-file
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Debug file written during execution. Not created
 unless this option is specified.
@@ -63,7 +63,7 @@ corresponds to the `-b --debugfile file` option of _robot_
 
 ## default-profiles
 
-Type: typing.Union[str, typing.List[str], NoneType]
+Type: Union[str, List[str], None]
 
 Selects the Default profile if no profile is given at command line.
 
@@ -78,7 +78,7 @@ default_profiles = ["default", "Firefox"]
 
 ## doc
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Set the documentation of the top level suite.
 Simple formatting is supported (e.g. *bold*). If the
@@ -97,7 +97,7 @@ corresponds to the `-D --doc documentation` option of _robot_
 
 ## dotted
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 Shortcut for `--console dotted`.
 
@@ -105,7 +105,7 @@ corresponds to the `-. --dotted` option of _robot_
 
 ## dry-run
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 Verifies test data and runs tests so that library
 keywords are not executed.
@@ -114,7 +114,7 @@ corresponds to the `--dryrun` option of _robot_
 
 ## env
 
-Type: typing.Optional[typing.Dict[str, str]]
+Type: Optional[Dict[str, str]]
 
 Define environment variables to be set before running tests.
 
@@ -127,7 +127,7 @@ SECRET = "password"
 
 ## excludes
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Select test cases not to run by tag. These tests are
 not run even if included with --include. Tags are
@@ -137,7 +137,7 @@ corresponds to the `-e --exclude tag *` option of _robot_
 
 ## exit-on-error
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 Stops test execution if any error occurs when parsing
 test data, importing libraries, and so on.
@@ -146,7 +146,7 @@ corresponds to the `--exitonerror` option of _robot_
 
 ## exit-on-failure
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 Stops test execution if any test fails.
 
@@ -154,7 +154,7 @@ corresponds to the `-X --exitonfailure` option of _robot_
 
 ## expand-keywords
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.NamePattern, robotcode.robot.config.model.TagPattern]]]
+Type: Optional[List[Union[str, NamePattern, TagPattern]]]
 
 Matching keywords will be automatically expanded in
 the log file. Matching against keyword name or tags
@@ -171,7 +171,7 @@ corresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _
 
 ## extensions
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Parse only files with this extension when executing
 a directory. Has no effect when running individual
@@ -191,19 +191,19 @@ corresponds to the `-F --extension value` option of _robot_
 
 ## extra-args
 
-Type: typing.Optional[typing.List[str]]
+Type: Optional[List[str]]
 
 Append extra arguments to be passed to _robot_.
 
 ## extra-env
 
-Type: typing.Optional[typing.Dict[str, str]]
+Type: Optional[Dict[str, str]]
 
 Append extra environment variables to be set before tests.
 
 ## extra-excludes
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --exclude option.
 
@@ -215,7 +215,7 @@ corresponds to the `-e --exclude tag *` option of _robot_
 
 ## extra-expand-keywords
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.NamePattern, robotcode.robot.config.model.TagPattern]]]
+Type: Optional[List[Union[str, NamePattern, TagPattern]]]
 
 Appends entries to the --expandkeywords option.
 
@@ -234,7 +234,7 @@ corresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _
 
 ## extra-flatten-keywords
 
-Type: typing.Optional[typing.List[typing.Union[str, typing.Literal['for', 'while', 'iteration'], robotcode.robot.config.model.NamePattern, robotcode.robot.config.model.TagPattern]]]
+Type: Optional[List[Union[str, Literal['for', 'while', 'iteration'], NamePattern, TagPattern]]]
 
 Appends entries to the --flattenkeywords option.
 
@@ -256,7 +256,7 @@ corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pa
 
 ## extra-includes
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --include option.
 
@@ -277,7 +277,7 @@ corresponds to the `-i --include tag *` option of _robot_
 
 ## extra-languages
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --language option.
 
@@ -289,7 +289,7 @@ corresponds to the `--language lang *` option of _rebot_
 
 ## extra-listeners
 
-Type: typing.Optional[typing.Dict[str, typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]]
+Type: Optional[Dict[str, List[Union[str, StringExpression]]]]
 
 Appends entries to the --listener option.
 
@@ -309,7 +309,7 @@ corresponds to the `--listener listener *` option of _rebot_
 
 ## extra-metadata
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Appends entries to the --metadata option.
 
@@ -321,7 +321,7 @@ corresponds to the `-M --metadata name:value *` option of _robot_
 
 ## extra-parsers
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, List[Union[str, StringExpression]]]]
 
 Appends entries to the --parser option.
 
@@ -332,7 +332,7 @@ corresponds to the `--parser parser *` option of _rebot_
 
 ## extra-paths
 
-Type: typing.Union[str, typing.List[str], NoneType]
+Type: Union[str, List[str], None]
 
 Append extra entries to the paths argument.
 
@@ -343,7 +343,7 @@ paths = ["tests"]
 
 ## extra-pre-rebot-modifiers
 
-Type: typing.Optional[typing.Dict[str, typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]]
+Type: Optional[Dict[str, List[Union[str, StringExpression]]]]
 
 Appends entries to the --prerebotmodifier option.
 
@@ -355,7 +355,7 @@ corresponds to the `--prerebotmodifier modifier *` option of _robot_
 
 ## extra-pre-run-modifiers
 
-Type: typing.Optional[typing.Dict[str, typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]]
+Type: Optional[Dict[str, List[Union[str, StringExpression]]]]
 
 Appends entries to the --prerunmodifier option.
 
@@ -367,13 +367,13 @@ corresponds to the `--prerunmodifier modifier *` option of _rebot_
 
 ## extra-profiles
 
-Type: typing.Optional[typing.Dict[str, robotcode.robot.config.model.RobotProfile]]
+Type: Optional[Dict[str, RobotProfile]]
 
 Extra execution profiles.
 
 ## extra-python-path
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --pythonpath option.
 
@@ -395,7 +395,7 @@ corresponds to the `-P --pythonpath path *` option of _robot_
 
 ## extra-remove-keywords
 
-Type: typing.Optional[typing.List[typing.Union[str, typing.Literal['all', 'passed', 'for', 'wuks'], robotcode.robot.config.model.NamePattern, robotcode.robot.config.model.TagPattern]]]
+Type: Optional[List[Union[str, Literal['all', 'passed', 'for', 'wuks'], NamePattern, TagPattern]]]
 
 Appends entries to the --removekeywords option.
 
@@ -442,7 +442,7 @@ corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pat
 
 ## extra-set-tag
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --settag option.
 
@@ -452,7 +452,7 @@ corresponds to the `-G --settag tag *` option of _robot_
 
 ## extra-skip
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --skip option.
 
@@ -463,7 +463,7 @@ corresponds to the `--skip tag *` option of _rebot_
 
 ## extra-skip-on-failure
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --skiponfailure option.
 
@@ -474,7 +474,7 @@ corresponds to the `--skiponfailure tag *` option of _rebot_
 
 ## extra-suites
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --suite option.
 
@@ -490,7 +490,7 @@ corresponds to the `-s --suite name *` option of _robot_
 
 ## extra-tag-doc
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Appends entries to the --tagdoc option.
 
@@ -511,7 +511,7 @@ corresponds to the `--tagdoc pattern:doc *` option of _robot_
 
 ## extra-tag-stat-combine
 
-Type: typing.Optional[typing.List[typing.Union[str, typing.Dict[str, str]]]]
+Type: Optional[List[Union[str, Dict[str, str]]]]
 
 Appends entries to the --tagstatcombine option.
 
@@ -532,7 +532,7 @@ corresponds to the `--tagstatcombine tags:name *` option of _robot_
 
 ## extra-tag-stat-exclude
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --tagstatexclude option.
 
@@ -544,7 +544,7 @@ corresponds to the `--tagstatexclude tag *` option of _robot_
 
 ## extra-tag-stat-include
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --tagstatinclude option.
 
@@ -556,7 +556,7 @@ corresponds to the `--tagstatinclude tag *` option of _robot_
 
 ## extra-tag-stat-link
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Appends entries to the --tagstatlink option.
 
@@ -577,7 +577,7 @@ corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
 
 ## extra-tasks
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --task option.
 
@@ -587,7 +587,7 @@ corresponds to the `--task name *` option of _robot_
 
 ## extra-tests
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --test option.
 
@@ -602,7 +602,7 @@ corresponds to the `-t --test name *` option of _robot_
 
 ## extra-variable-files
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --variablefile option.
 
@@ -621,7 +621,7 @@ corresponds to the `-V --variablefile path *` option of _rebot_
 
 ## extra-variables
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Appends entries to the --variable option.
 
@@ -642,7 +642,7 @@ corresponds to the `-v --variable name:value *` option of _rebot_
 
 ## flatten-keywords
 
-Type: typing.Optional[typing.List[typing.Union[str, typing.Literal['for', 'while', 'iteration'], robotcode.robot.config.model.NamePattern, robotcode.robot.config.model.TagPattern]]]
+Type: Optional[List[Union[str, Literal['for', 'while', 'iteration'], NamePattern, TagPattern]]]
 
 Flattens matching keywords in the generated log file.
 Matching keywords get all log messages from their
@@ -662,7 +662,7 @@ corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pa
 
 ## includes
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Select tests by tag. Similarly as name with --test,
 tag is case and space insensitive and it is possible
@@ -681,7 +681,7 @@ corresponds to the `-i --include tag *` option of _robot_
 
 ## languages
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Activate localization. `lang` can be a name or a code
 of a built-in language, or a path or a module name of
@@ -691,13 +691,13 @@ corresponds to the `--language lang *` option of _robot_
 
 ## libdoc
 
-Type: typing.Optional[robotcode.robot.config.model.LibDocProfile]
+Type: Optional[LibDocProfile]
 
 Options to be passed to _libdoc_.
 
 ## libdoc.doc-format
 
-Type: typing.Optional[typing.Literal['ROBOT', 'HTML', 'TEXT', 'REST']]
+Type: Optional[Literal['ROBOT', 'HTML', 'TEXT', 'REST']]
 
 Specifies the source documentation format. Possible
 values are Robot Framework's documentation format,
@@ -709,7 +709,7 @@ corresponds to the `-F --docformat ROBOT|HTML|TEXT|REST` option of _libdoc_
 
 ## libdoc.extra-python-path
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --pythonpath option.
 
@@ -720,7 +720,7 @@ corresponds to the `-P --pythonpath path *` option of _libdoc_
 
 ## libdoc.format
 
-Type: typing.Optional[typing.Literal['HTML', 'XML', 'JSON', 'LIBSPEC']]
+Type: Optional[Literal['HTML', 'XML', 'JSON', 'LIBSPEC']]
 
 Specifies whether to generate an HTML output for
 humans or a machine readable spec file in XML or JSON
@@ -732,7 +732,7 @@ corresponds to the `-f --format HTML|XML|JSON|LIBSPEC` option of _libdoc_
 
 ## libdoc.name
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Sets the name of the documented library or resource.
 
@@ -740,7 +740,7 @@ corresponds to the `-n --name name` option of _libdoc_
 
 ## libdoc.python-path
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Additional locations where to search for libraries
 and resources.
@@ -749,7 +749,7 @@ corresponds to the `-P --pythonpath path *` option of _libdoc_
 
 ## libdoc.quiet
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 Do not print the path of the generated output file
 to the console. New in RF 4.0.
@@ -758,7 +758,7 @@ corresponds to the `--quiet` option of _libdoc_
 
 ## libdoc.spec-doc-format
 
-Type: typing.Optional[typing.Literal['RAW', 'HTML']]
+Type: Optional[Literal['RAW', 'HTML']]
 
 Specifies the documentation format used with XML and
 JSON spec files. RAW means preserving the original
@@ -771,7 +771,7 @@ corresponds to the `-s --specdocformat RAW|HTML` option of _libdoc_
 
 ## libdoc.theme
 
-Type: typing.Optional[typing.Literal['DARK', 'LIGHT', 'NONE']]
+Type: Optional[Literal['DARK', 'LIGHT', 'NONE']]
 
 Use dark or light HTML theme. If this option is not
 used, or the value is NONE, the theme is selected
@@ -781,7 +781,7 @@ corresponds to the `--theme DARK|LIGHT|NONE` option of _libdoc_
 
 ## listeners
 
-Type: typing.Optional[typing.Dict[str, typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]]
+Type: Optional[Dict[str, List[Union[str, StringExpression]]]]
 
 Class or module for monitoring test execution.
 Gets notifications e.g. when tests start and end.
@@ -799,7 +799,7 @@ corresponds to the `--listener listener *` option of _robot_
 
 ## log
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 HTML log file. Can be disabled by giving a special
 value `NONE`. Default: log.html
@@ -814,7 +814,7 @@ corresponds to the `-l --log file` option of _robot_
 
 ## log-level
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Threshold level for logging. Available levels: TRACE,
 DEBUG, INFO (default), WARN, NONE (no logging). Use
@@ -832,7 +832,7 @@ corresponds to the `-L --loglevel level` option of _robot_
 
 ## log-title
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Title for the generated log file. The default title
 is `<SuiteName> Log`.
@@ -841,7 +841,7 @@ corresponds to the `--logtitle title` option of _robot_
 
 ## max-assign-length
 
-Type: typing.Optional[int]
+Type: Optional[int]
 
 Maximum number of characters to show in log
 when variables are assigned. Zero or negative values
@@ -852,7 +852,7 @@ corresponds to the `--maxassignlength characters` option of _robot_
 
 ## max-error-lines
 
-Type: typing.Optional[int]
+Type: Optional[int]
 
 Maximum number of error message lines to show in
 report when tests fail. Default is 40, minimum is 10
@@ -862,7 +862,7 @@ corresponds to the `--maxerrorlines lines` option of _robot_
 
 ## metadata
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Set metadata of the top level suite. Value can
 contain formatting and be read from a file similarly
@@ -872,7 +872,7 @@ corresponds to the `-M --metadata name:value *` option of _robot_
 
 ## name
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Set the name of the top level suite. By default the
 name is created based on the executed file or
@@ -882,7 +882,7 @@ corresponds to the `-N --name name` option of _robot_
 
 ## no-status-rc
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 Sets the return code to zero regardless of failures
 in test cases. Error codes are returned normally.
@@ -891,7 +891,7 @@ corresponds to the `--nostatusrc` option of _robot_
 
 ## output
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 XML output file. Given path, similarly as paths given
 to --log, --report, --xunit, and --debugfile, is
@@ -906,7 +906,7 @@ corresponds to the `-o --output file` option of _robot_
 
 ## output-dir
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Where to create output files. The default is the
 directory where tests are run from and the given path
@@ -916,7 +916,7 @@ corresponds to the `-d --outputdir dir` option of _robot_
 
 ## parsers
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, List[Union[str, StringExpression]]]]
 
 Custom parser class or module. Parser classes accept
 arguments the same way as with --listener.
@@ -925,7 +925,7 @@ corresponds to the `--parser parser *` option of _robot_
 
 ## paths
 
-Type: typing.Union[str, typing.List[str], NoneType]
+Type: Union[str, List[str], None]
 
 Specifies the paths where robot/robotcode should discover tests.
 If no paths are given at the command line this value is used.
@@ -939,7 +939,7 @@ Corresponds to the `paths` argument of __robot__.
 
 ## pre-rebot-modifiers
 
-Type: typing.Optional[typing.Dict[str, typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]]
+Type: Optional[Dict[str, List[Union[str, StringExpression]]]]
 
 Class to programmatically modify the result
 model before creating reports and logs. Accepts
@@ -949,7 +949,7 @@ corresponds to the `--prerebotmodifier modifier *` option of _robot_
 
 ## pre-run-modifiers
 
-Type: typing.Optional[typing.Dict[str, typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]]
+Type: Optional[Dict[str, List[Union[str, StringExpression]]]]
 
 Class to programmatically modify the suite
 structure before execution. Accepts arguments the
@@ -959,13 +959,13 @@ corresponds to the `--prerunmodifier modifier *` option of _robot_
 
 ## profiles
 
-Type: typing.Optional[typing.Dict[str, robotcode.robot.config.model.RobotProfile]]
+Type: Optional[Dict[str, RobotProfile]]
 
 Execution profiles.
 
 ## python-path
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Additional locations (directories, ZIPs) where to
 search libraries and other extensions when they are
@@ -985,7 +985,7 @@ corresponds to the `-P --pythonpath path *` option of _robot_
 
 ## quiet
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 Shortcut for `--console quiet`.
 
@@ -993,7 +993,7 @@ corresponds to the `--quiet` option of _robot_
 
 ## randomize
 
-Type: typing.Union[str, typing.Literal['all', 'suites', 'tests', 'none'], NoneType]
+Type: Union[str, Literal['all', 'suites', 'tests', 'none'], None]
 
 Randomizes the test execution order.
 all:    randomizes both suites and tests
@@ -1014,7 +1014,7 @@ corresponds to the `--randomize all|suites|tests|none` option of _robot_
 
 ## re-run-failed
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Select failed tests from an earlier output file to be
 re-executed. Equivalent to selecting same tests
@@ -1024,7 +1024,7 @@ corresponds to the `-R --rerunfailed output` option of _robot_
 
 ## re-run-failed-suites
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Select failed suites from an earlier output
 file to be re-executed.
@@ -1033,13 +1033,13 @@ corresponds to the `-S --rerunfailedsuites output` option of _robot_
 
 ## rebot
 
-Type: typing.Optional[robotcode.robot.config.model.RebotProfile]
+Type: Optional[RebotProfile]
 
 Options to be passed to _rebot_.
 
 ## rebot.console-colors
 
-Type: typing.Optional[typing.Literal['auto', 'on', 'ansi', 'off']]
+Type: Optional[Literal['auto', 'on', 'ansi', 'off']]
 
 Use colors on console output or not.
 auto: use colors when output not redirected (default)
@@ -1051,7 +1051,7 @@ corresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_
 
 ## rebot.doc
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Set the documentation of the top level suite.
 Simple formatting is supported (e.g. *bold*). If the
@@ -1070,7 +1070,7 @@ corresponds to the `-D --doc documentation` option of _robot_
 
 ## rebot.end-time
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Same as --starttime but for end time. If both options
 are used, elapsed time of the suite is calculated
@@ -1082,7 +1082,7 @@ corresponds to the `--endtime timestamp` option of _rebot_
 
 ## rebot.excludes
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Select test cases not to run by tag. These tests are
 not run even if included with --include. Tags are
@@ -1092,7 +1092,7 @@ corresponds to the `-e --exclude tag *` option of _robot_
 
 ## rebot.expand-keywords
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.NamePattern, robotcode.robot.config.model.TagPattern]]]
+Type: Optional[List[Union[str, NamePattern, TagPattern]]]
 
 Matching keywords will be automatically expanded in
 the log file. Matching against keyword name or tags
@@ -1109,7 +1109,7 @@ corresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _
 
 ## rebot.extra-excludes
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --exclude option.
 
@@ -1121,7 +1121,7 @@ corresponds to the `-e --exclude tag *` option of _robot_
 
 ## rebot.extra-expand-keywords
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.NamePattern, robotcode.robot.config.model.TagPattern]]]
+Type: Optional[List[Union[str, NamePattern, TagPattern]]]
 
 Appends entries to the --expandkeywords option.
 
@@ -1140,7 +1140,7 @@ corresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _
 
 ## rebot.extra-flatten-keywords
 
-Type: typing.Optional[typing.List[typing.Union[str, typing.Literal['for', 'while', 'iteration'], robotcode.robot.config.model.NamePattern, robotcode.robot.config.model.TagPattern]]]
+Type: Optional[List[Union[str, Literal['for', 'while', 'iteration'], NamePattern, TagPattern]]]
 
 Appends entries to the --flattenkeywords option.
 
@@ -1162,7 +1162,7 @@ corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pa
 
 ## rebot.extra-includes
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --include option.
 
@@ -1183,7 +1183,7 @@ corresponds to the `-i --include tag *` option of _robot_
 
 ## rebot.extra-metadata
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Appends entries to the --metadata option.
 
@@ -1195,7 +1195,7 @@ corresponds to the `-M --metadata name:value *` option of _robot_
 
 ## rebot.extra-pre-rebot-modifiers
 
-Type: typing.Optional[typing.Dict[str, typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]]
+Type: Optional[Dict[str, List[Union[str, StringExpression]]]]
 
 Appends entries to the --prerebotmodifier option.
 
@@ -1207,7 +1207,7 @@ corresponds to the `--prerebotmodifier modifier *` option of _robot_
 
 ## rebot.extra-python-path
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --pythonpath option.
 
@@ -1229,7 +1229,7 @@ corresponds to the `-P --pythonpath path *` option of _robot_
 
 ## rebot.extra-remove-keywords
 
-Type: typing.Optional[typing.List[typing.Union[str, typing.Literal['all', 'passed', 'for', 'wuks'], robotcode.robot.config.model.NamePattern, robotcode.robot.config.model.TagPattern]]]
+Type: Optional[List[Union[str, Literal['all', 'passed', 'for', 'wuks'], NamePattern, TagPattern]]]
 
 Appends entries to the --removekeywords option.
 
@@ -1276,7 +1276,7 @@ corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pat
 
 ## rebot.extra-set-tag
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --settag option.
 
@@ -1286,7 +1286,7 @@ corresponds to the `-G --settag tag *` option of _robot_
 
 ## rebot.extra-suites
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --suite option.
 
@@ -1302,7 +1302,7 @@ corresponds to the `-s --suite name *` option of _robot_
 
 ## rebot.extra-tag-doc
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Appends entries to the --tagdoc option.
 
@@ -1323,7 +1323,7 @@ corresponds to the `--tagdoc pattern:doc *` option of _robot_
 
 ## rebot.extra-tag-stat-combine
 
-Type: typing.Optional[typing.List[typing.Union[str, typing.Dict[str, str]]]]
+Type: Optional[List[Union[str, Dict[str, str]]]]
 
 Appends entries to the --tagstatcombine option.
 
@@ -1344,7 +1344,7 @@ corresponds to the `--tagstatcombine tags:name *` option of _robot_
 
 ## rebot.extra-tag-stat-exclude
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --tagstatexclude option.
 
@@ -1356,7 +1356,7 @@ corresponds to the `--tagstatexclude tag *` option of _robot_
 
 ## rebot.extra-tag-stat-include
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --tagstatinclude option.
 
@@ -1368,7 +1368,7 @@ corresponds to the `--tagstatinclude tag *` option of _robot_
 
 ## rebot.extra-tag-stat-link
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Appends entries to the --tagstatlink option.
 
@@ -1389,7 +1389,7 @@ corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
 
 ## rebot.extra-tasks
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --task option.
 
@@ -1399,7 +1399,7 @@ corresponds to the `--task name *` option of _robot_
 
 ## rebot.extra-tests
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --test option.
 
@@ -1414,7 +1414,7 @@ corresponds to the `-t --test name *` option of _robot_
 
 ## rebot.flatten-keywords
 
-Type: typing.Optional[typing.List[typing.Union[str, typing.Literal['for', 'while', 'iteration'], robotcode.robot.config.model.NamePattern, robotcode.robot.config.model.TagPattern]]]
+Type: Optional[List[Union[str, Literal['for', 'while', 'iteration'], NamePattern, TagPattern]]]
 
 Flattens matching keywords in the generated log file.
 Matching keywords get all log messages from their
@@ -1434,7 +1434,7 @@ corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pa
 
 ## rebot.includes
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Select tests by tag. Similarly as name with --test,
 tag is case and space insensitive and it is possible
@@ -1453,7 +1453,7 @@ corresponds to the `-i --include tag *` option of _robot_
 
 ## rebot.log
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 HTML log file. Can be disabled by giving a special
 value `NONE`. Default: log.html
@@ -1468,7 +1468,7 @@ corresponds to the `-l --log file` option of _robot_
 
 ## rebot.log-level
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Threshold for selecting messages. Available levels:
 TRACE (default), DEBUG, INFO, WARN, NONE (no msgs).
@@ -1486,7 +1486,7 @@ corresponds to the `-L --loglevel level` option of _rebot_
 
 ## rebot.log-title
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Title for the generated log file. The default title
 is `<SuiteName> Log`.
@@ -1495,7 +1495,7 @@ corresponds to the `--logtitle title` option of _robot_
 
 ## rebot.merge
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 When combining results, merge outputs together
 instead of putting them under a new top level suite.
@@ -1505,7 +1505,7 @@ corresponds to the `-R --merge` option of _rebot_
 
 ## rebot.metadata
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Set metadata of the top level suite. Value can
 contain formatting and be read from a file similarly
@@ -1515,7 +1515,7 @@ corresponds to the `-M --metadata name:value *` option of _robot_
 
 ## rebot.name
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Set the name of the top level suite. By default the
 name is created based on the executed file or
@@ -1525,7 +1525,7 @@ corresponds to the `-N --name name` option of _robot_
 
 ## rebot.no-status-rc
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 Sets the return code to zero regardless of failures
 in test cases. Error codes are returned normally.
@@ -1534,7 +1534,7 @@ corresponds to the `--nostatusrc` option of _robot_
 
 ## rebot.output
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 XML output file. Not created unless this option is
 specified. Given path, similarly as paths given to
@@ -1545,7 +1545,7 @@ corresponds to the `-o --output file` option of _rebot_
 
 ## rebot.output-dir
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Where to create output files. The default is the
 directory where tests are run from and the given path
@@ -1555,7 +1555,7 @@ corresponds to the `-d --outputdir dir` option of _robot_
 
 ## rebot.pre-rebot-modifiers
 
-Type: typing.Optional[typing.Dict[str, typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]]
+Type: Optional[Dict[str, List[Union[str, StringExpression]]]]
 
 Class to programmatically modify the result
 model before creating reports and logs. Accepts
@@ -1565,7 +1565,7 @@ corresponds to the `--prerebotmodifier modifier *` option of _robot_
 
 ## rebot.process-empty-suite
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 Processes output also if the top level suite is
 empty. Useful e.g. with --include/--exclude when it
@@ -1576,7 +1576,7 @@ corresponds to the `--processemptysuite` option of _rebot_
 
 ## rebot.python-path
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Additional locations (directories, ZIPs) where to
 search libraries and other extensions when they are
@@ -1596,7 +1596,7 @@ corresponds to the `-P --pythonpath path *` option of _robot_
 
 ## rebot.remove-keywords
 
-Type: typing.Optional[typing.List[typing.Union[str, typing.Literal['all', 'passed', 'for', 'wuks'], robotcode.robot.config.model.NamePattern, robotcode.robot.config.model.TagPattern]]]
+Type: Optional[List[Union[str, Literal['all', 'passed', 'for', 'wuks'], NamePattern, TagPattern]]]
 
 Remove keyword data from the generated log file.
 Keywords containing warnings are not removed except
@@ -1641,7 +1641,7 @@ corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pat
 
 ## rebot.report
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 HTML report file. Can be disabled with `NONE`
 similarly as --log. Default: report.html
@@ -1650,7 +1650,7 @@ corresponds to the `-r --report file` option of _robot_
 
 ## rebot.report-background
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Background colors to use in the report file.
 Given in format `passed:failed:skipped` where the
@@ -1668,7 +1668,7 @@ corresponds to the `--reportbackground colors` option of _robot_
 
 ## rebot.report-title
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Title for the generated report file. The default
 title is `<SuiteName> Report`.
@@ -1677,7 +1677,7 @@ corresponds to the `--reporttitle title` option of _robot_
 
 ## rebot.rpa
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 Turn on the generic automation mode. Mainly affects
 terminology so that "test" is replaced with "task"
@@ -1688,7 +1688,7 @@ corresponds to the `--rpa` option of _robot_
 
 ## rebot.set-tag
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Sets given tag(s) to all executed tests.
 
@@ -1696,7 +1696,7 @@ corresponds to the `-G --settag tag *` option of _robot_
 
 ## rebot.split-log
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 Split the log file into smaller pieces that open in
 browsers transparently.
@@ -1705,7 +1705,7 @@ corresponds to the `--splitlog` option of _robot_
 
 ## rebot.start-time
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Set execution start time. Timestamp must be given in
 format `2007-10-01 15:12:42.268` where all separators
@@ -1720,7 +1720,7 @@ corresponds to the `--starttime timestamp` option of _rebot_
 
 ## rebot.suite-stat-level
 
-Type: typing.Optional[int]
+Type: Optional[int]
 
 How many levels to show in `Statistics by Suite`
 in log and report. By default all suite levels are
@@ -1730,7 +1730,7 @@ corresponds to the `--suitestatlevel level` option of _robot_
 
 ## rebot.suites
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Select suites by name. When this option is used with
 --test, --include or --exclude, only tests in
@@ -1744,7 +1744,7 @@ corresponds to the `-s --suite name *` option of _robot_
 
 ## rebot.tag-doc
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Add documentation to tags matching the given
 pattern. Documentation is shown in `Test Details` and
@@ -1763,7 +1763,7 @@ corresponds to the `--tagdoc pattern:doc *` option of _robot_
 
 ## rebot.tag-stat-combine
 
-Type: typing.Optional[typing.List[typing.Union[str, typing.Dict[str, str]]]]
+Type: Optional[List[Union[str, Dict[str, str]]]]
 
 Create combined statistics based on tags.
 These statistics are added into `Statistics by Tag`.
@@ -1782,7 +1782,7 @@ corresponds to the `--tagstatcombine tags:name *` option of _robot_
 
 ## rebot.tag-stat-exclude
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Exclude matching tags from `Statistics by Tag`.
 This option can be used with --tagstatinclude
@@ -1792,7 +1792,7 @@ corresponds to the `--tagstatexclude tag *` option of _robot_
 
 ## rebot.tag-stat-include
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Include only matching tags in `Statistics by Tag`
 in log and report. By default all tags are shown.
@@ -1802,7 +1802,7 @@ corresponds to the `--tagstatinclude tag *` option of _robot_
 
 ## rebot.tag-stat-link
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Add external links into `Statistics by
 Tag`. Pattern can use `*`, `?` and `[]` as wildcards
@@ -1821,7 +1821,7 @@ corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
 
 ## rebot.tasks
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Alias to --test. Especially applicable with --rpa.
 
@@ -1829,7 +1829,7 @@ corresponds to the `--task name *` option of _robot_
 
 ## rebot.tests
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Select tests by name or by long name containing also
 parent suite name like `Parent.Test`. Name is case
@@ -1842,7 +1842,7 @@ corresponds to the `-t --test name *` option of _robot_
 
 ## rebot.timestamp-outputs
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 When this option is used, timestamp in a format
 `YYYYMMDD-hhmmss` is added to all generated output
@@ -1855,7 +1855,7 @@ corresponds to the `-T --timestampoutputs` option of _robot_
 
 ## rebot.xunit
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 xUnit compatible result file. Not created unless this
 option is specified.
@@ -1864,7 +1864,7 @@ corresponds to the `-x --xunit file` option of _robot_
 
 ## remove-keywords
 
-Type: typing.Optional[typing.List[typing.Union[str, typing.Literal['all', 'passed', 'for', 'wuks'], robotcode.robot.config.model.NamePattern, robotcode.robot.config.model.TagPattern]]]
+Type: Optional[List[Union[str, Literal['all', 'passed', 'for', 'wuks'], NamePattern, TagPattern]]]
 
 Remove keyword data from the generated log file.
 Keywords containing warnings are not removed except
@@ -1909,7 +1909,7 @@ corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pat
 
 ## report
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 HTML report file. Can be disabled with `NONE`
 similarly as --log. Default: report.html
@@ -1918,7 +1918,7 @@ corresponds to the `-r --report file` option of _robot_
 
 ## report-background
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Background colors to use in the report file.
 Given in format `passed:failed:skipped` where the
@@ -1936,7 +1936,7 @@ corresponds to the `--reportbackground colors` option of _robot_
 
 ## report-title
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Title for the generated report file. The default
 title is `<SuiteName> Report`.
@@ -1945,7 +1945,7 @@ corresponds to the `--reporttitle title` option of _robot_
 
 ## rpa
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 Turn on the generic automation mode. Mainly affects
 terminology so that "test" is replaced with "task"
@@ -1956,7 +1956,7 @@ corresponds to the `--rpa` option of _robot_
 
 ## run-empty-suite
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 Executes suite even if it contains no tests. Useful
 e.g. with --include/--exclude when it is not an error
@@ -1966,7 +1966,7 @@ corresponds to the `--runemptysuite` option of _robot_
 
 ## set-tag
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Sets given tag(s) to all executed tests.
 
@@ -1974,7 +1974,7 @@ corresponds to the `-G --settag tag *` option of _robot_
 
 ## skip
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Tests having given tag will be skipped. Tag can be
 a pattern.
@@ -1983,7 +1983,7 @@ corresponds to the `--skip tag *` option of _robot_
 
 ## skip-on-failure
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Tests having given tag will be skipped if they fail.
 Tag can be a pattern
@@ -1992,7 +1992,7 @@ corresponds to the `--skiponfailure tag *` option of _robot_
 
 ## skip-teardown-on-exit
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 Causes teardowns to be skipped if test execution is
 stopped prematurely.
@@ -2001,7 +2001,7 @@ corresponds to the `--skipteardownonexit` option of _robot_
 
 ## split-log
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 Split the log file into smaller pieces that open in
 browsers transparently.
@@ -2010,7 +2010,7 @@ corresponds to the `--splitlog` option of _robot_
 
 ## suite-stat-level
 
-Type: typing.Optional[int]
+Type: Optional[int]
 
 How many levels to show in `Statistics by Suite`
 in log and report. By default all suite levels are
@@ -2020,7 +2020,7 @@ corresponds to the `--suitestatlevel level` option of _robot_
 
 ## suites
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Select suites by name. When this option is used with
 --test, --include or --exclude, only tests in
@@ -2034,7 +2034,7 @@ corresponds to the `-s --suite name *` option of _robot_
 
 ## tag-doc
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Add documentation to tags matching the given
 pattern. Documentation is shown in `Test Details` and
@@ -2053,7 +2053,7 @@ corresponds to the `--tagdoc pattern:doc *` option of _robot_
 
 ## tag-stat-combine
 
-Type: typing.Optional[typing.List[typing.Union[str, typing.Dict[str, str]]]]
+Type: Optional[List[Union[str, Dict[str, str]]]]
 
 Create combined statistics based on tags.
 These statistics are added into `Statistics by Tag`.
@@ -2072,7 +2072,7 @@ corresponds to the `--tagstatcombine tags:name *` option of _robot_
 
 ## tag-stat-exclude
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Exclude matching tags from `Statistics by Tag`.
 This option can be used with --tagstatinclude
@@ -2082,7 +2082,7 @@ corresponds to the `--tagstatexclude tag *` option of _robot_
 
 ## tag-stat-include
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Include only matching tags in `Statistics by Tag`
 in log and report. By default all tags are shown.
@@ -2092,7 +2092,7 @@ corresponds to the `--tagstatinclude tag *` option of _robot_
 
 ## tag-stat-link
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Add external links into `Statistics by
 Tag`. Pattern can use `*`, `?` and `[]` as wildcards
@@ -2111,7 +2111,7 @@ corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
 
 ## tasks
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Alias to --test. Especially applicable with --rpa.
 
@@ -2119,13 +2119,13 @@ corresponds to the `--task name *` option of _robot_
 
 ## testdoc
 
-Type: typing.Optional[robotcode.robot.config.model.TestDocProfile]
+Type: Optional[TestDocProfile]
 
 Options to be passed to _testdoc_.
 
 ## testdoc.doc
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Override the documentation of the top level suite.
 
@@ -2133,7 +2133,7 @@ corresponds to the `-D --doc document` option of _testdoc_
 
 ## testdoc.excludes
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Exclude tests by tags.
 
@@ -2141,7 +2141,7 @@ corresponds to the `-e --exclude tag *` option of _testdoc_
 
 ## testdoc.extra-excludes
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --exclude option.
 
@@ -2151,7 +2151,7 @@ corresponds to the `-e --exclude tag *` option of _testdoc_
 
 ## testdoc.extra-includes
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --include option.
 
@@ -2161,7 +2161,7 @@ corresponds to the `-i --include tag *` option of _testdoc_
 
 ## testdoc.extra-metadata
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Appends entries to the --metadata option.
 
@@ -2171,7 +2171,7 @@ corresponds to the `-M --metadata name:value *` option of _testdoc_
 
 ## testdoc.extra-set-tag
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --settag option.
 
@@ -2181,7 +2181,7 @@ corresponds to the `-G --settag tag *` option of _testdoc_
 
 ## testdoc.extra-suites
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --suite option.
 
@@ -2191,7 +2191,7 @@ corresponds to the `-s --suite name *` option of _testdoc_
 
 ## testdoc.extra-tests
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Appends entries to the --test option.
 
@@ -2201,7 +2201,7 @@ corresponds to the `-t --test name *` option of _testdoc_
 
 ## testdoc.includes
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Include tests by tags.
 
@@ -2209,7 +2209,7 @@ corresponds to the `-i --include tag *` option of _testdoc_
 
 ## testdoc.metadata
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Set/override metadata of the top level suite.
 
@@ -2217,7 +2217,7 @@ corresponds to the `-M --metadata name:value *` option of _testdoc_
 
 ## testdoc.name
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Override the name of the top level suite.
 
@@ -2225,7 +2225,7 @@ corresponds to the `-N --name name` option of _testdoc_
 
 ## testdoc.set-tag
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Set given tag(s) to all test cases.
 
@@ -2233,7 +2233,7 @@ corresponds to the `-G --settag tag *` option of _testdoc_
 
 ## testdoc.suites
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Include suites by name.
 
@@ -2241,7 +2241,7 @@ corresponds to the `-s --suite name *` option of _testdoc_
 
 ## testdoc.tests
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Include tests by name.
 
@@ -2249,7 +2249,7 @@ corresponds to the `-t --test name *` option of _testdoc_
 
 ## testdoc.title
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 Set the title of the generated documentation.
 Underscores in the title are converted to spaces.
@@ -2259,7 +2259,7 @@ corresponds to the `-T --title title` option of _testdoc_
 
 ## tests
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Select tests by name or by long name containing also
 parent suite name like `Parent.Test`. Name is case
@@ -2272,7 +2272,7 @@ corresponds to the `-t --test name *` option of _robot_
 
 ## timestamp-outputs
 
-Type: typing.Union[bool, robotcode.robot.config.model.Flag, NoneType]
+Type: Union[bool, Flag, None]
 
 When this option is used, timestamp in a format
 `YYYYMMDD-hhmmss` is added to all generated output
@@ -2285,13 +2285,13 @@ corresponds to the `-T --timestampoutputs` option of _robot_
 
 ## tool
 
-Type: typing.Any
+Type: Any
 
 Tool configuration.
 
 ## variable-files
 
-Type: typing.Optional[typing.List[typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[List[Union[str, StringExpression]]]
 
 Python or YAML file file to read variables from.
 Possible arguments to the variable file can be given
@@ -2308,7 +2308,7 @@ corresponds to the `-V --variablefile path *` option of _robot_
 
 ## variables
 
-Type: typing.Optional[typing.Dict[str, typing.Union[str, robotcode.robot.config.model.StringExpression]]]
+Type: Optional[Dict[str, Union[str, StringExpression]]]
 
 Set variables in the test data. Only scalar
 variables with string value are supported and name is
@@ -2327,7 +2327,7 @@ corresponds to the `-v --variable name:value *` option of _robot_
 
 ## xunit
 
-Type: typing.Union[str, robotcode.robot.config.model.StringExpression, NoneType]
+Type: Union[str, StringExpression, None]
 
 xUnit compatible result file. Not created unless this
 option is specified.
