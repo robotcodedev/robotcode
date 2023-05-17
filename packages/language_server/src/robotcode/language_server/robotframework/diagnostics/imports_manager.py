@@ -573,7 +573,7 @@ class ImportsManager:
             if self._command_line_variables is None:
                 command_line_vars: List[VariableDefinition] = []
                 command_line_vars += [
-                    CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=(v,))
+                    CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=v)
                     for k, v in (self.parent_protocol.profile.variables or {}).items()
                 ]
 
@@ -593,7 +593,7 @@ class ImportsManager:
                         self._logger.exception(e)
 
                 command_line_vars += [
-                    CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=(v,))
+                    CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=v)
                     for k, v in self.config.robot.variables.items()
                 ]
                 for variable_file in self.config.robot.variable_files:
