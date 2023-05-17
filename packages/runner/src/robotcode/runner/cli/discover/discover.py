@@ -131,7 +131,7 @@ def _patch() -> None:
         if path:
             if _stdin_data is not None and (data := _stdin_data.get(str(path))) is not None:
                 if data is not None:
-                    return old_get_file(self, data, accept_text)
+                    return old_get_file(self, data, True)
 
         return old_get_file(self, source, accept_text)
 
