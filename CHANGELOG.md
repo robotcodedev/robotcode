@@ -4,6 +4,13 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.40.0 (2023-05-17)
+### Feature
+* Show argument infos for dynamic variables imports ([`94b21fb`](https://github.com/d-biehl/robotcode/commit/94b21fb08ebd3177668a7a1f20aa27d160060515))
+
+### Fix
+* Wrong values for command line vars ([`3720109`](https://github.com/d-biehl/robotcode/commit/37201094d0a1bf10fe8ba6a66a0f08c210b9ca8a))
+
 ## v0.39.0 (2023-05-16)
 ### Feature
 * New command `RobotCode: Select Execution Profiles` ([`78f5548`](https://github.com/d-biehl/robotcode/commit/78f554899a0c50c82deeac07fc921128beef778c))
