@@ -1512,7 +1512,9 @@ def get_variables_doc(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> VariablesDoc:
+    from robot.libdocpkg.robotbuilder import KeywordDocBuilder
     from robot.output import LOGGER
+    from robot.running.handlers import _PythonHandler
     from robot.utils.importer import Importer
     from robot.variables.filesetter import PythonImporter, YamlImporter
 
@@ -1523,6 +1525,7 @@ def get_variables_doc(
     try:
         with _std_capture() as std_capturer:
             import_name = find_variables(name, working_dir, base_dir, command_line_variables, variables)
+            get_variables = None
 
             if import_name.lower().endswith((".yaml", ".yml")):
                 source = import_name
@@ -1543,6 +1546,9 @@ def get_variables_doc(
                     def import_variables(self, path: str, args: Optional[Tuple[Any, ...]] = None) -> Any:
                         return self._get_variables(self.var_file, args)
 
+                    def is_dynamic(self) -> bool:
+                        return bool(self._is_dynamic(self.var_file))
+
                 module_importer = Importer("variable file", LOGGER)
 
                 if get_robot_version() >= (5, 0):
@@ -1554,6 +1560,9 @@ def get_variables_doc(
                     libcode = module_importer.import_class_or_module_by_path(import_name, instantiate_with_args=())
 
                 importer = MyPythonImporter(libcode)
+
+                if importer.is_dynamic():
+                    get_variables = getattr(libcode, "get_variables", None) or getattr(libcode, "getVariables", None)
 
             # TODO: add type information of the value including dict key names and member names
             vars: List[ImportedVariableDefinition] = [
@@ -1572,7 +1581,7 @@ def get_variables_doc(
                 for name, value in importer.import_variables(import_name, args)
             ]
 
-            return VariablesDoc(
+            libdoc = VariablesDoc(
                 name=stem,
                 source=source or module_spec.origin if module_spec is not None else import_name,
                 module_spec=module_spec,
@@ -1580,6 +1589,46 @@ def get_variables_doc(
                 stdout=std_capturer.getvalue(),
                 python_path=sys.path,
             )
+
+            if get_variables is not None:
+
+                class VarHandler(_PythonHandler):
+                    def _get_name(self, handler_name: Any, handler_method: Any) -> Any:
+                        return get_variables.__name__ if get_variables is not None else ""
+
+                    def _get_initial_handler(self, library: Any, name: Any, method: Any) -> Any:
+                        return None
+
+                vars_initializer = VarHandler(libdoc, get_variables.__name__, get_variables)
+
+                libdoc.inits = KeywordStore(
+                    keywords=[
+                        KeywordDoc(
+                            name=libdoc.name,
+                            args=[KeywordArgumentDoc.from_robot(a) for a in kw[0].args],
+                            doc=kw[0].doc,
+                            tags=list(kw[0].tags),
+                            source=kw[0].source,
+                            line_no=kw[0].lineno if kw[0].lineno is not None else -1,
+                            col_offset=-1,
+                            end_col_offset=-1,
+                            end_line_no=-1,
+                            type="library",
+                            libname=libdoc.name,
+                            libtype=libdoc.type,
+                            longname=f"{libdoc.name}.{kw[0].name}",
+                            is_initializer=True,
+                            arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
+                            parent=libdoc.digest,
+                        )
+                        for kw in [
+                            (KeywordDocBuilder().build_keyword(k), k)
+                            for k in [KeywordWrapper(vars_initializer, libdoc.source or "")]
+                        ]
+                    ]
+                )
+
+            return libdoc
     except (SystemExit, KeyboardInterrupt, IgnoreEasterEggLibraryWarning):
         raise
     except BaseException as e:

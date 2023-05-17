@@ -314,3 +314,112 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             signatures=signatures,
             active_signature=0,
         )
+
+    async def signature_help_VariablesImport(  # noqa: N802
+        self,
+        node: ast.AST,
+        document: TextDocument,
+        position: Position,
+        context: Optional[SignatureHelpContext] = None,
+    ) -> Optional[SignatureHelp]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import VariablesImport
+
+        # TODO from robot.utils.escaping import split_from_equals
+
+        namespace = await self.parent.documents_cache.get_namespace(document)
+
+        library_node = cast(VariablesImport, node)
+
+        if (
+            library_node.name is None
+            or position <= range_from_token(library_node.get_token(RobotToken.NAME)).extend(end_character=1).end
+        ):
+            return None
+
+        lib_doc: Optional[LibraryDoc] = None
+        try:
+            lib_doc = await namespace.get_imported_variables_libdoc(library_node.name, library_node.args)
+
+            if lib_doc is None or lib_doc.errors:
+                lib_doc = await namespace.imports_manager.get_libdoc_for_library_import(
+                    str(library_node.name),
+                    (),
+                    str(document.uri.to_path().parent),
+                    variables=await namespace.get_resolvable_variables(),
+                )
+
+        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException:
+            return None
+
+        tokens_at_position = tokens_at_position = get_tokens_at_position(library_node, position)
+        if not tokens_at_position:
+            return None
+
+        token_at_position = tokens_at_position[-1]
+
+        if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
+            return None
+
+        token_at_position_index = library_node.tokens.index(token_at_position)
+
+        argument_token_index = token_at_position_index
+        while argument_token_index >= 0 and library_node.tokens[argument_token_index].type != RobotToken.ARGUMENT:
+            argument_token_index -= 1
+
+        arguments = library_node.get_tokens(RobotToken.ARGUMENT)
+
+        if argument_token_index >= 0:
+            argument_token = library_node.tokens[argument_token_index]
+            if argument_token.type == RobotToken.ARGUMENT:
+                argument_index = arguments.index(argument_token)
+            else:
+                argument_index = 0
+        else:
+            argument_index = -1
+
+        if whitespace_at_begin_of_token(token_at_position) > 1:
+            r = range_from_token(token_at_position)
+
+            ws_b = whitespace_from_begin_of_token(token_at_position)
+            r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
+
+            if position.is_in_range(r) or r.end == position:
+                argument_index += 1
+
+        if argument_index < 0:
+            return None
+
+        signatures: List[SignatureInformation] = []
+
+        # TODO check if we have a named argument
+        # named_arg = False
+        # arg_name: Optional[str] = None
+
+        # if argument_index >= 0 and argument_index < len(arguments):
+        #     name, value = split_from_equals(arguments[argument_index].value)
+        #     if value is not None:
+        #         arg_name = name
+        #         named_arg = True
+
+        for init in lib_doc.inits.values():
+            if argument_index >= len(init.args) and len(init.args) > 0 and not str(init.args[-1]).startswith("*"):
+                argument_index = -1
+
+            signature = SignatureInformation(
+                label=init.parameter_signature,
+                parameters=[ParameterInformation(label=str(p)) for p in init.args],
+                active_parameter=min(argument_index, len(init.args) - 1),
+                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=init.to_markdown(False)),
+            )
+            signatures.append(signature)
+
+        if not signatures:
+            return None
+
+        return SignatureHelp(
+            signatures=signatures,
+            active_signature=0,
+        )
