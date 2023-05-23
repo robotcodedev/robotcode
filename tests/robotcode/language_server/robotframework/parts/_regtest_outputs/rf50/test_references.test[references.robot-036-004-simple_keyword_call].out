@@ -11,24 +11,6 @@ result:
     start:
       character: 4
       line: 2
-  uri: discovery/.not_discovered.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 5
-    start:
-      character: 4
-      line: 5
-  uri: discovery/.not_discovered.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 2
-    start:
-      character: 4
-      line: 2
   uri: discovery/__not_discovered.robot
 - !Location
   range:

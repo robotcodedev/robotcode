@@ -53,7 +53,9 @@
 				// "Data.Tests.Versions.Rf61.a suite with a custom Name"
 				// "Robotframework.Atest.Testdata.Variables",
 				//"."
-				"tags",
+				"all",
+				"--suite",
+				"Data.Tests.Versions.Rf61",
 				"."
 			]
 		},

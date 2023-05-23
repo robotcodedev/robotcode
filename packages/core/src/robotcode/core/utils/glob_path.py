@@ -3,21 +3,24 @@ from __future__ import annotations
 import functools
 import os
 import re
-from pathlib import Path
-from typing import Any, Iterable, Iterator, Sequence, Union, cast
+from pathlib import Path, PurePath
+from typing import Any, Iterable, Iterator, Sequence, Tuple, Union, cast
 
 
-def _glob_pattern_to_re(pattern: str) -> str:
+def _glob_pattern_to_re(pattern: str) -> Tuple[str, bool]:
     result = "(?ms)^"
 
     in_group = False
+    only_dirs = False
 
     i = 0
     while i < len(pattern):
         c = pattern[i]
-
         if c in "\\/$^+.()=!|":
-            result += "\\" + c
+            if c == "/" and i == len(pattern) - 1:
+                only_dirs = True
+            else:
+                result += "\\" + c
         elif c == "?":
             result += "."
         elif c in "[]":
@@ -59,23 +62,26 @@ def _glob_pattern_to_re(pattern: str) -> str:
 
     result += "$"
 
-    return result
+    return result, only_dirs
 
 
 @functools.lru_cache(maxsize=256)
-def _compile_glob_pattern(pattern: str) -> re.Pattern[str]:
-    return re.compile(_glob_pattern_to_re(pattern))
+def _compile_glob_pattern(pattern: str) -> Tuple[re.Pattern[str], bool]:
+    re_pattern, only_dirs = _glob_pattern_to_re(pattern)
+    return re.compile(re_pattern), only_dirs
 
 
 class Pattern:
     def __init__(self, pattern: str) -> None:
         self.pattern = pattern
-        self._re_pattern = _compile_glob_pattern(pattern)
+        self._re_pattern, self.only_dirs = _compile_glob_pattern(pattern)
 
-    def matches(self, path: Union[Path, str, os.PathLike[Any]]) -> bool:
-        if not isinstance(path, Path):
-            path = Path(path)
-        return self._re_pattern.fullmatch(str(path).replace(os.sep, "/")) is not None
+    def matches(self, path: Union[PurePath, str, os.PathLike[str]]) -> bool:
+        if isinstance(path, PurePath):
+            path = path.as_posix()
+        else:
+            path = str(os.fspath(path))
+        return self._re_pattern.fullmatch(path) is not None
 
     def __str__(self) -> str:
         return self.pattern
@@ -84,8 +90,21 @@ class Pattern:
         return f"{type(self).__qualname__}(pattern={self.pattern!r}"
 
 
-def globmatches(pattern: str, path: Union[Path, str, os.PathLike[Any]]) -> bool:
+def globmatches(pattern: str, path: Union[PurePath, str, os.PathLike[Any]]) -> bool:
     return Pattern(pattern).matches(path)
+
+
+FILE_ATTRIBUTE_HIDDEN = 2
+
+
+def _is_hidden(entry: os.DirEntry[str]) -> bool:
+    if entry.name.startswith("."):
+        return True
+
+    if os.name == "nt" and (entry.stat().st_file_attributes & 2 != 0 or entry.name.startswith("$")):
+        return True
+
+    return False
 
 
 def iter_files(
@@ -93,6 +112,7 @@ def iter_files(
     patterns: Union[Sequence[Union[Pattern, str]], Pattern, str, None] = None,
     ignore_patterns: Union[Sequence[Union[Pattern, str]], Pattern, str, None] = None,
     *,
+    include_hidden: bool = False,
     absolute: bool = False,
     _base_path: Union[Path, str, os.PathLike[str], None] = None,
 ) -> Iterator[Path]:
@@ -108,24 +128,39 @@ def iter_files(
     if patterns is not None and isinstance(patterns, (str, Pattern)):
         patterns = [patterns]
     if patterns is not None:
-        patterns = list(map(lambda p: p if isinstance(p, Pattern) else Pattern(p), patterns))
+        patterns = [p if isinstance(p, Pattern) else Pattern(p) for p in patterns]
 
     if ignore_patterns is not None and isinstance(ignore_patterns, (str, Pattern)):
         ignore_patterns = [ignore_patterns]
     if ignore_patterns is not None:
-        ignore_patterns = list(map(lambda p: p if isinstance(p, Pattern) else Pattern(p), ignore_patterns))
+        ignore_patterns = [p if isinstance(p, Pattern) else Pattern(p) for p in ignore_patterns]
 
     try:
-        for f in path.iterdir():
-            if ignore_patterns is None or not any(
-                p.matches(f.relative_to(_base_path)) for p in cast(Iterable[Pattern], ignore_patterns)
-            ):
-                if f.is_dir():
-                    for e in iter_files(f, patterns, ignore_patterns, absolute=absolute, _base_path=_base_path):
-                        yield e
-                elif patterns is None or any(
-                    p.matches(str(f.relative_to(_base_path))) for p in cast(Iterable[Pattern], patterns)
+        with os.scandir(path) as it:
+            for f in it:
+                if not include_hidden and _is_hidden(f):
+                    continue
+
+                relative_path = path / f.name
+
+                if not ignore_patterns or not any(
+                    p.matches(relative_path) and (not p.only_dirs or p.only_dirs and f.is_dir())
+                    for p in cast(Iterable[Pattern], ignore_patterns)
                 ):
-                    yield f.absolute() if absolute else f
+                    if f.is_dir():
+                        yield from iter_files(
+                            f,
+                            patterns,
+                            ignore_patterns,
+                            include_hidden=include_hidden,
+                            absolute=absolute,
+                            _base_path=_base_path,
+                        )
+                    if not patterns or any(
+                        p.matches(relative_path) and (not p.only_dirs or p.only_dirs and f.is_dir())
+                        for p in cast(Iterable[Pattern], patterns)
+                    ):
+                        yield Path(f).absolute() if absolute else Path(f)
+
     except PermissionError:
         pass
