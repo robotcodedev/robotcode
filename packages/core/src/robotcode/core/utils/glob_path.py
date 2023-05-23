@@ -1,3 +1,5 @@
+# mypy: warn_unused_ignores=false
+
 from __future__ import annotations
 
 import functools
@@ -102,7 +104,7 @@ def _is_hidden(entry: os.DirEntry[str]) -> bool:
         return True
 
     if os.name == "nt" and (
-        entry.stat().st_file_attributesa & 2 != 0 or entry.name.startswith("$")  # type: ignore[attr-defined]
+        entry.stat().st_file_attributes & 2 != 0 or entry.name.startswith("$")  # type: ignore[attr-defined]
     ):
         return True
 
