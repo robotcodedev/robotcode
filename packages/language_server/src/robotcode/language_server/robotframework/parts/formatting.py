@@ -55,10 +55,10 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self.short_test_name_length = 18
         self.setting_and_variable_name_length = 14
 
-    async def get_config(self, document: TextDocument) -> Optional[RoboTidyConfig]:
+    async def get_config(self, document: TextDocument) -> RoboTidyConfig:
         folder = self.parent.workspace.get_workspace_folder(document.uri)
         if folder is None:
-            return None
+            return RoboTidyConfig()
 
         return await self.parent.workspace.get_configuration(RoboTidyConfig, folder.uri)
 
@@ -73,8 +73,8 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     ) -> Optional[List[TextEdit]]:
         config = await self.get_config(document)
 
-        if config and (config.enabled or get_robot_version() >= (5, 0)) and robotidy_installed():
-            return await self.format_robot_tidy(document, options, **further_options)
+        if (config.enabled or get_robot_version() >= (5, 0)) and robotidy_installed():
+            return await self.format_robot_tidy(document, options, config=config, **further_options)
 
         if get_robot_version() < (5, 0):
             return await self.format_internal(document, options, **further_options)
@@ -93,11 +93,15 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         document: TextDocument,
         options: FormattingOptions,
         range: Optional[Range] = None,
+        config: Optional[RoboTidyConfig] = None,
         **further_options: Any,
     ) -> Optional[List[TextEdit]]:
         from robotidy.version import __version__
 
         try:
+            if config is None:
+                config = await self.get_config(document)
+
             robotidy_version = create_version_from_str(__version__)
 
             model = await self.parent.documents_cache.get_model(document, False)
@@ -106,7 +110,21 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 from robotidy.api import get_robotidy
                 from robotidy.disablers import RegisterDisablers
 
-                robot_tidy = get_robotidy(document.uri.to_path(), None)
+                if robotidy_version >= (4, 2):
+                    robot_tidy = get_robotidy(
+                        document.uri.to_path(),
+                        None,
+                        ignore_git_dir=config.ignore_git_dir,
+                        config=config.config,
+                    )
+                elif robotidy_version >= (4, 1):
+                    robot_tidy = get_robotidy(
+                        document.uri.to_path(),
+                        None,
+                        ignore_git_dir=config.ignore_git_dir,
+                    )
+                else:
+                    robot_tidy = get_robotidy(document.uri.to_path(), None)
 
                 if range is not None:
                     robot_tidy.config.formatting.start_line = range.start.line + 1
@@ -168,6 +186,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             raise
         except BaseException as e:
             self._logger.exception(e)
+            self.parent.window.show_message(f"Executing `robotidy` failed: {e}", MessageType.ERROR)
         return None
 
     async def format_internal(
@@ -218,7 +237,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         **further_options: Any,
     ) -> Optional[List[TextEdit]]:
         config = await self.get_config(document)
-        if config and config.enabled and robotidy_installed():
-            return await self.format_robot_tidy(document, options, range=range, **further_options)
+        if config.enabled and robotidy_installed():
+            return await self.format_robot_tidy(document, options, range=range, config=config, **further_options)
 
         return None

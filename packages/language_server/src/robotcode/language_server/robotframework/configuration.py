@@ -71,6 +71,8 @@ class RoboCopConfig(ConfigBase):
 @dataclass
 class RoboTidyConfig(ConfigBase):
     enabled: bool = True
+    ignore_git_dir: bool = False
+    config: Optional[str] = None
 
 
 @config_section("robotcode.workspace")
