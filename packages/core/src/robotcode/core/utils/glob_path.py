@@ -101,7 +101,9 @@ def _is_hidden(entry: os.DirEntry[str]) -> bool:
     if entry.name.startswith("."):
         return True
 
-    if os.name == "nt" and (entry.stat().st_file_attributes & 2 != 0 or entry.name.startswith("$")):
+    if os.name == "nt" and (
+        entry.stat().st_file_attributesa & 2 != 0 or entry.name.startswith("$")  # type: ignore[attr-defined]
+    ):
         return True
 
     return False
