@@ -4,6 +4,14 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.41.0 (2023-05-24)
+### Feature
+* New `robotcode.robotidy.ignoreGitDir` and `robotcode.robotidy.config` setting to set the config file for _robotidy_ and to ignore git files if searching for config files for _robotidy_ ([`a9e9c02`](https://github.com/d-biehl/robotcode/commit/a9e9c023ed62b1fc6ab7d231c9a1c47cfb42330b))
+* Optimize/speedup searching of files, setting `robotcode.workspace.excludePatterns` now supports gitignore like patterns ([`d48b629`](https://github.com/d-biehl/robotcode/commit/d48b629a2ad77c9ee1bb67fc2ff00461b593ace3))
+
+### Fix
+* Patched FileReader for discovery should respect accept_text ([`c654af5`](https://github.com/d-biehl/robotcode/commit/c654af57329068e6f5dbd3350aa6f4b7ef2edc46))
+
 ## v0.40.0 (2023-05-17)
 ### Feature
 * Show argument infos for dynamic variables imports ([`94b21fb`](https://github.com/d-biehl/robotcode/commit/94b21fb08ebd3177668a7a1f20aa27d160060515))
