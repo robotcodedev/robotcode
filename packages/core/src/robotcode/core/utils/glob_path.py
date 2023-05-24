@@ -186,5 +186,5 @@ def _iter_files_recursive_re(
                     ):
                         yield Path(f).absolute() if absolute else Path(f)
 
-    except PermissionError:
+    except (OSError, PermissionError):
         pass
