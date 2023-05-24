@@ -123,6 +123,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                         raise
                     except BaseException:
+                        self._logger.exception("Error resolving variable: {e}")
                         value = ""
                 else:
                     value = ""

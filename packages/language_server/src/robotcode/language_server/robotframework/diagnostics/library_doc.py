@@ -1085,6 +1085,8 @@ def resolve_variable(
     _update_env(working_dir)
 
     robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
+    if get_robot_version() >= (6, 1):
+        return VariableFinder(robot_variables).find(name.replace("\\", "\\\\"))
 
     return VariableFinder(robot_variables.store).find(name.replace("\\", "\\\\"))
 
