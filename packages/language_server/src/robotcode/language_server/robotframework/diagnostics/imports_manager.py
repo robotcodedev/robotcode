@@ -1222,7 +1222,7 @@ class ImportsManager:
                     args=[KeywordArgumentDoc.from_robot(a) for a in kw[0].args],
                     doc=kw[0].doc,
                     tags=list(kw[0].tags),
-                    source=kw[0].source,
+                    source=str(kw[0].source),
                     name_token=get_keyword_name_token_from_line(kw[0].lineno),
                     line_no=kw[0].lineno if kw[0].lineno is not None else -1,
                     col_offset=-1,

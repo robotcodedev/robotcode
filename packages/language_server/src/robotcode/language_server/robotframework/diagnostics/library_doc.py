@@ -888,11 +888,11 @@ class KeywordWrapper:
     @property
     def source(self) -> Any:
         try:
-            return self.kw.source
+            return str(self.kw.source) if self.kw.source is not None else self.source
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException:
-            return self.lib_source
+            return str(self.lib_source) if self.lib_source is not None else self.lib_source
 
     @property
     def lineno(self) -> Any:
