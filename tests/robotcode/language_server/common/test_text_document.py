@@ -11,7 +11,7 @@ from robotcode.language_server.common.text_document import (
 async def test_apply_full_change_should_work() -> None:
     text = """first"""
     new_text = """changed"""
-    document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
     assert document.text() == text
 
     document.apply_full_change(1, new_text)
@@ -23,7 +23,7 @@ async def test_apply_full_change_should_work() -> None:
 async def test_apply_apply_incremental_change_at_begining_should_work() -> None:
     text = """first"""
     new_text = """changed"""
-    document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
     assert document.text() == text
 
     document.apply_incremental_change(
@@ -38,7 +38,7 @@ async def test_apply_apply_incremental_change_at_end_should_work() -> None:
     text = """first"""
     new_text = """changed"""
 
-    document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
     assert document.text() == text
 
     document.apply_incremental_change(
@@ -53,7 +53,7 @@ async def test_save_and_revert_should_work() -> None:
     text = """first"""
     new_text = """changed"""
 
-    document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
     assert document.text() == text
 
     assert not document.revert(None)
@@ -93,7 +93,7 @@ first line
 second changed line
 third"""
 
-    document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
     assert document.text() == text
 
     document.apply_incremental_change(
@@ -111,7 +111,7 @@ second line
 third"""
     new_text = """changed """
 
-    document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
     assert document.text() == text
 
     document.apply_incremental_change(
@@ -126,7 +126,7 @@ async def test_apply_apply_incremental_change_with_wrong_range_should_raise_inva
     text = """first"""
     new_text = """changed"""
 
-    document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
     assert document.text() == text
 
     with pytest.raises(InvalidRangeError):
@@ -139,7 +139,7 @@ async def test_apply_apply_incremental_change_with_wrong_range_should_raise_inva
 async def test_apply_none_change_should_work() -> None:
     text = """first"""
 
-    document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
     assert document.text() == text
 
     document.apply_none_change()
@@ -155,7 +155,7 @@ second
 third
 """
 
-    document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
     assert document.text() == text
 
     document.apply_none_change()
@@ -177,7 +177,7 @@ third
     key = WeakReferencable()
     data = "some data"
 
-    document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
     document.set_data(key, data)
 
     assert document.get_data(key) == data
@@ -202,7 +202,7 @@ third
     async def get_data(document: TextDocument, data: str) -> str:
         return prefix + data
 
-    document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
 
     assert await document.get_cache(get_data, "data") == "1data"
 
@@ -228,7 +228,7 @@ first
 second
 third
 """
-    document = TextDocument(document_uri="file://test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
 
     prefix = "1"
 

@@ -288,7 +288,6 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         raise UnknownFileTypeError(f"Unknown file type '{document.uri}'.")
 
     def __get_model(self, document: TextDocument, tokens: Iterable[Any], document_type: DocumentType) -> ast.AST:
-        from robot.parsing.lexer import Token
         from robot.parsing.parser.parser import _get_model
 
         def get_tokens(source: str, data_only: bool = False, lang: Any = None) -> Iterator[Token]:
