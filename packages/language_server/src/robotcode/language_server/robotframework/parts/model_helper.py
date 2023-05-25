@@ -289,7 +289,7 @@ class ModelHelperMixin:
                                 sub_token,
                             )
                     variable_started = False
-                if toknum == python_token.ERRORTOKEN and tokval == "$":
+                if tokval == "$":
                     variable_started = True
         except TokenError:
             pass
