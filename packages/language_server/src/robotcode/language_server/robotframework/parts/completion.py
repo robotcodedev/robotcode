@@ -920,7 +920,7 @@ class CompletionCollector(ModelHelperMixin):
         from robot.parsing.model.statements import Arguments, Statement
 
         if len(nodes_at_position) > 1 and isinstance(nodes_at_position[0], Statement):
-            statement_node = cast(Statement, nodes_at_position[0])
+            statement_node = nodes_at_position[0]
             if len(statement_node.tokens) > 0:
                 token = cast(Token, statement_node.tokens[0])
                 r = range_from_token(token)
@@ -1160,7 +1160,7 @@ class CompletionCollector(ModelHelperMixin):
             if any(
                 template
                 for template in testcase_node.body
-                if isinstance(template, Template) and cast(Template, template).value is not None
+                if isinstance(template, Template) and template.value is not None
             ):
                 return True
 
@@ -1170,12 +1170,12 @@ class CompletionCollector(ModelHelperMixin):
                 if isinstance(file, File)
                 and any(
                     section
-                    for section in cast(File, file).sections
+                    for section in file.sections
                     if isinstance(section, SettingSection)
                     and any(
                         template
-                        for template in cast(SettingSection, section).body
-                        if isinstance(template, TestTemplate) and cast(TestTemplate, template).value is not None
+                        for template in section.body
+                        if isinstance(template, TestTemplate) and template.value is not None
                     )
                 )
             ):

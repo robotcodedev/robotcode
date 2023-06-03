@@ -399,7 +399,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         library_node = cast(LibraryImport, node)
         if library_node.name:
-            name_token = cast(RobotToken, library_node.get_token(RobotToken.NAME))
+            name_token = library_node.get_token(RobotToken.NAME)
             if name_token is None:
                 return None
 

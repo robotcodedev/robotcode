@@ -247,7 +247,7 @@ mypy_path = [
 ]
 explicit_package_bases = true
 namespace_packages = true
-
+allow_untyped_calls = true
 
 [[tool.mypy.overrides]]
 module = [

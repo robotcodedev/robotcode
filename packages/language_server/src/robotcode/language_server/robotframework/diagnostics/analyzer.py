@@ -129,6 +129,9 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         variable = cast(Variable, node)
 
         name_token = variable.get_token(RobotToken.VARIABLE)
+        if name_token is None:
+            return
+
         name = name_token.value
 
         if name is not None:
