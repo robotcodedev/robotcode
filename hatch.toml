@@ -39,6 +39,7 @@ test = "pytest {args}"
 test-reset = "test --regtest-reset"
 install-bundled-editable = "python ./scripts/install_bundled_editable.py"
 create-json-schema = "python ./scripts/create_robot_toml_json_schema.py"
+generate-rf-options = "python ./scripts/generate_rf_options.py"
 install-packages = "python ./scripts/install_packages.py"
 
 [envs.rfmaster]
@@ -52,6 +53,10 @@ python = "3.12"
 extra-dependencies=[
   "robotframework @ git+https://github.com/robotframework/robotframework.git"
 ]
+
+[envs.rfdevel]
+python = "3.11"
+post-install-commands = ["pip install -U -e {root:uri}/../robotframework"]
 
 [envs.devel]
 python = "3.8"
