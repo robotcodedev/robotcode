@@ -4,6 +4,16 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.42.0 (2023-06-05)
+### Feature
+
+* Support for new `--parseinclude` option in robot config ([`6b84986`](https://github.com/d-biehl/robotcode/commit/6b84986e7109c36b5df81c0ff56f84665a855c6a))
+
+### Fix
+
+* Compatibility with Python 3.12 ([`3ec4d23`](https://github.com/d-biehl/robotcode/commit/3ec4d23cd4e4f2b04d5a1b792131b90ef523b8e8))
+* Resolving variable values in hover for RF 6.1 ([`0acdd21`](https://github.com/d-biehl/robotcode/commit/0acdd21f24266700d87b046deead43aa33aae90b))
+
 ## v0.41.0 (2023-05-24)
 ### Feature
 * New `robotcode.robotidy.ignoreGitDir` and `robotcode.robotidy.config` setting to set the config file for _robotidy_ and to ignore git files if searching for config files for _robotidy_ ([`a9e9c02`](https://github.com/d-biehl/robotcode/commit/a9e9c023ed62b1fc6ab7d231c9a1c47cfb42330b))
