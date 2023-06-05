@@ -373,6 +373,25 @@
             "null"
           ]
         },
+        "extra-parse-include": {
+          "default": null,
+          "description": "Appends entries to the --parseinclude option.\n\nParse only files matching `pattern`. It can be:\n- a file name or pattern like `example.robot` or\n`*.robot` to parse all files matching that name,\n- a file path like `path/to/example.robot`, or\n- a directory path like `path/to/example` to parse\nall files in that directory, recursively.\n\ncorresponds to the `-I --parseinclude pattern *` option of _robot_\n",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
+          },
+          "title": "Extra parse include",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
         "extra-pre-rebot-modifiers": {
           "additionalProperties": {
             "items": {
@@ -822,6 +841,25 @@
           "default": null,
           "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n\ncorresponds to the `-d --outputdir dir` option of _robot_\n",
           "title": "Output dir"
+        },
+        "parse-include": {
+          "default": null,
+          "description": "Parse only files matching `pattern`. It can be:\n- a file name or pattern like `example.robot` or\n`*.robot` to parse all files matching that name,\n- a file path like `path/to/example.robot`, or\n- a directory path like `path/to/example` to parse\nall files in that directory, recursively.\n\ncorresponds to the `-I --parseinclude pattern *` option of _robot_\n",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
+          },
+          "title": "Parse include",
+          "type": [
+            "array",
+            "null"
+          ]
         },
         "pre-rebot-modifiers": {
           "additionalProperties": {
@@ -1689,6 +1727,25 @@
             "null"
           ]
         },
+        "extra-parse-include": {
+          "default": null,
+          "description": "Appends entries to the --parseinclude option.\n\nParse only files matching `pattern`. It can be:\n- a file name or pattern like `example.robot` or\n`*.robot` to parse all files matching that name,\n- a file path like `path/to/example.robot`, or\n- a directory path like `path/to/example` to parse\nall files in that directory, recursively.\n\ncorresponds to the `-I --parseinclude pattern *` option of _robot_\n",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
+          },
+          "title": "Extra parse include",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
         "extra-parsers": {
           "additionalProperties": {
             "items": {
@@ -2077,7 +2134,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --variable option.\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\ncorresponds to the `-v --variable name:value *` option of _rebot_\n",
+          "description": "Appends entries to the --variable option.\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable name:Robot  =>  ${name} = `Robot`\n-v \"hello:Hello world\" =>  ${hello} = `Hello world`\n-v x: -v y:42          =>  ${x} = ``, ${y} = `42`\n```\n\ncorresponds to the `-v --variable name:value *` option of _rebot_\n",
           "title": "Extra variables",
           "type": [
             "object",
@@ -2338,6 +2395,25 @@
           "default": null,
           "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n\ncorresponds to the `-d --outputdir dir` option of _robot_\n",
           "title": "Output dir"
+        },
+        "parse-include": {
+          "default": null,
+          "description": "Parse only files matching `pattern`. It can be:\n- a file name or pattern like `example.robot` or\n`*.robot` to parse all files matching that name,\n- a file path like `path/to/example.robot`, or\n- a directory path like `path/to/example` to parse\nall files in that directory, recursively.\n\ncorresponds to the `-I --parseinclude pattern *` option of _robot_\n",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
+          },
+          "title": "Parse include",
+          "type": [
+            "array",
+            "null"
+          ]
         },
         "parsers": {
           "additionalProperties": {
@@ -2993,7 +3069,7 @@
             ]
           },
           "default": null,
-          "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
+          "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable name:Robot  =>  ${name} = `Robot`\n-v \"hello:Hello world\" =>  ${hello} = `Hello world`\n-v x: -v y:42          =>  ${x} = ``, ${y} = `42`\n```\n\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
           "title": "Variables",
           "type": [
             "object",
@@ -3479,6 +3555,25 @@
             "null"
           ]
         },
+        "extra-parse-include": {
+          "default": null,
+          "description": "Appends entries to the --parseinclude option.\n\nParse only files matching `pattern`. It can be:\n- a file name or pattern like `example.robot` or\n`*.robot` to parse all files matching that name,\n- a file path like `path/to/example.robot`, or\n- a directory path like `path/to/example` to parse\nall files in that directory, recursively.\n\ncorresponds to the `-I --parseinclude pattern *` option of _robot_\n",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
+          },
+          "title": "Extra parse include",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
         "extra-parsers": {
           "additionalProperties": {
             "items": {
@@ -3856,7 +3951,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --variable option.\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\ncorresponds to the `-v --variable name:value *` option of _rebot_\n",
+          "description": "Appends entries to the --variable option.\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable name:Robot  =>  ${name} = `Robot`\n-v \"hello:Hello world\" =>  ${hello} = `Hello world`\n-v x: -v y:42          =>  ${x} = ``, ${y} = `42`\n```\n\ncorresponds to the `-v --variable name:value *` option of _rebot_\n",
           "title": "Extra variables",
           "type": [
             "object",
@@ -4117,6 +4212,25 @@
           "default": null,
           "description": "Where to create output files. The default is the\ndirectory where tests are run from and the given path\nis considered relative to that unless it is absolute.\n\ncorresponds to the `-d --outputdir dir` option of _robot_\n",
           "title": "Output dir"
+        },
+        "parse-include": {
+          "default": null,
+          "description": "Parse only files matching `pattern`. It can be:\n- a file name or pattern like `example.robot` or\n`*.robot` to parse all files matching that name,\n- a file path like `path/to/example.robot`, or\n- a directory path like `path/to/example` to parse\nall files in that directory, recursively.\n\ncorresponds to the `-I --parseinclude pattern *` option of _robot_\n",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
+          },
+          "title": "Parse include",
+          "type": [
+            "array",
+            "null"
+          ]
         },
         "parsers": {
           "additionalProperties": {
@@ -4765,7 +4879,7 @@
             ]
           },
           "default": null,
-          "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable str:Hello       =>  ${str} = `Hello`\n-v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`\n-v x: -v y:42              =>  ${x} = ``, ${y} = `42`\n```\n\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
+          "description": "Set variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```\n--variable name:Robot  =>  ${name} = `Robot`\n-v \"hello:Hello world\" =>  ${hello} = `Hello world`\n-v x: -v y:42          =>  ${x} = ``, ${y} = `42`\n```\n\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
           "title": "Variables",
           "type": [
             "object",

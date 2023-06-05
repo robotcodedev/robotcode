@@ -344,11 +344,11 @@ def handle_options(
             if settings.pythonpath:
                 sys.path = settings.pythonpath + sys.path
 
-        if get_robot_version() > (6, 1, 0, "a", 1, None):
+        if get_robot_version() > (6, 1, 0):
             builder = TestSuiteBuilder(
-                settings["SuiteNames"],
-                custom_parsers=settings.parsers,
                 included_extensions=settings.extension,
+                included_files=settings.parse_include,
+                custom_parsers=settings.parsers,
                 rpa=settings.rpa,
                 lang=settings.languages,
                 allow_empty_suite=settings.run_empty_suite,

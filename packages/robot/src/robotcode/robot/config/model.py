@@ -537,6 +537,21 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="d",
     )
+    parse_include: Optional[List[Union[str, StringExpression]]] = field(
+        description="""\
+            Parse only files matching `pattern`. It can be:
+            - a file name or pattern like `example.robot` or
+            `*.robot` to parse all files matching that name,
+            - a file path like `path/to/example.robot`, or
+            - a directory path like `path/to/example` to parse
+            all files in that directory, recursively.
+
+            corresponds to the `-I --parseinclude pattern *` option of _robot_
+            """,
+        robot_name="parseinclude",
+        robot_priority=500,
+        robot_short_name="I",
+    )
     pre_rebot_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
             Class to programmatically modify the result
@@ -939,6 +954,20 @@ class CommonExtraOptions(BaseOptions):
             as --doc. Example: --metadata Version:1.2
 
             corresponds to the `-M --metadata name:value *` option of _robot_
+            """,
+    )
+    extra_parse_include: Optional[List[Union[str, StringExpression]]] = field(
+        description="""\
+            Appends entries to the --parseinclude option.
+
+            Parse only files matching `pattern`. It can be:
+            - a file name or pattern like `example.robot` or
+            `*.robot` to parse all files matching that name,
+            - a file path like `path/to/example.robot`, or
+            - a directory path like `path/to/example` to parse
+            all files in that directory, recursively.
+
+            corresponds to the `-I --parseinclude pattern *` option of _robot_
             """,
     )
     extra_pre_rebot_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
@@ -1488,9 +1517,9 @@ class RobotOptions(BaseOptions):
             Examples:
 
             ```
-            --variable str:Hello       =>  ${str} = `Hello`
-            -v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`
-            -v x: -v y:42              =>  ${x} = ``, ${y} = `42`
+            --variable name:Robot  =>  ${name} = `Robot`
+            -v "hello:Hello world" =>  ${hello} = `Hello world`
+            -v x: -v y:42          =>  ${x} = ``, ${y} = `42`
             ```
 
             corresponds to the `-v --variable name:value *` option of _robot_
@@ -1607,9 +1636,9 @@ class RobotExtraOptions(BaseOptions):
             Examples:
 
             ```
-            --variable str:Hello       =>  ${str} = `Hello`
-            -v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`
-            -v x: -v y:42              =>  ${x} = ``, ${y} = `42`
+            --variable name:Robot  =>  ${name} = `Robot`
+            -v "hello:Hello world" =>  ${hello} = `Hello world`
+            -v x: -v y:42          =>  ${x} = ``, ${y} = `42`
             ```
 
             corresponds to the `-v --variable name:value *` option of _rebot_

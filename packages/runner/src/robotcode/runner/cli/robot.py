@@ -151,6 +151,8 @@ def robot(
     The options and arguments are passed to `robot` as is.
 
     Examples:
+
+    \b
     ```
     robotcode run
     ```
