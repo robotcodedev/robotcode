@@ -63,7 +63,7 @@ python = "3.8"
 
 [[envs.devel.matrix]]
 python = ["3.8", "3.9", "3.10", "3.11"]
-rf = ["rf41", "rf50", "rf60", "rf61b1"]
+rf = ["rf41", "rf50", "rf60", "61rc1"]
 
 [envs.devel.overrides]
 matrix.rf.dependencies = [
@@ -76,13 +76,13 @@ matrix.rf.dependencies = [
   { value = "robotframework>6.0.0, <6.1", if = [
     "rf60",
   ] },
-  { value = "robotframework==6.1b1", if = [
-    "rf61b1",
+  { value = "robotframework==6.1rc1", if = [
+    "61rc1",
   ] },
 ]
 
 [[envs.test.matrix]]
-rf = ["rf41", "rf50", "rf60", "rf61b1"]
+rf = ["rf41", "rf50", "rf60", "61rc1"]
 
 [envs.test.overrides]
 matrix.rf.dependencies = [
@@ -95,8 +95,8 @@ matrix.rf.dependencies = [
   { value = "robotframework>6.0.0, <6.1", if = [
     "rf60",
   ] },
-  { value = "robotframework==6.1b1", if = [
-    "rf61b1",
+  { value = "robotframework==6.1rc1", if = [
+    "61rc1",
   ] },
 ]
 

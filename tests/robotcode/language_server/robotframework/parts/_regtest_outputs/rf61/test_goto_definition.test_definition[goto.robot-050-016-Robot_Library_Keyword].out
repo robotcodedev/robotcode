@@ -14,15 +14,15 @@ result:
   target_range:
     end:
       character: 0
-      line: 786
+      line: 818
     start:
       character: 0
-      line: 785
+      line: 817
   target_selection_range:
     end:
       character: 0
-      line: 786
+      line: 818
     start:
       character: 0
-      line: 785
+      line: 817
   target_uri: Collections.py
