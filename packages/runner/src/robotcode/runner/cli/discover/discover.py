@@ -44,7 +44,7 @@ def _patch() -> None:
         return
     __patched = True
 
-    if get_robot_version() <= (6, 1, 0, "a", 1, None):
+    if get_robot_version() <= (6, 1):
         if get_robot_version() > (5, 0) and get_robot_version() < (6, 0, 0) or get_robot_version() < (5, 0):
             from robot.running.builder.testsettings import TestDefaults  # pyright: ignore[reportMissingImports]
         else:
@@ -69,7 +69,7 @@ def _patch() -> None:
             except DataError as e:
                 LOGGER.error(str(e))
                 parent_defaults = self._stack[-1][-1] if self._stack else None
-                if get_robot_version() < (6, 1, 0, "a", 1, None):
+                if get_robot_version() < (6, 1):
                     from robot.running.builder.parsers import format_name
 
                     return ErroneousTestSuite(
@@ -82,7 +82,7 @@ def _patch() -> None:
 
         SuiteStructureParser._build_suite = build_suite
 
-    elif get_robot_version() >= (6, 1, 0, "a", 1, None):
+    elif get_robot_version() >= (6, 1):
         from robot.parsing.suitestructure import SuiteDirectory, SuiteFile
         from robot.running.builder.settings import TestDefaults  # pyright: ignore[reportMissingImports]
 
@@ -170,7 +170,7 @@ class Collector(SuiteVisitor):
         super().__init__()
         self.all: TestItem = TestItem(
             type="workspace",
-            id=str(Path.cwd().resolve()),
+            id=str(Path.cwd().absolute()),
             name=Path.cwd().name,
             longname=Path.cwd().name,
             uri=str(Uri.from_path(Path.cwd())),
@@ -182,21 +182,24 @@ class Collector(SuiteVisitor):
         self.statistics = Statistics()
 
     def visit_suite(self, suite: TestSuite) -> None:
-        item = TestItem(
-            type="suite",
-            id=f"{Path(suite.source).resolve() if suite.source is not None else ''};{suite.longname}",
-            name=suite.name,
-            longname=suite.longname,
-            uri=str(Uri.from_path(suite.source)) if suite.source else None,
-            range=Range(
-                start=Position(line=0, character=0),
-                end=Position(line=0, character=0),
+        try:
+            item = TestItem(
+                type="suite",
+                id=f"{Path(suite.source).absolute() if suite.source is not None else ''};{suite.longname}",
+                name=suite.name,
+                longname=suite.longname,
+                uri=str(Uri.from_path(Path(suite.source).absolute())) if suite.source else None,
+                range=Range(
+                    start=Position(line=0, character=0),
+                    end=Position(line=0, character=0),
+                )
+                if suite.source and Path(suite.source).is_file()
+                else None,
+                children=[],
+                error=suite.error_message if isinstance(suite, ErroneousTestSuite) else None,
             )
-            if suite.source and Path(suite.source).is_file()
-            else None,
-            children=[],
-            error=suite.error_message if isinstance(suite, ErroneousTestSuite) else None,
-        )
+        except ValueError as e:
+            raise ValueError(f"Error while parsing suite {suite.source}: {e}") from e
 
         self.suites.append(item)
 
@@ -218,18 +221,22 @@ class Collector(SuiteVisitor):
     def visit_test(self, test: TestCase) -> None:
         if self._current.children is None:
             self._current.children = []
-        item = TestItem(
-            type="test",
-            id=f"{Path(test.source).resolve() if test.source is not None else ''};{test.longname};{test.lineno}",
-            name=test.name,
-            longname=test.longname,
-            uri=str(Uri.from_path(test.source)) if test.source else None,
-            range=Range(
-                start=Position(line=test.lineno - 1, character=0),
-                end=Position(line=test.lineno - 1, character=0),
-            ),
-            tags=list(test.tags) if test.tags else None,
-        )
+        try:
+            item = TestItem(
+                type="test",
+                id=f"{Path(test.source).absolute() if test.source is not None else ''};{test.longname};{test.lineno}",
+                name=test.name,
+                longname=test.longname,
+                uri=str(Uri.from_path(Path(test.source).absolute())) if test.source else None,
+                range=Range(
+                    start=Position(line=test.lineno - 1, character=0),
+                    end=Position(line=test.lineno - 1, character=0),
+                ),
+                tags=list(test.tags) if test.tags else None,
+            )
+        except ValueError as e:
+            raise ValueError(f"Error while parsing suite {test.source}: {e}") from e
+
         for tag in test.tags:
             self.tags[str(tag)].append(item)
 
@@ -344,7 +351,7 @@ def handle_options(
             if settings.pythonpath:
                 sys.path = settings.pythonpath + sys.path
 
-        if get_robot_version() > (6, 1, 0):
+        if get_robot_version() > (6, 1):
             builder = TestSuiteBuilder(
                 included_extensions=settings.extension,
                 included_files=settings.parse_include,
