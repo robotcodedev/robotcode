@@ -548,7 +548,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Optional[Hover]:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.blocks import TestCase
+        from robot.parsing.model.blocks import TestCase, TestCaseSection
         from robot.parsing.model.statements import Documentation, Tags
 
         test_case = cast(TestCase, node)
@@ -563,7 +563,11 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         doc = next((e for e in test_case.body if isinstance(e, Documentation)), None)
         tags = next((e for e in test_case.body if isinstance(e, Tags)), None)
 
-        txt = f"= Test Case *{test_case.name}* =\n"
+        section = next((e for e in nodes if isinstance(e, TestCaseSection)), None)
+        if section is not None and section.tasks:
+            txt = f"= Task *{test_case.name}* =\n"
+        else:
+            txt = f"= Test Case *{test_case.name}* =\n"
 
         if doc is not None:
             txt += "\n== Documentation ==\n"
