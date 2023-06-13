@@ -77,6 +77,7 @@ class RobotSemTokenTypes(Enum):
     HEADER_SETTINGS = "headerSettings"
     HEADER_VARIABLE = "headerVariable"
     HEADER_TESTCASE = "headerTestcase"
+    HEADER_TASK = "headerTask"
     HEADER_COMMENT = "headerComment"
     HEADER_KEYWORD = "headerKeyword"
     TESTCASE_NAME = "testcaseName"
@@ -229,6 +230,15 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                             RobotToken.CONFIG,
                         }
                     ): (RobotSemTokenTypes.CONFIG, None),
+                }
+            )
+            definition.update(
+                {
+                    frozenset(
+                        {
+                            RobotToken.TASK_HEADER,
+                        }
+                    ): (RobotSemTokenTypes.HEADER_TASK, None),
                 }
             )
 

@@ -1,3 +1,6 @@
 *** Tasks ***
 first task
-    Fatal Error
+    No Operation
+
+second task
+    No Operation

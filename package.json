@@ -137,7 +137,7 @@
             }
           },
           {
-            "scope": "keyword.other.header.setting.robotframework",
+            "scope": "keyword.other.header.settings.robotframework",
             "settings": {
               "fontStyle": "bold underline"
             }
@@ -155,13 +155,13 @@
             }
           },
           {
-            "scope": "keyword.other.header.keyword.robotframework",
+            "scope": "keyword.other.header.task.robotframework",
             "settings": {
               "fontStyle": "bold underline"
             }
           },
           {
-            "scope": "keyword.other.header.setting.robotframework",
+            "scope": "keyword.other.header.keyword.robotframework",
             "settings": {
               "fontStyle": "bold underline"
             }
@@ -213,6 +213,9 @@
           ],
           "headerTestcase": [
             "keyword.other.header.testcase.robotframework"
+          ],
+          "headerTask": [
+            "keyword.other.header.task.robotframework"
           ],
           "setting": [
             "keyword.control.settings.robotframework"
