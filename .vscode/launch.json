@@ -46,17 +46,7 @@
 				".",
 				//"config", "info", "desc",
 				"discover",
-				// "all",
-				// "--norpa",
-				// "--by-longname", "asd:dasd",
-				// "--suite",
-				// "Data.Tests.Versions.Rf61.a suite with a custom Name"
-				// "Robotframework.Atest.Testdata.Variables",
-				//"."
-				"all",
-				"--suite",
-				"Data.Tests.Versions.Rf61",
-				"."
+				"info"
 			]
 		},
 		{

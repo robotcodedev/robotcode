@@ -1769,7 +1769,7 @@ class KeywordFinder:
         return result
 
     def _get_keyword_from_self(self, name: str) -> Optional[KeywordDoc]:
-        if get_robot_version() >= (6, 0, 0):
+        if get_robot_version() >= (6, 0):
             found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = [
                 (None, v) for v in self.self_library_doc.keywords.get_all(name)
             ]
@@ -1813,7 +1813,7 @@ class KeywordFinder:
         for owner_name, kw_name in self._yield_owner_and_kw_names(name):
             found.extend(self.find_keywords(owner_name, kw_name))
 
-        if get_robot_version() >= (6, 0, 0) and len(found) > 1:
+        if get_robot_version() >= (6, 0) and len(found) > 1:
             found = self._select_best_matches(found)
 
         if len(found) > 1:
@@ -1832,7 +1832,7 @@ class KeywordFinder:
         if self._all_keywords is None:
             self._all_keywords = list(chain(self.namespace._libraries.values(), self.namespace._resources.values()))
 
-        if get_robot_version() >= (6, 0, 0):
+        if get_robot_version() >= (6, 0):
             result: List[Tuple[LibraryEntry, KeywordDoc]] = []
             for v in self._all_keywords:
                 if eq(v.alias or v.name, owner_name):
@@ -1914,7 +1914,7 @@ class KeywordFinder:
         if self._resource_keywords is None:
             self._resource_keywords = list(chain(self.namespace._resources.values()))
 
-        if get_robot_version() >= (6, 0, 0):
+        if get_robot_version() >= (6, 0):
             found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = []
             for v in self._resource_keywords:
                 r = v.library_doc.keywords.get_all(name)
@@ -1930,7 +1930,7 @@ class KeywordFinder:
         if not found:
             return None
 
-        if get_robot_version() >= (6, 0, 0):
+        if get_robot_version() >= (6, 0):
             if len(found) > 1:
                 found = self._prioritize_same_file_or_public(found)
 
@@ -1970,7 +1970,7 @@ class KeywordFinder:
         if self._library_keywords is None:
             self._library_keywords = list(chain(self.namespace._libraries.values()))
 
-        if get_robot_version() >= (6, 0, 0):
+        if get_robot_version() >= (6, 0):
             found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = []
             for v in self._library_keywords:
                 r = v.library_doc.keywords.get_all(name)
@@ -1987,7 +1987,7 @@ class KeywordFinder:
         if not found:
             return None
 
-        if get_robot_version() >= (6, 0, 0):
+        if get_robot_version() >= (6, 0):
             if len(found) > 1:
                 found = self._select_best_matches(found)
                 if len(found) > 1:

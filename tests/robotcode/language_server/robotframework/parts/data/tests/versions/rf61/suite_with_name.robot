@@ -1,5 +1,5 @@
 *** Settings ***
-# Name    a suite with a custom Name
+Name    a suite with a custom Name
 
 *** Test Cases ***
 first

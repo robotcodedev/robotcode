@@ -1,4 +1,5 @@
 import os
+import platform
 import re
 import sys
 from collections import defaultdict
@@ -45,7 +46,7 @@ def _patch() -> None:
     __patched = True
 
     if get_robot_version() <= (6, 1):
-        if get_robot_version() > (5, 0) and get_robot_version() < (6, 0, 0) or get_robot_version() < (5, 0):
+        if get_robot_version() > (5, 0) and get_robot_version() < (6, 0) or get_robot_version() < (5, 0):
             from robot.running.builder.testsettings import TestDefaults  # pyright: ignore[reportMissingImports]
         else:
             from robot.running.builder.settings import Defaults as TestDefaults  # pyright: ignore[reportMissingImports]
@@ -81,6 +82,16 @@ def _patch() -> None:
                 ), TestDefaults(parent_defaults)
 
         SuiteStructureParser._build_suite = build_suite
+
+        old_validate_execution_mode = SuiteStructureParser._validate_execution_mode
+
+        def _validate_execution_mode(self: SuiteStructureParser, suite: TestSuite) -> None:
+            try:
+                old_validate_execution_mode(self, suite)
+            except DataError as e:
+                LOGGER.error(f"Parsing '{suite.source}' failed: {e.message}")
+
+        SuiteStructureParser._validate_execution_mode = _validate_execution_mode
 
     elif get_robot_version() >= (6, 1):
         from robot.parsing.suitestructure import SuiteDirectory, SuiteFile
@@ -124,6 +135,16 @@ def _patch() -> None:
 
         SuiteStructureParser._build_suite_directory = build_suite_directory
 
+        old_validate_execution_mode = SuiteStructureParser._validate_execution_mode
+
+        def _validate_execution_mode(self: SuiteStructureParser, suite: TestSuite) -> None:
+            try:
+                old_validate_execution_mode(self, suite)
+            except DataError as e:
+                LOGGER.error(f"Parsing '{suite.source}' failed: {e.message}")
+
+        SuiteStructureParser._validate_execution_mode = _validate_execution_mode
+
     old_get_file = FileReader._get_file
 
     def get_file(self: FileReader, source: Union[str, Path, IOBase], accept_text: bool) -> Any:
@@ -145,6 +166,8 @@ class TestItem:
     name: str
     longname: str
     uri: Optional[DocumentUri] = None
+    rel_source: Optional[str] = None
+    needs_parse_include: bool = False
     children: Optional[List["TestItem"]] = None
     description: Optional[str] = None
     range: Optional[Range] = None
@@ -165,15 +188,25 @@ class Statistics:
     tests: int = 0
 
 
+def get_rel_source(source: Optional[str]) -> Optional[str]:
+    if source is None:
+        return None
+    try:
+        return str(Path(source).relative_to(Path.cwd()).as_posix())
+    except ValueError:
+        return str(source)
+
+
 class Collector(SuiteVisitor):
     def __init__(self) -> None:
         super().__init__()
         self.all: TestItem = TestItem(
             type="workspace",
-            id=str(Path.cwd().absolute()),
+            id=str(Path.cwd().resolve()),
             name=Path.cwd().name,
             longname=Path.cwd().name,
             uri=str(Uri.from_path(Path.cwd())),
+            needs_parse_include=get_robot_version() >= (6, 1),
         )
         self._current = self.all
         self.suites: List[TestItem] = []
@@ -185,10 +218,11 @@ class Collector(SuiteVisitor):
         try:
             item = TestItem(
                 type="suite",
-                id=f"{Path(suite.source).absolute() if suite.source is not None else ''};{suite.longname}",
+                id=f"{Path(suite.source).resolve() if suite.source is not None else ''};{suite.longname}",
                 name=suite.name,
                 longname=suite.longname,
-                uri=str(Uri.from_path(Path(suite.source).absolute())) if suite.source else None,
+                uri=str(Uri.from_path(Path(suite.source).resolve())) if suite.source else None,
+                rel_source=get_rel_source(suite.source),
                 range=Range(
                     start=Position(line=0, character=0),
                     end=Position(line=0, character=0),
@@ -224,10 +258,11 @@ class Collector(SuiteVisitor):
         try:
             item = TestItem(
                 type="test",
-                id=f"{Path(test.source).absolute() if test.source is not None else ''};{test.longname};{test.lineno}",
+                id=f"{Path(test.source).resolve() if test.source is not None else ''};{test.longname};{test.lineno}",
                 name=test.name,
                 longname=test.longname,
-                uri=str(Uri.from_path(Path(test.source).absolute())) if test.source else None,
+                uri=str(Uri.from_path(Path(test.source).resolve())) if test.source else None,
+                rel_source=get_rel_source(test.source),
                 range=Range(
                     start=Position(line=test.lineno - 1, character=0),
                     end=Position(line=test.lineno - 1, character=0),
@@ -287,7 +322,7 @@ def build_diagnostics(messages: List[Message]) -> Dict[str, List[Diagnostic]]:
     def add_diagnostic(
         message: Message, source_uri: Optional[str] = None, line: Optional[int] = None, text: Optional[str] = None
     ) -> None:
-        source_uri = str(Uri.from_path(Path(source_uri).absolute() if source_uri else Path.cwd()))
+        source_uri = str(Uri.from_path(Path(source_uri).resolve() if source_uri else Path.cwd()))
 
         if source_uri not in result:
             result[source_uri] = []
@@ -360,7 +395,7 @@ def handle_options(
                 lang=settings.languages,
                 allow_empty_suite=settings.run_empty_suite,
             )
-        elif get_robot_version() >= (6, 0, 0):
+        elif get_robot_version() >= (6, 0):
             builder = TestSuiteBuilder(
                 settings["SuiteNames"],
                 included_extensions=settings.extension,
@@ -583,7 +618,7 @@ def tags(
     ```
     """
 
-    suite, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    suite, _diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
     collector = Collector()
     suite.visit(collector)
@@ -594,16 +629,89 @@ def tags(
             def print(tags: Dict[str, List[TestItem]]) -> Iterable[str]:
                 for tag, items in tags.items():
                     yield f"{tag}{os.linesep}"
-                    # for item in items:
-                    #     yield f"  {item.longname}{os.linesep}"
-                    #     if item.uri:
-                    #         yield (
-                    #             f" ({Uri(item.uri).to_path()}{f':{item.range.start.line+1}' if item.range else ''})"
-                    #             f"{os.linesep}"
-                    #         )
 
             if collector.suites:
                 app.echo_via_pager(print(collector.tags))
 
         else:
             app.print_data(TagsResult(collector.tags), remove_defaults=True)
+
+
+@dataclass
+class RobotVersion:
+    major: int
+    minor: int
+    patch: Optional[int] = None
+    pre_id: Optional[str] = None
+    pre_number: Optional[int] = None
+    dev: Optional[int] = None
+
+
+@dataclass
+class PythonVersion:
+    major: int
+    minor: int
+    micro: int
+    releaselevel: str
+    serial: int
+
+
+@dataclass
+class Info:
+    robot_version: RobotVersion
+    robot_version_string: str
+    robot_env: Dict[str, str]
+    python_version: PythonVersion
+    python_version_string: str
+    machine: str
+    processor: str
+    platform: str
+    system: str
+    system_version: str
+
+
+@discover.command(
+    add_help_option=True,
+)
+@pass_application
+def info(
+    app: Application,
+) -> None:
+    """\
+    Shows some informations about the current *robot* environment.
+
+    \b
+    Examples:
+    ```
+    robotcode discover info
+    ```
+    """
+    from robot.version import get_version as get_version
+
+    robot_env: Dict[str, str] = {}
+    if "ROBOT_OPTIONS" in os.environ:
+        robot_env["ROBOT_OPTIONS"] = os.environ["ROBOT_OPTIONS"]
+    if "ROBOT_SYSLOG_FILE" in os.environ:
+        robot_env["ROBOT_SYSLOG_FILE"] = os.environ["ROBOT_SYSLOG_FILE"]
+    if "ROBOT_SYSLOG_LEVEL" in os.environ:
+        robot_env["ROBOT_SYSLOG_LEVEL"] = os.environ["ROBOT_SYSLOG_LEVEL"]
+    if "ROBOT_INTERNAL_TRACES" in os.environ:
+        robot_env["ROBOT_INTERNAL_TRACES"] = os.environ["ROBOT_INTERNAL_TRACES"]
+
+    info = Info(
+        RobotVersion(*get_robot_version()),
+        get_version(),
+        robot_env,
+        PythonVersion(*sys.version_info),
+        platform.python_version(),
+        platform.machine(),
+        platform.processor(),
+        sys.platform,
+        platform.system(),
+        platform.version(),
+    )
+
+    if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+        app.print_data(info, remove_defaults=True)
+    else:
+        app.print_data(info, remove_defaults=True)

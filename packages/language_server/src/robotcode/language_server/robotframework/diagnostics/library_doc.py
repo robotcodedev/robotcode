@@ -387,7 +387,7 @@ class KeywordDoc(SourceEntity):
 
     @single_call
     def is_private(self) -> bool:
-        if get_robot_version() < (6, 0, 0):
+        if get_robot_version() < (6, 0):
             return False
 
         return "robot:private" in self.normalized_tags()

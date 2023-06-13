@@ -29,6 +29,8 @@ interface RobotTestItem {
   type: string;
   id: string;
   uri?: string;
+  rel_source?: string;
+  needs_parse_include?: boolean;
   children: RobotTestItem[] | undefined;
   name: string;
   longname: string;
@@ -628,7 +630,11 @@ export class TestControllerManager {
     token?: vscode.CancellationToken
   ): Promise<RobotTestItem[] | undefined> {
     const folder = vscode.workspace.getWorkspaceFolder(document.uri);
+
     if (!folder) return undefined;
+
+    const workspaceItem = this.findTestItemByUri(folder.uri.toString());
+    const robotWorkspaceItem = workspaceItem ? this.findRobotItem(workspaceItem) : undefined;
 
     try {
       const o: { [key: string]: string } = {};
@@ -641,7 +647,13 @@ export class TestControllerManager {
       const result = await this.discoverTests(
         folder,
         ["discover", "--read-from-stdin", "tests"],
-        ["--suite", testItem?.longname],
+        [
+          ...(robotWorkspaceItem?.needs_parse_include && testItem.rel_source
+            ? ["--parse-include", testItem.rel_source]
+            : []),
+          "--suite",
+          testItem?.longname,
+        ],
         JSON.stringify(o),
         token
       );
@@ -1007,7 +1019,17 @@ export class TestControllerManager {
       }
 
       if (testItems.length === 1 && testItems[0] === workspaceItem && excluded.size === 0) {
-        const started = await DebugManager.runTests(workspace, [], [], [], runId, options, dryRun);
+        const started = await DebugManager.runTests(
+          workspace,
+          [],
+          [],
+          workspaceRobotItem?.needs_parse_include ?? false,
+          [],
+          [],
+          runId,
+          options,
+          dryRun
+        );
         run_started = run_started || started;
       } else {
         const includedInWs = testItems
@@ -1032,12 +1054,18 @@ export class TestControllerManager {
             .filter((i) => i !== undefined) as string[]) ?? [];
 
         const suites = new Set<string>();
+        const rel_sources = new Set<string>();
 
         for (const testItem of [...testItems, ...(excluded.get(workspace) || [])]) {
           if (!testItem?.canResolveChildren) {
             if (testItem?.parent) {
-              const longname = this.findRobotItem(testItem?.parent)?.longname;
-              if (longname) suites.add(longname);
+              const ritem = this.findRobotItem(testItem?.parent);
+              const longname = ritem?.longname;
+
+              if (longname) {
+                suites.add(longname);
+                if (ritem?.rel_source) rel_sources.add(ritem?.rel_source);
+              }
             }
           } else {
             const ritem = this.findRobotItem(testItem);
@@ -1045,7 +1073,10 @@ export class TestControllerManager {
             if (ritem?.type == "workspace" && ritem.children?.length) {
               longname = ritem.children[0].longname;
             }
-            if (longname) suites.add(longname);
+            if (longname) {
+              suites.add(longname);
+              if (ritem?.rel_source) rel_sources.add(ritem?.rel_source);
+            }
           }
         }
 
@@ -1058,6 +1089,8 @@ export class TestControllerManager {
         const started = await DebugManager.runTests(
           workspace,
           Array.from(suites),
+          Array.from(rel_sources),
+          workspaceRobotItem?.needs_parse_include ?? false,
           includedInWs,
           excludedInWs,
           runId,

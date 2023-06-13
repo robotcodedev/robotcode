@@ -438,7 +438,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         code="ReservedKeyword",
                     )
 
-                if get_robot_version() >= (6, 0, 0) and result.is_resource_keyword and result.is_private():
+                if get_robot_version() >= (6, 0) and result.is_resource_keyword and result.is_private():
                     if self.namespace.source != result.source:
                         self.append_diagnostics(
                             range=kw_range,

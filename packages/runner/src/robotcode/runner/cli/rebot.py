@@ -50,8 +50,8 @@ class RebotEx(Rebot):
 )
 @click.version_option(
     version=__version__,
-    package_name="robotcode.runner.libdoc",
-    prog_name="RobotCode LibDoc",
+    package_name="robotcode.runner.rebot",
+    prog_name="RobotCode rebot",
     message=f"%(prog)s %(version)s\n{USAGE.splitlines()[0].split(' -- ')[0].strip()} {get_full_version()}",
 )
 @click.argument("robot_options_and_args", nargs=-1, type=click.Path())

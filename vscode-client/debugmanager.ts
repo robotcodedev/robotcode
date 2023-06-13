@@ -461,6 +461,8 @@ export class DebugManager {
   static async runTests(
     folder: vscode.WorkspaceFolder,
     suites: string[],
+    rel_sources: string[],
+    needs_parse_include: boolean,
     included: string[],
     excluded: string[],
     runId?: string,
@@ -471,6 +473,13 @@ export class DebugManager {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
     const args = [];
+
+    if (needs_parse_include) {
+      for (const s of rel_sources) {
+        args.push("--parse-include");
+        args.push(s);
+      }
+    }
 
     if (topLevelSuiteName) {
       args.push("--name");

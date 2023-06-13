@@ -51,7 +51,7 @@ class LibDocEx(LibDoc):
 @click.version_option(
     version=__version__,
     package_name="robotcode.runner.libdoc",
-    prog_name="RobotCode LibDoc",
+    prog_name="RobotCode libdoc",
     message=f"%(prog)s %(version)s\n{USAGE.splitlines()[0].split(' -- ')[0].strip()} {get_full_version()}",
 )
 @click.argument("robot_options_and_args", nargs=-1, type=click.Path())
