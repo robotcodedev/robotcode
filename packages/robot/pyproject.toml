@@ -28,7 +28,7 @@ classifiers = [
 dependencies = [
   "robotframework>=4.1.0",
   "tomli>=1.1.0; python_version < '3.11'",
-  "robotcode-core==0.43.0",
+  "robotcode-core==0.42.0",
 ]
 dynamic = ["version"]
 
