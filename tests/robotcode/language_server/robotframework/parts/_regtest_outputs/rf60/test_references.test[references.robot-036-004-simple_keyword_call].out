@@ -169,6 +169,24 @@ result:
   range:
     end:
       character: 7
+      line: 5
+    start:
+      character: 4
+      line: 5
+  uri: rf61/jsonvariables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 6
+    start:
+      character: 4
+      line: 6
+  uri: rf61/jsonvariables.robot
+- !Location
+  range:
+    end:
+      character: 7
       line: 2
     start:
       character: 4
