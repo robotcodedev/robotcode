@@ -4,6 +4,20 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.43.0 (2023-06-14)
+
+### Feature
+
+* Support for importing `.json` files in RF 6.1 ([`0f84c4e`](https://github.com/d-biehl/robotcode/commit/0f84c4ec1d9a897aa25ab37fff702f8feea50cf4))
+* Enable importing and completion of `.rest`, `.rsrc` and `.json` resource extensions (not parsing) ([`3df22dd`](https://github.com/d-biehl/robotcode/commit/3df22ddcb703983b56d0756fef29d06cb2960009))
+* Support for new RF 6.1 `--parse-include` option for discovering and executing tests ([`607cf8d`](https://github.com/d-biehl/robotcode/commit/607cf8db2777b5d11db89e830131261d60581b0f))
+
+### Fix
+
+* Correct highlightning `*** Tasks ***` and `*** Settings ***` ([`c4cfdb9`](https://github.com/d-biehl/robotcode/commit/c4cfdb97b1e0b60561573dd94ddac5631093a7c6))
+* Hover over a tasks shows "task" in hint and not "test case" ([`457f3ae`](https://github.com/d-biehl/robotcode/commit/457f3ae1409d58c5c6c5844c714559ce161fa5dd))
+* Checks for robot version 6.1 ([`e16f09c`](https://github.com/d-biehl/robotcode/commit/e16f09caa359995c052606a46c9843fba0591731))
+
 ## v0.42.0 (2023-06-05)
 ### Feature
 
