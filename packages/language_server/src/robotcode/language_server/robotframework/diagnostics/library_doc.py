@@ -828,6 +828,8 @@ def is_library_by_path(path: str) -> bool:
 
 
 def is_variables_by_path(path: str) -> bool:
+    if get_robot_version() >= (6, 1):
+        return path.lower().endswith((".py", ".yml", ".yaml", ".json", "/", os.sep))
     return path.lower().endswith((".py", ".yml", ".yaml", "/", os.sep))
 
 
@@ -1529,6 +1531,9 @@ def get_variables_doc(
     from robot.utils.importer import Importer
     from robot.variables.filesetter import PythonImporter, YamlImporter
 
+    if get_robot_version() >= (6, 1):
+        from robot.variables.filesetter import JsonImporter
+
     import_name: str = name
     stem = Path(name).stem
     module_spec: Optional[ModuleSpec] = None
@@ -1541,6 +1546,8 @@ def get_variables_doc(
             if import_name.lower().endswith((".yaml", ".yml")):
                 source = import_name
                 importer = YamlImporter()
+            if get_robot_version() >= (6, 1) and import_name.lower().endswith(".json"):
+                importer = JsonImporter()
             else:
                 if not is_variables_by_path(import_name):
                     module_spec = get_module_spec(import_name)
@@ -1901,6 +1908,7 @@ def iter_variables_from_python_path(
                             if allow_modules and f.suffix.lower() not in [
                                 ".yaml",
                                 ".yml",
+                                *[".json" if get_robot_version() >= (6, 1) else []],
                             ]:
                                 yield CompleteResult(f.stem, CompleteResultKind.VARIABLES_MODULE)
                             if allow_files:
