@@ -80,7 +80,11 @@ if TYPE_CHECKING:
     from .namespace import Namespace
 
 
-RESOURCE_EXTENSIONS = (".resource", ".robot", ".txt", ".tsv", ".rst", ".rest")
+RESOURCE_EXTENSIONS = (
+    {".resource", ".robot", ".txt", ".tsv", ".rst", ".rest", ".json", ".rsrc"}
+    if get_robot_version() >= (6, 1)
+    else {".resource", ".robot", ".txt", ".tsv", ".rst", ".rest"}
+)
 REST_EXTENSIONS = (".rst", ".rest")
 
 
