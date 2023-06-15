@@ -46,4 +46,7 @@
     //     "TRACE",
     //     "--log-calls"
     // ],
+    "robotcode.robot.variableFiles": [
+        "${EXECDIR}/resources/testvars.yml"
+    ]
 }

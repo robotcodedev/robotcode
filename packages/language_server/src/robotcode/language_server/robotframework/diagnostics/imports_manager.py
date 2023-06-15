@@ -585,11 +585,22 @@ class ImportsManager:
                     name, args = split_args_from_name_or_path(str(variable_file))
                     try:
                         lib_doc = await self.get_libdoc_for_variables_import(
-                            name, tuple(args), str(self.folder.to_path()), self, resolve_command_line_vars=False
+                            name,
+                            tuple(args),
+                            str(self.folder.to_path()),
+                            self,
+                            resolve_variables=False,
+                            resolve_command_line_vars=False,
                         )
                         if lib_doc is not None:
                             command_line_vars += lib_doc.variables
 
+                            if lib_doc.errors:
+                                # TODO add diagnostics
+                                for error in lib_doc.errors:
+                                    self._logger.error(
+                                        lambda: f"{error.type_name}: {error.message} in {error.source}:{error.line_no}"
+                                    )
                     except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                         raise
                     except BaseException as e:
@@ -604,10 +615,22 @@ class ImportsManager:
                     name, args = split_args_from_name_or_path(variable_file)
                     try:
                         lib_doc = await self.get_libdoc_for_variables_import(
-                            name, tuple(args), str(self.folder.to_path()), self, resolve_command_line_vars=False
+                            name,
+                            tuple(args),
+                            str(self.folder.to_path()),
+                            self,
+                            resolve_variables=False,
+                            resolve_command_line_vars=False,
                         )
                         if lib_doc is not None:
                             command_line_vars += lib_doc.variables
+
+                            if lib_doc.errors:
+                                # TODO add diagnostics
+                                for error in lib_doc.errors:
+                                    self._logger.error(
+                                        lambda: f"{error.type_name}: {error.message} in {error.source}:{error.line_no}"
+                                    )
 
                     except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                         raise
@@ -878,12 +901,16 @@ class ImportsManager:
         name: str,
         base_dir: str = ".",
         variables: Optional[Dict[str, Optional[Any]]] = None,
+        resolve_variables: bool = True,
+        resolve_command_line_vars: bool = True,
     ) -> Tuple[Optional[LibraryMetaData], str]:
         try:
             import_name = await self.find_variables(
                 name,
                 base_dir=base_dir,
                 variables=variables,
+                resolve_variables=resolve_variables,
+                resolve_command_line_vars=resolve_command_line_vars,
             )
 
             result: Optional[LibraryMetaData] = None
@@ -935,7 +962,7 @@ class ImportsManager:
         except BaseException:
             pass
 
-        return None, import_name
+        return None, name
 
     async def find_library(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
         return await self._library_files_cache.get(self._find_library, name, base_dir, variables)
@@ -986,19 +1013,35 @@ class ImportsManager:
 
         return str(find_file_ex(name, base_dir, file_type))
 
-    async def find_variables(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
-        return await self._variables_files_cache.get(self.__find_variables, name, base_dir, variables)
+    async def find_variables(
+        self,
+        name: str,
+        base_dir: str,
+        variables: Optional[Dict[str, Any]] = None,
+        resolve_variables: bool = True,
+        resolve_command_line_vars: bool = True,
+    ) -> str:
+        return await self._variables_files_cache.get(
+            self.__find_variables, name, base_dir, variables, resolve_command_line_vars
+        )
 
     @_logger.call
-    async def __find_variables(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
+    async def __find_variables(
+        self,
+        name: str,
+        base_dir: str,
+        variables: Optional[Dict[str, Any]] = None,
+        resolve_variables: bool = True,
+        resolve_command_line_vars: bool = True,
+    ) -> str:
         from robot.variables.search import contains_variable
 
-        if contains_variable(name, "$@&%"):
+        if resolve_variables and contains_variable(name, "$@&%"):
             return find_variables(
                 name,
                 str(self.folder.to_path()),
                 base_dir,
-                await self.get_resolvable_command_line_variables(),
+                await self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
                 variables,
             )
 
@@ -1258,12 +1301,15 @@ class ImportsManager:
         base_dir: str,
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
+        resolve_variables: bool = True,
         resolve_command_line_vars: bool = True,
     ) -> VariablesDoc:
         source = await self.find_variables(
             name,
             base_dir,
             variables,
+            resolve_variables=resolve_variables,
+            resolve_command_line_vars=resolve_command_line_vars,
         )
 
         async def _get_libdoc(name: str, args: Tuple[Any, ...], working_dir: str, base_dir: str) -> VariablesDoc:
@@ -1271,6 +1317,7 @@ class ImportsManager:
                 name,
                 base_dir,
                 variables,
+                resolve_command_line_vars=resolve_command_line_vars,
             )
 
             self._logger.debug(lambda: f"Load variables {source}{args!r}")

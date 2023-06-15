@@ -1546,7 +1546,8 @@ def get_variables_doc(
             if import_name.lower().endswith((".yaml", ".yml")):
                 source = import_name
                 importer = YamlImporter()
-            if get_robot_version() >= (6, 1) and import_name.lower().endswith(".json"):
+            elif get_robot_version() >= (6, 1) and import_name.lower().endswith(".json"):
+                source = import_name
                 importer = JsonImporter()
             else:
                 if not is_variables_by_path(import_name):
