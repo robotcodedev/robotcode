@@ -4,6 +4,12 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.43.1 (2023-06-15)
+
+### Fix
+
+* Intellisense doesn't work when importing yml file with variables #143 ([`b19eea1`](https://github.com/d-biehl/robotcode/commit/b19eea19541e5bcfd22b7e4a79f14fb9eb43061a))
+
 ## v0.43.0 (2023-06-14)
 
 ### Feature
