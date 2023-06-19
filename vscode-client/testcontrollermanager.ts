@@ -5,7 +5,13 @@ import { red, yellow } from "ansi-colors";
 import * as vscode from "vscode";
 import { DebugManager } from "./debugmanager";
 
-import { ClientState, LanguageClientsManager, toVsCodeRange, SUPPORTED_LANGUAGES } from "./languageclientsmanger";
+import {
+  ClientState,
+  LanguageClientsManager,
+  toVsCodeRange,
+  SUPPORTED_LANGUAGES,
+  SUPPORTED_SUITE_FILE_EXTENSIONS,
+} from "./languageclientsmanger";
 import { filterAsync, Mutex, sleep, WeakValueMap } from "./utils";
 import { CONFIG_SECTION } from "./config";
 import { Range, Diagnostic, DiagnosticSeverity } from "vscode-languageclient/node";
@@ -220,11 +226,8 @@ export class TestControllerManager {
       }),
       vscode.workspace.onDidCloseTextDocument((document) => this.refreshDocument(document)),
       vscode.workspace.onDidSaveTextDocument((document) => this.refreshDocument(document)),
-      vscode.workspace.onDidOpenTextDocument(async (document) => {
-        if (!SUPPORTED_LANGUAGES.includes(document.languageId)) return;
+      vscode.workspace.onDidOpenTextDocument((document) => this.refreshDocument(document)),
 
-        await this.refresh(this.findTestItemForDocument(document));
-      }),
       vscode.workspace.onDidChangeTextDocument((event) => {
         this.refreshDocument(event.document);
       }),
@@ -436,6 +439,7 @@ export class TestControllerManager {
 
   public refreshDocument(document: vscode.TextDocument): void {
     if (!SUPPORTED_LANGUAGES.includes(document.languageId)) return;
+    if (!SUPPORTED_SUITE_FILE_EXTENSIONS.some((ext) => document.uri.path.endsWith(ext))) return;
 
     const uri_str = document.uri.toString();
     if (this.didChangedTimer.has(uri_str)) {

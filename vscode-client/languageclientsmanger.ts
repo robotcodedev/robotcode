@@ -36,6 +36,7 @@ export function toVsCodeRange(range: Range): vscode.Range {
 }
 
 export const SUPPORTED_LANGUAGES = ["robotframework"];
+export const SUPPORTED_SUITE_FILE_EXTENSIONS = [".robot"];
 
 export interface EvaluatableExpression {
   range: Range;
