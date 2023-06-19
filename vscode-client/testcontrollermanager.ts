@@ -642,7 +642,14 @@ export class TestControllerManager {
 
     try {
       const o: { [key: string]: string } = {};
-      o[document.fileName] = document.getText();
+      for (const document of vscode.workspace.textDocuments) {
+        if (
+          SUPPORTED_LANGUAGES.includes(document.languageId) &&
+          vscode.workspace.getWorkspaceFolder(document.uri) === folder
+        ) {
+          o[document.fileName] = document.getText();
+        }
+      }
 
       if (this.diagnosticCollection.has(document.uri)) {
         this.diagnosticCollection.delete(document.uri);
@@ -813,6 +820,10 @@ export class TestControllerManager {
       }
     });
     itemsToRemove.forEach((i) => {
+      const item = this.testItems.get(i);
+      if (item !== undefined && item.canResolveChildren) {
+        this.removeNotAddedTestItems(item, new Set<string>());
+      }
       items.delete(i);
       this.testItems.delete(i);
     });
@@ -864,8 +875,17 @@ export class TestControllerManager {
   }
 
   private refreshUri(uri?: vscode.Uri, reason?: string) {
+    this.outputChannel.appendLine(`refresh uri ${uri ? uri.toString() : "unknown"} because: ${reason ?? "unknown"}`);
+
     if (uri) {
-      this.outputChannel.appendLine(`refresh uri ${uri.toString()}`);
+      const testItem = this.findTestItemByUri(uri.toString());
+      if (testItem) {
+        this.refreshItem(testItem).then(
+          (_) => undefined,
+          (_) => undefined
+        );
+        return;
+      }
 
       const workspace = vscode.workspace.getWorkspaceFolder(uri);
       if (workspace === undefined) return;
