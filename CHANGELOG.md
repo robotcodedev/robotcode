@@ -4,6 +4,13 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.43.2 (2023-06-20)
+
+### Fix
+
+* Update testitems does not work correctly if a __init__.robot is changed ([`a426e84`](https://github.com/d-biehl/robotcode/commit/a426e840c35a17aba95f0c927b34d338d4a31889))
+* Only update test explorer items if file is a valid robot suite ([`9461acf`](https://github.com/d-biehl/robotcode/commit/9461acf5e1b1263dd5f61c1b864de83729fd87ec))
+
 ## v0.43.1 (2023-06-15)
 
 ### Fix
