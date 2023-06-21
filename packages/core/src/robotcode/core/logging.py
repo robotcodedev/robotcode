@@ -109,7 +109,7 @@ class LoggingDescriptor:
 
     def __init__(
         self,
-        _func: _FUNC_TYPE = None,
+        _func: Optional[_FUNC_TYPE] = None,
         *,
         name: Optional[str] = None,
         postfix: str = "",
@@ -172,7 +172,7 @@ class LoggingDescriptor:
         self.__owner = owner
         self.__owner_name = name
 
-    def __call__(self, _func: _FUNC_TYPE = None) -> LoggingDescriptor:
+    def __call__(self, _func: Optional[_FUNC_TYPE] = None) -> LoggingDescriptor:
         if _func is not None:
             self.__func = _func
 

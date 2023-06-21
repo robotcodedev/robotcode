@@ -128,7 +128,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
 
                     async def find_refs() -> None:
                         if document is None or kw_doc is None:
-                            return
+                            return  #  type: ignore[unreachable]
 
                         await self.parent.robot_references.find_keyword_references(
                             document, kw_doc, include_declaration=False

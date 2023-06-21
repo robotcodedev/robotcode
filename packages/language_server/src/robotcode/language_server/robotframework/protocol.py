@@ -2,7 +2,7 @@ import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Final, List, Optional, Set
 
 from robotcode.core.dataclasses import CamelSnakeMixin, from_dict
 from robotcode.core.logging import LoggingDescriptor
@@ -106,9 +106,9 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     short_name = "RobotCode"
     version = __version__
 
-    file_extensions = {"robot", "resource", "py", "yaml", "yml"}
+    file_extensions: ClassVar[Set[str]] = {"robot", "resource", "py", "yaml", "yml"}
 
-    languages = [
+    languages: ClassVar[List[LanguageDefinition]] = [
         LanguageDefinition(
             id="robotframework",
             extensions=[".robot", ".resource"],

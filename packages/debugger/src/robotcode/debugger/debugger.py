@@ -848,7 +848,7 @@ class Debugger:
 
             self.wait_for_running()
 
-    CAUGHTED_KEYWORDS: ClassVar = [
+    CAUGHTED_KEYWORDS: ClassVar[List[str]] = [
         "BuiltIn.Run Keyword And Expect Error",
         "BuiltIn.Run Keyword And Ignore Error",
         "BuiltIn.Run Keyword And Warn On Failure",
@@ -984,7 +984,7 @@ class Debugger:
 
         return StackTraceResult(frames, len(self.stack_frames))
 
-    MESSAGE_COLORS: ClassVar = {
+    MESSAGE_COLORS: ClassVar[Dict[str, str]] = {
         "INFO": "\u001b[38;5;2m",
         "WARN": "\u001b[38;5;3m",
         "ERROR": "\u001b[38;5;1m",

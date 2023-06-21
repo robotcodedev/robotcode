@@ -161,6 +161,4 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
         if len(results) > 1:
             self._logger.warning("More then one resolve result. Use the last one.")
-        result = results[-1]
-
-        return result
+        return results[-1]

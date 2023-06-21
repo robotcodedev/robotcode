@@ -2197,7 +2197,9 @@ class RobotConfig(RobotExtraBaseProfile):
         metadata={"description": "Tool configuration."},
     )
 
-    def select_profiles(self, *names: str, verbose_callback: Callable[..., None] = None) -> Dict[str, RobotProfile]:
+    def select_profiles(
+        self, *names: str, verbose_callback: Optional[Callable[..., None]] = None
+    ) -> Dict[str, RobotProfile]:
         result: Dict[str, RobotProfile] = {}
 
         profiles = self.profiles or {}
@@ -2226,7 +2228,7 @@ class RobotConfig(RobotExtraBaseProfile):
 
         return result
 
-    def combine_profiles(self, *names: str, verbose_callback: Callable[..., None] = None) -> RobotBaseProfile:
+    def combine_profiles(self, *names: str, verbose_callback: Optional[Callable[..., None]] = None) -> RobotBaseProfile:
         type_hints = get_type_hints(RobotBaseProfile)
         base_field_names = [f.name for f in dataclasses.fields(RobotBaseProfile)]
 

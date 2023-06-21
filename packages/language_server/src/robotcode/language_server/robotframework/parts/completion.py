@@ -11,6 +11,7 @@ from typing import (
     AsyncIterator,
     Awaitable,
     Callable,
+    ClassVar,
     Dict,
     Iterable,
     Iterator,
@@ -451,7 +452,7 @@ class CompletionCollector(ModelHelperMixin):
             for s in self.namespace.imports_manager.environment.keys()
         ]
 
-    _VARIABLE_COMPLETION_SORT_TEXT_PREFIX = {
+    _VARIABLE_COMPLETION_SORT_TEXT_PREFIX: ClassVar[Dict[VariableDefinitionType, str]] = {
         VariableDefinitionType.LOCAL_VARIABLE: "033",
         VariableDefinitionType.ARGUMENT: "034",
         VariableDefinitionType.VARIABLE: "035",

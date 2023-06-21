@@ -1,3 +1,5 @@
+# mypy: disable-error-code="attr-defined"
+
 import os
 
 __all__ = ["pid_exists"]

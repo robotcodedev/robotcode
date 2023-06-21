@@ -165,7 +165,7 @@ fail_under = 40
 line-length = 120
 target-version = "py38"
 extend-exclude = ["bundled/libs"]
-ignore = ["E741", "N805", "N999"]
+ignore = ["E741", "N805", "N999", "RUF012"]
 select = [
   "E",
   "F",
