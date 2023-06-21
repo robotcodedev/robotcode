@@ -4,6 +4,12 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.44.1 (2023-06-21)
+
+### Fix
+
+* Completion and diagnostics for import statements for RF >= 6.1 ([`b4e9f03`](https://github.com/d-biehl/robotcode/commit/b4e9f0333633f3d83990137e0a78d61faa029b8c))
+
 ## v0.44.0 (2023-06-21)
 
 ### Feature
