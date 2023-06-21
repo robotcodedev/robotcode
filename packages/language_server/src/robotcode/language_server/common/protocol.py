@@ -28,6 +28,7 @@ from robotcode.core.lsp.types import (
     UnregistrationParams,
     WorkspaceFolder,
 )
+from robotcode.core.utils.process import pid_exists
 from robotcode.jsonrpc2.protocol import (
     JsonRPCErrorException,
     JsonRPCErrors,
@@ -114,7 +115,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     def __init__(self, server: JsonRPCServer[Any]):
         super().__init__()
         self.server = server
-
+        self.parent_process_id: Optional[int] = None
         self.initialization_options: Any = None
         self.client_info: Optional[InitializeParamsClientInfoType] = None
         self._workspace: Optional[Workspace] = None
@@ -174,6 +175,20 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
         return base_capabilities
 
+    PARENT_PROCESS_WATCHER_INTERVAL = 5
+
+    def start_parent_process_watcher(self) -> None:
+        if self.parent_process_id and self.loop:
+            self.loop.call_later(self.PARENT_PROCESS_WATCHER_INTERVAL, self._parent_process_watcher)
+
+    def _parent_process_watcher(self) -> None:
+        if not self.parent_process_id:
+            return
+        if not pid_exists(self.parent_process_id):
+            self.__logger.error(lambda: f"Parent process {self.parent_process_id} is dead, exiting...")
+            exit(2)
+        self.start_parent_process_watcher()
+
     @rpc_method(name="initialize", param_type=InitializeParams)
     @__logger.call
     async def _initialize(
@@ -186,9 +201,14 @@ class LanguageServerProtocol(JsonRPCProtocol):
         client_info: Optional[InitializeParamsClientInfoType] = None,
         workspace_folders: Optional[List[WorkspaceFolder]] = None,
         work_done_token: Optional[ProgressToken] = None,
+        process_id: Optional[int] = None,
         *args: Any,
         **kwargs: Any,
     ) -> InitializeResult:
+        self.parent_process_id = process_id
+        if self.parent_process_id and pid_exists(self.parent_process_id):
+            self.start_parent_process_watcher()
+
         self.trace = trace or TraceValues.OFF
         self.client_info = client_info
 

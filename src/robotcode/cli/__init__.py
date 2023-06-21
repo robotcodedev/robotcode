@@ -190,6 +190,8 @@ def robotcode(
             if debugpy_wait_for_client:
                 app.verbose("Waiting for debugpy client to connect...")
                 wait_for_debugpy_connected()
+
+            app.verbose("Debugpy session started")
         else:
             app.verbose("Could not start debugpy session. Enable logging for more information.")
 
