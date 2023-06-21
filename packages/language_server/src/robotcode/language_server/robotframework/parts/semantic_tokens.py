@@ -770,7 +770,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         async def get_tokens() -> AsyncIterator[Tuple[Token, ast.AST]]:
             async for node in async_ast.iter_nodes(model):
                 if isinstance(node, HasTokens):
-                    if isinstance(node, LibraryImport):
+                    if isinstance(node, LibraryImport) and node.name:
                         lib_doc = await namespace.get_imported_library_libdoc(node.name, node.args, node.alias)
                         kw_doc = lib_doc.inits.keywords[0] if lib_doc and lib_doc.inits else None
                         if lib_doc is not None:
@@ -807,7 +807,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
                                 yield token, node
                             continue
-                    if isinstance(node, VariablesImport):
+                    if isinstance(node, VariablesImport) and node.name:
                         lib_doc = await namespace.get_imported_variables_libdoc(node.name, node.args)
                         kw_doc = lib_doc.inits.keywords[0] if lib_doc and lib_doc.inits else None
                         if lib_doc is not None:

@@ -902,3 +902,33 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         tags=[DiagnosticTag.DEPRECATED],
                         code="DeprecatedHyphenTag",
                     )
+
+    def _check_import_name(self, value: Optional[str], node: ast.AST, type: str) -> None:
+        if not value:
+            self.append_diagnostics(
+                range=range_from_node(node),
+                message=f"{type} setting requires value.",
+                severity=DiagnosticSeverity.ERROR,
+                code="ImportNeedsName",
+            )
+
+    async def visit_VariablesImport(self, node: ast.AST) -> None:  # noqa: N802
+        if get_robot_version() >= (6, 1):
+            from robot.parsing.model.statements import VariablesImport
+
+            import_node = cast(VariablesImport, node)
+            self._check_import_name(import_node.name, node, "Variables")
+
+    async def visit_ResourceImport(self, node: ast.AST) -> None:  # noqa: N802
+        if get_robot_version() >= (6, 1):
+            from robot.parsing.model.statements import ResourceImport
+
+            import_node = cast(ResourceImport, node)
+            self._check_import_name(import_node.name, node, "Resource")
+
+    async def visit_LibraryImport(self, node: ast.AST) -> None:  # noqa: N802
+        if get_robot_version() >= (6, 1):
+            from robot.parsing.model.statements import LibraryImport
+
+            import_node = cast(LibraryImport, node)
+            self._check_import_name(import_node.name, node, "Library")

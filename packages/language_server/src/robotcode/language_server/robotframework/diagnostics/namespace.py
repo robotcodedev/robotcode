@@ -419,28 +419,28 @@ class ImportVisitor(Visitor):
         last_data_token = cast(
             RobotToken, next(v for v in reversed(n.tokens) if v.type not in RobotToken.NON_DATA_TOKENS)
         )
-
-        self._results.append(
-            LibraryImport(
-                name=n.name,
-                name_token=name if name is not None else None,
-                args=n.args,
-                alias=n.alias,
-                line_no=node.lineno,
-                col_offset=node.col_offset,
-                end_line_no=last_data_token.lineno
-                if last_data_token is not None
-                else node.end_lineno
-                if node.end_lineno is not None
-                else -1,
-                end_col_offset=last_data_token.end_col_offset
-                if last_data_token is not None
-                else node.end_col_offset
-                if node.end_col_offset is not None
-                else -1,
-                source=self.source,
+        if n.name:
+            self._results.append(
+                LibraryImport(
+                    name=n.name,
+                    name_token=name if name is not None else None,
+                    args=n.args,
+                    alias=n.alias,
+                    line_no=node.lineno,
+                    col_offset=node.col_offset,
+                    end_line_no=last_data_token.lineno
+                    if last_data_token is not None
+                    else node.end_lineno
+                    if node.end_lineno is not None
+                    else -1,
+                    end_col_offset=last_data_token.end_col_offset
+                    if last_data_token is not None
+                    else node.end_col_offset
+                    if node.end_col_offset is not None
+                    else -1,
+                    source=self.source,
+                )
             )
-        )
 
     def visit_ResourceImport(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
@@ -452,25 +452,26 @@ class ImportVisitor(Visitor):
         last_data_token = cast(
             RobotToken, next(v for v in reversed(n.tokens) if v.type not in RobotToken.NON_DATA_TOKENS)
         )
-        self._results.append(
-            ResourceImport(
-                name=n.name,
-                name_token=name if name is not None else None,
-                line_no=node.lineno,
-                col_offset=node.col_offset,
-                end_line_no=last_data_token.lineno
-                if last_data_token is not None
-                else node.end_lineno
-                if node.end_lineno is not None
-                else -1,
-                end_col_offset=last_data_token.end_col_offset
-                if last_data_token is not None
-                else node.end_col_offset
-                if node.end_col_offset is not None
-                else -1,
-                source=self.source,
+        if n.name:
+            self._results.append(
+                ResourceImport(
+                    name=n.name,
+                    name_token=name if name is not None else None,
+                    line_no=node.lineno,
+                    col_offset=node.col_offset,
+                    end_line_no=last_data_token.lineno
+                    if last_data_token is not None
+                    else node.end_lineno
+                    if node.end_lineno is not None
+                    else -1,
+                    end_col_offset=last_data_token.end_col_offset
+                    if last_data_token is not None
+                    else node.end_col_offset
+                    if node.end_col_offset is not None
+                    else -1,
+                    source=self.source,
+                )
             )
-        )
 
     def visit_VariablesImport(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
@@ -482,26 +483,27 @@ class ImportVisitor(Visitor):
         last_data_token = cast(
             RobotToken, next(v for v in reversed(n.tokens) if v.type not in RobotToken.NON_DATA_TOKENS)
         )
-        self._results.append(
-            VariablesImport(
-                name=n.name,
-                name_token=name if name is not None else None,
-                args=n.args,
-                line_no=node.lineno,
-                col_offset=node.col_offset,
-                end_line_no=last_data_token.lineno
-                if last_data_token is not None
-                else node.end_lineno
-                if node.end_lineno is not None
-                else -1,
-                end_col_offset=last_data_token.end_col_offset
-                if last_data_token is not None
-                else node.end_col_offset
-                if node.end_col_offset is not None
-                else -1,
-                source=self.source,
+        if n.name:
+            self._results.append(
+                VariablesImport(
+                    name=n.name,
+                    name_token=name if name is not None else None,
+                    args=n.args,
+                    line_no=node.lineno,
+                    col_offset=node.col_offset,
+                    end_line_no=last_data_token.lineno
+                    if last_data_token is not None
+                    else node.end_lineno
+                    if node.end_lineno is not None
+                    else -1,
+                    end_col_offset=last_data_token.end_col_offset
+                    if last_data_token is not None
+                    else node.end_col_offset
+                    if node.end_col_offset is not None
+                    else -1,
+                    source=self.source,
+                )
             )
-        )
 
 
 @dataclass

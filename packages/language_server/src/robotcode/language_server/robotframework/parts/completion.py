@@ -1536,7 +1536,7 @@ class CompletionCollector(ModelHelperMixin):
 
         async def complete_arguments() -> Optional[List[CompletionItem]]:
             if (
-                import_node.name is None
+                not import_node.name
                 or position <= range_from_token(import_node.get_token(RobotToken.NAME)).extend(end_character=1).end
             ):
                 return None
@@ -1868,7 +1868,7 @@ class CompletionCollector(ModelHelperMixin):
 
         async def complete_arguments() -> Optional[List[CompletionItem]]:
             if (
-                import_node.name is None
+                not import_node.name
                 or position <= range_from_token(import_node.get_token(RobotToken.NAME)).extend(end_character=1).end
             ):
                 return None
