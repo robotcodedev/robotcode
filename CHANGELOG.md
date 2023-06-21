@@ -4,6 +4,18 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.44.0 (2023-06-21)
+
+### Feature
+
+* Add option to start a debugpy session for debugging purpose ([`3f626cc`](https://github.com/d-biehl/robotcode/commit/3f626cc4dd0fdf70191c84e9a63388eb947fa1db))
+
+### Fix
+
+* Correct handling error in server->client JSON RPC requests ([`6e16659`](https://github.com/d-biehl/robotcode/commit/6e166590f7b0096741c085d13ea7437f4674c4a8))
+* Detect languageId of not given at "textDocument/didOpen" ([`54e329e`](https://github.com/d-biehl/robotcode/commit/54e329e48d456c61063b697b91d4796a8ca34b3e))
+* Extension not terminating sometimes on vscode exit ([`753c89c`](https://github.com/d-biehl/robotcode/commit/753c89c91373bb5a27881bee23c1fc1e37b41356))
+
 ## v0.43.2 (2023-06-20)
 
 ### Fix
