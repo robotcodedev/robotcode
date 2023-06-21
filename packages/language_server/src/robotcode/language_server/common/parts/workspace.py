@@ -68,7 +68,7 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.uri import Uri
 from robotcode.core.utils.path import path_is_relative_to
-from robotcode.jsonrpc2.protocol import rpc_method
+from robotcode.jsonrpc2.protocol import JsonRPCErrorException, rpc_method
 from robotcode.language_server.common.has_extend_capabilities import (
     HasExtendCapabilities,
 )
@@ -351,20 +351,26 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
             and self.parent.client_capabilities.workspace.configuration
             and request
         ):
-            r = await self.parent.send_request_async(
-                "workspace/configuration",
-                ConfigurationParams(
-                    items=[
-                        ConfigurationItem(
-                            scope_uri=str(scope_uri) if isinstance(scope_uri, Uri) else scope_uri,
-                            section=section,
-                        )
-                    ]
-                ),
-                list,
-            )
+            try:
+                r = await self.parent.send_request_async(
+                    "workspace/configuration",
+                    ConfigurationParams(
+                        items=[
+                            ConfigurationItem(
+                                scope_uri=str(scope_uri) if isinstance(scope_uri, Uri) else scope_uri,
+                                section=section,
+                            )
+                        ]
+                    ),
+                    list,
+                )
 
-            return r[0] if r is not None else None
+                return r[0] if r is not None else None
+            except asyncio.CancelledError:
+                raise
+            except JsonRPCErrorException as e:
+                self._logger.warning(str(e))
+                pass
 
         result = self.settings
         for sub_key in str(section).split("."):

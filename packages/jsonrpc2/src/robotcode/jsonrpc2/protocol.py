@@ -624,7 +624,65 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
     @__logger.call
     async def handle_error(self, message: JsonRPCError) -> None:
-        raise JsonRPCErrorException(message.error.code, message.error.message, message.error.data)
+        if message.id is None:
+            error = "Invalid response. Response id is null."
+            self.__logger.warning(error)
+            raise JsonRPCErrorException(message.error.code, message.error.message, message.error.data)
+
+        with self._sended_request_lock:
+            entry = self._sended_request.pop(message.id, None)
+
+        if entry is None:
+            error = f"Invalid response. Could not find id '{message.id}' in request list."
+            self.__logger.warning(error)
+            raise JsonRPCErrorException(message.error.code, message.error.message, message.error.data)
+
+        try:
+            if not entry.future.done():
+                res = None
+                if message.result is not None:
+                    res = from_dict(message.result, entry.result_type)
+                if entry.future.get_loop() == asyncio.get_running_loop():
+                    entry.future.set_exception(
+                        JsonRPCErrorException(message.error.code, message.error.message, message.error.data)
+                    )
+                else:
+                    if entry.future.get_loop().is_running():
+
+                        def set_result(f: asyncio.Future[Any], r: Any, ev: threading.Event) -> None:
+                            try:
+                                if not f.done() and f.get_loop().is_running():
+                                    f.set_exception(
+                                        JsonRPCErrorException(
+                                            message.error.code, message.error.message, message.error.data
+                                        )
+                                    )
+                            finally:
+                                ev.set()
+
+                        done = threading.Event()
+
+                        entry.future.get_loop().call_soon_threadsafe(set_result, entry.future, res, done)
+
+                        start = time.monotonic()
+                        while not done.is_set():
+                            if time.monotonic() - start > 120:
+                                raise TimeoutError("Can't set future result.")
+
+                            await asyncio.sleep(0)
+
+                    else:
+                        self.__logger.warning(lambda: f"Response {entry!r} loop is not running.")
+
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            if not entry.future.done():
+                if entry.future.get_loop() == asyncio.get_running_loop():
+                    entry.future.set_exception(e)
+                else:
+                    if entry.future.get_loop().is_running():
+                        entry.future.get_loop().call_soon_threadsafe(entry.future.set_exception, e)
 
     @staticmethod
     def _convert_params(
