@@ -257,7 +257,12 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
             if document is None:
                 text_changed = False
                 document = await self._create_document(
-                    text_document.uri, normalized_text, text_document.language_id, text_document.version
+                    text_document.uri,
+                    normalized_text,
+                    text_document.language_id
+                    if text_document.language_id
+                    else self.detect_language_id(text_document.uri),
+                    text_document.version,
                 )
 
                 self._documents[uri] = document
