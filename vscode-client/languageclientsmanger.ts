@@ -271,7 +271,7 @@ export class LanguageClientsManager {
 
     this._pythonValidPythonAndRobotEnv.set(folder, true);
 
-    const robotCodeExtraArgs = config.get<string[]>("extraArgs", []);
+    const robotCodeExtraArgs = config.get<string[]>("languageServer.extraArgs", []);
 
     const args: string[] = ["-u", "-X", "utf8", this.pythonManager.robotCodeMain];
     const serverArgs: string[] = [...robotCodeExtraArgs, "language-server"];

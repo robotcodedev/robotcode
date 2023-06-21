@@ -106,6 +106,24 @@ from .commands import config, profiles
     type=str,
     help="Path to the launcher script. This is an internal option.",
 )
+@click.option(
+    "--debugpy",
+    is_flag=True,
+    help="Starts a debugpy session. "
+    "**This is an internal option and should only be use if you want to debug _RobotCode_.**",
+)
+@click.option(
+    "--debugpy-port",
+    type=int,
+    default=5678,
+    show_default=True,
+    help="Defines the port to use for the debugpy session.",
+)
+@click.option(
+    "--debugpy-wait-for-client",
+    is_flag=True,
+    help="Waits for a debugpy client to connect before starting the debugpy session.",
+)
 @click.version_option(version=__version__, prog_name="robotcode")
 @pass_application
 def robotcode(
@@ -122,6 +140,9 @@ def robotcode(
     log_calls: bool,
     default_path: Optional[List[str]],
     launcher_script: Optional[str] = None,
+    debugpy: bool = False,
+    debugpy_port: int = 5678,
+    debugpy_wait_for_client: bool = False,
 ) -> None:
     """\b
      _____       _           _    _____          _
@@ -154,6 +175,23 @@ def robotcode(
             LoggingDescriptor.set_call_tracing(True)
 
         logging.basicConfig(level=log_level, format="%(name)s:%(levelname)s: %(message)s")
+
+    if debugpy:
+        from robotcode.core.utils.debugpy import start_debugpy, wait_for_debugpy_connected
+
+        app.verbose(f"Try to start a debugpy session on port {debugpy_port}")
+
+        real_port = start_debugpy(debugpy_port, False)
+
+        if real_port is not None:
+            if real_port != debugpy_port:
+                app.verbose(f"Debugpy session started on port {real_port}")
+
+            if debugpy_wait_for_client:
+                app.verbose("Waiting for debugpy client to connect...")
+                wait_for_debugpy_connected()
+        else:
+            app.verbose("Could not start debugpy session. Enable logging for more information.")
 
 
 robotcode.add_command(config)

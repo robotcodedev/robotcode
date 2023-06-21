@@ -374,6 +374,15 @@
             "description": "If the port is specified, connect to the language server previously started at the given port.",
             "scope": "resource"
           },
+          "robotcode.languageServer.extraArgs": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "Specifies extra arguments to be passed to the `robotcode language-server` command line tool (i.e.: [`--log`, `--log-level=TRACE`, `--log-calls`]).",
+            "scope": "resource"
+          },
           "robotcode.debugLauncher.mode": {
             "type": "string",
             "default": "stdio",

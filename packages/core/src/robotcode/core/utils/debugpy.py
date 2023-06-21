@@ -1,4 +1,4 @@
-from typing import Sequence, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
 from ..logging import LoggingDescriptor
 from .net import find_free_port
@@ -43,7 +43,7 @@ def enable_debugpy(port: int, addresses: Union[Sequence[str], str, None] = None)
     return False
 
 
-def start_debugpy(end_point: Union[Tuple[str, int], int], wait_for_client: bool) -> bool:
+def start_debugpy(end_point: Union[Tuple[str, int], int], wait_for_client: bool) -> Optional[int]:
     if is_debugpy_installed():
         import debugpy
 
@@ -51,12 +51,11 @@ def start_debugpy(end_point: Union[Tuple[str, int], int], wait_for_client: bool)
             end_point = ("127.0.0.1", end_point)
 
         real_port = find_free_port(end_point[1])
-        if real_port != end_point[1]:
-            _logger.warning(lambda: f"start debugpy session on port {real_port}")
+
         debugpy.listen((end_point[0], real_port))
 
         if wait_for_client:
             _logger.info("wait for debugpy client")
             debugpy.wait_for_client()
-        return True
-    return False
+        return real_port
+    return None
