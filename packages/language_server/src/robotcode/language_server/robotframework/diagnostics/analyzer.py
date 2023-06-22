@@ -909,7 +909,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 range=range_from_node(node),
                 message=f"{type} setting requires value.",
                 severity=DiagnosticSeverity.ERROR,
-                code="ImportNeedsName",
+                code="ImportRequiresValue",
             )
 
     async def visit_VariablesImport(self, node: ast.AST) -> None:  # noqa: N802
