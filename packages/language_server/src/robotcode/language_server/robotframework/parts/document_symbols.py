@@ -57,7 +57,7 @@ class _Visitor(AsyncVisitor):
             return
 
         header = cast(SectionHeader, section.header)
-        if header.name is None:
+        if not header.name:
             return
 
         r = range_from_node(section)
