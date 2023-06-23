@@ -4,6 +4,17 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.45.0 (2023-06-23)
+
+### Feature
+
+* Library doc now generates a more RFW-like signature for arguments and argument defaults like ${SPACE}, ${EMPTY}, ${True}, etc. for the respective values ([`28a1f8a`](https://github.com/d-biehl/robotcode/commit/28a1f8a7451fb77e91348569065dff8573080330))
+
+### Fix
+
+* Document_symbols throws exception if section name is empty ([`ffce34d`](https://github.com/d-biehl/robotcode/commit/ffce34d7edd3f31f94da76edc090853f98cadb29))
+* Change code property for diagnostics for analyse imports to ImportRequiresValue ([`222e89c`](https://github.com/d-biehl/robotcode/commit/222e89cdc0391323d89c54ccbc4a54d13eb99b28))
+
 ## v0.44.1 (2023-06-21)
 
 ### Fix
