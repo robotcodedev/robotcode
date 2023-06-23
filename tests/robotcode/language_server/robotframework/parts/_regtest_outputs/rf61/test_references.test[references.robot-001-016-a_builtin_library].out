@@ -48,3 +48,12 @@ result:
       character: 16
       line: 1
   uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 22
+      line: 1
+    start:
+      character: 11
+      line: 1
+  uri: tests/signature_help.robot

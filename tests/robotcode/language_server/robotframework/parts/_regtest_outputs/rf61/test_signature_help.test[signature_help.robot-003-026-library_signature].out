@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 26
+  line: 3
+  name: library signature
+result: !SignatureHelp
+  active_parameter: null
+  active_signature: 0
+  signatures:
+  - activeParameter: 0
+    documentation:
+      kind: !MarkupKind 'MARKDOWN'
+      value: '#### Documentation:
+
+        This is the constructor of the class.
+
+
+        '
+    label: '(l: List[int] | None = ${None}, s: str = Hello World!, i: int = ${0},
+      b: bool = ${False})'
+    parameters:
+    - documentation: null
+      label: 'l: List[int] | None = ${None}'
+    - documentation: null
+      label: 's: str = Hello World!'
+    - documentation: null
+      label: 'i: int = ${0}'
+    - documentation: null
+      label: 'b: bool = ${False}'

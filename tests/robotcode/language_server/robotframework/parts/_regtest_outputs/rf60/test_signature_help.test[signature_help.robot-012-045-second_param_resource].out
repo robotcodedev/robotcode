@@ -1,0 +1,20 @@
+data: !GeneratedTestData
+  character: 45
+  line: 12
+  name: second param resource
+result: !SignatureHelp
+  active_parameter: 1
+  active_signature: 0
+  signatures:
+  - activeParameter: 1
+    documentation:
+      kind: !MarkupKind 'MARKDOWN'
+      value: ''
+    label: (message, level = INFO, html = ${False})
+    parameters:
+    - documentation: null
+      label: message
+    - documentation: null
+      label: level = INFO
+    - documentation: null
+      label: html = ${False}

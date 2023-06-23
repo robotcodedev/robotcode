@@ -571,6 +571,7 @@ class ImportsManager:
 
     @_logger.call
     async def get_command_line_variables(self) -> List[VariableDefinition]:
+        from robot.errors import DataError
         from robot.utils.text import split_args_from_name_or_path
 
         async with self._command_line_variables_lock:
@@ -634,6 +635,8 @@ class ImportsManager:
 
                     except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                         raise
+                    except DataError:
+                        pass
                     except BaseException as e:
                         # TODO add diagnostics
                         self._logger.exception(e)

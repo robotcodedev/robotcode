@@ -234,6 +234,29 @@ class KeywordArgumentKind(Enum):
     VAR_NAMED = "VAR_NAMED"
 
 
+def robot_arg_repr(arg: Any) -> Optional[str]:
+    from robot.running.arguments.argumentspec import ArgInfo
+
+    robot_arg = cast(ArgInfo, arg)
+
+    if robot_arg.default is ArgInfo.NOTSET:
+        return None
+
+    if robot_arg.default is None:
+        return "${None}"
+
+    if isinstance(robot_arg.default, (int, float, bool)):
+        return f"${{{robot_arg.default!r}}}"
+
+    if isinstance(robot_arg.default, str) and robot_arg.default == "":
+        return "${EMPTY}"
+
+    if isinstance(robot_arg.default, str) and robot_arg.default == "\\ \\":
+        return "${SPACE}"
+
+    return str(robot_arg.default_repr)
+
+
 @dataclass
 class KeywordArgumentDoc:
     name: str
@@ -251,7 +274,7 @@ class KeywordArgumentDoc:
 
         return KeywordArgumentDoc(
             name=robot_arg.name,
-            default_value=robot_arg.default_repr,
+            default_value=robot_arg_repr(robot_arg),
             str_repr=str(arg),
             types=robot_arg.types_reprs,
             kind=KeywordArgumentKind[robot_arg.kind],
@@ -259,7 +282,18 @@ class KeywordArgumentDoc:
         )
 
     def __str__(self) -> str:
-        return self.str_repr
+        prefix = ""
+        if self.kind == KeywordArgumentKind.VAR_POSITIONAL:
+            prefix = "*"
+        elif self.kind == KeywordArgumentKind.VAR_NAMED:
+            prefix = "**"
+
+        return (
+            f"{prefix}{self.name!s}"
+            f"{(': ' + (' | '.join(f'{s}' for s in self.types))) if self.types else ''}"
+            f"{' =' if self.default_value is not None else ''}"
+            f"{f' {self.default_value!s}' if self.default_value else ''}"
+        )
 
     def __hash__(self) -> int:
         return id(self)
@@ -431,7 +465,7 @@ class KeywordDoc(SourceEntity):
             if result:
                 result += "\n\n"
 
-            result += f"##{'#'*header_level} Documentation:\n\n"
+            result += f"##{'#'*header_level} Documentation:\n"
 
             if self.doc_format == ROBOT_DOC_FORMAT:
                 result += MarkDownFormatter().format(self.doc)
@@ -452,10 +486,12 @@ class KeywordDoc(SourceEntity):
                 result = ""
 
         if self.args:
-            result += f"\n##{'#'*header_level} Arguments: \n\n"
+            result += f"\n##{'#'*header_level} Arguments: \n"
 
             result += "\n| | | | |"
-            result += "\n|:--- | --:|:--|:---|"
+            result += "\n|:--|:--|:--|:--|"
+
+            escaped_pipe = " \\| "
 
             for a in self.args:
                 prefix = ""
@@ -466,9 +502,10 @@ class KeywordDoc(SourceEntity):
 
                 result += (
                     f"\n| `{prefix}{a.name!s}`"
-                    f"| {'=' if a.default_value is not None else ''}"
-                    f"| {f'`{a.default_value!s}`' if a.default_value else ''}"
-                    f"| {' or '.join(f'`<{s}>`' for s in a.types) if a.types is not None else ''} |"
+                    f'{": " if a.types else " "}'
+                    f"| {escaped_pipe.join(f'`{s}`' for s in a.types) if a.types else ''} "
+                    f"| {'=' if a.default_value is not None else ''} "
+                    f"| {f'`{a.default_value!s}`' if a.default_value else ''} |"
                 )
 
         if self.tags:
@@ -704,7 +741,6 @@ class LibraryDoc:
 
             write_lines(
                 f"#{'#'*header_level} {(self.type.capitalize()) if self.type else 'Unknown'} *{self.name}*",
-                "",
                 "",
             )
 

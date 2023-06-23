@@ -47,6 +47,10 @@ async def protocol(request: Any) -> AsyncIterator[RobotLanguageServerProtocol]:
         )
     )
 
+    initialization_options = {
+        "python_path": ["./lib", "./resources"],
+    }
+
     protocol = RobotLanguageServerProtocol(server)
     await protocol._initialize(
         dataclasses.replace(
@@ -57,6 +61,7 @@ async def protocol(request: Any) -> AsyncIterator[RobotLanguageServerProtocol]:
         root_uri=root_path.as_uri(),
         workspace_folders=[WorkspaceFolder(name="test workspace", uri=root_path.as_uri())],
         client_info=InitializeParamsClientInfoType(name="TestClient", version="1.0.0"),
+        initialization_options=initialization_options,
     )
 
     protocol.workspace.settings = {
