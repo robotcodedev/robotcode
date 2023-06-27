@@ -376,7 +376,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                     await asyncio.sleep(1)
 
                 self._logger.info(
-                    lambda: f"collecting workspace diagnostics for for {len(documents)} "
+                    lambda: f"collecting workspace diagnostics for {len(documents)} "
                     f"documents takes {time.monotonic() - start}s"
                 )
 

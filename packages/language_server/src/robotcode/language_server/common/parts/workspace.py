@@ -365,7 +365,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
                     list,
                 )
 
-                return r[0] if r is not None else None
+                return r[0] if r else None
             except asyncio.CancelledError:
                 raise
             except JsonRPCErrorException as e:

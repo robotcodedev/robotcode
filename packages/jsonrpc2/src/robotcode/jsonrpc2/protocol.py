@@ -461,7 +461,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         try:
             b = body.decode(charset)
 
-            self._data_logger.trace(lambda: f"JSON Received: {b}")
+            self._data_logger.trace(lambda: f"JSON Received: {b!r}")
 
             self._handle_messages(self._generate_json_rpc_messages_from_dict(json.loads(b)))
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
@@ -528,7 +528,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         if self.write_transport is not None:
             msg = header + body
 
-            self._data_logger.trace(lambda: f"JSON send: {msg.decode()}")
+            self._data_logger.trace(lambda: f"JSON send: {msg.decode()!r}")
 
             if self._loop:
                 self._loop.call_soon_threadsafe(self.write_transport.write, msg)

@@ -27,8 +27,6 @@ def main() -> None:
         version = version.next_minor()
         alias = "dev"
 
-    version.major, version.minor
-
     run(
         "mike deploy --push --update-aliases --rebase --force "
         f'--title "v{version.major}.{version.minor}.x ({alias})" {version.major}.{version.minor} {alias}',
