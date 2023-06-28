@@ -271,7 +271,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
                     message.seq,
                     message.command,
                     False,
-                    error_message=Message(format=f"{type(e).__name__}: {e}", show_user=True),
+                    error_message=Message(format=f"{type(e).__name__}: {e}"),
                 )
             finally:
                 with self._received_request_lock:

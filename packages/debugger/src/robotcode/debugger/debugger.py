@@ -5,7 +5,6 @@ import os
 import pathlib
 import re
 import threading
-import traceback
 import weakref
 from collections import deque
 from enum import Enum
@@ -33,6 +32,7 @@ from robot.utils import NormalizedDict
 from robot.variables import evaluate_expression
 from robotcode.core.event import event
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.robot.utils import get_robot_version
 
 from .dap_types import (
     Breakpoint,
@@ -60,6 +60,16 @@ from .dap_types import (
     Variable,
     VariablePresentationHint,
 )
+
+if get_robot_version() >= (6, 1):
+
+    def internal_evaluate_expression(expression: str, variable_store: Any) -> Any:
+        return evaluate_expression(expression, variable_store)
+
+else:
+
+    def internal_evaluate_expression(expression: str, variable_store: Any) -> Any:
+        return evaluate_expression(expression, variable_store.store)
 
 
 class Undefined:
@@ -516,7 +526,7 @@ class Debugger:
                             hit = False
                             try:
                                 vars = EXECUTION_CONTEXTS.current.variables.current
-                                hit = bool(evaluate_expression(vars.replace_string(point.condition), vars.store))
+                                hit = bool(internal_evaluate_expression(vars.replace_string(point.condition), vars))
                             except (SystemExit, KeyboardInterrupt):
                                 raise
                             except BaseException:
@@ -1281,14 +1291,13 @@ class Debugger:
                     else:
                         raise
             else:
-                result = evaluate_expression(vars.replace_string(expression), vars.store)
+                result = internal_evaluate_expression(vars.replace_string(expression), vars)
 
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             self._logger.exception(e)
-            result = traceback.format_exc()
-            # result = e
+            raise
 
         return EvaluateResult(repr(result), repr(type(result)))
 
@@ -1312,7 +1321,7 @@ class Debugger:
                 if (name[2:-1] if self.IS_VARIABLE_RE.match(name) else name) not in variables:
                     raise NameError(f"Variable '{name}' not found.")
 
-                evaluated_value = evaluate_expression(variables.replace_string(value), variables.store)
+                evaluated_value = internal_evaluate_expression(variables.replace_string(value), variables)
                 variables[name] = evaluated_value
 
                 return SetVariableResult(repr(evaluated_value), repr(type(value)))
