@@ -137,7 +137,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
     async def _launch(
         self,
         request: str,
-        python: str,
+        python: Optional[str] = None,
         cwd: str = ".",
         profiles: Optional[List[str]] = None,
         target: Optional[str] = None,
@@ -178,13 +178,11 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
 
         port = find_free_port(DEBUGGER_DEFAULT_PORT)
 
-        debugger_script = (
-            Path(Path(__file__).parent.parent) if self.debugger_script is None else Path(self.debugger_script)
-        )
+        debugger_script = ["-m", "robotcode.cli"] if self.debugger_script is None else [str(Path(self.debugger_script))]
 
         robotcode_run_args = [
-            python,
-            str(debugger_script),
+            python or sys.executable,
+            *debugger_script,
             *itertools.chain.from_iterable(["--profile", p] for p in profiles or []),
             *itertools.chain.from_iterable(["--default-path", p] for p in paths or []),
             *(robotCodeArgs or []),
