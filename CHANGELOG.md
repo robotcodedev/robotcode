@@ -4,6 +4,17 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.46.0 (2023-07-05)
+
+### Feature
+
+* Allow multiline RF statements in debug console ([`f057131`](https://github.com/d-biehl/robotcode/commit/f057131e956c2b5d3ee1255fd4fe7958ddd8722c))
+
+### Fix
+
+* **debugger:** Evaluation expressions in RFW >= 6.1 not work correctly ([`f7c38d6`](https://github.com/d-biehl/robotcode/commit/f7c38d6dcfc6b96b64d9db7fb1e53393426bf3bf))
+* Insted of starting the debugger, start robotcode.cli in debug launcher ([`013bdfd`](https://github.com/d-biehl/robotcode/commit/013bdfd485e021a511759a6d98fbc55693b0fafc))
+
 ## v0.45.0 (2023-06-23)
 
 ### Feature
