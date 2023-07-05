@@ -152,7 +152,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         launcherTimeout: Optional[int] = None,  # noqa: N803
         debuggerArgs: Optional[List[str]] = None,  # noqa: N803
         debuggerTimeout: Optional[int] = None,  # noqa: N803
-        attachPython: Optional[bool] = False,  # noqa: N803
+        attachPython: Optional[bool] = True,  # noqa: N803
         attachPythonPort: Optional[int] = None,  # noqa: N803
         variables: Optional[Dict[str, Any]] = None,
         outputDir: Optional[str] = None,  # noqa: N803

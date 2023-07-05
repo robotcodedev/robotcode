@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import itertools
 import os
 import pathlib
@@ -25,8 +26,10 @@ from typing import (
     Union,
 )
 
+from robot.api.parsing import get_model
 from robot.errors import VariableError
-from robot.running import EXECUTION_CONTEXTS, Keyword
+from robot.output import LOGGER
+from robot.running import EXECUTION_CONTEXTS, Keyword, TestCase, TestSuite
 from robot.running.userkeyword import UserKeywordHandler
 from robot.utils import NormalizedDict
 from robot.variables import evaluate_expression
@@ -268,6 +271,7 @@ class Debugger:
         self.terminated_requested = False
         self.attached = False
         self.path_mappings: List[PathMapping] = []
+        self.server_loop: Optional[asyncio.AbstractEventLoop] = None
 
         self._keyword_to_evaluate: Optional[Callable[..., Any]] = None
         self._evaluated_keyword_result: Any = None
@@ -275,6 +279,7 @@ class Debugger:
         self._evaluate_keyword_event.set()
         self._after_evaluate_keyword_event = threading.Event()
         self._after_evaluate_keyword_event.set()
+        self.expression_mode = False
 
     @property
     def debug(self) -> bool:
@@ -349,6 +354,8 @@ class Debugger:
                         body=ContinuedEventBody(thread_id=self.main_thread.ident, all_threads_continued=True)
                     ),
                 )
+
+            self.requested_state = RequestedState.Nothing
             self.state = State.Running
             self.condition.notify_all()
 
@@ -569,6 +576,7 @@ class Debugger:
                             )
                             return
 
+                        self.requested_state = RequestedState.Nothing
                         self.state = State.Paused
                         self.send_event(
                             self,
@@ -591,6 +599,7 @@ class Debugger:
                 if v.filter_options and any(o for o in v.filter_options if o.filter_id in filter_id)
             )
         ):
+            self.requested_state = RequestedState.Nothing
             self.state = State.Paused
 
             self.send_event(
@@ -605,7 +614,6 @@ class Debugger:
                     )
                 ),
             )
-            self.wait_for_running()
 
     def wait_for_running(self) -> None:
         if self.attached:
@@ -625,9 +633,10 @@ class Debugger:
                         self._evaluated_keyword_result = e
                     finally:
                         self._evaluate_keyword_event.set()
-                        self._after_evaluate_keyword_event.wait(60)
+                        self._after_evaluate_keyword_event.wait(120)
 
                     continue
+
                 break
 
     def start_output_group(self, name: str, attributes: Dict[str, Any], type: Optional[str] = None) -> None:
@@ -782,12 +791,15 @@ class Debugger:
             status = attributes.get("status", "")
 
             if status == "FAIL":
-                self.process_end_state(
-                    status,
-                    {"failed_suite"},
-                    "Suite failed.",
-                    f"Suite failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
-                )
+                if self.server_loop:
+                    self.process_end_state(
+                        status,
+                        {"failed_suite"},
+                        "Suite failed.",
+                        f"Suite failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
+                    )
+
+                self.wait_for_running()
 
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
@@ -821,6 +833,8 @@ class Debugger:
                     "Test failed.",
                     f"Test failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
                 )
+
+                self.wait_for_running()
 
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
@@ -890,6 +904,8 @@ class Debugger:
                     f"Keyword failed: {self.last_fail_message}" if self.last_fail_message else "Keyword failed.",
                 )
 
+                self.wait_for_running()
+
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", None)
         type = attributes.get("type", "KEYWORD")
@@ -948,6 +964,12 @@ class Debugger:
 
         return path
 
+    def source_from_entry(self, entry: StackFrameEntry) -> Optional[Source]:
+        if entry.source is not None and entry.is_file:
+            return Source(path=str(self.map_path_to_client(entry.source)), presentation_hint="normal")
+
+        return None
+
     def get_stack_trace(
         self,
         thread_id: int,
@@ -961,12 +983,6 @@ class Debugger:
         start_frame = start_frame or 0
         levels = start_frame + (levels or len(self.stack_frames))
 
-        def source_from_entry(entry: StackFrameEntry) -> Optional[Source]:
-            if entry.source is not None and entry.is_file:
-                return Source(path=str(self.map_path_to_client(entry.source)))
-
-            return None
-
         def yield_stack() -> Iterator[StackFrame]:
             for i, v in enumerate(itertools.islice(self.stack_frames, start_frame, levels)):
                 if v.stack_frames:
@@ -975,7 +991,7 @@ class Debugger:
                         name=v.longname or v.kwname or v.name or v.type,
                         line=v.stack_frames[0].line if v.stack_frames[0].line is not None else 0,
                         column=v.stack_frames[0].column if v.stack_frames[0].column is not None else 1,
-                        source=source_from_entry(v.stack_frames[0]),
+                        source=self.source_from_entry(v.stack_frames[0]),
                         presentation_hint="normal" if v.stack_frames[0].is_file else "subtle",
                         module_id=v.libname,
                     )
@@ -985,7 +1001,7 @@ class Debugger:
                         name=v.longname or v.kwname or v.name or v.type,
                         line=v.line if v.line is not None else 1,
                         column=v.column if v.column is not None else 1,
-                        source=source_from_entry(v),
+                        source=self.source_from_entry(v),
                         presentation_hint="normal" if v.is_file else "subtle",
                         module_id=v.libname,
                     )
@@ -1224,74 +1240,99 @@ class Debugger:
                 if stack_frame is not None
                 else evaluate_context.variables._global
             )
-
-            if expression.startswith("! "):
-                splitted = self.SPLIT_LINE.split(expression[2:].strip())
-
-                if splitted:
-                    variables: List[str] = []
-                    while len(splitted) > 1 and self.IS_VARIABLE_ASSIGNMENT_RE.match(splitted[0].strip()):
-                        var = splitted[0]
-                        splitted = splitted[1:]
-                        if var.endswith("="):
-                            var = var[:-1]
-                        variables.append(var)
+            if (
+                isinstance(context, EvaluateArgumentContext)
+                and context != EvaluateArgumentContext.REPL
+                or context != EvaluateArgumentContext.REPL.value
+                or self.expression_mode
+            ):
+                if expression.startswith("! "):
+                    splitted = self.SPLIT_LINE.split(expression[2:].strip())
 
                     if splitted:
+                        variables: List[str] = []
+                        while len(splitted) > 1 and self.IS_VARIABLE_ASSIGNMENT_RE.match(splitted[0].strip()):
+                            var = splitted[0]
+                            splitted = splitted[1:]
+                            if var.endswith("="):
+                                var = var[:-1]
+                            variables.append(var)
 
-                        def run_kw() -> Any:
-                            kw = Keyword(name=splitted[0], args=tuple(splitted[1:]), assign=tuple(variables))
-                            return kw.run(evaluate_context)
+                        if splitted:
 
-                        with self.condition:
-                            self._keyword_to_evaluate = run_kw
-                            self._evaluated_keyword_result = None
+                            def run_kw() -> Any:
+                                kw = Keyword(name=splitted[0], args=tuple(splitted[1:]), assign=tuple(variables))
+                                return kw.run(evaluate_context)
 
-                            self._evaluate_keyword_event.clear()
-                            self._after_evaluate_keyword_event.clear()
+                            result = self.run_in_robot_thread(run_kw)
 
-                            old_state = self.state
-                            self.state = State.CallKeyword
-                            self.condition.notify_all()
-
-                        try:
-                            self._evaluate_keyword_event.wait(60)
-                        finally:
-                            result = self._evaluated_keyword_result
-
-                            with self.condition:
-                                self._keyword_to_evaluate = None
-                                self._evaluated_keyword_result = None
-
-                                self.state = old_state
-                                self.condition.notify_all()
-
-                                self._after_evaluate_keyword_event.set()
-
-            elif self.IS_VARIABLE_RE.match(expression.strip()):
-                try:
-                    result = vars.replace_scalar(expression)
-                except VariableError:
-                    if context is not None and (
-                        isinstance(context, EvaluateArgumentContext)
-                        and (
-                            context
+                elif self.IS_VARIABLE_RE.match(expression.strip()):
+                    try:
+                        result = vars.replace_scalar(expression)
+                    except VariableError:
+                        if context is not None and (
+                            isinstance(context, EvaluateArgumentContext)
+                            and (
+                                context
+                                in [
+                                    EvaluateArgumentContext.HOVER,
+                                    EvaluateArgumentContext.WATCH,
+                                ]
+                            )
+                            or context
                             in [
-                                EvaluateArgumentContext.HOVER,
-                                EvaluateArgumentContext.WATCH,
+                                EvaluateArgumentContext.HOVER.value,
+                                EvaluateArgumentContext.WATCH.value,
                             ]
-                        )
-                        or context
-                        in [
-                            EvaluateArgumentContext.HOVER.value,
-                            EvaluateArgumentContext.WATCH.value,
-                        ]
-                    ):
-                        result = UNDEFINED
-                    else:
-                        raise
+                        ):
+                            result = UNDEFINED
+                        else:
+                            raise
+                else:
+                    result = internal_evaluate_expression(vars.replace_string(expression), vars)
             else:
-                result = internal_evaluate_expression(vars.replace_string(expression), vars)
+
+                def get_test_body_from_string(command: str) -> TestCase:
+                    suite_str = (
+                        "*** Test Cases ***\nDummyTestCase423141592653589793\n  "
+                        + ("\n  ".join(command.split("\n")) if "\n" in command else command)
+                    ) + "\n"
+
+                    model = get_model(suite_str)
+                    suite: TestSuite = TestSuite.from_model(model)
+                    return suite.tests[0]
+
+                def run_kw() -> Any:
+                    test = get_test_body_from_string(expression)
+                    result = None
+
+                    if len(test.body):
+                        for kw in test.body:
+                            with LOGGER.delayed_logging:
+                                try:
+                                    result = kw.run(evaluate_context)
+                                    if kw.assign:
+                                        result = None
+                                except (SystemExit, KeyboardInterrupt):
+                                    raise
+                                except BaseException:
+                                    result = None
+                                    break
+                                finally:
+                                    messages = LOGGER._log_message_cache or []
+                                    for msg in messages or ():
+                                        # hack to get and evaluate log level
+                                        listener: Any = next(iter(LOGGER), None)
+                                        if listener is None or listener._is_logged(msg.level):
+                                            self.log_message(
+                                                {"level": msg.level, "message": msg.message, "timestamp": msg.timestamp}
+                                            )
+                    return result
+
+                result = self.run_in_robot_thread(run_kw)
+
+                if isinstance(result, BaseException):
+                    raise result
 
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -1299,7 +1340,35 @@ class Debugger:
             self._logger.exception(e)
             raise
 
-        return EvaluateResult(repr(result), repr(type(result)))
+        return EvaluateResult(repr(result) if result is not None else "", repr(type(result)))
+
+    def run_in_robot_thread(self, kw: Callable[[], Any]) -> Any:
+        with self.condition:
+            self._keyword_to_evaluate = kw
+            self._evaluated_keyword_result = None
+
+            self._evaluate_keyword_event.clear()
+            self._after_evaluate_keyword_event.clear()
+
+            old_state = self.state
+            self.state = State.CallKeyword
+            self.condition.notify_all()
+
+        try:
+            self._evaluate_keyword_event.wait(60)
+        finally:
+            result = self._evaluated_keyword_result
+
+            with self.condition:
+                self._keyword_to_evaluate = None
+                self._evaluated_keyword_result = None
+
+                self.state = old_state
+                self.condition.notify_all()
+
+                self._after_evaluate_keyword_event.set()
+
+            return result
 
     def set_variable(
         self, variables_reference: int, name: str, value: str, format: Optional[ValueFormat] = None

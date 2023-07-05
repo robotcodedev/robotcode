@@ -87,7 +87,6 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         body = as_json(message, compact=True).encode(self.CHARSET)
 
         header = (f"Content-Length: {len(body)}\r\n\r\n").encode("ascii")
-
         if self.write_transport is not None:
             msg = header + body
 

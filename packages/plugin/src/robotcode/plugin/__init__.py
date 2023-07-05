@@ -220,11 +220,11 @@ class Application:
 
     def keyboard_interrupt(self) -> None:
         self.verbose("Aborted!", file=sys.stderr)
-        sys.exit(253)
+        raise SystemExit(253)
 
     def exit(self, code: int = 0) -> None:
         self.verbose(f"Exit with code {code}")
-        sys.exit(code)
+        raise SystemExit(code)
 
 
 pass_application = click.make_pass_decorator(Application, ensure=True)

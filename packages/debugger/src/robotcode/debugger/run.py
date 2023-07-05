@@ -191,6 +191,7 @@ async def run_debugger(
         Debugger.instance().output_timestamps = output_timestamps
         Debugger.instance().debug = debug
         Debugger.instance().set_main_thread(threading.current_thread())
+        Debugger.instance().server_loop = server.loop
         Debugger.instance().start()
 
         exit_code = 0
