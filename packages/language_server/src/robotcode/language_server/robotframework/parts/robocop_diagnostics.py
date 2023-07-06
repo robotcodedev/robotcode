@@ -104,7 +104,11 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 async def run_check(self, ast_model, filename, source=None):  # type: ignore
                     await check_canceled()
 
-                    if robocop_version >= (2, 4):
+                    if robocop_version >= (4, 0):
+                        from robocop.utils.disablers import DisablersFinder
+
+                        disablers = DisablersFinder(ast_model)
+                    elif robocop_version >= (2, 4):
                         from robocop.utils import DisablersFinder
 
                         disablers = DisablersFinder(filename=filename, source=source)
