@@ -1,7 +1,7 @@
 import os
 import sys
 from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union, cast
+from typing import Any, List, Optional, Set, Tuple, Union, cast
 
 import click
 from robot.errors import DataError, Information
@@ -57,7 +57,9 @@ class RobotFrameworkEx(RobotFramework):
         return options, arguments
 
 
-ROBOT_OPTIONS = (
+# mypy: disable-error-code="misc, arg-type, attr-defined"
+
+ROBOT_OPTIONS: Set[click.Command] = {
     click.option("--by-longname", type=str, multiple=True, help="Select tests/tasks or suites by longname."),
     click.option(
         "--exclude-by-longname",
@@ -72,7 +74,7 @@ ROBOT_OPTIONS = (
         message=f"%(prog)s %(version)s\n{USAGE.splitlines()[0].split(' -- ')[0].strip()} {get_full_version()}",
     ),
     click.argument("robot_options_and_args", nargs=-1, type=click.Path()),
-)
+}
 
 
 def handle_robot_options(

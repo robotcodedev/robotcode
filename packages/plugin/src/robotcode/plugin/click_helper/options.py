@@ -1,4 +1,4 @@
-from typing import Optional, Sequence, Set, Tuple
+from typing import List, Optional, Sequence, Set, Tuple
 
 import click
 from robotcode.core.types import ServerMode
@@ -15,11 +15,13 @@ from robotcode.plugin.click_helper.types import (
 
 from .types import FC
 
+# mypy: disable-error-code="attr-defined"
+
 
 def server_options(
     default_server_mode: ServerMode, default_port: int, allowed_server_modes: Optional[Set[ServerMode]] = None
 ) -> Sequence[FC]:
-    result = []
+    result: List[FC] = []
 
     def exclusive(option_name: str, *args: ServerMode) -> Sequence[str]:
         return (

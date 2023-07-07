@@ -9,6 +9,8 @@ from robotcode.robot.config.loader import (
 )
 from robotcode.robot.config.utils import get_config_files
 
+# mypy: disable-error-code="misc, arg-type, attr-defined"
+
 
 @click.group(
     invoke_without_command=False,

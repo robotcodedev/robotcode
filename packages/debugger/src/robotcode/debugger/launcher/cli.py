@@ -14,6 +14,8 @@ from .run import run_launcher
 
 LAUNCHER_DEFAULT_PORT = 6611
 
+# mypy: disable-error-code="misc, arg-type, attr-defined"
+
 
 @click.command(
     add_help_option=True,

@@ -281,6 +281,9 @@ class Collector(SuiteVisitor):
         self.statistics.tests += 1
 
 
+# mypy: disable-error-code="misc, arg-type, attr-defined"
+
+
 @click.group(invoke_without_command=False)
 @click.option(
     "--read-from-stdin", is_flag=True, help="Read file contents from stdin. This is an internal option.", hidden=True
