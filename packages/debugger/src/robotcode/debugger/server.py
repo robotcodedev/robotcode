@@ -244,7 +244,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         else:
             await self.send_event_async(Event("disconnectRequested"))
             Debugger.instance().attached = False
-            Debugger.instance().continue_all(False)
+            Debugger.instance().continue_all()
 
     @rpc_method(name="setBreakpoints", param_type=SetBreakpointsArguments)
     async def _set_breakpoints(

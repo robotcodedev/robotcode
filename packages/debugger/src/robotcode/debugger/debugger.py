@@ -117,6 +117,7 @@ class RequestedState(Enum):
     Next = 2
     StepIn = 3
     StepOut = 4
+    Running = 5
 
 
 class BreakpointsEntry(NamedTuple):
@@ -338,25 +339,16 @@ class Debugger:
 
             self.condition.notify_all()
 
-    def continue_all(self, send_event: bool = True) -> None:
+    def continue_all(self) -> None:
         if self.main_thread is not None and self.main_thread.ident is not None:
-            self.continue_thread(self.main_thread.ident, send_event)
+            self.continue_thread(self.main_thread.ident)
 
-    def continue_thread(self, thread_id: int, send_event: bool = False) -> None:
+    def continue_thread(self, thread_id: int) -> None:
         if self.main_thread is None or thread_id != self.main_thread.ident:
             raise InvalidThreadIdError(thread_id)
 
         with self.condition:
-            if send_event:
-                self.send_event(
-                    self,
-                    ContinuedEvent(
-                        body=ContinuedEventBody(thread_id=self.main_thread.ident, all_threads_continued=True)
-                    ),
-                )
-
-            self.requested_state = RequestedState.Nothing
-            self.state = State.Running
+            self.requested_state = RequestedState.Running
             self.condition.notify_all()
 
     def pause_thread(self, thread_id: int) -> None:
@@ -365,7 +357,6 @@ class Debugger:
 
         with self.condition:
             self.requested_state = RequestedState.Pause
-            self.state = State.Paused
 
             self.condition.notify_all()
 
@@ -374,8 +365,6 @@ class Debugger:
             raise InvalidThreadIdError(thread_id)
 
         with self.condition:
-            self.state = State.Running
-
             if self.full_stack_frames and self.full_stack_frames[0].type in ["TEST", "SUITE"]:
                 self.requested_state = RequestedState.StepIn
             else:
@@ -406,7 +395,6 @@ class Debugger:
 
         with self.condition:
             self.requested_state = RequestedState.StepIn
-            self.state = State.Running
 
             self.condition.notify_all()
 
@@ -416,7 +404,6 @@ class Debugger:
 
         with self.condition:
             self.requested_state = RequestedState.StepOut
-            self.state = State.Running
             self.stop_stack_len = len(self.full_stack_frames) - 1
 
             i = 1
@@ -474,7 +461,9 @@ class Debugger:
             return
 
         if self.requested_state == RequestedState.Pause:
+            self.requested_state = RequestedState.Nothing
             self.state = State.Paused
+
             self.send_event(
                 self,
                 StoppedEvent(
@@ -484,10 +473,12 @@ class Debugger:
                     )
                 ),
             )
-            self.requested_state = RequestedState.Nothing
+
         elif self.requested_state == RequestedState.Next:
             if len(self.full_stack_frames) <= self.stop_stack_len:
                 self.state = State.Paused
+                self.requested_state = RequestedState.Nothing
+
                 self.send_event(
                     self,
                     StoppedEvent(
@@ -497,9 +488,11 @@ class Debugger:
                         )
                     ),
                 )
-                self.requested_state = RequestedState.Nothing
+
         elif self.requested_state == RequestedState.StepIn:
             self.state = State.Paused
+            self.requested_state = RequestedState.Nothing
+
             self.send_event(
                 self,
                 StoppedEvent(
@@ -509,9 +502,11 @@ class Debugger:
                     )
                 ),
             )
-            self.requested_state = RequestedState.Nothing
+
         elif self.requested_state == RequestedState.StepOut and len(self.full_stack_frames) <= self.stop_stack_len:
             self.state = State.Paused
+            self.requested_state = RequestedState.Nothing
+
             self.send_event(
                 self,
                 StoppedEvent(
@@ -521,7 +516,6 @@ class Debugger:
                     )
                 ),
             )
-            self.requested_state = RequestedState.Nothing
 
         if source is not None:
             source_path = self.map_path_to_client(str(Path(source).absolute()))
@@ -576,8 +570,9 @@ class Debugger:
                             )
                             return
 
-                        self.requested_state = RequestedState.Nothing
                         self.state = State.Paused
+                        self.requested_state = RequestedState.Nothing
+
                         self.send_event(
                             self,
                             StoppedEvent(
@@ -590,6 +585,52 @@ class Debugger:
                         )
 
     def process_end_state(self, status: str, filter_id: Set[str], description: str, text: Optional[str]) -> None:
+        if self.state == State.Stopped:
+            return
+
+        if self.requested_state == RequestedState.Next:
+            if len(self.full_stack_frames) <= self.stop_stack_len:
+                self.state = State.Paused
+                self.requested_state = RequestedState.Nothing
+
+                self.send_event(
+                    self,
+                    StoppedEvent(
+                        body=StoppedEventBody(
+                            reason=StoppedReason.STEP,
+                            thread_id=threading.current_thread().ident,
+                        )
+                    ),
+                )
+
+        elif self.requested_state == RequestedState.StepIn:
+            self.state = State.Paused
+            self.requested_state = RequestedState.Nothing
+
+            self.send_event(
+                self,
+                StoppedEvent(
+                    body=StoppedEventBody(
+                        reason=StoppedReason.STEP,
+                        thread_id=threading.current_thread().ident,
+                    )
+                ),
+            )
+
+        elif self.requested_state == RequestedState.StepOut and len(self.full_stack_frames) <= self.stop_stack_len:
+            self.state = State.Paused
+            self.requested_state = RequestedState.Nothing
+
+            self.send_event(
+                self,
+                StoppedEvent(
+                    body=StoppedEventBody(
+                        reason=StoppedReason.STEP,
+                        thread_id=threading.current_thread().ident,
+                    )
+                ),
+            )
+
         if (
             not self.terminated
             and status == "FAIL"
@@ -599,17 +640,18 @@ class Debugger:
                 if v.filter_options and any(o for o in v.filter_options if o.filter_id in filter_id)
             )
         ):
-            self.requested_state = RequestedState.Nothing
+            reason = StoppedReason.EXCEPTION
+
             self.state = State.Paused
+            self.requested_state = RequestedState.Nothing
 
             self.send_event(
                 self,
                 StoppedEvent(
                     body=StoppedEventBody(
-                        description=description,
-                        reason=StoppedReason.EXCEPTION,
+                        reason=reason,
                         thread_id=threading.current_thread().ident,
-                        all_threads_stopped=True,
+                        description=description,
                         text=text,
                     )
                 ),
@@ -619,7 +661,10 @@ class Debugger:
         if self.attached:
             while True:
                 with self.condition:
-                    self.condition.wait_for(lambda: self.state in [State.Running, State.Stopped, State.CallKeyword])
+                    self.condition.wait_for(
+                        lambda: self.state in [State.Running, State.Stopped, State.CallKeyword]
+                        or self.requested_state != RequestedState.Nothing
+                    )
 
                 if self.state == State.CallKeyword:
                     self._evaluated_keyword_result = None
@@ -635,6 +680,18 @@ class Debugger:
                         self._evaluate_keyword_event.set()
                         self._after_evaluate_keyword_event.wait(120)
 
+                    continue
+
+                if self.requested_state == RequestedState.Running:
+                    self.state = State.Running
+                    if self.main_thread is not None and self.main_thread.ident is not None:
+                        self.send_event(
+                            self,
+                            ContinuedEvent(
+                                body=ContinuedEventBody(thread_id=self.main_thread.ident, all_threads_continued=True)
+                            ),
+                        )
+                    self.requested_state = RequestedState.Nothing
                     continue
 
                 break
@@ -769,6 +826,7 @@ class Debugger:
             if self.stop_on_entry:
                 self.stop_on_entry = False
 
+                self.requested_state = RequestedState.Nothing
                 self.state = State.Paused
                 self.send_event(
                     self,
