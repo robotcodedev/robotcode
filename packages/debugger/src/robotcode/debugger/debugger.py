@@ -1306,6 +1306,14 @@ class Debugger:
         if not expression:
             return EvaluateResult(result="")
 
+        if (
+            (context == EvaluateArgumentContext.REPL or context == EvaluateArgumentContext.REPL.value)
+            and expression.startswith("#")
+            and expression[1:].strip() == "exprmode"
+        ):
+            self.expression_mode = not self.expression_mode
+            return EvaluateResult(result="# Expression mode is now " + ("on" if self.expression_mode else "off"))
+
         stack_frame = next((v for v in self.full_stack_frames if v.id == frame_id), None)
 
         evaluate_context = stack_frame.context() if stack_frame else None
