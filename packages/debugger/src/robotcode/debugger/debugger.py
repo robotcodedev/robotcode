@@ -6,6 +6,7 @@ import os
 import pathlib
 import re
 import threading
+import time
 import weakref
 from collections import deque
 from enum import Enum
@@ -254,7 +255,7 @@ class Debugger:
         self.full_stack_frames: Deque[StackFrameEntry] = deque()
         self.stack_frames: Deque[StackFrameEntry] = deque()
         self.condition = threading.Condition()
-        self.state: State = State.Stopped
+        self._state: State = State.Stopped
         self.requested_state: RequestedState = RequestedState.Nothing
         self.stop_stack_len = 0
         self._robot_report_file: Optional[str] = None
@@ -281,6 +282,18 @@ class Debugger:
         self._after_evaluate_keyword_event = threading.Event()
         self._after_evaluate_keyword_event.set()
         self.expression_mode = False
+
+    @property
+    def state(self) -> State:
+        return self._state
+
+    @state.setter
+    def state(self, value: State) -> None:
+        if self._state == value:
+            # if state is not changed, do nothing and wait a little bit to avoid busy loop
+            time.sleep(0.01)
+
+        self._state = value
 
     @property
     def debug(self) -> bool:
@@ -476,8 +489,8 @@ class Debugger:
 
         elif self.requested_state == RequestedState.Next:
             if len(self.full_stack_frames) <= self.stop_stack_len:
-                self.state = State.Paused
                 self.requested_state = RequestedState.Nothing
+                self.state = State.Paused
 
                 self.send_event(
                     self,
@@ -490,8 +503,8 @@ class Debugger:
                 )
 
         elif self.requested_state == RequestedState.StepIn:
-            self.state = State.Paused
             self.requested_state = RequestedState.Nothing
+            self.state = State.Paused
 
             self.send_event(
                 self,
@@ -504,8 +517,8 @@ class Debugger:
             )
 
         elif self.requested_state == RequestedState.StepOut and len(self.full_stack_frames) <= self.stop_stack_len:
-            self.state = State.Paused
             self.requested_state = RequestedState.Nothing
+            self.state = State.Paused
 
             self.send_event(
                 self,
@@ -570,8 +583,8 @@ class Debugger:
                             )
                             return
 
-                        self.state = State.Paused
                         self.requested_state = RequestedState.Nothing
+                        self.state = State.Paused
 
                         self.send_event(
                             self,
@@ -588,49 +601,6 @@ class Debugger:
         if self.state == State.Stopped:
             return
 
-        if self.requested_state == RequestedState.Next:
-            if len(self.full_stack_frames) <= self.stop_stack_len:
-                self.state = State.Paused
-                self.requested_state = RequestedState.Nothing
-
-                self.send_event(
-                    self,
-                    StoppedEvent(
-                        body=StoppedEventBody(
-                            reason=StoppedReason.STEP,
-                            thread_id=threading.current_thread().ident,
-                        )
-                    ),
-                )
-
-        elif self.requested_state == RequestedState.StepIn:
-            self.state = State.Paused
-            self.requested_state = RequestedState.Nothing
-
-            self.send_event(
-                self,
-                StoppedEvent(
-                    body=StoppedEventBody(
-                        reason=StoppedReason.STEP,
-                        thread_id=threading.current_thread().ident,
-                    )
-                ),
-            )
-
-        elif self.requested_state == RequestedState.StepOut and len(self.full_stack_frames) <= self.stop_stack_len:
-            self.state = State.Paused
-            self.requested_state = RequestedState.Nothing
-
-            self.send_event(
-                self,
-                StoppedEvent(
-                    body=StoppedEventBody(
-                        reason=StoppedReason.STEP,
-                        thread_id=threading.current_thread().ident,
-                    )
-                ),
-            )
-
         if (
             not self.terminated
             and status == "FAIL"
@@ -642,8 +612,8 @@ class Debugger:
         ):
             reason = StoppedReason.EXCEPTION
 
-            self.state = State.Paused
             self.requested_state = RequestedState.Nothing
+            self.state = State.Paused
 
             self.send_event(
                 self,
@@ -683,6 +653,7 @@ class Debugger:
                     continue
 
                 if self.requested_state == RequestedState.Running:
+                    self.requested_state = RequestedState.Nothing
                     self.state = State.Running
                     if self.main_thread is not None and self.main_thread.ident is not None:
                         self.send_event(
@@ -691,7 +662,6 @@ class Debugger:
                                 body=ContinuedEventBody(thread_id=self.main_thread.ident, all_threads_continued=True)
                             ),
                         )
-                    self.requested_state = RequestedState.Nothing
                     continue
 
                 break
@@ -938,7 +908,7 @@ class Debugger:
         "BuiltIn.Run Keyword And Continue On Failure",
     ]
 
-    def in_caughted_keyword(self) -> bool:
+    def is_not_caughted_by_keyword(self) -> bool:
         r = next(
             (
                 v
@@ -949,6 +919,56 @@ class Debugger:
         )
         return r is None
 
+    __matchers: Optional[Dict[str, Callable[[str, str], bool]]] = None
+
+    def _get_matcher(self, pattern_type: str) -> Optional[Callable[[str, str], bool]]:
+        from robot.utils import Matcher
+
+        if self.__matchers is None:
+            self.__matchers: Dict[str, Callable[[str, str], bool]] = {
+                "GLOB": lambda m, p: bool(Matcher(p, spaceless=False, caseless=False).match(m)),
+                "LITERAL": lambda m, p: m == p,
+                "REGEXP": lambda m, p: re.match(rf"{p}\Z", m) is not None,
+                "START": lambda m, p: m.startswith(p),
+            }
+
+        return self.__matchers.get(pattern_type.upper(), None)
+
+    def _should_run_except(self, branch: Any, error: str) -> bool:
+        if not branch.patterns:
+            return True
+
+        if branch.pattern_type:
+            pattern_type = EXECUTION_CONTEXTS.current.variables.replace_string(branch.pattern_type)
+        else:
+            pattern_type = "LITERAL"
+
+        matcher = self._get_matcher(pattern_type)
+
+        if not matcher:
+            return False
+
+        for pattern in branch.patterns:
+            if matcher(error, EXECUTION_CONTEXTS.current.variables.replace_string(pattern)):
+                return True
+
+        return False
+
+    def is_not_caugthed_by_except(self, message: Optional[str]) -> bool:
+        if get_robot_version() >= (5, 0):
+            from robot.running.model import Try
+
+            if not message:
+                return True
+
+            if EXECUTION_CONTEXTS.current.steps:
+                for branch in [f.data for f in reversed(EXECUTION_CONTEXTS.current.steps) if isinstance(f.data, Try)]:
+                    for except_branch in branch.except_branches:
+                        if self._should_run_except(except_branch, message):
+                            return False
+
+        return True
+
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         type = attributes.get("type", None)
         if self.debug:
@@ -957,7 +977,15 @@ class Debugger:
             if status == "FAIL" and type in ["KEYWORD", "SETUP", "TEARDOWN"]:
                 self.process_end_state(
                     status,
-                    {"failed_keyword", *({"uncaught_failed_keyword"} if self.in_caughted_keyword() else {})},
+                    {
+                        "failed_keyword",
+                        *(
+                            {"uncaught_failed_keyword"}
+                            if self.is_not_caughted_by_keyword()
+                            and self.is_not_caugthed_by_except(self.last_fail_message)
+                            else {}
+                        ),
+                    },
                     "Keyword failed.",
                     f"Keyword failed: {self.last_fail_message}" if self.last_fail_message else "Keyword failed.",
                 )
