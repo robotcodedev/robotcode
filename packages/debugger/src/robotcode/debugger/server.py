@@ -11,6 +11,8 @@ from robotcode.jsonrpc2.server import JsonRPCServer
 from .dap_types import (
     AttachRequestArguments,
     Capabilities,
+    CompletionsArguments,
+    CompletionsResponseBody,
     ConfigurationDoneArguments,
     ContinueArguments,
     ContinueResponseBody,
@@ -178,6 +180,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
             ],
             supports_exception_options=True,
             supports_exception_filter_options=True,
+            supports_completions_request=True,
         )
 
     @rpc_method(name="attach", param_type=AttachRequestArguments)
@@ -375,6 +378,20 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
             arguments.filters, arguments.filter_options, arguments.exception_options
         )
         return SetExceptionBreakpointsResponseBody(breakpoints=result) if result else None
+
+    @rpc_method(name="completions", param_type=CompletionsArguments)
+    async def _completions(
+        self,
+        arguments: CompletionsArguments,
+        text: str,
+        column: int,
+        line: Optional[int] = None,
+        frame_id: Optional[int] = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> CompletionsResponseBody:
+        result = Debugger.instance().completions(text, column, line, frame_id)
+        return CompletionsResponseBody(targets=result)
 
 
 class DebugAdapterServer(JsonRPCServer[DebugAdapterServerProtocol]):

@@ -1092,3 +1092,67 @@ class SetExceptionBreakpointsResponseBody(Model):
 @dataclass
 class SetExceptionBreakpointsResponse(Response):
     body: Optional[SetExceptionBreakpointsResponseBody] = None
+
+
+@dataclass
+class _CompletionsRequest:
+    arguments: CompletionsArguments
+
+
+@dataclass
+class CompletionsRequest(Request, _CompletionsRequest):
+    arguments: CompletionsArguments = field()
+    command: str = "completions"
+
+
+@dataclass
+class CompletionsArguments(Model):
+    text: str
+    column: int
+    line: Optional[int] = None
+    frame_id: Optional[int] = None
+
+
+class CompletionItemType(Enum):
+    METHOD = "method"
+    FUNCTION = "function"
+    CONSTRUCTOR = "constructor"
+    FIELD = "field"
+    VARIABLE = "variable"
+    CLASS = "class"
+    INTERFACE = "interface"
+    MODULE = "module"
+    PROPERTY = "property"
+    UNIT = "unit"
+    VALUE = "value"
+    ENUM = "enum"
+    KEYWORD = "keyword"
+    SNIPPET = "snippet"
+    TEXT = "text"
+    COLOR = "color"
+    FILE = "file"
+    REFERENCE = "reference"
+    CUSTOMCOLOR = "customcolor"
+
+
+@dataclass
+class CompletionItem(Model):
+    label: str
+    text: Optional[str] = None
+    sort_text: Optional[str] = None
+    detail: Optional[str] = None
+    type: Optional[CompletionItemType] = None
+    start: Optional[int] = None
+    length: Optional[int] = None
+    selection_start: Optional[int] = None
+    selection_length: Optional[int] = None
+
+
+@dataclass
+class CompletionsResponseBody(Model):
+    targets: List[CompletionItem]
+
+
+@dataclass
+class CompletionsResponse(Response):
+    body: Optional[CompletionsResponseBody] = None

@@ -40,6 +40,8 @@ from robotcode.robot.utils import get_robot_version
 
 from .dap_types import (
     Breakpoint,
+    CompletionItem,
+    CompletionItemType,
     ContinuedEvent,
     ContinuedEventBody,
     EvaluateArgumentContext,
@@ -289,9 +291,8 @@ class Debugger:
 
     @state.setter
     def state(self, value: State) -> None:
-        if self._state == value:
-            # if state is not changed, do nothing and wait a little bit to avoid busy loop
-            time.sleep(0.01)
+        # if state is changed, do nothing and wait a little bit to avoid busy loop
+        time.sleep(0.01)
 
         self._state = value
 
@@ -1516,3 +1517,63 @@ class Debugger:
                     result.append(Breakpoint(verified=False))
 
         return result or None
+
+    def completions(
+        self, text: str, column: int, line: Optional[int] = None, frame_id: Optional[int] = None
+    ) -> List[CompletionItem]:
+        if self.expression_mode:
+            return []
+
+        stack_frame = next((v for v in self.full_stack_frames if v.id == frame_id), None)
+
+        evaluate_context = stack_frame.context() if stack_frame else None
+
+        if evaluate_context is None:
+            evaluate_context = EXECUTION_CONTEXTS.current
+
+        if evaluate_context is None:
+            return []
+
+        result = []
+
+        for library in evaluate_context.namespace._kw_store.libraries.values():
+            result.append(
+                CompletionItem(
+                    label=library.name,
+                    text=library.name,
+                    sort_text=f"010_{library.name}",
+                    type=CompletionItemType.MODULE,
+                )
+            )
+            for kw in library.handlers:
+                result.append(
+                    CompletionItem(
+                        label=kw.name,
+                        text=kw.name,
+                        sort_text=f"001_{kw.name}",
+                        type=CompletionItemType.FUNCTION,
+                        detail=kw.shortdoc,
+                    )
+                )
+
+        for resource in evaluate_context.namespace._kw_store.resources.values():
+            result.append(
+                CompletionItem(
+                    label=resource.name,
+                    text=resource.name,
+                    sort_text=f"010_{resource.name}",
+                    type=CompletionItemType.MODULE,
+                )
+            )
+            for kw in resource.handlers:
+                result.append(
+                    CompletionItem(
+                        label=kw.name,
+                        text=kw.name,
+                        sort_text=f"001_{kw.name}",
+                        type=CompletionItemType.FUNCTION,
+                        detail=kw.shortdoc,
+                    )
+                )
+
+        return result
