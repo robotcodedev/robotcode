@@ -216,6 +216,17 @@ class PathMapping(NamedTuple):
     remote_root: Optional[str]
 
 
+class DebugLogger:
+    def __init__(self) -> None:
+        self.steps: List[Any] = []
+
+    def start_keyword(self, kw: Any) -> None:
+        self.steps.append(kw)
+
+    def end_keyword(self, kw: Any) -> None:
+        self.steps.pop()
+
+
 class Debugger:
     __instance: ClassVar[Optional[Debugger]] = None
     __lock: ClassVar = threading.RLock()
@@ -284,6 +295,9 @@ class Debugger:
         self._after_evaluate_keyword_event = threading.Event()
         self._after_evaluate_keyword_event.set()
         self.expression_mode = False
+
+        self.debug_logger: Optional[DebugLogger] = None
+        self.run_started = False
 
     @property
     def state(self) -> State:
@@ -785,6 +799,11 @@ class Debugger:
                 self.stack_frames[0].stack_frames.popleft()
 
     def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
+        if not self.run_started:
+            self.run_started = True
+            self.debug_logger = DebugLogger()
+            LOGGER.register_logger(self.debug_logger)
+
         source = attributes.get("source", None)
         line_no = attributes.get("lineno", 1)
         longname = attributes.get("longname", "")
@@ -956,18 +975,17 @@ class Debugger:
         return False
 
     def is_not_caugthed_by_except(self, message: Optional[str]) -> bool:
-        if get_robot_version() >= (5, 0):
+        if not message:
+            return True
+
+        if get_robot_version() >= (5, 0) and self.debug_logger:
             from robot.running.model import Try
 
-            if not message:
-                return True
-
-            if EXECUTION_CONTEXTS.current.steps:
-                for branch in [f.data for f in reversed(EXECUTION_CONTEXTS.current.steps) if isinstance(f.data, Try)]:
+            if self.debug_logger.steps:
+                for branch in [f.data for f in reversed(self.debug_logger.steps) if isinstance(f.data, Try)]:
                     for except_branch in branch.except_branches:
                         if self._should_run_except(except_branch, message):
                             return False
-
         return True
 
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
@@ -1541,7 +1559,7 @@ class Debugger:
                 CompletionItem(
                     label=library.name,
                     text=library.name,
-                    sort_text=f"010_{library.name}",
+                    sort_text=f"020_{library.name}",
                     type=CompletionItemType.MODULE,
                 )
             )
@@ -1561,7 +1579,7 @@ class Debugger:
                 CompletionItem(
                     label=resource.name,
                     text=resource.name,
-                    sort_text=f"010_{resource.name}",
+                    sort_text=f"020_{resource.name}",
                     type=CompletionItemType.MODULE,
                 )
             )
@@ -1576,4 +1594,13 @@ class Debugger:
                     )
                 )
 
+        for var in evaluate_context.variables.as_dict().keys():
+            result.append(
+                CompletionItem(
+                    label=var,
+                    text=var,
+                    sort_text=f"010_{var}",
+                    type=CompletionItemType.VARIABLE,
+                )
+            )
         return result
