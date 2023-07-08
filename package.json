@@ -565,7 +565,7 @@
           "robotcode.debug.attachPython": {
             "type": "boolean",
             "description": "Attach also the python debugger if a robot test starts.",
-            "default": true,
+            "default": false,
             "scope": "resource"
           },
           "robotcode.debug.outputMessages": {
@@ -893,7 +893,7 @@
               "attachPython": {
                 "type": "boolean",
                 "description": "Attach also the python debugger if a robot test starts.",
-                "default": true
+                "default": false
               },
               "attachPythonPort": {
                 "type": "number",
@@ -990,7 +990,7 @@
               "attachPython": {
                 "type": "boolean",
                 "description": "Attach also the python debugger if a robot test starts.",
-                "default": true
+                "default": false
               },
               "attachPythonPort": {
                 "type": "number",
@@ -1177,7 +1177,7 @@
             "presentation": {
               "hidden": true
             },
-            "attachPython": true,
+            "attachPython": false,
             "pythonConfiguration": "RobotCode: Python"
           },
           {
