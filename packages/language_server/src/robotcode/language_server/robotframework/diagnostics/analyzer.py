@@ -883,6 +883,35 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         await self.generic_visit(node)
 
+    async def visit_ForceTags(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import ForceTags
+
+        if get_robot_version() >= (6, 0):
+            tag = cast(ForceTags, node).get_token(RobotToken.FORCE_TAGS)
+            if tag.value.upper() == "FORCE TAGS":
+                self.append_diagnostics(
+                    range=range_from_node_or_token(node, tag),
+                    message="`Force Tags` is deprecated in favour of new `Test Tags` setting.",
+                    severity=DiagnosticSeverity.INFORMATION,
+                    tags=[DiagnosticTag.DEPRECATED],
+                    code="DeprecatedHyphenTag",
+                )
+
+    async def visit_DefaultTags(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import ForceTags
+
+        if get_robot_version() >= (6, 0):
+            tag = cast(ForceTags, node).get_token(RobotToken.DEFAULT_TAGS)
+            self.append_diagnostics(
+                range=range_from_node_or_token(node, tag),
+                message="`Force Tags` is deprecated in favour of new `Test Tags` setting.",
+                severity=DiagnosticSeverity.INFORMATION,
+                tags=[DiagnosticTag.DEPRECATED],
+                code="DeprecatedHyphenTag",
+            )
+
     async def visit_Tags(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Tags
@@ -895,7 +924,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     self.append_diagnostics(
                         range=range_from_node_or_token(node, tag),
                         message=f"Settings tags starting with a hyphen using the '[Tags]' setting "
-                        f"is deprecated. In Robot Framework 5.2 this syntax will be used "
+                        f"is deprecated. In Robot Framework 7.0 this syntax will be used "
                         f"for removing tags. Escape '{tag.value}' like '\\{tag.value}' to use the "
                         f"literal value and to avoid this warning.",
                         severity=DiagnosticSeverity.WARNING,
