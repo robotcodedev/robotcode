@@ -91,7 +91,7 @@
       }
     },
     "setting": {
-      "contentName": "string.unquoted.argument.robotframework",
+      "contentName": "variable.parameter.argument.robotframework",
       "begin": "(?i)^(\\S+( \\S+)*)(?= {2}| ?\\t| ?$)",
       "beginCaptures": {
         "1": {
@@ -115,8 +115,28 @@
       ]
     },
     "testcase_settings": {
-      "match": "\\[.*?\\]",
-      "name": "keyword.control.settings.robotframework"
+      "contentName": "variable.parameter.argument.robotframework",
+      "begin": "(\\[.*?\\])(?= {2}| ?\\t| ?$)",
+      "beginCaptures": {
+        "0": {
+          "name": "keyword.control.settings.robotframework"
+        }
+      },
+      "end": "^(?!\\s*\\.\\.\\.)",
+      "patterns": [
+        {
+          "include": "#escape"
+        },
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#variables"
+        },
+        {
+          "include": "#line_continuation"
+        }
+      ]
     },
     "keyword_call": {
       "contentName": "string.unquoted.argument.robotframework",

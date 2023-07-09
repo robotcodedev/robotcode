@@ -2109,3 +2109,107 @@ class CompletionCollector(ModelHelperMixin):
             return None
 
         return await self._complete_KeywordCall_or_Fixture(RobotToken.NAME, node, nodes_at_position, position, context)
+
+    async def create_tags_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+        built_in_tags = {
+            "robot:continue-on-failure",
+            "robot:stop-on-failure",
+            "robot:no-dry-run",
+            "robot:exit",
+        }
+
+        if get_robot_version() >= (5, 0):
+            built_in_tags.add("robot:skip")
+            built_in_tags.add("robot:skip-on-failure")
+            built_in_tags.add("robot:exclude")
+            built_in_tags.add("robot:recursive-continue-on-failure")
+
+        if get_robot_version() >= (6, 0):
+            built_in_tags.add("robot:recursive-stop-on-failure")
+            built_in_tags.add("robot:private")
+
+        if get_robot_version() >= (6, 1):
+            built_in_tags.add("robot:flatten")
+
+        return [
+            CompletionItem(
+                label=tag,
+                kind=CompletionItemKind.ENUM_MEMBER,
+                detail="Reserved Tag",
+                sort_text=f"080_{tag}",
+                insert_text_format=InsertTextFormat.PLAIN_TEXT,
+                text_edit=TextEdit(range=range, new_text=f"{tag}") if range is not None else None,
+            )
+            for tag in built_in_tags
+        ]
+
+    async def _complete_ForceTags_or_KeywordTags_or_DefaultTags_Tags(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Statement
+
+        statement = cast(Statement, node)
+        tokens = get_tokens_at_position(statement, position)
+
+        if not tokens:
+            return None
+
+        if tokens[-1].type == RobotToken.ARGUMENT:
+            return await self.create_tags_completion_items(range_from_token(tokens[-1]))
+
+        if len(tokens) > 1 and tokens[-2].type == RobotToken.ARGUMENT:
+            return await self.create_tags_completion_items(range_from_token(tokens[-2]))
+
+        if whitespace_at_begin_of_token(tokens[-1]) >= 2:
+            return await self.create_tags_completion_items(None)
+
+        return None
+
+    async def complete_ForceTags(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        return await self._complete_ForceTags_or_KeywordTags_or_DefaultTags_Tags(
+            node, nodes_at_position, position, context
+        )
+
+    async def complete_KeywordTags(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        return await self._complete_ForceTags_or_KeywordTags_or_DefaultTags_Tags(
+            node, nodes_at_position, position, context
+        )
+
+    async def complete_DefaultTags(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        return await self._complete_ForceTags_or_KeywordTags_or_DefaultTags_Tags(
+            node, nodes_at_position, position, context
+        )
+
+    async def complete_Tags(  # noqa: N802
+        self,
+        node: ast.AST,
+        nodes_at_position: List[ast.AST],
+        position: Position,
+        context: Optional[CompletionContext],
+    ) -> Union[List[CompletionItem], CompletionList, None]:
+        return await self._complete_ForceTags_or_KeywordTags_or_DefaultTags_Tags(
+            node, nodes_at_position, position, context
+        )

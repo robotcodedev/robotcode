@@ -867,7 +867,7 @@ def var_repr(value: Any) -> str:
     if isinstance(value, str) and value == "":
         return "${EMPTY}"
 
-    if isinstance(value, str) and value == "\\ \\":
+    if isinstance(value, str) and value == " ":
         return "${SPACE}"
 
     if isinstance(value, str):
