@@ -851,12 +851,56 @@ class LibraryDoc:
         return "\n".join(f"- [{entry}](#{entry.lower().replace(' ', '-')})" for entry in entries)
 
 
+def var_repr(value: Any) -> str:
+    if value is None:
+        return ""
+
+    if isinstance(value, NativeValue):
+        value = value.value
+
+    if value is None:
+        return "${None}"
+
+    if isinstance(value, (int, float, bool)):
+        return f"${{{value!r}}}"
+
+    if isinstance(value, str) and value == "":
+        return "${EMPTY}"
+
+    if isinstance(value, str) and value == "\\ \\":
+        return "${SPACE}"
+
+    if isinstance(value, str):
+        return value
+
+    return "${{ " + repr(value) + " }}"
+
+
 @dataclass
 class VariablesDoc(LibraryDoc):
     type: str = "VARIABLES"
     scope: str = "GLOBAL"
 
     variables: List[ImportedVariableDefinition] = field(default_factory=list)
+
+    def to_markdown(self, add_signature: bool = True, only_doc: bool = True, header_level: int = 2) -> str:
+        result = super().to_markdown(add_signature, only_doc, header_level)
+
+        if self.variables:
+            result += "\n---\n\n"
+
+            result += "\n```robotframework"
+            result += "\n*** Variables ***"
+
+            for var in self.variables:
+                result += "\n" + var.name
+                if var.has_value:
+                    result += "    " + var_repr(var.value)
+                else:
+                    result += "    ..."
+            result += "\n```"
+
+        return result
 
 
 def is_library_by_path(path: str) -> bool:
@@ -1563,7 +1607,7 @@ def get_variables_doc(
 ) -> VariablesDoc:
     from robot.libdocpkg.robotbuilder import KeywordDocBuilder
     from robot.output import LOGGER
-    from robot.running.handlers import _PythonHandler
+    from robot.running.handlers import _PythonHandler, _PythonInitHandler
     from robot.utils.importer import Importer
     from robot.variables.filesetter import PythonImporter, YamlImporter
 
@@ -1575,6 +1619,8 @@ def get_variables_doc(
     module_spec: Optional[ModuleSpec] = None
     source: Optional[str] = None
     try:
+        python_import = False
+
         with _std_capture() as std_capturer:
             import_name = find_variables(name, working_dir, base_dir, command_line_variables, variables)
             get_variables = None
@@ -1586,6 +1632,8 @@ def get_variables_doc(
                 source = import_name
                 importer = JsonImporter()
             else:
+                python_import = True
+
                 if not is_variables_by_path(import_name):
                     module_spec = get_module_spec(import_name)
 
@@ -1645,43 +1693,80 @@ def get_variables_doc(
                 python_path=sys.path,
             )
 
-            if get_variables is not None:
+            if python_import:
+                if get_variables is not None:
 
-                class VarHandler(_PythonHandler):
-                    def _get_name(self, handler_name: Any, handler_method: Any) -> Any:
-                        return get_variables.__name__ if get_variables is not None else ""
+                    class VarHandler(_PythonHandler):
+                        def _get_name(self, handler_name: Any, handler_method: Any) -> Any:
+                            return get_variables.__name__ if get_variables is not None else ""
 
-                    def _get_initial_handler(self, library: Any, name: Any, method: Any) -> Any:
-                        return None
+                        def _get_initial_handler(self, library: Any, name: Any, method: Any) -> Any:
+                            return None
 
-                vars_initializer = VarHandler(libdoc, get_variables.__name__, get_variables)
+                    vars_initializer = VarHandler(libdoc, get_variables.__name__, get_variables)
 
-                libdoc.inits = KeywordStore(
-                    keywords=[
-                        KeywordDoc(
-                            name=libdoc.name,
-                            args=[KeywordArgumentDoc.from_robot(a) for a in kw[0].args],
-                            doc=kw[0].doc,
-                            tags=list(kw[0].tags),
-                            source=kw[0].source,
-                            line_no=kw[0].lineno if kw[0].lineno is not None else -1,
-                            col_offset=-1,
-                            end_col_offset=-1,
-                            end_line_no=-1,
-                            type="library",
-                            libname=libdoc.name,
-                            libtype=libdoc.type,
-                            longname=f"{libdoc.name}.{kw[0].name}",
-                            is_initializer=True,
-                            arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
-                            parent=libdoc.digest,
-                        )
-                        for kw in [
-                            (KeywordDocBuilder().build_keyword(k), k)
-                            for k in [KeywordWrapper(vars_initializer, libdoc.source or "")]
+                    libdoc.inits = KeywordStore(
+                        keywords=[
+                            KeywordDoc(
+                                name=libdoc.name,
+                                args=[KeywordArgumentDoc.from_robot(a) for a in kw[0].args],
+                                doc=kw[0].doc,
+                                source=kw[0].source,
+                                line_no=kw[0].lineno if kw[0].lineno is not None else -1,
+                                col_offset=-1,
+                                end_col_offset=-1,
+                                end_line_no=-1,
+                                type="library",
+                                libname=libdoc.name,
+                                libtype=libdoc.type,
+                                longname=f"{libdoc.name}.{kw[0].name}",
+                                is_initializer=True,
+                                arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
+                                parent=libdoc.digest,
+                            )
+                            for kw in [
+                                (KeywordDocBuilder().build_keyword(k), k)
+                                for k in [KeywordWrapper(vars_initializer, libdoc.source or "")]
+                            ]
                         ]
-                    ]
-                )
+                    )
+                else:
+                    get_variables = getattr(libcode, "__init__", None) or getattr(libcode, "__init__", None)
+
+                    class InitVarHandler(_PythonInitHandler):
+                        def _get_name(self, handler_name: Any, handler_method: Any) -> Any:
+                            return get_variables.__name__ if get_variables is not None else ""
+
+                        def _get_initial_handler(self, library: Any, name: Any, method: Any) -> Any:
+                            return None
+
+                    if get_variables is not None:
+                        vars_initializer = InitVarHandler(libdoc, get_variables.__name__, get_variables, None)
+
+                        libdoc.inits = KeywordStore(
+                            keywords=[
+                                KeywordDoc(
+                                    name=libdoc.name,
+                                    args=[],
+                                    doc=kw[0].doc,
+                                    source=kw[0].source,
+                                    line_no=kw[0].lineno if kw[0].lineno is not None else -1,
+                                    col_offset=-1,
+                                    end_col_offset=-1,
+                                    end_line_no=-1,
+                                    type="library",
+                                    libname=libdoc.name,
+                                    libtype=libdoc.type,
+                                    longname=f"{libdoc.name}.{kw[0].name}",
+                                    is_initializer=True,
+                                    parent=libdoc.digest,
+                                )
+                                for kw in [
+                                    (KeywordDocBuilder().build_keyword(k), k)
+                                    for k in [KeywordWrapper(vars_initializer, libdoc.source or "")]
+                                ]
+                            ]
+                        )
 
             return libdoc
     except (SystemExit, KeyboardInterrupt, IgnoreEasterEggLibraryWarning):

@@ -1103,7 +1103,8 @@ class ImportsManager:
                     except BaseException as e:
                         self._logger.exception(e)
 
-            with ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn")) as executor:
+            executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
+            try:
                 result = await asyncio.wait_for(
                     asyncio.get_running_loop().run_in_executor(
                         executor,
@@ -1117,6 +1118,13 @@ class ImportsManager:
                     ),
                     LOAD_LIBRARY_TIME_OUT,
                 )
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                self._logger.exception(e)
+                raise
+            finally:
+                executor.shutdown(wait=True)
 
             if result.stdout:
                 self._logger.warning(lambda: f"stdout captured at loading library {name}{args!r}:\n{result.stdout}")
@@ -1350,7 +1358,8 @@ class ImportsManager:
                     except BaseException as e:
                         self._logger.exception(e)
 
-            with ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn")) as executor:
+            executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
+            try:
                 result = await asyncio.wait_for(
                     asyncio.get_running_loop().run_in_executor(
                         executor,
@@ -1364,32 +1373,38 @@ class ImportsManager:
                     ),
                     LOAD_LIBRARY_TIME_OUT,
                 )
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                self._logger.exception(e)
+                raise
+            finally:
+                executor.shutdown(True)
 
-                if result.stdout:
-                    self._logger.warning(
-                        lambda: f"stdout captured at loading variables {name}{args!r}:\n{result.stdout}"
-                    )
+            if result.stdout:
+                self._logger.warning(lambda: f"stdout captured at loading variables {name}{args!r}:\n{result.stdout}")
 
-                try:
-                    if meta is not None:
-                        meta_file = Path(self.variables_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
-                        spec_file = Path(self.variables_doc_cache_path, meta.filepath_base.with_suffix(".spec.json"))
-                        spec_file.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                if meta is not None:
+                    meta_file = Path(self.variables_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
+                    spec_file = Path(self.variables_doc_cache_path, meta.filepath_base.with_suffix(".spec.json"))
+                    spec_file.parent.mkdir(parents=True, exist_ok=True)
 
-                        try:
-                            spec_file.write_text(as_json(result), "utf-8")
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except BaseException as e:
-                            raise RuntimeError(f"Cannot write spec file for variables '{name}' to '{spec_file}'") from e
-                        meta_file.write_text(as_json(meta), "utf-8")
-                    else:
-                        self._logger.debug(lambda: f"Skip caching variables {name}{args!r}")
-                except (SystemExit, KeyboardInterrupt):
-                    raise
-                except BaseException as e:
-                    self._logger.exception(e)
-                return result
+                    try:
+                        spec_file.write_text(as_json(result), "utf-8")
+                    except (SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException as e:
+                        raise RuntimeError(f"Cannot write spec file for variables '{name}' to '{spec_file}'") from e
+                    meta_file.write_text(as_json(meta), "utf-8")
+                else:
+                    self._logger.debug(lambda: f"Skip caching variables {name}{args!r}")
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                self._logger.exception(e)
+
+            return result
 
         resolved_args = resolve_args(
             args,
