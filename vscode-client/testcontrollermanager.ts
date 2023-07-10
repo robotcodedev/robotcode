@@ -875,6 +875,8 @@ export class TestControllerManager {
   }
 
   private refreshUri(uri?: vscode.Uri, reason?: string) {
+    if (vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri?.toString())) return;
+
     this.outputChannel.appendLine(`refresh uri ${uri ? uri.toString() : "unknown"} because: ${reason ?? "unknown"}`);
 
     if (uri) {
