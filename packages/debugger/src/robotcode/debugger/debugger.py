@@ -1510,12 +1510,10 @@ class Debugger:
                                 with LOGGER.delayed_logging:
                                     try:
                                         result = kw.run(evaluate_context)
-                                        if kw.assign:
-                                            result = None
                                     except (SystemExit, KeyboardInterrupt):
                                         raise
-                                    except BaseException:
-                                        result = None
+                                    except BaseException as e:
+                                        result = e
                                         break
                                     finally:
                                         messages = LOGGER._log_message_cache or []
