@@ -4,6 +4,13 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.47.1 (2023-07-10)
+
+### Fix
+
+* Dont update tests in an opened file twice if file is saved ([`390e6d4`](https://github.com/d-biehl/robotcode/commit/390e6d4ae6ad6f3ac46805d03a4034a86030c0c9))
+* **debugger:** Print the result of an keyword in debugger also if it has a variable assignment ([`43440d8`](https://github.com/d-biehl/robotcode/commit/43440d82e667aa4cdcbebdad848621f93075f282))
+
 ## v0.47.0 (2023-07-10)
 
 ### Feature
