@@ -4,6 +4,26 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.47.0 (2023-07-10)
+
+### Feature
+
+* **debugger:** Expanding dict and list variables in the variable view of the debugger, this also works in hints over variables, in the watch view and also by evaluating expressions/keywords in the command line of the debugger ([`2969379`](https://github.com/d-biehl/robotcode/commit/296937934db8997891df61c600953fc166a2dec2))
+* Show deprecation information if using `Force Tags` and `Default Tags` ([`f23e5d0`](https://github.com/d-biehl/robotcode/commit/f23e5d0ec2420561589ca24240e449defe7fd373))
+* Complete reserved tags in Tags settings ([`483b9ac`](https://github.com/d-biehl/robotcode/commit/483b9ac539daca8129945aec31735fd51bf00c6b))
+* Show more informations in hint over a variables import ([`735a209`](https://github.com/d-biehl/robotcode/commit/735a209801ab3014ec417a583279929a9d88c1b2))
+* **debugger:** Simple keyword completion in debugger ([`6b1ffb6`](https://github.com/d-biehl/robotcode/commit/6b1ffb6ae5738cd9fcf674729baecbb3964d0729))
+* **debugger:** Switching between "keyword" and "expression" mode by typing `# exprmode` into debug console (default: keyword mode) ([`1cc6680`](https://github.com/d-biehl/robotcode/commit/1cc668006b4d04911cae419d3dd53916c7dd68fe))
+* **debugger:** Debugger does not stop on errors caught in TRY/EXCEPT blocks ([`043842c`](https://github.com/d-biehl/robotcode/commit/043842c0709867fdc18d9b4417c7db00cead04fb))
+
+### Fix
+
+* **debugger:** Hide uncaught exceptions now also works correctly for RF >=5 and < 6.1 ([`f784613`](https://github.com/d-biehl/robotcode/commit/f7846138d2f668625d1afc2ec46f246338cc084e))
+* **debugger:** (re)disable attachPython by default ([`26ee516`](https://github.com/d-biehl/robotcode/commit/26ee516b9dda5912fff18d2b9e4f3126b08fcc0a))
+* Correct message output in test results view ([`b18856f`](https://github.com/d-biehl/robotcode/commit/b18856f1232650e91de3abf1ee8071c750fb689c))
+* Stabilize debugger with new vscode version > 1.79 ([`d5ad4ba`](https://github.com/d-biehl/robotcode/commit/d5ad4bad6ffe8f210cb6b0f10ca33ccdb269a457))
+* Update diagnostic for Robocop 4.0 release after disablers module was rewritten ([`6636bfd`](https://github.com/d-biehl/robotcode/commit/6636bfd352927c5721f9c34edfc99b2635b99937))
+
 ## v0.46.0 (2023-07-05)
 
 ### Feature
