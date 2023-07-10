@@ -5,6 +5,7 @@ import itertools
 import os
 import pathlib
 import re
+import reprlib
 import threading
 import time
 import weakref
@@ -20,8 +21,10 @@ from typing import (
     Iterator,
     List,
     Literal,
+    Mapping,
     NamedTuple,
     Optional,
+    Sequence,
     Set,
     Tuple,
     Union,
@@ -298,6 +301,9 @@ class Debugger:
 
         self.debug_logger: Optional[DebugLogger] = None
         self.run_started = False
+        self._evaluate_cache: List[Any] = []
+        self._variables_cache: Dict[int, Any] = {}
+        self._variables_object_cache: List[Any] = []
 
     @property
     def state(self) -> State:
@@ -306,6 +312,12 @@ class Debugger:
     @state.setter
     def state(self, value: State) -> None:
         # if state is changed, do nothing and wait a little bit to avoid busy loop
+
+        if self._state == State.Paused and value not in [State.Paused, State.CallKeyword]:
+            self._variables_cache.clear()
+            self._variables_object_cache.clear()
+            self._evaluate_cache.clear()
+
         time.sleep(0.01)
 
         self._state = value
@@ -1227,6 +1239,38 @@ class Debugger:
 
         return result
 
+    def _new_cache_id(self) -> int:
+        o = object()
+        self._variables_object_cache.append(o)
+        return id(o)
+
+    def _create_variable(self, name: str, value: Any) -> Variable:
+        if isinstance(value, Mapping):
+            v_id = self._new_cache_id()
+            self._variables_cache[v_id] = value
+            return Variable(
+                name=name,
+                value=reprlib.repr(value),
+                type=repr(type(value)),
+                variables_reference=v_id,
+                named_variables=len(value) + 1,
+                indexed_variables=0,
+            )
+
+        if isinstance(value, Sequence) and not isinstance(value, str):
+            v_id = self._new_cache_id()
+            self._variables_cache[v_id] = value
+            return Variable(
+                name=name,
+                value=reprlib.repr(value),
+                type=repr(type(value)),
+                variables_reference=v_id,
+                named_variables=1,
+                indexed_variables=len(value),
+            )
+
+        return Variable(name=name, value=repr(value), type=repr(type(value)))
+
     def get_variables(
         self,
         variables_reference: int,
@@ -1237,76 +1281,112 @@ class Debugger:
     ) -> List[Variable]:
         result = NormalizedDict(ignore="_")
 
-        entry = next(
-            (
-                v
-                for v in self.stack_frames
-                if variables_reference in [v.global_id(), v.suite_id(), v.test_id(), v.local_id()]
-            ),
-            None,
-        )
-        if entry is not None:
-            context = entry.context()
-            if context is not None:
-                if entry.global_id() == variables_reference:
-                    result.update(
-                        {
-                            k: Variable(name=k, value=repr(v), type=repr(type(v)))
-                            for k, v in context.variables._global.as_dict().items()
-                        }
-                    )
-                elif entry.suite_id() == variables_reference:
-                    globals = context.variables._global.as_dict()
-                    result.update(
-                        {
-                            k: Variable(name=k, value=repr(v), type=repr(type(v)))
-                            for k, v in context.variables._suite.as_dict().items()
-                            if k not in globals or globals[k] != v
-                        }
-                    )
-                elif entry.test_id() == variables_reference:
-                    globals = context.variables._suite.as_dict()
-                    result.update(
-                        {
-                            k: Variable(name=k, value=repr(v), type=repr(type(v)))
-                            for k, v in context.variables._test.as_dict().items()
-                            if k not in globals or globals[k] != v
-                        }
-                    )
-                elif entry.local_id() == variables_reference:
-                    vars = entry.get_first_or_self().variables()
-                    if vars is not None:
-                        p = entry.parent() if entry.parent else None
-
-                        globals = (
-                            (p.get_first_or_self().variables() if p is not None else None)
-                            or context.variables._test
-                            or context.variables._suite
-                            or context.variables._global
-                        ).as_dict()
-
-                        suite_vars = (context.variables._suite or context.variables._global).as_dict()
-
+        if filter is None:
+            entry = next(
+                (
+                    v
+                    for v in self.stack_frames
+                    if variables_reference in [v.global_id(), v.suite_id(), v.test_id(), v.local_id()]
+                ),
+                None,
+            )
+            if entry is not None:
+                context = entry.context()
+                if context is not None:
+                    if entry.global_id() == variables_reference:
+                        result.update(
+                            {k: self._create_variable(k, v) for k, v in context.variables._global.as_dict().items()}
+                        )
+                    elif entry.suite_id() == variables_reference:
+                        globals = context.variables._global.as_dict()
                         result.update(
                             {
-                                k: Variable(name=k, value=repr(v), type=repr(type(v)))
-                                for k, v in vars.as_dict().items()
-                                if (k not in globals or globals[k] != v)
-                                and (entry.handler is None or k not in suite_vars or suite_vars[k] != v)
+                                k: self._create_variable(k, v)
+                                for k, v in context.variables._suite.as_dict().items()
+                                if k not in globals or globals[k] != v
                             }
                         )
+                    elif entry.test_id() == variables_reference:
+                        globals = context.variables._suite.as_dict()
+                        result.update(
+                            {
+                                k: self._create_variable(k, v)
+                                for k, v in context.variables._test.as_dict().items()
+                                if k not in globals or globals[k] != v
+                            }
+                        )
+                    elif entry.local_id() == variables_reference:
+                        vars = entry.get_first_or_self().variables()
+                        if vars is not None:
+                            p = entry.parent() if entry.parent else None
 
-                        if entry.handler is not None and entry.handler.arguments:
-                            for argument in entry.handler.arguments.argument_names:
-                                name = f"${{{argument}}}"
-                                try:
-                                    value = vars[name]
-                                except (SystemExit, KeyboardInterrupt):
-                                    raise
-                                except BaseException as e:
-                                    value = str(e)
+                            globals = (
+                                (p.get_first_or_self().variables() if p is not None else None)
+                                or context.variables._test
+                                or context.variables._suite
+                                or context.variables._global
+                            ).as_dict()
 
-                                result[name] = Variable(name=name, value=repr(value), type=repr(type(value)))
+                            suite_vars = (context.variables._suite or context.variables._global).as_dict()
+
+                            result.update(
+                                {
+                                    k: self._create_variable(k, v)
+                                    for k, v in vars.as_dict().items()
+                                    if (k not in globals or globals[k] != v)
+                                    and (entry.handler is None or k not in suite_vars or suite_vars[k] != v)
+                                }
+                            )
+
+                            if entry.handler is not None and entry.handler.arguments:
+                                for argument in entry.handler.arguments.argument_names:
+                                    name = f"${{{argument}}}"
+                                    try:
+                                        value = vars[name]
+                                    except (SystemExit, KeyboardInterrupt):
+                                        raise
+                                    except BaseException as e:
+                                        value = str(e)
+
+                                    result[name] = self._create_variable(name, value)
+            else:
+                value = self._variables_cache.get(variables_reference, None)
+
+                if value is not None and isinstance(value, Mapping):
+                    result.update({"len()": self._create_variable("len()", len(value))})
+
+                    for i, (k, v) in enumerate(value.items(), start or 0):
+                        result[repr(i)] = self._create_variable(repr(k), v)
+                        if i >= 500:
+                            result["Unable to handle"] = self._create_variable(
+                                "Unable to handle", "Maximum number of items (500) reached."
+                            )
+                            break
+
+                elif value is not None and isinstance(value, Sequence) and not isinstance(value, str):
+                    result.update({"len()": self._create_variable("len()", len(value))})
+
+        elif filter == "indexed":
+            value = self._variables_cache.get(variables_reference, None)
+
+            if value is not None:
+                c = 0
+                for i, v in enumerate(value, start or 0):
+                    result[str(i)] = self._create_variable(str(i), v)
+                    c += 1
+                    if count is not None and c >= count:
+                        break
+
+        elif filter == "named":
+            value = self._variables_cache.get(variables_reference, None)
+
+            if value is not None and isinstance(value, Mapping):
+                for i, (k, v) in enumerate(value.items(), start or 0):
+                    result[repr(i)] = self._create_variable(repr(k), v)
+                    if count is not None and i >= count:
+                        break
+            elif value is not None and isinstance(value, Sequence) and not isinstance(value, str):
+                result.update({"len()": self._create_variable("len()", len(value))})
 
         return list(result.values())
 
@@ -1379,6 +1459,9 @@ class Debugger:
 
                             result = self.run_in_robot_thread(run_kw)
 
+                            if isinstance(result, BaseException):
+                                raise result
+
                 elif self.IS_VARIABLE_RE.match(expression.strip()):
                     try:
                         result = vars.replace_scalar(expression)
@@ -1404,48 +1487,55 @@ class Debugger:
                 else:
                     result = internal_evaluate_expression(vars.replace_string(expression), vars)
             else:
+                if self.IS_VARIABLE_RE.match(expression.strip()):
+                    result = vars[expression.strip()]
+                else:
 
-                def get_test_body_from_string(command: str) -> TestCase:
-                    suite_str = (
-                        "*** Test Cases ***\nDummyTestCase423141592653589793\n  "
-                        + ("\n  ".join(command.split("\n")) if "\n" in command else command)
-                    ) + "\n"
+                    def get_test_body_from_string(command: str) -> TestCase:
+                        suite_str = (
+                            "*** Test Cases ***\nDummyTestCase423141592653589793\n  "
+                            + ("\n  ".join(command.split("\n")) if "\n" in command else command)
+                        ) + "\n"
 
-                    model = get_model(suite_str)
-                    suite: TestSuite = TestSuite.from_model(model)
-                    return suite.tests[0]
+                        model = get_model(suite_str)
+                        suite: TestSuite = TestSuite.from_model(model)
+                        return suite.tests[0]
 
-                def run_kw() -> Any:
-                    test = get_test_body_from_string(expression)
-                    result = None
+                    def run_kw() -> Any:
+                        test = get_test_body_from_string(expression)
+                        result = None
 
-                    if len(test.body):
-                        for kw in test.body:
-                            with LOGGER.delayed_logging:
-                                try:
-                                    result = kw.run(evaluate_context)
-                                    if kw.assign:
+                        if len(test.body):
+                            for kw in test.body:
+                                with LOGGER.delayed_logging:
+                                    try:
+                                        result = kw.run(evaluate_context)
+                                        if kw.assign:
+                                            result = None
+                                    except (SystemExit, KeyboardInterrupt):
+                                        raise
+                                    except BaseException:
                                         result = None
-                                except (SystemExit, KeyboardInterrupt):
-                                    raise
-                                except BaseException:
-                                    result = None
-                                    break
-                                finally:
-                                    messages = LOGGER._log_message_cache or []
-                                    for msg in messages or ():
-                                        # hack to get and evaluate log level
-                                        listener: Any = next(iter(LOGGER), None)
-                                        if listener is None or listener._is_logged(msg.level):
-                                            self.log_message(
-                                                {"level": msg.level, "message": msg.message, "timestamp": msg.timestamp}
-                                            )
-                    return result
+                                        break
+                                    finally:
+                                        messages = LOGGER._log_message_cache or []
+                                        for msg in messages or ():
+                                            # hack to get and evaluate log level
+                                            listener: Any = next(iter(LOGGER), None)
+                                            if listener is None or listener._is_logged(msg.level):
+                                                self.log_message(
+                                                    {
+                                                        "level": msg.level,
+                                                        "message": msg.message,
+                                                        "timestamp": msg.timestamp,
+                                                    }
+                                                )
+                        return result
 
-                result = self.run_in_robot_thread(run_kw)
+                    result = self.run_in_robot_thread(run_kw)
 
-                if isinstance(result, BaseException):
-                    raise result
+                    if isinstance(result, BaseException):
+                        raise result
 
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -1453,7 +1543,36 @@ class Debugger:
             self._logger.exception(e)
             raise
 
-        return EvaluateResult(repr(result) if result is not None else "", repr(type(result)))
+        return self._create_evaluate_result(result)
+
+    def _create_evaluate_result(self, value: Any) -> EvaluateResult:
+        self._evaluate_cache.insert(0, value)
+        if len(self._evaluate_cache) > 50:
+            self._evaluate_cache.pop()
+
+        if isinstance(value, Mapping):
+            v_id = self._new_cache_id()
+            self._variables_cache[v_id] = value
+            return EvaluateResult(
+                result=reprlib.repr(value),
+                type=repr(type(value)),
+                variables_reference=v_id,
+                named_variables=len(value) + 1,
+                indexed_variables=0,
+            )
+
+        if isinstance(value, Sequence) and not isinstance(value, str):
+            v_id = self._new_cache_id()
+            self._variables_cache[v_id] = value
+            return EvaluateResult(
+                result=reprlib.repr(value),
+                type=repr(type(value)),
+                variables_reference=v_id,
+                named_variables=1,
+                indexed_variables=len(value),
+            )
+
+        return EvaluateResult(result=repr(value), type=repr(type(value)))
 
     def run_in_robot_thread(self, kw: Callable[[], Any]) -> Any:
         with self.condition:
@@ -1483,6 +1602,35 @@ class Debugger:
 
             return result
 
+    def _create_set_variable_result(self, value: Any) -> SetVariableResult:
+        self._evaluate_cache.insert(0, value)
+        if len(self._evaluate_cache) > 50:
+            self._evaluate_cache.pop()
+
+        if isinstance(value, Mapping):
+            v_id = self._new_cache_id()
+            self._variables_cache[v_id] = value
+            return SetVariableResult(
+                value=reprlib.repr(value),
+                type=repr(type(value)),
+                variables_reference=v_id,
+                named_variables=len(value) + 1,
+                indexed_variables=0,
+            )
+
+        if isinstance(value, Sequence) and not isinstance(value, str):
+            v_id = self._new_cache_id()
+            self._variables_cache[v_id] = value
+            return SetVariableResult(
+                value=reprlib.repr(value),
+                type=repr(type(value)),
+                variables_reference=v_id,
+                named_variables=1,
+                indexed_variables=len(value),
+            )
+
+        return SetVariableResult(value=repr(value), type=repr(type(value)))
+
     def set_variable(
         self, variables_reference: int, name: str, value: str, format: Optional[ValueFormat] = None
     ) -> SetVariableResult:
@@ -1506,7 +1654,7 @@ class Debugger:
                 evaluated_value = internal_evaluate_expression(variables.replace_string(value), variables)
                 variables[name] = evaluated_value
 
-                return SetVariableResult(repr(evaluated_value), repr(type(value)))
+                return self._create_set_variable_result(evaluated_value)
 
         raise ReferenceError("Invalid variable reference.")
 
