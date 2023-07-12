@@ -219,7 +219,7 @@ warn_return_any = true
 warn_unused_configs = true
 warn_unreachable = true
 implicit_optional = true
-# disallow_untyped_decorators = false
+disallow_untyped_decorators = false
 disallow_subclassing_any = false
 exclude = [
   "\\.mypy_cache",

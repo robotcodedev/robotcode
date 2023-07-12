@@ -50,6 +50,8 @@ class RobotInlineValueProtocolPart(RobotLanguageServerProtocolPart, ModelHelperM
     ) -> Optional[List[InlineValue]]:
         from robot.parsing.lexer import Token as RobotToken
 
+        # TODO make this configurable
+
         namespace = await self.parent.documents_cache.get_namespace(document)
 
         model = await self.parent.documents_cache.get_model(document, False)

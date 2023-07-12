@@ -4,14 +4,10 @@ from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
 import pytest
-
+from robotcode.core.dataclasses import as_json, from_json, to_camel_case, to_snake_case
 from robotcode.core.lsp.types import (
     CallHierarchyClientCapabilities,
     ClientCapabilities,
-    WindowClientCapabilities,
-    WorkspaceClientCapabilities,
-    FileOperationClientCapabilities,
-    InitializeParamsClientInfoType,
     CodeActionClientCapabilities,
     CodeActionClientCapabilitiesCodeActionLiteralSupportType,
     CodeActionClientCapabilitiesCodeActionLiteralSupportTypeCodeActionKindType,
@@ -19,9 +15,9 @@ from robotcode.core.lsp.types import (
     CodeLensClientCapabilities,
     CodeLensWorkspaceClientCapabilities,
     CompletionClientCapabilities,
+    CompletionClientCapabilitiesCompletionItemKindType,
     CompletionClientCapabilitiesCompletionItemType,
     CompletionClientCapabilitiesCompletionItemTypeInsertTextModeSupportType,
-    CompletionClientCapabilitiesCompletionItemKindType,
     CompletionClientCapabilitiesCompletionItemTypeResolveSupportType,
     CompletionClientCapabilitiesCompletionItemTypeTagSupportType,
     CompletionItemKind,
@@ -42,10 +38,12 @@ from robotcode.core.lsp.types import (
     DocumentSymbolClientCapabilitiesTagSupportType,
     ExecuteCommandClientCapabilities,
     FailureHandlingKind,
+    FileOperationClientCapabilities,
     FoldingRangeClientCapabilities,
     HoverClientCapabilities,
     ImplementationClientCapabilities,
     InitializeParams,
+    InitializeParamsClientInfoType,
     InsertTextMode,
     LinkedEditingRangeClientCapabilities,
     MarkupKind,
@@ -72,6 +70,8 @@ from robotcode.core.lsp.types import (
     TokenFormat,
     TraceValues,
     TypeDefinitionClientCapabilities,
+    WindowClientCapabilities,
+    WorkspaceClientCapabilities,
     WorkspaceEditClientCapabilities,
     WorkspaceEditClientCapabilitiesChangeAnnotationSupportType,
     WorkspaceFolder,
@@ -79,7 +79,6 @@ from robotcode.core.lsp.types import (
     WorkspaceSymbolClientCapabilitiesSymbolKindType,
     WorkspaceSymbolClientCapabilitiesTagSupportType,
 )
-from robotcode.core.dataclasses import as_json, from_json, to_camel_case, to_snake_case
 
 
 class EnumData(Enum):
