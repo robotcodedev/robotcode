@@ -411,7 +411,7 @@ class CompletionCollector(ModelHelperMixin):
             ):
                 languages = [v for v in languages if v.code != "en"]
 
-            headers = itertools.chain(*(lang.headers.keys() for lang in languages))
+            headers = set(itertools.chain(*(lang.headers.keys() for lang in languages)))
 
         return [
             CompletionItem(
