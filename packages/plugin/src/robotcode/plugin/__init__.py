@@ -7,6 +7,7 @@ from typing import IO, Any, AnyStr, Callable, Iterable, Optional, Sequence, Type
 
 import click
 import pluggy
+import tomli_w
 from robotcode.core.dataclasses import as_dict, as_json
 
 __all__ = [
@@ -108,19 +109,13 @@ class Application:
 
         text = None
         if format == OutputFormat.TOML:
-            try:
-                import tomli_w
-
-                text = tomli_w.dumps(
-                    as_dict(data, remove_defaults=remove_defaults)
-                    if dataclasses.is_dataclass(data)
-                    else data
-                    if isinstance(data, dict)
-                    else {data: data}
-                )
-            except ImportError:
-                self.warning("Package 'tomli_w' is required to use TOML output. Using JSON format instead.")
-                format = OutputFormat.JSON
+            text = tomli_w.dumps(
+                as_dict(data, remove_defaults=remove_defaults)
+                if dataclasses.is_dataclass(data)
+                else data
+                if isinstance(data, dict)
+                else {data: data}
+            )
 
         if text is None:
             if format in [OutputFormat.JSON, OutputFormat.JSON_INDENT]:

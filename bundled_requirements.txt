@@ -2,3 +2,4 @@ typing-extensions>=4.4.0
 click>=8.1.0
 pluggy>=1.0.0
 tomli > 2.0.0
+tomli_w >= 1.0.0
