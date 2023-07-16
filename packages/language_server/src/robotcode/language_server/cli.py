@@ -34,9 +34,6 @@ def run_server(
         server.run()
 
 
-# mypy: disable-error-code="misc, arg-type, attr-defined"
-
-
 @click.command(
     add_help_option=True,
     epilog='Use "-- --help" to see `robot` help.',

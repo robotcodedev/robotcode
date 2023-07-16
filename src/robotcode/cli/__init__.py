@@ -12,8 +12,6 @@ from robotcode.plugin.manager import PluginManager
 from .__version__ import __version__
 from .commands import config, profiles
 
-# mypy: disable-error-code="misc, arg-type, attr-defined"
-
 
 @click.group(
     cls=AliasedGroup,

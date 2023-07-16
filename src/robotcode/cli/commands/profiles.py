@@ -9,8 +9,6 @@ from robotcode.robot.config.loader import (
 )
 from robotcode.robot.config.utils import get_config_files
 
-# mypy: disable-error-code="misc, arg-type, attr-defined"
-
 
 @click.group(
     invoke_without_command=False,
@@ -19,7 +17,7 @@ def profiles() -> None:
     """View profile informations."""
 
 
-@profiles.command
+@profiles.command  # type: ignore[attr-defined]
 @click.option(
     "-n", "--no-evaluate", "no_evaluate", is_flag=True, default=False, help="Don't evaluate expressions in the profile."
 )
@@ -47,7 +45,7 @@ def show(
         raise UnknownError(str(e)) from e
 
 
-@profiles.command
+@profiles.command  # type: ignore[attr-defined]
 @click.argument("paths", type=click.Path(exists=True, path_type=Path), nargs=-1, required=False)
 @pass_application
 def list(

@@ -75,7 +75,6 @@ lint = ["robotframework-robocop>=2.0.0"]
 tidy = ["robotframework-tidy>=2.0.0"]
 rest = ["docutils"]
 colored = ["rich"]
-toml = ["tomli-w"]
 all = [
   "robotcode-debugger==0.47.1",
   "robotcode-language-server==0.47.1",
@@ -86,7 +85,6 @@ all = [
   "robotframework-tidy>=2.0.0",
   "docutils",
   "rich",
-  "tomli-w",
 ]
 
 

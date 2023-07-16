@@ -17,9 +17,6 @@ DEBUGGER_DEFAULT_PORT = 6612
 DEBUGPY_DEFAULT_PORT = 5678
 
 
-# mypy: disable-error-code="misc, arg-type, attr-defined"
-
-
 @click.command(
     context_settings={
         "allow_extra_args": True,

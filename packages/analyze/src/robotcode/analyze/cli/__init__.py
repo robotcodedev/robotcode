@@ -4,8 +4,6 @@ import click
 
 from ..__version__ import __version__
 
-# mypy: disable-error-code="misc, arg-type, attr-defined"
-
 
 @click.command(
     context_settings={

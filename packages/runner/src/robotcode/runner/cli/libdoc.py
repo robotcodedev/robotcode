@@ -40,9 +40,6 @@ class LibDocEx(LibDoc):
         return super().main(arguments, **options)
 
 
-# mypy: disable-error-code="misc, arg-type, attr-defined"
-
-
 @click.command(
     context_settings={
         "allow_extra_args": True,

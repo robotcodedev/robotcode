@@ -57,7 +57,7 @@ class RobotFrameworkEx(RobotFramework):
         return options, arguments
 
 
-# mypy: disable-error-code="misc, arg-type, attr-defined"
+# mypy: disable-error-code="arg-type"
 
 ROBOT_OPTIONS: Set[click.Command] = {
     click.option("--by-longname", type=str, multiple=True, help="Select tests/tasks or suites by longname."),

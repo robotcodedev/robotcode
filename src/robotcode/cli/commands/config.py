@@ -15,22 +15,17 @@ from robotcode.robot.config.loader import (
 from robotcode.robot.config.model import LibDocProfile, RebotProfile, RobotConfig, TestDocProfile
 from robotcode.robot.config.utils import get_config_files
 
-# mypy: disable-error-code="misc, arg-type, attr-defined"
-
 
 @click.group(
     invoke_without_command=False,
 )
-@pass_application
-def config(
-    app: Application,
-) -> None:
+def config() -> None:
     """\
     View configuration information.
     """
 
 
-@config.command
+@config.command  # type: ignore[attr-defined]
 @click.option(
     "-s", "--single", "single", is_flag=True, default=False, help="Shows single files, not the combined config."
 )
@@ -74,7 +69,7 @@ def show(
         raise UnknownError(str(e)) from e
 
 
-@config.command
+@config.command  # type: ignore[attr-defined]
 @click.argument("paths", type=click.Path(exists=True, path_type=Path), nargs=-1, required=False)
 @pass_application
 def files(
@@ -125,7 +120,7 @@ def files(
         raise UnknownError(str(e)) from e
 
 
-@config.command
+@config.command  # type: ignore[attr-defined]
 @click.argument("paths", type=click.Path(exists=True, path_type=Path), nargs=-1, required=False)
 @pass_application
 def root(
@@ -168,7 +163,7 @@ def root(
         app.print_data(result)
 
 
-@config.group
+@config.group  # type: ignore[attr-defined]
 @pass_application
 def info(app: Application) -> None:
     """Shows informations about possible configuration settings."""

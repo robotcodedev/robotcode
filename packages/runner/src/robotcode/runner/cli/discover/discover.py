@@ -281,9 +281,6 @@ class Collector(SuiteVisitor):
         self.statistics.tests += 1
 
 
-# mypy: disable-error-code="misc, arg-type, attr-defined"
-
-
 @click.group(invoke_without_command=False)
 @click.option(
     "--read-from-stdin", is_flag=True, help="Read file contents from stdin. This is an internal option.", hidden=True
@@ -432,7 +429,7 @@ def handle_options(
     raise UnknownError("Unexpected error happened.")
 
 
-@discover.command(
+@discover.command(  # type: ignore[attr-defined]
     context_settings={
         "allow_extra_args": True,
         "ignore_unknown_options": True,
@@ -492,7 +489,7 @@ def all(
             app.print_data(ResultItem([collector.all], diagnostics), remove_defaults=True)
 
 
-@discover.command(
+@discover.command(  # type: ignore[attr-defined]
     context_settings={
         "allow_extra_args": True,
         "ignore_unknown_options": True,
@@ -539,7 +536,7 @@ def tests(
             app.print_data(ResultItem(collector.tests, diagnostics), remove_defaults=True)
 
 
-@discover.command(
+@discover.command(  # type: ignore[attr-defined]
     context_settings={
         "allow_extra_args": True,
         "ignore_unknown_options": True,
@@ -591,7 +588,7 @@ class TagsResult:
     tags: Dict[str, List[TestItem]]
 
 
-@discover.command(
+@discover.command(  # type: ignore[attr-defined]
     context_settings={
         "allow_extra_args": True,
         "ignore_unknown_options": True,
@@ -673,7 +670,7 @@ class Info:
     system_version: str
 
 
-@discover.command(
+@discover.command(  # type: ignore[attr-defined]
     add_help_option=True,
 )
 @pass_application
