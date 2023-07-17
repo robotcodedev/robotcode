@@ -4,6 +4,12 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 <!--next-version-placeholder-->
 
+## v0.47.2 (2023-07-17)
+
+### Fix
+
+* Duplicated header completions if languages contains same words ([`d725c6e`](https://github.com/d-biehl/robotcode/commit/d725c6e0dc3f28bfdc6a6407a0d4e38426552e7f))
+
 ## v0.47.1 (2023-07-10)
 
 ### Fix
