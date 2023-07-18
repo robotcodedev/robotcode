@@ -2,6 +2,624 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.47.3 (2023-07-18)
+
+### Fix
+
+- move to commitizen to create new releases, this is only a dummy release..
+- reset changlog
+
+## v0.47.2 (2023-07-17)
+
+### Fix
+
+- duplicated header completions if languages contains same words
+
+## v0.47.1 (2023-07-10)
+
+### Fix
+
+- dont update tests in an opened file twice if file is saved
+- **debugger**: print the result of an keyword in debugger also if it has a variable assignment
+
+## v0.47.0 (2023-07-10)
+
+### Feat
+
+- **debugger**: expanding dict and list variables in the variable view of the debugger, this also works in hints over variables, in the watch view and also by evaluating expressions/keywords in the command line of the debugger
+- show deprecation information if using `Force Tags` and `Default Tags`
+- complete reserved tags in Tags settings
+- show more informations in hint over a variables import
+- **debugger**: simple keyword completion in debugger
+- **debugger**: switching between "keyword" and "expression" mode by typing `# exprmode` into debug console (default: keyword mode)
+- **debugger**: debugger does not stop on errors caught in TRY/EXCEPT blocks
+
+### Fix
+
+- **debugger**: hide uncaught exceptions now also works correctly for RF >=5 and < 6.1
+- **debugger**: (re)disable attachPython by default
+- correct message output in test results view
+- stabilize debugger with new vscode version > 1.79
+- Update diagnostic for Robocop 4.0 release after disablers module was rewritten
+
+## v0.46.0 (2023-07-05)
+
+### Feat
+
+- Allow multiline RF statements in debug console
+
+### Fix
+
+- **debugger**: evaluation expressions in RFW >= 6.1 not work correctly
+- insted of starting the debugger, start robotcode.cli in debug launcher
+
+## v0.45.0 (2023-06-23)
+
+### Feat
+
+- library doc now generates a more RFW-like signature for arguments and argument defaults like ${SPACE}, ${EMPTY}, ${True}, etc. for the respective values
+
+### Fix
+
+- document_symbols throws exception if section name is empty
+- change code property for diagnostics for analyse imports to ImportRequiresValue
+
+## v0.44.1 (2023-06-21)
+
+### Fix
+
+- completion and diagnostics for import statements for RF >= 6.1
+
+## v0.44.0 (2023-06-21)
+
+### Feat
+
+- add option to start a debugpy session for debugging purpose
+
+### Fix
+
+- correct handling error in server->client JSON RPC requests
+- detect languageId of not given at "textDocument/didOpen"
+- extension not terminating sometimes on vscode exit
+
+### Refactor
+
+- make mypy and ruff happy
+
+## v0.43.2 (2023-06-20)
+
+### Fix
+
+- update testitems does not work correctly if a __init__.robot is changed
+- only update test explorer items if file is a valid robot suite
+
+## v0.43.1 (2023-06-15)
+
+### Fix
+
+- Intellisense doesn't work when importing yml file with variables #143
+
+## v0.43.0 (2023-06-14)
+
+### Feat
+
+- support for importing `.json` files in RF 6.1
+- Enable importing and completion of `.rest`, `.rsrc` and `.json` resource extensions (not parsing)
+- support for new RF 6.1 `--parse-include` option for discovering and executing tests
+
+### Fix
+
+- correct highlightning `*** Tasks ***` and `*** Settings ***`
+- hover over a tasks shows "task" in hint and not "test case"
+- checks for robot version 6.1
+
+## v0.42.0 (2023-06-05)
+
+### Feat
+
+- support for new `--parseinclude` option in robot config
+
+### Fix
+
+- compatibility with Python 3.12
+- resolving variable values in hover for RF 6.1
+
+### Refactor
+
+- fix some mypy warnings
+
+## v0.41.0 (2023-05-24)
+
+### Feat
+
+- new `robotcode.robotidy.ignoreGitDir` and `robotcode.robotidy.config` setting to set the config file for _robotidy_ and to ignore git files if searching for config files for _robotidy_
+- optimize/speedup searching of files, setting `robotcode.workspace.excludePatterns` now supports gitignore like patterns
+
+### Fix
+
+- patched FileReader for discovery should respect accept_text
+
+### Refactor
+
+- some optimization in searching files
+
+## v0.40.0 (2023-05-17)
+
+### Feat
+
+- show argument infos for dynamic variables imports
+
+### Fix
+
+- wrong values for command line vars
+
+## v0.39.0 (2023-05-16)
+
+### Feat
+
+- new command `RobotCode: Select Execution Profiles`
+- language server now is a robotcode cli plugin and can use config files and execution profiles
+
+## v0.38.0 (2023-05-15)
+
+### Feat
+
+- new command `discover tags`
+
+### Fix
+
+- Bring output console into view if robotcode discovery fails
+- use dispose instead of stop to exit language server instances
+
+### Refactor
+
+- fix some ruff warnings
+
+## v0.37.1 (2023-05-11)
+
+### Fix
+
+- **discover**: wrong filename in diagnostics message on update single document
+
+## v0.37.0 (2023-05-10)
+
+### Feat
+
+- Reintroduce of updating the tests when typing
+- test discovery now runs in a separate process with the `robotcode discover` command, this supports also prerunmodifiers and RF 6.1 custom parsers
+
+### Fix
+
+- some correction in completions for robotframework >= 6.1
+- **langserver**: resolving variables as variable import arguments does not work correctly
+
+### Refactor
+
+- correct some help texts and printing of output
+
+## v0.36.0 (2023-05-01)
+
+### Feat
+
+- simple `discover all` command
+- select run profiles in test explorer
+
+## v0.35.0 (2023-04-25)
+
+### Feat
+
+- **runner**: add `run` alias for `robot` command in cli
+
+### Fix
+
+- **debug-launcher**: switch back to `stdio` communication, because this does not work on Windows with python <3.8
+
+## v0.34.1 (2023-04-21)
+
+### Fix
+
+- some code scanning alerts
+
+## v0.34.0 (2023-04-20)
+
+### Feat
+
+- **debugger**: refactored robotcode debugger to support debugging/running tests with robotcode's configurations and profiles, also command line tool changes.
+
+### Fix
+
+- correct toml json schema urls
+
+### Refactor
+
+- fix some ruff errors
+- create robotcode bundled interface
+
+## v0.33.0 (2023-04-09)
+
+### Feat
+
+- Improved Handling of UTF-16 encoded multibyte characters, e.g. emojis are now handled correctly
+
+### Fix
+
+- end positions on formatting
+
+## v0.32.3 (2023-04-07)
+
+### Fix
+
+- correct formatting with robotframework-tidy, also support tidy 4.0 reruns now, closes #124
+
+## v0.32.2 (2023-04-05)
+
+### Fix
+
+- update git versions script
+
+## v0.32.1 (2023-04-05)
+
+### Fix
+
+- dataclasses from dict respects Literals also for Python 3.8 and 3.9
+
+## v0.32.0 (2023-04-05)
+
+### Feat
+
+- allow expression for str options, better handling of tag:<pattern>, name:<pattern> options
+- add command for robots _testdoc_
+
+### Refactor
+
+- switch to src layout
+
+## v0.31.0 (2023-03-30)
+
+### Feat
+
+- Profiles can now be enabled or disabled, also with a condition. Profiles can now also be selected with a wildcard pattern.
+- new commands robot, rebot, libdoc for robotcode.runner
+- **robotcode**: Add commands to get informations about configurations and profiles
+
+### Refactor
+
+- move the config command to robotcode package
+- add more configuration options, update schema, new command config
+
+## v0.30.0 (2023-03-22)
+
+### Feat
+
+- **robotcode-runner**: robotcode-runner now supports all features, but not all robot options are supported
+
+### Refactor
+
+- implement robot.toml config file and runner
+
+## v0.29.0 (2023-03-21)
+
+### Feat
+
+- support for Refresh Tests button in test explorer
+
+## v0.28.4 (2023-03-19)
+
+### Fix
+
+- update regression tests
+
+## v0.28.3 (2023-03-19)
+
+### Fix
+
+- correct analysing keywords with embedded arguments for RF >= 6.1
+- correct discovering for RobotFramework 6.1a1
+
+## v0.28.2 (2023-03-10)
+
+### Fix
+
+- correct version of robotcode runner
+
+## v0.28.1 (2023-03-10)
+
+### Fix
+
+- Source actions are missing in the context menu for versions #129
+
+## v0.28.0 (2023-03-09)
+
+### Feat
+
+- debugger is now started from bundled/tool/debugger if available
+
+### Fix
+
+- #125 Robot Code crashes with a variables file containing a Dict[str, Callable]
+- return codes for command line tools now uses sys.exit with return codes
+
+## v0.27.2 (2023-03-06)
+
+### Fix
+
+- unknown workspace edit change received at renaming
+- The debugger no longer requires a dependency on the language server
+
+### Refactor
+
+- some big refactoring, introdude robotcode.runner project
+
+## v0.27.1 (2023-03-01)
+
+## v0.27.0 (2023-03-01)
+
+### Feat
+
+- split python code into several packages, now for instance robotcode.debugger can be installed standalone
+
+### Refactor
+
+- introduce bundled/libs/tool folders and move python source to src folder
+
+## v0.26.2 (2023-02-25)
+
+### Fix
+
+- publish script
+
+## v0.26.1 (2023-02-25)
+
+### Fix
+
+- Github workflow
+
+## v0.26.0 (2023-02-25)
+
+### Feat
+
+- Switch to [hatch](https://hatch.pypa.io) build tool and bigger internal refactorings
+
+### Fix
+
+- correct error message if variable import not found
+
+### Refactor
+
+- generate lsp types from json model
+- fix some mypy errors
+- fix some PIE810 errors
+- simplify some code
+- fix some flake8-return warnings
+- fix some pytest ruff warning
+- use `list` over useless lambda in default_factories
+- change logger calls with an f-string to use lambdas
+- Replace *Generator with *Iterator
+- fix some ruff errors and warnings, disable isort in precommit
+- **robotlangserver**: workspace rpc methods are now running threaded
+- **robotlangserver**: optimize test discovering
+
+## v0.25.1 (2023-01-24)
+
+### Fix
+
+- **vscode**: In long test runs suites with failed tests are still marked as running even though they are already finished
+
+### Refactor
+
+- add `type` parameter to end_output_group
+
+## v0.25.0 (2023-01-24)
+
+### Feat
+
+- **debugger**: new setting for `outputTimestamps` in launch and workspace configuration to enable/disable timestamps in debug console
+
+## v0.24.4 (2023-01-24)
+
+### Fix
+
+- **debugger**: show error/warning messages of python logger in debug console
+
+## v0.24.3 (2023-01-23)
+
+### Fix
+
+- set env and pythonpath erlier in lifecycle to prevent that sometime analyses fails because of python path is not correct
+
+## v0.24.2 (2023-01-20)
+
+### Fix
+
+- **robotlangserver**: retun correct robot framework version test
+
+## v0.24.1 (2023-01-20)
+
+### Fix
+
+- **robotlangserver**: robot version string is incorrectly parsed if version has no patch
+- start diagnostics only when the language server is fully initialized
+
+## v0.24.0 (2023-01-16)
+
+### Feat
+
+- **robotlangserver**: Create undefined keywords in the same file
+
+### Refactor
+
+- prepare create keywords quickfix
+- introduce asyncio.RLock
+
+## v0.23.0 (2023-01-13)
+
+### Feat
+
+- **robotlangserver**: highlight named args in library imports
+
+### Fix
+
+- **robotlangserver**: remove possible deadlock in completion
+
+## v0.22.1 (2023-01-13)
+
+### Fix
+
+- **robotlangserver**: resolving imports with arguments in diffent files and folders but with same string representation ie. ${curdir}/blah.py now works correctly
+- **robotlangserver**: generating documentation view with parameters that contains .py at the at does not work
+
+## v0.22.0 (2023-01-12)
+
+### Feat
+
+- Add onEnter rule to split a long line closes #78
+
+## v0.21.4 (2023-01-11)
+
+### Fix
+
+- **robotlangserver**: remove possible deadlock in Namespace initialization
+
+## v0.21.3 (2023-01-10)
+
+### Fix
+
+- **robotlangserver**: if a lock takes to long, try to cancel the lock
+
+## v0.21.2 (2023-01-10)
+
+### Fix
+
+- use markdownDescription in settings and launch configurations where needed
+
+### Refactor
+
+- remove unneeded code
+
+### Perf
+
+- massive overall speed improvements
+
+## v0.21.1 (2023-01-07)
+
+### Perf
+
+- Caching of variable imports
+
+## v0.21.0 (2023-01-07)
+
+### Feat
+
+- new setting `robotcode.analysis.cache.ignoredLibraries` to define which libraries should never be cached
+
+### Fix
+
+- **robotlangserver**: speedup analyser
+- try to handle unknow documents as .robot files to support resources as .txt or .tsv files
+- **robotlangserver**: Loading documents hardened
+- generating keyword specs for keywords with empty lineno
+
+## v0.20.0 (2023-01-06)
+
+### Feat
+
+- **robotlangserver**: Implement embedded keyword precedence for RF 6.0, this also speedups keyword analysing
+- **robotlangserver**: support for robot:private keywords for RF>6.0.0
+- **robotlangserver**: show keyword tags in keyword documentation
+- **debugger**: add `include` and `exclude` properties to launch configurations
+
+### Fix
+
+- **robotlangserver**:  Ignore parsing errors in test discovery
+- **vscode-testexplorer**: Correctly combine args and paths in debug configurations
+- speedup loading and analysing tests
+
+### Refactor
+
+- **robotlangserver**: Better error messages if converting from json to dataclasses
+- **debugger**: Move debugger.modifiers one level higher to shorten the commandline
+
+## v0.19.1 (2023-01-05)
+
+### Fix
+
+- **debugger**: use default target if there is no target specified in launch config with purpose test
+
+## v0.19.0 (2023-01-05)
+
+### Feat
+
+- New command `Clear Cache and Restart Language Servers`
+- **debugger**: possibility to disable the target `.` in a robotcode launch configurations with `null`, to append your own targets in `args`
+- **robotlangserver**: new setting `.analysis.cache.saveLocation` where you can specify the location where robotcode saves cached data
+
+### Fix
+
+- **robotlangserver**: don't report load workspace progress if progressmode is off
+
+## v0.18.0 (2022-12-15)
+
+### Feat
+
+- **robotlangserver**: Speedup loading of class and module libraries
+
+### Fix
+
+- **robotlangserver**: Update libraries when editing not work
+
+## v0.17.3 (2022-12-11)
+
+### Fix
+
+- **vscode**: Highlightning comments in text mate mode
+- **vscode**: Some tweaks for better highlightning
+
+### Perf
+
+- **robotlangserver**: Speedup keyword completion
+- **robotlangserver**: refactor some unnecessary async/await methods
+
+## v0.17.2 (2022-12-09)
+
+### Fix
+
+- **vscode**: Enhance tmLanguage to support thing  like variables, assignments,... better
+
+## v0.17.1 (2022-12-08)
+
+## v0.17.0 (2022-12-08)
+
+### Feat
+
+- **vscode**: Add configuration defaults for `editor.tokenColorCustomizations` and `editor.semanticTokenColorCustomizations`
+
+## v0.16.0 (2022-12-08)
+
+### Feat
+
+- **vscode**: Provide better coloring in the debug console.
+- **robotlangserver**: Highlight dictionary keys and values with different colors
+- **robotlangserver**: Optimization of the analysis of keywords with embedded arguments
+- **robotlangserver**: Highlight embedded arguments
+- **vscode**: add new command `Restart Language Server`
+
+### Fix
+
+- **robotlangserver**: try to hover, goto, ... for keyword with variables in names
+- **vscode**: Capitalize commands categories
+
+## v0.15.1 (2022-12-07)
+
+## v0.15.0 (2022-12-07)
+
+### Feat
+
+- Simplifying implementation of discovering of tests
+
+### Fix
+
+- debugger now also supports dictionary expressions
+
 ##  0.14.5
 
 - Improve analysing, find references and renaming of environment variables
