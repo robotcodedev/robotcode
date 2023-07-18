@@ -294,4 +294,8 @@ changelog_incremental = true
 changelog_merge_prerelease = true
 gpg_sign = true
 annotated_tag = true
-pre_bump_hooks = ["hatch run build:update-git-versions"]
+pre_bump_hooks = [
+  "hatch env remove lint",
+  "hatch run build:update-git-versions",
+  "git add .",
+]
