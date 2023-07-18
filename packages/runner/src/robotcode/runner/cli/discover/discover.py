@@ -429,7 +429,7 @@ def handle_options(
     raise UnknownError("Unexpected error happened.")
 
 
-@discover.command(  # type: ignore[attr-defined]
+@discover.command(
     context_settings={
         "allow_extra_args": True,
         "ignore_unknown_options": True,
@@ -489,7 +489,7 @@ def all(
             app.print_data(ResultItem([collector.all], diagnostics), remove_defaults=True)
 
 
-@discover.command(  # type: ignore[attr-defined]
+@discover.command(
     context_settings={
         "allow_extra_args": True,
         "ignore_unknown_options": True,
@@ -536,7 +536,7 @@ def tests(
             app.print_data(ResultItem(collector.tests, diagnostics), remove_defaults=True)
 
 
-@discover.command(  # type: ignore[attr-defined]
+@discover.command(
     context_settings={
         "allow_extra_args": True,
         "ignore_unknown_options": True,
@@ -588,7 +588,7 @@ class TagsResult:
     tags: Dict[str, List[TestItem]]
 
 
-@discover.command(  # type: ignore[attr-defined]
+@discover.command(
     context_settings={
         "allow_extra_args": True,
         "ignore_unknown_options": True,
@@ -670,7 +670,7 @@ class Info:
     system_version: str
 
 
-@discover.command(  # type: ignore[attr-defined]
+@discover.command(
     add_help_option=True,
 )
 @pass_application

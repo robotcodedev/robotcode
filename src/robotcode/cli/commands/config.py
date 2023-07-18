@@ -25,7 +25,7 @@ def config() -> None:
     """
 
 
-@config.command  # type: ignore[attr-defined]
+@config.command
 @click.option(
     "-s", "--single", "single", is_flag=True, default=False, help="Shows single files, not the combined config."
 )
@@ -69,7 +69,7 @@ def show(
         raise UnknownError(str(e)) from e
 
 
-@config.command  # type: ignore[attr-defined]
+@config.command
 @click.argument("paths", type=click.Path(exists=True, path_type=Path), nargs=-1, required=False)
 @pass_application
 def files(
@@ -120,7 +120,7 @@ def files(
         raise UnknownError(str(e)) from e
 
 
-@config.command  # type: ignore[attr-defined]
+@config.command
 @click.argument("paths", type=click.Path(exists=True, path_type=Path), nargs=-1, required=False)
 @pass_application
 def root(
@@ -163,7 +163,7 @@ def root(
         app.print_data(result)
 
 
-@config.group  # type: ignore[attr-defined]
+@config.group
 @pass_application
 def info(app: Application) -> None:
     """Shows informations about possible configuration settings."""

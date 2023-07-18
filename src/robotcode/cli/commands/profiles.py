@@ -17,7 +17,7 @@ def profiles() -> None:
     """View profile informations."""
 
 
-@profiles.command  # type: ignore[attr-defined]
+@profiles.command
 @click.option(
     "-n", "--no-evaluate", "no_evaluate", is_flag=True, default=False, help="Don't evaluate expressions in the profile."
 )
@@ -45,7 +45,7 @@ def show(
         raise UnknownError(str(e)) from e
 
 
-@profiles.command  # type: ignore[attr-defined]
+@profiles.command
 @click.argument("paths", type=click.Path(exists=True, path_type=Path), nargs=-1, required=False)
 @pass_application
 def list(
