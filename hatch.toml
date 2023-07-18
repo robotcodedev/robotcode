@@ -140,7 +140,7 @@ deploy = ["python scripts/deploy_docs.py"]
 skip-install = true
 detached = true
 python = "38"
-dependencies = ["GitPython", "semantic-version"]
+dependencies = ["GitPython", "semantic-version", "commitizen"]
 
 [envs.build.scripts]
 update-git-versions = ["python scripts/update_git_versions.py"]

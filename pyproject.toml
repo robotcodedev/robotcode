@@ -292,3 +292,6 @@ update_changelog_on_bump = true
 major_version_zero = true
 changelog_incremental = true
 changelog_merge_prerelease = true
+gpg_sign = true
+annotated_tag = true
+pre_bump_hooks = ["hatch run build:update-git-versions"]
