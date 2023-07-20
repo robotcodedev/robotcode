@@ -2,6 +2,12 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.47.5 (2023-07-20)
+
+### Fix
+
+- add missing log-level in testcontroller
+
 ## v0.47.4 (2023-07-20)
 
 ### Fix

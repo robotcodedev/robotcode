@@ -27,8 +27,8 @@ classifiers = [
 ]
 dependencies = [
   "robotframework>=4.1.0",
-  "robotcode-jsonrpc2==0.47.4",
-  "robotcode==0.47.4",
+  "robotcode-jsonrpc2==0.47.5",
+  "robotcode==0.47.5",
 ]
 dynamic = ["version"]
 
