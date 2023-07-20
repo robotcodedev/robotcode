@@ -2,6 +2,12 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.47.4 (2023-07-20)
+
+### Fix
+
+- don't update tests if editing `__init__.robot` files
+
 ## v0.47.3 (2023-07-18)
 
 ### Fix
