@@ -48,7 +48,7 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
   resolveDebugConfiguration(
     folder: vscode.WorkspaceFolder | undefined,
     debugConfiguration: vscode.DebugConfiguration,
-    token?: vscode.CancellationToken
+    token?: vscode.CancellationToken,
   ): vscode.ProviderResult<vscode.DebugConfiguration> {
     return this._resolveDebugConfiguration(folder, debugConfiguration, token);
   }
@@ -57,7 +57,7 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
   async _resolveDebugConfiguration(
     folder: vscode.WorkspaceFolder | undefined,
     debugConfiguration: vscode.DebugConfiguration,
-    token?: vscode.CancellationToken
+    token?: vscode.CancellationToken,
   ): Promise<vscode.DebugConfiguration> {
     if (!debugConfiguration.type && !debugConfiguration.request && !debugConfiguration.name) {
       const editor = vscode.window.activeTextEditor;
@@ -69,7 +69,7 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
         const result = await vscode.window.showQuickPick(
           DEBUG_CONFIGURATIONS.map((v) => v),
           { canPickMany: false },
-          token
+          token,
         );
 
         if (result !== undefined) {
@@ -93,7 +93,7 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
           ?.find(
             (v) =>
               v?.type === "robotcode" &&
-              (v?.purpose === "default" || (Array.isArray(v?.purpose) && v?.purpose?.indexOf("default") > -1))
+              (v?.purpose === "default" || (Array.isArray(v?.purpose) && v?.purpose?.indexOf("default") > -1)),
           ) ?? {};
 
       debugConfiguration = { ...template, ...defaultLaunchConfig, ...debugConfiguration };
@@ -202,11 +202,14 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
 }
 
 class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
-  constructor(private readonly pythonManager: PythonManager, private readonly outputChannel: vscode.OutputChannel) {}
+  constructor(
+    private readonly pythonManager: PythonManager,
+    private readonly outputChannel: vscode.OutputChannel,
+  ) {}
 
   async createDebugAdapterDescriptor(
     session: vscode.DebugSession,
-    _executable: vscode.DebugAdapterExecutable | undefined
+    _executable: vscode.DebugAdapterExecutable | undefined,
   ): Promise<vscode.DebugAdapterDescriptor> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, session.workspaceFolder);
 
@@ -250,7 +253,7 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
           const port =
             (await getAvailablePort(
               [host],
-              config.get("debugLauncher.tcpPort", DEBUG_ADAPTER_DEFAULT_TCP_PORT) ?? DEBUG_ADAPTER_DEFAULT_TCP_PORT
+              config.get("debugLauncher.tcpPort", DEBUG_ADAPTER_DEFAULT_TCP_PORT) ?? DEBUG_ADAPTER_DEFAULT_TCP_PORT,
             )) ?? DEBUG_ADAPTER_DEFAULT_TCP_PORT;
 
           this.spawnDebugLauncher(session, config, ["debug-launch", "--tcp", `${host}:${port}`, ...debugLauncherArgs]);
@@ -301,7 +304,7 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
   private spawnDebugLauncher(
     session: vscode.DebugSession,
     config: vscode.WorkspaceConfiguration,
-    launchArgs: string[]
+    launchArgs: string[],
   ) {
     const pythonCommand = this.pythonManager.getPythonCommand(session.workspaceFolder);
 
@@ -337,7 +340,7 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
     p.on("close", (code, signal) => {
       if (code !== 0) {
         this.outputChannel.appendLine(
-          `debug launcher exited with code ${code ?? "unknown"} and signal ${signal ?? "unknown"}`
+          `debug launcher exited with code ${code ?? "unknown"} and signal ${signal ?? "unknown"}`,
         );
       }
     });
@@ -354,12 +357,12 @@ export class DebugManager {
     public readonly extensionContext: vscode.ExtensionContext,
     public readonly pythonManager: PythonManager,
     public readonly languageClientsManager: LanguageClientsManager,
-    public readonly outputChannel: vscode.OutputChannel
+    public readonly outputChannel: vscode.OutputChannel,
   ) {
     this._disposables = vscode.Disposable.from(
       vscode.debug.registerDebugConfigurationProvider(
         "robotcode",
-        new RobotCodeDebugConfigurationProvider(this.pythonManager)
+        new RobotCodeDebugConfigurationProvider(this.pythonManager),
       ),
 
       vscode.debug.registerDebugConfigurationProvider(
@@ -367,17 +370,17 @@ export class DebugManager {
         {
           provideDebugConfigurations(
             _folder: vscode.WorkspaceFolder | undefined,
-            _token?: vscode.CancellationToken
+            _token?: vscode.CancellationToken,
           ): vscode.ProviderResult<vscode.DebugConfiguration[]> {
             return DEBUG_CONFIGURATIONS.map((v) => v.body);
           },
         },
-        vscode.DebugConfigurationProviderTriggerKind.Dynamic
+        vscode.DebugConfigurationProviderTriggerKind.Dynamic,
       ),
 
       vscode.debug.registerDebugAdapterDescriptorFactory(
         "robotcode",
-        new RobotCodeDebugAdapterDescriptorFactory(this.pythonManager, this.outputChannel)
+        new RobotCodeDebugAdapterDescriptorFactory(this.pythonManager, this.outputChannel),
       ),
 
       vscode.debug.onDidReceiveDebugSessionCustomEvent(async (event) => {
@@ -387,7 +390,7 @@ export class DebugManager {
               await DebugManager.OnDebugpyStarted(
                 event.session,
                 event.event,
-                event.body as { port: number; addresses: undefined | string[] | null }
+                event.body as { port: number; addresses: undefined | string[] | null },
               );
               break;
             }
@@ -406,7 +409,7 @@ export class DebugManager {
                 event.session,
                 body.outputFile as string,
                 body.logFile as string,
-                body.reportFile as string
+                body.reportFile as string,
               );
               break;
             }
@@ -440,17 +443,17 @@ export class DebugManager {
         provideEvaluatableExpression(
           document: vscode.TextDocument,
           position: vscode.Position,
-          token: vscode.CancellationToken
+          token: vscode.CancellationToken,
         ): vscode.ProviderResult<vscode.EvaluatableExpression> {
           return languageClientsManager.getEvaluatableExpression(document, position, token).then(
             (r) => {
               if (r) return new vscode.EvaluatableExpression(toVsCodeRange(r.range), r.expression);
               else return undefined;
             },
-            (_) => undefined
+            (_) => undefined,
           );
         },
-      })
+      }),
     );
   }
 
@@ -468,7 +471,7 @@ export class DebugManager {
     runId?: string,
     options?: vscode.DebugSessionOptions,
     dryRun?: boolean,
-    topLevelSuiteName?: string
+    topLevelSuiteName?: string,
   ): Promise<boolean> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
@@ -512,7 +515,7 @@ export class DebugManager {
         ?.find(
           (v) =>
             v?.type === "robotcode" &&
-            (v?.purpose === "test" || (Array.isArray(v?.purpose) && v?.purpose?.indexOf("test") > -1))
+            (v?.purpose === "test" || (Array.isArray(v?.purpose) && v?.purpose?.indexOf("test") > -1)),
         ) ?? {};
 
     if (!("target" in testLaunchConfig)) {
@@ -541,14 +544,14 @@ export class DebugManager {
           dryRun,
         },
       },
-      options
+      options,
     );
   }
 
   static async OnDebugpyStarted(
     session: vscode.DebugSession,
     _event: string,
-    options?: { port: number; addresses: undefined | string[] | null }
+    options?: { port: number; addresses: undefined | string[] | null },
   ): Promise<boolean> {
     if (
       session.type === "robotcode" &&
@@ -598,7 +601,7 @@ export class DebugManager {
     session: vscode.DebugSession,
     _outputFile?: string,
     logFile?: string,
-    reportFile?: string
+    reportFile?: string,
   ): Promise<void> {
     if (session.configuration?.openOutputAfterRun === "report" && reportFile) {
       await this.languageClientsManager.openUriInDocumentationView(vscode.Uri.file(reportFile));

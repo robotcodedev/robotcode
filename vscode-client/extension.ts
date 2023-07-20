@@ -5,7 +5,12 @@ import { PythonManager } from "./pythonmanger";
 import { TestControllerManager } from "./testcontrollermanager";
 
 class TerminalLink extends vscode.TerminalLink {
-  constructor(public path: string, startIndex: number, length: number, tooltip?: string) {
+  constructor(
+    public path: string,
+    startIndex: number,
+    length: number,
+    tooltip?: string,
+  ) {
     super(startIndex, length, tooltip);
   }
 }
@@ -66,7 +71,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
                 result,
                 line.indexOf(result),
                 result.length,
-                line.startsWith("Log:") ? "Open log." : "Open report."
+                line.startsWith("Log:") ? "Open log." : "Open report.",
               ),
             ];
           }
@@ -77,7 +82,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
       async handleTerminalLink(link: TerminalLink) {
         await languageClientManger.openUriInDocumentationView(vscode.Uri.file(link.path));
       },
-    })
+    }),
   );
 
   await languageClientManger.refresh();
@@ -109,7 +114,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
       for (const uri of affectedFolders) {
         await languageClientManger.restart(uri);
       }
-    })
+    }),
   );
 }
 

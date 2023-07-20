@@ -90,14 +90,14 @@ export class PythonManager {
 
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
-    public readonly outputChannel: vscode.OutputChannel
+    public readonly outputChannel: vscode.OutputChannel,
   ) {
     this._pythonLanguageServerMain = this.extensionContext.asAbsolutePath(
-      path.join("bundled", "tool", "language_server")
+      path.join("bundled", "tool", "language_server"),
     );
 
     this._checkRobotVersionMain = this.extensionContext.asAbsolutePath(
-      path.join("bundled", "tool", "utils", "check_robot_version.py")
+      path.join("bundled", "tool", "utils", "check_robot_version.py"),
     );
 
     this._robotCodeMain = this.extensionContext.asAbsolutePath(path.join("bundled", "tool", "robotcode"));
@@ -115,14 +115,14 @@ export class PythonManager {
 
         this._pythonExtension.activate().then(
           (_) => undefined,
-          (_) => undefined
+          (_) => undefined,
         );
 
         this.outputChannel.appendLine("Python Extension is active");
 
         this._pythonExtension.exports.ready.then(
           (_) => undefined,
-          (_) => undefined
+          (_) => undefined,
         );
       } catch (ex) {
         this.outputChannel.appendLine("can't activate python extension");
@@ -182,7 +182,7 @@ export class PythonManager {
     folder: vscode.WorkspaceFolder,
     args: string[],
     stdioData?: string,
-    token?: vscode.CancellationToken
+    token?: vscode.CancellationToken,
   ): Promise<unknown> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
     const robotCodeExtraArgs = config.get<string[]>("extraArgs", []);

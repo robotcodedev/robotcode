@@ -77,7 +77,7 @@ interface RobotExecutionAttributes {
   tags: string[] | undefined;
 }
 
-type RobotEventType = "suite" | "test" | "keyword" | string;
+type RobotEventType = "suite" | "test" | "keyword";
 
 interface RobotExecutionEvent {
   type: RobotEventType;
@@ -86,7 +86,7 @@ interface RobotExecutionEvent {
   failedKeywords: RobotExecutionAttributes[] | undefined;
 }
 
-type RobotLogLevel = "FAIL" | "WARN" | "INFO" | "DEBUG" | "TRACE" | string;
+type RobotLogLevel = "FAIL" | "WARN" | "INFO" | "DEBUG" | "TRACE";
 
 interface RobotLogMessageEvent {
   itemId: string | undefined;
@@ -124,7 +124,10 @@ class WorkspaceFolderEntry {
     this._valid = v;
   }
 
-  public constructor(valid: boolean, readonly items: RobotTestItem[] | undefined) {
+  public constructor(
+    valid: boolean,
+    readonly items: RobotTestItem[] | undefined,
+  ) {
     this._valid = valid;
   }
 }
@@ -146,7 +149,7 @@ export class TestControllerManager {
     public readonly extensionContext: vscode.ExtensionContext,
     public readonly languageClientsManager: LanguageClientsManager,
     public readonly debugManager: DebugManager,
-    public readonly outputChannel: vscode.OutputChannel
+    public readonly outputChannel: vscode.OutputChannel,
   ) {
     this.testController = vscode.tests.createTestController("robotCode.RobotFramework", "RobotFramework");
 
@@ -162,13 +165,13 @@ export class TestControllerManager {
       "Run",
       vscode.TestRunProfileKind.Run,
       async (request, token) => this.runTests(request, token),
-      true
+      true,
     );
 
     this.runProfile.configureHandler = () => {
       this.configureRunProfile().then(
         (_) => undefined,
-        (_) => undefined
+        (_) => undefined,
       );
     };
 
@@ -176,20 +179,20 @@ export class TestControllerManager {
       "Dry Run",
       vscode.TestRunProfileKind.Run,
       async (request, token) => this.runTests(request, token, true),
-      false
+      false,
     );
 
     this.debugProfile = this.testController.createRunProfile(
       "Debug",
       vscode.TestRunProfileKind.Debug,
       async (request, token) => this.runTests(request, token),
-      true
+      true,
     );
 
     this.debugProfile.configureHandler = () => {
       this.configureRunProfile().then(
         (_) => undefined,
-        (_) => undefined
+        (_) => undefined,
       );
     };
 
@@ -197,11 +200,11 @@ export class TestControllerManager {
       "Dry Debug",
       vscode.TestRunProfileKind.Debug,
       async (request, token) => this.runTests(request, token, true),
-      false
+      false,
     );
 
     const fileWatcher = vscode.workspace.createFileSystemWatcher(
-      `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}`
+      `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}`,
     );
     fileWatcher.onDidCreate((uri) => this.refreshUri(uri, "create"));
     fileWatcher.onDidDelete((uri) => this.refreshUri(uri, "delete"));
@@ -293,13 +296,13 @@ export class TestControllerManager {
       }),
       vscode.commands.registerCommand("robotcode.selectExecutionProfiles", async () => {
         await this.configureRunProfile();
-      })
+      }),
     );
   }
 
   public async getRobotCodeProfiles(
     folder: vscode.WorkspaceFolder,
-    profiles?: string[]
+    profiles?: string[],
   ): Promise<RobotCodeProfilesResult> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
     const paths = config.get<string[] | undefined>("robot.paths", undefined);
@@ -322,9 +325,9 @@ export class TestControllerManager {
           await vscode.workspace.findFiles(
             new vscode.RelativePattern(v, `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}}`),
             null,
-            1
+            1,
           )
-        ).length > 0
+        ).length > 0,
     );
 
     if (folders.length === 0) {
@@ -343,7 +346,7 @@ export class TestControllerManager {
                   value: v,
                 };
               }),
-              { title: "Select Workspace Folder" }
+              { title: "Select Workspace Folder" },
             )
           )?.value
         : folders[0];
@@ -372,7 +375,7 @@ export class TestControllerManager {
       await config.update(
         "profiles",
         profiles.map((p) => p.label),
-        vscode.ConfigurationTarget.WorkspaceFolder
+        vscode.ConfigurationTarget.WorkspaceFolder,
       );
     } catch (e) {
       await vscode.window.showErrorMessage("Error while getting profiles, is this a robot project?", {
@@ -462,28 +465,28 @@ export class TestControllerManager {
                   this.refreshWorkspace(
                     vscode.workspace.getWorkspaceFolder(document.uri),
                     undefined,
-                    cancelationTokenSource.token
+                    cancelationTokenSource.token,
                   ).then(
                     () => undefined,
-                    () => undefined
+                    () => undefined,
                   );
                 }
               },
-              () => undefined
+              () => undefined,
             );
           else {
             this.refreshWorkspace(
               vscode.workspace.getWorkspaceFolder(document.uri),
               undefined,
-              cancelationTokenSource.token
+              cancelationTokenSource.token,
             ).then(
               () => undefined,
-              () => undefined
+              () => undefined,
             );
           }
         }, 1000),
-        cancelationTokenSource
-      )
+        cancelationTokenSource,
+      ),
     );
   }
 
@@ -515,7 +518,7 @@ export class TestControllerManager {
     discoverArgs: string[],
     extraArgs: string[],
     stdioData?: string,
-    token?: vscode.CancellationToken
+    token?: vscode.CancellationToken,
   ): Promise<RobotCodeDiscoverResult> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
     const profiles = config.get<string[]>("profiles", []);
@@ -549,7 +552,7 @@ export class TestControllerManager {
         ...extraArgs,
       ],
       stdioData,
-      token
+      token,
     )) as RobotCodeDiscoverResult;
 
     if (result?.diagnostics) {
@@ -562,7 +565,7 @@ export class TestControllerManager {
             r.source = v.source;
             r.code = v.code;
             return r;
-          })
+          }),
         );
       }
     }
@@ -572,14 +575,14 @@ export class TestControllerManager {
 
   public async getTestsFromWorkspace(
     folder: vscode.WorkspaceFolder,
-    token?: vscode.CancellationToken
+    token?: vscode.CancellationToken,
   ): Promise<RobotTestItem[] | undefined> {
     // TODO do not use hardcoded file extensions
     const robotFiles = await vscode.workspace.findFiles(
       new vscode.RelativePattern(folder, "**/*.robot"),
       undefined,
       1,
-      token
+      token,
     );
 
     if (robotFiles.length === 0) {
@@ -609,7 +612,7 @@ export class TestControllerManager {
         ["discover", "--read-from-stdin", "all"],
         [],
         JSON.stringify(o),
-        token
+        token,
       );
 
       return result?.items;
@@ -632,7 +635,7 @@ export class TestControllerManager {
   public async getTestsFromDocument(
     document: vscode.TextDocument,
     testItem: RobotTestItem,
-    token?: vscode.CancellationToken
+    token?: vscode.CancellationToken,
   ): Promise<RobotTestItem[] | undefined> {
     const folder = vscode.workspace.getWorkspaceFolder(document.uri);
 
@@ -667,7 +670,7 @@ export class TestControllerManager {
           testItem?.longname,
         ],
         JSON.stringify(o),
-        token
+        token,
       );
 
       return result?.items;
@@ -713,7 +716,7 @@ export class TestControllerManager {
             }
 
             robotItem.children = robotItem.children.sort(
-              (a, b) => (a.range?.start.line || -1) - (b.range?.start.line || -1)
+              (a, b) => (a.range?.start.line || -1) - (b.range?.start.line || -1),
             );
           }
         }
@@ -750,7 +753,7 @@ export class TestControllerManager {
         if (this.robotTestItems.get(folder) === undefined || !this.robotTestItems.get(folder)?.valid) {
           this.robotTestItems.set(
             folder,
-            new WorkspaceFolderEntry(true, await this.getTestsFromWorkspace(folder, token))
+            new WorkspaceFolderEntry(true, await this.getTestsFromWorkspace(folder, token)),
           );
         }
 
@@ -782,7 +785,7 @@ export class TestControllerManager {
       testItem = this.testController.createTestItem(
         robotTestItem.id,
         robotTestItem.name,
-        robotTestItem.uri ? vscode.Uri.parse(robotTestItem.uri) : undefined
+        robotTestItem.uri ? vscode.Uri.parse(robotTestItem.uri) : undefined,
       );
 
       this.testItems.set(robotTestItem.id, testItem);
@@ -855,7 +858,7 @@ export class TestControllerManager {
   private async refreshWorkspace(
     workspace?: vscode.WorkspaceFolder,
     _reason?: string,
-    token?: vscode.CancellationToken
+    token?: vscode.CancellationToken,
   ): Promise<void> {
     return this.refreshFromUriMutex.dispatch(async () => {
       if (workspace) {
@@ -885,7 +888,7 @@ export class TestControllerManager {
       if (testItem) {
         this.refreshItem(testItem).then(
           (_) => undefined,
-          (_) => undefined
+          (_) => undefined,
         );
         return;
       }
@@ -906,10 +909,10 @@ export class TestControllerManager {
         setTimeout(() => {
           this.refreshWorkspace(workspace, reason, cancelationTokenSource.token).then(
             () => undefined,
-            () => undefined
+            () => undefined,
           );
         }, 1000),
-        cancelationTokenSource
+        cancelationTokenSource,
       );
     } else {
       if (this.fileChangeTimer) {
@@ -919,7 +922,7 @@ export class TestControllerManager {
 
       this.refresh().then(
         (_) => undefined,
-        (_) => undefined
+        (_) => undefined,
       );
     }
   }
@@ -982,7 +985,7 @@ export class TestControllerManager {
   public async runTests(
     request: vscode.TestRunRequest,
     token: vscode.CancellationToken,
-    dryRun?: boolean
+    dryRun?: boolean,
   ): Promise<void> {
     const includedItems: vscode.TestItem[] = [];
 
@@ -1055,7 +1058,7 @@ export class TestControllerManager {
           [],
           runId,
           options,
-          dryRun
+          dryRun,
         );
         run_started = run_started || started;
       } else {
@@ -1123,7 +1126,7 @@ export class TestControllerManager {
           runId,
           options,
           dryRun,
-          suiteName
+          suiteName,
         );
 
         run_started = run_started || started;
@@ -1227,8 +1230,8 @@ export class TestControllerManager {
                       vscode.Uri.file(keyword.source),
                       new vscode.Range(
                         new vscode.Position((keyword.lineno ?? 1) - 1, 0),
-                        new vscode.Position(keyword.lineno ?? 1, 0)
-                      )
+                        new vscode.Position(keyword.lineno ?? 1, 0),
+                      ),
                     );
                   }
 
@@ -1246,8 +1249,8 @@ export class TestControllerManager {
                     vscode.Uri.file(event.attributes.source),
                     new vscode.Range(
                       new vscode.Position((event.attributes.lineno ?? 1) - 1, 0),
-                      new vscode.Position(event.attributes.lineno ?? 1, 0)
-                    )
+                      new vscode.Position(event.attributes.lineno ?? 1, 0),
+                    ),
                   );
                 }
                 messages.push(message);
@@ -1278,8 +1281,8 @@ export class TestControllerManager {
             vscode.Uri.file(event.source),
             new vscode.Range(
               new vscode.Position((event.lineno ?? 1) - 1, event.column ?? 0),
-              new vscode.Position(event.lineno ?? 1, event.column ?? 0)
-            )
+              new vscode.Position(event.lineno ?? 1, event.column ?? 0),
+            ),
           )
         : undefined;
 
@@ -1299,7 +1302,7 @@ export class TestControllerManager {
       run.appendOutput(
         `[ ${style(event.level)} ] ${event.message.replaceAll("\n", "\r\n")}` + "\r\n",
         location,
-        event.itemId !== undefined ? this.findTestItemById(event.itemId) : undefined
+        event.itemId !== undefined ? this.findTestItemById(event.itemId) : undefined,
       );
     }
   }

@@ -31,7 +31,7 @@ const LANGUAGE_SERVER_DEFAULT_HOST = "127.0.0.1";
 export function toVsCodeRange(range: Range): vscode.Range {
   return new vscode.Range(
     new vscode.Position(range.start.line, range.start.character),
-    new vscode.Position(range.end.line, range.end.character)
+    new vscode.Position(range.end.line, range.end.character),
   );
 }
 
@@ -99,7 +99,7 @@ export class LanguageClientsManager {
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
     public readonly pythonManager: PythonManager,
-    public readonly outputChannel: vscode.OutputChannel
+    public readonly outputChannel: vscode.OutputChannel,
   ) {
     const fileWatcher1 = vscode.workspace.createFileSystemWatcher(`**/{pyproject.toml,robot.toml,.robot.toml}`);
     fileWatcher1.onDidCreate((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
@@ -131,7 +131,7 @@ export class LanguageClientsManager {
       vscode.commands.registerCommand("robotcode.clearCacheRestartLanguageServers", async () => {
         await this.clearCaches();
         await this.restart();
-      })
+      }),
     );
   }
 
@@ -159,14 +159,14 @@ export class LanguageClientsManager {
       (reason) => {
         this.outputChannel.appendLine(`can't stop client ${reason}`);
         return true;
-      }
+      },
     );
   }
 
   dispose(): void {
     this.stopAllClients().then(
       (_) => undefined,
-      (_) => undefined
+      (_) => undefined,
     );
     this._disposables.dispose();
   }
@@ -206,7 +206,7 @@ export class LanguageClientsManager {
         } else if (item && item.id === "retry") {
           this.restart(folder.uri).then(
             (_) => undefined,
-            (_) => undefined
+            (_) => undefined,
           );
         }
       });
@@ -226,7 +226,7 @@ export class LanguageClientsManager {
       this.showErrorWithSelectPythonInterpreter(
         `Can't find a valid python executable for workspace folder '${folder.name}'. ` +
           "Check if python and the python extension is installed.",
-        folder
+        folder,
       );
 
       return undefined;
@@ -238,7 +238,7 @@ export class LanguageClientsManager {
       this.showErrorWithSelectPythonInterpreter(
         `Invalid python version for workspace folder '${folder.name}'. Only python version >= 3.8 supported. ` +
           "Please update to a newer python version or select a valid python environment.",
-        folder
+        folder,
       );
 
       return undefined;
@@ -251,7 +251,7 @@ export class LanguageClientsManager {
       this.showErrorWithSelectPythonInterpreter(
         `Robot Framework package not found in workspace folder '${folder.name}'. ` +
           "Please install Robot Framework >= Version 4.0 to the current python environment or select a valid python environment.",
-        folder
+        folder,
       );
 
       return undefined;
@@ -263,7 +263,7 @@ export class LanguageClientsManager {
       this.showErrorWithSelectPythonInterpreter(
         `Robot Framework version in workspace folder '${folder.name}' not supported. Only Robot Framework version >= 4.0.0 supported. ` +
           "Please install or update Robot Framework >= Version 4.0 to the current python environment or select a valid python environment.",
-        folder
+        folder,
       );
 
       return undefined;
@@ -321,7 +321,7 @@ export class LanguageClientsManager {
 
   public async getLanguageClientForResource(
     resource: string | vscode.Uri,
-    create = true
+    create = true,
   ): Promise<LanguageClient | undefined> {
     return this.clientsMutex.dispatch(async () => {
       const uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
@@ -415,7 +415,7 @@ export class LanguageClientsManager {
             this: void, // NOSONAR
             codeLens: vscode.CodeLens,
             token: vscode.CancellationToken,
-            next: ResolveCodeLensSignature
+            next: ResolveCodeLensSignature,
           ): vscode.ProviderResult<vscode.CodeLens> {
             const resolvedCodeLens = next(codeLens, token);
 
@@ -433,8 +433,8 @@ export class LanguageClientsManager {
                         position.range.start.line,
                         position.range.start.character,
                         position.range.end.line,
-                        position.range.end.character
-                      )
+                        position.range.end.character,
+                      ),
                     );
                   }),
                 ];
@@ -464,16 +464,16 @@ export class LanguageClientsManager {
           result?.diagnostics?.clear();
 
           this.outputChannel.appendLine(
-            `client for ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} starting.`
+            `client for ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} starting.`,
           );
         } else if (e.newState == State.Running) {
           this.outputChannel.appendLine(
-            `client for ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} running.`
+            `client for ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} running.`,
           );
           closeHandlerAction = CloseAction.Restart;
         } else if (e.newState == State.Stopped) {
           this.outputChannel.appendLine(
-            `client for ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} stopped.`
+            `client for ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} stopped.`,
           );
           if (workspaceFolder && this.clients.get(workspaceFolder.uri.toString()) !== result)
             closeHandlerAction = CloseAction.DoNotRestart;
@@ -493,16 +493,16 @@ export class LanguageClientsManager {
       const started = await result.start().then(
         (_) => {
           this.outputChannel.appendLine(
-            `client for ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} started.`
+            `client for ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} started.`,
           );
           return true;
         },
         (reason) => {
           this.outputChannel.appendLine(
-            `client  ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} error: ${reason}`
+            `client  ${result?.clientOptions.workspaceFolder?.uri ?? "unknown"} error: ${reason}`,
           );
           return false;
-        }
+        },
       );
 
       if (started) {
@@ -565,7 +565,7 @@ export class LanguageClientsManager {
         const robotFiles = await vscode.workspace.findFiles(
           new vscode.RelativePattern(f, `**/*.{${this.fileExtensions.join(",")}}}`),
           undefined,
-          1
+          1,
         );
         if (robotFiles.length > 0) {
           folders.add(f);
@@ -589,14 +589,14 @@ export class LanguageClientsManager {
     } else {
       vscode.env.openExternal(uri).then(
         () => undefined,
-        () => undefined
+        () => undefined,
       );
     }
   }
 
   public async convertToDocumententationUri(
     uri: vscode.Uri,
-    token?: vscode.CancellationToken
+    token?: vscode.CancellationToken,
   ): Promise<vscode.Uri | undefined> {
     const client = await this.getLanguageClientForResource(uri);
 
@@ -610,13 +610,13 @@ export class LanguageClientsManager {
               {
                 uri: uri.toString(),
               },
-              token
-            )
+              token,
+            ),
           )
         : vscode.Uri.parse(
             await client.sendRequest<string>("robot/documentationServer/convertUri", {
               uri: uri.toString(),
-            })
+            }),
           )) ?? undefined
     );
   }
@@ -624,7 +624,7 @@ export class LanguageClientsManager {
   public async getEvaluatableExpression(
     document: vscode.TextDocument,
     position: Position,
-    token?: vscode.CancellationToken
+    token?: vscode.CancellationToken,
   ): Promise<EvaluatableExpression | undefined> {
     const client = await this.getLanguageClientForResource(document.uri);
 
@@ -638,7 +638,7 @@ export class LanguageClientsManager {
               textDocument: { uri: document.uri.toString() },
               position,
             },
-            token
+            token,
           )
         : await client.sendRequest<EvaluatableExpression | undefined>("robot/debugging/getEvaluatableExpression", {
             textDocument: { uri: document.uri.toString() },
@@ -651,7 +651,7 @@ export class LanguageClientsManager {
     document: vscode.TextDocument,
     viewPort: vscode.Range,
     context: vscode.InlineValueContext,
-    token?: vscode.CancellationToken
+    token?: vscode.CancellationToken,
   ): Promise<InlineValue[]> {
     const client = await this.getLanguageClientForResource(document.uri);
 
@@ -669,7 +669,7 @@ export class LanguageClientsManager {
                 stoppedLocation: { start: context.stoppedLocation.start, end: context.stoppedLocation.end },
               },
             },
-            token
+            token,
           )
         : await client.sendRequest<InlineValue[]>("robot/debugging/getInlineValues", {
             textDocument: { uri: document.uri.toString() },
