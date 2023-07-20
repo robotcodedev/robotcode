@@ -86,7 +86,7 @@ interface RobotExecutionEvent {
   failedKeywords: RobotExecutionAttributes[] | undefined;
 }
 
-type RobotLogLevel = "FAIL" | "WARN" | "INFO" | "DEBUG" | "TRACE";
+type RobotLogLevel = "FAIL" | "ERROR" | "WARN" | "INFO" | "DEBUG" | "TRACE";
 
 interface RobotLogMessageEvent {
   itemId: string | undefined;
