@@ -106,9 +106,9 @@ matrix.rf.dependencies = [
 features = ["all"]
 
 [envs.lint.scripts]
-typing = ["mypy --install-types --non-interactive {args:.}"]
-style = ["ruff .", "black --check --diff ."]
-fmt = ["black .", "ruff --fix .", "style"]
+typing = ["mypy --install-types --non-interactive {args:.}", "npm run compile"]
+style = ["ruff .", "black --check --diff .", "npx eslint ."]
+fmt = ["black .", "ruff --fix .", "style", "npx eslint --fix ."]
 all = ["style", "typing"]
 
 [envs.pages]

@@ -4,30 +4,23 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "npm: watch",
-			"type": "npm",
-			"script": "watch",
-			"problemMatcher": "$tsc-watch",
-			"isBackground": true,
-			"presentation": {
-				"reveal": "never"
-			},
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			}
+			"label": "robotcode: lint fix",
+			"type": "shell",
+			"command": "hatch run lint:fix",
+			"problemMatcher": []
 		},
 		{
-			"label": "npm: compile",
-			"type": "npm",
-			"script": "compile",
-			"problemMatcher": []
-		}
-		{
-			"label": "Python Lint All",
+			"label": "robotcode: lint all",
 			"type": "shell",
 			"command": "hatch run lint:all",
 			"problemMatcher": []
+		},
+		{
+			"label": "robotcode: bump version",
+			"type": "shell",
+			"command": "hatch run build:cz bump",
+			"problemMatcher": []
 		}
+
 	]
 }
