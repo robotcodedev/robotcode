@@ -439,7 +439,8 @@ export class TestControllerManager {
 
   public refreshDocument(document: vscode.TextDocument): void {
     if (!SUPPORTED_LANGUAGES.includes(document.languageId)) return;
-    if (!SUPPORTED_SUITE_FILE_EXTENSIONS.some((ext) => document.uri.path.endsWith(ext))) return;
+    if (!SUPPORTED_SUITE_FILE_EXTENSIONS.some((ext) => document.uri.path.toLowerCase().endsWith(ext))) return;
+    if (document.uri.path.toLowerCase().endsWith("__init__.robot")) return;
 
     const uri_str = document.uri.toString();
     if (this.didChangedTimer.has(uri_str)) {
