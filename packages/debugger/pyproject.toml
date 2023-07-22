@@ -38,9 +38,6 @@ debugpy = ["debugpy"]
 [project.entry-points.robotcode]
 debugger = "robotcode.debugger.hooks"
 
-[project.scripts]
-'robotcode.debugger' = 'robotcode.debugger.__main__:main'
-
 [project.urls]
 Homepage = "https://robotcode.io"
 Donate = "https://github.com/sponsors/d-biehl"
