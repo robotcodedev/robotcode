@@ -89,6 +89,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: install node modules
+        run: npm install --also=dev
+
       - name: setup python environment
         id: setup-python
         uses: actions/setup-python@v4
