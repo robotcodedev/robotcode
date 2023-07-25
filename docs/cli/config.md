@@ -1,3 +1,40 @@
+## [profile].description
+
+Type: Optional[str]
+
+Description of the profile.
+
+## [profile].detached
+
+Type: Optional[bool]
+
+The profile should be detached."
+Detached means it is not inherited from the main profile.
+
+## [profile].enabled
+
+Type: Union[bool, Condition, None]
+
+If enabled the profile is used. You can also use and `if` condition
+to calculate the enabled state.
+
+Examples:
+```toml
+# alway disabled
+enabled = false
+```
+
+```toml
+# enabled if TEST_VAR is set
+enabled = { if = 'environ.get("CI") == "true"' }
+```
+
+## [profile].precedence
+
+Type: Optional[int]
+
+Precedence of the profile. Lower values are executed first. If not set the order is undefined.
+
 ## args
 
 Type: Optional[List[str]]
@@ -319,6 +356,21 @@ as --doc. Example: --metadata Version:1.2
 
 corresponds to the `-M --metadata name:value *` option of _robot_
 
+## extra-parse-include
+
+Type: Optional[List[Union[str, StringExpression]]]
+
+Appends entries to the --parseinclude option.
+
+Parse only files matching `pattern`. It can be:
+- a file name or pattern like `example.robot` or
+`*.robot` to parse all files matching that name,
+- a file path like `path/to/example.robot`, or
+- a directory path like `path/to/example` to parse
+all files in that directory, recursively.
+
+corresponds to the `-I --parseinclude pattern *` option of _robot_
+
 ## extra-parsers
 
 Type: Optional[Dict[str, List[Union[str, StringExpression]]]]
@@ -633,9 +685,9 @@ powerful variable setting mechanism.
 Examples:
 
 ```
---variable str:Hello       =>  ${str} = `Hello`
--v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`
--v x: -v y:42              =>  ${x} = ``, ${y} = `42`
+--variable name:Robot  =>  ${name} = `Robot`
+-v "hello:Hello world" =>  ${hello} = `Hello world`
+-v x: -v y:42          =>  ${x} = ``, ${y} = `42`
 ```
 
 corresponds to the `-v --variable name:value *` option of _rebot_
@@ -913,6 +965,19 @@ directory where tests are run from and the given path
 is considered relative to that unless it is absolute.
 
 corresponds to the `-d --outputdir dir` option of _robot_
+
+## parse-include
+
+Type: Optional[List[Union[str, StringExpression]]]
+
+Parse only files matching `pattern`. It can be:
+- a file name or pattern like `example.robot` or
+`*.robot` to parse all files matching that name,
+- a file path like `path/to/example.robot`, or
+- a directory path like `path/to/example` to parse
+all files in that directory, recursively.
+
+corresponds to the `-I --parseinclude pattern *` option of _robot_
 
 ## parsers
 
@@ -1192,6 +1257,21 @@ contain formatting and be read from a file similarly
 as --doc. Example: --metadata Version:1.2
 
 corresponds to the `-M --metadata name:value *` option of _robot_
+
+## rebot.extra-parse-include
+
+Type: Optional[List[Union[str, StringExpression]]]
+
+Appends entries to the --parseinclude option.
+
+Parse only files matching `pattern`. It can be:
+- a file name or pattern like `example.robot` or
+`*.robot` to parse all files matching that name,
+- a file path like `path/to/example.robot`, or
+- a directory path like `path/to/example` to parse
+all files in that directory, recursively.
+
+corresponds to the `-I --parseinclude pattern *` option of _robot_
 
 ## rebot.extra-pre-rebot-modifiers
 
@@ -1552,6 +1632,19 @@ directory where tests are run from and the given path
 is considered relative to that unless it is absolute.
 
 corresponds to the `-d --outputdir dir` option of _robot_
+
+## rebot.parse-include
+
+Type: Optional[List[Union[str, StringExpression]]]
+
+Parse only files matching `pattern`. It can be:
+- a file name or pattern like `example.robot` or
+`*.robot` to parse all files matching that name,
+- a file path like `path/to/example.robot`, or
+- a directory path like `path/to/example` to parse
+all files in that directory, recursively.
+
+corresponds to the `-I --parseinclude pattern *` option of _robot_
 
 ## rebot.pre-rebot-modifiers
 
@@ -2318,9 +2411,9 @@ powerful variable setting mechanism.
 Examples:
 
 ```
---variable str:Hello       =>  ${str} = `Hello`
--v hi:Hi_World -E space:_  =>  ${hi} = `Hi World`
--v x: -v y:42              =>  ${x} = ``, ${y} = `42`
+--variable name:Robot  =>  ${name} = `Robot`
+-v "hello:Hello world" =>  ${hello} = `Hello world`
+-v x: -v y:42          =>  ${x} = ``, ${y} = `42`
 ```
 
 corresponds to the `-v --variable name:value *` option of _robot_
@@ -2333,5 +2426,3 @@ xUnit compatible result file. Not created unless this
 option is specified.
 
 corresponds to the `-x --xunit file` option of _robot_
-
-

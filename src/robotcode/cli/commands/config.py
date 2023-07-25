@@ -12,7 +12,7 @@ from robotcode.robot.config.loader import (
     find_project_root,
     load_config_from_path,
 )
-from robotcode.robot.config.model import LibDocProfile, RebotProfile, RobotConfig, TestDocProfile
+from robotcode.robot.config.model import LibDocProfile, RebotProfile, RobotConfig, RobotProfile, TestDocProfile
 from robotcode.robot.config.utils import get_config_files
 
 
@@ -174,6 +174,16 @@ def get_config_fields() -> Dict[str, Dict[str, str]]:
     for field in dataclasses.fields(RobotConfig):
         field_name_encoded = encode_case(RobotConfig, field)
         result[field_name_encoded] = {
+            "type": str(field.type),
+            "description": field.metadata.get("description", "").strip(),
+        }
+
+    for field in dataclasses.fields(RobotProfile):
+        field_name_encoded = encode_case(RobotProfile, field)
+        if field_name_encoded in result:
+            continue
+
+        result["[profile]." + field_name_encoded] = {
             "type": str(field.type),
             "description": field.metadata.get("description", "").strip(),
         }
