@@ -464,17 +464,28 @@ def all(
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-            tests_or_tasks = "Tasks" if suite.rpa else "Tests"
+            tests_or_tasks = "Task" if suite.rpa else "Test"
 
             def print(item: TestItem, indent: int = 0) -> Iterable[str]:
-                yield (
-                    f"{'  ' * indent}"
-                    f"{item.type.capitalize() if item.type == 'suite' else tests_or_tasks.capitalize() }: "
-                    f"{item.name}{os.linesep}"
+                type = click.style(
+                    item.type.capitalize() if item.type == "suite" else tests_or_tasks.capitalize(), fg="green"
                 )
-                if item.children:
-                    for child in item.children:
-                        yield from print(child, indent + 2)
+
+                if item.type == "test":
+                    yield f"    {type}: {item.longname}{os.linesep}"
+                else:
+                    yield f"{type}: {item.longname}{os.linesep}"
+
+                for child in item.children or []:
+                    yield from print(child, indent + 2)
+
+                # type = click.style(
+                #     item.type.capitalize() if item.type == "suite" else tests_or_tasks.capitalize(), fg="green"
+                # )
+                # yield (f"{'  ' * indent}{type}: {item.name}{os.linesep}")
+                # if item.children:
+                #     for child in item.children:
+                #         yield from print(child, indent + 2)
 
                 if indent == 0:
                     yield os.linesep
