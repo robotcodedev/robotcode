@@ -60,6 +60,8 @@ class ListenerV2:
             ),
         )
 
+        self.failed_keywords = None
+
     def start_test(self, name: str, attributes: Dict[str, Any]) -> None:
         self.failed_keywords = None
 
@@ -287,8 +289,36 @@ class ListenerV3:
 
         self._event_sended = True
 
-    def end_suite(self, data: running.TestSuite, result: result.TestSuite) -> None:
-        pass
+    def end_suite(self, data: running.TestSuite, suite_result: result.TestSuite) -> None:
+        def report_status(item: Union[result.TestSuite, result.TestCase], message: str) -> None:
+            if isinstance(item, result.TestCase):
+                Debugger.instance().send_event(
+                    self,
+                    Event(
+                        event="robotSetFailed",
+                        body=RobotExecutionEventBody(
+                            type="test",
+                            attributes={
+                                "longname": item.longname,
+                                "status": str(item.status),
+                                "elapsedtime": item.elapsedtime,
+                                "source": str(item.source),
+                                "lineno": item.lineno,
+                                "message": item.message,
+                            },
+                            id=f"{item.source or ''};{item.longname or ''}"
+                            + (f";{item.lineno or 0}" if isinstance(item, result.TestCase) else ""),
+                        ),
+                    ),
+                )
+            if isinstance(item, result.TestSuite):
+                for r in item.suites:
+                    report_status(r, message)
+                for r in item.tests:
+                    report_status(r, message)
+
+        if data.teardown and suite_result.teardown.status in ["FAIL", "SKIP"]:
+            report_status(suite_result, message=suite_result.message)
 
     def start_test(self, data: running.TestCase, result: result.TestCase) -> None:
         pass

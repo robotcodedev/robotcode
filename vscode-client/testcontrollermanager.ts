@@ -151,7 +151,7 @@ export class TestControllerManager {
     public readonly debugManager: DebugManager,
     public readonly outputChannel: vscode.OutputChannel,
   ) {
-    this.testController = vscode.tests.createTestController("robotCode.RobotFramework", "RobotFramework");
+    this.testController = vscode.tests.createTestController("robotCode.RobotFramework", "Robot Framework");
 
     this.testController.resolveHandler = async (item) => {
       await this.refresh(item);
@@ -264,13 +264,16 @@ export class TestControllerManager {
               this.TestRunExited(event.session.configuration.runId);
               break;
             }
-
             case "robotStarted": {
               this.OnRobotStartedEvent(event.session.configuration.runId, event.body as RobotExecutionEvent);
               break;
             }
             case "robotEnded": {
               this.OnRobotEndedEvent(event.session.configuration.runId, event.body as RobotExecutionEvent);
+              break;
+            }
+            case "robotSetFailed": {
+              this.OnRobotSetFailed(event.session.configuration.runId, event.body as RobotExecutionEvent);
               break;
             }
             case "robotEnqueued": {
@@ -1202,6 +1205,49 @@ export class TestControllerManager {
     }
   }
 
+  private OnRobotSetFailed(runId: string | undefined, event: RobotExecutionEvent) {
+    switch (event.type) {
+      case "suite":
+      case "test":
+        this.TestItemSetFailed(runId, event);
+        break;
+      default:
+        // do nothing
+        break;
+    }
+  }
+
+  private TestItemSetFailed(runId: string | undefined, event: RobotExecutionEvent) {
+    if (runId === undefined || event.attributes?.longname === undefined) return;
+
+    const run = this.testRuns.get(runId);
+
+    if (run !== undefined) {
+      const item = this.findTestItemById(event.id);
+      if (item) {
+        const message = new vscode.TestMessage(event.attributes?.message ?? "");
+
+        if (event.attributes.source) {
+          message.location = new vscode.Location(
+            vscode.Uri.file(event.attributes.source),
+            new vscode.Range(
+              new vscode.Position((event.attributes.lineno ?? 1) - 1, 0),
+              new vscode.Position(event.attributes.lineno ?? 1, 0),
+            ),
+          );
+        }
+
+        if (event.attributes.status === "SKIP") {
+          run.skipped(item);
+        } else if (event.attributes.status === "FAIL") {
+          run.failed(item, message, event.attributes.elapsedtime);
+        } else if (event.attributes.status === "ERROR") {
+          run.errored(item, message, event.attributes.elapsedtime);
+        }
+      }
+    }
+  }
+
   private TestItemEnded(runId: string | undefined, event: RobotExecutionEvent) {
     if (runId === undefined || event.attributes?.longname === undefined) return;
 
@@ -1209,13 +1255,14 @@ export class TestControllerManager {
 
     if (run !== undefined) {
       const item = this.findTestItemById(event.id);
+
       if (item !== undefined) {
         switch (event.attributes.status) {
           case "PASS":
-            run.passed(item, event.attributes.elapsedtime);
+            if (!item?.canResolveChildren) run.passed(item, event.attributes.elapsedtime);
             break;
           case "SKIP":
-            run.skipped(item);
+            if (!item?.canResolveChildren) run.skipped(item);
             break;
           default:
             {
@@ -1256,10 +1303,12 @@ export class TestControllerManager {
                 messages.push(message);
               }
 
-              if (event.attributes.status === "FAIL") {
-                run.failed(item, messages, event.attributes.elapsedtime);
-              } else {
-                run.errored(item, messages, event.attributes.elapsedtime);
+              if (!item?.canResolveChildren) {
+                if (event.attributes.status === "FAIL") {
+                  run.failed(item, messages, event.attributes.elapsedtime);
+                } else {
+                  run.errored(item, messages, event.attributes.elapsedtime);
+                }
               }
             }
             break;
