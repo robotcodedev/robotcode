@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-import { red, yellow } from "ansi-colors";
+import { red, yellow, blue } from "ansi-colors";
 import * as vscode from "vscode";
 import { DebugManager } from "./debugmanager";
 
@@ -281,11 +281,11 @@ export class TestControllerManager {
               break;
             }
             case "robotLog": {
-              this.OnRobotLogMessageEvent(event.session.configuration.runId, event.body as RobotLogMessageEvent);
+              this.OnRobotLogMessageEvent(event.session.configuration.runId, event.body as RobotLogMessageEvent, false);
               break;
             }
             case "robotMessage": {
-              this.OnRobotLogMessageEvent(event.session.configuration.runId, event.body as RobotLogMessageEvent);
+              this.OnRobotLogMessageEvent(event.session.configuration.runId, event.body as RobotLogMessageEvent, true);
               break;
             }
           }
@@ -1020,7 +1020,7 @@ export class TestControllerManager {
 
     if (included.size === 0) return;
 
-    const run = this.testController.createTestRun(request);
+    const run = this.testController.createTestRun(request, undefined);
     let run_started = false;
 
     token.onCancellationRequested(async (_) => {
@@ -1225,7 +1225,7 @@ export class TestControllerManager {
     if (run !== undefined) {
       const item = this.findTestItemById(event.id);
       if (item) {
-        const message = new vscode.TestMessage(event.attributes?.message ?? "");
+        const message = new vscode.TestMessage((event.attributes?.message ?? "").replaceAll("\n", "\r\n"));
 
         if (event.attributes.source) {
           message.location = new vscode.Location(
@@ -1268,9 +1268,27 @@ export class TestControllerManager {
             {
               const messages: vscode.TestMessage[] = [];
 
+              if (
+                !event.attributes?.message ||
+                !event.failedKeywords?.find((v) => v.message === event.attributes?.message)
+              ) {
+                const message = new vscode.TestMessage((event.attributes.message ?? "").replaceAll("\n", "\r\n"));
+
+                if (event.attributes.source) {
+                  message.location = new vscode.Location(
+                    vscode.Uri.file(event.attributes.source),
+                    new vscode.Range(
+                      new vscode.Position((event.attributes.lineno ?? 1) - 1, 0),
+                      new vscode.Position(event.attributes.lineno ?? 1, 0),
+                    ),
+                  );
+                }
+                messages.push(message);
+              }
+
               if (event.failedKeywords) {
-                for (const keyword of event.failedKeywords) {
-                  const message = new vscode.TestMessage(keyword.message ?? "");
+                for (const keyword of event.failedKeywords.reverse()) {
+                  const message = new vscode.TestMessage((keyword.message ?? "").replaceAll("\n", "\r\n"));
 
                   if (keyword.source) {
                     message.location = new vscode.Location(
@@ -1284,23 +1302,6 @@ export class TestControllerManager {
 
                   messages.push(message);
                 }
-              }
-              if (
-                !event.attributes?.message ||
-                !event.failedKeywords?.find((v) => v.message === event.attributes?.message)
-              ) {
-                const message = new vscode.TestMessage(event.attributes.message ?? "");
-
-                if (event.attributes.source) {
-                  message.location = new vscode.Location(
-                    vscode.Uri.file(event.attributes.source),
-                    new vscode.Range(
-                      new vscode.Position((event.attributes.lineno ?? 1) - 1, 0),
-                      new vscode.Position(event.attributes.lineno ?? 1, 0),
-                    ),
-                  );
-                }
-                messages.push(message);
               }
 
               if (!item?.canResolveChildren) {
@@ -1317,7 +1318,7 @@ export class TestControllerManager {
     }
   }
 
-  private OnRobotLogMessageEvent(runId: string | undefined, event: RobotLogMessageEvent): void {
+  private OnRobotLogMessageEvent(runId: string | undefined, event: RobotLogMessageEvent, isMessage: boolean): void {
     if (runId === undefined) return;
 
     const run = this.testRuns.get(runId);
@@ -1348,8 +1349,10 @@ export class TestControllerManager {
           break;
       }
 
+      const messageStyle = isMessage ? blue : (s: string) => s;
+
       run.appendOutput(
-        `[ ${style(event.level)} ] ${event.message.replaceAll("\n", "\r\n")}` + "\r\n",
+        `[ ${style(event.level)} ] ${messageStyle(event.message.replaceAll("\n", "\r\n"))}` + "\r\n",
         location,
         event.itemId !== undefined ? this.findTestItemById(event.itemId) : undefined,
       );
