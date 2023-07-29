@@ -918,6 +918,7 @@ class CompletionCollector(ModelHelperMixin):
         context: Optional[CompletionContext],
     ) -> Optional[List[CompletionItem]]:
         from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.blocks import SettingSection
         from robot.parsing.model.statements import Arguments, Statement
 
         if len(nodes_at_position) > 1 and isinstance(nodes_at_position[0], Statement):
@@ -943,6 +944,14 @@ class CompletionCollector(ModelHelperMixin):
                             return await self.create_headers_completion_items(r)
 
         elif position.character == 0:
+            if not nodes_at_position and position.line > 0:
+                nodes_at_line_before = await get_nodes_at_position(self.model, Position(position.line - 1, 0))
+                if nodes_at_line_before and any(isinstance(n, SettingSection) for n in nodes_at_line_before):
+                    return [
+                        *await self.create_settings_completion_items(None),
+                        *await self.create_headers_completion_items(None),
+                    ]
+
             return await self.create_headers_completion_items(None)
 
         if len(nodes_at_position) > 1 and isinstance(nodes_at_position[0], HasTokens):
@@ -1028,6 +1037,16 @@ class CompletionCollector(ModelHelperMixin):
             return None
 
         if nodes_at_position.index(node) > 0 and not isinstance(nodes_at_position[0], SectionHeader):
+            node_at_pos = nodes_at_position[0]
+            if (
+                position.character > 0
+                and isinstance(node_at_pos, HasTokens)
+                and node_at_pos.tokens
+                and node_at_pos.tokens[0].value
+                and whitespace_at_begin_of_token(node_at_pos.tokens[0]) > 0
+            ):
+                return None
+
             statement_node = cast(Statement, nodes_at_position[0])
             if len(statement_node.tokens) > 0:
                 token = cast(Token, statement_node.tokens[0])
