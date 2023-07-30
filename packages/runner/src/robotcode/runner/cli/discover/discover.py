@@ -650,30 +650,10 @@ def tags(
 
 
 @dataclass
-class RobotVersion:
-    major: int
-    minor: int
-    patch: Optional[int] = None
-    pre_id: Optional[str] = None
-    pre_number: Optional[int] = None
-    dev: Optional[int] = None
-
-
-@dataclass
-class PythonVersion:
-    major: int
-    minor: int
-    micro: int
-    releaselevel: str
-    serial: int
-
-
-@dataclass
 class Info:
-    robot_version: RobotVersion
     robot_version_string: str
     robot_env: Dict[str, str]
-    python_version: PythonVersion
+    robotcode_version_string: str
     python_version_string: str
     machine: str
     processor: str
@@ -698,7 +678,12 @@ def info(
     robotcode discover info
     ```
     """
+    import pprint
+
     from robot.version import get_version as get_version
+    from robotcode.core.dataclasses import as_dict
+
+    from ...__version__ import __version__
 
     robot_env: Dict[str, str] = {}
     if "ROBOT_OPTIONS" in os.environ:
@@ -711,10 +696,9 @@ def info(
         robot_env["ROBOT_INTERNAL_TRACES"] = os.environ["ROBOT_INTERNAL_TRACES"]
 
     info = Info(
-        RobotVersion(*get_robot_version()),
         get_version(),
         robot_env,
-        PythonVersion(*sys.version_info),
+        __version__,
         platform.python_version(),
         platform.machine(),
         platform.processor(),
@@ -724,6 +708,7 @@ def info(
     )
 
     if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-        app.print_data(info, remove_defaults=True)
+        app.echo_via_pager(pprint.pformat(as_dict(info, remove_defaults=True), compact=True, sort_dicts=False))
+        # app.print_data(info, remove_defaults=True)
     else:
         app.print_data(info, remove_defaults=True)
