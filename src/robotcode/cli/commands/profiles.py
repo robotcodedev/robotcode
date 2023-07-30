@@ -14,7 +14,7 @@ from robotcode.robot.config.utils import get_config_files
     invoke_without_command=False,
 )
 def profiles() -> None:
-    """View profile informations."""
+    """View _robot_ profile informations."""
 
 
 @profiles.command
@@ -28,7 +28,7 @@ def show(
     no_evaluate: bool,
     paths: List[Path],
 ) -> None:
-    """Shows the given Robot Framework profile."""
+    """Shows the given _robot_ profile."""
     try:
         config_files, _, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
 
@@ -52,7 +52,7 @@ def list(
     app: Application,
     paths: List[Path],
 ) -> None:
-    """List the defined profiles in the given Robot Framework configuration."""
+    """Lists the defined profiles in the current _robot_ configuration."""
 
     try:
         config_files, _, discovered_by = get_config_files(

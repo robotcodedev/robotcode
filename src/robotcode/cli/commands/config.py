@@ -21,7 +21,7 @@ from robotcode.robot.config.utils import get_config_files
 )
 def config() -> None:
     """\
-    View configuration information.
+    View configuration informations.
     """
 
 
@@ -37,7 +37,7 @@ def show(
     paths: List[Path],
 ) -> None:
     """\
-    Shows the Robot Framework configuration.
+    Shows the current _robot_ configuration.
 
     Takes a list of PATHS or if no PATHS are given, takes the current working directory,
     to search for configuration files and prints the current configuration.
@@ -77,7 +77,7 @@ def files(
     paths: List[Path],
 ) -> None:
     """\
-    Shows Robot Framework configuration files.
+    Search for _robot_ configuration files and list them.
 
     Takes a list of PATHS or if no PATHS are given, takes the current working directory,
     to search for configuration files and prints them.
@@ -128,7 +128,7 @@ def root(
     paths: List[Path],
 ) -> None:
     """\
-    Shows the root of the Robot Framework project.
+    Searches for the root folder of the _robot_ project and prints them.
 
     Takes a list of PATHS or if no PATHS are given, takes the current working directory,
     to search for the root of the project and prints this.
