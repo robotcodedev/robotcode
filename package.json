@@ -74,6 +74,15 @@
   },
   "main": "./out/extension.js",
   "contributes": {
+    "icons": {
+      "robotcode-robot": {
+        "description": "RobotFramework Icon",
+        "default": {
+          "fontPath": "./icons/robot.woff",
+          "fontCharacter": "\\E900"
+        }
+      }
+    },
     "tomlValidation": [
       {
         "fileMatch": "robot.toml",

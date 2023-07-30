@@ -76,6 +76,15 @@ export interface ClientStateChangedEvent {
   state: ClientState;
 }
 
+interface DiscoverInfoResult {
+  robot_version_string?: string;
+  python_version_string?: string;
+  machine?: string;
+  platform?: string;
+  system?: string;
+  system_version?: string;
+  [key: string]: string | undefined;
+}
 export class LanguageClientsManager {
   private clientsMutex = new Mutex();
 
@@ -84,8 +93,10 @@ export class LanguageClientsManager {
 
   private _disposables: vscode.Disposable;
   private _pythonValidPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
+  private _workspaceFolderDiscoverInfo = new WeakMap<vscode.WorkspaceFolder, DiscoverInfoResult>();
 
   private readonly _onClientStateChangedEmitter = new vscode.EventEmitter<ClientStateChangedEvent>();
+  private readonly statusBarItem: vscode.StatusBarItem;
 
   public get onClientStateChanged(): vscode.Event<ClientStateChangedEvent> {
     return this._onClientStateChangedEmitter.event;
@@ -106,8 +117,13 @@ export class LanguageClientsManager {
     fileWatcher1.onDidDelete((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
     fileWatcher1.onDidChange((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
 
+    this.statusBarItem = vscode.window.createStatusBarItem("robotCodeInfo", vscode.StatusBarAlignment.Right, 0);
+    this.statusBarItem.text = "RobotCode";
+
     this._disposables = vscode.Disposable.from(
       fileWatcher1,
+      this.statusBarItem,
+      vscode.window.onDidChangeActiveTextEditor(async (editor) => this.updateStatusbarItem(editor)),
       this.pythonManager.pythonExtension?.exports.settings.onDidChangeExecutionDetails(async (uri) => {
         if (uri !== undefined) {
           const folder = vscode.workspace.getWorkspaceFolder(uri);
@@ -133,6 +149,9 @@ export class LanguageClientsManager {
         await this.restart();
       }),
     );
+    setTimeout(() => {
+      this.updateStatusbarItem(vscode.window.activeTextEditor).then(undefined, undefined);
+    }, 1000);
   }
 
   public async clearCaches(): Promise<void> {
@@ -516,6 +535,7 @@ export class LanguageClientsManager {
 
   public async restart(uri?: vscode.Uri): Promise<void> {
     this._pythonValidPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
+    this._workspaceFolderDiscoverInfo = new WeakMap<vscode.WorkspaceFolder, DiscoverInfoResult>();
     await this.refresh(uri, true);
   }
 
@@ -580,6 +600,8 @@ export class LanguageClientsManager {
         // do noting
       }
     }
+
+    await this.updateStatusbarItem(vscode.window.activeTextEditor);
   }
 
   public async openUriInDocumentationView(uri: vscode.Uri): Promise<void> {
@@ -680,5 +702,42 @@ export class LanguageClientsManager {
             },
           })) ?? []
     );
+  }
+
+  private async updateStatusbarItem(editor: vscode.TextEditor | undefined) {
+    if (editor && SUPPORTED_LANGUAGES.includes(editor.document.languageId)) {
+      try {
+        const folder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
+        if (folder) {
+          if (!this._workspaceFolderDiscoverInfo.has(folder)) {
+            this._workspaceFolderDiscoverInfo.set(
+              folder,
+              (await this.pythonManager.executeRobotCode(folder, ["discover", "info"])) as DiscoverInfoResult,
+            );
+          }
+          const info = this._workspaceFolderDiscoverInfo.get(folder);
+          if (info?.robot_version_string) {
+            this.statusBarItem.text = "$(robotcode-robot) " + info.robot_version_string;
+            this.statusBarItem.tooltip = new vscode.MarkdownString(
+              `
+- **Robot Framework**: ${info.robot_version_string}
+- **Python**: ${info.python_version_string}
+- **Platform**: ${info.platform}
+- **Machine**: ${info.machine}
+- **System**: ${info.system}
+- **System Version**: ${info.system_version}
+`,
+              true,
+            );
+
+            this.statusBarItem.show();
+            return;
+          }
+        }
+      } catch {
+        // do nothing
+      }
+    }
+    this.statusBarItem.hide();
   }
 }
