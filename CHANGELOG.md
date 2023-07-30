@@ -2,6 +2,22 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.48.0 (2023-07-30)
+
+### Feat
+
+- **vscode**: added a statusbar item that shows some information about the current robot environment, like version, python version, etc.
+- removed old `robotcode.debugger` script in favor of using `robotcode debug` cli command
+
+### Fix
+
+- better output for discover info command
+- discover tests for RF 6.1.1
+- in a test run, errors that occur are first selected in the test case and not in the keyword definition
+- correct completion of settings with ctrl+space in some situation
+- correct update of test run results when suite teardown fails or is skipped during suite teardown
+- **robotcode**: add missing profile settings to config documentation
+
 ## v0.47.5 (2023-07-20)
 
 ### Fix
