@@ -135,15 +135,16 @@ def _patch() -> None:
 
         SuiteStructureParser._build_suite_directory = build_suite_directory
 
-        old_validate_execution_mode = SuiteStructureParser._validate_execution_mode
+        if get_robot_version() < (6, 1, 1):
+            old_validate_execution_mode = SuiteStructureParser._validate_execution_mode
 
-        def _validate_execution_mode(self: SuiteStructureParser, suite: TestSuite) -> None:
-            try:
-                old_validate_execution_mode(self, suite)
-            except DataError as e:
-                LOGGER.error(f"Parsing '{suite.source}' failed: {e.message}")
+            def _validate_execution_mode(self: SuiteStructureParser, suite: TestSuite) -> None:
+                try:
+                    old_validate_execution_mode(self, suite)
+                except DataError as e:
+                    LOGGER.error(f"Parsing '{suite.source}' failed: {e.message}")
 
-        SuiteStructureParser._validate_execution_mode = _validate_execution_mode
+            SuiteStructureParser._validate_execution_mode = _validate_execution_mode
 
     old_get_file = FileReader._get_file
 
