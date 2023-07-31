@@ -1,5 +1,4 @@
 # ruff: noqa: RUF009
-
 import dataclasses
 import datetime
 import fnmatch
@@ -2103,7 +2102,7 @@ class RobotBaseProfile(CommonOptions, CommonExtraOptions, RobotOptions, RobotExt
         """
     )
 
-    def save(self, path: os.PathLike[str]) -> None:
+    def save(self, path: "os.PathLike[str]") -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with Path(path).open("w", encoding="utf-8") as f:
             f.write(tomli_w.dumps(as_dict(self, remove_defaults=True)))
