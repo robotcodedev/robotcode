@@ -42,11 +42,9 @@
 				// "toml",
 				"--no-color",
 				"--no-pager",
-				"--default-path",
-				".",
 				//"config", "info", "desc",
-				"discover",
-				"info"
+				"config",
+				"files"
 			]
 		},
 		{

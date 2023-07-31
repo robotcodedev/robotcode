@@ -8,6 +8,7 @@ import platform
 import re
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -20,7 +21,8 @@ from typing import (
     get_type_hints,
 )
 
-from robotcode.core.dataclasses import TypeValidationError, ValidateMixin, validate_types
+import tomli_w
+from robotcode.core.dataclasses import TypeValidationError, ValidateMixin, as_dict, validate_types
 from robotcode.core.utils.safe_eval import safe_eval
 from typing_extensions import Self
 
@@ -2100,6 +2102,11 @@ class RobotBaseProfile(CommonOptions, CommonExtraOptions, RobotOptions, RobotExt
             Options to be passed to _testdoc_.
         """
     )
+
+    def save(self, path: os.PathLike[str]) -> None:
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        with Path(path).open("w", encoding="utf-8") as f:
+            f.write(tomli_w.dumps(as_dict(self, remove_defaults=True)))
 
 
 @dataclass

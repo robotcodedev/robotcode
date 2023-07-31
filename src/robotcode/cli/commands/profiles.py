@@ -41,7 +41,7 @@ def show(
 
         app.print_data(config, remove_defaults=True, default_output_format=OutputFormat.TOML)
 
-    except (TypeError, ValueError, FileNotFoundError) as e:
+    except (TypeError, ValueError, OSError) as e:
         raise UnknownError(str(e)) from e
 
 
@@ -90,5 +90,5 @@ def list(
         else:
             app.print_data(result)
 
-    except (TypeError, ValueError, FileNotFoundError) as e:
+    except (TypeError, ValueError, OSError) as e:
         raise UnknownError(str(e)) from e

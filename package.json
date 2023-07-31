@@ -449,14 +449,11 @@
           },
           "robotcode.robot.pythonPath": {
             "type": "array",
-            "default": [
-              "./lib",
-              "./resources"
-            ],
+            "default": [],
             "items": {
               "type": "string"
             },
-            "markdownDescription": "Specifies additional python paths for robotframework. Corresponds to the `--pythonpath` option of __robot__.\n\n> **WARNING:**\n>\n> The default value for this will changed in one of the next releases to `[]`, because there is the new `robot.toml` configuration file. Please use this file to configure the python path.",
+            "markdownDescription": "Specifies additional python paths for robotframework. Corresponds to the `--pythonpath` option of __robot__.",
             "scope": "resource"
           },
           "robotcode.robot.env": {
@@ -497,8 +494,8 @@
           },
           "robotcode.robot.outputDir": {
             "type": "string",
-            "default": "results",
-            "markdownDescription": "Specifies the output directory where robotframework saves output files. Corresponds to the `--outputdir` option of __robot__.\n\n> **WARNING:**\n>\n> The default value for this will changed in one of the next releases to `\"\"`, because there is the new `robot.toml` configuration file. Please use this file to configure the output directory.",
+            "default": "",
+            "markdownDescription": "Specifies the output directory where robotframework saves output files. Corresponds to the `--outputdir` option of __robot__.",
             "scope": "resource"
           },
           "robotcode.robot.mode": {

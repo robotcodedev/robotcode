@@ -16,22 +16,25 @@ from .model import RobotConfig
 PYPROJECT_TOML = "pyproject.toml"
 ROBOT_TOML = "robot.toml"
 LOCAL_ROBOT_TOML = ".robot.toml"
+USER_DEFAULT_CONFIG_TOML = "default config"
 
 
 class DiscoverdBy(str, Enum):
     GIT = ".git directory"
     HG = "hg"
-    PYPROJECT_TOML = PYPROJECT_TOML
-    ROBOT_TOML = ROBOT_TOML
-    LOCAL_ROBOT_TOML = LOCAL_ROBOT_TOML
+    PYPROJECT_TOML = "pyproject.toml (project file))"
+    ROBOT_TOML = "robot.toml (project file)"
+    LOCAL_ROBOT_TOML = ".robot.toml (local file)"
+    USER_DEFAULT_CONFIG_TOML = "robot.toml (user default config)"
     NOT_FOUND = "not found"
 
 
 class ConfigType(str, Enum):
-    PYPROJECT_TOML = PYPROJECT_TOML
-    ROBOT_TOML = ROBOT_TOML
-    LOCAL_ROBOT_TOML = LOCAL_ROBOT_TOML
-    CUSTOM_TOML = ".toml"
+    PYPROJECT_TOML = "pyproject.toml (project file))"
+    ROBOT_TOML = "robot.toml (project file)"
+    LOCAL_ROBOT_TOML = ".robot.toml (local file)"
+    USER_DEFAULT_CONFIG_TOML = "robot.toml (user default config)"
+    CUSTOM_TOML = ".toml (custom file)"
 
 
 class ConfigValueError(ValueError):
@@ -70,6 +73,13 @@ def _load_config_data_from_path(__path: Path) -> RobotConfig:
         raise ConfigValueError(__path, f'Parsing "{__path}" failed: {e}') from e
     except TypeError as e:
         raise ConfigTypeError(__path, f'Parsing "{__path}" failed: {e}') from e
+
+
+def get_default_config() -> RobotConfig:
+    result = RobotConfig()
+    result.output_dir = "results"
+    result.python_path = ["./lib", "./resources"]
+    return result
 
 
 def load_config_from_path(*__paths: Union[Path, Tuple[Path, ConfigType]]) -> RobotConfig:

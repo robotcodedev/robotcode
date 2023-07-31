@@ -50,9 +50,9 @@ def show(
     robotcode --format json config show
     ```
     """
-    config_files, _, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
-
     try:
+        config_files, _, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
+
         if single:
             for file, _ in config_files:
                 config = load_config_from_path(file)
@@ -65,17 +65,15 @@ def show(
 
         app.print_data(config, remove_defaults=True, default_output_format=OutputFormat.TOML)
 
-    except (TypeError, ValueError) as e:
+    except (TypeError, ValueError, OSError) as e:
         raise UnknownError(str(e)) from e
 
 
 @config.command
 @click.argument("paths", type=click.Path(exists=True, path_type=Path), nargs=-1, required=False)
+@click.argument("user", type=bool, default=False)
 @pass_application
-def files(
-    app: Application,
-    paths: List[Path],
-) -> None:
+def files(app: Application, paths: List[Path], user: bool = False) -> None:
     """\
     Search for _robot_ configuration files and list them.
 
@@ -112,11 +110,11 @@ def files(
 
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
             for entry in result["files"]:
-                app.echo(entry["path"])
+                app.echo(f'{entry["path"]} ({entry["type"].value})')
         else:
             app.print_data(result)
 
-    except FileNotFoundError as e:
+    except OSError as e:
         raise UnknownError(str(e)) from e
 
 
