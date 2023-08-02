@@ -17,9 +17,16 @@ from robot.model.visitor import SuiteVisitor
 from robot.output import LOGGER, Message
 from robot.running.builder import TestSuiteBuilder
 from robot.running.builder.builders import SuiteStructureParser
+from robot.utils import NormalizedDict
 from robot.utils.filereader import FileReader
 from robotcode.core.dataclasses import from_json
-from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, DocumentUri, Position, Range
+from robotcode.core.lsp.types import (
+    Diagnostic,
+    DiagnosticSeverity,
+    DocumentUri,
+    Position,
+    Range,
+)
 from robotcode.core.uri import Uri
 from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
 from robotcode.plugin.click_helper.types import add_options
@@ -47,9 +54,13 @@ def _patch() -> None:
 
     if get_robot_version() <= (6, 1):
         if get_robot_version() > (5, 0) and get_robot_version() < (6, 0) or get_robot_version() < (5, 0):
-            from robot.running.builder.testsettings import TestDefaults  # pyright: ignore[reportMissingImports]
+            from robot.running.builder.testsettings import (
+                TestDefaults,
+            )
         else:
-            from robot.running.builder.settings import Defaults as TestDefaults  # pyright: ignore[reportMissingImports]
+            from robot.running.builder.settings import (
+                Defaults as TestDefaults,
+            )
 
         old_validate_test_counts = TestSuiteBuilder._validate_test_counts
 
@@ -74,11 +85,15 @@ def _patch() -> None:
                     from robot.running.builder.parsers import format_name
 
                     return ErroneousTestSuite(
-                        error_message=str(e), name=format_name(structure.source), source=structure.source
+                        error_message=str(e),
+                        name=format_name(structure.source),
+                        source=structure.source,
                     ), TestDefaults(parent_defaults)
 
                 return ErroneousTestSuite(
-                    error_message=str(e), name=TestSuite.name_from_source(structure.source), source=structure.source
+                    error_message=str(e),
+                    name=TestSuite.name_from_source(structure.source),
+                    source=structure.source,
                 ), TestDefaults(parent_defaults)
 
         SuiteStructureParser._build_suite = build_suite
@@ -95,7 +110,9 @@ def _patch() -> None:
 
     elif get_robot_version() >= (6, 1):
         from robot.parsing.suitestructure import SuiteDirectory, SuiteFile
-        from robot.running.builder.settings import TestDefaults  # pyright: ignore[reportMissingImports]
+        from robot.running.builder.settings import (
+            TestDefaults,
+        )
 
         old_validate_not_empty = TestSuiteBuilder._validate_not_empty
 
@@ -115,7 +132,9 @@ def _patch() -> None:
             except DataError as e:
                 LOGGER.error(str(e))
                 return ErroneousTestSuite(
-                    error_message=str(e), name=TestSuite.name_from_source(structure.source), source=structure.source
+                    error_message=str(e),
+                    name=TestSuite.name_from_source(structure.source),
+                    source=structure.source,
                 )
 
         SuiteStructureParser._build_suite_file = build_suite_file
@@ -130,7 +149,9 @@ def _patch() -> None:
             except DataError as e:
                 LOGGER.error(str(e))
                 return ErroneousTestSuite(
-                    error_message=str(e), name=TestSuite.name_from_source(structure.source), source=structure.source
+                    error_message=str(e),
+                    name=TestSuite.name_from_source(structure.source),
+                    source=structure.source,
                 ), TestDefaults(self.parent_defaults)
 
         SuiteStructureParser._build_suite_directory = build_suite_directory
@@ -214,8 +235,22 @@ class Collector(SuiteVisitor):
         self.tests: List[TestItem] = []
         self.tags: Dict[str, List[TestItem]] = defaultdict(list)
         self.statistics = Statistics()
+        self._collected = [NormalizedDict(ignore="_")]
 
     def visit_suite(self, suite: TestSuite) -> None:
+        if suite.name in self._collected[-1] and suite.parent.source:
+            LOGGER.warn(
+                (
+                    f"Warning in {'file' if Path(suite.parent.source).is_file() else 'folder'} "
+                    f"'{suite.parent.source}': "
+                    if suite.source and Path(suite.parent.source).exists()
+                    else ""
+                )
+                + f"Multiple suites with name '{suite.name}' in suite '{suite.parent.longname}'."
+            )
+
+        self._collected[-1][suite.name] = True
+        self._collected.append(NormalizedDict(ignore="_"))
         try:
             item = TestItem(
                 type="suite",
@@ -253,7 +288,18 @@ class Collector(SuiteVisitor):
         if suite.tests:
             self.statistics.suites_with_tests += 1
 
+    def end_suite(self, _suite: TestSuite) -> None:
+        self._collected.pop()
+
     def visit_test(self, test: TestCase) -> None:
+        if test.name in self._collected[-1]:
+            LOGGER.warn(
+                f"Warning in file '{test.source}' on line {test.lineno}: "
+                f"Multiple {'task' if test.parent.rpa else 'test'}s with name '{test.name}' in suite "
+                f"'{test.parent.longname}'."
+            )
+        self._collected[-1][test.name] = True
+
         if self._current.children is None:
             self._current.children = []
         try:
@@ -284,7 +330,10 @@ class Collector(SuiteVisitor):
 
 @click.group(invoke_without_command=False)
 @click.option(
-    "--read-from-stdin", is_flag=True, help="Read file contents from stdin. This is an internal option.", hidden=True
+    "--read-from-stdin",
+    is_flag=True,
+    help="Read file contents from stdin. This is an internal option.",
+    hidden=True,
 )
 @pass_application
 def discover(app: Application, read_from_stdin: bool) -> None:
@@ -304,7 +353,9 @@ def discover(app: Application, read_from_stdin: bool) -> None:
         app.verbose(f"Read data from stdin: {_stdin_data!r}")
 
 
-RE_IN_FILE_LINE_MATCHER = re.compile(r".+\sin\sfile\s'(?P<file>.*)'\son\sline\s(?P<line>\d+):(?P<message>.*)")
+RE_IN_FILE_LINE_MATCHER = re.compile(
+    r".+\sin\s(file|folder)\s'(?P<file>.*)'(\son\sline\s(?P<line>\d+))?:(?P<message>.*)"
+)
 RE_PARSING_FAILED_MATCHER = re.compile(r"Parsing\s'(?P<file>.*)'\sfailed:(?P<message>.*)")
 
 
@@ -321,7 +372,10 @@ def build_diagnostics(messages: List[Message]) -> Dict[str, List[Diagnostic]]:
     result: Dict[str, List[Diagnostic]] = {}
 
     def add_diagnostic(
-        message: Message, source_uri: Optional[str] = None, line: Optional[int] = None, text: Optional[str] = None
+        message: Message,
+        source_uri: Optional[str] = None,
+        line: Optional[int] = None,
+        text: Optional[str] = None,
     ) -> None:
         source_uri = str(Uri.from_path(Path(source_uri).resolve() if source_uri else Path.cwd()))
 
@@ -343,7 +397,12 @@ def build_diagnostics(messages: List[Message]) -> Dict[str, List[Diagnostic]]:
 
     for message in messages:
         if match := RE_IN_FILE_LINE_MATCHER.match(message.message):
-            add_diagnostic(message, match.group("file"), int(match.group("line")), text=match.group("message").strip())
+            add_diagnostic(
+                message,
+                match.group("file"),
+                int(match.group("line")) if match.group("line") is not None else None,
+                text=match.group("message").strip(),
+            )
         elif match := RE_PARSING_FAILED_MATCHER.match(message.message):
             add_diagnostic(message, match.group("file"), text=match.group("message").strip())
         else:
@@ -357,7 +416,7 @@ def handle_options(
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
-) -> Tuple[TestSuite, Optional[Dict[str, List[Diagnostic]]]]:
+) -> Tuple[TestSuite, Collector, Optional[Dict[str, List[Diagnostic]]]]:
     root_folder, profile, cmd_options = handle_robot_options(
         app, by_longname, exclude_by_longname, robot_options_and_args
     )
@@ -418,7 +477,10 @@ def handle_options(
             suite.visit(ModelModifier(settings.pre_run_modifiers, settings.run_empty_suite, LOGGER))
         suite.configure(**settings.suite_config)
 
-        return suite, build_diagnostics(diagnostics_logger.messages)
+        collector = Collector()
+        suite.visit(collector)
+
+        return suite, collector, build_diagnostics(diagnostics_logger.messages)
 
     except Information as err:
         app.echo(str(err))
@@ -458,10 +520,7 @@ def all(
     ```
     """
 
-    suite, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
-
-    collector = Collector()
-    suite.visit(collector)
+    suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
@@ -469,7 +528,8 @@ def all(
 
             def print(item: TestItem, indent: int = 0) -> Iterable[str]:
                 type = click.style(
-                    item.type.capitalize() if item.type == "suite" else tests_or_tasks.capitalize(), fg="green"
+                    item.type.capitalize() if item.type == "suite" else tests_or_tasks.capitalize(),
+                    fg="green",
                 )
 
                 if item.type == "test":
@@ -529,10 +589,7 @@ def tests(
     ```
     """
 
-    suite, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
-
-    collector = Collector()
-    suite.visit(collector)
+    suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
@@ -576,10 +633,7 @@ def suites(
     ```
     """
 
-    suite, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
-
-    collector = Collector()
-    suite.visit(collector)
+    suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
@@ -630,10 +684,7 @@ def tags(
     ```
     """
 
-    suite, _diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
-
-    collector = Collector()
-    suite.visit(collector)
+    _suite, collector, _diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
