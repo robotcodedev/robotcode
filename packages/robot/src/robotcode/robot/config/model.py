@@ -2144,7 +2144,7 @@ class RobotProfile(RobotExtraBaseProfile):
 
     detached: Optional[bool] = field(
         description="""\
-            The profile should be detached."
+            The profile should be detached.
             Detached means it is not inherited from the main profile.
             """,
     )

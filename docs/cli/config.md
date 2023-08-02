@@ -8,7 +8,7 @@ Description of the profile.
 
 Type: Optional[bool]
 
-The profile should be detached."
+The profile should be detached.
 Detached means it is not inherited from the main profile.
 
 ## [profile].enabled
