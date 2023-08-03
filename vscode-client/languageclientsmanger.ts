@@ -150,7 +150,10 @@ export class LanguageClientsManager {
       }),
     );
     setTimeout(() => {
-      this.updateStatusbarItem(vscode.window.activeTextEditor).then(undefined, undefined);
+      this.updateStatusbarItem(vscode.window.activeTextEditor).then(
+        (_) => undefined,
+        (_) => undefined,
+      );
     }, 1000);
   }
 
