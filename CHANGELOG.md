@@ -2,6 +2,18 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.49.0 (2023-08-03)
+
+### Feat
+
+- "create keyword" quick fix detects bdd prefixes in the keyword being created and creates keywords without the prefix
+- reporting suites and tests with the same name when tests are discovered
+- user default `robot.toml` config file
+
+### Fix
+
+- completion of bdd prefixes optimized
+
 ## v0.48.0 (2023-07-30)
 
 ### Feat
