@@ -3,37 +3,36 @@
 {
   "name": "robotcode devcontainer",
   "image": "ghcr.io/d-biehl/robocode-dev:latest",
-
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
   //"build": {
   //   "dockerfile": "Dockerfile"
   //},
-
   // Features to add to the dev container. More info: https://containers.dev/features.
   // "features": {},
-
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
-
   // Use 'postCreateCommand' to run commands after the container is created.
   "postCreateCommand": "bash -i -c 'npm install --also-dev && hatch config set dirs.env.virtual .hatch && hatch env create devel'",
-
   // Configure tool-specific properties.
   // "customizations": {},
-
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-je+-containers-non-root.
   "remoteUser": "vscode",
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-python.python",
-        "charliermarsh.ruff",
         "esbenp.prettier-vscode",
         "dbaeumer.vscode-eslint",
-        "tamasfe.even-better-toml"
+        "tamasfe.even-better-toml",
+        "gruntfuggly.todo-tree",
+        "charliermarsh.ruff",
+        "ms-python.black-formatter",
+        "ms-python.mypy-type-checker"
       ],
       "settings": {
-        "python.testing.pytestArgs": ["tests"],
+        "python.testing.pytestArgs": [
+          "tests"
+        ],
         "python.testing.unittestEnabled": false,
         "python.testing.pytestEnabled": true,
         "files.exclude": {
@@ -57,7 +56,9 @@
         "python.terminal.activateEnvInCurrentTerminal": true,
         "python.formatting.provider": "black",
         "python.analysis.completeFunctionParens": true,
-        "python.linting.mypyArgs": ["--show-column-numbers"],
+        "python.linting.mypyArgs": [
+          "--show-column-numbers"
+        ],
         "prettier.printWidth": 120,
         "prettier.tabWidth": 4,
         "eslint.alwaysShowStatus": true,
