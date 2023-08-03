@@ -32,14 +32,15 @@ if TYPE_CHECKING:
     from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol  # pragma: no cover
 
 
-CODEACTIONKINDS_QUICKFIX_CREATEKEYWORD = f"{CodeActionKind.QUICK_FIX.value}.createKeyword"
+CODEACTIONKIND_QUICKFIX_CREATEKEYWORD = f"{CodeActionKind.QUICK_FIX.value}.createKeyword"
 
 
 KEYWORD_WITH_ARGS_TEMPLATE = Template(
     """\
 ${name}
     [Arguments]    ${args}
-    Fail
+    # TODO: implement keyword "${name}".
+    Fail    Not Implemented
 
 """
 )
@@ -47,7 +48,8 @@ ${name}
 KEYWORD_TEMPLATE = Template(
     """\
 ${name}
-    Fail
+    # TODO: implement keyword "${name}".
+    Fail    Not Implemented
 
 """
 )
@@ -80,7 +82,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
     @language_id("robotframework")
     @code_action_kinds(
         [
-            CODEACTIONKINDS_QUICKFIX_CREATEKEYWORD,
+            CODEACTIONKIND_QUICKFIX_CREATEKEYWORD,
         ]
     )
     @_logger.call
@@ -130,13 +132,20 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
         node = await get_node_at_position(model, range.start)
 
         if isinstance(node, (KeywordCall, Fixture, TestTemplate, Template)):
-            keyword = (
-                node.value
-                if isinstance(node, (TestTemplate, Template))
-                else node.keyword
-                if isinstance(node, KeywordCall)
-                else node.name
+            keyword_token = (
+                node.get_token(RobotToken.NAME)
+                if isinstance(node, (TestTemplate, Template, Fixture))
+                else node.get_token(RobotToken.KEYWORD)
             )
+
+            if keyword_token is None:
+                return
+
+            bdd_token, token = self.split_bdd_prefix(namespace, keyword_token)
+            if bdd_token is not None and token is not None:
+                keyword = token.value
+            else:
+                keyword = keyword_token.value
 
             arguments = []
 
