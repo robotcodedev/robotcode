@@ -120,9 +120,14 @@ extra_css:
   - stylesheets/extra.css
 
 nav:
-  - Home: index.md
-  - Features: features.md
-  - Installation: installation.md
+  - Home:
+    - index.md
+    - features.md
+    - installation.md
+  - Get Started:
+    - get_started/quickstart.md
+    - get_started/configuration.md
+    - get_started/troubleshooting.md
   - CLI:
       - About: cli/about.md
       - Reference: cli/reference.md

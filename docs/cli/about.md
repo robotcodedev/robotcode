@@ -1,3 +1,3 @@
 # About Commandline Interface
 
-TODO
+TODO - write about the CLI
