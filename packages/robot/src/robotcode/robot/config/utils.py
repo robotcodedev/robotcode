@@ -32,17 +32,14 @@ def get_config_files(
     paths: Optional[Sequence[Union[str, Path]]] = None,
     config_files: Optional[Sequence[Path]] = None,
     *,
-    raise_on_error: bool = True,
     verbose_callback: Optional[Callable[[str], None]] = None,
 ) -> Tuple[Sequence[Tuple[Path, ConfigType]], Optional[Path], DiscoverdBy]:
     root_folder, discovered_by = find_project_root(*(paths or []))
 
     if root_folder is None:
-        if raise_on_error:
-            raise FileNotFoundError("Cannot detect root folder. 😥")
+        root_folder = Path.cwd()
         if verbose_callback:
-            verbose_callback("Cannot detect root folder. 😥")
-        return [], None, DiscoverdBy.NOT_FOUND
+            verbose_callback(f"Cannot detect root folder. Use current folder '{root_folder}' as root.")
 
     if verbose_callback:
         verbose_callback(f"Found root at:\n    {root_folder} ({discovered_by.value})")
@@ -54,9 +51,6 @@ def get_config_files(
         result: Sequence[Tuple[Path, ConfigType]] = [(f, ConfigType.CUSTOM_TOML) for f in config_files]
     else:
         result = get_config_files_from_folder(root_folder)
-
-        if not result and raise_on_error:
-            raise FileNotFoundError("Cannot find any configuration file. 😥")
 
         if verbose_callback:
             if result:

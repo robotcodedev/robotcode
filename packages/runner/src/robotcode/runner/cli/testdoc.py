@@ -72,7 +72,7 @@ def testdoc(
         pass
 
     config_files, root_folder, _ = get_config_files(
-        robot_arguments, app.config.config_files, raise_on_error=False, verbose_callback=app.verbose
+        robot_arguments, app.config.config_files, verbose_callback=app.verbose
     )
 
     try:

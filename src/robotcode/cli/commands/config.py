@@ -57,7 +57,7 @@ def show(
             for file, _ in config_files:
                 config = load_config_from_path(file)
                 click.secho(f"File: {file}")
-                app.print_data(config, remove_defaults=True)
+                app.print_data(config, remove_defaults=True, default_output_format=OutputFormat.TOML)
 
             return
 
@@ -89,12 +89,7 @@ def files(app: Application, paths: List[Path], user: bool = False) -> None:
     """
 
     try:
-        config_files, _, discovered_by = get_config_files(
-            paths,
-            app.config.config_files,
-            verbose_callback=app.verbose,
-            raise_on_error=app.config.output_format is None or app.config.output_format == OutputFormat.TEXT,
-        )
+        config_files, _, discovered_by = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
 
         result: Dict[str, Any] = {
             "files": [{"path": str(file), "type": type} for file, type in config_files],

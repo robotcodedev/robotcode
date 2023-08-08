@@ -59,7 +59,6 @@ def list(
             paths,
             app.config.config_files,
             verbose_callback=app.verbose,
-            raise_on_error=app.config.output_format is None or app.config.output_format == OutputFormat.TEXT,
         )
 
         config = load_config_from_path(*config_files)
