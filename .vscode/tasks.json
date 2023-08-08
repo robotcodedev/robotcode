@@ -20,6 +20,12 @@
 			"type": "shell",
 			"command": "hatch run build:cz bump",
 			"problemMatcher": []
+		},
+		{
+			"label": "robotcode: mkdocs serve",
+			"type": "shell",
+			"command": "hatch run pages:mkdocs serve",
+			"problemMatcher": []
 		}
 
 	]
