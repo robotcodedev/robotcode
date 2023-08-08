@@ -2,6 +2,17 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.50.0 (2023-08-08)
+
+### Feat
+
+- **discover**: tags are now discovered normalized by default
+- **robotcode**: use default configuration if no project root or project configuration is found
+
+### Fix
+
+- made RobotCode work with Python 3.12
+
 ## v0.49.0 (2023-08-03)
 
 ### Feat
