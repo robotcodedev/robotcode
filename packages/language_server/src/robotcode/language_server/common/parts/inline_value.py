@@ -18,7 +18,7 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import (
-    HasLanguageId,
+    LANGUAGE_ID_ATTR,
     language_id_filter,
 )
 from robotcode.language_server.common.has_extend_capabilities import (
@@ -52,8 +52,8 @@ class InlineValueProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         if len(self.collect):
             document_filters: DocumentSelector = []
             for e in self.collect:
-                if isinstance(e, HasLanguageId):
-                    for lang_id in e.__language_id__:  # type: ignore
+                if hasattr(e, LANGUAGE_ID_ATTR):
+                    for lang_id in getattr(e, LANGUAGE_ID_ATTR):
                         document_filters.append(TextDocumentFilterType1(language=lang_id))
             capabilities.inline_value_provider = InlineValueRegistrationOptions(
                 work_done_progress=True,

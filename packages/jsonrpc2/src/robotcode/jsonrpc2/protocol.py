@@ -154,6 +154,8 @@ class RpcMethodEntry(NamedTuple):
 
 @runtime_checkable
 class RpcMethod(Protocol):
+    __slots__ = "__rpc_method__"
+
     __rpc_method__: RpcMethodEntry
 
 
@@ -264,7 +266,12 @@ class RpcRegistry:
                 )
                 for method, rpc_method in map(
                     lambda m1: (m1, cast(RpcMethod, m1)),
-                    filter(lambda m2: isinstance(m2, RpcMethod), iter_methods(obj)),
+                    iter_methods(
+                        obj,
+                        lambda m2: isinstance(m2, RpcMethod)
+                        or inspect.ismethod(m2)
+                        and isinstance(m2.__func__, RpcMethod),
+                    ),
                 )
             }
 
@@ -761,7 +768,13 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
         params = self._convert_params(e.method, e.param_type, message.params)
 
-        if isinstance(e.method, HasThreaded) and e.method.__threaded__:
+        if (
+            isinstance(e.method, HasThreaded)
+            and e.method.__threaded__
+            or inspect.ismethod(e.method)
+            and isinstance(e.method.__func__, HasThreaded)
+            and e.method.__func__.__threaded__
+        ):
             task = run_coroutine_in_thread(
                 ensure_coroutine(cast(Callable[..., Any], e.method)), *params[0], **params[1]
             )
@@ -826,7 +839,13 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         try:
             params = self._convert_params(e.method, e.param_type, message.params)
 
-            if isinstance(e.method, HasThreaded) and e.method.__threaded__:
+            if (
+                isinstance(e.method, HasThreaded)
+                and e.method.__threaded__
+                or inspect.ismethod(e.method)
+                and isinstance(e.method.__func__, HasThreaded)
+                and e.method.__func__.__threaded__
+            ):
                 task = run_coroutine_in_thread(
                     ensure_coroutine(cast(Callable[..., Any], e.method)), *params[0], **params[1]
                 )

@@ -19,7 +19,13 @@ from robotcode.core.lsp.types import (
     TextEdit,
 )
 from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.common.decorators import HasAllCommitCharacters, HasTriggerCharacters, language_id_filter
+from robotcode.language_server.common.decorators import (
+    ALL_COMMIT_CHARACTERS_ATTR,
+    TRIGGER_CHARACTERS_ATTR,
+    HasAllCommitCharacters,
+    HasTriggerCharacters,
+    language_id_filter,
+)
 from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 from robotcode.language_server.common.text_document import TextDocument
@@ -51,7 +57,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                     *[
                         cast(HasTriggerCharacters, e).__trigger_characters__
                         for e in self.collect
-                        if isinstance(e, HasTriggerCharacters)
+                        if hasattr(e, TRIGGER_CHARACTERS_ATTR)
                     ]
                 )
             )
@@ -61,7 +67,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                     *[
                         cast(HasAllCommitCharacters, e).__all_commit_characters__
                         for e in self.collect
-                        if isinstance(e, HasAllCommitCharacters)
+                        if hasattr(e, ALL_COMMIT_CHARACTERS_ATTR)
                     ]
                 )
             )

@@ -256,9 +256,6 @@ class CompletionCollector(ModelHelperMixin):
             async for m in self._find_methods(base):
                 yield m
 
-    @language_id("robotframework")
-    @trigger_characters([" ", "*", "\t", ".", "/"])
-    # @all_commit_characters(['\n'])
     async def collect(
         self, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:

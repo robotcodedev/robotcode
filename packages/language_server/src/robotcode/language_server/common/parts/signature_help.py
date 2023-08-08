@@ -16,7 +16,13 @@ from robotcode.core.lsp.types import (
     TextDocumentIdentifier,
 )
 from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.common.decorators import HasRetriggerCharacters, HasTriggerCharacters, language_id_filter
+from robotcode.language_server.common.decorators import (
+    RETRIGGER_CHARACTERS_ATTR,
+    TRIGGER_CHARACTERS_ATTR,
+    HasRetriggerCharacters,
+    HasTriggerCharacters,
+    language_id_filter,
+)
 from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.text_document import TextDocument
 
@@ -45,7 +51,7 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilitie
                     *[
                         cast(HasTriggerCharacters, e).__trigger_characters__
                         for e in self.collect
-                        if isinstance(e, HasTriggerCharacters)
+                        if hasattr(e, TRIGGER_CHARACTERS_ATTR)
                     ]
                 )
             )
@@ -55,7 +61,7 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilitie
                     *[
                         cast(HasRetriggerCharacters, e).__retrigger_characters__
                         for e in self.collect
-                        if isinstance(e, HasRetriggerCharacters)
+                        if hasattr(e, RETRIGGER_CHARACTERS_ATTR)
                     ]
                 )
             )

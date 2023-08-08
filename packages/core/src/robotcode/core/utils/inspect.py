@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Callable, Coroutine, Iterator, List, Optional
+from typing import Any, Callable, Coroutine, Iterator, Optional
 
 
 def iter_methods(
@@ -20,13 +20,6 @@ def iter_methods(
 
             if predicate is None or predicate(m):
                 yield m
-
-
-def get_methods(
-    instance_or_type: Any,
-    predicate: Optional[Callable[[Callable[..., Any]], bool]] = None,
-) -> List[Callable[..., Any]]:
-    return list(iter_methods(instance_or_type, predicate))
 
 
 _lambda_type = type(lambda: 0)

@@ -1,26 +1,26 @@
-from typing import Any, Callable, List, Protocol, Set, TypeVar, Union, runtime_checkable
+from typing import Any, Callable, List, Protocol, TypeVar, Union, runtime_checkable
 
 from .text_document import TextDocument
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
+LANGUAGE_ID_ATTR = "__language_id__"
+
 
 def language_id(id: str, *ids: str) -> Callable[[_F], _F]:
     def decorator(func: _F) -> _F:
-        setattr(func, "__language_id__", {id, *ids})
+        setattr(func, LANGUAGE_ID_ATTR, {id, *ids})
         return func
 
     return decorator
 
 
-@runtime_checkable
-class HasLanguageId(Protocol):
-    __language_id__: Set[str]
+TRIGGER_CHARACTERS_ATTR = "__trigger_characters__"
 
 
 def trigger_characters(characters: List[str]) -> Callable[[_F], _F]:
     def decorator(func: _F) -> _F:
-        setattr(func, "__trigger_characters__", characters)
+        setattr(func, TRIGGER_CHARACTERS_ATTR, characters)
         return func
 
     return decorator
@@ -31,6 +31,9 @@ class HasTriggerCharacters(Protocol):
     __trigger_characters__: List[str]
 
 
+RETRIGGER_CHARACTERS_ATTR = "__retrigger_characters__"
+
+
 @runtime_checkable
 class HasRetriggerCharacters(Protocol):
     __retrigger_characters__: str
@@ -38,15 +41,18 @@ class HasRetriggerCharacters(Protocol):
 
 def retrigger_characters(characters: List[str]) -> Callable[[_F], _F]:
     def decorator(func: _F) -> _F:
-        setattr(func, "__retrigger_characters__", characters)
+        setattr(func, RETRIGGER_CHARACTERS_ATTR, characters)
         return func
 
     return decorator
 
 
+ALL_COMMIT_CHARACTERS_ATTR = "__all_commit_characters__"
+
+
 def all_commit_characters(characters: List[str]) -> Callable[[_F], _F]:
     def decorator(func: _F) -> _F:
-        setattr(func, "__all_commit_characters__", characters)
+        setattr(func, ALL_COMMIT_CHARACTERS_ATTR, characters)
         return func
 
     return decorator
@@ -57,9 +63,12 @@ class HasAllCommitCharacters(Protocol):
     __all_commit_characters__: List[str]
 
 
+CODE_ACTION_KINDS_ATTR = "__code_action_kinds__"
+
+
 def code_action_kinds(characters: List[str]) -> Callable[[_F], _F]:
     def decorator(func: _F) -> _F:
-        setattr(func, "__code_action_kinds__", characters)
+        setattr(func, CODE_ACTION_KINDS_ATTR, characters)
         return func
 
     return decorator
@@ -72,33 +81,35 @@ class HasCodeActionKinds(Protocol):
 
 def language_id_filter(language_id_or_document: Union[str, TextDocument]) -> Callable[[Any], bool]:
     def filter(c: Any) -> bool:
-        return not isinstance(c, HasLanguageId) or (
+        return not hasattr(c, LANGUAGE_ID_ATTR) or (
             (
                 language_id_or_document.language_id
                 if isinstance(language_id_or_document, TextDocument)
                 else language_id_or_document
             )
-            in c.__language_id__
+            in getattr(c, LANGUAGE_ID_ATTR)
         )
 
     return filter
 
 
-@runtime_checkable
-class IsCommand(Protocol):
-    __command_name__: str
+COMMAND_NAME_ATTR = "__command_name__"
 
 
 def command(name: str) -> Callable[[_F], _F]:
     def decorator(func: _F) -> _F:
-        setattr(func, "__command_name__", name)
+        setattr(func, COMMAND_NAME_ATTR, name)
         return func
 
     return decorator
 
 
+def is_command(func: Callable[..., Any]) -> bool:
+    return hasattr(func, COMMAND_NAME_ATTR)
+
+
 def get_command_name(func: Callable[..., Any]) -> str:
-    if isinstance(func, IsCommand):
-        return func.__command_name__  # type: ignore
+    if hasattr(func, COMMAND_NAME_ATTR):
+        return str(getattr(func, COMMAND_NAME_ATTR))
 
     raise TypeError(f"{func} is not a command.")

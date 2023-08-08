@@ -105,11 +105,6 @@ class HasCaseDecoder(Protocol):
         ...
 
 
-@runtime_checkable
-class ConfigBase(HasCaseDecoder, HasCaseEncoder, Protocol):
-    pass
-
-
 _T = TypeVar("_T")
 
 
