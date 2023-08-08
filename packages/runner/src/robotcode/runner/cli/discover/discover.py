@@ -17,7 +17,7 @@ from robot.model.visitor import SuiteVisitor
 from robot.output import LOGGER, Message
 from robot.running.builder import TestSuiteBuilder
 from robot.running.builder.builders import SuiteStructureParser
-from robot.utils import NormalizedDict
+from robot.utils import NormalizedDict, normalize
 from robot.utils.filereader import FileReader
 from robotcode.core.dataclasses import from_json
 from robotcode.core.lsp.types import (
@@ -234,6 +234,7 @@ class Collector(SuiteVisitor):
         self.suites: List[TestItem] = []
         self.tests: List[TestItem] = []
         self.tags: Dict[str, List[TestItem]] = defaultdict(list)
+        self.normalized_tags: Dict[str, List[TestItem]] = defaultdict(list)
         self.statistics = Statistics()
         self._collected = [NormalizedDict(ignore="_")]
 
@@ -321,6 +322,7 @@ class Collector(SuiteVisitor):
 
         for tag in test.tags:
             self.tags[str(tag)].append(item)
+            self.normalized_tags[normalize(str(tag), ignore="_")].append(item)
 
         self.tests.append(item)
         self._current.children.append(item)
@@ -662,10 +664,17 @@ class TagsResult:
     add_help_option=True,
     epilog='Use "-- --help" to see `robot` help.',
 )
+@click.option(
+    "--normalized / --not-normalized",
+    "normalized",
+    default=True,
+    help="Whether or not normalized tags are shown.",
+)
 @add_options(*ROBOT_OPTIONS)
 @pass_application
 def tags(
     app: Application,
+    normalized: bool,
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
@@ -692,12 +701,14 @@ def tags(
             def print(tags: Dict[str, List[TestItem]]) -> Iterable[str]:
                 for tag, items in tags.items():
                     yield f"{tag}{os.linesep}"
+                    # for t in items:
+                    #     yield f"    {t.longname}{os.linesep}"
 
-            if collector.suites:
-                app.echo_via_pager(print(collector.tags))
+            if collector.normalized_tags:
+                app.echo_via_pager(print(collector.normalized_tags if normalized else collector.tags))
 
         else:
-            app.print_data(TagsResult(collector.tags), remove_defaults=True)
+            app.print_data(TagsResult(collector.normalized_tags), remove_defaults=True)
 
 
 @dataclass
