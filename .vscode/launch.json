@@ -40,11 +40,11 @@
 				// "run"
 				// "--format",
 				// "toml",
-				"--no-color",
-				"--no-pager",
+				// "--no-color",
+				// "--no-pager",
 				//"config", "info", "desc",
-				"config",
-				"files"
+				"discover",
+				"all"
 			]
 		},
 		{

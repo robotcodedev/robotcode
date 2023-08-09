@@ -415,6 +415,7 @@ def build_diagnostics(messages: List[Message]) -> Dict[str, List[Diagnostic]]:
 
 def handle_options(
     app: Application,
+    diagnostics: bool,
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
@@ -439,7 +440,10 @@ def handle_options(
 
         settings = RobotSettings(options)
 
-        LOGGER.register_console_logger(**settings.console_output_config)
+        if diagnostics:
+            LOGGER.register_console_logger(**settings.console_output_config)
+        else:
+            LOGGER.unregister_console_logger()
 
         diagnostics_logger = DiagnosticsLogger()
         LOGGER.register_logger(diagnostics_logger)
@@ -494,6 +498,16 @@ def handle_options(
     raise UnknownError("Unexpected error happened.")
 
 
+DIAGOSTICS_OPTIONS = {
+    click.option(
+        "--diagnostics / --no-diagnostics",
+        "show_diagnostics",
+        default=True,
+        help="Display `robot` parsing errors and warning that occur during discovering.",
+    )
+}
+
+
 @discover.command(
     context_settings={
         "allow_extra_args": True,
@@ -502,10 +516,12 @@ def handle_options(
     add_help_option=True,
     epilog='Use "-- --help" to see `robot` help.',
 )
+@add_options(*DIAGOSTICS_OPTIONS)
 @add_options(*ROBOT_OPTIONS)
 @pass_application
 def all(
     app: Application,
+    show_diagnostics: bool,
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
@@ -525,7 +541,9 @@ def all(
     ```
     """
 
-    suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    suite, collector, diagnostics = handle_options(
+        app, show_diagnostics, by_longname, exclude_by_longname, robot_options_and_args
+    )
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
@@ -574,10 +592,12 @@ def all(
     add_help_option=True,
     epilog='Use "-- --help" to see `robot` help.',
 )
+@add_options(*DIAGOSTICS_OPTIONS)
 @add_options(*ROBOT_OPTIONS)
 @pass_application
 def tests(
     app: Application,
+    show_diagnostics: bool,
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
@@ -597,7 +617,9 @@ def tests(
     ```
     """
 
-    suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    suite, collector, diagnostics = handle_options(
+        app, show_diagnostics, by_longname, exclude_by_longname, robot_options_and_args
+    )
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
@@ -621,10 +643,12 @@ def tests(
     add_help_option=True,
     epilog='Use "-- --help" to see `robot` help.',
 )
+@add_options(*DIAGOSTICS_OPTIONS)
 @add_options(*ROBOT_OPTIONS)
 @pass_application
 def suites(
     app: Application,
+    show_diagnostics: bool,
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
@@ -644,7 +668,9 @@ def suites(
     ```
     """
 
-    suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    suite, collector, diagnostics = handle_options(
+        app, show_diagnostics, by_longname, exclude_by_longname, robot_options_and_args
+    )
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
@@ -679,10 +705,12 @@ class TagsResult:
     default=True,
     help="Whether or not normalized tags are shown.",
 )
+@add_options(*DIAGOSTICS_OPTIONS)
 @add_options(*ROBOT_OPTIONS)
 @pass_application
 def tags(
     app: Application,
+    show_diagnostics: bool,
     normalized: bool,
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
@@ -704,7 +732,9 @@ def tags(
     ```
     """
 
-    _suite, collector, _diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    _suite, collector, _diagnostics = handle_options(
+        app, show_diagnostics, by_longname, exclude_by_longname, robot_options_and_args
+    )
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
