@@ -514,11 +514,14 @@ def all(
     Discover suites, tests, tasks with the selected configuration,
     profiles, options and arguments.
 
+    You can use all known `robot` arguments to filter for example by tags or to use pre-run-modifier.
+
     \b
     Examples:
     ```
     robotcode discover all
     robotcode --profile regression discover all
+    robotcode --profile regression discover all --include regression --exclude wipANDnotready
     ```
     """
 
@@ -583,11 +586,14 @@ def tests(
     Discover tests with the selected configuration, profiles, options and
     arguments.
 
+    You can use all known `robot` arguments to filter for example by tags or to use pre-run-modifier.
+
     \b
     Examples:
     ```
     robotcode discover tests
     robotcode --profile regression discover tests
+    robotcode --profile regression discover tests --include regression --exclude wipANDnotready
     ```
     """
 
@@ -627,11 +633,14 @@ def suites(
     Discover suites with the selected configuration, profiles, options and
     arguments.
 
+    You can use all known `robot` arguments to filter for example by tags or to use pre-run-modifier.
+
     \b
     Examples:
     ```
     robotcode discover suites
     robotcode --profile regression discover suites
+    robotcode --profile regression discover suites --include regression --exclude wipANDnotready
     ```
     """
 
@@ -682,6 +691,8 @@ def tags(
     """\
     Discover tags with the selected configuration, profiles, options and
     arguments.
+
+    You can use all known `robot` arguments to filter for example by tags or to use pre-run-modifier.
 
     \b
     Examples:
