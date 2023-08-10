@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 32
+  line: 198
+  name: duplicated keyword with namespace
+result: null

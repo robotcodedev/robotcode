@@ -9,7 +9,6 @@ import re
 import time
 import weakref
 from collections import OrderedDict
-from dataclasses import dataclass, field
 from itertools import chain
 from pathlib import Path
 from typing import (
@@ -62,13 +61,15 @@ from .entities import (
     CommandLineVariableDefinition,
     EnvironmentVariableDefinition,
     Import,
-    ImportedVariableDefinition,
     InvalidVariableError,
+    LibraryEntry,
     LibraryImport,
     LocalVariableDefinition,
+    ResourceEntry,
     ResourceImport,
     VariableDefinition,
     VariableMatcher,
+    VariablesEntry,
     VariablesImport,
 )
 from .imports_manager import ImportsManager
@@ -506,36 +507,6 @@ class ImportVisitor(Visitor):
             )
 
 
-@dataclass
-class LibraryEntry:
-    name: str
-    import_name: str
-    library_doc: LibraryDoc
-    args: Tuple[Any, ...] = ()
-    alias: Optional[str] = None
-    import_range: Range = field(default_factory=lambda: Range.zero())
-    import_source: Optional[str] = None
-
-    def __str__(self) -> str:
-        result = self.import_name
-        if self.args:
-            result += f"  {self.args!s}"
-        if self.alias:
-            result += f"  WITH NAME  {self.alias}"
-        return result
-
-
-@dataclass
-class ResourceEntry(LibraryEntry):
-    imports: List[Import] = field(default_factory=list)
-    variables: List[VariableDefinition] = field(default_factory=list)
-
-
-@dataclass
-class VariablesEntry(LibraryEntry):
-    variables: List[ImportedVariableDefinition] = field(default_factory=list)
-
-
 class DocumentType(enum.Enum):
     UNKNOWN = "unknown"
     GENERAL = "robot"
@@ -589,6 +560,7 @@ class Namespace:
         self._diagnostics: List[Diagnostic] = []
         self._keyword_references: Dict[KeywordDoc, Set[Location]] = {}
         self._variable_references: Dict[VariableDefinition, Set[Location]] = {}
+        self._namespace_references: Dict[LibraryEntry, Set[Location]] = {}
 
         self._imported_keywords: Optional[List[KeywordDoc]] = None
         self._imported_keywords_lock = Lock()
@@ -705,6 +677,7 @@ class Namespace:
         self._diagnostics = []
         self._keyword_references = {}
         self._variable_references = {}
+        self._namespace_references = {}
         self._finder = None
         self._in_initialize = False
         self._ignored_lines = None
@@ -739,6 +712,13 @@ class Namespace:
         await self._analyze()
 
         return self._variable_references
+
+    async def get_namespace_references(self) -> Dict[LibraryEntry, Set[Location]]:
+        await self.ensure_initialized()
+
+        await self._analyze()
+
+        return self._namespace_references
 
     @_logger.call
     async def get_libraries(self) -> OrderedDict[str, LibraryEntry]:
@@ -1593,6 +1573,7 @@ class Namespace:
                     self._diagnostics += result.diagnostics
                     self._keyword_references = result.keyword_references
                     self._variable_references = result.variable_references
+                    self._namespace_references = result.namespace_references
 
                     lib_doc = await self.get_library_doc()
 

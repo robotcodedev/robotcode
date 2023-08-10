@@ -32,13 +32,13 @@ from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import (
     DocumentationServerConfig,
 )
+from robotcode.language_server.robotframework.diagnostics.entities import LibraryEntry
 from robotcode.language_server.robotframework.diagnostics.library_doc import (
     get_library_doc,
     get_robot_library_html_doc_str,
     resolve_robot_variables,
 )
 from robotcode.language_server.robotframework.diagnostics.namespace import (
-    LibraryEntry,
     Namespace,
 )
 from robotcode.language_server.robotframework.utils.ast_utils import (

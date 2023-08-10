@@ -20,6 +20,8 @@ from typing import (
 
 from robotcode.core.lsp.types import Position
 from robotcode.language_server.robotframework.diagnostics.entities import (
+    LibraryEntry,
+    ResourceEntry,
     VariableDefinition,
     VariableNotFoundDefinition,
 )
@@ -30,9 +32,7 @@ from robotcode.language_server.robotframework.diagnostics.library_doc import (
 )
 from robotcode.language_server.robotframework.diagnostics.namespace import (
     DEFAULT_BDD_PREFIXES,
-    LibraryEntry,
     Namespace,
-    ResourceEntry,
 )
 from robotcode.language_server.robotframework.utils.ast_utils import (
     Token,

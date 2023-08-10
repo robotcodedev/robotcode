@@ -1,12 +1,13 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, TypeVar, cast
 
 from robotcode.core.lsp.types import Position, Range
-from robotcode.language_server.robotframework.utils.ast_utils import Token, range_from_token
+
+from ..utils.ast_utils import Token, range_from_token
 
 if TYPE_CHECKING:
-    from .library_doc import KeywordDoc
+    from .library_doc import KeywordDoc, LibraryDoc
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
@@ -289,3 +290,45 @@ class VariableNotFoundDefinition(VariableDefinition):
     @single_call
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type))
+
+
+@dataclass
+class LibraryEntry:
+    name: str
+    import_name: str
+    library_doc: "LibraryDoc"
+    args: Tuple[Any, ...] = ()
+    alias: Optional[str] = None
+    import_range: Range = field(default_factory=lambda: Range.zero())
+    import_source: Optional[str] = None
+
+    def __str__(self) -> str:
+        result = self.import_name
+        if self.args:
+            result += f"  {self.args!s}"
+        if self.alias:
+            result += f"  WITH NAME  {self.alias}"
+        return result
+
+    @single_call
+    def __hash__(self) -> int:
+        return hash(
+            (type(self), self.name, self.import_name, self.args, self.alias, self.import_range, self.import_source)
+        )
+
+
+@dataclass
+class ResourceEntry(LibraryEntry):
+    imports: List[Import] = field(default_factory=list)
+    variables: List[VariableDefinition] = field(default_factory=list)
+
+    @single_call
+    def __hash__(self) -> int:
+        return hash(
+            (type(self), self.name, self.import_name, self.args, self.alias, self.import_range, self.import_source)
+        )
+
+
+@dataclass
+class VariablesEntry(LibraryEntry):
+    variables: List[ImportedVariableDefinition] = field(default_factory=list)

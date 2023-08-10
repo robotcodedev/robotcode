@@ -331,10 +331,11 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         library_node = cast(VariablesImport, node)
 
-        if (
-            library_node.name is None
-            or position <= range_from_token(library_node.get_token(RobotToken.NAME)).extend(end_character=1).end
-        ):
+        name_token = library_node.get_token(RobotToken.NAME)
+        if name_token is None:
+            return None
+
+        if library_node.name is None or position <= range_from_token(name_token).extend(end_character=1).end:
             return None
 
         lib_doc: Optional[LibraryDoc] = None

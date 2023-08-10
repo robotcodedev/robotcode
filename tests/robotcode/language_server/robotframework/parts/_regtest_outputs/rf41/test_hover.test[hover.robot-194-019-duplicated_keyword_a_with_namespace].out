@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 19
+  line: 194
+  name: duplicated keyword a with namespace
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '### Keyword *A Resource Keyword A*'
+  range:
+    end:
+      character: 35
+      line: 194
+    start:
+      character: 15
+      line: 194

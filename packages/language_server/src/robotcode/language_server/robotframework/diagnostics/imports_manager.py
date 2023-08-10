@@ -1118,7 +1118,7 @@ class ImportsManager:
                     ),
                     LOAD_LIBRARY_TIME_OUT,
                 )
-            except (SystemExit, KeyboardInterrupt):
+            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                 raise
             except BaseException as e:
                 self._logger.exception(e)
@@ -1373,7 +1373,7 @@ class ImportsManager:
                     ),
                     LOAD_LIBRARY_TIME_OUT,
                 )
-            except (SystemExit, KeyboardInterrupt):
+            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                 raise
             except BaseException as e:
                 self._logger.exception(e)

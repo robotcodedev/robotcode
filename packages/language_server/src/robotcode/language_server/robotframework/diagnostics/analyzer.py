@@ -36,7 +36,10 @@ from robotcode.language_server.robotframework.utils.async_ast import AsyncVisito
 from robotcode.language_server.robotframework.utils.version import get_robot_version
 
 from .entities import (
+    CommandLineVariableDefinition,
     EnvironmentVariableDefinition,
+    LibraryEntry,
+    ResourceEntry,
     VariableDefinition,
     VariableNotFoundDefinition,
 )
@@ -44,9 +47,7 @@ from .library_doc import KeywordDoc, KeywordMatcher, is_embedded_keyword
 from .namespace import (
     DIAGNOSTICS_SOURCE_NAME,
     KeywordFinder,
-    LibraryEntry,
     Namespace,
-    ResourceEntry,
 )
 
 
@@ -55,6 +56,7 @@ class AnalyzerResult:
     diagnostics: List[Diagnostic]
     keyword_references: Dict[KeywordDoc, Set[Location]]
     variable_references: Dict[VariableDefinition, Set[Location]]
+    namespace_references: Dict[LibraryEntry, Set[Location]]
 
 
 class Analyzer(AsyncVisitor, ModelHelperMixin):
@@ -83,6 +85,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         self._diagnostics: List[Diagnostic] = []
         self._keyword_references: Dict[KeywordDoc, Set[Location]] = defaultdict(set)
         self._variable_references: Dict[VariableDefinition, Set[Location]] = defaultdict(set)
+        self._namespace_references: Dict[LibraryEntry, Set[Location]] = defaultdict(set)
 
     async def run(self) -> AnalyzerResult:
         self._diagnostics = []
@@ -90,7 +93,9 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         await self.visit(self.model)
 
-        return AnalyzerResult(self._diagnostics, self._keyword_references, self._variable_references)
+        return AnalyzerResult(
+            self._diagnostics, self._keyword_references, self._variable_references, self._namespace_references
+        )
 
     def yield_argument_name_and_rest(self, node: ast.AST, token: Token) -> Iterator[Token]:
         from robot.parsing.lexer.tokens import Token as RobotToken
@@ -159,6 +164,13 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
             if var_def is None:
                 return
+
+            cmd_line_var = await self.namespace.find_variable(
+                name, skip_commandline_variables=False, position=r.start, ignore_error=True
+            )
+            if isinstance(cmd_line_var, CommandLineVariableDefinition):
+                if self.namespace.document is not None:
+                    self._variable_references[cmd_line_var].add(Location(self.namespace.document.document_uri, r))
 
             if var_def not in self._variable_references:
                 self._variable_references[var_def] = set()
@@ -340,6 +352,10 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
             kw_range = range_from_token(keyword_token)
 
+            lib_entry = None
+            lib_range = None
+            kw_namespace = None
+
             if keyword is not None:
                 for lib, name in iter_over_keyword_names_and_owners(keyword):
                     if (
@@ -354,8 +370,10 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     )
                     if lib_entry and kw_namespace:
                         r = range_from_token(keyword_token)
+                        lib_range = r
                         r.end.character = r.start.character + len(kw_namespace)
                         kw_range.start.character = r.end.character + 1
+                        lib_range.end.character = kw_range.start.character - 1
 
             result = self.finder.find_keyword(keyword)
 
@@ -367,6 +385,10 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         severity=e.severity,
                         code=e.code,
                     )
+
+            if kw_namespace and lib_entry is not None and lib_range is not None:
+                if self.namespace.document is not None:
+                    self._namespace_references[lib_entry].add(Location(self.namespace.document.document_uri, lib_range))
 
             if result is not None:
                 if self.namespace.document is not None:

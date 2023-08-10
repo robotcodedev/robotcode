@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 5
+  line: 202
+  name: a keyword with emoji
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: "### Keyword *\U0001F916\U0001F916*"
+  range:
+    end:
+      character: 6
+      line: 202
+    start:
+      character: 4
+      line: 202

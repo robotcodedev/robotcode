@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 4
-  line: 198
-  name: duplicated keyword
-result: null

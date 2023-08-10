@@ -99,7 +99,7 @@ second
 
 third
     ${result}    lib_hello.A Library Keyword
-#   ^^^^^^^^^    Keyword assignement
+#     ^^^^^^    Keyword assignement
     Should Be Equal    ${result}   from hello
     ${result}=    lib_var.A Library Keyword
 #     ^^^^^^    Keyword assignment with equals sign
@@ -187,21 +187,21 @@ eight
 
 nineth
     a resource keyword A
-#   ^^^^^^^^^^^^^^^^^^^^  duplicated keyword
+#   ^^^^^^^^^^^^^^^^^^^^  duplicated keyword a
     a resource keyword B
-#   ^^^^^^^^^^^^^^^^^^^^  duplicated keyword
+#   ^^^^^^^^^^^^^^^^^^^^  duplicated keyword b
     duplicated keyword
 #   ^^^^^^^^^^^^^^^^^^  duplicated keyword
     duplicated.a resource keyword A
-#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  duplicated keyword
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  duplicated keyword a with namespace
     duplicated.a resource keyword B
-#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  duplicated keyword
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  duplicated keyword b with namespace
     duplicated.duplicated keyword
-#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  duplicated keyword
+#   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  duplicated keyword with namespace
 
 tenth
     🤖🤖    🥴🥶
-#   ^^^^ a keyword with emoji
+#   ^^ a keyword with emoji
 
 *** Keywords ***
 a keyword

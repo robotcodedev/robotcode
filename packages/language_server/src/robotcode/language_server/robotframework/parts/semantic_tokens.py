@@ -34,6 +34,7 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.language_server.common.decorators import language_id
 from robotcode.language_server.common.text_document import TextDocument, range_to_utf16
+from robotcode.language_server.robotframework.diagnostics.entities import LibraryEntry, ResourceEntry
 from robotcode.language_server.robotframework.diagnostics.library_doc import (
     ALL_RUN_KEYWORDS_MATCHERS,
     BUILTIN_LIBRARY_NAME,
@@ -44,9 +45,7 @@ from robotcode.language_server.robotframework.diagnostics.library_doc import (
 )
 from robotcode.language_server.robotframework.diagnostics.namespace import (
     DEFAULT_BDD_PREFIXES,
-    LibraryEntry,
     Namespace,
-    ResourceEntry,
 )
 from robotcode.language_server.robotframework.utils import async_ast
 from robotcode.language_server.robotframework.utils.ast_utils import (
