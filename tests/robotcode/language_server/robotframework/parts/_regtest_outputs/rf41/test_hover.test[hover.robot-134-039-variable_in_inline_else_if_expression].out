@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 39
+  line: 134
+  name: variable in inline else if expression
+result: null

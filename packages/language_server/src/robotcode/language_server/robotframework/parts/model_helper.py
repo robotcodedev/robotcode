@@ -522,8 +522,8 @@ class ModelHelperMixin:
             cls.__expression_statement_types = (robot.parsing.model.statements.IfHeader,)
 
             if get_robot_version() >= (5, 0):
-                cls.__expression_statement_types = (  # type: ignore
-                    robot.parsing.model.statements.IfHeader,
+                cls.__expression_statement_types = (  # type: ignore[assignment]
+                    robot.parsing.model.statements.IfElseHeader,
                     robot.parsing.model.statements.WhileHeader,
                 )
 

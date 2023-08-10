@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 16
+  line: 52
+  name: Robot Library Keyword
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 30
+      line: 52
+    start:
+      character: 16
+      line: 52
+  target_range:
+    end:
+      character: 0
+      line: 818
+    start:
+      character: 0
+      line: 817
+  target_selection_range:
+    end:
+      character: 0
+      line: 818
+    start:
+      character: 0
+      line: 817
+  target_uri: Collections.py

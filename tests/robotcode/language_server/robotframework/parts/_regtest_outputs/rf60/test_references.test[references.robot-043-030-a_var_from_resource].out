@@ -25,10 +25,10 @@ result:
   range:
     end:
       character: 31
-      line: 37
+      line: 39
     start:
       character: 13
-      line: 37
+      line: 39
   uri: tests/document_highlight.robot
 - !Location
   range:

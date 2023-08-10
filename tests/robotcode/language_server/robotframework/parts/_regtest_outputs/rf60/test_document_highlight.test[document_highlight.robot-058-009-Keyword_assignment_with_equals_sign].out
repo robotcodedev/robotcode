@@ -1,0 +1,41 @@
+data: !GeneratedTestData
+  character: 9
+  line: 58
+  name: Keyword assignment with equals sign
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 12
+      line: 55
+    start:
+      character: 6
+      line: 55
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 31
+      line: 57
+    start:
+      character: 25
+      line: 57
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 12
+      line: 58
+    start:
+      character: 6
+      line: 58
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 31
+      line: 60
+    start:
+      character: 25
+      line: 60

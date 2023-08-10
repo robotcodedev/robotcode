@@ -20,6 +20,8 @@ ${a var}    hello
 # ^^^^^ simple variable
 ${LIB_ARG}    from lib
 # ^^^^^^ another simple var
+${A}=    1
+${B}     2
 
 
 *** Test Cases ***
@@ -71,6 +73,32 @@ sixth
 #   ^^^^ a keyword with emoji 1
     🤖🤖    🥴🥶
 #   ^^^^ a keyword with emoji 2
+
+seventh
+    IF  ${A}
+#         ^    variable in if
+        Log    Yeah
+    ELSE IF    ${B}
+#                ^    variable in else if
+        Log    No
+    END
+
+    IF  $a
+#        ^    variable in if expression
+        Log    Yeah
+    ELSE IF    $b
+#               ^    variable in else if expression
+        Log    No
+    END
+
+    IF  ${A}    log    hi    ELSE IF    ${b}    log  ho    ELSE    log  ro
+#         ^    variable in inline if expression
+#                                         ^    variable in inline else if expression
+
+    IF  $a    log    hi    ELSE IF    $b    log  ho    ELSE    log  ro
+#        ^    variable in inline if expression
+#                                      ^    variable in inline else if expression
+
 
 *** Keywords ***
 a keyword with params

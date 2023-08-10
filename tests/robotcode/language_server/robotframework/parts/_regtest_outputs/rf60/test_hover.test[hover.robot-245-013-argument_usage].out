@@ -5,10 +5,10 @@ data: !GeneratedTestData
 result: !Hover
   contents:
     kind: !MarkupKind 'MARKDOWN'
-    value: (argument) ${b}
+    value: (argument) ${tt}
   range:
     end:
-      character: 14
+      character: 15
       line: 245
     start:
       character: 13

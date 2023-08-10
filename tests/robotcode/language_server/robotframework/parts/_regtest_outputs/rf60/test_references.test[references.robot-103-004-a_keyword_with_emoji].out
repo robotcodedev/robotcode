@@ -34,15 +34,6 @@ result:
   range:
     end:
       character: 6
-      line: 69
-    start:
-      character: 4
-      line: 69
-  uri: tests/document_highlight.robot
-- !Location
-  range:
-    end:
-      character: 6
       line: 71
     start:
       character: 4
@@ -52,19 +43,28 @@ result:
   range:
     end:
       character: 6
-      line: 98
+      line: 73
     start:
       character: 4
-      line: 98
+      line: 73
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 6
+      line: 100
+    start:
+      character: 4
+      line: 100
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 6
-      line: 190
+      line: 202
     start:
       character: 4
-      line: 190
+      line: 202
   uri: tests/hover.robot
 - !Location
   range:

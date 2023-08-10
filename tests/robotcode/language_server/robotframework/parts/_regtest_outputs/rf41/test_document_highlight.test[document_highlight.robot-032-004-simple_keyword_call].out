@@ -1,0 +1,131 @@
+data: !GeneratedTestData
+  character: 4
+  line: 32
+  name: simple keyword call
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 32
+    start:
+      character: 4
+      line: 32
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 39
+    start:
+      character: 4
+      line: 39
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 11
+      line: 79
+    start:
+      character: 8
+      line: 79
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 11
+      line: 82
+    start:
+      character: 8
+      line: 82
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 11
+      line: 87
+    start:
+      character: 8
+      line: 87
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 11
+      line: 90
+    start:
+      character: 8
+      line: 90
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 107
+    start:
+      character: 4
+      line: 107
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 109
+    start:
+      character: 4
+      line: 109
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 117
+    start:
+      character: 4
+      line: 117
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 119
+    start:
+      character: 4
+      line: 119
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 127
+    start:
+      character: 4
+      line: 127
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 129
+    start:
+      character: 4
+      line: 129
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 131
+    start:
+      character: 4
+      line: 131
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 141
+    start:
+      character: 4
+      line: 141

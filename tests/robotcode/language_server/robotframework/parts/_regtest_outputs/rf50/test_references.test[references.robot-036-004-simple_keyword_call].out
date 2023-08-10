@@ -349,91 +349,181 @@ result:
   range:
     end:
       character: 7
-      line: 30
+      line: 32
     start:
       character: 4
-      line: 30
+      line: 32
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 7
-      line: 37
+      line: 39
     start:
       character: 4
-      line: 37
+      line: 39
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
-      character: 7
+      character: 11
       line: 79
     start:
-      character: 4
+      character: 8
       line: 79
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
-      character: 7
-      line: 81
+      character: 11
+      line: 82
     start:
-      character: 4
-      line: 81
+      character: 8
+      line: 82
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 87
+    start:
+      character: 8
+      line: 87
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 90
+    start:
+      character: 8
+      line: 90
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 19
+      line: 93
+    start:
+      character: 16
+      line: 93
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 51
+      line: 93
+    start:
+      character: 48
+      line: 93
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 70
+      line: 93
+    start:
+      character: 67
+      line: 93
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 97
+    start:
+      character: 14
+      line: 97
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 47
+      line: 97
+    start:
+      character: 44
+      line: 97
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 66
+      line: 97
+    start:
+      character: 63
+      line: 97
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 7
-      line: 89
+      line: 107
     start:
       character: 4
-      line: 89
+      line: 107
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 7
-      line: 91
+      line: 109
     start:
       character: 4
-      line: 91
+      line: 109
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 7
-      line: 99
+      line: 117
     start:
       character: 4
-      line: 99
+      line: 117
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 7
-      line: 101
+      line: 119
     start:
       character: 4
-      line: 101
+      line: 119
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 7
-      line: 103
+      line: 127
     start:
       character: 4
-      line: 103
+      line: 127
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 7
-      line: 113
+      line: 129
     start:
       character: 4
-      line: 113
+      line: 129
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 131
+    start:
+      character: 4
+      line: 131
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 141
+    start:
+      character: 4
+      line: 141
   uri: tests/document_highlight.robot
 - !Location
   range:
@@ -502,19 +592,10 @@ result:
   range:
     end:
       character: 7
-      line: 34
+      line: 36
     start:
       character: 4
-      line: 34
-  uri: tests/goto.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 38
-    start:
-      character: 4
-      line: 38
+      line: 36
   uri: tests/goto.robot
 - !Location
   range:
@@ -529,10 +610,10 @@ result:
   range:
     end:
       character: 7
-      line: 43
+      line: 42
     start:
       character: 4
-      line: 43
+      line: 42
   uri: tests/goto.robot
 - !Location
   range:
@@ -547,145 +628,244 @@ result:
   range:
     end:
       character: 7
-      line: 48
+      line: 47
     start:
       character: 4
-      line: 48
+      line: 47
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 50
+    start:
+      character: 4
+      line: 50
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 15
-      line: 55
+      line: 57
     start:
       character: 12
-      line: 55
+      line: 57
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 11
-      line: 62
+      line: 64
     start:
       character: 8
-      line: 62
+      line: 64
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 7
-      line: 66
+      line: 68
     start:
       character: 4
-      line: 66
+      line: 68
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 18
-      line: 81
+      line: 83
     start:
       character: 15
-      line: 81
-  uri: tests/goto.robot
-- !Location
-  range:
-    end:
-      character: 29
-      line: 83
-    start:
-      character: 26
       line: 83
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 29
-      line: 88
+      line: 85
     start:
       character: 26
-      line: 88
+      line: 85
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 29
+      line: 90
+    start:
+      character: 26
+      line: 90
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 106
+    start:
+      character: 8
+      line: 106
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 109
+    start:
+      character: 8
+      line: 109
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 114
+    start:
+      character: 8
+      line: 114
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 117
+    start:
+      character: 8
+      line: 117
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 19
+      line: 120
+    start:
+      character: 16
+      line: 120
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 51
+      line: 120
+    start:
+      character: 48
+      line: 120
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 70
+      line: 120
+    start:
+      character: 67
+      line: 120
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 124
+    start:
+      character: 14
+      line: 124
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 47
+      line: 124
+    start:
+      character: 44
+      line: 124
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 66
+      line: 124
+    start:
+      character: 63
+      line: 124
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 7
-      line: 104
+      line: 131
     start:
       character: 4
-      line: 104
+      line: 131
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 7
-      line: 111
+      line: 138
     start:
       character: 4
-      line: 111
+      line: 138
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 7
-      line: 113
+      line: 140
     start:
       character: 4
-      line: 113
+      line: 140
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 7
-      line: 121
+      line: 148
     start:
       character: 4
-      line: 121
+      line: 148
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 7
-      line: 123
+      line: 150
     start:
       character: 4
-      line: 123
+      line: 150
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 7
-      line: 133
+      line: 160
     start:
       character: 4
-      line: 133
+      line: 160
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 7
-      line: 135
+      line: 162
     start:
       character: 4
-      line: 135
+      line: 162
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 7
-      line: 144
+      line: 171
     start:
       character: 4
-      line: 144
+      line: 171
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 7
-      line: 146
+      line: 173
     start:
       character: 4
-      line: 146
+      line: 173
   uri: tests/goto.robot
 - !Location
   range:
@@ -808,199 +988,226 @@ result:
   range:
     end:
       character: 11
-      line: 115
+      line: 116
     start:
       character: 8
-      line: 115
+      line: 116
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 11
-      line: 117
+      line: 119
     start:
       character: 8
-      line: 117
+      line: 119
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 11
-      line: 121
+      line: 124
     start:
       character: 8
-      line: 121
+      line: 124
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 11
-      line: 123
+      line: 127
     start:
       character: 8
-      line: 123
+      line: 127
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 19
+      line: 130
+    start:
+      character: 16
+      line: 130
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 51
+      line: 130
+    start:
+      character: 48
+      line: 130
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 70
+      line: 130
+    start:
+      character: 67
+      line: 130
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 134
+    start:
+      character: 14
+      line: 134
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 47
+      line: 134
+    start:
+      character: 44
+      line: 134
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 66
+      line: 134
+    start:
+      character: 63
+      line: 134
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 24
-      line: 127
+      line: 139
     start:
       character: 21
-      line: 127
+      line: 139
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 34
-      line: 130
+      line: 142
     start:
       character: 31
-      line: 130
+      line: 142
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 13
-      line: 134
+      line: 146
     start:
       character: 10
-      line: 134
+      line: 146
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 12
-      line: 137
+      line: 149
     start:
       character: 9
-      line: 137
+      line: 149
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 11
-      line: 140
+      line: 152
     start:
       character: 8
-      line: 140
+      line: 152
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 12
-      line: 143
+      line: 155
     start:
       character: 9
-      line: 143
+      line: 155
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 11
-      line: 146
+      line: 158
     start:
       character: 8
-      line: 146
+      line: 158
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 21
-      line: 149
+      line: 161
     start:
       character: 18
-      line: 149
+      line: 161
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 40
-      line: 154
+      line: 166
     start:
       character: 37
-      line: 154
+      line: 166
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 65
-      line: 154
+      line: 166
     start:
       character: 62
-      line: 154
+      line: 166
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 82
-      line: 154
+      line: 166
     start:
       character: 79
-      line: 154
+      line: 166
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 62
-      line: 159
+      line: 171
     start:
       character: 59
-      line: 159
+      line: 171
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 27
-      line: 164
+      line: 176
     start:
       character: 24
-      line: 164
+      line: 176
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 22
-      line: 195
+      line: 207
     start:
       character: 19
-      line: 195
+      line: 207
   uri: tests/hover.robot
 - !Location
   range:
     end:
       character: 23
-      line: 204
+      line: 216
     start:
       character: 20
-      line: 204
-  uri: tests/hover.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 223
-    start:
-      character: 4
-      line: 223
-  uri: tests/hover.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 225
-    start:
-      character: 4
-      line: 225
-  uri: tests/hover.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 233
-    start:
-      character: 4
-      line: 233
+      line: 216
   uri: tests/hover.robot
 - !Location
   range:
@@ -1015,10 +1222,10 @@ result:
   range:
     end:
       character: 7
-      line: 243
+      line: 237
     start:
       character: 4
-      line: 243
+      line: 237
   uri: tests/hover.robot
 - !Location
   range:
@@ -1028,6 +1235,33 @@ result:
     start:
       character: 4
       line: 245
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 247
+    start:
+      character: 4
+      line: 247
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 255
+    start:
+      character: 4
+      line: 255
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 257
+    start:
+      character: 4
+      line: 257
   uri: tests/hover.robot
 - !Location
   range:

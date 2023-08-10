@@ -113,16 +113,28 @@ forth
 
 sixth
     IF  ${A}
+#         ^    variable in if
         Log    Yeah
     ELSE IF    ${B}
+#                ^    variable in else if
         Log    No
     END
 
     IF  $a
+#        ^    variable in if expression
         Log    Yeah
     ELSE IF    $b
+#               ^    variable in else if expression
         Log    No
     END
+
+    IF  ${A}    log    hi    ELSE IF    ${b}    log  ho    ELSE    log  ro
+#         ^    variable in inline if expression
+#                                         ^    variable in inline else if expression
+
+    IF  $a    log    hi    ELSE IF    $b    log  ho    ELSE    log  ro
+#        ^    variable in inline if expression
+#                                      ^    variable in inline else if expression
 
 seventh
     [Setup]    Given log    setup

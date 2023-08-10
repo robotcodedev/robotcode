@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 9
+  line: 122
+  name: variable in if expression
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: (variable) ${A}
+  range:
+    end:
+      character: 10
+      line: 122
+    start:
+      character: 9
+      line: 122

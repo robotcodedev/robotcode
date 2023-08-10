@@ -1,0 +1,14 @@
+data: !GeneratedTestData
+  character: 22
+  line: 39
+  name: a var from resource
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 31
+      line: 39
+    start:
+      character: 13
+      line: 39

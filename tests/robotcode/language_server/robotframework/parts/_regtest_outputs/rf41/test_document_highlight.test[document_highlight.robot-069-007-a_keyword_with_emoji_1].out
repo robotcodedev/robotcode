@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 7
-  line: 69
-  name: a keyword with emoji 1
-result: null

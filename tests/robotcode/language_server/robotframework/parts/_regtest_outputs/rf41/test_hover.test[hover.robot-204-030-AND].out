@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 30
-  line: 204
-  name: AND
-result: null

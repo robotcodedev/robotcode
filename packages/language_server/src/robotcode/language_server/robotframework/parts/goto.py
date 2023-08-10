@@ -149,15 +149,15 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     ]
         return None
 
-    async def definition_IfHeader(  # noqa: N802
+    async def _definition_IfElseHeader(  # noqa: N802
         self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import IfHeader
+        from robot.parsing.model.statements import Statement
 
         namespace = await self.parent.documents_cache.get_namespace(document)
 
-        header = cast(IfHeader, node)
+        header = cast(Statement, node)
 
         expression_token = header.get_token(RobotToken.ARGUMENT)
         if expression_token is not None and position in range_from_token(expression_token):
@@ -187,44 +187,21 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     ]
 
         return None
+
+    async def definition_IfElseHeader(  # noqa: N802
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
+    ) -> Union[Location, List[Location], List[LocationLink], None]:
+        return await self._definition_IfElseHeader(node, nodes, document, position, collect_type)
+
+    async def definition_IfHeader(  # noqa: N802
+        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
+    ) -> Union[Location, List[Location], List[LocationLink], None]:
+        return await self._definition_IfElseHeader(node, nodes, document, position, collect_type)
 
     async def definition_WhileHeader(  # noqa: N802
         self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType
     ) -> Union[Location, List[Location], List[LocationLink], None]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import WhileHeader
-
-        namespace = await self.parent.documents_cache.get_namespace(document)
-
-        header = cast(WhileHeader, node)
-
-        expression_token = header.get_token(RobotToken.ARGUMENT)
-        if expression_token is not None and position in range_from_token(expression_token):
-            token_and_var = await async_next(
-                (
-                    (var_token, var)
-                    async for var_token, var in self.iter_expression_variables_from_token(
-                        expression_token, namespace, nodes, position, skip_commandline_variables=True
-                    )
-                    if position in range_from_token(var_token)
-                ),
-                None,
-            )
-            if token_and_var is not None:
-                var_token, variable = token_and_var
-
-                if variable.source:
-                    return [
-                        LocationLink(
-                            origin_selection_range=range_from_token(var_token),
-                            target_uri=str(Uri.from_path(variable.source)),
-                            target_range=variable.range,
-                            target_selection_range=range_from_token(variable.name_token)
-                            if variable.name_token
-                            else variable.range,
-                        )
-                    ]
-        return None
+        return await self._definition_IfElseHeader(node, nodes, document, position, collect_type)
 
     async def definition_KeywordName(  # noqa: N802
         self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position, collect_type: CollectType

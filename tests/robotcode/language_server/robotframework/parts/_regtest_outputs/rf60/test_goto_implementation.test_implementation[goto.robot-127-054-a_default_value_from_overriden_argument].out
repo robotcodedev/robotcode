@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 54
-  line: 127
-  name: a default value from overriden argument
-result: null

@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 14
+  line: 245
+  name: argument usage
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: (argument) ${tt}
+  range:
+    end:
+      character: 15
+      line: 245
+    start:
+      character: 13
+      line: 245
