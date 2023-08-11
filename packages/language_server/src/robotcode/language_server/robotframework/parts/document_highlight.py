@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.core.lsp.types import DocumentHighlight, DocumentHighlightKind, Position
+from robotcode.core.lsp.types import DocumentHighlight, DocumentHighlightKind, Position, Range
 from robotcode.language_server.common.decorators import language_id
 from robotcode.language_server.common.text_document import TextDocument
 
@@ -60,4 +60,40 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
                             *(DocumentHighlight(e.range, DocumentHighlightKind.TEXT) for e in kw_refs),
                         ]
 
+        all_namespace_refs = await namespace.get_namespace_references()
+        if all_namespace_refs:
+            for ns, ns_refs in all_namespace_refs.items():
+                found_range = (
+                    ns.import_range
+                    if ns.import_source == namespace.source
+                    and (position.is_in_range(ns.alias_range, False) or position.is_in_range(ns.import_range, False))
+                    else cast(
+                        Optional[Range], next((r.range for r in ns_refs if position.is_in_range(r.range, False)), None)
+                    )
+                )
+
+                if found_range is not None:
+                    return [
+                        *(
+                            [
+                                DocumentHighlight(
+                                    ns.import_range,
+                                    DocumentHighlightKind.TEXT,
+                                )
+                            ]
+                            if ns.import_source == namespace.source and ns.import_range and not ns.alias_range
+                            else []
+                        ),
+                        *(
+                            [
+                                DocumentHighlight(
+                                    ns.alias_range,
+                                    DocumentHighlightKind.TEXT,
+                                )
+                            ]
+                            if ns.import_source == namespace.source and ns.alias_range
+                            else []
+                        ),
+                        *(DocumentHighlight(e.range, DocumentHighlightKind.TEXT) for e in ns_refs),
+                    ]
         return None

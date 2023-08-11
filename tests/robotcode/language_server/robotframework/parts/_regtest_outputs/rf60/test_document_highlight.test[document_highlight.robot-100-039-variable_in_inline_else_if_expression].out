@@ -1,0 +1,50 @@
+data: !GeneratedTestData
+  character: 39
+  line: 100
+  name: variable in inline else if expression
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 3
+      line: 25
+    start:
+      character: 2
+      line: 25
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 18
+      line: 83
+    start:
+      character: 17
+      line: 83
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 17
+      line: 91
+    start:
+      character: 16
+      line: 91
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 43
+      line: 96
+    start:
+      character: 42
+      line: 96
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 40
+      line: 100
+    start:
+      character: 39
+      line: 100

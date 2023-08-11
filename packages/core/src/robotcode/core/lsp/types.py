@@ -3985,6 +3985,9 @@ class Range(CamelSnakeMixin):
             ),
         )
 
+    def __bool__(self) -> bool:
+        return self.start != self.end
+
     def __contains__(self, x: object) -> bool:
         if isinstance(x, (Position, Range)):
             return x.is_in_range(self)

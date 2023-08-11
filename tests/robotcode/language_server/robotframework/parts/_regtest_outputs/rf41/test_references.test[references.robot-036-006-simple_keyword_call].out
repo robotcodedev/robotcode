@@ -349,28 +349,19 @@ result:
   range:
     end:
       character: 7
-      line: 32
+      line: 34
     start:
       character: 4
-      line: 32
+      line: 34
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 7
-      line: 39
+      line: 41
     start:
       character: 4
-      line: 39
-  uri: tests/document_highlight.robot
-- !Location
-  range:
-    end:
-      character: 11
-      line: 79
-    start:
-      character: 8
-      line: 79
+      line: 41
   uri: tests/document_highlight.robot
 - !Location
   range:
@@ -385,10 +376,10 @@ result:
   range:
     end:
       character: 11
-      line: 87
+      line: 85
     start:
       character: 8
-      line: 87
+      line: 85
   uri: tests/document_highlight.robot
 - !Location
   range:
@@ -402,74 +393,83 @@ result:
 - !Location
   range:
     end:
-      character: 7
-      line: 107
+      character: 11
+      line: 93
     start:
-      character: 4
-      line: 107
+      character: 8
+      line: 93
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 7
-      line: 109
+      line: 110
     start:
       character: 4
-      line: 109
+      line: 110
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 7
-      line: 117
+      line: 112
     start:
       character: 4
-      line: 117
+      line: 112
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 7
-      line: 119
+      line: 120
     start:
       character: 4
-      line: 119
+      line: 120
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 7
-      line: 127
+      line: 122
     start:
       character: 4
-      line: 127
+      line: 122
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 7
-      line: 129
+      line: 130
     start:
       character: 4
-      line: 129
+      line: 130
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 7
-      line: 131
+      line: 132
     start:
       character: 4
-      line: 131
+      line: 132
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 7
-      line: 141
+      line: 134
     start:
       character: 4
-      line: 141
+      line: 134
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 144
+    start:
+      character: 4
+      line: 144
   uri: tests/document_highlight.robot
 - !Location
   range:

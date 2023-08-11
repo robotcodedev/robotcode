@@ -1,0 +1,23 @@
+data: !GeneratedTestData
+  character: 18
+  line: 60
+  name: namespace reference with alias
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 70
+      line: 10
+    start:
+      character: 63
+      line: 10
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 25
+      line: 60
+    start:
+      character: 18
+      line: 60

@@ -140,7 +140,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             for ns, ns_refs in all_namespace_refs.items():
                 found_range = (
                     ns.import_range
-                    if kw.source == namespace.source and position.is_in_range(ns.import_range, False)
+                    if ns.import_source == namespace.source and position.is_in_range(ns.import_range, False)
                     else cast(
                         Optional[Range], next((r.range for r in ns_refs if position.is_in_range(r.range, False)), None)
                     )

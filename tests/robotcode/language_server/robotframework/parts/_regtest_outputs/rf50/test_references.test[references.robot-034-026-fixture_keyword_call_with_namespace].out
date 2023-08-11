@@ -88,73 +88,73 @@ result:
   range:
     end:
       character: 37
-      line: 12
+      line: 14
     start:
       character: 23
-      line: 12
+      line: 14
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 28
-      line: 14
+      line: 16
     start:
       character: 14
-      line: 14
+      line: 16
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 29
-      line: 28
+      line: 30
     start:
       character: 15
-      line: 28
+      line: 30
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 40
-      line: 30
+      line: 32
     start:
       character: 26
-      line: 30
+      line: 32
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 18
-      line: 34
+      line: 36
     start:
       character: 4
-      line: 34
+      line: 36
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 26
-      line: 36
+      line: 38
     start:
       character: 12
-      line: 36
+      line: 38
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 32
-      line: 43
+      line: 45
     start:
       character: 18
-      line: 43
+      line: 45
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 40
-      line: 49
+      line: 51
     start:
       character: 26
-      line: 49
+      line: 51
   uri: tests/document_highlight.robot
 - !Location
   range:

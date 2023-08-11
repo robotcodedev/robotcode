@@ -417,6 +417,9 @@ class ImportVisitor(Visitor):
         n = cast(RobotLibraryImport, node)
         name = cast(RobotToken, n.get_token(RobotToken.NAME))
 
+        separator = n.get_token(RobotToken.WITH_NAME)
+        alias_token = n.get_tokens(RobotToken.NAME)[-1] if separator else None
+
         last_data_token = cast(
             RobotToken, next(v for v in reversed(n.tokens) if v.type not in RobotToken.NON_DATA_TOKENS)
         )
@@ -427,6 +430,7 @@ class ImportVisitor(Visitor):
                     name_token=name if name is not None else None,
                     args=n.args,
                     alias=n.alias,
+                    alias_token=alias_token,
                     line_no=node.lineno,
                     col_offset=node.col_offset,
                     end_line_no=last_data_token.lineno
@@ -1025,6 +1029,7 @@ class Namespace:
                     )
                     result.import_range = value.range
                     result.import_source = value.source
+                    result.alias_range = value.alias_range
 
                     self._import_entries[value] = result
 

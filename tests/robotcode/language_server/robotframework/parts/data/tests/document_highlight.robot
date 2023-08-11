@@ -6,9 +6,11 @@ Variables       ${CURDIR}/../lib/myvariables.py
 #                 ^^^^^^  Variable in variables import path
 Resource        ${CURDIR}/../resources/firstresource.resource
 #                 ^^^^^^  Variable in resource import path
+#                            ^^^^^^^^^^^^^^^^^^^^^^^   namespace reference with resource
 Library         alibrary    a_param=from hello    WITH NAME    lib_hello
 Library         alibrary    a_param=${LIB_ARG}    WITH NAME    lib_var
 #                                   ^^^^^^^^^^  Variable in library params
+#                                                              ^^^^^^^  namespace references with alias
 
 Suite Setup    BuiltIn.Log To Console    hi from suite setup
 #                      ^^^^^^^^^^^^^^  suite fixture keyword call with namespace
@@ -58,6 +60,7 @@ forth
     Should Be Equal    ${result}   from hello
     ${result}=    lib_var.A Library Keyword
 #     ^^^^^^    Keyword assignment with equals sign
+#                 ^^^^^^^  namespace reference with alias
     Should Be Equal    ${result}   ${LIB_ARG}
 
 
@@ -65,8 +68,8 @@ fifth
     a keyword with params
     another keyword with params    1
     again a keyword with params    1
-    a keyword with args    a=2    a long name=99    a_short_name=342
-
+    firstresource.a keyword with args    a=2    a long name=99    a_short_name=342
+#   ^^^^^^^^^^^^^  namespace reference with resource
 
 sixth
     🤖🤖    🥴🥶

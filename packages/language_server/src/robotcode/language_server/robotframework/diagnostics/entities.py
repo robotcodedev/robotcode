@@ -71,6 +71,20 @@ class Import(SourceEntity):
 class LibraryImport(Import):
     args: Tuple[str, ...] = ()
     alias: Optional[str] = None
+    alias_token: Optional[Token] = None
+
+    @property
+    def alias_range(self) -> Range:
+        return Range(
+            start=Position(
+                line=self.alias_token.lineno - 1 if self.alias_token is not None else -1,
+                character=self.alias_token.col_offset if self.alias_token is not None else -1,
+            ),
+            end=Position(
+                line=self.alias_token.lineno - 1 if self.alias_token is not None else -1,
+                character=self.alias_token.end_col_offset if self.alias_token is not None else -1,
+            ),
+        )
 
     @single_call
     def __hash__(self) -> int:
@@ -301,6 +315,7 @@ class LibraryEntry:
     alias: Optional[str] = None
     import_range: Range = field(default_factory=lambda: Range.zero())
     import_source: Optional[str] = None
+    alias_range: Range = field(default_factory=lambda: Range.zero())
 
     def __str__(self) -> str:
         result = self.import_name
