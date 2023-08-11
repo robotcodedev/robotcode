@@ -277,7 +277,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     ) -> AsyncIterator[SemTokenInfo]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import (
-            Arguments,
             Documentation,
             Fixture,
             LibraryImport,
@@ -309,7 +308,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
                         yield SemTokenInfo.from_token(
                             token,
-                            SemanticTokenTypes.PARAMETER if isinstance(node, Arguments) else sem_type,
+                            sem_type,
                             sem_mod,
                             col_offset + 2,
                             last_index - 2,
@@ -497,24 +496,46 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         resources_matchers: Dict[KeywordMatcher, ResourceEntry],
     ) -> AsyncIterator[SemTokenInfo]:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Variable
+        from robot.parsing.model.statements import Arguments, Variable
         from robot.utils.escaping import split_from_equals
 
         if token.type in {RobotToken.ARGUMENT, RobotToken.TESTCASE_NAME, RobotToken.KEYWORD_NAME}:
-            if isinstance(node, Variable) and token.type == RobotToken.ARGUMENT and node.name and node.name[0] == "&":
+            if (
+                isinstance(node, Variable) and token.type == RobotToken.ARGUMENT and node.name and node.name[0] == "&"
+            ) or (isinstance(node, Arguments)):
                 name, value = split_from_equals(token.value)
                 if value is not None:
                     length = len(name)
 
                     yield SemTokenInfo.from_token(
-                        RobotToken(ROBOT_NAMED_ARGUMENT, name, token.lineno, token.col_offset),
-                        RobotSemTokenTypes.NAMED_ARGUMENT,
+                        RobotToken(
+                            ROBOT_NAMED_ARGUMENT if isinstance(node, Variable) else SemanticTokenTypes.PARAMETER,
+                            name,
+                            token.lineno,
+                            token.col_offset,
+                        ),
+                        RobotSemTokenTypes.NAMED_ARGUMENT
+                        if isinstance(node, Variable)
+                        else SemanticTokenTypes.PARAMETER,
                     )
                     yield SemTokenInfo.from_token(
                         RobotToken(ROBOT_OPERATOR, "=", token.lineno, token.col_offset + length),
                         SemanticTokenTypes.OPERATOR,
                     )
                     token = RobotToken(token.type, value, token.lineno, token.col_offset + length + 1, token.error)
+                elif isinstance(node, Arguments) and name:
+                    yield SemTokenInfo.from_token(
+                        RobotToken(
+                            ROBOT_NAMED_ARGUMENT if isinstance(node, Variable) else SemanticTokenTypes.PARAMETER,
+                            name,
+                            token.lineno,
+                            token.col_offset,
+                        ),
+                        RobotSemTokenTypes.NAMED_ARGUMENT
+                        if isinstance(node, Variable)
+                        else SemanticTokenTypes.PARAMETER,
+                    )
+                    token = RobotToken(token.type, "", token.lineno, token.col_offset + len(name), token.error)
 
             for sub_token in self._tokenize_variables(
                 token,
