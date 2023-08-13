@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 2
-  line: 78
-  name: Spaces
-result: null

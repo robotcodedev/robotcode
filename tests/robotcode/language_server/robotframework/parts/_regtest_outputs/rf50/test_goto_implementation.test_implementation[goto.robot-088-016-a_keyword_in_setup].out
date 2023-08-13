@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 16
+  line: 88
+  name: a keyword in setup
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 18
+      line: 88
+    start:
+      character: 15
+      line: 88
+  target_range:
+    end:
+      character: 0
+      line: 2918
+    start:
+      character: 0
+      line: 2917
+  target_selection_range:
+    end:
+      character: 0
+      line: 2918
+    start:
+      character: 0
+      line: 2917
+  target_uri: BuiltIn.py

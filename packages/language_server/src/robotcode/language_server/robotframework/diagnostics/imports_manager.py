@@ -571,18 +571,24 @@ class ImportsManager:
 
     @_logger.call
     async def get_command_line_variables(self) -> List[VariableDefinition]:
-        from robot.errors import DataError
         from robot.utils.text import split_args_from_name_or_path
 
         async with self._command_line_variables_lock:
             if self._command_line_variables is None:
                 command_line_vars: List[VariableDefinition] = []
+
                 command_line_vars += [
                     CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=v)
-                    for k, v in (self.parent_protocol.profile.variables or {}).items()
+                    for k, v in {
+                        **{k1: v1 for k1, v1 in (self.parent_protocol.profile.variables or {}).items()},
+                        **self.config.robot.variables,
+                    }.items()
                 ]
 
-                for variable_file in self.parent_protocol.profile.variable_files or []:
+                for variable_file in [
+                    *(self.parent_protocol.profile.variable_files or []),
+                    *self.config.robot.variable_files,
+                ]:
                     name, args = split_args_from_name_or_path(str(variable_file))
                     try:
                         lib_doc = await self.get_libdoc_for_variables_import(
@@ -594,7 +600,22 @@ class ImportsManager:
                             resolve_command_line_vars=False,
                         )
                         if lib_doc is not None:
-                            command_line_vars += lib_doc.variables
+                            command_line_vars += [
+                                CommandLineVariableDefinition(
+                                    line_no=e.line_no,
+                                    col_offset=e.col_offset,
+                                    end_line_no=e.end_line_no,
+                                    end_col_offset=e.end_col_offset,
+                                    source=e.source,
+                                    name=e.name,
+                                    name_token=e.name_token,
+                                    has_value=e.has_value,
+                                    resolvable=e.resolvable,
+                                    value=e.value,
+                                    value_is_native=e.value_is_native,
+                                )
+                                for e in lib_doc.variables
+                            ]
 
                             if lib_doc.errors:
                                 # TODO add diagnostics
@@ -604,39 +625,6 @@ class ImportsManager:
                                     )
                     except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                         raise
-                    except BaseException as e:
-                        # TODO add diagnostics
-                        self._logger.exception(e)
-
-                command_line_vars += [
-                    CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=v)
-                    for k, v in self.config.robot.variables.items()
-                ]
-                for variable_file in self.config.robot.variable_files:
-                    name, args = split_args_from_name_or_path(variable_file)
-                    try:
-                        lib_doc = await self.get_libdoc_for_variables_import(
-                            name,
-                            tuple(args),
-                            str(self.folder.to_path()),
-                            self,
-                            resolve_variables=False,
-                            resolve_command_line_vars=False,
-                        )
-                        if lib_doc is not None:
-                            command_line_vars += lib_doc.variables
-
-                            if lib_doc.errors:
-                                # TODO add diagnostics
-                                for error in lib_doc.errors:
-                                    self._logger.error(
-                                        lambda: f"{error.type_name}: {error.message} in {error.source}:{error.line_no}"
-                                    )
-
-                    except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                        raise
-                    except DataError:
-                        pass
                     except BaseException as e:
                         # TODO add diagnostics
                         self._logger.exception(e)

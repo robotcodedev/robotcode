@@ -25,19 +25,19 @@ result:
   range:
     end:
       character: 49
-      line: 6
+      line: 7
     start:
       character: 18
-      line: 6
+      line: 7
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 49
-      line: 9
+      line: 10
     start:
       character: 18
-      line: 9
+      line: 10
   uri: tests/hover.robot
 - !Location
   range:

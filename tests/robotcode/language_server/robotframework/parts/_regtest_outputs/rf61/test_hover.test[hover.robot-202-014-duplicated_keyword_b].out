@@ -1,0 +1,9 @@
+data: !GeneratedTestData
+  character: 14
+  line: 202
+  name: duplicated keyword b
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '### Keyword *a resource keyword B*'
+  range: null

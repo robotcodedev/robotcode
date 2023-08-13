@@ -12,17 +12,10 @@
             "justMyCode": false
         }
     },
-    "robotcode.languageServer.args": [
-        // "--debugpy",
-        // "--debugpy-wait-for-client"
+    "robotcode.languageServer.extraArgs": [
+        //"--debugpy",
+        // "--debugpy-wait-for-client",
         // "--log",
-        // "--log-all",
-        // "--log-level",
-        // "INFO"
-        // "TRACE",
-        // "--log-robotframework",
-        // // "--log-language-server"
-        // "--call-tracing"
     ],
     "robotcode.robocop.enabled": false,
     // "robotcode.debug.groupOutput": false,
@@ -38,7 +31,8 @@
     "robotcode.analysis.cache.saveLocation": "workspaceFolder",
     "robotcode.analysis.cache.ignoredLibraries": [
         //"robot.libraries.Remote",
-        "**/lib/alibrary.py"
+        "**/lib/alibrary.py",
+        "LibraryWithErrors"
     ],
     // "robotcode.extraArgs": [
     //     "--log",
@@ -48,5 +42,6 @@
     // ],
     "robotcode.robot.variableFiles": [
         "${EXECDIR}/resources/testvars.yml"
-    ]
+    ],
+
 }

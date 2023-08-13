@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 11
+  line: 224
+  name: namespace of lib with error
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '### Library *LibraryWithErrors*'
+  range:
+    end:
+      character: 12
+      line: 224
+    start:
+      character: 4
+      line: 224

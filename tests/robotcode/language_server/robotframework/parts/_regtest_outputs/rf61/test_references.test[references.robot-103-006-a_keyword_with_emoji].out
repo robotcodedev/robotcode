@@ -7,10 +7,10 @@ result:
   range:
     end:
       character: 2
-      line: 21
+      line: 26
     start:
       character: 0
-      line: 21
+      line: 26
   uri: resources/firstresource.resource
 - !Location
   range:
@@ -34,37 +34,37 @@ result:
   range:
     end:
       character: 6
-      line: 74
+      line: 77
     start:
       character: 4
-      line: 74
+      line: 77
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 6
-      line: 76
+      line: 79
     start:
       character: 4
-      line: 76
+      line: 79
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 6
-      line: 100
+      line: 105
     start:
       character: 4
-      line: 100
+      line: 105
   uri: tests/goto.robot
 - !Location
   range:
     end:
       character: 6
-      line: 202
+      line: 214
     start:
       character: 4
-      line: 202
+      line: 214
   uri: tests/hover.robot
 - !Location
   range:

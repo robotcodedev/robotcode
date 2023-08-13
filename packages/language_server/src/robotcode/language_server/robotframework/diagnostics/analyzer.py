@@ -41,6 +41,7 @@ from .entities import (
     LibraryEntry,
     ResourceEntry,
     VariableDefinition,
+    VariableDefinitionType,
     VariableNotFoundDefinition,
 )
 from .library_doc import KeywordDoc, KeywordMatcher, is_embedded_keyword
@@ -245,16 +246,36 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                         var_range = range_from_token(var_token)
                                     else:
                                         var_range = range_from_token(var_token)
+
+                                    suite_var = None
+                                    if isinstance(var, CommandLineVariableDefinition):
+                                        suite_var = await self.namespace.find_variable(
+                                            var.name,
+                                            skip_commandline_variables=True,
+                                            ignore_error=True,
+                                        )
+                                        if suite_var is not None and suite_var.type not in [
+                                            VariableDefinitionType.VARIABLE
+                                        ]:
+                                            suite_var = None
+
                                     if var.name_range != var_range:
                                         self._variable_references[var].add(
                                             Location(self.namespace.document.document_uri, var_range)
                                         )
+                                        if suite_var is not None:
+                                            self._variable_references[suite_var].add(
+                                                Location(self.namespace.document.document_uri, var_range)
+                                            )
+
                                     elif var not in self._variable_references and token1.type in [
                                         RobotToken.ASSIGN,
                                         RobotToken.ARGUMENT,
                                         RobotToken.VARIABLE,
                                     ]:
                                         self._variable_references[var] = set()
+                                        if suite_var is not None:
+                                            self._variable_references[suite_var] = set()
 
             if (
                 isinstance(node, Statement)
@@ -280,10 +301,22 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     else:
                         if self.namespace.document is not None:
                             var_range = range_from_token(var_token)
+
                             if var.name_range != var_range:
                                 self._variable_references[var].add(
                                     Location(self.namespace.document.document_uri, range_from_token(var_token))
                                 )
+
+                                if isinstance(var, CommandLineVariableDefinition):
+                                    suite_var = await self.namespace.find_variable(
+                                        var.name,
+                                        skip_commandline_variables=True,
+                                        ignore_error=True,
+                                    )
+                                    if suite_var is not None and suite_var.type in [VariableDefinitionType.VARIABLE]:
+                                        self._variable_references[suite_var].add(
+                                            Location(self.namespace.document.document_uri, range_from_token(var_token))
+                                        )
 
             await super().visit(node)
         finally:
@@ -377,6 +410,37 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
             result = self.finder.find_keyword(keyword)
 
+            if (
+                result is not None
+                and lib_entry is not None
+                and kw_namespace
+                and result.parent is not None
+                and result.parent != lib_entry.library_doc.digest
+            ):
+                entry = next(
+                    (
+                        v
+                        for v in (await self.namespace.get_libraries()).values()
+                        if v.library_doc.digest == result.parent
+                    ),
+                    None,
+                )
+                if entry is None:
+                    entry = next(
+                        (
+                            v
+                            for v in (await self.namespace.get_resources()).values()
+                            if v.library_doc.digest == result.parent
+                        ),
+                        None,
+                    )
+                if entry is not None:
+                    lib_entry = entry
+
+            if kw_namespace and lib_entry is not None and lib_range is not None:
+                if self.namespace.document is not None:
+                    self._namespace_references[lib_entry].add(Location(self.namespace.document.document_uri, lib_range))
+
             if not ignore_errors_if_contains_variables or is_not_variable_token(keyword_token):
                 for e in self.finder.diagnostics:
                     self.append_diagnostics(
@@ -386,11 +450,11 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         code=e.code,
                     )
 
-            if kw_namespace and lib_entry is not None and lib_range is not None:
-                if self.namespace.document is not None:
-                    self._namespace_references[lib_entry].add(Location(self.namespace.document.document_uri, lib_range))
-
-            if result is not None:
+            if result is None:
+                if self.namespace.document is not None and self.finder.multiple_keywords_result is not None:
+                    for lib_entry, kw_doc in self.finder.multiple_keywords_result:
+                        self._keyword_references[kw_doc].add(Location(self.namespace.document.document_uri, kw_range))
+            else:
                 if self.namespace.document is not None:
                     self._keyword_references[result].add(Location(self.namespace.document.document_uri, kw_range))
 
@@ -538,6 +602,17 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                 self._variable_references[var].add(
                                     Location(self.namespace.document.document_uri, range_from_token(var_token))
                                 )
+
+                                if isinstance(var, CommandLineVariableDefinition):
+                                    suite_var = await self.namespace.find_variable(
+                                        var.name,
+                                        skip_commandline_variables=True,
+                                        ignore_error=True,
+                                    )
+                                    if suite_var is not None and suite_var.type in [VariableDefinitionType.VARIABLE]:
+                                        self._variable_references[suite_var].add(
+                                            Location(self.namespace.document.document_uri, range_from_token(var_token))
+                                        )
             if result.argument_definitions:
                 for arg in argument_tokens:
                     name, value = split_from_equals(arg.value)
@@ -964,22 +1039,61 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             )
 
     async def visit_VariablesImport(self, node: ast.AST) -> None:  # noqa: N802
-        if get_robot_version() >= (6, 1):
-            from robot.parsing.model.statements import VariablesImport
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import VariablesImport
 
+        if get_robot_version() >= (6, 1):
             import_node = cast(VariablesImport, node)
             self._check_import_name(import_node.name, node, "Variables")
 
-    async def visit_ResourceImport(self, node: ast.AST) -> None:  # noqa: N802
-        if get_robot_version() >= (6, 1):
-            from robot.parsing.model.statements import ResourceImport
+        n = cast(VariablesImport, node)
+        name_token = cast(RobotToken, n.get_token(RobotToken.NAME))
+        if name_token is None:
+            return
 
+        entries = await self.namespace.get_imported_variables()
+        if entries and self.namespace.document:
+            for v in entries.values():
+                if v.import_source == self.namespace.source and v.import_range == range_from_token(name_token):
+                    if v not in self._namespace_references:
+                        self._namespace_references[v] = set()
+
+    async def visit_ResourceImport(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import ResourceImport
+
+        if get_robot_version() >= (6, 1):
             import_node = cast(ResourceImport, node)
             self._check_import_name(import_node.name, node, "Resource")
 
-    async def visit_LibraryImport(self, node: ast.AST) -> None:  # noqa: N802
-        if get_robot_version() >= (6, 1):
-            from robot.parsing.model.statements import LibraryImport
+        n = cast(ResourceImport, node)
+        name_token = cast(RobotToken, n.get_token(RobotToken.NAME))
+        if name_token is None:
+            return
 
+        entries = await self.namespace.get_resources()
+        if entries and self.namespace.document:
+            for v in entries.values():
+                if v.import_source == self.namespace.source and v.import_range == range_from_token(name_token):
+                    if v not in self._namespace_references:
+                        self._namespace_references[v] = set()
+
+    async def visit_LibraryImport(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import LibraryImport
+
+        if get_robot_version() >= (6, 1):
             import_node = cast(LibraryImport, node)
             self._check_import_name(import_node.name, node, "Library")
+
+        n = cast(LibraryImport, node)
+        name_token = cast(RobotToken, n.get_token(RobotToken.NAME))
+        if name_token is None:
+            return
+
+        entries = await self.namespace.get_libraries()
+        if entries and self.namespace.document:
+            for v in entries.values():
+                if v.import_source == self.namespace.source and v.import_range == range_from_token(name_token):
+                    if v not in self._namespace_references:
+                        self._namespace_references[v] = set()

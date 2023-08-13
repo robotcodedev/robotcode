@@ -1,0 +1,9 @@
+data: !GeneratedTestData
+  character: 21
+  line: 224
+  name: keyword of lib with error
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '### Keyword *A Library Keyword*'
+  range: null

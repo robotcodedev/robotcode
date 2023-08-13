@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 73
+  line: 3
+  name: lib with alias
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '### Library *alibrary*'
+  range:
+    end:
+      character: 74
+      line: 3
+    start:
+      character: 65
+      line: 3

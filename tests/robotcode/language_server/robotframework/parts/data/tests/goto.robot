@@ -4,16 +4,21 @@ Library           Collections
 #      ^^^^^^^^^^^  Separator
 Library           ${CURDIR}/../lib/myvariables.py
 #                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  library import by path
-Variables         ${CURDIR}/../lib/myvariables.py
+#                   ^^^^^^  var in library import
+Variables         ${MY_DIR}/../lib/myvariables.py
 #                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  Variables Import
-Resource          ${CURDIR}/../resources/firstresource.resource
+#                   ^^^^^^  var in variables import
+Resource          ${MY_DIR}/../resources/firstresource.resource
 #                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  built in var in Resource Import
+#                   ^^^^^^  var in resource import
 
 Library           ${DOT}/../lib/alibrary.py    a_param=${LIB_ARG}    WITH NAME    lib_var
 #                   ^^^ var in Libary import path
 #                                                        ^^^^^^^  var in library parameters
+#                                                                                 ^^^^^^^ library alias
 
 *** Variables ***
+${MY_DIR}    ${CURDIR}
 ${A VAR}          i'm a var
 &{A DICT}         a=1    b=2    c=3
 ${LIB_ARG}    from lib
@@ -125,6 +130,11 @@ sixth
     IF  $a    log    hi    ELSE IF    $b    log  ho    ELSE    log  ro
 #        ^    variable in inline if expression
 #                                      ^    variable in inline else if expression
+    ${a}    Evaluate    $a
+#                        ^ expression in keyword
+
+seventh
+    test kw
 
 *** Keywords ***
 a simple keyword
@@ -173,3 +183,11 @@ again a keyword with params
 #            ^ argument usage
     Log    ${b}
 #            ^ argument usage
+
+test kw
+    lib_var.A Library Keyword
+#   ^^^^^^^  library alias
+    lib_var.A Library Keywords With Args    1    False
+#   ^^^^^^^  library alias
+    res_lib_var.A Library Keyword
+#   ^^^^^^^^^^^  library alias from resource

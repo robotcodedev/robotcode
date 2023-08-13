@@ -17,11 +17,16 @@ from typing import (
 from robotcode.core.async_cache import AsyncSimpleLRUCache
 from robotcode.core.async_tools import async_event, threaded
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.core.lsp.types import FileEvent, Location, Position, ReferenceContext, WatchKind
+from robotcode.core.lsp.types import FileEvent, Location, Position, Range, ReferenceContext, WatchKind
 from robotcode.core.uri import Uri
 from robotcode.language_server.common.decorators import language_id
 from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.diagnostics.entities import LocalVariableDefinition, VariableDefinition
+from robotcode.language_server.robotframework.diagnostics.entities import (
+    LibraryEntry,
+    LocalVariableDefinition,
+    ResourceEntry,
+    VariableDefinition,
+)
 from robotcode.language_server.robotframework.diagnostics.library_doc import (
     RESOURCE_FILE_EXTENSION,
     ROBOT_FILE_EXTENSION,
@@ -344,7 +349,26 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             ):
                 result.append(Location(str(doc.uri), lib_entry.import_range))
 
+        references = await namespace.get_namespace_references()
+        for k, v in references.items():
+            if not k.alias and k.library_doc == library_doc:
+                result.extend(v)
+
         return result
+
+    @_logger.call
+    async def _find_library_alias_in_file(
+        self,
+        doc: TextDocument,
+        entry: LibraryEntry,
+    ) -> List[Location]:
+        namespace = await self.parent.documents_cache.get_namespace(doc)
+
+        references = await namespace.get_namespace_references()
+        if entry not in references:
+            return []
+
+        return list(references[entry])
 
     async def references_LibraryImport(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position, context: ReferenceContext
@@ -357,7 +381,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         import_node = cast(LibraryImport, node)
 
         name_token = cast(RobotToken, import_node.get_token(RobotToken.NAME))
-
         if not name_token:
             return None
 
@@ -373,20 +396,50 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 document, False, self._find_library_import_references_in_file, library_doc
             )
 
-        return None
+        separator = import_node.get_token(RobotToken.WITH_NAME)
+        alias_token = import_node.get_tokens(RobotToken.NAME)[-1] if separator else None
+        if not alias_token:
+            return None
+
+        entries = await namespace.get_libraries()
+        entry = next(
+            (
+                v
+                for v in entries.values()
+                if v.import_source == namespace.source and v.alias_range == range_from_token(alias_token)
+            ),
+            None,
+        )
+
+        if entry is None:
+            return None
+
+        result = await self._find_references_in_workspace(document, False, self._find_library_alias_in_file, entry)
+
+        if context.include_declaration and entry.import_source:
+            result.append(Location(str(Uri.from_path(entry.import_source)), entry.alias_range))
+
+        return result
 
     @_logger.call
     async def _find_resource_import_references_in_file(
         self,
         doc: TextDocument,
-        library_doc: LibraryDoc,
+        entry: ResourceEntry,
     ) -> List[Location]:
         namespace = await self.parent.documents_cache.get_namespace(doc)
 
         result: List[Location] = []
         for lib_entry in (await namespace.get_resources()).values():
-            if lib_entry.import_source == str(doc.uri.to_path()) and lib_entry.library_doc.source == library_doc.source:
+            if (
+                lib_entry.import_source == str(doc.uri.to_path())
+                and lib_entry.library_doc.source == entry.library_doc.source
+            ):
                 result.append(Location(str(doc.uri), lib_entry.import_range))
+
+        references = await namespace.get_namespace_references()
+        if entry in references:
+            result.extend(references[entry])
 
         return result
 
@@ -405,17 +458,35 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         if not name_token:
             return None
 
-        if position in range_from_token(name_token):
-            library_doc = await namespace.get_imported_resource_libdoc(import_node.name)
+        entries = await namespace.get_resources()
+        entry = next(
+            (
+                v
+                for v in entries.values()
+                if v.import_source == namespace.source and v.import_range == range_from_token(name_token)
+            ),
+            None,
+        )
 
-            if library_doc is None:
-                return None
+        if entry is None:
+            return None
 
-            return await self._find_references_in_workspace(
-                document, False, self._find_resource_import_references_in_file, library_doc
+        result = await self._find_references_in_workspace(
+            document,
+            False,
+            self._find_resource_import_references_in_file,
+            entry,
+        )
+
+        if context.include_declaration and entry.library_doc.source:
+            result.append(
+                Location(
+                    str(Uri.from_path(entry.library_doc.source)),
+                    Range(start=entry.library_doc.range.start, end=entry.library_doc.range.start),
+                )
             )
 
-        return None
+        return result
 
     async def _find_variables_import_references_in_file(
         self,

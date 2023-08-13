@@ -724,6 +724,11 @@ class Namespace:
 
         return self._namespace_references
 
+    async def get_import_entries(self) -> OrderedDict[Import, LibraryEntry]:
+        await self.ensure_initialized()
+
+        return self._import_entries
+
     @_logger.call
     async def get_libraries(self) -> OrderedDict[str, LibraryEntry]:
         await self.ensure_initialized()
@@ -949,10 +954,10 @@ class Namespace:
             await self.get_global_variables(),
         ):
             if var.matcher not in yielded.keys():
-                yielded[var.matcher] = var
-
                 if skip_commandline_variables and isinstance(var, CommandLineVariableDefinition):
                     continue
+
+                yielded[var.matcher] = var
 
                 yield var.matcher, var
 
@@ -1686,6 +1691,7 @@ class KeywordFinder:
         self.self_library_doc = library_doc
 
         self.diagnostics: List[DiagnosticsEntry] = []
+        self.multiple_keywords_result: Optional[Sequence[Tuple[Optional[LibraryEntry], KeywordDoc]]] = None
         self._cache: Dict[Tuple[Optional[str], bool], Tuple[Optional[KeywordDoc], List[DiagnosticsEntry]]] = {}
         self.handle_bdd_style = True
         self._all_keywords: Optional[List[LibraryEntry]] = None
@@ -1694,6 +1700,7 @@ class KeywordFinder:
 
     def reset_diagnostics(self) -> None:
         self.diagnostics = []
+        self.multiple_keywords_result = None
 
     def find_keyword(
         self, name: Optional[str], *, raise_keyword_error: bool = False, handle_bdd_style: bool = True
@@ -1838,6 +1845,8 @@ class KeywordFinder:
     def _create_multiple_keywords_found_message(
         self, name: str, found: Sequence[Tuple[Optional[LibraryEntry], KeywordDoc]], implicit: bool = True
     ) -> str:
+        self.multiple_keywords_result = found
+
         if any(e[1].is_embedded for e in found):
             error = f"Multiple keywords matching name '{name}' found"
         else:

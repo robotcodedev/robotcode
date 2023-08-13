@@ -26,15 +26,6 @@ result:
   range:
     end:
       character: 11
-      line: 82
-    start:
-      character: 8
-      line: 82
-- !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
-  range:
-    end:
-      character: 11
       line: 85
     start:
       character: 8
@@ -44,10 +35,10 @@ result:
   range:
     end:
       character: 11
-      line: 90
+      line: 88
     start:
       character: 8
-      line: 90
+      line: 88
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
@@ -61,71 +52,80 @@ result:
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
-      character: 7
-      line: 110
+      character: 11
+      line: 96
     start:
-      character: 4
-      line: 110
+      character: 8
+      line: 96
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 112
+      line: 113
     start:
       character: 4
-      line: 112
+      line: 113
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 120
+      line: 115
     start:
       character: 4
-      line: 120
+      line: 115
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 122
+      line: 123
     start:
       character: 4
-      line: 122
+      line: 123
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 130
+      line: 125
     start:
       character: 4
-      line: 130
+      line: 125
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 132
+      line: 133
     start:
       character: 4
-      line: 132
+      line: 133
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 134
+      line: 135
     start:
       character: 4
-      line: 134
+      line: 135
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 144
+      line: 137
     start:
       character: 4
-      line: 144
+      line: 137
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 7
+      line: 148
+    start:
+      character: 4
+      line: 148

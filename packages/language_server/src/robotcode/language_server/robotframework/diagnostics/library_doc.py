@@ -1385,9 +1385,11 @@ def get_library_doc(
                 create_handlers=False,
                 variables=robot_variables,
             )
+            lib.get_instance()
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
+            lib = None
             errors.append(
                 error_from_exception(
                     e,
@@ -1399,9 +1401,11 @@ def get_library_doc(
             if args:
                 try:
                     lib = get_test_library(libcode, source, library_name, (), create_handlers=False)
+                    lib.get_instance()
                 except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException:
+                    lib = None
                     pass
 
         real_source = lib.source if lib is not None else source

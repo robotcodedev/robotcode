@@ -2,4 +2,27 @@ data: !GeneratedTestData
   character: 39
   line: 154
   name: a default value
-result: null
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 44
+      line: 154
+    start:
+      character: 39
+      line: 154
+  target_range:
+    end:
+      character: 27
+      line: 21
+    start:
+      character: 0
+      line: 21
+  target_selection_range:
+    end:
+      character: 7
+      line: 21
+    start:
+      character: 2
+      line: 21
+  target_uri: goto.robot

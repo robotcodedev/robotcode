@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 7
+  line: 218
+  name: namespace of unknown lib
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '### Library *UnknownLibrary*'
+  range:
+    end:
+      character: 11
+      line: 218
+    start:
+      character: 4
+      line: 218

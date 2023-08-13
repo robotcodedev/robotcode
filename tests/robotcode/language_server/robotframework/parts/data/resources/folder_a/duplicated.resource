@@ -1,5 +1,6 @@
 *** Keywords ***
 duplicated keyword
+    [Documentation]    keyword from folder a
     Log    hello
 
 A Resource Keyword A

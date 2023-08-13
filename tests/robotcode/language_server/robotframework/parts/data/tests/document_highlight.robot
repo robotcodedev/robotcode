@@ -70,12 +70,15 @@ fifth
     again a keyword with params    1
     firstresource.a keyword with args    a=2    a long name=99    a_short_name=342
 #   ^^^^^^^^^^^^^  namespace reference with resource
+    res_lib_var.A Library Keyword
+#   ^^^^^^^^^^^  namespace reference from resource
+
 
 sixth
     🤖🤖    🥴🥶
-#   ^^^^ a keyword with emoji 1
+#   ^^ a keyword with emoji 1
     🤖🤖    🥴🥶
-#   ^^^^ a keyword with emoji 2
+#   ^^ a keyword with emoji 2
 
 seventh
     IF  ${A}
@@ -137,6 +140,7 @@ again a keyword with params
 
     Run Keyword If    ${a}    Should Be Equal    ${b}    ${c}
     Run Keyword If    $a    Should Be Equal    ${{$c}}    ${c}
+#                      ^ argument usage in keyword with expression
     Run Keyword If    ${a}    run keyword    ${b}    ${{$c}}
 
 

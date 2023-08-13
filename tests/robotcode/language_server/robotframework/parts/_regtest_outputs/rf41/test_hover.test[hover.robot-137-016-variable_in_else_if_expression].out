@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 16
+  line: 137
+  name: variable in else if expression
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: (suite variable) ${B}
+  range:
+    end:
+      character: 17
+      line: 137
+    start:
+      character: 16
+      line: 137

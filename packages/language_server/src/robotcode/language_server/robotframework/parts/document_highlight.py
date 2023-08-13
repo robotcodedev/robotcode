@@ -10,11 +10,10 @@ from robotcode.language_server.common.text_document import TextDocument
 if TYPE_CHECKING:
     from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
 
-from .model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
 
-class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
@@ -81,7 +80,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart, ModelH
                                     DocumentHighlightKind.TEXT,
                                 )
                             ]
-                            if ns.import_source == namespace.source and ns.import_range and not ns.alias_range
+                            if ns.import_source == namespace.source and ns.import_range
                             else []
                         ),
                         *(

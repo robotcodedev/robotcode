@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 22
+  line: 66
+  name: Namespace in Teardown
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: '### Library *BuiltIn*'
+  range:
+    end:
+      character: 23
+      line: 66
+    start:
+      character: 16
+      line: 66

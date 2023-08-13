@@ -2,6 +2,7 @@
 Library           Collections
 #                 ^^^^^^^^^^^ library import by module name
 Library           alibrary    a_param=from hello    WITH NAME    lib_hello
+#                                                                ^^^^^^^^^  lib with alias
 Library           alibrary    a_param=${LIB_ARG}    WITH NAME    lib_var
 #                                       ^^^^^^^  Variable in library params
 Library           ${CURDIR}/../lib/myvariables.py
@@ -16,12 +17,22 @@ Resource          ${CURDIR}/../resources/firstresource.resource
 Resource          ../resources/folder_a/duplicated.resource
 Resource          ../resources/folder_b/duplicated.resource
 
+Library        UnknownLibrary    WITH NAME    unknown
+#              ^^^^^^^^^^^^^^  unknown lib
+#                                             ^^^^^^^^  unknown lib namespace
+Library        LibraryWithErrors    True    WITH NAME    errorlib
+#              ^^^^^^^^^^^^^^^^^  lib with errors
+#                                                        ^^^^^^^^  lib with errors alias
+Library        LibraryWithErrors    False    WITH NAME    noerrorlib
+#              ^^^^^^^^^^^^^^^^^  lib with no errors
+#                                                         ^^^^^^^^^^  lib with no errors alias
+
 *** Variables ***
 ${A VAR}=          i'm a var
 # ^^^^^  variable declaration
 #       ^ not the equal sign
 &{A DICT}         a=1    b=2    c=3
-# ^^^^^^  variable declaration
+# ^^^^^^  variable declarations
 
 ${LIB_ARG}    from lib
 
@@ -101,6 +112,7 @@ third
     ${result}    lib_hello.A Library Keyword
 #     ^^^^^^    Keyword assignement
     Should Be Equal    ${result}   from hello
+    ${result}=    lib_var.A Library Keyword
     ${result}=    lib_var.A Library Keyword
 #     ^^^^^^    Keyword assignment with equals sign
     Should Be Equal    first=${result}   second=${LIB_ARG}
@@ -202,6 +214,23 @@ nineth
 tenth
     🤖🤖    🥴🥶
 #   ^^ a keyword with emoji
+
+eleventh
+    unknown.this is an error
+#   ^^^^^^^  namespace of unknown lib
+#           ^^^^^^^^^^^^^^^^  keyword of unknown lib
+    unknown.this is another error
+#   ^^^^^^^  namespace of unknown lib
+#           ^^^^^^^^^^^^^^^^^^^^^  keyword of unknown lib
+    errorlib.A Library Keyword
+#   ^^^^^^^^  namespace of lib with error
+#            ^^^^^^^^^^^^^^^^^  keyword of lib with error
+    noerrorlib.A Library Keyword
+#   ^^^^^^^^^^  namespace of lib with no error
+#              ^^^^^^^^^^^^^^^^^  keyword of lib with no error
+    n o e r r o r l i b.A Library Keyword
+#   ^^^^^^^^^^^^^^^^^^^  namespace of lib with no error with spaces
+#                       ^^^^^^^^^^^^^^^^^  keyword of lib with no error with spaces
 
 *** Keywords ***
 a keyword

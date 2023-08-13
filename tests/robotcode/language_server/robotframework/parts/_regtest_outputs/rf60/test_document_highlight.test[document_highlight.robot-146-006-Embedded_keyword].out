@@ -1,0 +1,23 @@
+data: !GeneratedTestData
+  character: 6
+  line: 146
+  name: Embedded keyword
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 12
+      line: 146
+    start:
+      character: 6
+      line: 146
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 25
+      line: 148
+    start:
+      character: 19
+      line: 148

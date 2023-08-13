@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 19
+  line: 86
+  name: Command line variable
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: (global variable [command line]) ${CMD_VAR}
+  range:
+    end:
+      character: 20
+      line: 86
+    start:
+      character: 13
+      line: 86

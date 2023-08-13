@@ -23,7 +23,17 @@ def split(hover: Optional[Hover]) -> Optional[Hover]:
         return None
     if isinstance(hover.contents, MarkupContent):
         return Hover(
-            MarkupContent(hover.contents.kind, hover.contents.value.splitlines()[0].split("=")[0].strip()),
+            MarkupContent(
+                hover.contents.kind,
+                hover.contents.value.replace("|", "")
+                .replace(":--", "")
+                .lstrip()
+                .splitlines()[0]
+                .split("   ", 1)[0]
+                .replace("  ", " ")
+                .splitlines()[0]
+                .strip(),
+            ),
             hover.range,
         )
     return hover

@@ -6,21 +6,21 @@ result:
 - !LocationLink
   origin_selection_range:
     end:
-      character: 36
+      character: 35
       line: 154
     start:
       character: 30
       line: 154
   target_range:
     end:
-      character: 37
+      character: 36
       line: 154
     start:
       character: 28
       line: 154
   target_selection_range:
     end:
-      character: 36
+      character: 35
       line: 154
     start:
       character: 30

@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 20
+  line: 92
+  name: variable from lib
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: (suite variable [imported]) ${A_VAR_FROM_LIB}
+  range:
+    end:
+      character: 27
+      line: 92
+    start:
+      character: 13
+      line: 92

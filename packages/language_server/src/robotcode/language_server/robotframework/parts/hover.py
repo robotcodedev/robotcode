@@ -10,6 +10,7 @@ from typing import (
     Callable,
     List,
     Optional,
+    Tuple,
     Type,
     cast,
 )
@@ -85,6 +86,9 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         all_variable_refs = await namespace.get_variable_references()
         if all_variable_refs:
+            text = None
+            highlight_range = None
+
             for variable, var_refs in all_variable_refs.items():
                 found_range = (
                     variable.name_range
@@ -93,6 +97,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 )
 
                 if found_range is not None:
+                    highlight_range = found_range
                     if variable.has_value or variable.resolvable:
                         try:
                             value = reprlib.repr(
@@ -109,17 +114,26 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                             value = ""
                     else:
                         value = ""
+                    if text is None:
+                        text = ""
+                    if text:
+                        text += "\n"
+                    text += f"| ({variable.type.value}) | {variable.name} | {f' `{value}`' if value else ''} |"
 
-                    return Hover(
-                        contents=MarkupContent(
-                            kind=MarkupKind.MARKDOWN,
-                            value=f"({variable.type.value}) {variable.name} {f'= `{value}`' if value else ''}",
-                        ),
-                        range=found_range,
-                    )
+            if text:
+                text = "| | | |\n|:--|:--|:--|\n" + text
+                return Hover(
+                    contents=MarkupContent(
+                        kind=MarkupKind.MARKDOWN,
+                        value=text,
+                    ),
+                    range=highlight_range,
+                )
 
         all_kw_refs = await namespace.get_keyword_references()
         if all_kw_refs:
+            result: List[Tuple[Range, str]] = []
+
             for kw, kw_refs in all_kw_refs.items():
                 found_range = (
                     kw.name_range
@@ -130,8 +144,13 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 )
 
                 if found_range is not None:
+                    result.append((found_range, kw.to_markdown()))
+            if result:
+                r = result[0][0]
+                if all(r == i[0] for i in result):
+                    doc = "\n\n---\n\n".join(i[1] for i in result)
                     return Hover(
-                        contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=kw.to_markdown()),
+                        contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=doc),
                         range=found_range,
                     )
 
@@ -141,6 +160,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 found_range = (
                     ns.import_range
                     if ns.import_source == namespace.source and position.is_in_range(ns.import_range, False)
+                    else ns.alias_range
+                    if ns.import_source == namespace.source and position.is_in_range(ns.alias_range, False)
                     else cast(
                         Optional[Range], next((r.range for r in ns_refs if position.is_in_range(r.range, False)), None)
                     )
@@ -152,136 +173,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         range=found_range,
                     )
 
-        return None
-
-    async def hover_LibraryImport(  # noqa: N802
-        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
-    ) -> Optional[Hover]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import LibraryImport
-
-        library_node = cast(LibraryImport, node)
-        if library_node.name:
-            name_token = library_node.get_token(RobotToken.NAME)
-            if name_token is None:
-                return None
-
-            token_range = range_from_token(name_token)
-            if position.is_in_range(token_range):
-                namespace = await self.parent.documents_cache.get_namespace(document)
-
-                try:
-                    libdoc = await namespace.get_imported_library_libdoc(
-                        library_node.name, library_node.args, library_node.alias
-                    )
-
-                    if libdoc is None or libdoc.errors:
-                        libdoc = await namespace.imports_manager.get_libdoc_for_library_import(
-                            str(library_node.name),
-                            (),
-                            str(document.uri.to_path().parent),
-                            variables=await namespace.get_resolvable_variables(),
-                        )
-
-                    if libdoc is None or libdoc.errors:
-                        return None
-
-                    return Hover(
-                        contents=MarkupContent(
-                            kind=MarkupKind.MARKDOWN,
-                            value=libdoc.to_markdown(),
-                        ),
-                        range=token_range,
-                    )
-                except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                    raise
-                except BaseException:
-                    pass
-        return None
-
-    async def hover_ResourceImport(  # noqa: N802
-        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
-    ) -> Optional[Hover]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import ResourceImport
-
-        resource_node = cast(ResourceImport, node)
-        if resource_node.name:
-            name_token = cast(RobotToken, resource_node.get_token(RobotToken.NAME))
-            if name_token is None:
-                return None
-
-            token_range = range_from_token(name_token)
-            if position.is_in_range(token_range):
-                namespace = await self.parent.documents_cache.get_namespace(document)
-
-                try:
-                    libdoc = await namespace.get_imported_resource_libdoc(resource_node.name)
-
-                    if libdoc is None or libdoc.errors:
-                        libdoc = await namespace.imports_manager.get_libdoc_for_resource_import(
-                            str(resource_node.name),
-                            str(document.uri.to_path().parent),
-                            variables=await namespace.get_resolvable_variables(),
-                        )
-
-                    if libdoc is None or libdoc.errors:
-                        return None
-
-                    return Hover(
-                        contents=MarkupContent(
-                            kind=MarkupKind.MARKDOWN,
-                            value=libdoc.to_markdown(),
-                        ),
-                        range=token_range,
-                    )
-                except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                    raise
-                except BaseException:
-                    pass
-        return None
-
-    async def hover_VariablesImport(  # noqa: N802
-        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
-    ) -> Optional[Hover]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import VariablesImport
-
-        variables_node = cast(VariablesImport, node)
-        if variables_node.name:
-            name_token = cast(RobotToken, variables_node.get_token(RobotToken.NAME))
-            if name_token is None:
-                return None
-
-            token_range = range_from_token(name_token)
-            if position.is_in_range(token_range):
-                namespace = await self.parent.documents_cache.get_namespace(document)
-
-                try:
-                    libdoc = await namespace.get_imported_variables_libdoc(variables_node.name, variables_node.args)
-
-                    if libdoc is None or libdoc.errors:
-                        libdoc = await namespace.imports_manager.get_libdoc_for_variables_import(
-                            str(variables_node.name),
-                            variables_node.args,
-                            str(document.uri.to_path().parent),
-                            variables=await namespace.get_resolvable_variables(),
-                        )
-
-                    if libdoc is None or libdoc.errors:
-                        return None
-
-                    return Hover(
-                        contents=MarkupContent(
-                            kind=MarkupKind.MARKDOWN,
-                            value=libdoc.to_markdown(),
-                        ),
-                        range=token_range,
-                    )
-                except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
-                    raise
-                except BaseException:
-                    pass
         return None
 
     async def hover_TestCase(  # noqa: N802

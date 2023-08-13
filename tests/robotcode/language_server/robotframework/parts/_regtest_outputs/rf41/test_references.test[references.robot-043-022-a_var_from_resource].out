@@ -7,10 +7,10 @@ result:
   range:
     end:
       character: 20
-      line: 1
+      line: 4
     start:
       character: 2
-      line: 1
+      line: 4
   uri: resources/firstresource.resource
 - !Location
   range:

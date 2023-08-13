@@ -171,12 +171,12 @@ class VariableMatcher:
 
 
 class VariableDefinitionType(Enum):
-    VARIABLE = "variable"
+    VARIABLE = "suite variable"
     LOCAL_VARIABLE = "local variable"
     ARGUMENT = "argument"
-    COMMAND_LINE_VARIABLE = "command line variable"
+    COMMAND_LINE_VARIABLE = "global variable [command line]"
     BUILTIN_VARIABLE = "builtin variable"
-    IMPORTED_VARIABLE = "imported variable"
+    IMPORTED_VARIABLE = "suite variable [imported]"
     ENVIRONMENT_VARIABLE = "environment variable"
     VARIABLE_NOT_FOUND = "variable not found"
 
@@ -310,7 +310,7 @@ class VariableNotFoundDefinition(VariableDefinition):
 class LibraryEntry:
     name: str
     import_name: str
-    library_doc: "LibraryDoc"
+    library_doc: "LibraryDoc" = field(compare=False)
     args: Tuple[Any, ...] = ()
     alias: Optional[str] = None
     import_range: Range = field(default_factory=lambda: Range.zero())
@@ -328,22 +328,33 @@ class LibraryEntry:
     @single_call
     def __hash__(self) -> int:
         return hash(
-            (type(self), self.name, self.import_name, self.args, self.alias, self.import_range, self.import_source)
+            (
+                type(self),
+                self.name,
+                self.import_name,
+                self.args,
+                self.alias,
+                self.import_range,
+                self.import_source,
+                self.alias_range,
+            )
         )
 
 
 @dataclass
 class ResourceEntry(LibraryEntry):
-    imports: List[Import] = field(default_factory=list)
-    variables: List[VariableDefinition] = field(default_factory=list)
+    imports: List[Import] = field(default_factory=list, compare=False)
+    variables: List[VariableDefinition] = field(default_factory=list, compare=False)
 
     @single_call
     def __hash__(self) -> int:
-        return hash(
-            (type(self), self.name, self.import_name, self.args, self.alias, self.import_range, self.import_source)
-        )
+        return hash((type(self), self.name, self.import_name, self.import_range, self.import_source))
 
 
 @dataclass
 class VariablesEntry(LibraryEntry):
-    variables: List[ImportedVariableDefinition] = field(default_factory=list)
+    variables: List[ImportedVariableDefinition] = field(default_factory=list, compare=False)
+
+    @single_call
+    def __hash__(self) -> int:
+        return hash((type(self), self.name, self.import_name, self.args, self.import_range, self.import_source))
