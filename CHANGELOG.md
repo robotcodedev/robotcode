@@ -2,6 +2,8 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.51.1 (2023-08-14)
+
 ## v0.51.0 (2023-08-13)
 
 ### Feat
