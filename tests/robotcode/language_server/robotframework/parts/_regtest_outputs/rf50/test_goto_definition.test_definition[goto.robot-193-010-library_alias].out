@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 10
+  line: 193
+  name: library alias
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 11
+      line: 193
+    start:
+      character: 4
+      line: 193
+  target_range:
+    end:
+      character: 89
+      line: 14
+    start:
+      character: 82
+      line: 14
+  target_selection_range:
+    end:
+      character: 89
+      line: 14
+    start:
+      character: 82
+      line: 14
+  target_uri: goto.robot

@@ -52,10 +52,10 @@ result:
   range:
     end:
       character: 6
-      line: 105
+      line: 109
     start:
       character: 4
-      line: 105
+      line: 109
   uri: tests/goto.robot
 - !Location
   range:

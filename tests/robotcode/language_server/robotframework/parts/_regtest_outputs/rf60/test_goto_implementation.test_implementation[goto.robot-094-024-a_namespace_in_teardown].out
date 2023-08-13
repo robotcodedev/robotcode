@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 24
+  line: 94
+  name: a namespace in teardown
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 25
+      line: 94
+    start:
+      character: 18
+      line: 94
+  target_range:
+    end:
+      character: 0
+      line: 3668
+    start:
+      character: 0
+      line: 3667
+  target_selection_range:
+    end:
+      character: 0
+      line: 3668
+    start:
+      character: 0
+      line: 3667
+  target_uri: BuiltIn.py
