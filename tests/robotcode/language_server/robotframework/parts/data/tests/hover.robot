@@ -286,3 +286,10 @@ again a keyword with params
 #            ^ argument usage
     Log    ${b}
 #            ^ argument usage
+
+a keyword with try except
+    TRY
+        Fail    Does not work
+    EXCEPT  AS  ${e}
+        Log    ${e}
+    END

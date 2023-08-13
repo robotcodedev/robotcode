@@ -39,6 +39,8 @@ ${B}     2
 
 *** Test Cases ***
 first
+    [Tags]    first    second
+
     Log    Hello ${A VAR}
 #                  ^^^^^  Variable
 #   ^^^  BuiltIn Keyword
@@ -86,6 +88,8 @@ first
 #   ^^^^^^^^^^^^^^^^^^  unknown keyword
 
 second
+    [Tags]    first    second
+
     [Setup]    Log  hello setup
 #              ^^^ a keyword in setup
     [Teardown]    BuiltIn.Log  hello teardown

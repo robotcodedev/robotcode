@@ -2,6 +2,23 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.51.0 (2023-08-13)
+
+### Feat
+
+- **langserver**: rework "Analysing", "Hover", "Document Highlight", "Goto" and other things to make them faster, simpler, and easier to extend
+- **langserver**: highlight namespace references
+- **discovery**: option to show/hide parsing errors/warnings at suite/test discovery
+
+### Fix
+
+- **langserver**: correct highlighting of keyword arguments with default value
+- correct hovering, goto, etc. for if/else if/inline if statements
+
+### Refactor
+
+- **langserver**: speed up hovering for keywords, variables and namespace by using references from code analysis
+
 ## v0.50.0 (2023-08-08)
 
 ### Feat
