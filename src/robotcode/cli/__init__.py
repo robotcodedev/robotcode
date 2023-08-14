@@ -4,6 +4,7 @@ from typing import List, Optional
 
 import click
 from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.utils.cli import show_hidden_arguments
 from robotcode.plugin import Application, ColoredOutput, OutputFormat, pass_application
 from robotcode.plugin.click_helper.aliases import AliasedGroup
 from robotcode.plugin.click_helper.types import EnumChoice
@@ -98,17 +99,20 @@ from .commands import config, profiles
     "-dp",
     type=click.Path(exists=False, resolve_path=False, path_type=str),
     multiple=True,
-    help="Default path to use if no path is given or defined in a profile. Can be specified multiple times.",
+    hidden=show_hidden_arguments(),
+    help="Default path to use if no path is given or defined in a profile. Can be specified multiple times. "
+    "**This is an internal option for running in vscode",
 )
 @click.option(
     "--launcher-script",
-    hidden=True,
+    hidden=show_hidden_arguments(),
     type=str,
     help="Path to the launcher script. This is an internal option.",
 )
 @click.option(
     "--debugpy",
     is_flag=True,
+    hidden=show_hidden_arguments(),
     help="Starts a debugpy session. "
     "**This is an internal option and should only be use if you want to debug _RobotCode_.**",
 )
@@ -117,11 +121,13 @@ from .commands import config, profiles
     type=int,
     default=5678,
     show_default=True,
+    hidden=show_hidden_arguments(),
     help="Defines the port to use for the debugpy session.",
 )
 @click.option(
     "--debugpy-wait-for-client",
     is_flag=True,
+    hidden=show_hidden_arguments(),
     help="Waits for a debugpy client to connect before starting the debugpy session.",
 )
 @click.version_option(version=__version__, prog_name="robotcode")

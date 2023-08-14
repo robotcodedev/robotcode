@@ -2,6 +2,7 @@ from typing import Optional, Sequence
 
 import click
 from robotcode.core.types import ServerMode
+from robotcode.core.utils.cli import show_hidden_arguments
 from robotcode.plugin import Application, UnknownError, pass_application
 from robotcode.plugin.click_helper.options import resolve_server_options, server_options
 from robotcode.plugin.click_helper.types import (
@@ -17,7 +18,7 @@ LAUNCHER_DEFAULT_PORT = 6611
 
 @click.command(
     add_help_option=True,
-    hidden=True,
+    hidden=show_hidden_arguments(),
 )
 @add_options(*server_options(ServerMode.STDIO, default_port=LAUNCHER_DEFAULT_PORT))
 @click.version_option(version=__version__, prog_name="RobotCode Launcher")

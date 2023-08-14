@@ -28,6 +28,7 @@ from robotcode.core.lsp.types import (
     Range,
 )
 from robotcode.core.uri import Uri
+from robotcode.core.utils.cli import show_hidden_arguments
 from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
 from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.utils import get_robot_version
@@ -335,7 +336,7 @@ class Collector(SuiteVisitor):
     "--read-from-stdin",
     is_flag=True,
     help="Read file contents from stdin. This is an internal option.",
-    hidden=True,
+    hidden=show_hidden_arguments(),
 )
 @pass_application
 def discover(app: Application, read_from_stdin: bool) -> None:
