@@ -4,6 +4,12 @@ Resource          ../resources/folder_a/duplicated.resource
 Resource          ../resources/folder_b/duplicated.resource
 Resource          folder_b/duplicated.resource
 
+Library   alibrary.py
+Library    alibrary
+
+Variables    myvariables
+Variables   myvariables.py
+
 *** Test Cases ***
 first
     a resource keyword A

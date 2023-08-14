@@ -1051,7 +1051,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         if name_token is None:
             return
 
-        entries = await self.namespace.get_imported_variables()
+        entries = await self.namespace.get_import_entries()
         if entries and self.namespace.document:
             for v in entries.values():
                 if v.import_source == self.namespace.source and v.import_range == range_from_token(name_token):
@@ -1071,7 +1071,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         if name_token is None:
             return
 
-        entries = await self.namespace.get_resources()
+        entries = await self.namespace.get_import_entries()
         if entries and self.namespace.document:
             for v in entries.values():
                 if v.import_source == self.namespace.source and v.import_range == range_from_token(name_token):
@@ -1091,7 +1091,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         if name_token is None:
             return
 
-        entries = await self.namespace.get_libraries()
+        entries = await self.namespace.get_import_entries()
         if entries and self.namespace.document:
             for v in entries.values():
                 if v.import_source == self.namespace.source and v.import_range == range_from_token(name_token):
