@@ -140,6 +140,12 @@ sixth
 seventh
     test kw
 
+eighth
+    firstresource.a keyword with args    a=2    a long name=99    a_short_name=342
+#                                        ^  short keyword argument
+#                                               ^^^^^^^^^^^  keyword argument with spaces
+#
+
 *** Keywords ***
 a simple keyword
 #^^^^^^^^^^^^^^^ a simple keyword

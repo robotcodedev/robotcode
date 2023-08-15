@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import itertools
 from typing import (
     Any,
     AsyncIterator,
@@ -289,3 +290,19 @@ def strip_variable_token(token: Token) -> Token:
         )
 
     return token
+
+
+def get_variable_token(token: Token) -> Optional[Token]:
+    from robot.parsing.lexer.tokens import Token as RobotToken
+
+    return next(
+        (
+            v
+            for v in itertools.dropwhile(
+                lambda t: t.type in RobotToken.NON_DATA_TOKENS,
+                tokenize_variables(token, ignore_errors=True),
+            )
+            if v.type == RobotToken.VARIABLE
+        ),
+        None,
+    )

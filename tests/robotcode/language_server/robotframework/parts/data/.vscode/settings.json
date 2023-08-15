@@ -13,8 +13,8 @@
         }
     },
     "robotcode.languageServer.extraArgs": [
-        //"--debugpy",
-        // "--debugpy-wait-for-client",
+        "--debugpy",
+        //"--debugpy-wait-for-client",
         // "--log",
     ],
     "robotcode.robocop.enabled": false,

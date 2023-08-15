@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 48
+  line: 235
+  name: keyword argument with spaces
+result: !Hover
+  contents:
+    kind: !MarkupKind 'MARKDOWN'
+    value: (argument) ${a long name}
+  range:
+    end:
+      character: 59
+      line: 235
+    start:
+      character: 48
+      line: 235

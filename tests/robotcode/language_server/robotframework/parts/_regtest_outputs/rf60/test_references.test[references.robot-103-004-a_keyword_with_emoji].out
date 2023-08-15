@@ -34,19 +34,19 @@ result:
   range:
     end:
       character: 6
-      line: 77
+      line: 80
     start:
       character: 4
-      line: 77
+      line: 80
   uri: tests/document_highlight.robot
 - !Location
   range:
     end:
       character: 6
-      line: 79
+      line: 82
     start:
       character: 4
-      line: 79
+      line: 82
   uri: tests/document_highlight.robot
 - !Location
   range:

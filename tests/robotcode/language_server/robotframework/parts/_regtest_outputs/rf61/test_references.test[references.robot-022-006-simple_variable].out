@@ -61,17 +61,17 @@ result:
   range:
     end:
       character: 35
-      line: 143
+      line: 150
     start:
       character: 30
-      line: 143
+      line: 150
   uri: tests/references.robot
 - !Location
   range:
     end:
       character: 44
-      line: 152
+      line: 159
     start:
       character: 39
-      line: 152
+      line: 159
   uri: tests/references.robot

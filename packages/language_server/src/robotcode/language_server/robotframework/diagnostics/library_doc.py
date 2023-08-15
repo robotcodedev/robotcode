@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import hashlib
 import importlib
 import importlib.util
@@ -31,8 +32,12 @@ from typing import (
 
 from robotcode.core.lsp.types import Position, Range
 from robotcode.language_server.robotframework.utils.ast_utils import (
+    HasError,
+    HasErrors,
     Token,
+    get_variable_token,
     range_from_token,
+    strip_variable_token,
 )
 from robotcode.language_server.robotframework.utils.markdownformatter import (
     MarkDownFormatter,
@@ -43,6 +48,7 @@ from robotcode.language_server.robotframework.utils.version import get_robot_ver
 from .entities import (
     ArgumentDefinition,
     ImportedVariableDefinition,
+    LibraryArgumentDefinition,
     NativeValue,
     SourceEntity,
     single_call,
@@ -303,6 +309,25 @@ DEPRECATED_PATTERN = re.compile(r"^\*DEPRECATED(?P<message>.*)\*(?P<doc>.*)")
 
 
 @dataclass
+class ArgInfo:
+    name: str
+    kind: KeywordArgumentKind
+    required: bool
+
+    @staticmethod
+    def from_robot(arg: Any) -> ArgInfo:
+        from robot.running.arguments.argumentspec import ArgInfo as RobotArgInfo
+
+        robot_arg = cast(RobotArgInfo, arg)
+
+        return ArgInfo(
+            name=robot_arg.name,
+            kind=KeywordArgumentKind[robot_arg.kind],
+            required=robot_arg.required,
+        )
+
+
+@dataclass
 class ArgumentSpec:
     name: Optional[str]
     type: str
@@ -313,6 +338,8 @@ class ArgumentSpec:
     var_named: Any
     defaults: Any
     types: Any
+
+    arg_infos: Optional[List[ArgInfo]] = field(default=None, compare=False)
 
     @staticmethod
     def from_robot_argument_spec(spec: Any) -> ArgumentSpec:
@@ -326,6 +353,7 @@ class ArgumentSpec:
             var_named=spec.var_named,
             defaults={k: str(v) for k, v in spec.defaults.items()} if spec.defaults else {},
             types=None,
+            arg_infos=[ArgInfo.from_robot(info) for info in spec],
         )
 
     def resolve(
@@ -385,8 +413,40 @@ class KeywordDoc(SourceEntity):
     deprecated: bool = field(default=False, compare=False)
     arguments: Optional[ArgumentSpec] = field(default=None, compare=False)
     argument_definitions: Optional[List[ArgumentDefinition]] = field(
-        default=None, compare=False, repr=False, hash=False
+        default=None, compare=False, metadata={"nosave": True}
     )
+
+    def _get_argument_definitions(self) -> Optional[List[ArgumentDefinition]]:
+        return (
+            [
+                LibraryArgumentDefinition(
+                    self.line_no if self.line_no is not None else -1,
+                    col_offset=-1,
+                    end_line_no=-1,
+                    end_col_offset=-1,
+                    source=self.source,
+                    name="${" + a.name + "}",
+                    name_token=None,
+                    keyword_doc=self,
+                )
+                for a in self.arguments.arg_infos
+            ]
+            if self.arguments is not None and not self.is_error_handler and self.arguments.arg_infos
+            else []
+        )
+
+    digest: Optional[str] = field(init=False)
+
+    def __post_init__(self) -> None:
+        s = (
+            f"{self.name}|{self.source}|{self.line_no}|"
+            f"{self.end_line_no}|{self.col_offset}|{self.end_col_offset}|"
+            f"{self.type}|{self.libname}|{self.libtype}"
+        )
+        self.digest = hashlib.sha224(s.encode("utf-8")).hexdigest()
+
+        if self.argument_definitions is None:
+            self.argument_definitions = self._get_argument_definitions()
 
     parent: Optional[str] = field(default=None, metadata={"nosave": True})
 
@@ -2098,3 +2158,166 @@ def complete_variables_import(
             ]
 
     return list(set(result))
+
+
+def get_model_doc(
+    model: ast.AST,
+    source: str,
+    model_type: str = "RESOURCE",
+    scope: str = "GLOBAL",
+    append_model_errors: bool = True,
+) -> LibraryDoc:
+    from robot.errors import DataError, VariableError
+    from robot.libdocpkg.robotbuilder import KeywordDocBuilder
+    from robot.parsing.lexer.tokens import Token as RobotToken
+    from robot.parsing.model.blocks import Keyword
+    from robot.parsing.model.statements import Arguments, KeywordName
+    from robot.running.builder.transformers import ResourceBuilder
+    from robot.running.model import ResourceFile
+    from robot.running.usererrorhandler import UserErrorHandler
+    from robot.running.userkeyword import UserLibrary
+
+    errors: List[Error] = []
+    keyword_name_nodes: List[KeywordName] = []
+    keywords_nodes: List[Keyword] = []
+    for node in ast.walk(model):
+        if isinstance(node, Keyword):
+            keywords_nodes.append(node)
+        if isinstance(node, KeywordName):
+            keyword_name_nodes.append(node)
+
+        error = node.error if isinstance(node, HasError) else None
+        if error is not None:
+            errors.append(Error(message=error, type_name="ModelError", source=source, line_no=node.lineno))
+        if append_model_errors:
+            node_errors = node.errors if isinstance(node, HasErrors) else None
+            if node_errors is not None:
+                for e in node_errors:
+                    errors.append(Error(message=e, type_name="ModelError", source=source, line_no=node.lineno))
+
+    def get_keyword_name_token_from_line(line: int) -> Optional[Token]:
+        for keyword_name in keyword_name_nodes:
+            if keyword_name.lineno == line:
+                return cast(Token, keyword_name.get_token(RobotToken.KEYWORD_NAME))
+
+        return None
+
+    def get_argument_definitions_from_line(line: int) -> List[ArgumentDefinition]:
+        keyword_node = next((k for k in keywords_nodes if k.lineno == line), None)
+        if keyword_node is None:
+            return []
+
+        arguments_node = next((n for n in ast.walk(keyword_node) if isinstance(n, Arguments)), None)
+        if arguments_node is None:
+            return []
+
+        args: List[str] = []
+        arguments = arguments_node.get_tokens(RobotToken.ARGUMENT)
+        argument_definitions = []
+
+        for argument_token in (cast(RobotToken, e) for e in arguments):
+            try:
+                argument = get_variable_token(argument_token)
+
+                if argument is not None and argument.value != "@{}":
+                    if argument.value not in args:
+                        args.append(argument.value)
+                        arg_def = ArgumentDefinition(
+                            name=argument.value,
+                            name_token=strip_variable_token(argument),
+                            line_no=argument.lineno,
+                            col_offset=argument.col_offset,
+                            end_line_no=argument.lineno,
+                            end_col_offset=argument.end_col_offset,
+                            source=source,
+                        )
+                        argument_definitions.append(arg_def)
+
+            except VariableError:
+                pass
+
+        return argument_definitions
+
+    res = ResourceFile(source=source)
+
+    ResourceBuilder(res).visit(model)
+
+    class MyUserLibrary(UserLibrary):
+        current_kw: Any = None
+
+        def _log_creating_failed(self, handler: UserErrorHandler, error: BaseException) -> None:
+            err = Error(
+                message=f"Creating keyword '{handler.name}' failed: {error!s}",
+                type_name=type(error).__qualname__,
+                source=self.current_kw.source if self.current_kw is not None else None,
+                line_no=self.current_kw.lineno if self.current_kw is not None else None,
+            )
+            errors.append(err)
+
+        def _create_handler(self, kw: Any) -> Any:
+            self.current_kw = kw
+            try:
+                handler = super()._create_handler(kw)
+                setattr(handler, "errors", None)
+            except DataError as e:
+                err = Error(
+                    message=str(e),
+                    type_name=type(e).__qualname__,
+                    source=kw.source,
+                    line_no=kw.lineno,
+                )
+                errors.append(err)
+
+                handler = UserErrorHandler(e, kw.name, self.name)
+                handler.source = kw.source
+                handler.lineno = kw.lineno
+
+                setattr(handler, "errors", [err])
+
+            return handler
+
+    lib = MyUserLibrary(res)
+
+    libdoc = LibraryDoc(
+        name=lib.name or "",
+        doc=lib.doc,
+        type=model_type,
+        scope=scope,
+        source=source,
+        line_no=1,
+        errors=errors,
+    )
+
+    libdoc.keywords = KeywordStore(
+        source=libdoc.name,
+        source_type=libdoc.type,
+        keywords=[
+            KeywordDoc(
+                name=kw[0].name,
+                args=[KeywordArgumentDoc.from_robot(a) for a in kw[0].args],
+                doc=kw[0].doc,
+                tags=list(kw[0].tags),
+                source=str(kw[0].source),
+                name_token=get_keyword_name_token_from_line(kw[0].lineno),
+                line_no=kw[0].lineno if kw[0].lineno is not None else -1,
+                col_offset=-1,
+                end_col_offset=-1,
+                end_line_no=-1,
+                libname=libdoc.name,
+                libtype=libdoc.type,
+                longname=f"{libdoc.name}.{kw[0].name}",
+                is_embedded=is_embedded_keyword(kw[0].name),
+                errors=getattr(kw[1], "errors") if hasattr(kw[1], "errors") else None,
+                is_error_handler=isinstance(kw[1], UserErrorHandler),
+                error_handler_message=str(cast(UserErrorHandler, kw[1]).error)
+                if isinstance(kw[1], UserErrorHandler)
+                else None,
+                arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
+                argument_definitions=get_argument_definitions_from_line(kw[0].lineno),
+                parent=libdoc.digest,
+            )
+            for kw in [(KeywordDocBuilder(resource=True).build_keyword(lw), lw) for lw in lib.handlers]
+        ],
+    )
+
+    return libdoc

@@ -25,8 +25,8 @@ result:
   range:
     end:
       character: 31
-      line: 138
+      line: 145
     start:
       character: 0
-      line: 138
+      line: 145
   uri: tests/references.robot

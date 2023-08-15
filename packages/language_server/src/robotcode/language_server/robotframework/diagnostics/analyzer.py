@@ -618,7 +618,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     name, value = split_from_equals(arg.value)
                     if value is not None and name:
                         arg_def = next(
-                            (e for e in result.argument_definitions if e.name_token and e.name_token.value == name),
+                            (e for e in result.argument_definitions if e.name[2:-1] == name),
                             None,
                         )
                         if arg_def is not None:

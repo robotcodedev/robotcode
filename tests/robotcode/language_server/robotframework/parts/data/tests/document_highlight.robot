@@ -70,6 +70,9 @@ fifth
     again a keyword with params    1
     firstresource.a keyword with args    a=2    a long name=99    a_short_name=342
 #   ^^^^^^^^^^^^^  namespace reference with resource
+#                                        ^  short keyword argument
+#                                               ^^^^^^^^^^^  keyword argument with spaces
+#                                                                 ^^^^^^^^^^^^  another keyword argument
     res_lib_var.A Library Keyword
 #   ^^^^^^^^^^^  namespace reference from resource
 

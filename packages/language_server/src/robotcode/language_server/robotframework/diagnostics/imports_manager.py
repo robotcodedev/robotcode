@@ -10,7 +10,6 @@ import sys
 import weakref
 import zlib
 from abc import ABC, abstractmethod
-from ast import walk
 from collections import OrderedDict
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
@@ -25,7 +24,6 @@ from typing import (
     Mapping,
     Optional,
     Tuple,
-    cast,
     final,
 )
 
@@ -41,7 +39,6 @@ from robotcode.language_server.common.decorators import language_id
 from robotcode.language_server.common.parts.workspace import FileWatcherEntry, Workspace
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import CacheSaveLocation, RobotCodeConfig
-from robotcode.language_server.robotframework.utils.ast_utils import HasError, HasErrors, Token
 from robotcode.language_server.robotframework.utils.robot_path import find_file_ex
 from robotcode.language_server.robotframework.utils.version import get_robot_version, get_robot_version_str
 
@@ -49,12 +46,7 @@ from ...__version__ import __version__
 from .entities import CommandLineVariableDefinition, VariableDefinition
 from .library_doc import (
     ROBOT_LIBRARY_PACKAGE,
-    ArgumentSpec,
     CompleteResult,
-    Error,
-    KeywordArgumentDoc,
-    KeywordDoc,
-    KeywordStore,
     LibraryDoc,
     ModuleSpec,
     VariablesDoc,
@@ -65,9 +57,9 @@ from .library_doc import (
     find_library,
     find_variables,
     get_library_doc,
+    get_model_doc,
     get_module_spec,
     get_variables_doc,
-    is_embedded_keyword,
     is_library_by_path,
     is_variables_by_path,
     resolve_args,
@@ -1177,120 +1169,9 @@ class ImportsManager:
         scope: str = "GLOBAL",
         append_model_errors: bool = True,
     ) -> LibraryDoc:
-        from robot.errors import DataError
-        from robot.libdocpkg.robotbuilder import KeywordDocBuilder
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import KeywordName
-        from robot.running.builder.transformers import ResourceBuilder
-        from robot.running.model import ResourceFile
-        from robot.running.usererrorhandler import UserErrorHandler
-        from robot.running.userkeyword import UserLibrary
-
-        errors: List[Error] = []
-        keyword_names: List[KeywordName] = []
-
-        for node in walk(model):
-            if isinstance(node, KeywordName):
-                keyword_names.append(node)
-
-            error = node.error if isinstance(node, HasError) else None
-            if error is not None:
-                errors.append(Error(message=error, type_name="ModelError", source=source, line_no=node.lineno))
-            if append_model_errors:
-                node_errors = node.errors if isinstance(node, HasErrors) else None
-                if node_errors is not None:
-                    for e in node_errors:
-                        errors.append(Error(message=e, type_name="ModelError", source=source, line_no=node.lineno))
-
-        def get_keyword_name_token_from_line(line: int) -> Optional[Token]:
-            for keyword_name in keyword_names:
-                if keyword_name.lineno == line:
-                    return cast(Token, keyword_name.get_token(RobotToken.KEYWORD_NAME))
-
-            return None
-
-        res = ResourceFile(source=source)
-
-        ResourceBuilder(res).visit(model)
-
-        class MyUserLibrary(UserLibrary):
-            current_kw: Any = None
-
-            def _log_creating_failed(self, handler: UserErrorHandler, error: BaseException) -> None:
-                err = Error(
-                    message=f"Creating keyword '{handler.name}' failed: {error!s}",
-                    type_name=type(error).__qualname__,
-                    source=self.current_kw.source if self.current_kw is not None else None,
-                    line_no=self.current_kw.lineno if self.current_kw is not None else None,
-                )
-                errors.append(err)
-
-            def _create_handler(self, kw: Any) -> Any:
-                self.current_kw = kw
-                try:
-                    handler = super()._create_handler(kw)
-                    setattr(handler, "errors", None)
-                except DataError as e:
-                    err = Error(
-                        message=str(e),
-                        type_name=type(e).__qualname__,
-                        source=kw.source,
-                        line_no=kw.lineno,
-                    )
-                    errors.append(err)
-
-                    handler = UserErrorHandler(e, kw.name, self.name)
-                    handler.source = kw.source
-                    handler.lineno = kw.lineno
-
-                    setattr(handler, "errors", [err])
-
-                return handler
-
-        lib = MyUserLibrary(res)
-
-        libdoc = LibraryDoc(
-            name=lib.name or "",
-            doc=lib.doc,
-            type=model_type,
-            scope=scope,
-            source=source,
-            line_no=1,
-            errors=errors,
+        return get_model_doc(
+            model=model, source=source, model_type=model_type, scope=scope, append_model_errors=append_model_errors
         )
-
-        libdoc.keywords = KeywordStore(
-            source=libdoc.name,
-            source_type=libdoc.type,
-            keywords=[
-                KeywordDoc(
-                    name=kw[0].name,
-                    args=[KeywordArgumentDoc.from_robot(a) for a in kw[0].args],
-                    doc=kw[0].doc,
-                    tags=list(kw[0].tags),
-                    source=str(kw[0].source),
-                    name_token=get_keyword_name_token_from_line(kw[0].lineno),
-                    line_no=kw[0].lineno if kw[0].lineno is not None else -1,
-                    col_offset=-1,
-                    end_col_offset=-1,
-                    end_line_no=-1,
-                    libname=libdoc.name,
-                    libtype=libdoc.type,
-                    longname=f"{libdoc.name}.{kw[0].name}",
-                    is_embedded=is_embedded_keyword(kw[0].name),
-                    errors=getattr(kw[1], "errors") if hasattr(kw[1], "errors") else None,
-                    is_error_handler=isinstance(kw[1], UserErrorHandler),
-                    error_handler_message=str(cast(UserErrorHandler, kw[1]).error)
-                    if isinstance(kw[1], UserErrorHandler)
-                    else None,
-                    arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
-                    parent=libdoc.digest,
-                )
-                for kw in [(KeywordDocBuilder(resource=True).build_keyword(lw), lw) for lw in lib.handlers]
-            ],
-        )
-
-        return libdoc
 
     @_logger.call
     async def get_libdoc_for_variables_import(

@@ -26,15 +26,6 @@ result:
   range:
     end:
       character: 11
-      line: 85
-    start:
-      character: 8
-      line: 85
-- !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
-  range:
-    end:
-      character: 11
       line: 88
     start:
       character: 8
@@ -44,10 +35,10 @@ result:
   range:
     end:
       character: 11
-      line: 93
+      line: 91
     start:
       character: 8
-      line: 93
+      line: 91
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
@@ -57,129 +48,138 @@ result:
     start:
       character: 8
       line: 96
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 11
+      line: 99
+    start:
+      character: 8
+      line: 99
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 19
-      line: 99
+      line: 102
     start:
       character: 16
-      line: 99
+      line: 102
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 51
-      line: 99
+      line: 102
     start:
       character: 48
-      line: 99
+      line: 102
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 70
-      line: 99
+      line: 102
     start:
       character: 67
-      line: 99
+      line: 102
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 17
-      line: 103
+      line: 106
     start:
       character: 14
-      line: 103
+      line: 106
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 47
-      line: 103
+      line: 106
     start:
       character: 44
-      line: 103
+      line: 106
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 66
-      line: 103
+      line: 106
     start:
       character: 63
-      line: 103
+      line: 106
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 113
+      line: 116
     start:
       character: 4
-      line: 113
+      line: 116
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 115
+      line: 118
     start:
       character: 4
-      line: 115
+      line: 118
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 123
+      line: 126
     start:
       character: 4
-      line: 123
+      line: 126
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 125
+      line: 128
     start:
       character: 4
-      line: 125
+      line: 128
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 133
+      line: 136
     start:
       character: 4
-      line: 133
+      line: 136
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 135
+      line: 138
     start:
       character: 4
-      line: 135
+      line: 138
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 137
+      line: 140
     start:
       character: 4
-      line: 137
+      line: 140
 - !DocumentHighlight
   kind: !DocumentHighlightKind 'TEXT'
   range:
     end:
       character: 7
-      line: 148
+      line: 151
     start:
       character: 4
-      line: 148
+      line: 151

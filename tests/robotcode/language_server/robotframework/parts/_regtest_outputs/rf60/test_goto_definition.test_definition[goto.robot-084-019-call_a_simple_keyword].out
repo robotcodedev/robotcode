@@ -14,15 +14,15 @@ result:
   target_range:
     end:
       character: 16
-      line: 143
+      line: 149
     start:
       character: 0
-      line: 143
+      line: 149
   target_selection_range:
     end:
       character: 16
-      line: 143
+      line: 149
     start:
       character: 0
-      line: 143
+      line: 149
   target_uri: goto.robot

@@ -108,6 +108,13 @@ sixth
 #                           ^^^^^^  a variable with emoji
 
 
+seventh
+    firstresource.a keyword with args    a=2    a long name=99    a_short_name=342
+#                                        ^  short keyword argument
+#                                               ^^^^^^^^^^^  keyword argument with spaces
+#                                                                 ^^^^^^^^^^^^  another keyword argument
+    Log    message=123
+
 *** Keywords ***
 do something ${type}
     do something     ${type}

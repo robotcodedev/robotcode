@@ -247,7 +247,6 @@ class BlockVariableVisitor(Visitor):
         args: List[str] = []
         n = cast(Arguments, node)
         arguments = n.get_tokens(RobotToken.ARGUMENT)
-        argument_definitions = []
 
         for argument_token in (cast(RobotToken, e) for e in arguments):
             try:
@@ -275,13 +274,9 @@ class BlockVariableVisitor(Visitor):
                             keyword_doc=self.current_kw_doc,
                         )
                         self._results[argument.value] = arg_def
-                        argument_definitions.append(arg_def)
 
             except VariableError:
                 pass
-
-        if self.current_kw_doc is not None:
-            self.current_kw_doc.argument_definitions = argument_definitions
 
     def visit_ExceptHeader(self, node: ast.AST) -> None:  # noqa: N802
         from robot.errors import VariableError

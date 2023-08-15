@@ -1,0 +1,14 @@
+data: !GeneratedTestData
+  character: 77
+  line: 70
+  name: another keyword argument
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 78
+      line: 70
+    start:
+      character: 66
+      line: 70

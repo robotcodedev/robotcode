@@ -1,0 +1,14 @@
+data: !GeneratedTestData
+  character: 4
+  line: 75
+  name: namespace reference from resource
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 15
+      line: 75
+    start:
+      character: 4
+      line: 75

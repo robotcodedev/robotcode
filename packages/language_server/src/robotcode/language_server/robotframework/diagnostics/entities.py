@@ -256,8 +256,15 @@ class CommandLineVariableDefinition(VariableDefinition):
 @dataclass
 class ArgumentDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.ARGUMENT
-    keyword_doc: Optional["KeywordDoc"] = None
+    keyword_doc: Optional["KeywordDoc"] = field(default=None, compare=False, metadata={"nosave": True})
 
+    @single_call
+    def __hash__(self) -> int:
+        return hash((type(self), self.name, self.type, self.range, self.source))
+
+
+@dataclass
+class LibraryArgumentDefinition(ArgumentDefinition):
     @single_call
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.type, self.range, self.source))

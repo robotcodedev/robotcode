@@ -1,0 +1,50 @@
+data: !GeneratedTestData
+  character: 10
+  line: 86
+  name: variable in if
+result:
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 3
+      line: 24
+    start:
+      character: 2
+      line: 24
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 11
+      line: 86
+    start:
+      character: 10
+      line: 86
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 10
+      line: 94
+    start:
+      character: 9
+      line: 94
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 11
+      line: 102
+    start:
+      character: 10
+      line: 102
+- !DocumentHighlight
+  kind: !DocumentHighlightKind 'TEXT'
+  range:
+    end:
+      character: 10
+      line: 106
+    start:
+      character: 9
+      line: 106

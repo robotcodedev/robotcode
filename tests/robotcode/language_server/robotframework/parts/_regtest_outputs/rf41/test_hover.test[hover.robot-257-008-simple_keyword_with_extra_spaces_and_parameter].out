@@ -1,9 +1,0 @@
-data: !GeneratedTestData
-  character: 8
-  line: 257
-  name: simple keyword with extra spaces and parameter
-result: !Hover
-  contents:
-    kind: !MarkupKind 'MARKDOWN'
-    value: '### Keyword *Sleep*'
-  range: null

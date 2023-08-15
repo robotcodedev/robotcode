@@ -1,9 +1,0 @@
-data: !GeneratedTestData
-  character: 49
-  line: 245
-  name: run keywords simple keyword and AND
-result: !Hover
-  contents:
-    kind: !MarkupKind 'MARKDOWN'
-    value: '### Keyword *a simple keyword*'
-  range: null

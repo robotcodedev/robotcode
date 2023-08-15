@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 39
-  line: 129
-  name: variable in inline else if expression
-result: null

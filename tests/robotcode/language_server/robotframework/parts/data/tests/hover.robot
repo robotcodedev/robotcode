@@ -232,6 +232,12 @@ eleventh
 #   ^^^^^^^^^^^^^^^^^^^  namespace of lib with no error with spaces
 #                       ^^^^^^^^^^^^^^^^^  keyword of lib with no error with spaces
 
+twelfth
+    firstresource.a keyword with args    a=2    a long name=99    a_short_name=342
+#                                        ^  short keyword argument
+#                                               ^^^^^^^^^^^  keyword argument with spaces
+#
+
 *** Keywords ***
 a keyword
     Run Keyword    log    hi

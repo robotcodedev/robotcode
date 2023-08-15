@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 13
-  line: 148
-  name: argument usage
-result: null
