@@ -197,7 +197,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
             robotcode_run_args += ["--tcp", str(port)]
 
         if debuggerTimeout is not None:
-            robotcode_run_args += ["wait-for-client-timeout", str(debuggerTimeout)]
+            robotcode_run_args += ["--wait-for-client-timeout", str(debuggerTimeout)]
 
         if attachPython and not no_debug:
             robotcode_run_args += ["--debugpy"]

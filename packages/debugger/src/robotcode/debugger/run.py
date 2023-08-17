@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import os
 import threading
 import warnings
 from typing import (
@@ -103,7 +104,9 @@ async def start_debugpy_async(
         global config_done_callback
 
         def connect_debugpy(server: "DebugAdapterServer") -> None:
-            server.protocol.send_event(Event(event="debugpyStarted", body={"port": port, "addresses": addresses}))
+            server.protocol.send_event(
+                Event(event="debugpyStarted", body={"port": port, "addresses": addresses, "processId": os.getpid()})
+            )
 
             if wait_for_debugpy_client:
                 wait_for_debugpy_connected()
@@ -134,11 +137,13 @@ async def run_debugger(
     group_output: bool = False,
 ) -> int:
     if debug and debugpy and not is_debugpy_installed():
-        print("debugpy not installed.")
+        app.warning("Debugpy not installed.")
 
     if debug and debugpy:
+        app.verbose("Try to start debugpy session.")
         await start_debugpy_async(debugpy_port, addresses, debugpy_wait_for_client, wait_for_client_timeout)
 
+    app.verbose("Start robotcode debugger thread.")
     server_future = run_coroutine_in_thread(
         _debug_adapter_server_, config_done_callback, mode, addresses, port, pipe_name
     )
@@ -148,6 +153,7 @@ async def run_debugger(
 
     try:
         if wait_for_client:
+            app.verbose("Wait for incomming connections.")
             try:
                 await run_coroutine_from_thread_async(
                     server.protocol.wait_for_client,
@@ -162,6 +168,7 @@ async def run_debugger(
             await run_coroutine_from_thread_async(server.protocol.wait_for_initialized, loop=server.loop)
 
         if wait_for_client:
+            app.verbose("Wait for debug configuration.")
             try:
                 await run_coroutine_from_thread_async(
                     server.protocol.wait_for_configuration_done,
@@ -174,6 +181,7 @@ async def run_debugger(
                 raise ConnectionError("Timeout to get configuration from client.") from e
 
         if debugpy and debugpy_wait_for_client:
+            app.verbose("Wait for debugpy incomming connections.")
             wait_for_debugpy_connected()
 
         args = [
@@ -192,12 +200,15 @@ async def run_debugger(
         Debugger.instance().debug = debug
         Debugger.instance().set_main_thread(threading.current_thread())
         Debugger.instance().server_loop = server.loop
+
+        app.verbose("Start the debugger instance.")
         Debugger.instance().start()
 
         exit_code = 0
         try:
             from robotcode.runner.cli.robot import robot
 
+            app.verbose("Start robot.")
             try:
                 robot_ctx = robot.make_context("robot", args, parent=ctx)
                 robot.invoke(robot_ctx)

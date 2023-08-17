@@ -551,7 +551,7 @@ export class DebugManager {
   static async OnDebugpyStarted(
     session: vscode.DebugSession,
     _event: string,
-    options?: { port: number; addresses: undefined | string[] | null },
+    options?: { port: number; addresses: undefined | string[] | null; processId?: number | null },
   ): Promise<boolean> {
     if (
       session.type === "robotcode" &&
