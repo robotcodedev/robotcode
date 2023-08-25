@@ -11,17 +11,22 @@ Suite Setup    Do Something    1    2
 *** Test Cases ***
 first
     do something from resource    hello     INFO    False                    #
-#                               ^^^^^^^ first param resource
-#                                        ^^^^^^^^^  second param resource
-#                                                   ^^^^^^^  second param resource
+#                                 ^^^^^  first param resource
+#                                           ^^^^  second param resource
+#                                                   ^^^^^  second param resource
 #                                                          ^^^^^^^  no param resource
     Do Something        #
 #                   ^ without params
-    ${a}    ${b}    Do Something    1    2
+    ${a}    ${b}    Do Something    1    2                #
 #                                   ^ with params
 #                                        ^ second param
 #                                             ^ no param
 
+    Do Something With Enum    1    True    A    #
+#                             ^ int params
+#                                  ^^^^ bool params
+#                                          ^ enum params
+#                                             ^ no params
 
 *** Keywords ***
 do something from resource

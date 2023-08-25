@@ -1662,7 +1662,7 @@ class CompletionCollector(ModelHelperMixin):
                                 name=e.name,
                             ),
                         )
-                        for i, e in enumerate(init.args)
+                        for i, e in enumerate(init.arguments)
                         if e.kind
                         not in [
                             KeywordArgumentKind.VAR_POSITIONAL,
@@ -1992,7 +1992,7 @@ class CompletionCollector(ModelHelperMixin):
                                 name=e.name,
                             ),
                         )
-                        for i, e in enumerate(init.args)
+                        for i, e in enumerate(init.arguments)
                         if e.kind
                         not in [
                             KeywordArgumentKind.VAR_POSITIONAL,
@@ -2110,7 +2110,7 @@ class CompletionCollector(ModelHelperMixin):
                 insert_text_format=InsertTextFormat.PLAIN_TEXT,
                 text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
             )
-            for i, e in enumerate(result[0].args)
+            for i, e in enumerate(result[0].arguments)
             if e.kind
             not in [
                 KeywordArgumentKind.VAR_POSITIONAL,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import asyncio
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Type, cast
 
 from robotcode.core.logging import LoggingDescriptor
@@ -8,7 +9,7 @@ from robotcode.core.lsp.types import InlayHint, InlayHintKind, Range
 from robotcode.language_server.common.decorators import language_id
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import InlayHintsConfig
-from robotcode.language_server.robotframework.diagnostics.library_doc import KeywordArgumentKind
+from robotcode.language_server.robotframework.diagnostics.library_doc import KeywordArgumentKind, KeywordDoc, LibraryDoc
 from robotcode.language_server.robotframework.diagnostics.namespace import Namespace
 from robotcode.language_server.robotframework.utils.ast_utils import Token, range_from_node, range_from_token
 from robotcode.language_server.robotframework.utils.async_ast import iter_nodes
@@ -89,8 +90,6 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
         namespace: Namespace,
         config: InlayHintsConfig,
     ) -> Optional[List[InlayHint]]:
-        from robot.utils.escaping import split_from_equals
-
         kw_result = await self.get_keyworddoc_and_token_from_position(
             keyword_token.value,
             keyword_token,
@@ -107,24 +106,67 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
         if kw_doc is None:
             return None
 
+        return await self._get_inlay_hint(keyword_token, kw_doc, arguments, namespace, config)
+
+    async def _get_inlay_hint(
+        self,
+        keyword_token: Optional[Token],
+        kw_doc: KeywordDoc,
+        arguments: List[Token],
+        namespace: Namespace,
+        config: InlayHintsConfig,
+    ) -> Optional[List[InlayHint]]:
+        from robot.errors import DataError
+
         result: List[InlayHint] = []
 
         if config.parameter_names:
-            for i, arg_value in enumerate(arguments):
-                name, _ = split_from_equals(arg_value.value)
-                has_name = any(v for v in kw_doc.args if v.kind == KeywordArgumentKind.VAR_NAMED or v.name == name)
-                if not has_name and i < len(kw_doc.args):
-                    arg = kw_doc.args[i]
+            positional = None
+            if kw_doc.arguments_spec is not None:
+                try:
+                    positional, _ = kw_doc.arguments_spec.resolve(
+                        [a.value for a in arguments],
+                        None,
+                        resolve_variables_until=kw_doc.args_to_process,
+                        resolve_named=not kw_doc.is_any_run_keyword(),
+                        validate=False,
+                    )
+                except DataError:
+                    pass
+
+            if positional is not None:
+                kw_arguments = [
+                    a
+                    for a in kw_doc.arguments
+                    if a.kind
+                    not in [
+                        KeywordArgumentKind.NAMED_ONLY_MARKER,
+                        KeywordArgumentKind.POSITIONAL_ONLY_MARKER,
+                        KeywordArgumentKind.VAR_NAMED,
+                        KeywordArgumentKind.NAMED_ONLY,
+                    ]
+                ]
+                for i, _ in enumerate(positional):
+                    if i >= len(arguments):
+                        break
+
+                    arg = kw_arguments[i if i < len(kw_arguments) else len(kw_arguments) - 1]
+                    if i >= len(kw_arguments) and arg.kind not in [
+                        KeywordArgumentKind.VAR_POSITIONAL,
+                    ]:
+                        break
+
                     prefix = ""
                     if arg.kind == KeywordArgumentKind.VAR_POSITIONAL:
                         prefix = "*"
                     elif arg.kind == KeywordArgumentKind.VAR_NAMED:
                         prefix = "**"
+
                     result.append(
-                        InlayHint(range_from_token(arg_value).start, f"{prefix}{arg.name}=", InlayHintKind.PARAMETER)
+                        InlayHint(range_from_token(arguments[i]).start, f"{prefix}{arg.name}=", InlayHintKind.PARAMETER)
                     )
 
-        if config.namespaces:
+        if keyword_token is not None and config.namespaces:
             lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
             if lib_entry is None and kw_namespace is None:
                 if kw_doc.libtype == "LIBRARY":
@@ -227,3 +269,94 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
             return None
 
         return await self._handle_keywordcall_fixture_template(keyword_token, [], namespace, config)
+
+    async def handle_LibraryImport(  # noqa: N802
+        self,
+        document: TextDocument,
+        range: Range,
+        node: ast.AST,
+        model: ast.AST,
+        namespace: Namespace,
+        config: InlayHintsConfig,
+    ) -> Optional[List[InlayHint]]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import LibraryImport
+
+        library_node = cast(LibraryImport, node)
+
+        if not library_node.name:
+            return None
+
+        lib_doc: Optional[LibraryDoc] = None
+        try:
+            namespace = await self.parent.documents_cache.get_namespace(document)
+
+            lib_doc = await namespace.get_imported_library_libdoc(
+                library_node.name, library_node.args, library_node.alias
+            )
+
+            if lib_doc is None or lib_doc.errors:
+                lib_doc = await namespace.imports_manager.get_libdoc_for_library_import(
+                    str(library_node.name),
+                    (),
+                    str(document.uri.to_path().parent),
+                    variables=await namespace.get_resolvable_variables(),
+                )
+
+        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException:
+            return None
+
+        arguments = library_node.get_tokens(RobotToken.ARGUMENT)
+
+        for kw_doc in lib_doc.inits:
+            return await self._get_inlay_hint(None, kw_doc, arguments, namespace, config)
+
+        return None
+
+    async def handle_VariablesImport(  # noqa: N802
+        self,
+        document: TextDocument,
+        range: Range,
+        node: ast.AST,
+        model: ast.AST,
+        namespace: Namespace,
+        config: InlayHintsConfig,
+    ) -> Optional[List[InlayHint]]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import VariablesImport
+
+        library_node = cast(VariablesImport, node)
+
+        if not library_node.name:
+            return None
+
+        lib_doc: Optional[LibraryDoc] = None
+        try:
+            namespace = await self.parent.documents_cache.get_namespace(document)
+
+            lib_doc = await namespace.get_imported_variables_libdoc(
+                library_node.name,
+                library_node.args,
+            )
+
+            if lib_doc is None or lib_doc.errors:
+                lib_doc = await namespace.imports_manager.get_libdoc_for_variables_import(
+                    str(library_node.name),
+                    (),
+                    str(document.uri.to_path().parent),
+                    variables=await namespace.get_resolvable_variables(),
+                )
+
+        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException:
+            return None
+
+        arguments = library_node.get_tokens(RobotToken.ARGUMENT)
+
+        for kw_doc in lib_doc.inits:
+            return await self._get_inlay_hint(None, kw_doc, arguments, namespace, config)
+
+        return None

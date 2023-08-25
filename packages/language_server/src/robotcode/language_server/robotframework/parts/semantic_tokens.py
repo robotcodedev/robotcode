@@ -754,7 +754,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                         kw_doc = await namespace.find_keyword(kw_token.value)
 
                     if kw_doc and any(
-                        v for v in kw_doc.args if v.kind == KeywordArgumentKind.VAR_NAMED or v.name == name
+                        v for v in kw_doc.arguments if v.kind == KeywordArgumentKind.VAR_NAMED or v.name == name
                     ):
                         length = len(name)
                         yield RobotToken(ROBOT_NAMED_ARGUMENT, name, token.lineno, token.col_offset), node
@@ -800,10 +800,10 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                                     if (
                                         value is not None
                                         and kw_doc is not None
-                                        and kw_doc.args
+                                        and kw_doc.arguments
                                         and any(
                                             v
-                                            for v in kw_doc.args
+                                            for v in kw_doc.arguments
                                             if v.kind == KeywordArgumentKind.VAR_NAMED or v.name == name
                                         )
                                     ):
@@ -837,10 +837,10 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                                     if (
                                         value is not None
                                         and kw_doc is not None
-                                        and kw_doc.args
+                                        and kw_doc.arguments
                                         and any(
                                             v
-                                            for v in kw_doc.args
+                                            for v in kw_doc.arguments
                                             if v.kind == KeywordArgumentKind.VAR_NAMED or v.name == name
                                         )
                                     ):

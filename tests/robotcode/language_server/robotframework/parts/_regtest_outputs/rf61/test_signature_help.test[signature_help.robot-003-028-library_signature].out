@@ -3,18 +3,11 @@ data: !GeneratedTestData
   line: 3
   name: library signature
 result: !SignatureHelp
-  active_parameter: null
+  active_parameter: 0
   active_signature: 0
   signatures:
   - activeParameter: 0
-    documentation:
-      kind: !MarkupKind 'MARKDOWN'
-      value: '#### Documentation:
-
-        This is the constructor of the class.
-
-
-        '
+    documentation: null
     label: '(l: List[int] | None = ${None}, s: str = Hello World!, i: int = ${0},
       b: bool = ${False})'
     parameters:

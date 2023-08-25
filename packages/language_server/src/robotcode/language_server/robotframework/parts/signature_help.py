@@ -7,7 +7,6 @@ from typing import (
     Any,
     Awaitable,
     Callable,
-    List,
     Optional,
     Tuple,
     Type,
@@ -26,10 +25,11 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.language_server.common.decorators import language_id, retrigger_characters, trigger_characters
 from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.diagnostics.library_doc import KeywordDoc, LibraryDoc
+from robotcode.language_server.robotframework.diagnostics.library_doc import KeywordArgumentKind, KeywordDoc, LibraryDoc
 from robotcode.language_server.robotframework.parts.model_helper import ModelHelperMixin
 from robotcode.language_server.robotframework.parts.protocol_part import RobotLanguageServerProtocolPart
 from robotcode.language_server.robotframework.utils.ast_utils import (
+    Statement,
     Token,
     get_node_at_position,
     get_tokens_at_position,
@@ -94,7 +94,6 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         context: Optional[SignatureHelpContext] = None,
     ) -> Optional[SignatureHelp]:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Statement
 
         namespace = await self.parent.documents_cache.get_namespace(document)
 
@@ -110,17 +109,78 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
             return None
 
-        token_at_position_index = kw_node.tokens.index(token_at_position)
+        keyword_doc_and_token: Optional[Tuple[Optional[KeywordDoc], Token]] = None
+
+        keyword_token = kw_node.get_token(keyword_name_token_type)
+        if keyword_token is None:
+            return None
+
+        keyword_doc_and_token = await self.get_keyworddoc_and_token_from_position(
+            keyword_token.value,
+            keyword_token,
+            [t for t in kw_node.get_tokens(RobotToken.ARGUMENT)],
+            namespace,
+            range_from_token(keyword_token).start,
+            analyse_run_keywords=False,
+        )
+
+        if keyword_doc_and_token is None or keyword_doc_and_token[0] is None:
+            return None
+
+        keyword_doc = keyword_doc_and_token[0]
+
+        if keyword_doc.is_any_run_keyword():
+            # TODO
+            pass
+
+        return self._get_signature_help(keyword_doc, kw_node.tokens, token_at_position, position, context)
+
+    def _get_signature_help(
+        self,
+        keyword_doc: KeywordDoc,
+        tokens: Tuple[Token, ...],
+        token_at_position: Token,
+        position: Position,
+        context: Optional[SignatureHelpContext] = None,
+    ) -> Optional[SignatureHelp]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.utils.escaping import split_from_equals
+
+        argument_index = -1
+        named_arg = False
+
+        token_at_position_index = tokens.index(token_at_position)
+
+        if (
+            token_at_position.type in [RobotToken.EOL, RobotToken.SEPARATOR]
+            and token_at_position_index > 2
+            and tokens[token_at_position_index - 2].type == RobotToken.CONTINUATION
+            and position.character < range_from_token(tokens[token_at_position_index - 2]).end.character + 2
+        ):
+            return None
+
+        token_at_position_index = tokens.index(token_at_position)
 
         argument_token_index = token_at_position_index
-        while argument_token_index >= 0 and kw_node.tokens[argument_token_index].type != RobotToken.ARGUMENT:
+        while argument_token_index >= 0 and tokens[argument_token_index].type != RobotToken.ARGUMENT:
             argument_token_index -= 1
 
-        arguments = kw_node.get_tokens(RobotToken.ARGUMENT)
+        if (
+            token_at_position.type == RobotToken.EOL
+            and len(tokens) > 1
+            and tokens[argument_token_index - 1].type == RobotToken.CONTINUATION
+        ):
+            argument_token_index -= 2
+            while argument_token_index >= 0 and tokens[argument_token_index].type != RobotToken.ARGUMENT:
+                argument_token_index -= 1
+
+        arguments = [a for a in tokens if a.type == RobotToken.ARGUMENT]
+
+        argument_token: Optional[Token] = None
 
         if argument_token_index >= 0:
-            argument_token = kw_node.tokens[argument_token_index]
-            if argument_token.type == RobotToken.ARGUMENT:
+            argument_token = tokens[argument_token_index]
+            if argument_token is not None and argument_token.type == RobotToken.ARGUMENT:
                 argument_index = arguments.index(argument_token)
             else:
                 argument_index = 0
@@ -135,50 +195,77 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
             if position.is_in_range(r) or r.end == position:
                 argument_index += 1
+                argument_token = None
 
         if argument_index < 0:
             return None
 
-        result: Optional[Tuple[Optional[KeywordDoc], Token]] = None
+        kw_arguments = [
+            a
+            for a in keyword_doc.arguments
+            if a.kind
+            not in [
+                KeywordArgumentKind.POSITIONAL_ONLY_MARKER,
+                KeywordArgumentKind.NAMED_ONLY_MARKER,
+            ]
+        ]
 
-        keyword_token = kw_node.get_token(keyword_name_token_type)
-        if keyword_token is None:
-            return None
-
-        result = await self.get_keyworddoc_and_token_from_position(
-            keyword_token.value,
-            keyword_token,
-            [cast(Token, t) for t in kw_node.get_tokens(RobotToken.ARGUMENT)],
-            namespace,
-            range_from_token(keyword_token).start,
-            analyse_run_keywords=False,
-        )
-
-        if result is None or result[0] is None:
-            return None
-
-        if result[0].is_any_run_keyword():
-            # TODO
-            pass
+        if argument_token is not None and argument_token.type == RobotToken.ARGUMENT:
+            arg_name_or_value, arg_value = split_from_equals(argument_token.value)
+            if arg_value is not None:
+                arg_name = arg_name_or_value
+                named_arg = True
+                argument_index = next((i for i, v in enumerate(kw_arguments) if v.name == arg_name), -1)
+                if argument_index == -1:
+                    argument_index = next(
+                        (i for i, v in enumerate(kw_arguments) if v.kind == KeywordArgumentKind.VAR_NAMED), -1
+                    )
 
         if (
-            argument_index >= len(result[0].args)
-            and len(result[0].args) > 0
-            and not str(result[0].args[-1]).startswith("*")
+            argument_index >= len(kw_arguments)
+            and len(kw_arguments) > 0
+            and kw_arguments[-1].kind in [KeywordArgumentKind.VAR_POSITIONAL, KeywordArgumentKind.VAR_NAMED]
         ):
             argument_index = -1
 
+        if not named_arg and argument_index >= 0 and argument_index < len(kw_arguments):
+            while (
+                argument_index >= 0
+                and argument_index < len(kw_arguments)
+                and kw_arguments[argument_index].kind in [KeywordArgumentKind.NAMED_ONLY]
+            ):
+                argument_index -= 1
+
+            if argument_index >= 0 and argument_index < len(kw_arguments):
+                args = arguments[:argument_index]
+                for a in args:
+                    arg_name_or_value, arg_value = split_from_equals(a.value)
+                    if arg_value is not None:
+                        argument_index = -1
+                        break
+
         signature = SignatureInformation(
-            label=result[0].parameter_signature,
-            parameters=[ParameterInformation(label=str(p)) for p in result[0].args],
-            active_parameter=min(argument_index, len(result[0].args) - 1),
-            documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=result[0].to_markdown(False)),
+            label=keyword_doc.parameter_signature,
+            parameters=[
+                ParameterInformation(
+                    label=str(p),
+                    documentation=MarkupContent(
+                        kind=MarkupKind.MARKDOWN,
+                        value="\n\n---\n\n".join([t.to_markdown() for t in keyword_doc.parent.get_types(p.types)]),
+                    )
+                    if p.types and keyword_doc.parent is not None
+                    else None,
+                )
+                for p in kw_arguments
+            ],
+            active_parameter=argument_index,
+            documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown(False)),
         )
 
         return SignatureHelp(
             signatures=[signature],
             active_signature=0,
-            active_parameter=min(argument_index, len(result[0].args) - 1),
+            active_parameter=argument_index,
         )
 
     async def signature_help_KeywordCall(  # noqa: N802
@@ -210,10 +297,6 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import LibraryImport
 
-        # TODO from robot.utils.escaping import split_from_equals
-
-        namespace = await self.parent.documents_cache.get_namespace(document)
-
         library_node = cast(LibraryImport, node)
 
         if (
@@ -224,6 +307,8 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         lib_doc: Optional[LibraryDoc] = None
         try:
+            namespace = await self.parent.documents_cache.get_namespace(document)
+
             lib_doc = await namespace.get_imported_library_libdoc(
                 library_node.name, library_node.args, library_node.alias
             )
@@ -254,66 +339,18 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
             return None
 
-        token_at_position_index = library_node.tokens.index(token_at_position)
-
-        argument_token_index = token_at_position_index
-        while argument_token_index >= 0 and library_node.tokens[argument_token_index].type != RobotToken.ARGUMENT:
-            argument_token_index -= 1
-
-        arguments = library_node.get_tokens(RobotToken.ARGUMENT)
-
-        if argument_token_index >= 0:
-            argument_token = library_node.tokens[argument_token_index]
-            if argument_token.type == RobotToken.ARGUMENT:
-                argument_index = arguments.index(argument_token)
-            else:
-                argument_index = 0
-        else:
-            argument_index = -1
-
-        if whitespace_at_begin_of_token(token_at_position) > 1:
-            r = range_from_token(token_at_position)
-
-            ws_b = whitespace_from_begin_of_token(token_at_position)
-            r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
-
-            if position.is_in_range(r) or r.end == position:
-                argument_index += 1
-
-        if argument_index < 0:
+        if not lib_doc.inits:
             return None
 
-        signatures: List[SignatureInformation] = []
-
-        # TODO check if we have a named argument
-        # named_arg = False
-        # arg_name: Optional[str] = None
-
-        # if argument_index >= 0 and argument_index < len(arguments):
-        #     name, value = split_from_equals(arguments[argument_index].value)
-        #     if value is not None:
-        #         arg_name = name
-        #         named_arg = True
-
-        for init in lib_doc.inits.values():
-            if argument_index >= len(init.args) and len(init.args) > 0 and not str(init.args[-1]).startswith("*"):
-                argument_index = -1
-
-            signature = SignatureInformation(
-                label=init.parameter_signature,
-                parameters=[ParameterInformation(label=str(p)) for p in init.args],
-                active_parameter=min(argument_index, len(init.args) - 1),
-                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=init.to_markdown(False)),
-            )
-            signatures.append(signature)
-
-        if not signatures:
-            return None
-
-        return SignatureHelp(
-            signatures=signatures,
-            active_signature=0,
+        tokens = (
+            library_node.tokens
+            if with_name_token is None
+            else library_node.tokens[: library_node.tokens.index(with_name_token)]
         )
+        for kw_doc in lib_doc.inits:
+            return self._get_signature_help(kw_doc, tokens, token_at_position, position, context)
+
+        return None
 
     async def signature_help_VariablesImport(  # noqa: N802
         self,
@@ -325,26 +362,24 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import VariablesImport
 
-        # TODO from robot.utils.escaping import split_from_equals
+        variables_node = cast(VariablesImport, node)
 
-        namespace = await self.parent.documents_cache.get_namespace(document)
-
-        library_node = cast(VariablesImport, node)
-
-        name_token = library_node.get_token(RobotToken.NAME)
+        name_token = variables_node.get_token(RobotToken.NAME)
         if name_token is None:
             return None
 
-        if library_node.name is None or position <= range_from_token(name_token).extend(end_character=1).end:
+        if variables_node.name is None or position <= range_from_token(name_token).extend(end_character=1).end:
             return None
 
         lib_doc: Optional[LibraryDoc] = None
         try:
-            lib_doc = await namespace.get_imported_variables_libdoc(library_node.name, library_node.args)
+            namespace = await self.parent.documents_cache.get_namespace(document)
+
+            lib_doc = await namespace.get_imported_variables_libdoc(variables_node.name, variables_node.args)
 
             if lib_doc is None or lib_doc.errors:
-                lib_doc = await namespace.imports_manager.get_libdoc_for_library_import(
-                    str(library_node.name),
+                lib_doc = await namespace.imports_manager.get_libdoc_for_variables_import(
+                    str(variables_node.name),
                     (),
                     str(document.uri.to_path().parent),
                     variables=await namespace.get_resolvable_variables(),
@@ -355,7 +390,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         except BaseException:
             return None
 
-        tokens_at_position = tokens_at_position = get_tokens_at_position(library_node, position)
+        tokens_at_position = tokens_at_position = get_tokens_at_position(variables_node, position)
         if not tokens_at_position:
             return None
 
@@ -364,63 +399,10 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
             return None
 
-        token_at_position_index = library_node.tokens.index(token_at_position)
-
-        argument_token_index = token_at_position_index
-        while argument_token_index >= 0 and library_node.tokens[argument_token_index].type != RobotToken.ARGUMENT:
-            argument_token_index -= 1
-
-        arguments = library_node.get_tokens(RobotToken.ARGUMENT)
-
-        if argument_token_index >= 0:
-            argument_token = library_node.tokens[argument_token_index]
-            if argument_token.type == RobotToken.ARGUMENT:
-                argument_index = arguments.index(argument_token)
-            else:
-                argument_index = 0
-        else:
-            argument_index = -1
-
-        if whitespace_at_begin_of_token(token_at_position) > 1:
-            r = range_from_token(token_at_position)
-
-            ws_b = whitespace_from_begin_of_token(token_at_position)
-            r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
-
-            if position.is_in_range(r) or r.end == position:
-                argument_index += 1
-
-        if argument_index < 0:
+        if not lib_doc.inits:
             return None
 
-        signatures: List[SignatureInformation] = []
+        for kw_doc in lib_doc.inits:
+            return self._get_signature_help(kw_doc, variables_node.tokens, token_at_position, position, context)
 
-        # TODO check if we have a named argument
-        # named_arg = False
-        # arg_name: Optional[str] = None
-
-        # if argument_index >= 0 and argument_index < len(arguments):
-        #     name, value = split_from_equals(arguments[argument_index].value)
-        #     if value is not None:
-        #         arg_name = name
-        #         named_arg = True
-
-        for init in lib_doc.inits.values():
-            if argument_index >= len(init.args) and len(init.args) > 0 and not str(init.args[-1]).startswith("*"):
-                argument_index = -1
-
-            signature = SignatureInformation(
-                label=init.parameter_signature,
-                parameters=[ParameterInformation(label=str(p)) for p in init.args],
-                active_parameter=min(argument_index, len(init.args) - 1),
-                documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=init.to_markdown(False)),
-            )
-            signatures.append(signature)
-
-        if not signatures:
-            return None
-
-        return SignatureHelp(
-            signatures=signatures,
-            active_signature=0,
-        )
+        return None

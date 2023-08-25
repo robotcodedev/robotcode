@@ -2,4 +2,17 @@ data: !GeneratedTestData
   character: 43
   line: 52
   name: keyword call from user library with namespace in assignment
-result: null
+result:
+- !CodeAction
+  command:
+    arguments:
+    - <removed>
+    command: robotcode.showDocumentation
+    title: Open Documentation
+  data: null
+  diagnostics: null
+  disabled: null
+  edit: null
+  is_preferred: null
+  kind: source.openDocumentation
+  title: Open Documentation

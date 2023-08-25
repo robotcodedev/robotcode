@@ -1686,8 +1686,10 @@ class KeywordFinder:
         self.self_library_doc = library_doc
 
         self.diagnostics: List[DiagnosticsEntry] = []
-        self.multiple_keywords_result: Optional[Sequence[Tuple[Optional[LibraryEntry], KeywordDoc]]] = None
-        self._cache: Dict[Tuple[Optional[str], bool], Tuple[Optional[KeywordDoc], List[DiagnosticsEntry]]] = {}
+        self.multiple_keywords_result: Optional[List[KeywordDoc]] = None
+        self._cache: Dict[
+            Tuple[Optional[str], bool], Tuple[Optional[KeywordDoc], List[DiagnosticsEntry], Optional[List[KeywordDoc]]]
+        ] = {}
         self.handle_bdd_style = True
         self._all_keywords: Optional[List[LibraryEntry]] = None
         self._resource_keywords: Optional[List[ResourceEntry]] = None
@@ -1709,6 +1711,7 @@ class KeywordFinder:
 
             if cached is not None:
                 self.diagnostics = cached[1]
+                self.multiple_keywords_result = cached[2]
                 return cached[0]
 
             try:
@@ -1722,13 +1725,16 @@ class KeywordFinder:
                         )
                     )
             except KeywordError as e:
+                if e.multiple_keywords:
+                    self._add_to_multiple_keywords_result(e.multiple_keywords)
+
                 if raise_keyword_error:
                     raise
 
                 result = None
                 self.diagnostics.append(DiagnosticsEntry(str(e), DiagnosticSeverity.ERROR, "KeywordError"))
 
-            self._cache[(name, self.handle_bdd_style)] = (result, self.diagnostics)
+            self._cache[(name, self.handle_bdd_style)] = (result, self.diagnostics, self.multiple_keywords_result)
 
             return result
         except CancelSearchError:
@@ -1837,10 +1843,16 @@ class KeywordFinder:
                     result.append((v, kw))
         return result
 
+    def _add_to_multiple_keywords_result(self, kw: Iterable[KeywordDoc]) -> None:
+        if self.multiple_keywords_result is None:
+            self.multiple_keywords_result = list(kw)
+        else:
+            self.multiple_keywords_result.extend(kw)
+
     def _create_multiple_keywords_found_message(
         self, name: str, found: Sequence[Tuple[Optional[LibraryEntry], KeywordDoc]], implicit: bool = True
     ) -> str:
-        self.multiple_keywords_result = found
+        self._add_to_multiple_keywords_result([k for _, k in found])
 
         if any(e[1].is_embedded for e in found):
             error = f"Multiple keywords matching name '{name}' found"

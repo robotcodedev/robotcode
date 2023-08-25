@@ -3,13 +3,11 @@ data: !GeneratedTestData
   line: 12
   name: no param resource
 result: !SignatureHelp
-  active_parameter: -1
+  active_parameter: 3
   active_signature: 0
   signatures:
-  - activeParameter: -1
-    documentation:
-      kind: !MarkupKind 'MARKDOWN'
-      value: ''
+  - activeParameter: 3
+    documentation: null
     label: (message, level = INFO, html = ${False})
     parameters:
     - documentation: null

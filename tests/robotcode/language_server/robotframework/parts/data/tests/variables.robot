@@ -76,7 +76,7 @@ fourth
     ${a}    Evaluate    1
     ${b}    Evaluate    2
     ${c}    Set Variable    ${{$a+$b+$d}}
-    ${d}    Set Variable    ${{$a+$b+c}}
+    ${d}    Set Variable    ${{$a+$b+$c}}
     ${e}    Set Variable    ${{$a+$b+$e}}
     ${f}    Set Variable    ${{$a+$b+$e}}
 

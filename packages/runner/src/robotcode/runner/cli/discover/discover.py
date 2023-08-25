@@ -59,7 +59,7 @@ def _patch() -> None:
                 TestDefaults,
             )
         else:
-            from robot.running.builder.settings import (
+            from robot.running.builder.settings import (  #  pyright: ignore[reportMissingImports]
                 Defaults as TestDefaults,
             )
 
@@ -111,7 +111,7 @@ def _patch() -> None:
 
     elif get_robot_version() >= (6, 1):
         from robot.parsing.suitestructure import SuiteDirectory, SuiteFile
-        from robot.running.builder.settings import (
+        from robot.running.builder.settings import (  # pyright: ignore[reportMissingImports]
             TestDefaults,
         )
 

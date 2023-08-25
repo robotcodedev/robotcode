@@ -1,0 +1,18 @@
+data: !GeneratedTestData
+  character: 56
+  line: 12
+  name: second param resource
+result: !SignatureHelp
+  active_parameter: 2
+  active_signature: 0
+  signatures:
+  - activeParameter: 2
+    documentation: null
+    label: (message, level = INFO, html = ${False})
+    parameters:
+    - documentation: null
+      label: message
+    - documentation: null
+      label: level = INFO
+    - documentation: null
+      label: html = ${False}

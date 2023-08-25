@@ -66,8 +66,8 @@ class HasErrors(Protocol):
 
 
 @runtime_checkable
-class Statement(Protocol):
-    def get_token(self, type: str) -> Token:
+class Statement(HasTokens, Protocol):
+    def get_token(self, type: str) -> Optional[Token]:
         ...
 
     def get_tokens(self, *types: str) -> Tuple[Token, ...]:

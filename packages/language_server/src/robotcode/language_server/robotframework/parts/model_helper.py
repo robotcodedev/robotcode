@@ -614,7 +614,7 @@ class ModelHelperMixin:
 
         parts = token.value.split()
 
-        for index in range(0, len(parts)):
+        for index in range(len(parts)):
             prefix = " ".join(parts[: index + 1]).title()
 
             if prefix.title() in (

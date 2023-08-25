@@ -24,6 +24,7 @@ from typing import (
     List,
     NamedTuple,
     Optional,
+    Set,
     Tuple,
     TypeVar,
     Union,
@@ -222,6 +223,87 @@ RUN_KEYWORDS_MATCHER = KeywordMatcher(RUN_KEYWORDS_NAME)
 ALL_RUN_KEYWORDS_MATCHERS = [KeywordMatcher(e) for e in ALL_RUN_KEYWORDS]
 
 
+class TypeDocType(Enum):
+    ENUM = "Enum"
+    TYPED_DICT = "TypedDict"
+    CUSTOM = "Custom"
+    STANDARD = "Standard"
+
+
+@dataclass
+class TypedDictItem:
+    key: str
+    type: str
+    required: Optional[bool] = None
+
+
+@dataclass
+class EnumMember:
+    name: str
+    value: str
+
+
+@dataclass
+class TypeDoc:
+    type: str
+    name: str
+    doc: Optional[str] = None
+    accepts: List[str] = field(default_factory=list)
+    usages: List[str] = field(default_factory=list)
+    members: Optional[List[EnumMember]] = None
+    items: Optional[List[TypedDictItem]] = None
+
+    libname: Optional[str] = None
+    libtype: Optional[str] = None
+
+    doc_format: str = ROBOT_DOC_FORMAT
+
+    @single_call
+    def __hash__(self) -> int:
+        return hash(
+            (
+                self.type,
+                self.name,
+                self.libname,
+                self.libtype,
+                tuple(self.accepts),
+                tuple(self.usages),
+            )
+        )
+
+    def to_markdown(self, header_level: int = 2) -> str:
+        result = ""
+
+        result += f"##{'#'*header_level} {self.name} ({self.type})\n\n"
+
+        if self.doc:
+            result += f"###{'#'*header_level} Documentation:\n\n"
+            result += "\n\n"
+
+            if self.doc_format == ROBOT_DOC_FORMAT:
+                result += MarkDownFormatter().format(self.doc)
+            elif self.doc_format == REST_DOC_FORMAT:
+                result += convert_from_rest(self.doc)
+            else:
+                result += self.doc
+
+        if self.members:
+            result += f"\n\n###{'#'*header_level} Allowed Values:\n\n"
+            result += "- " + "\n- ".join(f"`{m.name}`" for m in self.members)
+
+        if self.items:
+            result += f"\n\n###{'#'*header_level} Dictionary Structure:\n\n"
+            result += "```\n{"
+            result += "\n ".join(f"'{m.key}': <{m.type}> {'# optional' if not m.required else ''}" for m in self.items)
+            result += "\n}\n```"
+
+        if self.accepts:
+            result += f"\n\n###{'#'*header_level} Converted Types:\n\n"
+            result += "- " + "\n- ".join(self.accepts)
+
+        return result
+
+
 @dataclass
 class Error:
     message: str
@@ -264,21 +346,21 @@ def robot_arg_repr(arg: Any) -> Optional[str]:
 
 
 @dataclass
-class KeywordArgumentDoc:
+class ArgumentInfo:
     name: str
     str_repr: str
     kind: KeywordArgumentKind
     required: bool
     default_value: Optional[Any] = None
-    types: Optional[Any] = None
+    types: Optional[List[str]] = None
 
     @staticmethod
-    def from_robot(arg: Any) -> KeywordArgumentDoc:
+    def from_robot(arg: Any) -> ArgumentInfo:
         from robot.running.arguments.argumentspec import ArgInfo
 
         robot_arg = cast(ArgInfo, arg)
 
-        return KeywordArgumentDoc(
+        return ArgumentInfo(
             name=robot_arg.name,
             default_value=robot_arg_repr(robot_arg),
             str_repr=str(arg),
@@ -289,11 +371,18 @@ class KeywordArgumentDoc:
 
     def __str__(self) -> str:
         prefix = ""
-        if self.kind == KeywordArgumentKind.VAR_POSITIONAL:
+        if self.kind == KeywordArgumentKind.POSITIONAL_ONLY_MARKER:
             prefix = "*"
+        elif self.kind == KeywordArgumentKind.NAMED_ONLY_MARKER:
+            prefix = "/"
         elif self.kind == KeywordArgumentKind.VAR_NAMED:
             prefix = "**"
-
+        elif self.kind == KeywordArgumentKind.VAR_POSITIONAL:
+            prefix = "*"
+        elif self.kind == KeywordArgumentKind.NAMED_ONLY:
+            prefix = "🏷"
+        elif self.kind == KeywordArgumentKind.POSITIONAL_ONLY:
+            prefix = "⟶"
         return (
             f"{prefix}{self.name!s}"
             f"{(': ' + (' | '.join(f'{s}' for s in self.types))) if self.types else ''}"
@@ -309,25 +398,6 @@ DEPRECATED_PATTERN = re.compile(r"^\*DEPRECATED(?P<message>.*)\*(?P<doc>.*)")
 
 
 @dataclass
-class ArgInfo:
-    name: str
-    kind: KeywordArgumentKind
-    required: bool
-
-    @staticmethod
-    def from_robot(arg: Any) -> ArgInfo:
-        from robot.running.arguments.argumentspec import ArgInfo as RobotArgInfo
-
-        robot_arg = cast(RobotArgInfo, arg)
-
-        return ArgInfo(
-            name=robot_arg.name,
-            kind=KeywordArgumentKind[robot_arg.kind],
-            required=robot_arg.required,
-        )
-
-
-@dataclass
 class ArgumentSpec:
     name: Optional[str]
     type: str
@@ -338,8 +408,6 @@ class ArgumentSpec:
     var_named: Any
     defaults: Any
     types: Any
-
-    arg_infos: Optional[List[ArgInfo]] = field(default=None, compare=False)
 
     @staticmethod
     def from_robot_argument_spec(spec: Any) -> ArgumentSpec:
@@ -353,7 +421,6 @@ class ArgumentSpec:
             var_named=spec.var_named,
             defaults={k: str(v) for k, v in spec.defaults.items()} if spec.defaults else {},
             types=None,
-            arg_infos=[ArgInfo.from_robot(info) for info in spec],
         )
 
     def resolve(
@@ -363,8 +430,14 @@ class ArgumentSpec:
         resolve_named: bool = True,
         resolve_variables_until: Any = None,
         dict_to_kwargs: bool = False,
-    ) -> Any:
-        from robot.running.arguments.argumentresolver import ArgumentResolver
+        validate: bool = True,
+    ) -> Tuple[List[Any], Dict[str, Any]]:
+        from robot.running.arguments.argumentresolver import (
+            ArgumentResolver,
+            DictToKwargs,
+            NamedArgumentResolver,
+            VariableReplacer,
+        )
         from robot.running.arguments.argumentspec import (
             ArgumentSpec as RobotArgumentSpec,
         )
@@ -382,20 +455,30 @@ class ArgumentSpec:
                 self.types,
             )
         self.__robot_arguments.name = self.name
-        resolver = ArgumentResolver(
-            self.__robot_arguments,
-            resolve_named=resolve_named,
-            resolve_variables_until=resolve_variables_until,
-            dict_to_kwargs=dict_to_kwargs,
-        )
-        resolver.resolve(arguments, variables)
+        if validate:
+            resolver = ArgumentResolver(
+                self.__robot_arguments,
+                resolve_named=resolve_named,
+                resolve_variables_until=resolve_variables_until,
+                dict_to_kwargs=dict_to_kwargs,
+            )
+            return cast(Tuple[List[Any], Dict[str, Any]], resolver.resolve(arguments, variables))
+
+        positional, named = NamedArgumentResolver(self.__robot_arguments).resolve(arguments, variables)
+        positional, named = VariableReplacer(resolve_variables_until).replace(positional, named, variables)
+        positional, named = DictToKwargs(self.__robot_arguments, dict_to_kwargs).handle(positional, named)
+        return positional, named
 
 
 @dataclass
 class KeywordDoc(SourceEntity):
     name: str = ""
     name_token: Optional[Token] = field(default=None, compare=False)
-    args: List[KeywordArgumentDoc] = field(default_factory=list, compare=False)
+    arguments: List[ArgumentInfo] = field(default_factory=list, compare=False)
+    arguments_spec: Optional[ArgumentSpec] = field(default=None, compare=False)
+    argument_definitions: Optional[List[ArgumentDefinition]] = field(
+        default=None, compare=False, metadata={"nosave": True}
+    )
     doc: str = field(default="", compare=False)
     tags: List[str] = field(default_factory=list)
     type: str = "keyword"
@@ -411,10 +494,9 @@ class KeywordDoc(SourceEntity):
     is_registered_run_keyword: bool = field(default=False, compare=False)
     args_to_process: Optional[int] = field(default=None, compare=False)
     deprecated: bool = field(default=False, compare=False)
-    arguments: Optional[ArgumentSpec] = field(default=None, compare=False)
-    argument_definitions: Optional[List[ArgumentDefinition]] = field(
-        default=None, compare=False, metadata={"nosave": True}
-    )
+
+    parent_digest: Optional[str] = field(default=None, init=False, metadata={"nosave": True})
+    parent: Optional[LibraryDoc] = field(default=None, init=False, metadata={"nosave": True})
 
     def _get_argument_definitions(self) -> Optional[List[ArgumentDefinition]]:
         return (
@@ -429,9 +511,9 @@ class KeywordDoc(SourceEntity):
                     name_token=None,
                     keyword_doc=self,
                 )
-                for a in self.arguments.arg_infos
+                for a in self.arguments
             ]
-            if self.arguments is not None and not self.is_error_handler and self.arguments.arg_infos
+            if self.arguments_spec is not None and not self.is_error_handler and self.arguments
             else []
         )
 
@@ -448,10 +530,8 @@ class KeywordDoc(SourceEntity):
         if self.argument_definitions is None:
             self.argument_definitions = self._get_argument_definitions()
 
-    parent: Optional[str] = field(default=None, metadata={"nosave": True})
-
     def __str__(self) -> str:
-        return f"{self.name}({', '.join(str(arg) for arg in self.args)})"
+        return f"{self.name}({', '.join(str(arg) for arg in self.arguments)})"
 
     @property
     def matcher(self) -> KeywordMatcher:
@@ -545,7 +625,7 @@ class KeywordDoc(SourceEntity):
             else:
                 result = ""
 
-        if self.args:
+        if self.arguments:
             result += f"\n##{'#'*header_level} Arguments: \n"
 
             result += "\n| | | | |"
@@ -553,12 +633,19 @@ class KeywordDoc(SourceEntity):
 
             escaped_pipe = " \\| "
 
-            for a in self.args:
+            for a in self.arguments:
                 prefix = ""
+                if a.kind in [KeywordArgumentKind.NAMED_ONLY_MARKER, KeywordArgumentKind.POSITIONAL_ONLY_MARKER]:
+                    continue
+
                 if a.kind == KeywordArgumentKind.VAR_POSITIONAL:
                     prefix = "*"
                 elif a.kind == KeywordArgumentKind.VAR_NAMED:
                     prefix = "**"
+                elif a.kind == KeywordArgumentKind.NAMED_ONLY:
+                    prefix = "🏷"
+                elif a.kind == KeywordArgumentKind.POSITIONAL_ONLY:
+                    prefix = "⟶"
 
                 result += (
                     f"\n| `{prefix}{a.name!s}`"
@@ -579,11 +666,27 @@ class KeywordDoc(SourceEntity):
 
     @property
     def signature(self) -> str:
-        return f"({self.type}) \"{self.name}\": ({', '.join(str(a) for a in self.args)})"
+        return (
+            f'({self.type}) "{self.name}": ('
+            + ", ".join(
+                str(a)
+                for a in self.arguments
+                if a.kind not in [KeywordArgumentKind.POSITIONAL_ONLY_MARKER, KeywordArgumentKind.NAMED_ONLY_MARKER]
+            )
+            + ")"
+        )
 
     @property
     def parameter_signature(self) -> str:
-        return f"({', '.join(str(a) for a in self.args)})"
+        return (
+            "("
+            + ", ".join(
+                str(a)
+                for a in self.arguments
+                if a.kind not in [KeywordArgumentKind.POSITIONAL_ONLY_MARKER, KeywordArgumentKind.NAMED_ONLY_MARKER]
+            )
+            + ")"
+        )
 
     def is_reserved(self) -> bool:
         return self.libname == RESERVED_LIBRARY_NAME
@@ -634,7 +737,9 @@ class KeywordDoc(SourceEntity):
 
 
 class KeywordError(Exception):
-    pass
+    def __init__(self, *args: Any, multiple_keywords: Optional[List[KeywordDoc]] = None, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.multiple_keywords = multiple_keywords
 
 
 @dataclass
@@ -671,7 +776,7 @@ class KeywordStore:
             file_info = "File"
         error = [f"{file_info} contains multiple keywords matching name '{key}':"]
         names = sorted(k.name for k, v in items)
-        raise KeywordError("\n    ".join(error + names))
+        raise KeywordError("\n    ".join(error + names), multiple_keywords=[v for _, v in items])
 
     def __contains__(self, __x: object) -> bool:
         return any(k == __x for k in self._matchers.keys())
@@ -736,15 +841,43 @@ class LibraryDoc:
     source: Optional[str] = None
     line_no: int = -1
     end_line_no: int = -1
-    inits: KeywordStore = field(default_factory=KeywordStore, compare=False)
-    keywords: KeywordStore = field(default_factory=KeywordStore, compare=False)
+    _inits: KeywordStore = field(default_factory=KeywordStore, compare=False)
+    _keywords: KeywordStore = field(default_factory=KeywordStore, compare=False)
+    types: List[TypeDoc] = field(default_factory=list)
     module_spec: Optional[ModuleSpec] = None
     errors: Optional[List[Error]] = field(default=None, compare=False)
     python_path: Optional[List[str]] = None
     stdout: Optional[str] = field(default=None, compare=False)
     has_listener: Optional[bool] = None
     library_type: Optional[LibraryType] = None
+
     digest: Optional[str] = field(init=False)
+
+    @property
+    def inits(self) -> KeywordStore:
+        return self._inits
+
+    @inits.setter
+    def inits(self, value: KeywordStore) -> None:
+        self._inits = value
+        self._update_keywords(self._inits)
+
+    @property
+    def keywords(self) -> KeywordStore:
+        return self._keywords
+
+    @keywords.setter
+    def keywords(self, value: KeywordStore) -> None:
+        self._keywords = value
+        self._update_keywords(self._keywords)
+
+    def _update_keywords(self, keywords: Optional[Iterable[KeywordDoc]]) -> None:
+        if not keywords:
+            return
+
+        for k in keywords:
+            k.parent = self
+            k.parent_digest = self.digest
 
     def __post_init__(self) -> None:
         s = (
@@ -753,6 +886,9 @@ class LibraryDoc:
             f"{self.type}|{self.scope}|{self.doc_format}"
         )
         self.digest = hashlib.sha224(s.encode("utf-8")).hexdigest()
+
+        self._update_keywords(self._inits)
+        self._update_keywords(self._keywords)
 
     @single_call
     def __hash__(self) -> int:
@@ -768,6 +904,12 @@ class LibraryDoc:
                 self.doc_format,
             )
         )
+
+    def get_types(self, type_names: Optional[List[str]]) -> List[TypeDoc]:
+        if not type_names:
+            return []
+
+        return [t for t in self.types if t.name in type_names]
 
     @property
     def is_deprecated(self) -> bool:
@@ -795,7 +937,7 @@ class LibraryDoc:
             def write_lines(*args: str) -> None:
                 result.writelines(i + "\n" for i in args)
 
-            if add_signature and any(v for v in self.inits.values() if v.args):
+            if add_signature and any(v for v in self.inits.values() if v.arguments):
                 for i in self.inits.values():
                     write_lines(i.to_markdown(header_level=header_level), "", "---")
 
@@ -866,7 +1008,7 @@ class LibraryDoc:
 
     def _get_doc_for_keywords(self, header_level: int = 2) -> str:
         result = ""
-        if any(v for v in self.inits.values() if v.args):
+        if any(v for v in self.inits.values() if v.arguments):
             result += "\n---\n\n"
             result += f"\n##{'#'*header_level} Importing\n\n"
 
@@ -901,7 +1043,7 @@ class LibraryDoc:
         entries = re.findall(r"^##\s+(.+)", doc, flags=re.MULTILINE)
 
         if not only_doc:
-            if any(v for v in self.inits.values() if v.args):
+            if any(v for v in self.inits.values() if v.arguments):
                 entries.append("Importing")
             if self.keywords:
                 entries.append("Keywords")
@@ -1499,11 +1641,13 @@ def get_library_doc(
                 elif isinstance(lib, robot.running.testlibraries._HybridLibrary):
                     libdoc.library_type = LibraryType.HYBRID
 
+                init_wrappers = [KeywordWrapper(lib.init, source)]
+                init_keywords = [(KeywordDocBuilder().build_keyword(k), k) for k in init_wrappers]
                 libdoc.inits = KeywordStore(
                     keywords=[
                         KeywordDoc(
                             name=libdoc.name,
-                            args=[KeywordArgumentDoc.from_robot(a) for a in kw[0].args],
+                            arguments=[ArgumentInfo.from_robot(a) for a in kw[0].args],
                             doc=kw[0].doc,
                             tags=list(kw[0].tags),
                             source=kw[0].source,
@@ -1517,12 +1661,9 @@ def get_library_doc(
                             longname=f"{libdoc.name}.{kw[0].name}",
                             doc_format=str(lib.doc_format) or ROBOT_DOC_FORMAT,
                             is_initializer=True,
-                            arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
-                            parent=libdoc.digest,
+                            arguments_spec=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
                         )
-                        for kw in [
-                            (KeywordDocBuilder().build_keyword(k), k) for k in [KeywordWrapper(lib.init, source)]
-                        ]
+                        for kw in init_keywords
                     ]
                 )
 
@@ -1540,13 +1681,15 @@ def get_library_doc(
                             )
                         )
 
+                keyword_wrappers = [KeywordWrapper(k, source) for k in lib.handlers]
+                keyword_docs = [(KeywordDocBuilder().build_keyword(k), k) for k in keyword_wrappers]
                 libdoc.keywords = KeywordStore(
                     source=libdoc.name,
                     source_type=libdoc.type,
                     keywords=[
                         KeywordDoc(
                             name=kw[0].name,
-                            args=[KeywordArgumentDoc.from_robot(a) for a in kw[0].args],
+                            arguments=[ArgumentInfo.from_robot(a) for a in kw[0].args],
                             doc=kw[0].doc,
                             tags=list(kw[0].tags),
                             source=kw[0].source,
@@ -1564,17 +1707,53 @@ def get_library_doc(
                             is_registered_run_keyword=RUN_KW_REGISTER.is_run_keyword(libdoc.name, kw[0].name),
                             args_to_process=RUN_KW_REGISTER.get_args_to_process(libdoc.name, kw[0].name),
                             deprecated=kw[0].deprecated,
-                            arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments)
+                            arguments_spec=ArgumentSpec.from_robot_argument_spec(kw[1].arguments)
                             if not kw[1].is_error_handler
                             else None,
-                            parent=libdoc.digest,
                         )
-                        for kw in [
-                            (KeywordDocBuilder().build_keyword(k), k)
-                            for k in [KeywordWrapper(k, source) for k in lib.handlers]
-                        ]
+                        for kw in keyword_docs
                     ],
                 )
+
+                if get_robot_version() >= (5, 0):
+                    from robot.libdocpkg.datatypes import TypeDoc as RobotTypeDoc
+                    from robot.running.arguments.argumentspec import TypeInfo
+
+                    def _yield_type_info(info: TypeInfo) -> TypeInfo:
+                        if not info.is_union:
+                            yield info
+                        for nested in info.nested:
+                            yield from _yield_type_info(nested)
+
+                    def _get_type_docs(keywords: List[Any], custom_converters: List[Any]) -> Set[RobotTypeDoc]:
+                        type_docs: Dict[RobotTypeDoc, Set[str]] = {}
+                        for kw in keywords:
+                            for arg in kw.args:
+                                kw.type_docs[arg.name] = {}
+                                for type_info in _yield_type_info(arg.type):
+                                    type_doc = RobotTypeDoc.for_type(type_info.type, custom_converters)
+                                    if type_doc:
+                                        kw.type_docs[arg.name][type_info.name] = type_doc.name
+                                        type_docs.setdefault(type_doc, set()).add(kw.name)
+                        for type_doc, usages in type_docs.items():
+                            type_doc.usages = sorted(usages, key=str.lower)
+                        return set(type_docs)
+
+                    libdoc.types = [
+                        TypeDoc(
+                            td.type,
+                            td.name,
+                            td.doc,
+                            td.accepts,
+                            td.usages,
+                            [EnumMember(m.name, m.value) for m in td.members] if td.members else None,
+                            [TypedDictItem(i.key, i.type, i.required) for i in td.items] if td.items else None,
+                            libname=libdoc.name,
+                            libtype=libdoc.type,
+                            doc_format=libdoc.doc_format,
+                        )
+                        for td in _get_type_docs([kw[0] for kw in keyword_docs + init_keywords], lib.converters)
+                    ]
 
             except (SystemExit, KeyboardInterrupt):
                 raise
@@ -1773,7 +1952,7 @@ def get_variables_doc(
                         keywords=[
                             KeywordDoc(
                                 name=libdoc.name,
-                                args=[KeywordArgumentDoc.from_robot(a) for a in kw[0].args],
+                                arguments=[ArgumentInfo.from_robot(a) for a in kw[0].args],
                                 doc=kw[0].doc,
                                 source=kw[0].source,
                                 line_no=kw[0].lineno if kw[0].lineno is not None else -1,
@@ -1785,8 +1964,7 @@ def get_variables_doc(
                                 libtype=libdoc.type,
                                 longname=f"{libdoc.name}.{kw[0].name}",
                                 is_initializer=True,
-                                arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
-                                parent=libdoc.digest,
+                                arguments_spec=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
                             )
                             for kw in [
                                 (KeywordDocBuilder().build_keyword(k), k)
@@ -1811,7 +1989,7 @@ def get_variables_doc(
                             keywords=[
                                 KeywordDoc(
                                     name=libdoc.name,
-                                    args=[],
+                                    arguments=[],
                                     doc=kw[0].doc,
                                     source=kw[0].source,
                                     line_no=kw[0].lineno if kw[0].lineno is not None else -1,
@@ -1823,7 +2001,6 @@ def get_variables_doc(
                                     libtype=libdoc.type,
                                     longname=f"{libdoc.name}.{kw[0].name}",
                                     is_initializer=True,
-                                    parent=libdoc.digest,
                                 )
                                 for kw in [
                                     (KeywordDocBuilder().build_keyword(k), k)
@@ -2294,7 +2471,7 @@ def get_model_doc(
         keywords=[
             KeywordDoc(
                 name=kw[0].name,
-                args=[KeywordArgumentDoc.from_robot(a) for a in kw[0].args],
+                arguments=[ArgumentInfo.from_robot(a) for a in kw[0].args],
                 doc=kw[0].doc,
                 tags=list(kw[0].tags),
                 source=str(kw[0].source),
@@ -2312,9 +2489,8 @@ def get_model_doc(
                 error_handler_message=str(cast(UserErrorHandler, kw[1]).error)
                 if isinstance(kw[1], UserErrorHandler)
                 else None,
-                arguments=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
+                arguments_spec=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
                 argument_definitions=get_argument_definitions_from_line(kw[0].lineno),
-                parent=libdoc.digest,
             )
             for kw in [(KeywordDocBuilder(resource=True).build_keyword(lw), lw) for lw in lib.handlers]
         ],

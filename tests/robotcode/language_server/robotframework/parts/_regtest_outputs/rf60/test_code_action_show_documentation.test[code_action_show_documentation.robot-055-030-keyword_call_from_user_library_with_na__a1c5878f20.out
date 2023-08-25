@@ -3,4 +3,17 @@ data: !GeneratedTestData
   line: 55
   name: keyword call from user library with namespace in assignment from different
     library
-result: null
+result:
+- !CodeAction
+  command:
+    arguments:
+    - <removed>
+    command: robotcode.showDocumentation
+    title: Open Documentation
+  data: null
+  diagnostics: null
+  disabled: null
+  edit: null
+  is_preferred: null
+  kind: source.openDocumentation
+  title: Open Documentation

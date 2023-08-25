@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from robotcode.core.async_tools import check_canceled, threaded
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
+    CodeDescription,
     Diagnostic,
     DiagnosticSeverity,
     Position,
@@ -170,7 +171,10 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                     if issue.severity == RuleSeverity.ERROR
                     else DiagnosticSeverity.HINT,
                     source=self.source_name,
-                    code=f"{issue.severity.value}{issue.rule_id}",
+                    code=f"{issue.name}-{issue.severity.value}{issue.rule_id}",
+                    code_description=CodeDescription(
+                        href=f"https://robocop.readthedocs.io/en/stable/rules.html#{issue.name}-{issue.severity.value}{issue.rule_id}".lower()
+                    ),
                 )
 
                 result.append(d)

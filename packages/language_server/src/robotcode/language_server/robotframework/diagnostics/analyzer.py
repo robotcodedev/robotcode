@@ -195,7 +195,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             )
 
             if isinstance(node, KeywordCall) and node.keyword:
-                kw_doc = self.finder.find_keyword(node.keyword)
+                kw_doc = self.finder.find_keyword(node.keyword, raise_keyword_error=False)
                 if kw_doc is not None and kw_doc.longname in ["BuiltIn.Comment"]:
                     severity = DiagnosticSeverity.HINT
 
@@ -408,20 +408,20 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         kw_range.start.character = r.end.character + 1
                         lib_range.end.character = kw_range.start.character - 1
 
-            result = self.finder.find_keyword(keyword)
+            result = self.finder.find_keyword(keyword, raise_keyword_error=False)
 
             if (
                 result is not None
                 and lib_entry is not None
                 and kw_namespace
-                and result.parent is not None
-                and result.parent != lib_entry.library_doc.digest
+                and result.parent_digest is not None
+                and result.parent_digest != lib_entry.library_doc.digest
             ):
                 entry = next(
                     (
                         v
                         for v in (await self.namespace.get_libraries()).values()
-                        if v.library_doc.digest == result.parent
+                        if v.library_doc.digest == result.parent_digest
                     ),
                     None,
                 )
@@ -430,7 +430,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         (
                             v
                             for v in (await self.namespace.get_resources()).values()
-                            if v.library_doc.digest == result.parent
+                            if v.library_doc.digest == result.parent_digest
                         ),
                         None,
                     )
@@ -452,8 +452,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
             if result is None:
                 if self.namespace.document is not None and self.finder.multiple_keywords_result is not None:
-                    for lib_entry, kw_doc in self.finder.multiple_keywords_result:
-                        self._keyword_references[kw_doc].add(Location(self.namespace.document.document_uri, kw_range))
+                    for d in self.finder.multiple_keywords_result:
+                        self._keyword_references[d].add(Location(self.namespace.document.document_uri, kw_range))
             else:
                 if self.namespace.document is not None:
                     self._keyword_references[result].add(Location(self.namespace.document.document_uri, kw_range))
@@ -536,8 +536,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
                 if not isinstance(node, (Template, TestTemplate)):
                     try:
-                        if result.arguments is not None:
-                            result.arguments.resolve(
+                        if result.arguments_spec is not None:
+                            result.arguments_spec.resolve(
                                 [v.value for v in argument_tokens],
                                 None,
                                 resolve_variables_until=result.args_to_process,
@@ -953,8 +953,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             result = self.finder.find_keyword(keyword)
             if result is not None:
                 try:
-                    if result.arguments is not None:
-                        result.arguments.resolve(
+                    if result.arguments_spec is not None:
+                        result.arguments_spec.resolve(
                             args,
                             None,
                             resolve_variables_until=result.args_to_process,

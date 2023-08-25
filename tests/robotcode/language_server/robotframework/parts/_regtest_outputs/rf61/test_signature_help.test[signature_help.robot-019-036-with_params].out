@@ -7,14 +7,7 @@ result: !SignatureHelp
   active_signature: 0
   signatures:
   - activeParameter: 0
-    documentation:
-      kind: !MarkupKind 'MARKDOWN'
-      value: '#### Documentation:
-
-        This is a method of the class.
-
-
-        '
+    documentation: null
     label: '(i: int, b: bool, l: List[int] | None = ${None})'
     parameters:
     - documentation: null
