@@ -2,6 +2,19 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.52.0 (2023-08-26)
+
+### Feat
+
+- **langserver**: inlay hint and signature help now shows the correct parameters and active parameter index, make both work for library and variable imports and show type informations if type hints are defined
+- **debugger**: add some more informations in verbose mode
+- **langserver**: goto, highlight, rename, hover, find references for named arguments
+- **robotcode**: internal cli args are now hidden
+
+### Fix
+
+- use import nodes to add references for libraries/resources and variables
+
 ## v0.51.1 (2023-08-14)
 
 ## v0.51.0 (2023-08-13)
