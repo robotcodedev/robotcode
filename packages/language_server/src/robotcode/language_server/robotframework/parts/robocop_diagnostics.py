@@ -12,7 +12,7 @@ from robotcode.core.lsp.types import (
     Position,
     Range,
 )
-from robotcode.core.utils.version import create_version_from_str
+from robotcode.core.utils.version import Version, create_version_from_str
 from robotcode.language_server.common.decorators import language_id
 from robotcode.language_server.common.parts.diagnostics import DiagnosticsResult
 from robotcode.language_server.common.parts.workspace import WorkspaceFolder
@@ -172,11 +172,25 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                     else DiagnosticSeverity.HINT,
                     source=self.source_name,
                     code=f"{issue.name}-{issue.severity.value}{issue.rule_id}",
-                    code_description=CodeDescription(
-                        href=f"https://robocop.readthedocs.io/en/stable/rules.html#{issue.name}-{issue.severity.value}{issue.rule_id}".lower()
-                    ),
+                    code_description=self.get_code_description(robocop_version, issue),
                 )
 
                 result.append(d)
 
         return result
+
+    def get_code_description(self, version: Version, issue: Any) -> Optional[CodeDescription]:
+        if version < (3, 0):
+            return None
+
+        base = f"https://robocop.readthedocs.io/en/{version.major}.{version.minor}.{version.patch}"
+
+        if version < (4, 0):
+            return CodeDescription(href=f"{base}/rules.html#{issue.name}".lower())
+
+        if version < (4, 1):
+            return CodeDescription(href=f"{base}/rules.html#{issue.name}-{issue.severity.value}{issue.rule_id}".lower())
+
+        return CodeDescription(
+            href=f"{base}/rules_list.html#{issue.name}-{issue.severity.value}{issue.rule_id}".lower()
+        )
