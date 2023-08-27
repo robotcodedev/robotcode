@@ -8,7 +8,7 @@
     },
     "variable_setting": {
       "name": "meta.variable.assign.robotframework",
-      "contentName": "string.unquoted.argument.robotframework",
+      "contentName": "constant.character.argument.robotframework",
       "begin": "^(?:([$@&%]\\{)(.+?}*)(\\})( ?=)?)",
       "beginCaptures": {
         "1": {
@@ -139,7 +139,7 @@
       ]
     },
     "keyword_call": {
-      "contentName": "string.unquoted.argument.robotframework",
+      "contentName": "constant.character.argument.robotframework",
       "begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(.*?)(?= {2,}| ?\\t ?| ?$)",
       "end": "^(?!\\s*\\.\\.\\.)",
       "beginCaptures": {
@@ -171,7 +171,7 @@
       "name": "meta.returning.keyword.call.robotframework"
     },
     "returning_keyword": {
-      "contentName": "string.unquoted.argument.robotframework",
+      "contentName": "constant.character.argument.robotframework",
       "name": "meta.returning.keyword.robotframework",
       "begin": "(?<=\\s)(?=\\s*(?:(?=[$@&])))((?:\\s)*(?:[$&@]{(?:.*?)}(?:\\[.*?\\])?(?: ?=?\\s*))*)(.*?)(?: {2,}| ?\\t ?|$)",
       "beginCaptures": {

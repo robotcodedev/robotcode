@@ -906,10 +906,15 @@ class LibraryDoc:
         )
 
     def get_types(self, type_names: Optional[List[str]]) -> List[TypeDoc]:
+        def alias(s: str) -> str:
+            if s == "boolean":
+                return "bool"
+            return s
+
         if not type_names:
             return []
 
-        return [t for t in self.types if t.name in type_names]
+        return [t for t in self.types if alias(t.name) in type_names]
 
     @property
     def is_deprecated(self) -> bool:
@@ -1715,7 +1720,7 @@ def get_library_doc(
                     ],
                 )
 
-                if get_robot_version() >= (5, 0):
+                if get_robot_version() >= (6, 1):
                     from robot.libdocpkg.datatypes import TypeDoc as RobotTypeDoc
                     from robot.running.arguments.argumentspec import TypeInfo
 

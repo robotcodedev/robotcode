@@ -27,6 +27,7 @@ from typing import (
 from robotcode.core.async_itertools import async_chain, async_chain_iterator
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
+    Command,
     CompletionContext,
     CompletionItem,
     CompletionItemKind,
@@ -104,6 +105,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
             ".",
             "/",
             "{",
+            "=",
             os.sep,
         ],
     )
@@ -2021,8 +2023,8 @@ class CompletionCollector(ModelHelperMixin):
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Statement
 
-        if context is None or context.trigger_kind != CompletionTriggerKind.INVOKED:
-            return []
+        # if context is None or context.trigger_kind != CompletionTriggerKind.INVOKED:
+        #     return []
 
         kw_node = cast(Statement, node)
 
@@ -2040,24 +2042,35 @@ class CompletionCollector(ModelHelperMixin):
         if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
             return None
 
-        if (
-            token_at_position.type in [RobotToken.EOL, RobotToken.SEPARATOR]
-            and len(tokens_at_position) > 1
-            and tokens_at_position[-2].type == RobotToken.KEYWORD
-        ):
+        keyword_doc_and_token: Optional[Tuple[Optional[KeywordDoc], Token]] = None
+
+        keyword_token = kw_node.get_token(keyword_name_token_type)
+        if keyword_token is None:
             return None
 
-        token_at_position_index = kw_node.tokens.index(token_at_position)
+        keyword_doc_and_token = await self.get_keyworddoc_and_token_from_position(
+            keyword_token.value,
+            keyword_token,
+            [t for t in kw_node.get_tokens(RobotToken.ARGUMENT)],
+            self.namespace,
+            range_from_token(keyword_token).start,
+            analyse_run_keywords=False,
+        )
 
-        argument_token_index = token_at_position_index
-        while argument_token_index >= 0 and kw_node.tokens[argument_token_index].type != RobotToken.ARGUMENT:
-            argument_token_index -= 1
+        if keyword_doc_and_token is None or keyword_doc_and_token[0] is None:
+            return None
 
-        argument_token: Optional[RobotToken] = None
-        if argument_token_index >= 0:
-            argument_token = kw_node.tokens[argument_token_index]
+        keyword_doc = keyword_doc_and_token[0]
 
-        result: Optional[Tuple[Optional[KeywordDoc], Token]]
+        if keyword_doc.is_any_run_keyword():
+            # TODO
+            pass
+
+        argument_index, kw_arguments, argument_token = self.get_argument_info_at_position(
+            keyword_doc, kw_node.tokens, token_at_position, position
+        )
+
+        complete_argument_names = True
 
         completion_range = range_from_token(argument_token or token_at_position)
         completion_range.end = range_from_token(token_at_position).end
@@ -2069,56 +2082,107 @@ class CompletionCollector(ModelHelperMixin):
         else:
             if "=" in (argument_token or token_at_position).value:
                 equal_index = (argument_token or token_at_position).value.index("=")
-                if completion_range.start.character + equal_index < position.character:
-                    return None
+                if position.character < completion_range.start.character + equal_index:
+                    completion_range.end.character = completion_range.start.character + equal_index + 1
+                else:
+                    complete_argument_names = False
+                    completion_range.start.character = completion_range.start.character + equal_index + 1
+                    completion_range.end = position
 
-                completion_range.end.character = completion_range.start.character + equal_index + 1
-            else:
-                completion_range.end = position
+        result = []
 
-        result = await self.get_keyworddoc_and_token_from_position(
-            keyword_token.value,
-            keyword_token,
-            [cast(Token, t) for t in kw_node.get_tokens(RobotToken.ARGUMENT)],
-            self.namespace,
-            range_from_token(keyword_token).start,
-            analyse_run_keywords=False,
-        )
+        if argument_index >= 0 and keyword_doc.parent is not None and argument_index < len(kw_arguments):
+            type_infos = keyword_doc.parent.get_types(kw_arguments[argument_index].types)
+            for i, type_info in enumerate(type_infos):
+                if type_info.name == "boolean":
+                    snippets = [
+                        "True",
+                        "False",
+                    ]
+                    for i, snippet in enumerate(snippets):
+                        result.append(
+                            CompletionItem(
+                                label=snippet,
+                                kind=CompletionItemKind.VALUE,
+                                detail=type_info.name,
+                                documentation=MarkupContent(MarkupKind.MARKDOWN, type_info.to_markdown()),
+                                sort_text=f"02{i:03}_{snippet}",
+                                insert_text_format=InsertTextFormat.PLAIN_TEXT,
+                                text_edit=TextEdit(
+                                    range=completion_range,
+                                    new_text=snippet,
+                                ),
+                            )
+                        )
 
-        if result is None or result[0] is None:
-            return None
+                if type_info.members:
+                    for member in type_info.members:
+                        result.append(
+                            CompletionItem(
+                                label=member.name,
+                                kind=CompletionItemKind.ENUM_MEMBER,
+                                detail=type_info.name,
+                                documentation=MarkupContent(
+                                    MarkupKind.MARKDOWN, f"```python\n{member.name} = {member.value}\n```"
+                                ),
+                                sort_text=f"01{i}_{member.name}",
+                                insert_text_format=InsertTextFormat.PLAIN_TEXT,
+                                text_edit=TextEdit(
+                                    range=completion_range,
+                                    new_text=member.name,
+                                ),
+                            )
+                        )
+                if type_info.items:
+                    snippets = [
+                        "{"
+                        + ", ".join(
+                            (str(m.key) + ": ${" + str(i + 1) + "}")
+                            for i, m in enumerate(type_info.items)
+                            if m.required
+                        )
+                        + "}",
+                        f"{{{', '.join((str(m.key)+': ${'+str(i+1)+'}') for i, m in enumerate(type_info.items))}}}",
+                    ]
+                    for i, snippet in enumerate(snippets):
+                        result.append(
+                            CompletionItem(
+                                label=snippet,
+                                kind=CompletionItemKind.STRUCT,
+                                detail=type_info.name,
+                                documentation=MarkupContent(MarkupKind.MARKDOWN, type_info.to_markdown()),
+                                sort_text=f"02{i:03}_{snippet}",
+                                insert_text_format=InsertTextFormat.SNIPPET,
+                                text_edit=TextEdit(
+                                    range=completion_range,
+                                    new_text=snippet,
+                                ),
+                            )
+                        )
 
-        if result[0].is_any_run_keyword():
-            # TODO: complete run keyword
-            # ks = await self.get_keyworddoc_and_token_from_position(
-            #     keyword_token.value,
-            #     keyword_token,
-            #     [cast(Token, t) for t in kw_node.get_tokens(RobotToken.ARGUMENT)],
-            #     namespace,
-            #     position,
-            #     analyse_run_keywords=True,
-            # )
-            pass
-
-        return [
-            CompletionItem(
-                label=f"{e.name}=",
-                kind=CompletionItemKind.VARIABLE,
-                detail="Argument",
-                filter_text=e.name,
-                sort_text=f"02{i}_{e.name}=",
-                insert_text_format=InsertTextFormat.PLAIN_TEXT,
-                text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
-            )
-            for i, e in enumerate(result[0].arguments)
-            if e.kind
-            not in [
-                KeywordArgumentKind.VAR_POSITIONAL,
-                KeywordArgumentKind.VAR_NAMED,
-                KeywordArgumentKind.NAMED_ONLY_MARKER,
-                KeywordArgumentKind.POSITIONAL_ONLY_MARKER,
+        if complete_argument_names:
+            result += [
+                CompletionItem(
+                    label=f"{e.name}=",
+                    kind=CompletionItemKind.VARIABLE,
+                    detail="Argument",
+                    filter_text=e.name,
+                    sort_text=f"03{i:03}_{e.name}=",
+                    insert_text_format=InsertTextFormat.PLAIN_TEXT,
+                    text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
+                    command=Command("", "editor.action.triggerSuggest", []),
+                )
+                for i, e in enumerate(kw_arguments)
+                if e.kind
+                not in [
+                    KeywordArgumentKind.VAR_POSITIONAL,
+                    KeywordArgumentKind.VAR_NAMED,
+                    KeywordArgumentKind.NAMED_ONLY_MARKER,
+                    KeywordArgumentKind.POSITIONAL_ONLY_MARKER,
+                ]
             ]
-        ]
+
+        return result
 
     async def complete_KeywordCall(  # noqa: N802
         self,

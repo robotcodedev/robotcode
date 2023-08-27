@@ -26,6 +26,8 @@ from robotcode.language_server.robotframework.diagnostics.entities import (
     VariableNotFoundDefinition,
 )
 from robotcode.language_server.robotframework.diagnostics.library_doc import (
+    ArgumentInfo,
+    KeywordArgumentKind,
     KeywordDoc,
     KeywordMatcher,
     LibraryDoc,
@@ -40,6 +42,8 @@ from robotcode.language_server.robotframework.utils.ast_utils import (
     range_from_token,
     strip_variable_token,
     tokenize_variables,
+    whitespace_at_begin_of_token,
+    whitespace_from_begin_of_token,
 )
 from robotcode.language_server.robotframework.utils.version import get_robot_version
 
@@ -634,3 +638,120 @@ class ModelHelperMixin:
             (k for k in library_doc.keywords.get_all(value) if k.line_no == line),
             None,
         )
+
+    def get_argument_info_at_position(
+        self,
+        keyword_doc: KeywordDoc,
+        tokens: Tuple[Token, ...],
+        token_at_position: Token,
+        position: Position,
+    ) -> Tuple[int, List[ArgumentInfo], Optional[Token]]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.utils.escaping import split_from_equals
+
+        argument_index = -1
+        named_arg = False
+
+        kw_arguments = [
+            a
+            for a in keyword_doc.arguments
+            if a.kind
+            not in [
+                KeywordArgumentKind.POSITIONAL_ONLY_MARKER,
+                KeywordArgumentKind.NAMED_ONLY_MARKER,
+            ]
+        ]
+
+        token_at_position_index = tokens.index(token_at_position)
+
+        if (
+            token_at_position.type in [RobotToken.EOL, RobotToken.SEPARATOR]
+            and token_at_position_index > 2
+            and tokens[token_at_position_index - 1].type == RobotToken.CONTINUATION
+            and position.character < range_from_token(tokens[token_at_position_index - 1]).end.character + 2
+        ):
+            return -1, kw_arguments, None
+
+        token_at_position_index = tokens.index(token_at_position)
+
+        argument_token_index = token_at_position_index
+        while argument_token_index >= 0 and tokens[argument_token_index].type != RobotToken.ARGUMENT:
+            argument_token_index -= 1
+
+        if (
+            token_at_position.type == RobotToken.EOL
+            and len(tokens) > 1
+            and tokens[argument_token_index - 1].type == RobotToken.CONTINUATION
+        ):
+            argument_token_index -= 2
+            while argument_token_index >= 0 and tokens[argument_token_index].type != RobotToken.ARGUMENT:
+                argument_token_index -= 1
+
+        arguments = [a for a in tokens if a.type == RobotToken.ARGUMENT]
+
+        argument_token: Optional[Token] = None
+
+        if argument_token_index >= 0:
+            argument_token = tokens[argument_token_index]
+            if argument_token is not None and argument_token.type == RobotToken.ARGUMENT:
+                argument_index = arguments.index(argument_token)
+            else:
+                argument_index = 0
+        else:
+            argument_index = -1
+
+        if whitespace_at_begin_of_token(token_at_position) > 1:
+            r = range_from_token(token_at_position)
+
+            ws_b = whitespace_from_begin_of_token(token_at_position)
+            r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
+
+            if position.is_in_range(r, True):
+                argument_index += 1
+                argument_token = None
+
+            if argument_token is None:
+                r.end.character = r.start.character + whitespace_at_begin_of_token(token_at_position) - 3
+                if not position.is_in_range(r, False):
+                    argument_token_index += 2
+                    if argument_token_index < len(tokens) and tokens[argument_token_index].type == RobotToken.ARGUMENT:
+                        argument_token = tokens[argument_token_index]
+
+        if argument_index < 0:
+            return -1, kw_arguments, argument_token
+
+        if argument_token is not None and argument_token.type == RobotToken.ARGUMENT:
+            arg_name_or_value, arg_value = split_from_equals(argument_token.value)
+            if arg_value is not None:
+                arg_name = arg_name_or_value
+                named_arg = True
+                argument_index = next((i for i, v in enumerate(kw_arguments) if v.name == arg_name), -1)
+                if argument_index == -1:
+                    argument_index = next(
+                        (i for i, v in enumerate(kw_arguments) if v.kind == KeywordArgumentKind.VAR_NAMED), -1
+                    )
+
+        if (
+            argument_index >= len(kw_arguments)
+            and len(kw_arguments) > 0
+            and kw_arguments[-1].kind in [KeywordArgumentKind.VAR_POSITIONAL, KeywordArgumentKind.VAR_NAMED]
+        ):
+            argument_index = len(kw_arguments) - 1
+
+        if not named_arg and argument_index >= 0 and argument_index < len(kw_arguments) and argument_token is not None:
+            while (
+                argument_index >= 0
+                and argument_index < len(kw_arguments)
+                and kw_arguments[argument_index].kind in [KeywordArgumentKind.NAMED_ONLY]
+            ):
+                argument_index -= 1
+
+            if argument_index >= 0 and argument_index < len(kw_arguments):
+                args = arguments[:argument_index]
+                for a in args:
+                    arg_name_or_value, arg_value = split_from_equals(a.value)
+                    if arg_value is not None:
+                        argument_index = -1
+                        break
+
+        return argument_index, kw_arguments, argument_token

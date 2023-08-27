@@ -150,7 +150,11 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
                     if i >= len(arguments):
                         break
 
-                    arg = kw_arguments[i if i < len(kw_arguments) else len(kw_arguments) - 1]
+                    index = i if i < len(kw_arguments) else len(kw_arguments) - 1
+                    if index < 0:
+                        continue
+
+                    arg = kw_arguments[index]
                     if i >= len(kw_arguments) and arg.kind not in [
                         KeywordArgumentKind.VAR_POSITIONAL,
                     ]:
