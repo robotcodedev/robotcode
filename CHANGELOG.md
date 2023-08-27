@@ -2,6 +2,13 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.53.0 (2023-08-28)
+
+### Feat
+
+- **langserver**: first version of completion of enums and typed dicts for RF >= 6.1
+- **robocop**: with code descriptions in `robocop` diagnostics you can jump directly to the website where the rule is explained
+
 ## v0.52.0 (2023-08-26)
 
 ### Feat
