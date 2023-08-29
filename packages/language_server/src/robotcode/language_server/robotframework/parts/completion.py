@@ -2087,7 +2087,6 @@ class CompletionCollector(ModelHelperMixin):
                 else:
                     complete_argument_names = False
                     completion_range.start.character = completion_range.start.character + equal_index + 1
-                    completion_range.end = position
 
         result = []
 
