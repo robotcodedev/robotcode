@@ -2162,7 +2162,7 @@ class CompletionCollector(ModelHelperMixin):
         if complete_argument_names:
             result += [
                 CompletionItem(
-                    label=f"{e.name}=",
+                    label=f"{e.signature(False)}=",
                     kind=CompletionItemKind.VARIABLE,
                     detail="Argument",
                     filter_text=e.name,

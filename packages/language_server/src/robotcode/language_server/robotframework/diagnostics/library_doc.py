@@ -24,6 +24,7 @@ from typing import (
     List,
     NamedTuple,
     Optional,
+    Sequence,
     Set,
     Tuple,
     TypeVar,
@@ -370,25 +371,32 @@ class ArgumentInfo:
         )
 
     def __str__(self) -> str:
+        return self.signature()
+
+    def signature(self, add_types: bool = True) -> str:
         prefix = ""
         if self.kind == KeywordArgumentKind.POSITIONAL_ONLY_MARKER:
-            prefix = "*"
+            prefix = "*\u200d"
         elif self.kind == KeywordArgumentKind.NAMED_ONLY_MARKER:
-            prefix = "/"
+            prefix = "/\u200d"
         elif self.kind == KeywordArgumentKind.VAR_NAMED:
-            prefix = "**"
+            prefix = "*\u200d*\u200d"
         elif self.kind == KeywordArgumentKind.VAR_POSITIONAL:
-            prefix = "*"
+            prefix = "*\u200d"
         elif self.kind == KeywordArgumentKind.NAMED_ONLY:
-            prefix = "🏷"
+            prefix = "🏷\u200d"
         elif self.kind == KeywordArgumentKind.POSITIONAL_ONLY:
-            prefix = "⟶"
-        return (
-            f"{prefix}{self.name!s}"
-            f"{(': ' + (' | '.join(f'{s}' for s in self.types))) if self.types else ''}"
-            f"{' =' if self.default_value is not None else ''}"
-            f"{f' {self.default_value!s}' if self.default_value else ''}"
-        )
+            prefix = "⟶\u200d"
+        result = f"{prefix}{self.name!s}"
+        if add_types:
+            result += (
+                f"{(': ' + (' | '.join(f'{s}' for s in self.types))) if self.types else ''}"
+                f"{' =' if self.default_value is not None else ''}"
+                f"{f' {self.default_value!s}' if self.default_value else ''}"
+                if add_types
+                else ""
+            )
+        return result
 
     def __hash__(self) -> int:
         return id(self)
@@ -676,13 +684,12 @@ class KeywordDoc(SourceEntity):
             + ")"
         )
 
-    @property
-    def parameter_signature(self) -> str:
+    def parameter_signature(self, full_signatures: Optional[Sequence[int]] = None) -> str:
         return (
             "("
             + ", ".join(
-                str(a)
-                for a in self.arguments
+                a.signature(full_signatures is None or i in full_signatures)
+                for i, a in enumerate(self.arguments)
                 if a.kind not in [KeywordArgumentKind.POSITIONAL_ONLY_MARKER, KeywordArgumentKind.NAMED_ONLY_MARKER]
             )
             + ")"
