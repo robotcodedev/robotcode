@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import io
 import multiprocessing as mp
 import socket
 import threading
@@ -8,7 +9,9 @@ import traceback
 import urllib.parse
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
+from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from os import PathLike
 from string import Template
 from threading import Thread
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
@@ -114,6 +117,14 @@ class LibDocRequestHandler(SimpleHTTPRequestHandler):
 
     def log_error(self, format: str, *args: Any) -> None:
         self._logger.error(lambda: f"{self.address_string()} - {format % args}")
+
+    def list_directory(self, _path: Union[str, PathLike[str]]) -> io.BytesIO | None:
+        self.send_error(
+            HTTPStatus.FORBIDDEN,
+            "You don't have permission to access this resource.",
+            "Directory browsing is not allowed.",
+        )
+        return None
 
     def do_GET(self) -> None:  # noqa: N802
         query = parse_qs(urlparse(self.path).query)
