@@ -3,10 +3,10 @@ data: !GeneratedTestData
   line: 33
   name: BuiltIn no params
 result: !SignatureHelp
-  active_parameter: 0
+  active_parameter: -1
   active_signature: 0
   signatures:
-  - activeParameter: 0
+  - activeParameter: -1
     documentation: null
     label: ()
     parameters: []

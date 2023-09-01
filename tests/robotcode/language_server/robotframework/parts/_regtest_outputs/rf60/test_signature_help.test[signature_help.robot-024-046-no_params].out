@@ -3,10 +3,10 @@ data: !GeneratedTestData
   line: 24
   name: no params
 result: !SignatureHelp
-  active_parameter: 3
+  active_parameter: -1
   active_signature: 0
   signatures:
-  - activeParameter: 3
+  - activeParameter: -1
     documentation: null
     label: '(i: int, b: bool, l: TestEnum = A)'
     parameters:

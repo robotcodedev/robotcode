@@ -1582,12 +1582,9 @@ class CompletionCollector(ModelHelperMixin):
             ):
                 return None
 
-            with_name_token = next((v for v in import_node.tokens if v.value == "WITH NAME"), None)
+            with_name_token = next((v for v in import_node.tokens if v.type == RobotToken.WITH_NAME), None)
             if with_name_token is not None and position >= range_from_token(with_name_token).start:
                 return None
-
-            if context is None or context.trigger_kind != CompletionTriggerKind.INVOKED:
-                return []
 
             kw_node = cast(Statement, node)
 
@@ -1598,102 +1595,41 @@ class CompletionCollector(ModelHelperMixin):
 
             token_at_position = tokens_at_position[-1]
 
-            if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
-                return None
-
-            if (
-                token_at_position.type == RobotToken.EOL
-                and len(tokens_at_position) > 1
-                and tokens_at_position[-2].type == RobotToken.KEYWORD
-            ):
-                return None
-
-            token_at_position_index = kw_node.tokens.index(token_at_position)
-
-            argument_token_index = token_at_position_index
-            while argument_token_index >= 0 and kw_node.tokens[argument_token_index].type != RobotToken.ARGUMENT:
-                argument_token_index -= 1
-
-            argument_token: Optional[RobotToken] = None
-            if argument_token_index >= 0:
-                argument_token = kw_node.tokens[argument_token_index]
-
-            completion_range = range_from_token(argument_token or token_at_position)
-            completion_range.end = range_from_token(token_at_position).end
-            if (w := whitespace_at_begin_of_token(token_at_position)) > 0:
-                if w > 1 and range_from_token(token_at_position).start.character + 1 < position.character:
-                    completion_range.start = position
-                elif completion_range.start != position:
-                    return None
-            else:
-                if "=" in (argument_token or token_at_position).value:
-                    equal_index = (argument_token or token_at_position).value.index("=")
-                    if completion_range.start.character + equal_index < position.character:
-                        return None
-
-                    completion_range.end.character = completion_range.start.character + equal_index + 1
-                else:
-                    completion_range.end = position
-
             try:
                 libdoc = await self.namespace.get_imported_library_libdoc(
                     import_node.name, import_node.args, import_node.alias
                 )
+                if libdoc is not None:
+                    init = next((v for v in libdoc.inits.values()), None)
+                    if init:
+                        return self._complete_keyword_arguments_at_position(
+                            init, kw_node.tokens, token_at_position, position
+                        )
 
             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                 raise
             except BaseException as e:
                 self._logger.exception(e)
-                return None
-
-            if libdoc is not None:
-                init = next((v for v in libdoc.inits.values()), None)
-
-                if init:
-                    return [
-                        CompletionItem(
-                            label=f"{e.name}=",
-                            kind=CompletionItemKind.VARIABLE,
-                            sort_text=f"010{i}_{e.name}",
-                            filter_text=e.name,
-                            insert_text_format=InsertTextFormat.PLAIN_TEXT,
-                            text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
-                            data=CompletionItemData(
-                                document_uri=str(self.document.uri),
-                                type="Argument",
-                                name=e.name,
-                            ),
-                        )
-                        for i, e in enumerate(init.arguments)
-                        if e.kind
-                        not in [
-                            KeywordArgumentKind.VAR_POSITIONAL,
-                            KeywordArgumentKind.VAR_NAMED,
-                            KeywordArgumentKind.NAMED_ONLY_MARKER,
-                            KeywordArgumentKind.POSITIONAL_ONLY_MARKER,
-                        ]
-                    ]
 
             return None
 
         async def complete_with_name() -> Optional[List[CompletionItem]]:
-            if context is None or context.trigger_kind != CompletionTriggerKind.INVOKED:
-                return []
+            with_name_token = next((v for v in import_node.tokens if v.type == RobotToken.WITH_NAME), None)
+            if with_name_token is not None and position < range_from_token(with_name_token).start:
+                return None
 
-            if get_robot_version() >= (6, 0):
-                namespace_marker = ["AS", "WITH NAME"]
-            else:
-                namespace_marker = ["WITH NAME"]
-
-            if import_node.name and not any(v for v in import_node.tokens if v.value in namespace_marker):
+            if import_node.name and not any(v for v in import_node.tokens if v.type == RobotToken.WITH_NAME):
                 name_token = import_node.get_token(RobotToken.NAME)
-                if position >= range_from_token(name_token).extend(end_character=2).end:
+                arg_tokens = import_node.get_tokens(RobotToken.ARGUMENT)
+                if position >= range_from_token(name_token).extend(end_character=2).end and (
+                    not arg_tokens or position >= range_from_token(arg_tokens[-1]).extend(end_character=2).end
+                ):
                     return [
                         CompletionItem(
                             label="AS" if get_robot_version() >= (6, 0) else "WITH NAME",
                             kind=CompletionItemKind.KEYWORD,
                             # detail=e.detail,
-                            sort_text="03_NAMESPACE_MARKER",
+                            sort_text="05_NAMESPACE_MARKER",
                             insert_text_format=InsertTextFormat.PLAIN_TEXT,
                         )
                     ]
@@ -2066,23 +2002,43 @@ class CompletionCollector(ModelHelperMixin):
             # TODO
             pass
 
+        return self._complete_keyword_arguments_at_position(keyword_doc, kw_node.tokens, token_at_position, position)
+
+    TRUE_STRINGS = {"TRUE", "YES", "ON", "1"}
+    FALSE_STRINGS = {"FALSE", "NO", "OFF", "0", "NONE", ""}
+
+    def _complete_keyword_arguments_at_position(
+        self, keyword_doc: KeywordDoc, tokens: Tuple[Token, ...], token_at_position: Token, position: Position
+    ) -> Optional[List[CompletionItem]]:
+        from robot.api.parsing import Token as RobotToken
+        from robot.utils.escaping import split_from_equals
+
         argument_index, kw_arguments, argument_token = self.get_argument_info_at_position(
-            keyword_doc, kw_node.tokens, token_at_position, position
+            keyword_doc, tokens, token_at_position, position
         )
 
         complete_argument_names = True
+        complete_argument_values = True
+        if kw_arguments is None:
+            return None
 
         completion_range = range_from_token(argument_token or token_at_position)
         completion_range.end = range_from_token(token_at_position).end
+        has_name = False
         if (w := whitespace_at_begin_of_token(token_at_position)) > 0:
             if w > 1 and range_from_token(token_at_position).start.character + 1 < position.character:
                 completion_range.start = position
+                if token_at_position.type == RobotToken.SEPARATOR:
+                    completion_range.end = position
             elif completion_range.start != position:
                 return None
         else:
-            if "=" in (argument_token or token_at_position).value:
+            name_or_value, value = split_from_equals((argument_token or token_at_position).value)
+            if value is not None and name_or_value:
+                has_name = True
                 equal_index = (argument_token or token_at_position).value.index("=")
-                if position.character < completion_range.start.character + equal_index:
+                if position.character <= completion_range.start.character + equal_index:
+                    complete_argument_values = False
                     completion_range.end.character = completion_range.start.character + equal_index + 1
                 else:
                     complete_argument_names = False
@@ -2090,32 +2046,92 @@ class CompletionCollector(ModelHelperMixin):
 
         result = []
 
-        if argument_index >= 0 and keyword_doc.parent is not None and argument_index < len(kw_arguments):
+        if (
+            complete_argument_values
+            and argument_index >= 0
+            and keyword_doc.parent is not None
+            and argument_index < len(kw_arguments)
+            and (
+                kw_arguments[argument_index].kind
+                in [
+                    KeywordArgumentKind.POSITIONAL_ONLY,
+                    KeywordArgumentKind.POSITIONAL_OR_NAMED,
+                    KeywordArgumentKind.VAR_POSITIONAL,
+                ]
+                or has_name
+            )
+        ):
             type_infos = keyword_doc.parent.get_types(kw_arguments[argument_index].types)
             for i, type_info in enumerate(type_infos):
                 if type_info.name == "boolean":
-                    snippets = [
-                        "True",
-                        "False",
-                    ]
-                    for i, snippet in enumerate(snippets):
-                        result.append(
-                            CompletionItem(
-                                label=snippet,
-                                kind=CompletionItemKind.VALUE,
-                                detail=type_info.name,
-                                documentation=MarkupContent(MarkupKind.MARKDOWN, type_info.to_markdown()),
-                                sort_text=f"02{i:03}_{snippet}",
-                                insert_text_format=InsertTextFormat.PLAIN_TEXT,
-                                text_edit=TextEdit(
-                                    range=completion_range,
-                                    new_text=snippet,
-                                ),
-                            )
-                        )
+                    if get_robot_version() >= (6, 0) and self.namespace.languages:
+                        languages = self.namespace.languages.languages
 
+                        if self.config.filter_default_language:
+                            languages = [v for v in languages if v.code != "en"]
+
+                        bool_snippets = [
+                            *((s, True) for s in itertools.chain(*(lang.true_strings for lang in languages))),
+                            *((s, False) for s in itertools.chain(*(lang.false_strings for lang in languages))),
+                        ]
+                    else:
+                        bool_snippets = [
+                            *((s, True) for s in self.TRUE_STRINGS),
+                            *((s, False) for s in self.FALSE_STRINGS),
+                        ]
+
+                    if ("1", True) not in bool_snippets:
+                        bool_snippets.append(("1", True))
+                    if ("0", False) not in bool_snippets:
+                        bool_snippets.append(("0", False))
+
+                    for i, b_snippet in enumerate(bool_snippets):
+                        if b_snippet[0]:
+                            result.append(
+                                CompletionItem(
+                                    label=b_snippet[0],
+                                    kind=CompletionItemKind.CONSTANT,
+                                    detail=f"{type_info.name}({b_snippet[1]})",
+                                    documentation=MarkupContent(MarkupKind.MARKDOWN, type_info.to_markdown()),
+                                    sort_text=f"01_000_{int(not b_snippet[1])}_{b_snippet[0]}",
+                                    insert_text_format=InsertTextFormat.PLAIN_TEXT,
+                                    text_edit=TextEdit(
+                                        range=completion_range,
+                                        new_text=b_snippet[0],
+                                    ),
+                                )
+                            )
+                elif type_info.name == "None":
+                    result.append(
+                        CompletionItem(
+                            label="None",
+                            kind=CompletionItemKind.CONSTANT,
+                            detail=f"{type_info.name}",
+                            documentation=MarkupContent(MarkupKind.MARKDOWN, type_info.to_markdown()),
+                            sort_text="50_000_None",
+                            insert_text_format=InsertTextFormat.PLAIN_TEXT,
+                            text_edit=TextEdit(
+                                range=completion_range,
+                                new_text="None",
+                            ),
+                        )
+                    )
+                    result.append(
+                        CompletionItem(
+                            label="${None}",
+                            kind=CompletionItemKind.VARIABLE,
+                            detail=f"{type_info.name}",
+                            documentation=MarkupContent(MarkupKind.MARKDOWN, type_info.to_markdown()),
+                            sort_text="50_001_None",
+                            insert_text_format=InsertTextFormat.PLAIN_TEXT,
+                            text_edit=TextEdit(
+                                range=completion_range,
+                                new_text="${None}",
+                            ),
+                        )
+                    )
                 if type_info.members:
-                    for member in type_info.members:
+                    for member_index, member in enumerate(type_info.members):
                         result.append(
                             CompletionItem(
                                 label=member.name,
@@ -2124,7 +2140,7 @@ class CompletionCollector(ModelHelperMixin):
                                 documentation=MarkupContent(
                                     MarkupKind.MARKDOWN, f"```python\n{member.name} = {member.value}\n```"
                                 ),
-                                sort_text=f"01{i}_{member.name}",
+                                sort_text=f"09_{i:03}_{member_index:03}_{member.name}",
                                 insert_text_format=InsertTextFormat.PLAIN_TEXT,
                                 text_edit=TextEdit(
                                     range=completion_range,
@@ -2140,39 +2156,72 @@ class CompletionCollector(ModelHelperMixin):
                             for i, m in enumerate(type_info.items)
                             if m.required
                         )
-                        + "}",
+                        + "}"
+                        if any(m.required for m in type_info.items) and any(not m.required for m in type_info.items)
+                        else "",
                         f"{{{', '.join((str(m.key)+': ${'+str(i+1)+'}') for i, m in enumerate(type_info.items))}}}",
                     ]
                     for i, snippet in enumerate(snippets):
-                        result.append(
-                            CompletionItem(
-                                label=snippet,
-                                kind=CompletionItemKind.STRUCT,
-                                detail=type_info.name,
-                                documentation=MarkupContent(MarkupKind.MARKDOWN, type_info.to_markdown()),
-                                sort_text=f"02{i:03}_{snippet}",
-                                insert_text_format=InsertTextFormat.SNIPPET,
-                                text_edit=TextEdit(
-                                    range=completion_range,
-                                    new_text=snippet,
-                                ),
+                        if snippet:
+                            result.append(
+                                CompletionItem(
+                                    label=snippet,
+                                    kind=CompletionItemKind.STRUCT,
+                                    detail=type_info.name,
+                                    documentation=MarkupContent(MarkupKind.MARKDOWN, type_info.to_markdown()),
+                                    sort_text=f"08_{i:03}_{snippet}",
+                                    insert_text_format=InsertTextFormat.SNIPPET,
+                                    text_edit=TextEdit(
+                                        range=completion_range,
+                                        new_text=snippet,
+                                    ),
+                                )
                             )
-                        )
 
         if complete_argument_names:
+            known_names = []
+
+            if (argument_token or token_at_position).type == RobotToken.ARGUMENT and position == range_from_token(
+                (argument_token or token_at_position)
+            ).start:
+                completion_range = Range(position, position)
+
+            elif keyword_doc.arguments_spec is not None:
+                positional, named = keyword_doc.arguments_spec.resolve(
+                    [a.value for a in [t for t in tokens if t.type == RobotToken.ARGUMENT]],
+                    None,
+                    resolve_variables_until=keyword_doc.args_to_process,
+                    resolve_named=not keyword_doc.is_any_run_keyword(),
+                    validate=False,
+                )
+
+                for i in range(len(positional)):
+                    known_names.append(kw_arguments[i].name)
+                for n, _ in named:
+                    known_names.append(n)
+
+            preselected = -1
+            if known_names:
+                n = known_names[-1]
+                preselected = next((i for i, e in enumerate(kw_arguments) if e.name == n), -1) + 1
+                if preselected >= len(kw_arguments):
+                    preselected = next((i for i, e in enumerate(kw_arguments) if e.name == n), -1) - 1
+
             result += [
                 CompletionItem(
                     label=f"{e.signature(False)}=",
                     kind=CompletionItemKind.VARIABLE,
                     detail="Argument",
                     filter_text=e.name,
-                    sort_text=f"03{i:03}_{e.name}=",
+                    sort_text=f"99_{i:03}_{e.name}=",
                     insert_text_format=InsertTextFormat.PLAIN_TEXT,
                     text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
                     command=Command("", "editor.action.triggerSuggest", []),
+                    preselect=True if i == preselected else None,
                 )
                 for i, e in enumerate(kw_arguments)
-                if e.kind
+                if e.name not in known_names
+                and e.kind
                 not in [
                     KeywordArgumentKind.VAR_POSITIONAL,
                     KeywordArgumentKind.VAR_NAMED,

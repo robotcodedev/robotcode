@@ -439,7 +439,7 @@ class ArgumentSpec:
         resolve_variables_until: Any = None,
         dict_to_kwargs: bool = False,
         validate: bool = True,
-    ) -> Tuple[List[Any], Dict[str, Any]]:
+    ) -> Tuple[List[Any], List[Tuple[str, Any]]]:
         from robot.running.arguments.argumentresolver import (
             ArgumentResolver,
             DictToKwargs,
@@ -470,7 +470,7 @@ class ArgumentSpec:
                 resolve_variables_until=resolve_variables_until,
                 dict_to_kwargs=dict_to_kwargs,
             )
-            return cast(Tuple[List[Any], Dict[str, Any]], resolver.resolve(arguments, variables))
+            return cast(Tuple[List[Any], List[Tuple[str, Any]]], resolver.resolve(arguments, variables))
 
         positional, named = NamedArgumentResolver(self.__robot_arguments).resolve(arguments, variables)
         positional, named = VariableReplacer(resolve_variables_until).replace(positional, named, variables)
@@ -626,7 +626,10 @@ class KeywordDoc(SourceEntity):
 
     def _get_signature(self, header_level: int, add_type: bool = True) -> str:
         if add_type:
-            result = f"#{'#'*header_level} {'Library' if self.is_initializer else 'Keyword'} *{self.name}*\n"
+            result = (
+                f"#{'#'*header_level} "
+                f"{(self.libtype or 'Library').capitalize() if self.is_initializer else 'Keyword'} *{self.name}*\n"
+            )
         else:
             if not self.is_initializer:
                 result = f"\n\n#{'#'*header_level} {self.name}\n"
@@ -1971,7 +1974,7 @@ def get_variables_doc(
                                 col_offset=-1,
                                 end_col_offset=-1,
                                 end_line_no=-1,
-                                type="library",
+                                type="variables",
                                 libname=libdoc.name,
                                 libtype=libdoc.type,
                                 longname=f"{libdoc.name}.{kw[0].name}",
@@ -2008,7 +2011,7 @@ def get_variables_doc(
                                     col_offset=-1,
                                     end_col_offset=-1,
                                     end_line_no=-1,
-                                    type="library",
+                                    type="variables",
                                     libname=libdoc.name,
                                     libtype=libdoc.type,
                                     longname=f"{libdoc.name}.{kw[0].name}",

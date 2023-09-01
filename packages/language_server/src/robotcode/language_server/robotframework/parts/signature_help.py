@@ -122,10 +122,15 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             analyse_run_keywords=False,
         )
 
-        if keyword_doc_and_token is None or keyword_doc_and_token[0] is None:
+        if keyword_doc_and_token is None:
             return None
 
-        keyword_doc = keyword_doc_and_token[0]
+        keyword_doc, keyword_token = keyword_doc_and_token
+        if keyword_doc is None:
+            return None
+
+        if keyword_token is not None and position < range_from_token(keyword_token).extend(end_character=2).end:
+            return None
 
         if keyword_doc.is_any_run_keyword():
             # TODO
@@ -143,6 +148,8 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         argument_index, kw_arguments, _ = self.get_argument_info_at_position(
             keyword_doc, tokens, token_at_position, position
         )
+        if kw_arguments is None:
+            return None
 
         signature = SignatureInformation(
             label=keyword_doc.parameter_signature(),

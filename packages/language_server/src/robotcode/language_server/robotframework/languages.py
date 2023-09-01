@@ -7,6 +7,8 @@ class Languages(Protocol):
     headers: Dict[str, str]
     settings: Dict[str, str]
     bdd_prefixes: Set[str]
+    true_strings: Set[str]
+    false_strings: Set[str]
 
     def add_language(self, name: str) -> None:
         ...

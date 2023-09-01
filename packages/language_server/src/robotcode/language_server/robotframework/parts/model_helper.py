@@ -645,7 +645,7 @@ class ModelHelperMixin:
         tokens: Tuple[Token, ...],
         token_at_position: Token,
         position: Position,
-    ) -> Tuple[int, List[ArgumentInfo], Optional[Token]]:
+    ) -> Tuple[int, Optional[List[ArgumentInfo]], Optional[Token]]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.utils.escaping import split_from_equals
 
@@ -670,7 +670,7 @@ class ModelHelperMixin:
             and tokens[token_at_position_index - 1].type == RobotToken.CONTINUATION
             and position.character < range_from_token(tokens[token_at_position_index - 1]).end.character + 2
         ):
-            return -1, kw_arguments, None
+            return -1, None, None
 
         token_at_position_index = tokens.index(token_at_position)
 
@@ -723,35 +723,55 @@ class ModelHelperMixin:
         if argument_token is not None and argument_token.type == RobotToken.ARGUMENT:
             arg_name_or_value, arg_value = split_from_equals(argument_token.value)
             if arg_value is not None:
-                arg_name = arg_name_or_value
-                named_arg = True
-                argument_index = next((i for i, v in enumerate(kw_arguments) if v.name == arg_name), -1)
+                old_argument_index = argument_index
+                argument_index = next(
+                    (
+                        i
+                        for i, v in enumerate(kw_arguments)
+                        if v.name == arg_name_or_value or v.kind == KeywordArgumentKind.VAR_NAMED
+                    ),
+                    -1,
+                )
+
                 if argument_index == -1:
+                    argument_index = old_argument_index
+                else:
+                    named_arg = True
+
+        if not named_arg and argument_index >= 0:
+            need_named = False
+            for i, a in enumerate(arguments):
+                if i == argument_index:
+                    break
+                arg_name_or_value, arg_value = split_from_equals(a.value)
+                if arg_value is not None and any(
+                    (i for i, v in enumerate(kw_arguments) if v.name == arg_name_or_value)
+                ):
+                    need_named = True
+                    break
+
+            a_index = next(
+                (
+                    i
+                    for i, v in enumerate(kw_arguments)
+                    if v.kind in [KeywordArgumentKind.POSITIONAL_ONLY, KeywordArgumentKind.POSITIONAL_OR_NAMED]
+                    and i == argument_index
+                ),
+                -1,
+            )
+            if a_index >= 0 and not need_named:
+                argument_index = a_index
+            else:
+                if need_named:
                     argument_index = next(
                         (i for i, v in enumerate(kw_arguments) if v.kind == KeywordArgumentKind.VAR_NAMED), -1
                     )
+                else:
+                    argument_index = next(
+                        (i for i, v in enumerate(kw_arguments) if v.kind == KeywordArgumentKind.VAR_POSITIONAL), -1
+                    )
 
-        if (
-            argument_index >= len(kw_arguments)
-            and len(kw_arguments) > 0
-            and kw_arguments[-1].kind in [KeywordArgumentKind.VAR_POSITIONAL, KeywordArgumentKind.VAR_NAMED]
-        ):
-            argument_index = len(kw_arguments) - 1
-
-        if not named_arg and argument_index >= 0 and argument_index < len(kw_arguments) and argument_token is not None:
-            while (
-                argument_index >= 0
-                and argument_index < len(kw_arguments)
-                and kw_arguments[argument_index].kind in [KeywordArgumentKind.NAMED_ONLY]
-            ):
-                argument_index -= 1
-
-            if argument_index >= 0 and argument_index < len(kw_arguments):
-                args = arguments[:argument_index]
-                for a in args:
-                    arg_name_or_value, arg_value = split_from_equals(a.value)
-                    if arg_value is not None:
-                        argument_index = -1
-                        break
+        if argument_index >= len(kw_arguments):
+            argument_index = -1
 
         return argument_index, kw_arguments, argument_token
