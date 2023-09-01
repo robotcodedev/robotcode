@@ -2,6 +2,18 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.54.0 (2023-09-01)
+
+### Feat
+
+- **langserver**: better signature help and completion of keyword arguments and library import arguments, including completions for type converters like Enums, bools, TypedDict, ...
+- **langserver**: better argument signatures for completion and signature help
+
+### Fix
+
+- **langserver**: correct end positon of completion range in arguments
+- **langserver**: disable directory browsing in documentation server
+
 ## v0.53.0 (2023-08-28)
 
 ### Feat
