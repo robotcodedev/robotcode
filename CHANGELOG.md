@@ -2,6 +2,12 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.54.1 (2023-09-02)
+
+### Fix
+
+- disable html report for pytest
+
 ## v0.54.0 (2023-09-01)
 
 ### Feat
