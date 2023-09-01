@@ -1629,7 +1629,7 @@ class CompletionCollector(ModelHelperMixin):
                             label="AS" if get_robot_version() >= (6, 0) else "WITH NAME",
                             kind=CompletionItemKind.KEYWORD,
                             # detail=e.detail,
-                            sort_text="05_NAMESPACE_MARKER",
+                            sort_text="99_NAMESPACE_MARKER",
                             insert_text_format=InsertTextFormat.PLAIN_TEXT,
                         )
                     ]
@@ -2213,7 +2213,7 @@ class CompletionCollector(ModelHelperMixin):
                     kind=CompletionItemKind.VARIABLE,
                     detail="Argument",
                     filter_text=e.name,
-                    sort_text=f"99_{i:03}_{e.name}=",
+                    sort_text=f"80_{i:03}_{e.name}=",
                     insert_text_format=InsertTextFormat.PLAIN_TEXT,
                     text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
                     command=Command("", "editor.action.triggerSuggest", []),
