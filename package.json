@@ -108,7 +108,7 @@
             }
           },
           {
-            "scope": "entity.name.function.keyword-call.keyword-call.inner.robotframework",
+            "scope": "entity.name.function.keyword-call.inner.robotframework",
             "settings": {
               "fontStyle": "italic"
             }
@@ -120,7 +120,7 @@
             }
           },
           {
-            "scope": "entity.name.function.keyword-call.keyword-call.robotframework",
+            "scope": "entity.name.function.keyword-call.robotframework",
             "settings": {}
           },
           {
@@ -282,7 +282,7 @@
             "constant.character.escape.robotframework"
           ],
           "namespace": [
-            "entity.name.namespace.robotframework"
+            "entity.other.namespace.robotframework"
           ],
           "error": [
             "invalid.illegal.robotframework"
