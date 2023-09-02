@@ -114,7 +114,7 @@
             }
           },
           {
-            "scope": "string.unquoted.embeddedArgument.robotframework",
+            "scope": "constant.character.embeddedArgument.robotframework",
             "settings": {
               "fontStyle": "italic"
             }
@@ -182,7 +182,7 @@
             }
           },
           {
-            "scope": "constant.character.escape.robotframework",
+            "scope": "constant.character.character.escape.robotframework",
             "settings": {}
           }
         ]
@@ -245,10 +245,10 @@
             "keyword.operator.for.robotframework"
           ],
           "argument": [
-            "string.unquoted.argument.robotframework"
+            "constant.character.argument.robotframework"
           ],
           "embeddedArgument": [
-            "string.unquoted.embeddedArgument.robotframework"
+            "constant.character.embeddedArgument.robotframework"
           ],
           "variable": [
             "variable.other.readwrite.robotframework"
@@ -279,7 +279,7 @@
             "punctuation.definition.variable.end.robotframework"
           ],
           "escape": [
-            "constant.character.escape.robotframework"
+            "constant.character.character.escape.robotframework"
           ],
           "namespace": [
             "entity.other.namespace.robotframework"

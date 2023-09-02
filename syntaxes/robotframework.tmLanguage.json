@@ -140,7 +140,7 @@
     },
     "keyword_call": {
       "name": "meta.keyword-call.content.robotframework",
-      "contentName": "string.unquoted.argument.robotframework",
+      "contentName": "constant.character.argument.robotframework",
       "begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(.*?)(?= {2,}| ?\\t ?| ?$)",
       "end": "^(?!\\s*\\.\\.\\.)",
       "beginCaptures": {
@@ -173,7 +173,7 @@
     },
     "returning_keyword": {
       "name": "meta.returning-keyword.robotframework",
-      "contentName": "string.unquoted.argument.robotframework",
+      "contentName": "constant.character.argument.robotframework",
       "begin": "(?<=\\s)(?=\\s*(?:(?=[$@&])))((?:\\s)*(?:[$&@]{(?:.*?)}(?:\\[.*?\\])?(?: ?=?\\s*))*)(.*?)(?: {2,}| ?\\t ?|$)",
       "beginCaptures": {
         "1": {
