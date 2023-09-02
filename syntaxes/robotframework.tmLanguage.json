@@ -139,7 +139,8 @@
       ]
     },
     "keyword_call": {
-      "contentName": "constant.character.argument.robotframework",
+      "name": "meta.keyword-call.content.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(.*?)(?= {2,}| ?\\t ?| ?$)",
       "end": "^(?!\\s*\\.\\.\\.)",
       "beginCaptures": {
@@ -160,6 +161,7 @@
       ]
     },
     "returning_keyword_call": {
+      "name": "meta.returning-keyword-call.robotframework",
       "contentName": "meta.returning.keyword.content.robotframework",
       "begin": "^(?=(?: {2,}| ?\\t ?)+(?:(?=[$@&])))(?:\\s)",
       "end": "^(?!\\s*\\.\\.\\.)",
@@ -167,12 +169,11 @@
         {
           "include": "#returning_keyword"
         }
-      ],
-      "name": "meta.returning.keyword.call.robotframework"
+      ]
     },
     "returning_keyword": {
-      "contentName": "constant.character.argument.robotframework",
-      "name": "meta.returning.keyword.robotframework",
+      "name": "meta.returning-keyword.robotframework",
+      "contentName": "string.unquoted.argument.robotframework",
       "begin": "(?<=\\s)(?=\\s*(?:(?=[$@&])))((?:\\s)*(?:[$&@]{(?:.*?)}(?:\\[.*?\\])?(?: ?=?\\s*))*)(.*?)(?: {2,}| ?\\t ?|$)",
       "beginCaptures": {
         "1": {
