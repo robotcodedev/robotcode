@@ -2034,7 +2034,7 @@ class CompletionCollector(ModelHelperMixin):
                 return None
         else:
             name_or_value, value = split_from_equals((argument_token or token_at_position).value)
-            if value is not None and name_or_value:
+            if value is not None and name_or_value and any(k for k in kw_arguments if k.name == name_or_value):
                 has_name = True
                 equal_index = (argument_token or token_at_position).value.index("=")
                 if position.character <= completion_range.start.character + equal_index:
@@ -2045,6 +2045,21 @@ class CompletionCollector(ModelHelperMixin):
                     completion_range.start.character = completion_range.start.character + equal_index + 1
 
         result = []
+
+        arg_index_before = tokens.index(argument_token or token_at_position) - 1
+        if arg_index_before >= 0:
+            while arg_index_before >= 0 and tokens[arg_index_before].type != RobotToken.ARGUMENT:
+                arg_index_before -= 1
+
+        before_is_named = False
+        if arg_index_before >= 0 and tokens[arg_index_before].type == RobotToken.ARGUMENT:
+            name_or_value, value = split_from_equals((tokens[arg_index_before]).value)
+            before_is_named = (
+                value is not None and name_or_value and any(k for k in kw_arguments if k.name == name_or_value)
+            )
+
+        if before_is_named and not has_name:
+            complete_argument_values = False
 
         if (
             complete_argument_values
@@ -2138,7 +2153,8 @@ class CompletionCollector(ModelHelperMixin):
                                 kind=CompletionItemKind.ENUM_MEMBER,
                                 detail=type_info.name,
                                 documentation=MarkupContent(
-                                    MarkupKind.MARKDOWN, f"```python\n{member.name} = {member.value}\n```"
+                                    MarkupKind.MARKDOWN,
+                                    f"```python\n{member.name} = {member.value}\n```\n\n{type_info.to_markdown()}",
                                 ),
                                 sort_text=f"09_{i:03}_{member_index:03}_{member.name}",
                                 insert_text_format=InsertTextFormat.PLAIN_TEXT,
@@ -2196,12 +2212,13 @@ class CompletionCollector(ModelHelperMixin):
                 )
 
                 for i in range(len(positional)):
-                    known_names.append(kw_arguments[i].name)
+                    if i != argument_index:
+                        known_names.append(kw_arguments[i].name)
                 for n, _ in named:
                     known_names.append(n)
 
             preselected = -1
-            if known_names:
+            if known_names and before_is_named:
                 n = known_names[-1]
                 preselected = next((i for i, e in enumerate(kw_arguments) if e.name == n), -1) + 1
                 if preselected >= len(kw_arguments):
