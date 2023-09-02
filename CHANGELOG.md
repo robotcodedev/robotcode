@@ -2,6 +2,14 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.54.2 (2023-09-02)
+
+### Fix
+
+- **langserver**: escape pipe symbols in keyword argument descriptions in hover
+- **vscode**: correct highligtning of keyword arguments
+- sorting of completion items on library imports
+
 ## v0.54.1 (2023-09-02)
 
 ### Fix
