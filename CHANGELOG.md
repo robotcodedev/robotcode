@@ -2,6 +2,14 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.54.3 (2023-09-03)
+
+### Fix
+
+- **langserver**: dont show values in completions if the token before is an named argument token
+- **langserver**: change scope name of argument tokens to allow better automatic opening of completions
+- **langserver**: correct some styles for semantic highlightning
+
 ## v0.54.2 (2023-09-02)
 
 ### Fix
