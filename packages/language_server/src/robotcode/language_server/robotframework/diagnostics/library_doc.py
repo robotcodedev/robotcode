@@ -658,10 +658,13 @@ class KeywordDoc(SourceEntity):
                 elif a.kind == KeywordArgumentKind.POSITIONAL_ONLY:
                     prefix = "⟶"
 
+                def escape_pipe(s: str) -> str:
+                    return s.replace("|", "\\|")
+
                 result += (
                     f"\n| `{prefix}{a.name!s}`"
-                    f'{": " if a.types else " "}'
-                    f"| {escaped_pipe.join(f'`{s}`' for s in a.types) if a.types else ''} "
+                    f'| {": " if a.types else " "}'
+                    f"{escaped_pipe.join(f'`{escape_pipe(s)}`' for s in a.types) if a.types else ''} "
                     f"| {'=' if a.default_value is not None else ''} "
                     f"| {f'`{a.default_value!s}`' if a.default_value else ''} |"
                 )
