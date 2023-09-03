@@ -1928,28 +1928,10 @@ def get_variables_doc(
                 if importer.is_dynamic():
                     get_variables = getattr(libcode, "get_variables", None) or getattr(libcode, "getVariables", None)
 
-            # TODO: add type information of the value including dict key names and member names
-            vars: List[ImportedVariableDefinition] = [
-                ImportedVariableDefinition(
-                    1,
-                    0,
-                    1,
-                    0,
-                    source or (module_spec.origin if module_spec is not None else None) or "",
-                    name,
-                    None,
-                    value=NativeValue(value) if value is None or isinstance(value, (int, float, bool, str)) else None,
-                    has_value=value is None or isinstance(value, (int, float, bool, str)),
-                    value_is_native=value is None or isinstance(value, (int, float, bool, str)),
-                )
-                for name, value in importer.import_variables(import_name, args)
-            ]
-
             libdoc = VariablesDoc(
                 name=stem,
                 source=source or module_spec.origin if module_spec is not None else import_name,
                 module_spec=module_spec,
-                variables=vars,
                 stdout=std_capturer.getvalue(),
                 python_path=sys.path,
             )
@@ -2026,6 +2008,39 @@ def get_variables_doc(
                                 ]
                             ]
                         )
+            try:
+                # TODO: add type information of the value including dict key names and member names
+                libdoc.variables = [
+                    ImportedVariableDefinition(
+                        1,
+                        0,
+                        1,
+                        0,
+                        source or (module_spec.origin if module_spec is not None else None) or "",
+                        name,
+                        None,
+                        value=NativeValue(value)
+                        if value is None or isinstance(value, (int, float, bool, str))
+                        else None,
+                        has_value=value is None or isinstance(value, (int, float, bool, str)),
+                        value_is_native=value is None or isinstance(value, (int, float, bool, str)),
+                    )
+                    for name, value in importer.import_variables(import_name, args)
+                ]
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                libdoc.errors = [
+                    error_from_exception(
+                        e,
+                        source or module_spec.origin
+                        if module_spec is not None and module_spec.origin
+                        else import_name
+                        if is_variables_by_path(import_name)
+                        else None,
+                        1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
+                    )
+                ]
 
             return libdoc
     except (SystemExit, KeyboardInterrupt, IgnoreEasterEggLibraryWarning):

@@ -1850,13 +1850,6 @@ class CompletionCollector(ModelHelperMixin):
             ):
                 return None
 
-            with_name_token = next((v for v in import_node.tokens if v.value == "WITH NAME"), None)
-            if with_name_token is not None and position >= range_from_token(with_name_token).start:
-                return None
-
-            if context is None or context.trigger_kind != CompletionTriggerKind.INVOKED:
-                return []
-
             kw_node = cast(Statement, node)
 
             tokens_at_position = get_tokens_at_position(kw_node, position)
@@ -1866,87 +1859,27 @@ class CompletionCollector(ModelHelperMixin):
 
             token_at_position = tokens_at_position[-1]
 
-            if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
-                return None
-
-            if (
-                token_at_position.type == RobotToken.EOL
-                and len(tokens_at_position) > 1
-                and tokens_at_position[-2].type == RobotToken.KEYWORD
-            ):
-                return None
-
-            token_at_position_index = kw_node.tokens.index(token_at_position)
-
-            argument_token_index = token_at_position_index
-            while argument_token_index >= 0 and kw_node.tokens[argument_token_index].type != RobotToken.ARGUMENT:
-                argument_token_index -= 1
-
-            argument_token: Optional[RobotToken] = None
-            if argument_token_index >= 0:
-                argument_token = kw_node.tokens[argument_token_index]
-
-            completion_range = range_from_token(argument_token or token_at_position)
-            completion_range.end = range_from_token(token_at_position).end
-            if (w := whitespace_at_begin_of_token(token_at_position)) > 0:
-                if w > 1 and range_from_token(token_at_position).start.character + 1 < position.character:
-                    completion_range.start = position
-                elif completion_range.start != position:
-                    return None
-            else:
-                if "=" in (argument_token or token_at_position).value:
-                    equal_index = (argument_token or token_at_position).value.index("=")
-                    if completion_range.start.character + equal_index < position.character:
-                        return None
-
-                    completion_range.end.character = completion_range.start.character + equal_index + 1
-                else:
-                    completion_range.end = position
-
             try:
                 libdoc = await self.namespace.get_imported_variables_libdoc(import_node.name, import_node.args)
+                if libdoc is not None:
+                    init = next((v for v in libdoc.inits.values()), None)
+                    if init:
+                        return self._complete_keyword_arguments_at_position(
+                            init, kw_node.tokens, token_at_position, position
+                        )
 
             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                 raise
             except BaseException as e:
                 self._logger.exception(e)
-                return None
-
-            if libdoc is not None:
-                init = next((v for v in libdoc.inits.values()), None)
-
-                if init:
-                    return [
-                        CompletionItem(
-                            label=f"{e.name}=",
-                            kind=CompletionItemKind.VARIABLE,
-                            sort_text=f"010{i}_{e.name}",
-                            filter_text=e.name,
-                            insert_text_format=InsertTextFormat.PLAIN_TEXT,
-                            text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
-                            data=CompletionItemData(
-                                document_uri=str(self.document.uri),
-                                type="Argument",
-                                name=e.name,
-                            ),
-                        )
-                        for i, e in enumerate(init.arguments)
-                        if e.kind
-                        not in [
-                            KeywordArgumentKind.VAR_POSITIONAL,
-                            KeywordArgumentKind.VAR_NAMED,
-                            KeywordArgumentKind.NAMED_ONLY_MARKER,
-                            KeywordArgumentKind.POSITIONAL_ONLY_MARKER,
-                        ]
-                    ]
 
             return None
 
         result = await complete_import() or []
         # TODO this is not supported in robotframework, but it would be nice to have
-        # result.extend(await complete_arguments() or [])
+        result.extend(await complete_arguments() or [])
 
-        return result  # noqa: RET504
+        return result
 
     async def _complete_KeywordCall_or_Fixture(  # noqa: N802
         self,
