@@ -15,7 +15,7 @@ from robotcode.robot.config.model import RobotBaseProfile
 from ..__version__ import __version__
 from .configuration import RobotConfig
 from .parts.code_action_documentation import RobotCodeActionDocumentationProtocolPart
-from .parts.code_action_fixes import RobotCodeActionFixesProtocolPart
+from .parts.code_action_quick_fixes import RobotCodeActionFixesProtocolPart
 from .parts.codelens import RobotCodeLensProtocolPart
 from .parts.completion import RobotCompletionProtocolPart
 from .parts.debugging_utils import RobotDebuggingUtilsProtocolPart

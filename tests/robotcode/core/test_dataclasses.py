@@ -203,6 +203,7 @@ def test_encode_with_optional_field_and_none_as_default_value() -> None:
         ('"first"', EnumData, EnumData.FIRST),
         ('"second"', EnumData, EnumData.SECOND),
         ('["first", "second"]', List[EnumData], [EnumData.FIRST, EnumData.SECOND]),
+        ('["first", "second", "ninety"]', List[Union[EnumData, str]], [EnumData.FIRST, EnumData.SECOND, "ninety"]),
     ],
 )
 def test_decode_simple(expr: Any, type: Any, expected: str) -> None:

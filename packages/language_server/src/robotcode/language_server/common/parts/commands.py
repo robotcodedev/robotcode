@@ -17,7 +17,7 @@ from robotcode.core.lsp.types import (
     ServerCapabilities,
 )
 from robotcode.jsonrpc2.protocol import JsonRPCErrorException, rpc_method
-from robotcode.language_server.common.decorators import get_command_name, is_command
+from robotcode.language_server.common.decorators import get_command_id, is_command
 from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 
@@ -44,7 +44,7 @@ class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         self.commands: Dict[str, CommandEntry] = {}
 
     def register(self, callback: _FUNC_TYPE, name: Optional[str] = None) -> str:
-        name = name or get_command_name(callback)
+        name = name or get_command_id(callback)
 
         command = f"{self.PREFIX}.{name}"
 
@@ -64,7 +64,7 @@ class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 self.register(cast(_FUNC_TYPE, method))
 
     def get_command_name(self, callback: _FUNC_TYPE, name: Optional[str] = None) -> str:
-        name = name or get_command_name(callback)
+        name = name or get_command_id(callback)
 
         return f"{self.PREFIX}.{name}"
 

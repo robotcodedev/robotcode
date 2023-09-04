@@ -1,5 +1,7 @@
 from typing import Any, Callable, List, Protocol, TypeVar, Union, runtime_checkable
 
+from robotcode.core.lsp.types import CodeActionKind
+
 from .text_document import TextDocument
 
 _F = TypeVar("_F", bound=Callable[..., Any])
@@ -66,9 +68,9 @@ class HasAllCommitCharacters(Protocol):
 CODE_ACTION_KINDS_ATTR = "__code_action_kinds__"
 
 
-def code_action_kinds(characters: List[str]) -> Callable[[_F], _F]:
+def code_action_kinds(kinds: List[Union[CodeActionKind, str]]) -> Callable[[_F], _F]:
     def decorator(func: _F) -> _F:
-        setattr(func, CODE_ACTION_KINDS_ATTR, characters)
+        setattr(func, CODE_ACTION_KINDS_ATTR, kinds)
         return func
 
     return decorator
@@ -93,23 +95,23 @@ def language_id_filter(language_id_or_document: Union[str, TextDocument]) -> Cal
     return filter
 
 
-COMMAND_NAME_ATTR = "__command_name__"
+COMMAND_ID_ATTR = "__command_name__"
 
 
-def command(name: str) -> Callable[[_F], _F]:
+def command(id: str) -> Callable[[_F], _F]:
     def decorator(func: _F) -> _F:
-        setattr(func, COMMAND_NAME_ATTR, name)
+        setattr(func, COMMAND_ID_ATTR, id)
         return func
 
     return decorator
 
 
 def is_command(func: Callable[..., Any]) -> bool:
-    return hasattr(func, COMMAND_NAME_ATTR)
+    return hasattr(func, COMMAND_ID_ATTR)
 
 
-def get_command_name(func: Callable[..., Any]) -> str:
-    if hasattr(func, COMMAND_NAME_ATTR):
-        return str(getattr(func, COMMAND_NAME_ATTR))
+def get_command_id(func: Callable[..., Any]) -> str:
+    if hasattr(func, COMMAND_ID_ATTR):
+        return str(getattr(func, COMMAND_ID_ATTR))
 
     raise TypeError(f"{func} is not a command.")

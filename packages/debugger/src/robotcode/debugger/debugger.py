@@ -1406,7 +1406,7 @@ class Debugger:
             return EvaluateResult(result="")
 
         if (
-            (context == EvaluateArgumentContext.REPL or context == EvaluateArgumentContext.REPL.value)
+            (context == EvaluateArgumentContext.REPL)
             and expression.startswith("#")
             and expression[1:].strip() == "exprmode"
         ):
@@ -1436,7 +1436,6 @@ class Debugger:
             if (
                 isinstance(context, EvaluateArgumentContext)
                 and context != EvaluateArgumentContext.REPL
-                or context != EvaluateArgumentContext.REPL.value
                 or self.expression_mode
             ):
                 if expression.startswith("! "):

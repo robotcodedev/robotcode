@@ -20,19 +20,17 @@ from robotcode.core.lsp.types import (
     TextDocumentEdit,
     WorkspaceEdit,
 )
+from robotcode.core.utils.inspect import iter_methods
 from robotcode.language_server.common.decorators import code_action_kinds, command, language_id
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.utils.ast_utils import Token, get_node_at_position, range_from_node
-from robotcode.language_server.robotframework.utils.async_ast import AsyncVisitor
+from robotcode.language_server.robotframework.utils.async_ast import Visitor
 
 from .model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
     from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol  # pragma: no cover
-
-
-CODEACTIONKIND_QUICKFIX_CREATEKEYWORD = f"{CodeActionKind.QUICK_FIX.value}.createKeyword"
 
 
 KEYWORD_WITH_ARGS_TEMPLATE = Template(
@@ -55,17 +53,17 @@ ${name}
 )
 
 
-class FindKeywordSectionVisitor(AsyncVisitor):
+class FindKeywordSectionVisitor(Visitor):
     def __init__(self) -> None:
         self.keyword_sections: List[ast.AST] = []
 
-    async def visit_KeywordSection(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_KeywordSection(self, node: ast.AST) -> None:  # noqa: N802
         self.keyword_sections.append(node)
 
 
-async def find_keyword_sections(node: ast.AST) -> Optional[List[ast.AST]]:
+def find_keyword_sections(node: ast.AST) -> Optional[List[ast.AST]]:
     visitor = FindKeywordSectionVisitor()
-    await visitor.visit(node)
+    visitor.visit(node)
     return visitor.keyword_sections if visitor.keyword_sections else None
 
 
@@ -80,13 +78,22 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
         self.parent.commands.register_all(self)
 
     @language_id("robotframework")
-    @code_action_kinds(
-        [
-            CODEACTIONKIND_QUICKFIX_CREATEKEYWORD,
-        ]
-    )
-    @_logger.call
+    @code_action_kinds([CodeActionKind.QUICK_FIX])
     async def collect(
+        self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
+    ) -> Optional[List[Union[Command, CodeAction]]]:
+        result = []
+        for method in iter_methods(self, lambda m: m.__name__.startswith("code_action_")):
+            code_actions = await method(self, document, range, context)
+            if code_actions:
+                result.extend(code_actions)
+
+        if result:
+            return result
+
+        return None
+
+    async def code_action_create_keyword(
         self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
         kw_not_found_in_diagnostics = next((d for d in context.diagnostics if d.code == "KeywordNotFoundError"), None)
@@ -98,11 +105,11 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
             return [
                 CodeAction(
                     "Create Keyword",
-                    kind=CodeActionKind.QUICK_FIX.value + ".createKeyword",
+                    kind=CodeActionKind.QUICK_FIX,
                     command=Command(
-                        "Create Keyword",
-                        self.parent.commands.get_command_name(self.create_keyword),
-                        [document.document_uri, range, context],
+                        self.parent.commands.get_command_name(self.create_keyword_command),
+                        self.parent.commands.get_command_name(self.create_keyword_command),
+                        [document.document_uri, range],
                     ),
                     diagnostics=[kw_not_found_in_diagnostics],
                 )
@@ -111,7 +118,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
         return None
 
     @command("robotcode.createKeyword")
-    async def create_keyword(self, document_uri: DocumentUri, range: Range, context: CodeActionContext) -> None:
+    async def create_keyword_command(self, document_uri: DocumentUri, range: Range) -> None:
         from robot.parsing.lexer import Token as RobotToken
         from robot.parsing.model.statements import (
             Fixture,
@@ -162,7 +169,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
                 else KEYWORD_TEMPLATE.substitute(name=keyword)
             )
 
-            keyword_sections = await find_keyword_sections(model)
+            keyword_sections = find_keyword_sections(model)
             keyword_section = keyword_sections[-1] if keyword_sections else None
 
             if keyword_section is not None:

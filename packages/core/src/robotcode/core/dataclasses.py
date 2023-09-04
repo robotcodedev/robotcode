@@ -228,6 +228,11 @@ def from_dict(
 
             continue
 
+        if inspect.isclass(origin or t) and issubclass(origin or t, enum.Enum):
+            for v in cast(Iterable[Any], t):
+                if v.value == value:
+                    return cast(_T, v)
+
         if (
             t is Any
             or t is Ellipsis  # type: ignore
