@@ -2,6 +2,23 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.55.0 (2023-09-05)
+
+### Feat
+
+- support for robocop 4.1.1 code descriptions
+- **langserver**: better completion for variable imports
+
+### Fix
+
+- correct handling of @ variable and & dictionary arguments in signature help and completion
+- don't complete arguments for run keywords
+- update of RobotCode icon in status bar when Python environment is changed
+
+### Refactor
+
+- move code_actions and support unions with enums and string in dataclasses
+
 ## v0.54.3 (2023-09-03)
 
 ### Fix

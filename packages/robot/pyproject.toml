@@ -29,7 +29,7 @@ dependencies = [
   "robotframework>=4.1.0",
   "tomli>=1.1.0; python_version < '3.11'",
   "platformdirs<3.9.0,>=3.2.0",
-  "robotcode-core==0.54.3",
+  "robotcode-core==0.55.0",
 ]
 dynamic = ["version"]
 
