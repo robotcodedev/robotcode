@@ -759,6 +759,7 @@ class Info:
     robot_env: Dict[str, str]
     robotcode_version_string: str
     python_version_string: str
+    executable: str
     machine: str
     processor: str
     platform: str
@@ -782,7 +783,6 @@ def info(
     robotcode discover info
     ```
     """
-    import pprint
 
     from robot.version import get_version as get_version
     from robotcode.core.dataclasses import as_dict
@@ -799,11 +799,18 @@ def info(
     if "ROBOT_INTERNAL_TRACES" in os.environ:
         robot_env["ROBOT_INTERNAL_TRACES"] = os.environ["ROBOT_INTERNAL_TRACES"]
 
+    executable = str(sys.executable)
+    try:
+        executable = str(Path(sys.executable).relative_to(Path.cwd()))
+    except ValueError:
+        pass
+
     info = Info(
         get_version(),
         robot_env,
         __version__,
         platform.python_version(),
+        executable,
         platform.machine(),
         platform.processor(),
         sys.platform,
@@ -812,7 +819,9 @@ def info(
     )
 
     if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-        app.echo_via_pager(pprint.pformat(as_dict(info, remove_defaults=True), compact=True, sort_dicts=False))
+        for key, value in as_dict(info, remove_defaults=True).items():
+            app.echo_via_pager(f"{key}: {value}")
+
         # app.print_data(info, remove_defaults=True)
     else:
         app.print_data(info, remove_defaults=True)

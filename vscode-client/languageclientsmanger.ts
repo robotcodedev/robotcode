@@ -79,6 +79,7 @@ export interface ClientStateChangedEvent {
 interface DiscoverInfoResult {
   robot_version_string?: string;
   python_version_string?: string;
+  executable?: string;
   machine?: string;
   platform?: string;
   system?: string;
@@ -129,6 +130,7 @@ export class LanguageClientsManager {
           const folder = vscode.workspace.getWorkspaceFolder(uri);
           let needsRestart = false;
           if (folder !== undefined) {
+            this._workspaceFolderDiscoverInfo.delete(folder);
             needsRestart = this._pythonValidPythonAndRobotEnv.has(folder);
             if (needsRestart) this._pythonValidPythonAndRobotEnv.delete(folder);
           }
@@ -725,6 +727,7 @@ export class LanguageClientsManager {
               `
 - **Robot Framework**: ${info.robot_version_string}
 - **Python**: ${info.python_version_string}
+- **Python Executable**: ${info.executable}
 - **Platform**: ${info.platform}
 - **Machine**: ${info.machine}
 - **System**: ${info.system}
