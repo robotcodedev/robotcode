@@ -1932,8 +1932,7 @@ class CompletionCollector(ModelHelperMixin):
         keyword_doc = keyword_doc_and_token[0]
 
         if keyword_doc.is_any_run_keyword():
-            # TODO
-            pass
+            return None
 
         return self._complete_keyword_arguments_at_position(keyword_doc, kw_node.tokens, token_at_position, position)
 

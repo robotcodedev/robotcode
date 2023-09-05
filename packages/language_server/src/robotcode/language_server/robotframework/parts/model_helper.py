@@ -717,7 +717,13 @@ class ModelHelperMixin:
                     if argument_token_index < len(tokens) and tokens[argument_token_index].type == RobotToken.ARGUMENT:
                         argument_token = tokens[argument_token_index]
 
-        if argument_index < 0:
+        if (
+            argument_index < 0
+            or argument_token is not None
+            and argument_token.type == RobotToken.ARGUMENT
+            and argument_token.value.startswith(("@{", "&{"))
+            and argument_token.value.endswith("}")
+        ):
             return -1, kw_arguments, argument_token
 
         if argument_token is not None and argument_token.type == RobotToken.ARGUMENT:
@@ -745,8 +751,11 @@ class ModelHelperMixin:
                     break
                 arg_name_or_value, arg_value = split_from_equals(a.value)
                 if arg_value is not None and any(
-                    (i for i, v in enumerate(kw_arguments) if v.name == arg_name_or_value)
+                    (k for k, v in enumerate(kw_arguments) if v.name == arg_name_or_value)
                 ):
+                    need_named = True
+                    break
+                if arg_name_or_value.startswith(("@{", "&{")) and arg_name_or_value.endswith("}"):
                     need_named = True
                     break
 
