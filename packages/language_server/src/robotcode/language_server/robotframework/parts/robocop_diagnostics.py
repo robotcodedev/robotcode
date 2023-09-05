@@ -191,6 +191,9 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         if version < (4, 1):
             return CodeDescription(href=f"{base}/rules.html#{issue.name}-{issue.severity.value}{issue.rule_id}".lower())
 
-        return CodeDescription(
-            href=f"{base}/rules_list.html#{issue.name}-{issue.severity.value}{issue.rule_id}".lower()
-        )
+        if version < (4, 1, 1):
+            return CodeDescription(
+                href=f"{base}/rules_list.html#{issue.name}-{issue.severity.value}{issue.rule_id}".lower()
+            )
+
+        return CodeDescription(href=f"{base}/rules_list.html#{issue.name}".lower())
