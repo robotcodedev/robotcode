@@ -1946,6 +1946,9 @@ class CompletionCollector(ModelHelperMixin):
         from robot.api.parsing import Token as RobotToken
         from robot.utils.escaping import split_from_equals
 
+        if keyword_doc.is_any_run_keyword():
+            return None
+
         argument_index, kw_arguments, argument_token = self.get_argument_info_at_position(
             keyword_doc, tokens, token_at_position, position
         )
