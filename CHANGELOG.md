@@ -2,6 +2,12 @@
 
 All notable changes to the "robotcode" extension will be documented in this file.
 
+## v0.55.1 (2023-09-06)
+
+### Fix
+
+- **debugger**: correct update of test run results when suite teardown fails or is skipped during suite teardown for RF 4.1
+
 ## v0.55.0 (2023-09-05)
 
 ### Feat

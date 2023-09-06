@@ -4,7 +4,7 @@
   "description": "RobotFramework support for Visual Studio Code",
   "icon": "images/icon.png",
   "publisher": "d-biehl",
-  "version": "0.55.0",
+  "version": "0.55.1",
   "author": {
     "name": "Daniel Biehl",
     "url": "https://github.com/d-biehl/"
