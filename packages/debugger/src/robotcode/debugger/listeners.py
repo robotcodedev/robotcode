@@ -289,9 +289,13 @@ class ListenerV3:
 
         self._event_sended = True
 
-    def end_suite(self, data: running.TestSuite, suite_result: result.TestSuite) -> None:
-        def report_status(item: Union[result.TestSuite, result.TestCase], message: str) -> None:
-            if isinstance(item, result.TestCase):
+    def end_suite(self, suite_data: running.TestSuite, suite_result: result.TestSuite) -> None:
+        def report_status(
+            data_item: Union[running.TestSuite, running.TestCase, None],
+            result_item: Union[result.TestSuite, result.TestCase],
+            message: str,
+        ) -> None:
+            if isinstance(result_item, result.TestCase):
                 Debugger.instance().send_event(
                     self,
                     Event(
@@ -299,26 +303,32 @@ class ListenerV3:
                         body=RobotExecutionEventBody(
                             type="test",
                             attributes={
-                                "longname": item.longname,
-                                "status": str(item.status),
-                                "elapsedtime": item.elapsedtime,
-                                "source": str(item.source),
-                                "lineno": item.lineno,
-                                "message": item.message,
+                                "longname": result_item.longname,
+                                "status": str(result_item.status),
+                                "elapsedtime": result_item.elapsedtime,
+                                "source": str(result_item.source),
+                                "lineno": data_item.lineno if data_item is not None else 0,
+                                "message": result_item.message,
                             },
-                            id=f"{item.source or ''};{item.longname or ''}"
-                            + (f";{item.lineno or 0}" if isinstance(item, result.TestCase) else ""),
+                            id=f"{result_item.source or ''};{result_item.longname or ''}"
+                            + (
+                                f";{data_item.lineno if data_item is not None else 0}"
+                                if isinstance(result_item, result.TestCase)
+                                else ""
+                            ),
                         ),
                     ),
                 )
-            if isinstance(item, result.TestSuite):
-                for r in item.suites:
-                    report_status(r, message)
-                for r in item.tests:
-                    report_status(r, message)
+            if isinstance(result_item, result.TestSuite):
+                for r in result_item.suites:
+                    p = next((i for i in data_item.suites if i.id == r.id), None) if data_item else None
+                    report_status(p, r, message)
+                for r in result_item.tests:
+                    p = next((i for i in data_item.tests if i.id == r.id), None) if data_item else None
+                    report_status(p, r, message)
 
-        if data.teardown and suite_result.teardown.status in ["FAIL", "SKIP"]:
-            report_status(suite_result, message=suite_result.message)
+        if suite_data.teardown and suite_result.teardown.status in ["FAIL", "SKIP"]:
+            report_status(suite_data, suite_result, message=suite_result.message)
 
     def start_test(self, data: running.TestCase, result: result.TestCase) -> None:
         pass
