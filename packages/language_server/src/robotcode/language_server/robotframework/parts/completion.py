@@ -2147,7 +2147,7 @@ class CompletionCollector(ModelHelperMixin):
                 )
 
                 for i in range(len(positional)):
-                    if i != argument_index:
+                    if i != argument_index and i < len(kw_arguments):
                         known_names.append(kw_arguments[i].name)
                 for n, _ in named:
                     known_names.append(n)

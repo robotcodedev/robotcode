@@ -23,7 +23,13 @@ from robotcode.core.lsp.types import (
 from robotcode.core.utils.inspect import iter_methods
 from robotcode.language_server.common.decorators import code_action_kinds, command, language_id
 from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.utils.ast_utils import Token, get_node_at_position, range_from_node
+from robotcode.language_server.robotframework.utils.ast_utils import (
+    Token,
+    get_node_at_position,
+    get_nodes_at_position,
+    range_from_node,
+    range_from_token,
+)
 from robotcode.language_server.robotframework.utils.async_ast import Visitor
 
 from .model_helper import ModelHelperMixin
@@ -78,7 +84,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
         self.parent.commands.register_all(self)
 
     @language_id("robotframework")
-    @code_action_kinds([CodeActionKind.QUICK_FIX])
+    @code_action_kinds([CodeActionKind.QUICK_FIX, "other"])
     async def collect(
         self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
@@ -96,24 +102,31 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
     async def code_action_create_keyword(
         self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
-        kw_not_found_in_diagnostics = next((d for d in context.diagnostics if d.code == "KeywordNotFoundError"), None)
-
-        if kw_not_found_in_diagnostics and (
-            (context.only and CodeActionKind.QUICK_FIX.value in context.only)
+        if range.start == range.end and (
+            (context.only and CodeActionKind.QUICK_FIX in context.only)
             or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
         ):
-            return [
-                CodeAction(
-                    "Create Keyword",
-                    kind=CodeActionKind.QUICK_FIX,
-                    command=Command(
-                        self.parent.commands.get_command_name(self.create_keyword_command),
-                        self.parent.commands.get_command_name(self.create_keyword_command),
-                        [document.document_uri, range],
-                    ),
-                    diagnostics=[kw_not_found_in_diagnostics],
-                )
-            ]
+            diagnostics = next(
+                (
+                    d
+                    for d in context.diagnostics
+                    if d.source == "robotcode.namespace" and d.code == "KeywordNotFoundError"
+                ),
+                None,
+            )
+            if diagnostics is not None:
+                return [
+                    CodeAction(
+                        "Create Keyword",
+                        kind=CodeActionKind.QUICK_FIX,
+                        command=Command(
+                            self.parent.commands.get_command_name(self.create_keyword_command),
+                            self.parent.commands.get_command_name(self.create_keyword_command),
+                            [document.document_uri, range],
+                        ),
+                        diagnostics=[diagnostics],
+                    )
+                ]
 
         return None
 
@@ -133,8 +146,6 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
         if document is None:
             return
 
-        namespace = await self.parent.documents_cache.get_namespace(document)
-
         model = await self.parent.documents_cache.get_model(document, False)
         node = await get_node_at_position(model, range.start)
 
@@ -147,6 +158,8 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
 
             if keyword_token is None:
                 return
+
+            namespace = await self.parent.documents_cache.get_namespace(document)
 
             bdd_token, token = self.split_bdd_prefix(namespace, keyword_token)
             if bdd_token is not None and token is not None:
@@ -205,11 +218,250 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
                 change_annotations={"create_keyword": ChangeAnnotation("Create Keyword", False)},
             )
 
-            await self.parent.workspace.apply_edit(we, "Rename Keyword")
+            if (await self.parent.workspace.apply_edit(we)).applied:
+                lines = insert_text.rstrip().splitlines()
+                insert_range.start.line += len(lines) - 1
+                insert_range.start.character = 4
+                insert_range.end = Position(insert_range.start.line, insert_range.start.character)
+                insert_range.end.character += len(lines[-1])
+                await self.parent.window.show_document(str(document.uri), take_focus=True, selection=insert_range)
 
-            lines = insert_text.rstrip().splitlines()
-            insert_range.start.line += len(lines) - 1
-            insert_range.start.character = 4
-            insert_range.end = Position(insert_range.start.line, insert_range.start.character)
-            insert_range.end.character += len(lines[-1])
-            await self.parent.window.show_document(str(document.uri), take_focus=True, selection=insert_range)
+    async def code_action_assign_result_to_variable(
+        self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
+    ) -> Optional[List[Union[Command, CodeAction]]]:
+        from robot.parsing.lexer import Token as RobotToken
+        from robot.parsing.model.statements import (
+            Fixture,
+            KeywordCall,
+            Template,
+            TestTemplate,
+        )
+
+        if range.start == range.end and (
+            (context.only and "other" in context.only)
+            or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+        ):
+            model = await self.parent.documents_cache.get_model(document, False)
+            node = await get_node_at_position(model, range.start)
+
+            if not isinstance(node, KeywordCall) or node.assign:
+                return None
+
+            keyword_token = (
+                node.get_token(RobotToken.NAME)
+                if isinstance(node, (TestTemplate, Template, Fixture))
+                else node.get_token(RobotToken.KEYWORD)
+            )
+
+            if keyword_token is None or range.start not in range_from_token(keyword_token):
+                return None
+
+            return [
+                CodeAction(
+                    "Assign Result To Variable",
+                    kind="other",
+                    command=Command(
+                        self.parent.commands.get_command_name(self.assign_result_to_variable_command),
+                        self.parent.commands.get_command_name(self.assign_result_to_variable_command),
+                        [document.document_uri, range],
+                    ),
+                )
+            ]
+
+        return None
+
+    @command("robotcode.assignResultToVariable")
+    async def assign_result_to_variable_command(self, document_uri: DocumentUri, range: Range) -> None:
+        from robot.parsing.lexer import Token as RobotToken
+        from robot.parsing.model.statements import (
+            Fixture,
+            KeywordCall,
+            Template,
+            TestTemplate,
+        )
+
+        if range.start == range.end:
+            document = await self.parent.documents.get(document_uri)
+            if document is None:
+                return
+
+            model = await self.parent.documents_cache.get_model(document, False)
+            node = await get_node_at_position(model, range.start)
+
+            if not isinstance(node, KeywordCall) or node.assign:
+                return
+
+            keyword_token = (
+                node.get_token(RobotToken.NAME)
+                if isinstance(node, (TestTemplate, Template, Fixture))
+                else node.get_token(RobotToken.KEYWORD)
+            )
+
+            if keyword_token is None or range.start not in range_from_token(keyword_token):
+                return
+
+            start = range_from_token(keyword_token).start
+            we = WorkspaceEdit(
+                document_changes=[
+                    TextDocumentEdit(
+                        OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
+                        [AnnotatedTextEdit("assign_result_to_variable", Range(start, start), "${result}    ")],
+                    )
+                ],
+                change_annotations={"assign_result_to_variable": ChangeAnnotation("Assign result to variable", False)},
+            )
+
+            if (await self.parent.workspace.apply_edit(we)).applied:
+                insert_range = Range(start, start).extend(start_character=2, end_character=8)
+
+                await self.parent.window.show_document(str(document.uri), take_focus=True, selection=insert_range)
+
+    async def code_action_create_local_variable(
+        self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
+    ) -> Optional[List[Union[Command, CodeAction]]]:
+        from robot.parsing.model.blocks import Keyword, TestCase
+        from robot.parsing.model.statements import Documentation, Fixture, Statement, Template
+
+        if range.start == range.end and (
+            (context.only and CodeActionKind.QUICK_FIX in context.only)
+            or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+        ):
+            diagnostics = next(
+                (d for d in context.diagnostics if d.source == "robotcode.namespace" and d.code == "VariableNotFound"),
+                None,
+            )
+            if (
+                diagnostics is not None
+                and diagnostics.range.start.line == diagnostics.range.end.line
+                and diagnostics.range.start.character < diagnostics.range.end.character
+            ):
+                model = await self.parent.documents_cache.get_model(document, False)
+                nodes = await get_nodes_at_position(model, range.start)
+
+                if not any(n for n in nodes if isinstance(n, (Keyword, TestCase))):
+                    return None
+
+                node = nodes[-1] if nodes else None
+                if node is None or isinstance(node, (Documentation, Fixture, Template)):
+                    return None
+
+                if not isinstance(node, Statement):
+                    return None
+                return [
+                    CodeAction(
+                        "Create Local Variable",
+                        kind=CodeActionKind.QUICK_FIX,
+                        command=Command(
+                            self.parent.commands.get_command_name(self.create_local_variable_command),
+                            self.parent.commands.get_command_name(self.create_local_variable_command),
+                            [document.document_uri, diagnostics.range],
+                        ),
+                        diagnostics=[diagnostics],
+                    )
+                ]
+
+        return None
+
+    @command("robotcode.createLocalVariable")
+    async def create_local_variable_command(self, document_uri: DocumentUri, range: Range) -> None:
+        from robot.parsing.model.blocks import Keyword, TestCase
+        from robot.parsing.model.statements import Documentation, Fixture, Statement, Template
+
+        if range.start.line == range.end.line and range.start.character < range.end.character:
+            document = await self.parent.documents.get(document_uri)
+            if document is None:
+                return
+
+            model = await self.parent.documents_cache.get_model(document, False)
+            nodes = await get_nodes_at_position(model, range.start)
+
+            if not any(n for n in nodes if isinstance(n, (Keyword, TestCase))):
+                return
+
+            node = nodes[-1] if nodes else None
+            if node is None or isinstance(node, (Documentation, Fixture, Template)):
+                return
+
+            if not isinstance(node, Statement):
+                return
+
+            text = document.get_lines()[range.start.line][range.start.character : range.end.character]
+            if not text:
+                return
+
+            spaces = node.tokens[0].value if node.tokens and node.tokens[0].type == "SEPARATOR" else "    "
+
+            insert_text = f"{spaces}${{{text}}}     Set Variable    value\n"
+            node_range = range_from_node(node)
+            insert_range = Range(start=Position(node_range.start.line, 0), end=Position(node_range.start.line, 0))
+            we = WorkspaceEdit(
+                document_changes=[
+                    TextDocumentEdit(
+                        OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
+                        [AnnotatedTextEdit("create_local_variable", insert_range, insert_text)],
+                    )
+                ],
+                change_annotations={"create_local_variable": ChangeAnnotation("Create Local Variable", False)},
+            )
+
+            if (await self.parent.workspace.apply_edit(we)).applied:
+                insert_range.start.character += insert_text.index("value")
+                insert_range.end.character = insert_range.start.character + len("value")
+
+                await self.parent.window.show_document(str(document.uri), take_focus=False, selection=insert_range)
+
+    async def code_action_disable_robotcode_diagnostics_for_line(
+        self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
+    ) -> Optional[List[Union[Command, CodeAction]]]:
+        if range.start == range.end and (
+            (context.only and CodeActionKind.QUICK_FIX in context.only)
+            or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+        ):
+            diagnostics = next((d for d in context.diagnostics if d.source and d.source.startswith("robotcode.")), None)
+
+            if diagnostics is not None:
+                return [
+                    CodeAction(
+                        f"Disable '{diagnostics.code}' for this line",
+                        kind=CodeActionKind.QUICK_FIX,
+                        command=Command(
+                            self.parent.commands.get_command_name(self.disable_robotcode_diagnostics_for_line_command),
+                            self.parent.commands.get_command_name(self.disable_robotcode_diagnostics_for_line_command),
+                            [document.document_uri, range],
+                        ),
+                        diagnostics=[diagnostics],
+                    )
+                ]
+
+        return None
+
+    @command("robotcode.disableRobotcodeDiagnosticsForLine")
+    async def disable_robotcode_diagnostics_for_line_command(self, document_uri: DocumentUri, range: Range) -> None:
+        if range.start.line == range.end.line:
+            document = await self.parent.documents.get(document_uri)
+            if document is None:
+                return
+
+            insert_text = "    # robotcode: ignore"
+
+            line = document.get_lines()[range.start.line]
+            stripped_line = line.rstrip()
+
+            insert_range = Range(
+                start=Position(range.start.line, len(stripped_line)), end=Position(range.start.line, len(line))
+            )
+            we = WorkspaceEdit(
+                document_changes=[
+                    TextDocumentEdit(
+                        OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
+                        [AnnotatedTextEdit("disable_robotcode_diagnostics_for_line", insert_range, insert_text)],
+                    )
+                ],
+                change_annotations={
+                    "disable_robotcode_diagnostics_for_line": ChangeAnnotation(
+                        "Disable robotcode diagnostics for line", False
+                    )
+                },
+            )
+
+            await self.parent.workspace.apply_edit(we)

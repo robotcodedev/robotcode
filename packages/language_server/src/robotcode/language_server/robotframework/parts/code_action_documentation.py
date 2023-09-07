@@ -199,9 +199,6 @@ class DualStackServer(ThreadingHTTPServer):
         return super().server_bind()
 
 
-CODEACTIONKINDS_SOURCE_OPENDOCUMENTATION = f"{CodeActionKind.SOURCE.value}.openDocumentation"
-
-
 class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     _logger = LoggingDescriptor()
 
@@ -256,7 +253,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
     @language_id("robotframework")
     @code_action_kinds(
         [
-            CODEACTIONKINDS_SOURCE_OPENDOCUMENTATION,
+            CodeActionKind.SOURCE,
         ]
     )
     @_logger.call
@@ -383,7 +380,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
     def open_documentation_code_action(self, url: str) -> CodeAction:
         return CodeAction(
             "Open Documentation",
-            kind=CODEACTIONKINDS_SOURCE_OPENDOCUMENTATION,
+            kind=CodeActionKind.SOURCE,
             command=Command(
                 "Open Documentation",
                 "robotcode.showDocumentation",
