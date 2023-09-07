@@ -1,6 +1,6 @@
 # Change Log
 
-All notable changes to the "robotcode" extension will be documented in this file.
+All notable changes to "robotcode" are documented in this file.
 
 ## v0.55.1 (2023-09-06)
 
@@ -12,14 +12,14 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 ### Feat
 
-- support for robocop 4.1.1 code descriptions
+- **langserver**: support for robocop 4.1.1 code descriptions
 - **langserver**: better completion for variable imports
 
 ### Fix
 
-- correct handling of @ variable and & dictionary arguments in signature help and completion
-- don't complete arguments for run keywords
-- update of RobotCode icon in status bar when Python environment is changed
+- **langserver**: correct handling of @ variable and & dictionary arguments in signature help and completion
+- **langserver**: don't complete arguments for run keywords
+- **vscode**: update of RobotCode icon in status bar when Python environment is changed
 
 ### Refactor
 
@@ -39,13 +39,13 @@ All notable changes to the "robotcode" extension will be documented in this file
 
 - **langserver**: escape pipe symbols in keyword argument descriptions in hover
 - **vscode**: correct highligtning of keyword arguments
-- sorting of completion items on library imports
+- **langserver**: sorting of completion items on library imports
 
 ## v0.54.1 (2023-09-02)
 
 ### Fix
 
-- disable html report for pytest
+- **build**: disable html report for pytest
 
 ## v0.54.0 (2023-09-01)
 
@@ -92,7 +92,7 @@ All notable changes to the "robotcode" extension will be documented in this file
 ### Fix
 
 - **langserver**: correct highlighting of keyword arguments with default value
-- correct hovering, goto, etc. for if/else if/inline if statements
+- **langserver**: correct hovering, goto, etc. for if/else if/inline if statements
 
 ### Refactor
 
