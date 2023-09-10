@@ -59,16 +59,53 @@ ${name}
 )
 
 
-class FindKeywordSectionVisitor(Visitor):
+class LastRealStatementFinder(Visitor):
+    def __init__(self) -> None:
+        self.statement: Optional[ast.AST] = None
+
+    @classmethod
+    def find_from(cls, model: ast.AST) -> Optional[ast.AST]:
+        finder = cls()
+        finder.visit(model)
+        return finder.statement
+
+    def visit_Statement(self, statement: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.model.statements import EmptyLine
+
+        if not isinstance(statement, EmptyLine):
+            self.statement = statement
+
+
+class FindSectionsVisitor(Visitor):
     def __init__(self) -> None:
         self.keyword_sections: List[ast.AST] = []
+        self.variable_sections: List[ast.AST] = []
+        self.setting_sections: List[ast.AST] = []
+        self.testcase_sections: List[ast.AST] = []
+        self.sections: List[ast.AST] = []
 
     def visit_KeywordSection(self, node: ast.AST) -> None:  # noqa: N802
         self.keyword_sections.append(node)
+        self.sections.append(node)
+
+    def visit_VariableSection(self, node: ast.AST) -> None:  # noqa: N802
+        self.variable_sections.append(node)
+        self.sections.append(node)
+
+    def visit_SettingSection(self, node: ast.AST) -> None:  # noqa: N802
+        self.setting_sections.append(node)
+        self.sections.append(node)
+
+    def visit_TestCaseSection(self, node: ast.AST) -> None:  # noqa: N802
+        self.testcase_sections.append(node)
+        self.sections.append(node)
+
+    def visit_CommentSection(self, node: ast.AST) -> None:  # noqa: N802
+        self.sections.append(node)
 
 
 def find_keyword_sections(node: ast.AST) -> Optional[List[ast.AST]]:
-    visitor = FindKeywordSectionVisitor()
+    visitor = FindSectionsVisitor()
     visitor.visit(node)
     return visitor.keyword_sections if visitor.keyword_sections else None
 
@@ -95,7 +132,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
                 result.extend(code_actions)
 
         if result:
-            return result
+            return list(sorted(result, key=lambda ca: ca.title))
 
         return None
 
@@ -258,7 +295,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
 
             return [
                 CodeAction(
-                    "Assign Result To Variable",
+                    "Assign result to variable",
                     kind="other",
                     command=Command(
                         self.parent.commands.get_command_name(self.assign_result_to_variable_command),
@@ -349,7 +386,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
                     return None
                 return [
                     CodeAction(
-                        "Create Local Variable",
+                        "Create local variable",
                         kind=CodeActionKind.QUICK_FIX,
                         command=Command(
                             self.parent.commands.get_command_name(self.create_local_variable_command),
@@ -391,7 +428,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
 
             spaces = node.tokens[0].value if node.tokens and node.tokens[0].type == "SEPARATOR" else "    "
 
-            insert_text = f"{spaces}${{{text}}}     Set Variable    value\n"
+            insert_text = f"{spaces}${{{text}}}    Set Variable    value\n"
             node_range = range_from_node(node)
             insert_range = Range(start=Position(node_range.start.line, 0), end=Position(node_range.start.line, 0))
             we = WorkspaceEdit(
@@ -401,7 +438,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
                         [AnnotatedTextEdit("create_local_variable", insert_range, insert_text)],
                     )
                 ],
-                change_annotations={"create_local_variable": ChangeAnnotation("Create Local Variable", False)},
+                change_annotations={"create_local_variable": ChangeAnnotation("Create Local variable", False)},
             )
 
             if (await self.parent.workspace.apply_edit(we)).applied:
@@ -465,3 +502,118 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
             )
 
             await self.parent.workspace.apply_edit(we)
+
+    async def code_action_create_suite_variable(
+        self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
+    ) -> Optional[List[Union[Command, CodeAction]]]:
+        if range.start == range.end and (
+            (context.only and CodeActionKind.QUICK_FIX in context.only)
+            or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+        ):
+            diagnostics = next(
+                (d for d in context.diagnostics if d.source == "robotcode.namespace" and d.code == "VariableNotFound"),
+                None,
+            )
+            if (
+                diagnostics is not None
+                and diagnostics.range.start.line == diagnostics.range.end.line
+                and diagnostics.range.start.character < diagnostics.range.end.character
+            ):
+                return [
+                    CodeAction(
+                        "Create suite variable",
+                        kind=CodeActionKind.QUICK_FIX,
+                        command=Command(
+                            self.parent.commands.get_command_name(self.create_suite_variable_command),
+                            self.parent.commands.get_command_name(self.create_suite_variable_command),
+                            [document.document_uri, diagnostics.range],
+                        ),
+                        diagnostics=[diagnostics],
+                    )
+                ]
+
+        return None
+
+    @command("robotcode.createSuiteVariable")
+    async def create_suite_variable_command(self, document_uri: DocumentUri, range: Range) -> None:
+        from robot.parsing.model.blocks import VariableSection
+        from robot.parsing.model.statements import Variable
+
+        if range.start.line == range.end.line and range.start.character < range.end.character:
+            document = await self.parent.documents.get(document_uri)
+            if document is None:
+                return
+
+            model = await self.parent.documents_cache.get_model(document, False)
+            nodes = await get_nodes_at_position(model, range.start)
+
+            node = nodes[-1] if nodes else None
+
+            if node is None:
+                return
+
+            insert_range_prefix = ""
+            insert_range_suffix = ""
+
+            if any(n for n in nodes if isinstance(n, (VariableSection))) and isinstance(node, Variable):
+                node_range = range_from_node(node)
+                insert_range = Range(start=Position(node_range.start.line, 0), end=Position(node_range.start.line, 0))
+            else:
+                finder = FindSectionsVisitor()
+                finder.visit(model)
+
+                if finder.variable_sections:
+                    section = finder.variable_sections[-1]
+
+                    last_stmt = LastRealStatementFinder.find_from(section)
+                    end_lineno = last_stmt.end_lineno if last_stmt else section.end_lineno
+                    if end_lineno is None:
+                        return
+
+                    insert_range = Range(start=Position(end_lineno, 0), end=Position(end_lineno, 0))
+                else:
+                    insert_range_prefix = "\n\n*** Variables ***\n"
+                    if finder.setting_sections:
+                        insert_range_prefix = "\n\n*** Variables ***\n"
+                        insert_range_suffix = "\n\n"
+                        section = finder.setting_sections[-1]
+
+                        last_stmt = LastRealStatementFinder.find_from(section)
+                        end_lineno = last_stmt.end_lineno if last_stmt else section.end_lineno
+                        if end_lineno is None:
+                            return
+
+                        insert_range = Range(start=Position(end_lineno, 0), end=Position(end_lineno, 0))
+                    else:
+                        insert_range_prefix = "*** Variables ***\n"
+                        insert_range_suffix = "\n\n"
+                        insert_range = Range(start=Position(0, 0), end=Position(0, 0))
+
+            lines = document.get_lines()
+            text = lines[range.start.line][range.start.character : range.end.character]
+            if not text:
+                return
+            if insert_range.start.line == insert_range.end.line and insert_range.start.line >= len(lines):
+                insert_range.start.line = len(lines) - 1
+                insert_range.start.character = len(lines[-1])
+                insert_range_prefix = "\n" + insert_range_prefix
+            insert_text = insert_range_prefix + f"${{{text}}}    value\n" + insert_range_suffix
+            we = WorkspaceEdit(
+                document_changes=[
+                    TextDocumentEdit(
+                        OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
+                        [AnnotatedTextEdit("create_suite_variable", insert_range, insert_text)],
+                    )
+                ],
+                change_annotations={"create_suite_variable": ChangeAnnotation("Create suite variable", False)},
+            )
+
+            if (await self.parent.workspace.apply_edit(we)).applied:
+                splitted = insert_text.splitlines()
+                start_line = next((i for i, l in enumerate(splitted) if "value" in l), 0)
+                insert_range.start.line = insert_range.start.line + start_line
+                insert_range.end.line = insert_range.start.line
+                insert_range.start.character = splitted[start_line].index("value")
+                insert_range.end.character = insert_range.start.character + len("value")
+
+                await self.parent.window.show_document(str(document.uri), take_focus=False, selection=insert_range)
