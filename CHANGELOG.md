@@ -2,6 +2,18 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.56.0 (2023-09-11)
+
+### Feat
+
+- **langserver**: new code action quick fix - Add argument
+- **langserver**: new code action quick fix - create suite variable
+- **langserver**: new code action quick fixes - assign kw result to variable, create local variable, disable robot code diagnostics for line
+
+### Refactor
+
+- **langserver**: move all error messages to one place
+
 ## v0.55.1 (2023-09-06)
 
 ### Fix
