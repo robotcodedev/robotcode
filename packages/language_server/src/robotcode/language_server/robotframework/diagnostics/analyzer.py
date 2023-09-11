@@ -44,9 +44,9 @@ from .entities import (
     VariableDefinitionType,
     VariableNotFoundDefinition,
 )
+from .errors import DIAGNOSTICS_SOURCE_NAME, Error
 from .library_doc import KeywordDoc, KeywordMatcher, is_embedded_keyword
 from .namespace import (
-    DIAGNOSTICS_SOURCE_NAME,
     KeywordFinder,
     Namespace,
 )
@@ -225,7 +225,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                     message=f"Variable '{var.name}' not found.",
                                     severity=severity,
                                     source=DIAGNOSTICS_SOURCE_NAME,
-                                    code="VariableNotFound",
+                                    code=Error.VARIABLE_NOT_FOUND,
                                 )
                             else:
                                 if isinstance(var, EnvironmentVariableDefinition) and var.default_value is None:
@@ -236,7 +236,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                             message=f"Environment variable '{var.name}' not found.",
                                             severity=severity,
                                             source=DIAGNOSTICS_SOURCE_NAME,
-                                            code="EnvirommentVariableNotFound",
+                                            code=Error.ENVIROMMENT_VARIABLE_NOT_FOUND,
                                         )
 
                                 if self.namespace.document is not None:
@@ -296,7 +296,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                             message=f"Variable '{var.name}' not found.",
                             severity=DiagnosticSeverity.ERROR,
                             source=DIAGNOSTICS_SOURCE_NAME,
-                            code="VariableNotFound",
+                            code=Error.VARIABLE_NOT_FOUND,
                         )
                     else:
                         if self.namespace.document is not None:
@@ -507,21 +507,21 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         f"{f': {result.deprecated_message}' if result.deprecated_message else ''}.",
                         severity=DiagnosticSeverity.HINT,
                         tags=[DiagnosticTag.DEPRECATED],
-                        code="DeprecatedKeyword",
+                        code=Error.DEPRECATED_KEYWORD,
                     )
                 if result.is_error_handler:
                     self.append_diagnostics(
                         range=kw_range,
                         message=f"Keyword definition contains errors: {result.error_handler_message}",
                         severity=DiagnosticSeverity.ERROR,
-                        code="KeywordContainsErrors",
+                        code=Error.KEYWORD_CONTAINS_ERRORS,
                     )
                 if result.is_reserved():
                     self.append_diagnostics(
                         range=kw_range,
                         message=f"'{result.name}' is a reserved keyword.",
                         severity=DiagnosticSeverity.ERROR,
-                        code="ReservedKeyword",
+                        code=Error.RESERVED_KEYWORD,
                     )
 
                 if get_robot_version() >= (6, 0) and result.is_resource_keyword and result.is_private():
@@ -531,7 +531,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                             message=f"Keyword '{result.longname}' is private and should only be called by"
                             f" keywords in the same file.",
                             severity=DiagnosticSeverity.WARNING,
-                            code="PrivateKeyword",
+                            code=Error.PRIVATE_KEYWORD,
                         )
 
                 if not isinstance(node, (Template, TestTemplate)):
@@ -595,7 +595,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                 range=range_from_token(var_token),
                                 message=f"Variable '{var.name}' not found.",
                                 severity=DiagnosticSeverity.ERROR,
-                                code="VariableNotFound",
+                                code=Error.VARIABLE_NOT_FOUND,
                             )
                         else:
                             if self.namespace.document is not None:
@@ -675,7 +675,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         range=range_from_token(t),
                         message=f"Incorrect use of {t.value}.",
                         severity=DiagnosticSeverity.ERROR,
-                        code="IncorrectUse",
+                        code=Error.INCORRECT_USE,
                     )
                     continue
 
@@ -843,7 +843,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 range=range_from_node_or_token(value, value.get_token(RobotToken.ASSIGN)),
                 message="Keyword name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
-                code="KeywordNameEmpty",
+                code=Error.KEYWORD_NAME_EMPTY,
             )
         else:
             await self._analyze_keyword_call(
@@ -856,7 +856,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 message="Code is unreachable.",
                 severity=DiagnosticSeverity.HINT,
                 tags=[DiagnosticTag.UNNECESSARY],
-                code="CodeUnreachable",
+                code=Error.CODE_UNREACHABLE,
             )
 
         await self.generic_visit(node)
@@ -874,7 +874,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 range=range_from_node_or_token(testcase, name_token),
                 message="Test case name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
-                code="TestCaseNameEmpty",
+                code=Error.TESTCASE_NAME_EMPTY,
             )
 
         self.current_testcase_or_keyword_name = testcase.name
@@ -907,7 +907,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     range=range_from_node_or_token(keyword, name_token),
                     message="Keyword cannot have both normal and embedded arguments.",
                     severity=DiagnosticSeverity.ERROR,
-                    code="KeywordNormalAndEmbbededError",
+                    code=Error.KEYWORD_CONTAINS_NORMAL_AND_EMBBEDED_ARGUMENTS,
                 )
         else:
             name_token = cast(KeywordName, keyword.header).get_token(RobotToken.KEYWORD_NAME)
@@ -915,7 +915,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 range=range_from_node_or_token(keyword, name_token),
                 message="Keyword name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
-                code="KeywordNameEmpty",
+                code=Error.KEYWORD_NAME_EMPTY,
             )
 
         self.current_testcase_or_keyword_name = keyword.name
@@ -992,7 +992,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     message="`Force Tags` is deprecated in favour of new `Test Tags` setting.",
                     severity=DiagnosticSeverity.INFORMATION,
                     tags=[DiagnosticTag.DEPRECATED],
-                    code="DeprecatedHyphenTag",
+                    code=Error.DEPRECATED_HYPHEN_TAG,
                 )
 
     async def visit_DefaultTags(self, node: ast.AST) -> None:  # noqa: N802
@@ -1006,7 +1006,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 message="`Force Tags` is deprecated in favour of new `Test Tags` setting.",
                 severity=DiagnosticSeverity.INFORMATION,
                 tags=[DiagnosticTag.DEPRECATED],
-                code="DeprecatedHyphenTag",
+                code=Error.DEPRECATED_HYPHEN_TAG,
             )
 
     async def visit_Tags(self, node: ast.AST) -> None:  # noqa: N802
@@ -1026,7 +1026,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         f"literal value and to avoid this warning.",
                         severity=DiagnosticSeverity.WARNING,
                         tags=[DiagnosticTag.DEPRECATED],
-                        code="DeprecatedHyphenTag",
+                        code=Error.DEPRECATED_HYPHEN_TAG,
                     )
 
     def _check_import_name(self, value: Optional[str], node: ast.AST, type: str) -> None:
@@ -1035,7 +1035,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 range=range_from_node(node),
                 message=f"{type} setting requires value.",
                 severity=DiagnosticSeverity.ERROR,
-                code="ImportRequiresValue",
+                code=Error.IMPORT_REQUIRES_VALUE,
             )
 
     async def visit_VariablesImport(self, node: ast.AST) -> None:  # noqa: N802

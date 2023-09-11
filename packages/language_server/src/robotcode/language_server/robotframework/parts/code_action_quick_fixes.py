@@ -23,6 +23,7 @@ from robotcode.core.lsp.types import (
 from robotcode.core.utils.inspect import iter_methods
 from robotcode.language_server.common.decorators import code_action_kinds, command, language_id
 from robotcode.language_server.common.text_document import TextDocument
+from robotcode.language_server.robotframework.diagnostics.errors import DIAGNOSTICS_SOURCE_NAME, Error
 from robotcode.language_server.robotframework.utils.ast_utils import (
     Token,
     get_node_at_position,
@@ -147,7 +148,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
                 (
                     d
                     for d in context.diagnostics
-                    if d.source == "robotcode.namespace" and d.code == "KeywordNotFoundError"
+                    if d.source == DIAGNOSTICS_SOURCE_NAME and d.code == Error.KEYWORD_NOT_FOUND
                 ),
                 None,
             )
@@ -364,7 +365,11 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
             or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
         ):
             diagnostics = next(
-                (d for d in context.diagnostics if d.source == "robotcode.namespace" and d.code == "VariableNotFound"),
+                (
+                    d
+                    for d in context.diagnostics
+                    if d.source == DIAGNOSTICS_SOURCE_NAME and d.code == Error.VARIABLE_NOT_FOUND
+                ),
                 None,
             )
             if (
@@ -511,7 +516,11 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
             or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
         ):
             diagnostics = next(
-                (d for d in context.diagnostics if d.source == "robotcode.namespace" and d.code == "VariableNotFound"),
+                (
+                    d
+                    for d in context.diagnostics
+                    if d.source == DIAGNOSTICS_SOURCE_NAME and d.code == Error.VARIABLE_NOT_FOUND
+                ),
                 None,
             )
             if (

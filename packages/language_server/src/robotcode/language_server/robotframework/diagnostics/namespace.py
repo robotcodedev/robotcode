@@ -72,6 +72,7 @@ from .entities import (
     VariablesEntry,
     VariablesImport,
 )
+from .errors import DIAGNOSTICS_SOURCE_NAME, Error
 from .imports_manager import ImportsManager
 from .library_doc import (
     BUILTIN_LIBRARY_NAME,
@@ -81,8 +82,6 @@ from .library_doc import (
     KeywordMatcher,
     LibraryDoc,
 )
-
-DIAGNOSTICS_SOURCE_NAME = "robotcode.namespace"
 
 EXTRACT_COMMENT_PATTERN = re.compile(r".*(?:^ *|\t+| {2,})#(?P<comment>.*)$")
 ROBOTCODE_PATTERN = re.compile(r"(?P<marker>\brobotcode\b)\s*:\s*(?P<rule>\b\w+\b)")
@@ -1043,7 +1042,7 @@ class Namespace:
                             message=f"Imported library '{value.name}' contains no keywords.",
                             severity=DiagnosticSeverity.WARNING,
                             source=DIAGNOSTICS_SOURCE_NAME,
-                            code="LibraryContainsNoKeywords",
+                            code=Error.LIBRARY_CONTAINS_NO_KEYWORDS,
                         )
                 elif isinstance(value, ResourceImport):
                     if value.name is None:
@@ -1066,7 +1065,7 @@ class Namespace:
                                 ]
                                 if value.source
                                 else None,
-                                code="PossibleCircularImport",
+                                code=Error.POSSIBLE_CIRCULAR_IMPORT,
                             )
                     else:
                         result = await self._get_resource_entry(
@@ -1091,7 +1090,7 @@ class Namespace:
                                 message=f"Imported resource file '{value.name}' is empty.",
                                 severity=DiagnosticSeverity.WARNING,
                                 source=DIAGNOSTICS_SOURCE_NAME,
-                                code="ResourceEmpty",
+                                code=Error.RESOURCE_EMPTY,
                             )
 
                 elif isinstance(value, VariablesImport):
@@ -1146,7 +1145,7 @@ class Namespace:
                                     for err in result.library_doc.errors
                                     if err.source is not None
                                 ],
-                                code="ImportContainsErrors",
+                                code=Error.IMPORT_CONTAINS_ERRORS,
                             )
                         for err in filter(
                             lambda e: e.source is None or not Path(e.source).is_absolute(), result.library_doc.errors
@@ -1231,7 +1230,7 @@ class Namespace:
                                         message="Recursive resource import.",
                                         severity=DiagnosticSeverity.INFORMATION,
                                         source=DIAGNOSTICS_SOURCE_NAME,
-                                        code="RecursiveImport",
+                                        code=Error.RECURSIVE_IMPORT,
                                     )
                                 elif (
                                     already_imported_resources is not None
@@ -1253,7 +1252,7 @@ class Namespace:
                                         ]
                                         if already_imported_resources.import_source
                                         else None,
-                                        code="ResourceAlreadyImported",
+                                        code=Error.RESOURCE_ALREADY_IMPORTED,
                                     )
 
                     elif isinstance(entry, VariablesEntry):
@@ -1285,7 +1284,7 @@ class Namespace:
                                 ]
                                 if already_imported_variables[0].import_source
                                 else None,
-                                code="VariablesAlreadyImported",
+                                code=Error.VARIABLES_ALREADY_IMPORTED,
                             )
 
                         if (entry.alias or entry.name or entry.import_name) not in self._variables:
@@ -1310,7 +1309,7 @@ class Namespace:
                                 ]
                                 if entry.import_source
                                 else None,
-                                code="LibraryOverridesBuiltIn",
+                                code=Error.LIBRARY_OVERRIDES_BUILTIN,
                             )
                             continue
 
@@ -1338,7 +1337,7 @@ class Namespace:
                                 ]
                                 if already_imported_library[0].import_source
                                 else None,
-                                code="LibraryAlreadyImported",
+                                code=Error.LIBRARY_ALREADY_IMPORTED,
                             )
 
                         if (entry.alias or entry.name or entry.import_name) not in self._libraries:
