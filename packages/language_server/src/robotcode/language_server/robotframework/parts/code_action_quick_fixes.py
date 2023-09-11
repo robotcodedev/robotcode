@@ -128,7 +128,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
     ) -> Optional[List[Union[Command, CodeAction]]]:
         result = []
         for method in iter_methods(self, lambda m: m.__name__.startswith("code_action_")):
-            code_actions = await method(self, document, range, context)
+            code_actions = await method(document, range, context)
             if code_actions:
                 result.extend(code_actions)
 
@@ -138,11 +138,15 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
         return None
 
     async def code_action_create_keyword(
-        self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
+        self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
-        if range.start == range.end and (
-            (context.only and CodeActionKind.QUICK_FIX in context.only)
-            or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+        if (
+            range.start.line == range.end.line
+            and range.start.character <= range.end.character
+            and (
+                (context.only and CodeActionKind.QUICK_FIX in context.only)
+                or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+            )
         ):
             diagnostics = next(
                 (
@@ -265,7 +269,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
                 await self.parent.window.show_document(str(document.uri), take_focus=True, selection=insert_range)
 
     async def code_action_assign_result_to_variable(
-        self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
+        self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
         from robot.parsing.lexer import Token as RobotToken
         from robot.parsing.model.statements import (
@@ -275,9 +279,13 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
             TestTemplate,
         )
 
-        if range.start == range.end and (
-            (context.only and "other" in context.only)
-            or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+        if (
+            range.start.line == range.end.line
+            and range.start.character <= range.end.character
+            and (
+                (context.only and "other" in context.only)
+                or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+            )
         ):
             model = await self.parent.documents_cache.get_model(document, False)
             node = await get_node_at_position(model, range.start)
@@ -318,7 +326,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
             TestTemplate,
         )
 
-        if range.start == range.end:
+        if range.start.line == range.end.line and range.start.character <= range.end.character:
             document = await self.parent.documents.get(document_uri)
             if document is None:
                 return
@@ -355,14 +363,18 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
                 await self.parent.window.show_document(str(document.uri), take_focus=True, selection=insert_range)
 
     async def code_action_create_local_variable(
-        self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
+        self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
         from robot.parsing.model.blocks import Keyword, TestCase
         from robot.parsing.model.statements import Documentation, Fixture, Statement, Template
 
-        if range.start == range.end and (
-            (context.only and CodeActionKind.QUICK_FIX in context.only)
-            or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+        if (
+            range.start.line == range.end.line
+            and range.start.character <= range.end.character
+            and (
+                (context.only and CodeActionKind.QUICK_FIX in context.only)
+                or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+            )
         ):
             diagnostics = next(
                 (
@@ -409,7 +421,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
         from robot.parsing.model.blocks import Keyword, TestCase
         from robot.parsing.model.statements import Documentation, Fixture, Statement, Template
 
-        if range.start.line == range.end.line and range.start.character < range.end.character:
+        if range.start.line == range.end.line and range.start.character <= range.end.character:
             document = await self.parent.documents.get(document_uri)
             if document is None:
                 return
@@ -447,17 +459,21 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
             )
 
             if (await self.parent.workspace.apply_edit(we)).applied:
-                insert_range.start.character += insert_text.index("value")
+                insert_range.start.character += insert_text.rindex("value")
                 insert_range.end.character = insert_range.start.character + len("value")
 
                 await self.parent.window.show_document(str(document.uri), take_focus=False, selection=insert_range)
 
     async def code_action_disable_robotcode_diagnostics_for_line(
-        self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
+        self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
-        if range.start == range.end and (
-            (context.only and CodeActionKind.QUICK_FIX in context.only)
-            or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+        if (
+            range.start.line == range.end.line
+            and range.start.character <= range.end.character
+            and (
+                (context.only and CodeActionKind.QUICK_FIX in context.only)
+                or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+            )
         ):
             diagnostics = next((d for d in context.diagnostics if d.source and d.source.startswith("robotcode.")), None)
 
@@ -479,7 +495,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
 
     @command("robotcode.disableRobotcodeDiagnosticsForLine")
     async def disable_robotcode_diagnostics_for_line_command(self, document_uri: DocumentUri, range: Range) -> None:
-        if range.start.line == range.end.line:
+        if range.start.line == range.end.line and range.start.character <= range.end.character:
             document = await self.parent.documents.get(document_uri)
             if document is None:
                 return
@@ -509,11 +525,15 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
             await self.parent.workspace.apply_edit(we)
 
     async def code_action_create_suite_variable(
-        self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
+        self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
-        if range.start == range.end and (
-            (context.only and CodeActionKind.QUICK_FIX in context.only)
-            or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+        if (
+            range.start.line == range.end.line
+            and range.start.character <= range.end.character
+            and (
+                (context.only and CodeActionKind.QUICK_FIX in context.only)
+                or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+            )
         ):
             diagnostics = next(
                 (
@@ -548,7 +568,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
         from robot.parsing.model.blocks import VariableSection
         from robot.parsing.model.statements import Variable
 
-        if range.start.line == range.end.line and range.start.character < range.end.character:
+        if range.start.line == range.end.line and range.start.character <= range.end.character:
             document = await self.parent.documents.get(document_uri)
             if document is None:
                 return
@@ -622,7 +642,127 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
                 start_line = next((i for i, l in enumerate(splitted) if "value" in l), 0)
                 insert_range.start.line = insert_range.start.line + start_line
                 insert_range.end.line = insert_range.start.line
-                insert_range.start.character = splitted[start_line].index("value")
+                insert_range.start.character = splitted[start_line].rindex("value")
                 insert_range.end.character = insert_range.start.character + len("value")
+
+                await self.parent.window.show_document(str(document.uri), take_focus=False, selection=insert_range)
+
+    async def code_action_add_argument(
+        self, document: TextDocument, range: Range, context: CodeActionContext
+    ) -> Optional[List[Union[Command, CodeAction]]]:
+        from robot.parsing.model.blocks import Keyword
+
+        if (
+            range.start.line == range.end.line
+            and range.start.character <= range.end.character
+            and (
+                (context.only and CodeActionKind.QUICK_FIX in context.only)
+                or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
+            )
+        ):
+            diagnostics = next(
+                (
+                    d
+                    for d in context.diagnostics
+                    if d.source == DIAGNOSTICS_SOURCE_NAME and d.code == Error.VARIABLE_NOT_FOUND
+                ),
+                None,
+            )
+            if (
+                diagnostics is not None
+                and diagnostics.range.start.line == diagnostics.range.end.line
+                and diagnostics.range.start.character < diagnostics.range.end.character
+            ):
+                text = document.get_lines()[range.start.line][range.start.character : range.end.character]
+                if not text:
+                    return None
+
+                model = await self.parent.documents_cache.get_model(document, False)
+                nodes = await get_nodes_at_position(model, range.start)
+
+                if not any(n for n in nodes if isinstance(n, Keyword)):
+                    return None
+
+                return [
+                    CodeAction(
+                        "Add argument",
+                        kind=CodeActionKind.QUICK_FIX,
+                        command=Command(
+                            self.parent.commands.get_command_name(self.action_add_argument_command),
+                            self.parent.commands.get_command_name(self.action_add_argument_command),
+                            [document.document_uri, diagnostics.range],
+                        ),
+                        diagnostics=[diagnostics],
+                    )
+                ]
+
+        return None
+
+    @command("robotcode.actionAddArgument")
+    async def action_add_argument_command(self, document_uri: DocumentUri, range: Range) -> None:
+        from robot.parsing.lexer.tokens import Token
+        from robot.parsing.model.blocks import Keyword
+        from robot.parsing.model.statements import Arguments, Documentation
+
+        if range.start.line == range.end.line and range.start.character <= range.end.character:
+            document = await self.parent.documents.get(document_uri)
+            if document is None:
+                return
+
+            text = document.get_lines()[range.start.line][range.start.character : range.end.character]
+            if not text:
+                return
+
+            model = await self.parent.documents_cache.get_model(document, False)
+            nodes = await get_nodes_at_position(model, range.start)
+
+            keyword = next((n for n in nodes if isinstance(n, Keyword)), None)
+            if keyword is None:
+                return
+
+            arguments = next((n for n in keyword.body if isinstance(n, Arguments)), None)
+
+            if arguments is None:
+                i = 0
+                first_stmt = keyword.body[i]
+
+                while isinstance(first_stmt, Documentation) and i < len(keyword.body):
+                    i += 1
+                    first_stmt = keyword.body[i]
+
+                if i >= len(keyword.body):
+                    return
+
+                spaces = (
+                    first_stmt.tokens[0].value
+                    if first_stmt is not None and first_stmt.tokens and first_stmt.tokens[0].type == "SEPARATOR"
+                    else "    "
+                )
+
+                insert_text = f"{spaces}[Arguments]    ${{{text}}}=\n"
+                node_range = range_from_node(first_stmt)
+                insert_range = Range(start=Position(node_range.start.line, 0), end=Position(node_range.start.line, 0))
+            else:
+                insert_text = f"    ${{{text}}}="
+                argument_tokens = arguments.get_tokens(Token.ARGUMENT)
+                if argument_tokens:
+                    token_range = range_from_token(argument_tokens[-1])
+                else:
+                    token_range = range_from_token(arguments.get_token(Token.ARGUMENTS))
+                insert_range = Range(start=token_range.end, end=token_range.end)
+
+            we = WorkspaceEdit(
+                document_changes=[
+                    TextDocumentEdit(
+                        OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
+                        [AnnotatedTextEdit("add_argument", insert_range, insert_text)],
+                    )
+                ],
+                change_annotations={"add_argument": ChangeAnnotation("Add Argument", False)},
+            )
+
+            if (await self.parent.workspace.apply_edit(we)).applied:
+                insert_range.start.character += len(insert_text)
+                insert_range.end.character = insert_range.start.character
 
                 await self.parent.window.show_document(str(document.uri), take_focus=False, selection=insert_range)
