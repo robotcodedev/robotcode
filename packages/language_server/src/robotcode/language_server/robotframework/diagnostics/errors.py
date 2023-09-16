@@ -7,7 +7,7 @@ DIAGNOSTICS_SOURCE_NAME = "robotcode.namespace"
 class Error:
     VARIABLE_NOT_FOUND = "VariableNotFound"
     ENVIROMMENT_VARIABLE_NOT_FOUND = "EnvirommentVariableNotFound"
-    KEYWORD_NOT_FOUND = "KeywordNotFoundError"
+    KEYWORD_NOT_FOUND = "KeywordNotFound"
     LIBRARY_CONTAINS_NO_KEYWORDS = "LibraryContainsNoKeywords"
     POSSIBLE_CIRCULAR_IMPORT = "PossibleCircularImport"
     RESOURCE_EMPTY = "ResourceEmpty"
@@ -28,3 +28,4 @@ class Error:
     KEYWORD_CONTAINS_NORMAL_AND_EMBBEDED_ARGUMENTS = "KeywordContainsNormalAndEmbbededArguments"
     DEPRECATED_HYPHEN_TAG = "DeprecatedHyphenTag"
     IMPORT_REQUIRES_VALUE = "ImportRequiresValue"
+    KEYWORD_ERROR = "KeywordError"

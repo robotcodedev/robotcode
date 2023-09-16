@@ -20,18 +20,19 @@ from robotcode.core.lsp.types import Position, Range
 from . import async_ast
 
 
-def iter_nodes(node: ast.AST) -> Iterator[ast.AST]:
+def iter_nodes(node: ast.AST, descendants: bool = True) -> Iterator[ast.AST]:
     for _field, value in ast.iter_fields(node):
         if isinstance(value, list):
             for item in value:
                 if isinstance(item, ast.AST):
                     yield item
-                    yield from iter_nodes(item)
+                    if descendants:
+                        yield from iter_nodes(item)
 
         elif isinstance(value, ast.AST):
             yield value
-
-            yield from iter_nodes(value)
+            if descendants:
+                yield from iter_nodes(value)
 
 
 @runtime_checkable
@@ -102,6 +103,11 @@ class HeaderAndBodyBlock(Protocol):
     body: List[Any]
 
 
+@runtime_checkable
+class BodyBlock(Protocol):
+    body: List[Any]
+
+
 def range_from_token(token: Token) -> Range:
     return Range(
         start=Position(line=token.lineno - 1, character=token.col_offset),
@@ -112,20 +118,90 @@ def range_from_token(token: Token) -> Range:
     )
 
 
-def range_from_node(node: ast.AST, skip_non_data: bool = False, only_start: bool = False) -> Range:
+class FirstAndLastRealStatementFinder(async_ast.Visitor):
+    def __init__(self) -> None:
+        self.first_statement: Optional[ast.AST] = None
+        self.last_statement: Optional[ast.AST] = None
+
+    @classmethod
+    def find_from(cls, model: ast.AST) -> Tuple[Optional[ast.AST], Optional[ast.AST]]:
+        finder = cls()
+        finder.visit(model)
+        return finder.first_statement, finder.last_statement
+
+    def visit_Statement(self, statement: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.model.statements import EmptyLine
+
+        if not isinstance(statement, EmptyLine):
+            if self.first_statement is None:
+                self.first_statement = statement
+
+            self.last_statement = statement
+
+
+def _get_non_data_range_from_node(
+    node: ast.AST, only_start: bool = False, allow_comments: bool = False
+) -> Optional[Range]:
     from robot.parsing.lexer import Token as RobotToken
 
-    if skip_non_data and isinstance(node, HasTokens) and node.tokens:
-        start_token = next((v for v in node.tokens if v.type not in RobotToken.NON_DATA_TOKENS), None)
+    if isinstance(node, HasTokens) and node.tokens:
+        start_token = next(
+            (
+                v
+                for v in node.tokens
+                if v.type
+                not in [
+                    RobotToken.SEPARATOR,
+                    *([] if allow_comments else [RobotToken.COMMENT]),
+                    RobotToken.CONTINUATION,
+                    RobotToken.EOL,
+                    RobotToken.EOS,
+                ]
+            ),
+            None,
+        )
 
         if only_start and start_token is not None:
             end_tokens = tuple(t for t in node.tokens if start_token.lineno == t.lineno)
         else:
             end_tokens = node.tokens
 
-        end_token = next((v for v in reversed(end_tokens) if v.type not in RobotToken.NON_DATA_TOKENS), None)
+        end_token = next(
+            (
+                v
+                for v in reversed(end_tokens)
+                if v.type
+                not in [
+                    RobotToken.SEPARATOR,
+                    *([] if allow_comments else [RobotToken.COMMENT]),
+                    RobotToken.CONTINUATION,
+                    RobotToken.EOL,
+                    RobotToken.EOS,
+                ]
+            ),
+            None,
+        )
         if start_token is not None and end_token is not None:
             return Range(start=range_from_token(start_token).start, end=range_from_token(end_token).end)
+    return None
+
+
+def range_from_node(
+    node: ast.AST, skip_non_data: bool = False, only_start: bool = False, allow_comments: bool = False
+) -> Range:
+    if skip_non_data:
+        if isinstance(node, HasTokens) and node.tokens:
+            result = _get_non_data_range_from_node(node, only_start, allow_comments)
+            if result is not None:
+                return result
+        else:
+            first_stmt, last_stmt = FirstAndLastRealStatementFinder.find_from(node)
+            if first_stmt is not None:
+                first_range = _get_non_data_range_from_node(first_stmt, only_start, allow_comments)
+                if first_range is not None and last_stmt is not None:
+                    last_range = _get_non_data_range_from_node(last_stmt, only_start, allow_comments)
+                    if last_range is not None:
+                        return Range(start=first_range.start, end=last_range.end)
 
     return Range(
         start=Position(line=node.lineno - 1, character=node.col_offset),

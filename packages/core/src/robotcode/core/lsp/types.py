@@ -3993,8 +3993,8 @@ class Range(CamelSnakeMixin):
             return x.is_in_range(self)
         return False
 
-    def is_in_range(self, range: Range) -> bool:
-        return self.start.is_in_range(range) and self.end.is_in_range(range)
+    def is_in_range(self, range: Range, include_end: bool = True) -> bool:
+        return self.start.is_in_range(range, include_end) and self.end.is_in_range(range, include_end)
 
     def __hash__(self) -> int:
         return hash((self.start, self.end))

@@ -15,7 +15,8 @@ from robotcode.robot.config.model import RobotBaseProfile
 from ..__version__ import __version__
 from .configuration import RobotConfig
 from .parts.code_action_documentation import RobotCodeActionDocumentationProtocolPart
-from .parts.code_action_quick_fixes import RobotCodeActionFixesProtocolPart
+from .parts.code_action_quick_fixes import RobotCodeActionQuickFixesProtocolPart
+from .parts.code_action_refactor import RobotCodeActionRefactorProtocolPart
 from .parts.codelens import RobotCodeLensProtocolPart
 from .parts.completion import RobotCompletionProtocolPart
 from .parts.debugging_utils import RobotDebuggingUtilsProtocolPart
@@ -79,6 +80,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     _logger: Final = LoggingDescriptor()
 
     documents_cache = ProtocolPartDescriptor(DocumentsCache)
+    robot_workspace = ProtocolPartDescriptor(RobotWorkspaceProtocolPart)
     robot_diagnostics = ProtocolPartDescriptor(RobotDiagnosticsProtocolPart)
     robot_folding_ranges = ProtocolPartDescriptor(RobotFoldingRangeProtocolPart)
     robot_goto = ProtocolPartDescriptor(RobotGotoProtocolPart)
@@ -97,8 +99,8 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     robot_inline_value = ProtocolPartDescriptor(RobotInlineValueProtocolPart)
     robot_inlay_hint = ProtocolPartDescriptor(RobotInlayHintProtocolPart)
     robot_code_action_documentation = ProtocolPartDescriptor(RobotCodeActionDocumentationProtocolPart)
-    robot_code_action_fixes = ProtocolPartDescriptor(RobotCodeActionFixesProtocolPart)
-    robot_workspace = ProtocolPartDescriptor(RobotWorkspaceProtocolPart)
+    robot_code_action_quick_fixes = ProtocolPartDescriptor(RobotCodeActionQuickFixesProtocolPart)
+    robot_code_action_refactor = ProtocolPartDescriptor(RobotCodeActionRefactorProtocolPart)
 
     robot_debugging_utils = ProtocolPartDescriptor(RobotDebuggingUtilsProtocolPart)
 

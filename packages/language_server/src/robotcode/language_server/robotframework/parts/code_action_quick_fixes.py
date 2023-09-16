@@ -25,6 +25,7 @@ from robotcode.language_server.common.decorators import code_action_kinds, comma
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.diagnostics.errors import DIAGNOSTICS_SOURCE_NAME, Error
 from robotcode.language_server.robotframework.utils.ast_utils import (
+    FirstAndLastRealStatementFinder,
     Token,
     get_node_at_position,
     get_nodes_at_position,
@@ -39,6 +40,7 @@ from .protocol_part import RobotLanguageServerProtocolPart
 if TYPE_CHECKING:
     from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol  # pragma: no cover
 
+QUICK_FIX_OTHER = "other"
 
 KEYWORD_WITH_ARGS_TEMPLATE = Template(
     """\
@@ -58,23 +60,6 @@ ${name}
 
 """
 )
-
-
-class LastRealStatementFinder(Visitor):
-    def __init__(self) -> None:
-        self.statement: Optional[ast.AST] = None
-
-    @classmethod
-    def find_from(cls, model: ast.AST) -> Optional[ast.AST]:
-        finder = cls()
-        finder.visit(model)
-        return finder.statement
-
-    def visit_Statement(self, statement: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.model.statements import EmptyLine
-
-        if not isinstance(statement, EmptyLine):
-            self.statement = statement
 
 
 class FindSectionsVisitor(Visitor):
@@ -111,7 +96,7 @@ def find_keyword_sections(node: ast.AST) -> Optional[List[ast.AST]]:
     return visitor.keyword_sections if visitor.keyword_sections else None
 
 
-class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
@@ -122,7 +107,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
         self.parent.commands.register_all(self)
 
     @language_id("robotframework")
-    @code_action_kinds([CodeActionKind.QUICK_FIX, "other"])
+    @code_action_kinds([CodeActionKind.QUICK_FIX, QUICK_FIX_OTHER])
     async def collect(
         self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
@@ -283,7 +268,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
             range.start.line == range.end.line
             and range.start.character <= range.end.character
             and (
-                (context.only and "other" in context.only)
+                (context.only and QUICK_FIX_OTHER in context.only)
                 or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
             )
         ):
@@ -305,7 +290,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
             return [
                 CodeAction(
                     "Assign result to variable",
-                    kind="other",
+                    kind=QUICK_FIX_OTHER,
                     command=Command(
                         self.parent.commands.get_command_name(self.assign_result_to_variable_command),
                         self.parent.commands.get_command_name(self.assign_result_to_variable_command),
@@ -475,9 +460,8 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
                 or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
             )
         ):
-            diagnostics = next((d for d in context.diagnostics if d.source and d.source.startswith("robotcode.")), None)
-
-            if diagnostics is not None:
+            all_diagnostics = [d for d in context.diagnostics if d.source and d.source.startswith("robotcode.")]
+            if all_diagnostics:
                 return [
                     CodeAction(
                         f"Disable '{diagnostics.code}' for this line",
@@ -489,6 +473,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
                         ),
                         diagnostics=[diagnostics],
                     )
+                    for diagnostics in all_diagnostics
                 ]
 
         return None
@@ -594,7 +579,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
                 if finder.variable_sections:
                     section = finder.variable_sections[-1]
 
-                    last_stmt = LastRealStatementFinder.find_from(section)
+                    _, last_stmt = FirstAndLastRealStatementFinder.find_from(section)
                     end_lineno = last_stmt.end_lineno if last_stmt else section.end_lineno
                     if end_lineno is None:
                         return
@@ -607,7 +592,7 @@ class RobotCodeActionFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHel
                         insert_range_suffix = "\n\n"
                         section = finder.setting_sections[-1]
 
-                        last_stmt = LastRealStatementFinder.find_from(section)
+                        _, last_stmt = FirstAndLastRealStatementFinder.find_from(section)
                         end_lineno = last_stmt.end_lineno if last_stmt else section.end_lineno
                         if end_lineno is None:
                             return

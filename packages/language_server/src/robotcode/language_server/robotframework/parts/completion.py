@@ -196,6 +196,7 @@ def get_reserved_keywords() -> List[str]:
             __reserved_keywords += [
                 "TRY",
                 "EXCEPT",
+                "FINALLY",
                 "WHILE",
                 "BREAK",
                 "CONTINUE",

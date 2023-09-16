@@ -1720,7 +1720,7 @@ class KeywordFinder:
                         DiagnosticsEntry(
                             f"No keyword with name '{name}' found.",
                             DiagnosticSeverity.ERROR,
-                            "KeywordNotFoundError",
+                            Error.KEYWORD_NOT_FOUND,
                         )
                     )
             except KeywordError as e:
@@ -1731,7 +1731,7 @@ class KeywordFinder:
                     raise
 
                 result = None
-                self.diagnostics.append(DiagnosticsEntry(str(e), DiagnosticSeverity.ERROR, "KeywordError"))
+                self.diagnostics.append(DiagnosticsEntry(str(e), DiagnosticSeverity.ERROR, Error.KEYWORD_ERROR))
 
             self._cache[(name, self.handle_bdd_style)] = (result, self.diagnostics, self.multiple_keywords_result)
 
@@ -1742,12 +1742,12 @@ class KeywordFinder:
     def _find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
         if not name:
             self.diagnostics.append(
-                DiagnosticsEntry("Keyword name cannot be empty.", DiagnosticSeverity.ERROR, "KeywordError")
+                DiagnosticsEntry("Keyword name cannot be empty.", DiagnosticSeverity.ERROR, Error.KEYWORD_ERROR)
             )
             raise CancelSearchError
         if not isinstance(name, str):
             self.diagnostics.append(  # type: ignore
-                DiagnosticsEntry("Keyword name must be a string.", DiagnosticSeverity.ERROR, "KeywordError")
+                DiagnosticsEntry("Keyword name must be a string.", DiagnosticSeverity.ERROR, Error.KEYWORD_ERROR)
             )
             raise CancelSearchError
 
@@ -1775,7 +1775,7 @@ class KeywordFinder:
                         DiagnosticsEntry(
                             self._create_multiple_keywords_found_message(name, found, implicit=False),
                             DiagnosticSeverity.ERROR,
-                            "KeywordError",
+                            Error.KEYWORD_ERROR,
                         )
                     )
                     raise CancelSearchError
@@ -1793,7 +1793,7 @@ class KeywordFinder:
                 DiagnosticsEntry(
                     str(e),
                     DiagnosticSeverity.ERROR,
-                    "KeywordError",
+                    Error.KEYWORD_ERROR,
                 )
             )
             raise CancelSearchError from e
@@ -1816,7 +1816,7 @@ class KeywordFinder:
                 DiagnosticsEntry(
                     self._create_multiple_keywords_found_message(name, found, implicit=False),
                     DiagnosticSeverity.ERROR,
-                    "KeywordError",
+                    Error.KEYWORD_ERROR,
                 )
             )
             raise CancelSearchError
@@ -1954,7 +1954,7 @@ class KeywordFinder:
             DiagnosticsEntry(
                 self._create_multiple_keywords_found_message(name, found),
                 DiagnosticSeverity.ERROR,
-                "KeywordError",
+                Error.KEYWORD_ERROR,
             )
         )
         raise CancelSearchError
@@ -2008,7 +2008,7 @@ class KeywordFinder:
             DiagnosticsEntry(
                 self._create_multiple_keywords_found_message(name, found),
                 DiagnosticSeverity.ERROR,
-                "KeywordError",
+                Error.KEYWORD_ERROR,
             )
         )
         raise CancelSearchError
@@ -2030,7 +2030,7 @@ class KeywordFinder:
             DiagnosticsEntry(
                 self._create_custom_and_standard_keyword_conflict_warning_message(custom, standard),
                 DiagnosticSeverity.WARNING,
-                "KeywordError",
+                Error.KEYWORD_ERROR,
             )
         )
 
