@@ -29,6 +29,7 @@ from robotcode.language_server.robotframework.utils.ast_utils import (
     Token,
     get_node_at_position,
     get_nodes_at_position,
+    get_tokens_at_position,
     range_from_node,
     range_from_token,
 )
@@ -125,37 +126,36 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     async def code_action_create_keyword(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
-        if (
-            range.start.line == range.end.line
-            and range.start.character <= range.end.character
-            and (
-                (context.only and CodeActionKind.QUICK_FIX in context.only)
-                or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
-            )
-        ):
-            diagnostics = next(
-                (
-                    d
-                    for d in context.diagnostics
-                    if d.source == DIAGNOSTICS_SOURCE_NAME and d.code == Error.KEYWORD_NOT_FOUND
-                ),
-                None,
-            )
-            if diagnostics is not None:
-                return [
+        result: List[Union[Command, CodeAction]] = []
+
+        if (context.only and CodeActionKind.QUICK_FIX in context.only) or context.trigger_kind in [
+            CodeActionTriggerKind.INVOKED,
+            CodeActionTriggerKind.AUTOMATIC,
+        ]:
+            for diagnostic in (
+                d
+                for d in context.diagnostics
+                if d.source == DIAGNOSTICS_SOURCE_NAME and d.code == Error.KEYWORD_NOT_FOUND
+            ):
+                text = document.get_lines()[diagnostic.range.start.line][
+                    diagnostic.range.start.character : diagnostic.range.end.character
+                ]
+                if not text:
+                    continue
+                result.append(
                     CodeAction(
-                        "Create Keyword",
+                        f"Create Keyword `{text}`",
                         kind=CodeActionKind.QUICK_FIX,
                         command=Command(
                             self.parent.commands.get_command_name(self.create_keyword_command),
                             self.parent.commands.get_command_name(self.create_keyword_command),
-                            [document.document_uri, range],
+                            [document.document_uri, diagnostic.range],
                         ),
-                        diagnostics=[diagnostics],
+                        diagnostics=[diagnostic],
                     )
-                ]
+                )
 
-        return None
+        return result if result else None
 
     @command("robotcode.createKeyword")
     async def create_keyword_command(self, document_uri: DocumentUri, range: Range) -> None:
@@ -177,14 +177,11 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
         node = await get_node_at_position(model, range.start)
 
         if isinstance(node, (KeywordCall, Fixture, TestTemplate, Template)):
-            keyword_token = (
-                node.get_token(RobotToken.NAME)
-                if isinstance(node, (TestTemplate, Template, Fixture))
-                else node.get_token(RobotToken.KEYWORD)
-            )
-
-            if keyword_token is None:
+            tokens = get_tokens_at_position(node, range.start)
+            if not tokens:
                 return
+
+            keyword_token = tokens[-1]
 
             namespace = await self.parent.documents_cache.get_namespace(document)
 
@@ -196,6 +193,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
             arguments = []
 
+            # TODO: Check if keyword has a valid namespace and use it instead of the current namespace. (Issue #9)
             for t in node.get_tokens(RobotToken.ARGUMENT):
                 name, value = split_from_equals(cast(Token, t).value)
                 if value is not None and not contains_variable(name, "$@&%"):
@@ -264,14 +262,10 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             TestTemplate,
         )
 
-        if (
-            range.start.line == range.end.line
-            and range.start.character <= range.end.character
-            and (
-                (context.only and QUICK_FIX_OTHER in context.only)
-                or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
-            )
-        ):
+        if (context.only and QUICK_FIX_OTHER in context.only) or context.trigger_kind in [
+            CodeActionTriggerKind.INVOKED,
+            CodeActionTriggerKind.AUTOMATIC,
+        ]:
             model = await self.parent.documents_cache.get_model(document, False)
             node = await get_node_at_position(model, range.start)
 
@@ -347,119 +341,13 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
                 await self.parent.window.show_document(str(document.uri), take_focus=True, selection=insert_range)
 
-    async def code_action_create_local_variable(
-        self, document: TextDocument, range: Range, context: CodeActionContext
-    ) -> Optional[List[Union[Command, CodeAction]]]:
-        from robot.parsing.model.blocks import Keyword, TestCase
-        from robot.parsing.model.statements import Documentation, Fixture, Statement, Template
-
-        if (
-            range.start.line == range.end.line
-            and range.start.character <= range.end.character
-            and (
-                (context.only and CodeActionKind.QUICK_FIX in context.only)
-                or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
-            )
-        ):
-            diagnostics = next(
-                (
-                    d
-                    for d in context.diagnostics
-                    if d.source == DIAGNOSTICS_SOURCE_NAME and d.code == Error.VARIABLE_NOT_FOUND
-                ),
-                None,
-            )
-            if (
-                diagnostics is not None
-                and diagnostics.range.start.line == diagnostics.range.end.line
-                and diagnostics.range.start.character < diagnostics.range.end.character
-            ):
-                model = await self.parent.documents_cache.get_model(document, False)
-                nodes = await get_nodes_at_position(model, range.start)
-
-                if not any(n for n in nodes if isinstance(n, (Keyword, TestCase))):
-                    return None
-
-                node = nodes[-1] if nodes else None
-                if node is None or isinstance(node, (Documentation, Fixture, Template)):
-                    return None
-
-                if not isinstance(node, Statement):
-                    return None
-                return [
-                    CodeAction(
-                        "Create local variable",
-                        kind=CodeActionKind.QUICK_FIX,
-                        command=Command(
-                            self.parent.commands.get_command_name(self.create_local_variable_command),
-                            self.parent.commands.get_command_name(self.create_local_variable_command),
-                            [document.document_uri, diagnostics.range],
-                        ),
-                        diagnostics=[diagnostics],
-                    )
-                ]
-
-        return None
-
-    @command("robotcode.createLocalVariable")
-    async def create_local_variable_command(self, document_uri: DocumentUri, range: Range) -> None:
-        from robot.parsing.model.blocks import Keyword, TestCase
-        from robot.parsing.model.statements import Documentation, Fixture, Statement, Template
-
-        if range.start.line == range.end.line and range.start.character <= range.end.character:
-            document = await self.parent.documents.get(document_uri)
-            if document is None:
-                return
-
-            model = await self.parent.documents_cache.get_model(document, False)
-            nodes = await get_nodes_at_position(model, range.start)
-
-            if not any(n for n in nodes if isinstance(n, (Keyword, TestCase))):
-                return
-
-            node = nodes[-1] if nodes else None
-            if node is None or isinstance(node, (Documentation, Fixture, Template)):
-                return
-
-            if not isinstance(node, Statement):
-                return
-
-            text = document.get_lines()[range.start.line][range.start.character : range.end.character]
-            if not text:
-                return
-
-            spaces = node.tokens[0].value if node.tokens and node.tokens[0].type == "SEPARATOR" else "    "
-
-            insert_text = f"{spaces}${{{text}}}    Set Variable    value\n"
-            node_range = range_from_node(node)
-            insert_range = Range(start=Position(node_range.start.line, 0), end=Position(node_range.start.line, 0))
-            we = WorkspaceEdit(
-                document_changes=[
-                    TextDocumentEdit(
-                        OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
-                        [AnnotatedTextEdit("create_local_variable", insert_range, insert_text)],
-                    )
-                ],
-                change_annotations={"create_local_variable": ChangeAnnotation("Create Local variable", False)},
-            )
-
-            if (await self.parent.workspace.apply_edit(we)).applied:
-                insert_range.start.character += insert_text.rindex("value")
-                insert_range.end.character = insert_range.start.character + len("value")
-
-                await self.parent.window.show_document(str(document.uri), take_focus=False, selection=insert_range)
-
     async def code_action_disable_robotcode_diagnostics_for_line(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
-        if (
-            range.start.line == range.end.line
-            and range.start.character <= range.end.character
-            and (
-                (context.only and CodeActionKind.QUICK_FIX in context.only)
-                or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
-            )
-        ):
+        if (context.only and CodeActionKind.QUICK_FIX in context.only) or context.trigger_kind in [
+            CodeActionTriggerKind.INVOKED,
+            CodeActionTriggerKind.AUTOMATIC,
+        ]:
             all_diagnostics = [d for d in context.diagnostics if d.source and d.source.startswith("robotcode.")]
             if all_diagnostics:
                 return [
@@ -509,44 +397,147 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
             await self.parent.workspace.apply_edit(we)
 
+    async def code_action_create_local_variable(
+        self, document: TextDocument, range: Range, context: CodeActionContext
+    ) -> Optional[List[Union[Command, CodeAction]]]:
+        from robot.parsing.model.blocks import Keyword, TestCase
+        from robot.parsing.model.statements import Documentation, Fixture, Statement, Template
+
+        result: List[Union[Command, CodeAction]] = []
+
+        if (context.only and CodeActionKind.QUICK_FIX in context.only) or context.trigger_kind in [
+            CodeActionTriggerKind.INVOKED,
+            CodeActionTriggerKind.AUTOMATIC,
+        ]:
+            for diagnostic in (
+                d
+                for d in context.diagnostics
+                if d.source == DIAGNOSTICS_SOURCE_NAME and d.code == Error.VARIABLE_NOT_FOUND
+            ):
+                if (
+                    diagnostic.range.start.line == diagnostic.range.end.line
+                    and diagnostic.range.start.character < diagnostic.range.end.character
+                ):
+                    model = await self.parent.documents_cache.get_model(document, False)
+                    nodes = await get_nodes_at_position(model, range.start)
+
+                    if not any(n for n in nodes if isinstance(n, (Keyword, TestCase))):
+                        continue
+
+                    node = nodes[-1] if nodes else None
+                    if node is None or isinstance(node, (Documentation, Fixture, Template)):
+                        continue
+
+                    if not isinstance(node, Statement):
+                        continue
+
+                    text = document.get_lines()[diagnostic.range.start.line][
+                        diagnostic.range.start.character : diagnostic.range.end.character
+                    ]
+                    if not text:
+                        continue
+
+                    result.append(
+                        CodeAction(
+                            f"Create local variable `${{{text}}}`",
+                            kind=CodeActionKind.QUICK_FIX,
+                            command=Command(
+                                self.parent.commands.get_command_name(self.create_local_variable_command),
+                                self.parent.commands.get_command_name(self.create_local_variable_command),
+                                [document.document_uri, diagnostic.range],
+                            ),
+                            diagnostics=[diagnostic],
+                        )
+                    )
+
+        return result if result else None
+
+    @command("robotcode.createLocalVariable")
+    async def create_local_variable_command(self, document_uri: DocumentUri, range: Range) -> None:
+        from robot.parsing.model.blocks import Keyword, TestCase
+        from robot.parsing.model.statements import Documentation, Fixture, Statement, Template
+
+        if range.start.line == range.end.line and range.start.character <= range.end.character:
+            document = await self.parent.documents.get(document_uri)
+            if document is None:
+                return
+
+            model = await self.parent.documents_cache.get_model(document, False)
+            nodes = await get_nodes_at_position(model, range.start)
+
+            if not any(n for n in nodes if isinstance(n, (Keyword, TestCase))):
+                return
+
+            node = nodes[-1] if nodes else None
+            if node is None or isinstance(node, (Documentation, Fixture, Template)):
+                return
+
+            if not isinstance(node, Statement):
+                return
+
+            text = document.get_lines()[range.start.line][range.start.character : range.end.character]
+            if not text:
+                return
+
+            spaces = node.tokens[0].value if node.tokens and node.tokens[0].type == "SEPARATOR" else "    "
+
+            insert_text = f"{spaces}${{{text}}}    Set Variable    value\n"
+            node_range = range_from_node(node)
+            insert_range = Range(start=Position(node_range.start.line, 0), end=Position(node_range.start.line, 0))
+            we = WorkspaceEdit(
+                document_changes=[
+                    TextDocumentEdit(
+                        OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
+                        [AnnotatedTextEdit("create_local_variable", insert_range, insert_text)],
+                    )
+                ],
+                change_annotations={"create_local_variable": ChangeAnnotation("Create Local variable", False)},
+            )
+
+            if (await self.parent.workspace.apply_edit(we)).applied:
+                insert_range.start.character += insert_text.rindex("value")
+                insert_range.end.character = insert_range.start.character + len("value")
+
+                await self.parent.window.show_document(str(document.uri), take_focus=False, selection=insert_range)
+
     async def code_action_create_suite_variable(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
-        if (
-            range.start.line == range.end.line
-            and range.start.character <= range.end.character
-            and (
-                (context.only and CodeActionKind.QUICK_FIX in context.only)
-                or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
-            )
-        ):
-            diagnostics = next(
-                (
-                    d
-                    for d in context.diagnostics
-                    if d.source == DIAGNOSTICS_SOURCE_NAME and d.code == Error.VARIABLE_NOT_FOUND
-                ),
-                None,
-            )
-            if (
-                diagnostics is not None
-                and diagnostics.range.start.line == diagnostics.range.end.line
-                and diagnostics.range.start.character < diagnostics.range.end.character
-            ):
-                return [
-                    CodeAction(
-                        "Create suite variable",
-                        kind=CodeActionKind.QUICK_FIX,
-                        command=Command(
-                            self.parent.commands.get_command_name(self.create_suite_variable_command),
-                            self.parent.commands.get_command_name(self.create_suite_variable_command),
-                            [document.document_uri, diagnostics.range],
-                        ),
-                        diagnostics=[diagnostics],
-                    )
-                ]
+        result: List[Union[Command, CodeAction]] = []
 
-        return None
+        if (context.only and CodeActionKind.QUICK_FIX in context.only) or context.trigger_kind in [
+            CodeActionTriggerKind.INVOKED,
+            CodeActionTriggerKind.AUTOMATIC,
+        ]:
+            for diagnostic in (
+                d
+                for d in context.diagnostics
+                if d.source == DIAGNOSTICS_SOURCE_NAME and d.code == Error.VARIABLE_NOT_FOUND
+            ):
+                if (
+                    diagnostic.range.start.line == diagnostic.range.end.line
+                    and diagnostic.range.start.character < diagnostic.range.end.character
+                ):
+                    lines = document.get_lines()
+                    text = lines[diagnostic.range.start.line][
+                        diagnostic.range.start.character : diagnostic.range.end.character
+                    ]
+                    if not text:
+                        continue
+                    result.append(
+                        CodeAction(
+                            f"Create suite variable `${{{text}}}`",
+                            kind=CodeActionKind.QUICK_FIX,
+                            command=Command(
+                                self.parent.commands.get_command_name(self.create_suite_variable_command),
+                                self.parent.commands.get_command_name(self.create_suite_variable_command),
+                                [document.document_uri, diagnostic.range],
+                            ),
+                            diagnostics=[diagnostic],
+                        )
+                    )
+
+        return result if result else None
 
     @command("robotcode.createSuiteVariable")
     async def create_suite_variable_command(self, document_uri: DocumentUri, range: Range) -> None:
@@ -637,51 +628,48 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     ) -> Optional[List[Union[Command, CodeAction]]]:
         from robot.parsing.model.blocks import Keyword
 
-        if (
-            range.start.line == range.end.line
-            and range.start.character <= range.end.character
-            and (
-                (context.only and CodeActionKind.QUICK_FIX in context.only)
-                or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
-            )
-        ):
-            diagnostics = next(
-                (
-                    d
-                    for d in context.diagnostics
-                    if d.source == DIAGNOSTICS_SOURCE_NAME and d.code == Error.VARIABLE_NOT_FOUND
-                ),
-                None,
-            )
-            if (
-                diagnostics is not None
-                and diagnostics.range.start.line == diagnostics.range.end.line
-                and diagnostics.range.start.character < diagnostics.range.end.character
+        result: List[Union[Command, CodeAction]] = []
+
+        if (context.only and CodeActionKind.QUICK_FIX in context.only) or context.trigger_kind in [
+            CodeActionTriggerKind.INVOKED,
+            CodeActionTriggerKind.AUTOMATIC,
+        ]:
+            for diagnostic in (
+                d
+                for d in context.diagnostics
+                if d.source == DIAGNOSTICS_SOURCE_NAME and d.code == Error.VARIABLE_NOT_FOUND
             ):
-                text = document.get_lines()[range.start.line][range.start.character : range.end.character]
-                if not text:
-                    return None
+                if (
+                    diagnostic.range.start.line == diagnostic.range.end.line
+                    and diagnostic.range.start.character < diagnostic.range.end.character
+                ):
+                    diagnostic.range.start.line == diagnostic.range.end.line
+                    text = document.get_lines()[diagnostic.range.start.line][
+                        diagnostic.range.start.character : diagnostic.range.end.character
+                    ]
+                    if not text:
+                        continue
 
-                model = await self.parent.documents_cache.get_model(document, False)
-                nodes = await get_nodes_at_position(model, range.start)
+                    model = await self.parent.documents_cache.get_model(document, False)
+                    nodes = await get_nodes_at_position(model, range.start)
 
-                if not any(n for n in nodes if isinstance(n, Keyword)):
-                    return None
+                    if not any(n for n in nodes if isinstance(n, Keyword)):
+                        continue
 
-                return [
-                    CodeAction(
-                        "Add argument",
-                        kind=CodeActionKind.QUICK_FIX,
-                        command=Command(
-                            self.parent.commands.get_command_name(self.action_add_argument_command),
-                            self.parent.commands.get_command_name(self.action_add_argument_command),
-                            [document.document_uri, diagnostics.range],
-                        ),
-                        diagnostics=[diagnostics],
+                    result.append(
+                        CodeAction(
+                            f"Add argument `${{{text}}}`",
+                            kind=CodeActionKind.QUICK_FIX,
+                            command=Command(
+                                self.parent.commands.get_command_name(self.action_add_argument_command),
+                                self.parent.commands.get_command_name(self.action_add_argument_command),
+                                [document.document_uri, diagnostic.range],
+                            ),
+                            diagnostics=[diagnostic],
+                        )
                     )
-                ]
 
-        return None
+        return result if result else None
 
     @command("robotcode.actionAddArgument")
     async def action_add_argument_command(self, document_uri: DocumentUri, range: Range) -> None:
