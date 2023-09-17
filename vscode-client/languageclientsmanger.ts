@@ -610,7 +610,7 @@ export class LanguageClientsManager {
   }
 
   public async openUriInDocumentationView(uri: vscode.Uri): Promise<void> {
-    const doc_uri = await this.convertToDocumententationUri(uri);
+    const doc_uri = await this.convertToDocumentationUri(uri);
     if (doc_uri) {
       await vscode.commands.executeCommand("robotcode.showDocumentation", doc_uri.toString(true));
     } else {
@@ -621,7 +621,7 @@ export class LanguageClientsManager {
     }
   }
 
-  public async convertToDocumententationUri(
+  public async convertToDocumentationUri(
     uri: vscode.Uri,
     token?: vscode.CancellationToken,
   ): Promise<vscode.Uri | undefined> {
