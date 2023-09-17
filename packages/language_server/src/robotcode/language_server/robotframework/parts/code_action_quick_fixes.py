@@ -10,6 +10,7 @@ from robotcode.core.lsp.types import (
     ChangeAnnotation,
     CodeAction,
     CodeActionContext,
+    CodeActionDisabledType,
     CodeActionKind,
     CodeActionTriggerKind,
     Command,
@@ -126,34 +127,68 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     async def code_action_create_keyword(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
+        from robot.parsing.model.statements import (
+            Fixture,
+            KeywordCall,
+            Template,
+            TestTemplate,
+        )
+
         result: List[Union[Command, CodeAction]] = []
 
         if (context.only and CodeActionKind.QUICK_FIX in context.only) or context.trigger_kind in [
             CodeActionTriggerKind.INVOKED,
             CodeActionTriggerKind.AUTOMATIC,
         ]:
+            model = await self.parent.documents_cache.get_model(document, False)
+            namespace = await self.parent.documents_cache.get_namespace(document)
+
             for diagnostic in (
                 d
                 for d in context.diagnostics
                 if d.source == DIAGNOSTICS_SOURCE_NAME and d.code == Error.KEYWORD_NOT_FOUND
             ):
-                text = document.get_lines()[diagnostic.range.start.line][
-                    diagnostic.range.start.character : diagnostic.range.end.character
-                ]
-                if not text:
-                    continue
-                result.append(
-                    CodeAction(
-                        f"Create Keyword `{text}`",
-                        kind=CodeActionKind.QUICK_FIX,
-                        command=Command(
-                            self.parent.commands.get_command_name(self.create_keyword_command),
-                            self.parent.commands.get_command_name(self.create_keyword_command),
-                            [document.document_uri, diagnostic.range],
-                        ),
-                        diagnostics=[diagnostic],
+                disabled = None
+                node = await get_node_at_position(model, diagnostic.range.start)
+
+                if isinstance(node, (KeywordCall, Fixture, TestTemplate, Template)):
+                    tokens = get_tokens_at_position(node, diagnostic.range.start)
+                    if not tokens:
+                        continue
+
+                    keyword_token = tokens[-1]
+
+                    bdd_token, token = self.split_bdd_prefix(namespace, keyword_token)
+                    if bdd_token is not None and token is not None:
+                        keyword_token = token
+
+                    lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+
+                    if lib_entry is not None and lib_entry.library_doc.type == "LIBRARY":
+                        disabled = CodeActionDisabledType("Keyword is from a library")
+
+                    text = keyword_token.value
+
+                    if lib_entry and kw_namespace:
+                        text = text[len(kw_namespace) + 1 :].strip()
+
+                    if not text:
+                        continue
+
+                    result.append(
+                        CodeAction(
+                            f"Create Keyword `{text}`",
+                            kind=CodeActionKind.QUICK_FIX,
+                            command=Command(
+                                self.parent.commands.get_command_name(self.create_keyword_command),
+                                self.parent.commands.get_command_name(self.create_keyword_command),
+                                [document.document_uri, diagnostic.range],
+                            ),
+                            diagnostics=[diagnostic],
+                            disabled=disabled,
+                            is_preferred=True,
+                        )
                     )
-                )
 
         return result if result else None
 
@@ -187,9 +222,20 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
             bdd_token, token = self.split_bdd_prefix(namespace, keyword_token)
             if bdd_token is not None and token is not None:
-                keyword = token.value
-            else:
-                keyword = keyword_token.value
+                keyword_token = token
+
+            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+
+            if lib_entry is not None and lib_entry.library_doc.type == "LIBRARY":
+                return
+
+            text = keyword_token.value
+
+            if lib_entry and kw_namespace:
+                text = text[len(kw_namespace) + 1 :].strip()
+
+            if not text:
+                return
 
             arguments = []
 
@@ -202,54 +248,65 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                     arguments.append(f"${{arg{len(arguments)+1}}}")
 
             insert_text = (
-                KEYWORD_WITH_ARGS_TEMPLATE.substitute(name=keyword, args="    ".join(arguments))
+                KEYWORD_WITH_ARGS_TEMPLATE.substitute(name=text, args="    ".join(arguments))
                 if arguments
-                else KEYWORD_TEMPLATE.substitute(name=keyword)
+                else KEYWORD_TEMPLATE.substitute(name=text)
             )
 
-            keyword_sections = find_keyword_sections(model)
-            keyword_section = keyword_sections[-1] if keyword_sections else None
-
-            if keyword_section is not None:
-                node_range = range_from_node(keyword_section)
-
-                insert_pos = Position(node_range.end.line + 1, 0)
-                insert_range = Range(insert_pos, insert_pos)
-
-                insert_text = f"\n{insert_text}"
+            if lib_entry is not None and lib_entry.library_doc.type == "RESOURCE" and lib_entry.library_doc.source:
+                dest_document = await self.parent.documents.get_or_open_document(lib_entry.library_doc.source)
             else:
-                if namespace.languages is None or not namespace.languages.languages:
-                    keywords_text = "Keywords"
-                else:
-                    keywords_text = namespace.languages.languages[-1].keywords_header
+                dest_document = document
 
-                insert_text = f"\n\n*** {keywords_text} ***\n{insert_text}"
+            await self._apply_create_keyword(dest_document, insert_text)
 
-                lines = document.get_lines()
-                end_line = len(lines) - 1
-                while end_line >= 0 and not lines[end_line].strip():
-                    end_line -= 1
-                doc_pos = Position(end_line + 1, 0)
+    async def _apply_create_keyword(self, document: TextDocument, insert_text: str) -> None:
+        model = await self.parent.documents_cache.get_model(document, False)
+        namespace = await self.parent.documents_cache.get_namespace(document)
 
-                insert_range = Range(doc_pos, doc_pos)
+        keyword_sections = find_keyword_sections(model)
+        keyword_section = keyword_sections[-1] if keyword_sections else None
 
-            we = WorkspaceEdit(
-                document_changes=[
-                    TextDocumentEdit(
-                        OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
-                        [AnnotatedTextEdit("create_keyword", insert_range, insert_text)],
-                    )
-                ],
-                change_annotations={"create_keyword": ChangeAnnotation("Create Keyword", False)},
-            )
+        if keyword_section is not None:
+            node_range = range_from_node(keyword_section)
 
-            if (await self.parent.workspace.apply_edit(we)).applied:
-                lines = insert_text.rstrip().splitlines()
-                insert_range.start.line += len(lines) - 1
-                insert_range.start.character = 4
-                insert_range.end = Position(insert_range.start.line, insert_range.start.character)
-                insert_range.end.character += len(lines[-1])
-                await self.parent.window.show_document(str(document.uri), take_focus=True, selection=insert_range)
+            insert_pos = Position(node_range.end.line + 1, 0)
+            insert_range = Range(insert_pos, insert_pos)
+
+            insert_text = f"\n{insert_text}"
+        else:
+            if namespace.languages is None or not namespace.languages.languages:
+                keywords_text = "Keywords"
+            else:
+                keywords_text = namespace.languages.languages[-1].keywords_header
+
+            insert_text = f"\n\n*** {keywords_text} ***\n{insert_text}"
+
+            lines = document.get_lines()
+            end_line = len(lines) - 1
+            while end_line >= 0 and not lines[end_line].strip():
+                end_line -= 1
+            doc_pos = Position(end_line + 1, 0)
+
+            insert_range = Range(doc_pos, doc_pos)
+
+        we = WorkspaceEdit(
+            document_changes=[
+                TextDocumentEdit(
+                    OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
+                    [AnnotatedTextEdit("create_keyword", insert_range, insert_text)],
+                )
+            ],
+            change_annotations={"create_keyword": ChangeAnnotation("Create Keyword", False)},
+        )
+
+        if (await self.parent.workspace.apply_edit(we)).applied:
+            lines = insert_text.rstrip().splitlines()
+            insert_range.start.line += len(lines) - 1
+            insert_range.start.character = 4
+            insert_range.end = Position(insert_range.start.line, insert_range.start.character)
+            insert_range.end.character += len(lines[-1])
+            await self.parent.window.show_document(str(document.uri), take_focus=True, selection=insert_range)
 
     async def code_action_assign_result_to_variable(
         self, document: TextDocument, range: Range, context: CodeActionContext
@@ -262,10 +319,14 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             TestTemplate,
         )
 
-        if (context.only and QUICK_FIX_OTHER in context.only) or context.trigger_kind in [
-            CodeActionTriggerKind.INVOKED,
-            CodeActionTriggerKind.AUTOMATIC,
-        ]:
+        if range.start.line == range.end.line and (
+            (context.only and QUICK_FIX_OTHER in context.only)
+            or context.trigger_kind
+            in [
+                CodeActionTriggerKind.INVOKED,
+                CodeActionTriggerKind.AUTOMATIC,
+            ]
+        ):
             model = await self.parent.documents_cache.get_model(document, False)
             node = await get_node_at_position(model, range.start)
 
