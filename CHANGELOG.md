@@ -2,6 +2,18 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.57.0 (2023-09-17)
+
+### Feat
+
+- **langserver**: improved quickfix `create keyword` can now add keywords to resource files if valid namespace is given
+- **langserver**: Quick fixes for code actions are generated for all diagnostics specified in the request, and quick fixes are generated with the name of the variable or keyword in the label.
+- new code action refactor rewrite: surroundings for TRY/EXCEPT/FINALLY
+
+### Refactor
+
+- **langserver**: move code action `assign result to variable` to refactorings
+
 ## v0.56.0 (2023-09-11)
 
 ### Feat
