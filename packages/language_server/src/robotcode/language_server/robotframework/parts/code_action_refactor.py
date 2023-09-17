@@ -13,6 +13,7 @@ from robotcode.core.lsp.types import (
     CodeActionContext,
     CodeActionDisabledType,
     CodeActionKind,
+    CodeActionTriggerKind,
     Command,
     DocumentUri,
     OptionalVersionedTextDocumentIdentifier,
@@ -28,8 +29,10 @@ from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.utils import ast_utils
 from robotcode.language_server.robotframework.utils.ast_utils import (
     BodyBlock,
+    get_node_at_position,
     get_nodes_at_position,
     range_from_node,
+    range_from_token,
 )
 from robotcode.robot.utils import get_robot_version
 
@@ -328,3 +331,97 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
 
         if (await self.parent.workspace.apply_edit(we)).applied and selection_range is not None:
             await self.parent.window.show_document(str(document.uri), take_focus=True, selection=selection_range)
+
+    async def code_action_assign_result_to_variable(
+        self, document: TextDocument, range: Range, context: CodeActionContext
+    ) -> Optional[List[Union[Command, CodeAction]]]:
+        from robot.parsing.lexer import Token as RobotToken
+        from robot.parsing.model.statements import (
+            Fixture,
+            KeywordCall,
+            Template,
+            TestTemplate,
+        )
+
+        if range.start.line == range.end.line and (
+            (context.only and CodeActionKind.REFACTOR_EXTRACT in context.only)
+            or context.trigger_kind
+            in [
+                CodeActionTriggerKind.INVOKED,
+                CodeActionTriggerKind.AUTOMATIC,
+            ]
+        ):
+            model = await self.parent.documents_cache.get_model(document, False)
+            node = await get_node_at_position(model, range.start)
+
+            if not isinstance(node, KeywordCall) or node.assign:
+                return None
+
+            keyword_token = (
+                node.get_token(RobotToken.NAME)
+                if isinstance(node, (TestTemplate, Template, Fixture))
+                else node.get_token(RobotToken.KEYWORD)
+            )
+
+            if keyword_token is None or range.start not in range_from_token(keyword_token):
+                return None
+
+            return [
+                CodeAction(
+                    "Assign keyword result to variable",
+                    kind=CodeActionKind.REFACTOR_EXTRACT,
+                    command=Command(
+                        self.parent.commands.get_command_name(self.assign_result_to_variable_command),
+                        self.parent.commands.get_command_name(self.assign_result_to_variable_command),
+                        [document.document_uri, range],
+                    ),
+                )
+            ]
+
+        return None
+
+    @command("robotcode.assignResultToVariable")
+    async def assign_result_to_variable_command(self, document_uri: DocumentUri, range: Range) -> None:
+        from robot.parsing.lexer import Token as RobotToken
+        from robot.parsing.model.statements import (
+            Fixture,
+            KeywordCall,
+            Template,
+            TestTemplate,
+        )
+
+        if range.start.line == range.end.line and range.start.character <= range.end.character:
+            document = await self.parent.documents.get(document_uri)
+            if document is None:
+                return
+
+            model = await self.parent.documents_cache.get_model(document, False)
+            node = await get_node_at_position(model, range.start)
+
+            if not isinstance(node, KeywordCall) or node.assign:
+                return
+
+            keyword_token = (
+                node.get_token(RobotToken.NAME)
+                if isinstance(node, (TestTemplate, Template, Fixture))
+                else node.get_token(RobotToken.KEYWORD)
+            )
+
+            if keyword_token is None or range.start not in range_from_token(keyword_token):
+                return
+
+            start = range_from_token(keyword_token).start
+            we = WorkspaceEdit(
+                document_changes=[
+                    TextDocumentEdit(
+                        OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
+                        [AnnotatedTextEdit("assign_result_to_variable", Range(start, start), "${result}    ")],
+                    )
+                ],
+                change_annotations={"assign_result_to_variable": ChangeAnnotation("Assign result to variable", False)},
+            )
+
+            if (await self.parent.workspace.apply_edit(we)).applied:
+                insert_range = Range(start, start).extend(start_character=2, end_character=8)
+
+                await self.parent.window.show_document(str(document.uri), take_focus=True, selection=insert_range)
