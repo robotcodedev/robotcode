@@ -259,6 +259,13 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         if document is None:
             return
 
+        lines = document.get_lines()
+        need_return = False
+        if insert_range.end.line >= len(lines):
+            insert_range.end.line == len(lines) - 1
+            insert_range.end.character = len(lines[-1])
+            need_return = True
+
         spaces = "".join(itertools.takewhile(str.isspace, document.get_lines()[insert_range.start.line]))
 
         edits: List[Union[TextEdit, AnnotatedTextEdit]] = [
@@ -281,7 +288,9 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                 AnnotatedTextEdit(
                     "add_clause",
                     Range(start=Position(insert_range.end.line, 0), end=Position(insert_range.end.line, 0)),
-                    f"{spaces}EXCEPT    message\n{spaces}    Fail    implement this\n{spaces}END\n",
+                    ("\n" if need_return else "")
+                    + f"{spaces}EXCEPT    message\n{spaces}    Fail    implement this\n{spaces}END"
+                    + ("\n" if not need_return else ""),
                 )
             )
             p = Position(insert_range.end.line + 1, len(spaces) + 6 + 4)
@@ -293,7 +302,9 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                 AnnotatedTextEdit(
                     "add_clause",
                     Range(start=Position(insert_range.end.line, 0), end=Position(insert_range.end.line, 0)),
-                    f"{spaces}FINALLY\n{spaces}    Fail    implement this\n{spaces}END\n",
+                    ("\n" if need_return else "")
+                    + f"{spaces}FINALLY\n{spaces}    Fail    implement this\n{spaces}END"
+                    + ("\n" if not need_return else ""),
                 )
             )
             p = Position(insert_range.end.line + 2, len(spaces) + 4)
@@ -304,11 +315,11 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                 AnnotatedTextEdit(
                     "add_clause",
                     Range(start=Position(insert_range.end.line, 0), end=Position(insert_range.end.line, 0)),
-                    f"{spaces}EXCEPT    message\n"
+                    ("\n" if need_return else "") + f"{spaces}EXCEPT    message\n"
                     f"{spaces}    Fail    implement this\n"
                     f"{spaces}FINALLY\n"
                     f"{spaces}    Fail    implement this\n"
-                    f"{spaces}END\n",
+                    f"{spaces}END" + ("\n" if not need_return else ""),
                 )
             )
             p = Position(insert_range.end.line + 1, len(spaces) + 6 + 4)

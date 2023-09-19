@@ -238,7 +238,6 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
             arguments = []
 
-            # TODO: Check if keyword has a valid namespace and use it instead of the current namespace. (Issue #9)
             for t in node.get_tokens(RobotToken.ARGUMENT):
                 name, value = split_from_equals(cast(Token, t).value)
                 if value is not None and not contains_variable(name, "$@&%"):
