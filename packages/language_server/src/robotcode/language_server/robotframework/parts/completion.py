@@ -32,7 +32,6 @@ from robotcode.core.lsp.types import (
     CompletionItem,
     CompletionItemKind,
     CompletionList,
-    CompletionTriggerKind,
     InsertTextFormat,
     MarkupContent,
     MarkupKind,
@@ -262,7 +261,7 @@ class CompletionCollector(ModelHelperMixin):
     async def collect(
         self, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        result_nodes = await get_nodes_at_position(self.model, position)
+        result_nodes = await get_nodes_at_position(self.model, position, include_end=True)
 
         result_nodes.reverse()
 
@@ -980,7 +979,7 @@ class CompletionCollector(ModelHelperMixin):
         if len(nodes_at_position) > 1 and isinstance(nodes_at_position[0], HasTokens):
             node = nodes_at_position[0]
 
-            tokens_at_position = get_tokens_at_position(node, position)
+            tokens_at_position = get_tokens_at_position(node, position, True)
             if not tokens_at_position:
                 return None
 
@@ -1051,14 +1050,6 @@ class CompletionCollector(ModelHelperMixin):
     ) -> Union[List[CompletionItem], CompletionList, None]:
         from robot.parsing.model.statements import SectionHeader, Statement
 
-        # TODO should this be configurable?
-        if (
-            context is not None
-            and context.trigger_kind == CompletionTriggerKind.TRIGGER_CHARACTER
-            and context.trigger_character in [" ", "\t"]
-        ):
-            return None
-
         if nodes_at_position.index(node) > 0 and not isinstance(nodes_at_position[0], SectionHeader):
             node_at_pos = nodes_at_position[0]
             if (
@@ -1093,14 +1084,6 @@ class CompletionCollector(ModelHelperMixin):
     ) -> Union[List[CompletionItem], CompletionList, None]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordName, Statement, TestCaseName
-
-        # TODO should this be configurable?
-        if (
-            context is not None
-            and context.trigger_kind == CompletionTriggerKind.TRIGGER_CHARACTER
-            and context.trigger_character in [" ", "\t"]
-        ):
-            return None
 
         index = 0
         in_assign = False
@@ -1262,14 +1245,6 @@ class CompletionCollector(ModelHelperMixin):
     ) -> Union[List[CompletionItem], CompletionList, None]:
         from robot.parsing.model.statements import Statement, TestTemplate
 
-        # TODO should this be configurable?
-        if (
-            context is not None
-            and context.trigger_kind == CompletionTriggerKind.TRIGGER_CHARACTER
-            and context.trigger_character in [" ", "\t"]
-        ):
-            return None
-
         statement_node = cast(Statement, node)
         if len(statement_node.tokens) > 1:
             token = cast(Token, statement_node.tokens[1])
@@ -1386,14 +1361,6 @@ class CompletionCollector(ModelHelperMixin):
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
         from robot.parsing.model.statements import Statement, Template
-
-        # TODO should this be configurable?
-        if (
-            context is not None
-            and context.trigger_kind == CompletionTriggerKind.TRIGGER_CHARACTER
-            and context.trigger_character in [" ", "\t"]
-        ):
-            return None
 
         statement_node = cast(Statement, node)
         if len(statement_node.tokens) > 2:
@@ -1589,7 +1556,7 @@ class CompletionCollector(ModelHelperMixin):
 
             kw_node = cast(Statement, node)
 
-            tokens_at_position = get_tokens_at_position(kw_node, position)
+            tokens_at_position = get_tokens_at_position(kw_node, position, True)
 
             if not tokens_at_position:
                 return None
@@ -1853,7 +1820,7 @@ class CompletionCollector(ModelHelperMixin):
 
             kw_node = cast(Statement, node)
 
-            tokens_at_position = get_tokens_at_position(kw_node, position)
+            tokens_at_position = get_tokens_at_position(kw_node, position, True)
 
             if not tokens_at_position:
                 return None
@@ -1893,16 +1860,13 @@ class CompletionCollector(ModelHelperMixin):
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Statement
 
-        # if context is None or context.trigger_kind != CompletionTriggerKind.INVOKED:
-        #     return []
-
         kw_node = cast(Statement, node)
 
         keyword_token = kw_node.get_token(keyword_name_token_type)
         if keyword_token is None:
             return None
 
-        tokens_at_position = get_tokens_at_position(kw_node, position)
+        tokens_at_position = get_tokens_at_position(kw_node, position, include_end=True)
 
         if not tokens_at_position:
             return None
@@ -1910,6 +1874,9 @@ class CompletionCollector(ModelHelperMixin):
         token_at_position = tokens_at_position[-1]
 
         if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
+            return None
+
+        if len(tokens_at_position) > 1 and tokens_at_position[-2].type == RobotToken.KEYWORD:
             return None
 
         keyword_doc_and_token: Optional[Tuple[Optional[KeywordDoc], Token]] = None
@@ -2258,7 +2225,7 @@ class CompletionCollector(ModelHelperMixin):
         from robot.parsing.model.statements import Statement
 
         statement = cast(Statement, node)
-        tokens = get_tokens_at_position(statement, position)
+        tokens = get_tokens_at_position(statement, position, True)
 
         if not tokens:
             return None

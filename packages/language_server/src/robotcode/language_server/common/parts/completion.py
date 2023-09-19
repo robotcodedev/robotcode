@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from asyncio import CancelledError
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union, cast
@@ -12,6 +13,7 @@ from robotcode.core.lsp.types import (
     CompletionList,
     CompletionOptions,
     CompletionParams,
+    CompletionTriggerKind,
     InsertReplaceEdit,
     Position,
     ServerCapabilities,
@@ -90,14 +92,19 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     ) -> Union[List[CompletionItem], CompletionList, None]:
         results: List[Union[List[CompletionItem], CompletionList]] = []
 
+        if context is not None and context.trigger_kind == CompletionTriggerKind.TRIGGER_CHARACTER:
+            await asyncio.sleep(0.25)
+
         document = await self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 
+        p = document.position_from_utf16(position)
+
         for result in await self.collect(
             self,
             document,
-            document.position_from_utf16(position),
+            p,
             context,
             callback_filter=language_id_filter(document),
         ):

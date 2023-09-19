@@ -472,7 +472,11 @@ class ArgumentSpec:
             )
             return cast(Tuple[List[Any], List[Tuple[str, Any]]], resolver.resolve(arguments, variables))
 
-        positional, named = NamedArgumentResolver(self.__robot_arguments).resolve(arguments, variables)
+        class MyNamedArgumentResolver(NamedArgumentResolver):
+            def _raise_positional_after_named(self) -> None:
+                pass
+
+        positional, named = MyNamedArgumentResolver(self.__robot_arguments).resolve(arguments, variables)
         positional, named = VariableReplacer(resolve_variables_until).replace(positional, named, variables)
         positional, named = DictToKwargs(self.__robot_arguments, dict_to_kwargs).handle(positional, named)
         return positional, named

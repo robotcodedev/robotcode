@@ -262,7 +262,7 @@ put this to the `settings.json`
             }
         },
         {
-            "scope": "constant.character.escape.robotframework",
+            "scope": "string.unquoted.escape.robotframework",
             "settings": {
                 //"foreground": "#FF0000",
             }

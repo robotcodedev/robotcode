@@ -97,7 +97,11 @@
       "[robotframework]": {
         "editor.wordBasedSuggestions": false,
         "editor.semanticHighlighting.enabled": true,
-        "editor.inlayHints.enabled": "offUnlessPressed"
+        "editor.inlayHints.enabled": "offUnlessPressed",
+        "editor.quickSuggestionsDelay": 100,
+        "editor.quickSuggestions": {
+          "strings": "on"
+        }
       },
       "editor.tokenColorCustomizations": {
         "textMateRules": [
@@ -114,7 +118,7 @@
             }
           },
           {
-            "scope": "constant.character.embeddedArgument.robotframework",
+            "scope": "string.unquoted.embeddedArgument.robotframework",
             "settings": {
               "fontStyle": "italic"
             }
@@ -182,7 +186,7 @@
             }
           },
           {
-            "scope": "constant.character.character.escape.robotframework",
+            "scope": "string.unquoted.character.escape.robotframework",
             "settings": {}
           }
         ]
@@ -245,10 +249,10 @@
             "keyword.operator.for.robotframework"
           ],
           "argument": [
-            "constant.character.argument.robotframework"
+            "string.unquoted.argument.robotframework"
           ],
           "embeddedArgument": [
-            "constant.character.embeddedArgument.robotframework"
+            "string.unquoted.embeddedArgument.robotframework"
           ],
           "variable": [
             "variable.other.readwrite.robotframework"
@@ -279,7 +283,7 @@
             "punctuation.definition.variable.end.robotframework"
           ],
           "escape": [
-            "constant.character.character.escape.robotframework"
+            "string.unquoted.character.escape.robotframework"
           ],
           "namespace": [
             "entity.other.namespace.robotframework"
@@ -328,7 +332,7 @@
         "args": {
           "text": "    "
         },
-        "when": "editorLangId == robotframework && editorTextFocus && !editorHasSelection && !inSnippetMode && !suggestWidgetVisible && config.robotcode.editor.4SpacesTab && !inlineSuggestionVisible"
+        "when": "editorLangId == robotframework && editorTextFocus && config.robotcode.editor.4SpacesTab && !editorHasSelection && !inSnippetMode && !suggestWidgetVisible && !inlineSuggestionVisible"
       }
     ],
     "configuration": [
