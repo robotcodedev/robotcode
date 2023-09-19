@@ -2,6 +2,13 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.57.1 (2023-09-19)
+
+### Fix
+
+- **langserver**: correct some in refactor surrounding quirks at file ends
+- **langserver**: correct some completion quirks at line or file ends
+
 ## v0.57.0 (2023-09-17)
 
 ### Feat
