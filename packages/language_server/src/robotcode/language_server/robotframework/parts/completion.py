@@ -1563,6 +1563,10 @@ class CompletionCollector(ModelHelperMixin):
 
             token_at_position = tokens_at_position[-1]
 
+            name_token = import_node.get_token(RobotToken.NAME)
+            if name_token is None or position.character < range_from_token(name_token).end.character:
+                return None
+
             try:
                 libdoc = await self.namespace.get_imported_library_libdoc(
                     import_node.name, import_node.args, import_node.alias
@@ -1570,8 +1574,9 @@ class CompletionCollector(ModelHelperMixin):
                 if libdoc is not None:
                     init = next((v for v in libdoc.inits.values()), None)
                     if init:
+                        name_token_index = import_node.tokens.index(name_token)
                         return self._complete_keyword_arguments_at_position(
-                            init, kw_node.tokens, token_at_position, position
+                            init, kw_node.tokens[name_token_index:], token_at_position, position
                         )
 
             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
@@ -1827,13 +1832,18 @@ class CompletionCollector(ModelHelperMixin):
 
             token_at_position = tokens_at_position[-1]
 
+            name_token = import_node.get_token(RobotToken.NAME)
+            if name_token is None or position.character < range_from_token(name_token).end.character:
+                return None
+
             try:
                 libdoc = await self.namespace.get_imported_variables_libdoc(import_node.name, import_node.args)
                 if libdoc is not None:
                     init = next((v for v in libdoc.inits.values()), None)
                     if init:
+                        name_token_index = import_node.tokens.index(name_token)
                         return self._complete_keyword_arguments_at_position(
-                            init, kw_node.tokens, token_at_position, position
+                            init, kw_node.tokens[name_token_index:], token_at_position, position
                         )
 
             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
@@ -1882,7 +1892,7 @@ class CompletionCollector(ModelHelperMixin):
         keyword_doc_and_token: Optional[Tuple[Optional[KeywordDoc], Token]] = None
 
         keyword_token = kw_node.get_token(keyword_name_token_type)
-        if keyword_token is None:
+        if keyword_token is None or position.character < range_from_token(keyword_token).end.character:
             return None
 
         keyword_doc_and_token = await self.get_keyworddoc_and_token_from_position(
@@ -1902,7 +1912,11 @@ class CompletionCollector(ModelHelperMixin):
         if keyword_doc.is_any_run_keyword():
             return None
 
-        return self._complete_keyword_arguments_at_position(keyword_doc, kw_node.tokens, token_at_position, position)
+        keyword_token_index = kw_node.tokens.index(keyword_token)
+
+        return self._complete_keyword_arguments_at_position(
+            keyword_doc, kw_node.tokens[keyword_token_index:], token_at_position, position
+        )
 
     TRUE_STRINGS = {"TRUE", "YES", "ON", "1"}
     FALSE_STRINGS = {"FALSE", "NO", "OFF", "0", "NONE", ""}
