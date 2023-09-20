@@ -93,6 +93,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             KeywordName,
             MultiValue,
             SingleValue,
+            TemplateArguments,
             TestCaseName,
             TryHeader,
             WhileHeader,
@@ -122,6 +123,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                         SingleValue,
                         TestCaseName,
                         KeywordName,
+                        TemplateArguments,
                     ),
                 ):
                     return []
