@@ -2,6 +2,13 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.57.2 (2023-09-20)
+
+### Fix
+
+- **langserver**: don't show surround code action if we have selected template arguments
+- **langserver**: don't show argument completion if the cursor is in a keyword assignment
+
 ## v0.57.1 (2023-09-19)
 
 ### Fix
