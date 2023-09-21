@@ -120,8 +120,8 @@ class Expression:
 
             Examples:
             ```toml
-            if = "re.match(r'^\\d+$', environ.get('TEST_VAR', ''))"
-            if = "platform.system() == 'Linux'"
+            expr = "re.match(r'^\\d+$', environ.get('TEST_VAR', ''))"
+            expr = "platform.system() == 'Linux'"
             ```
             """,
         no_default=True,

@@ -36,7 +36,6 @@ def run_server(
 
 @click.command(
     add_help_option=True,
-    epilog='Use "-- --help" to see `robot` help.',
 )
 @add_options(
     *server_options(

@@ -3190,7 +3190,7 @@
         },
         "detached": {
           "default": null,
-          "description": "The profile should be detached.\"\nDetached means it is not inherited from the main profile.\n",
+          "description": "The profile should be detached.\nDetached means it is not inherited from the main profile.\n",
           "title": "Detached",
           "type": [
             "boolean",
