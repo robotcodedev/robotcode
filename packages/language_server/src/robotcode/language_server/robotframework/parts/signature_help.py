@@ -73,7 +73,9 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
     ) -> Optional[SignatureHelp]:
-        result_node = await get_node_at_position(await self.parent.documents_cache.get_model(document, False), position)
+        result_node = await get_node_at_position(
+            await self.parent.documents_cache.get_model(document, False), position, include_end=True
+        )
         if result_node is None:
             return None
 
@@ -95,7 +97,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         kw_node = cast(Statement, node)
 
-        tokens_at_position = get_tokens_at_position(kw_node, position)
+        tokens_at_position = get_tokens_at_position(kw_node, position, include_end=True)
 
         if not tokens_at_position:
             return None
