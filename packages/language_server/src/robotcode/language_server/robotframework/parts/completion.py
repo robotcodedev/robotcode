@@ -152,6 +152,7 @@ _CompleteMethod = Callable[
 ]
 
 HEADERS = ["Test Case", "Setting", "Variable", "Keyword", "Comment", "Task"]
+RESOURCE_HEADERS = ["Setting", "Variable", "Keyword", "Comment"]
 
 
 __snippets: Optional[Dict[str, List[str]]] = None
@@ -398,8 +399,13 @@ class CompletionCollector(ModelHelperMixin):
         return completion_item
 
     async def create_headers_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+        doc_type = await self.parent.documents_cache.get_document_type(self.document)
+
         if self.namespace.languages is None:
-            headers: Iterable[str] = HEADERS
+            if doc_type in [DocumentType.RESOURCE, DocumentType.INIT]:
+                headers: Iterable[str] = RESOURCE_HEADERS
+            else:
+                headers = HEADERS
         else:
             languages = self.namespace.languages.languages
 
@@ -410,7 +416,19 @@ class CompletionCollector(ModelHelperMixin):
             ):
                 languages = [v for v in languages if v.code != "en"]
 
-            headers = set(itertools.chain(*(lang.headers.keys() for lang in languages)))
+            headers = set(
+                itertools.chain(
+                    *(
+                        [
+                            k
+                            for k, v in lang.headers.items()
+                            if doc_type not in [DocumentType.RESOURCE, DocumentType.INIT]
+                            or v not in ("Test Cases", "Tasks")
+                        ]
+                        for lang in languages
+                    )
+                )
+            )
 
         return [
             CompletionItem(
