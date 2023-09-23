@@ -2,6 +2,13 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.57.3 (2023-09-23)
+
+### Fix
+
+- **langserver**: only show valid headers in resource and init.robot file at completion
+- **langserver**: some correction at line and file endings for signature help
+
 ## v0.57.2 (2023-09-20)
 
 ### Fix
