@@ -2,6 +2,12 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.57.4 (2023-09-24)
+
+### Fix
+
+- **langserver**: correct "Create keyword" quick fix to ignore empty lines when inserting text
+
 ## v0.57.3 (2023-09-23)
 
 ### Fix
