@@ -49,7 +49,6 @@ ${name}
     [Arguments]    ${args}
     # TODO: implement keyword "${name}".
     Fail    Not Implemented
-
 """
 )
 
@@ -58,7 +57,6 @@ KEYWORD_TEMPLATE = Template(
 ${name}
     # TODO: implement keyword "${name}".
     Fail    Not Implemented
-
 """
 )
 
@@ -265,13 +263,13 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
         keyword_sections = find_keyword_sections(model)
         keyword_section = keyword_sections[-1] if keyword_sections else None
 
-        if keyword_section is not None:
-            node_range = range_from_node(keyword_section)
+        lines = document.get_lines()
 
+        if keyword_section is not None:
+            node_range = range_from_node(keyword_section, skip_non_data=True, allow_comments=True)
             insert_pos = Position(node_range.end.line + 1, 0)
             insert_range = Range(insert_pos, insert_pos)
-
-            insert_text = f"\n{insert_text}"
+            insert_text = f"\n\n{insert_text}"
         else:
             if namespace.languages is None or not namespace.languages.languages:
                 keywords_text = "Keywords"
@@ -280,13 +278,26 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
             insert_text = f"\n\n*** {keywords_text} ***\n{insert_text}"
 
-            lines = document.get_lines()
             end_line = len(lines) - 1
             while end_line >= 0 and not lines[end_line].strip():
                 end_line -= 1
             doc_pos = Position(end_line + 1, 0)
 
             insert_range = Range(doc_pos, doc_pos)
+
+        if insert_range.start.line >= len(lines) and lines[-1].strip():
+            doc_pos = Position(len(lines) - 1, len(lines[-1]))
+            insert_range = Range(doc_pos, doc_pos)
+            insert_text = "\n" + insert_text
+
+        if insert_range.start.line <= len(lines) and lines[insert_range.start.line].startswith("*"):
+            insert_text = insert_text + "\n\n"
+        if (
+            insert_range.start.line + 1 <= len(lines)
+            and not lines[insert_range.start.line].strip()
+            and lines[insert_range.start.line + 1].startswith("*")
+        ):
+            insert_text = insert_text + "\n"
 
         we = WorkspaceEdit(
             document_changes=[
