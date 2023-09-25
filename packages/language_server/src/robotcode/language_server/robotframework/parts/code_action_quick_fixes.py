@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+from collections import defaultdict
 from string import Template
 from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 
@@ -320,24 +321,36 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     async def code_action_disable_robotcode_diagnostics_for_line(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
-        if (context.only and CodeActionKind.QUICK_FIX in context.only) or context.trigger_kind in [
-            CodeActionTriggerKind.INVOKED,
-            CodeActionTriggerKind.AUTOMATIC,
-        ]:
+        if (
+            range.start.line == range.end.line
+            and range.start.character <= range.end.character
+            and (
+                (context.only and CodeActionKind.QUICK_FIX in context.only)
+                or context.trigger_kind
+                in [
+                    CodeActionTriggerKind.INVOKED,
+                    CodeActionTriggerKind.AUTOMATIC,
+                ]
+            )
+        ):
             all_diagnostics = [d for d in context.diagnostics if d.source and d.source.startswith("robotcode.")]
             if all_diagnostics:
+                result = defaultdict(list)
+                for diagnostics in all_diagnostics:
+                    result[diagnostics.code].append(diagnostics)
+
                 return [
                     CodeAction(
-                        f"Disable '{diagnostics.code}' for this line",
+                        f"Disable '{k}' for this line",
                         kind=CodeActionKind.QUICK_FIX,
                         command=Command(
                             self.parent.commands.get_command_name(self.disable_robotcode_diagnostics_for_line_command),
                             self.parent.commands.get_command_name(self.disable_robotcode_diagnostics_for_line_command),
                             [document.document_uri, range],
                         ),
-                        diagnostics=[diagnostics],
+                        diagnostics=v,
                     )
-                    for diagnostics in all_diagnostics
+                    for k, v in result.items()
                 ]
 
         return None
