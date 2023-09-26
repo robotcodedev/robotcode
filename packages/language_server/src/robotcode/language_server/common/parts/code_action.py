@@ -100,7 +100,7 @@ class CodeActionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
         return results
 
-    @rpc_method(name="textDocument/codeAction/resolve", param_type=CodeAction)
+    @rpc_method(name="codeAction/resolve", param_type=CodeAction)
     @threaded()
     async def _text_document_code_action_resolve(
         self,

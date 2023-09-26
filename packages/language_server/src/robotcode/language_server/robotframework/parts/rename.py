@@ -92,7 +92,9 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         position: Position,
         new_name: str,
     ) -> Optional[WorkspaceEdit]:
-        result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
+        result_nodes = await get_nodes_at_position(
+            await self.parent.documents_cache.get_model(document), position, include_end=True
+        )
 
         if not result_nodes:
             return None
@@ -119,7 +121,9 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         document: TextDocument,
         position: Position,
     ) -> Optional[PrepareRenameResult]:
-        result_nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document), position)
+        result_nodes = await get_nodes_at_position(
+            await self.parent.documents_cache.get_model(document), position, include_end=True
+        )
 
         if not result_nodes:
             return None

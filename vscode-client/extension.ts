@@ -58,6 +58,27 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         viewColumn: vscode.ViewColumn.Beside,
       });
     }),
+    vscode.commands.registerCommand(
+      "robotcode.showDocumentAndRename",
+      async (
+        uri: string,
+        pos: { start: { line: number; character: number }; end: { line: number; character: number } },
+      ) => {
+        const doc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri);
+        if (doc) {
+          const editor = await vscode.window.showTextDocument(doc, undefined, false);
+          editor.selection = new vscode.Selection(
+            new vscode.Position(pos.start.line, pos.start.character),
+            new vscode.Position(pos.end.line, pos.end.character),
+          );
+          await vscode.commands.executeCommand(
+            "editor.action.rename",
+            doc.uri,
+            new vscode.Position(pos.start.line, pos.start.character),
+          );
+        }
+      },
+    ),
     vscode.window.registerTerminalLinkProvider({
       provideTerminalLinks(terminalContext: vscode.TerminalLinkContext, _token: vscode.CancellationToken) {
         const line = terminalContext.line.trimEnd();

@@ -36,9 +36,11 @@ from robotcode.language_server.robotframework.utils.async_ast import AsyncVisito
 from robotcode.language_server.robotframework.utils.version import get_robot_version
 
 from .entities import (
+    ArgumentDefinition,
     CommandLineVariableDefinition,
     EnvironmentVariableDefinition,
     LibraryEntry,
+    LocalVariableDefinition,
     ResourceEntry,
     VariableDefinition,
     VariableDefinitionType,
@@ -57,6 +59,7 @@ class AnalyzerResult:
     diagnostics: List[Diagnostic]
     keyword_references: Dict[KeywordDoc, Set[Location]]
     variable_references: Dict[VariableDefinition, Set[Location]]
+    local_variable_assignments: Dict[VariableDefinition, Set[Range]]
     namespace_references: Dict[LibraryEntry, Set[Location]]
 
 
@@ -86,6 +89,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         self._diagnostics: List[Diagnostic] = []
         self._keyword_references: Dict[KeywordDoc, Set[Location]] = defaultdict(set)
         self._variable_references: Dict[VariableDefinition, Set[Location]] = defaultdict(set)
+        self._local_variable_assignments: Dict[VariableDefinition, Set[Range]] = defaultdict(set)
         self._namespace_references: Dict[LibraryEntry, Set[Location]] = defaultdict(set)
 
     async def run(self) -> AnalyzerResult:
@@ -95,7 +99,11 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         await self.visit(self.model)
 
         return AnalyzerResult(
-            self._diagnostics, self._keyword_references, self._variable_references, self._namespace_references
+            self._diagnostics,
+            self._keyword_references,
+            self._variable_references,
+            self._local_variable_assignments,
+            self._namespace_references,
         )
 
     def yield_argument_name_and_rest(self, node: ast.AST, token: Token) -> Iterator[Token]:
@@ -243,9 +251,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                     if isinstance(var, EnvironmentVariableDefinition):
                                         var_token.value, _, _ = var_token.value.partition("=")
 
-                                        var_range = range_from_token(var_token)
-                                    else:
-                                        var_range = range_from_token(var_token)
+                                    var_range = range_from_token(var_token)
 
                                     suite_var = None
                                     if isinstance(var, CommandLineVariableDefinition):
@@ -267,6 +273,10 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                             self._variable_references[suite_var].add(
                                                 Location(self.namespace.document.document_uri, var_range)
                                             )
+                                        if token1.type in [RobotToken.ASSIGN] and isinstance(
+                                            var, (LocalVariableDefinition, ArgumentDefinition)
+                                        ):
+                                            self._local_variable_assignments[var].add(var_range)
 
                                     elif var not in self._variable_references and token1.type in [
                                         RobotToken.ASSIGN,

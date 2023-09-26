@@ -558,6 +558,7 @@ class Namespace:
         self._diagnostics: List[Diagnostic] = []
         self._keyword_references: Dict[KeywordDoc, Set[Location]] = {}
         self._variable_references: Dict[VariableDefinition, Set[Location]] = {}
+        self._local_variable_assignments: Dict[VariableDefinition, Set[Range]] = {}
         self._namespace_references: Dict[LibraryEntry, Set[Location]] = {}
 
         self._imported_keywords: Optional[List[KeywordDoc]] = None
@@ -710,6 +711,13 @@ class Namespace:
         await self._analyze()
 
         return self._variable_references
+
+    async def get_local_variable_assignments(self) -> Dict[VariableDefinition, Set[Range]]:
+        await self.ensure_initialized()
+
+        await self._analyze()
+
+        return self._local_variable_assignments
 
     async def get_namespace_references(self) -> Dict[LibraryEntry, Set[Location]]:
         await self.ensure_initialized()
@@ -1577,6 +1585,7 @@ class Namespace:
                     self._diagnostics += result.diagnostics
                     self._keyword_references = result.keyword_references
                     self._variable_references = result.variable_references
+                    self._local_variable_assignments = result.local_variable_assignments
                     self._namespace_references = result.namespace_references
 
                     lib_doc = await self.get_library_doc()
