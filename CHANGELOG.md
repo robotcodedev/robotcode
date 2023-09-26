@@ -2,6 +2,13 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.58.0 (2023-09-26)
+
+### Feat
+
+- **langserver**: code action - extract keyword
+- **vscode**: update to vscode-languageclient to 9.0, now we need at least a vscode version >=1.82
+
 ## v0.57.4 (2023-09-24)
 
 ### Fix
