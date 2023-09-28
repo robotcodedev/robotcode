@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import ast
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 from robotcode.core.lsp.types import (
+    DocumentUri,
     Position,
     Range,
 )
@@ -13,6 +15,16 @@ from robotcode.language_server.robotframework.utils.ast_utils import (
     range_from_node,
 )
 from robotcode.language_server.robotframework.utils.async_ast import Visitor
+
+SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND = "_robotcode.codeActionShowDocumentSelectAndRename"
+
+
+@dataclass
+class CodeActionDataBase:
+    type: str
+    method: str
+    document_uri: DocumentUri
+    range: Range
 
 
 class FindSectionsVisitor(Visitor):

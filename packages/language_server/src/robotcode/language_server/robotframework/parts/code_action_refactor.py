@@ -4,6 +4,7 @@ import ast
 import itertools
 from dataclasses import dataclass
 from enum import Enum
+from string import Template
 from typing import TYPE_CHECKING, Any, List, Mapping, Optional, Union
 
 from robotcode.core.dataclasses import as_dict, from_dict
@@ -17,7 +18,6 @@ from robotcode.core.lsp.types import (
     CodeActionKind,
     CodeActionTriggerKind,
     Command,
-    DocumentUri,
     OptionalVersionedTextDocumentIdentifier,
     Position,
     Range,
@@ -26,7 +26,7 @@ from robotcode.core.lsp.types import (
     WorkspaceEdit,
 )
 from robotcode.core.utils.inspect import iter_methods
-from robotcode.language_server.common.decorators import code_action_kinds, command, language_id
+from robotcode.language_server.common.decorators import code_action_kinds, language_id
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.utils import ast_utils
 from robotcode.language_server.robotframework.utils.ast_utils import (
@@ -38,7 +38,7 @@ from robotcode.language_server.robotframework.utils.ast_utils import (
 )
 from robotcode.robot.utils import get_robot_version
 
-from .code_action_helper_mixin import CodeActionHelperMixin
+from .code_action_helper_mixin import SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND, CodeActionDataBase, CodeActionHelperMixin
 from .model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -46,18 +46,52 @@ if TYPE_CHECKING:
     from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol  # pragma: no cover
 
 
-@dataclass
-class CodeActionData:
-    type: str
-    method: str
-    document_uri: DocumentUri
-    range: Range
-
-
 class SurroundType(Enum):
     TRY_EXCEPT = "try_except"
     TRY_FINALLY = "try_finally"
     TRY_EXCEPT_FINALLY = "try_except_finally"
+
+
+@dataclass
+class CodeActionData(CodeActionDataBase):
+    surround_type: Optional[SurroundType] = None
+
+
+CODE_ACTION_KIND_SURROUND_WITH = CodeActionKind.REFACTOR.value + ".surround"
+CODE_ACTION_KIND_REFACTOR_EXTRACT_FUNCTION = CodeActionKind.REFACTOR_EXTRACT + ".function"
+CODE_ACTION_KIND_REFACTOR_EXTRACT_VARIABLE = CodeActionKind.REFACTOR_EXTRACT + ".variable"
+
+TRY_EXCEPT_TEMPLATE = Template(
+    """\
+${spaces}TRY
+${body}
+${spaces}EXCEPT    message
+${spaces}    Fail    Not Implemented
+${spaces}END
+"""
+)
+
+TRY_EXCEPT_FINALLY_TEMPLATE = Template(
+    """\
+${spaces}TRY
+${body}
+${spaces}EXCEPT    message
+${spaces}    Fail    Not Implemented
+${spaces}FINALLY
+${spaces}    Fail    Not Implemented
+${spaces}END
+"""
+)
+
+TRY_FINALLY_TEMPLATE = Template(
+    """\
+${spaces}TRY
+${body}
+${spaces}FINALLY
+${spaces}    Fail    Not Implemented
+${spaces}END
+"""
+)
 
 
 class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin, CodeActionHelperMixin):
@@ -72,7 +106,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         self.parent.commands.register_all(self)
 
     @language_id("robotframework")
-    @code_action_kinds([CodeActionKind.REFACTOR_REWRITE, CodeActionKind.REFACTOR_EXTRACT])
+    @code_action_kinds([CODE_ACTION_KIND_REFACTOR_EXTRACT_FUNCTION, CODE_ACTION_KIND_SURROUND_WITH])
     async def collect(
         self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
@@ -249,130 +283,110 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         return [
             CodeAction(
                 "Surround with TRY...EXCEPT",
-                kind=CodeActionKind.REFACTOR_REWRITE,
-                command=Command(
-                    self.parent.commands.get_command_name(self.surround_with_command),
-                    self.parent.commands.get_command_name(self.surround_with_command),
-                    [document.document_uri, insert_range, SurroundType.TRY_EXCEPT],
-                ),
+                kind=CODE_ACTION_KIND_SURROUND_WITH,
+                data=as_dict(
+                    CodeActionData("refactor", "surround", document.document_uri, insert_range, SurroundType.TRY_EXCEPT)
+                )
+                if insert_range
+                else None,
                 disabled=disabled,
             ),
             CodeAction(
                 "Surround with TRY...FINALLY",
-                kind=CodeActionKind.REFACTOR_REWRITE,
-                command=Command(
-                    self.parent.commands.get_command_name(self.surround_with_command),
-                    self.parent.commands.get_command_name(self.surround_with_command),
-                    [document.document_uri, insert_range, SurroundType.TRY_FINALLY],
-                ),
+                kind=CODE_ACTION_KIND_SURROUND_WITH,
+                data=as_dict(
+                    CodeActionData(
+                        "refactor", "surround", document.document_uri, insert_range, SurroundType.TRY_FINALLY
+                    )
+                )
+                if insert_range
+                else None,
                 disabled=disabled,
             ),
             CodeAction(
                 "Surround with TRY...EXCEPT..FINALLY",
-                kind=CodeActionKind.REFACTOR_REWRITE,
-                command=Command(
-                    self.parent.commands.get_command_name(self.surround_with_command),
-                    self.parent.commands.get_command_name(self.surround_with_command),
-                    [document.document_uri, insert_range, SurroundType.TRY_EXCEPT_FINALLY],
-                ),
+                kind=CODE_ACTION_KIND_SURROUND_WITH,
+                data=as_dict(
+                    CodeActionData(
+                        "refactor", "surround", document.document_uri, insert_range, SurroundType.TRY_EXCEPT_FINALLY
+                    )
+                )
+                if insert_range
+                else None,
                 disabled=disabled,
             ),
         ]
 
-    @command("robotcode.surroundWith")
-    async def surround_with_command(
-        self, document_uri: DocumentUri, insert_range: Optional[Range], type: SurroundType
-    ) -> None:
-        if insert_range is None or not insert_range:
-            return
+    async def resolve_code_action_surround(self, code_action: CodeAction, data: CodeActionData) -> Optional[CodeAction]:
+        insert_range = data.range
 
-        document = await self.parent.documents.get(document_uri)
+        if not insert_range:
+            return None
+
+        document = await self.parent.documents.get(data.document_uri)
         if document is None:
-            return
+            return None
 
         lines = document.get_lines()
-        need_return = False
+
         if insert_range.end.line >= len(lines):
             insert_range.end.line == len(lines) - 1
             insert_range.end.character = len(lines[-1])
-            need_return = True
 
         spaces = "".join(itertools.takewhile(str.isspace, document.get_lines()[insert_range.start.line]))
 
-        edits: List[Union[TextEdit, AnnotatedTextEdit]] = [
-            AnnotatedTextEdit("add_spaces", Range(start=Position(r, 0), end=Position(r, 0)), "    ")
-            for r in range(insert_range.start.line, insert_range.end.line)
-        ]
-
-        edits.insert(
-            0,
-            AnnotatedTextEdit(
-                "add_try",
-                Range(start=Position(insert_range.start.line, 0), end=Position(insert_range.start.line, 0)),
-                f"{spaces}TRY\n",
-            ),
-        )
+        body = "".join("    " + lines[r] for r in range(insert_range.start.line, insert_range.end.line))
+        body = body.rstrip("\r\n")
 
         selection_range = None
-        if type == SurroundType.TRY_EXCEPT:
-            edits.append(
-                AnnotatedTextEdit(
-                    "add_clause",
-                    Range(start=Position(insert_range.end.line, 0), end=Position(insert_range.end.line, 0)),
-                    ("\n" if need_return else "")
-                    + f"{spaces}EXCEPT    message\n{spaces}    Fail    implement this\n{spaces}END"
-                    + ("\n" if not need_return else ""),
-                )
-            )
+        template = None
+
+        if data.surround_type == SurroundType.TRY_EXCEPT:
+            template = TRY_EXCEPT_TEMPLATE
+
             p = Position(insert_range.end.line + 1, len(spaces) + 6 + 4)
             selection_range = Range(start=p, end=p)
             selection_range = selection_range.extend(end_character=selection_range.end.character + 7)
 
-        elif type == SurroundType.TRY_FINALLY:
-            edits.append(
-                AnnotatedTextEdit(
-                    "add_clause",
-                    Range(start=Position(insert_range.end.line, 0), end=Position(insert_range.end.line, 0)),
-                    ("\n" if need_return else "")
-                    + f"{spaces}FINALLY\n{spaces}    Fail    implement this\n{spaces}END"
-                    + ("\n" if not need_return else ""),
-                )
-            )
+        elif data.surround_type == SurroundType.TRY_FINALLY:
+            template = TRY_FINALLY_TEMPLATE
             p = Position(insert_range.end.line + 2, len(spaces) + 4)
             selection_range = Range(start=p, end=p)
             selection_range = selection_range.extend(end_character=selection_range.end.character + 14)
-        elif type == SurroundType.TRY_EXCEPT_FINALLY:
-            edits.append(
-                AnnotatedTextEdit(
-                    "add_clause",
-                    Range(start=Position(insert_range.end.line, 0), end=Position(insert_range.end.line, 0)),
-                    ("\n" if need_return else "") + f"{spaces}EXCEPT    message\n"
-                    f"{spaces}    Fail    implement this\n"
-                    f"{spaces}FINALLY\n"
-                    f"{spaces}    Fail    implement this\n"
-                    f"{spaces}END" + ("\n" if not need_return else ""),
-                )
-            )
+        elif data.surround_type == SurroundType.TRY_EXCEPT_FINALLY:
+            template = TRY_EXCEPT_FINALLY_TEMPLATE
             p = Position(insert_range.end.line + 1, len(spaces) + 6 + 4)
             selection_range = Range(start=p, end=p)
             selection_range = selection_range.extend(end_character=selection_range.end.character + 7)
 
-        we = WorkspaceEdit(
+        if template is None or selection_range is None:
+            return None
+
+        code_action.edit = WorkspaceEdit(
             document_changes=[
                 TextDocumentEdit(
                     OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
-                    edits,
+                    [
+                        AnnotatedTextEdit(
+                            "surround",
+                            insert_range,
+                            template.substitute(spaces=spaces, body=body),
+                        )
+                    ],
                 )
             ],
             change_annotations={
-                "add_try": ChangeAnnotation("add try", False),
-                "add_spaces": ChangeAnnotation("add spaces", False),
-                "add_clause": ChangeAnnotation("add clause", False),
+                "surround": ChangeAnnotation("surround", False),
             },
         )
 
-        if (await self.parent.workspace.apply_edit(we)).applied and selection_range is not None:
-            await self.parent.window.show_document(str(document.uri), take_focus=True, selection=selection_range)
+        code_action.command = Command(
+            SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
+            SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
+            [document.document_uri, selection_range, False],
+        )
+
+        return code_action
 
     async def code_action_assign_result_to_variable(
         self, document: TextDocument, range: Range, context: CodeActionContext
@@ -411,19 +425,16 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             return [
                 CodeAction(
                     "Assign keyword result to variable",
-                    kind=CodeActionKind.REFACTOR_EXTRACT,
-                    command=Command(
-                        self.parent.commands.get_command_name(self.assign_result_to_variable_command),
-                        self.parent.commands.get_command_name(self.assign_result_to_variable_command),
-                        [document.document_uri, range],
-                    ),
+                    kind=CODE_ACTION_KIND_REFACTOR_EXTRACT_VARIABLE,
+                    data=as_dict(CodeActionData("refactor", "assign_result_to_variable", document.document_uri, range)),
                 )
             ]
 
         return None
 
-    @command("robotcode.assignResultToVariable")
-    async def assign_result_to_variable_command(self, document_uri: DocumentUri, range: Range) -> None:
+    async def resolve_code_action_assign_result_to_variable(
+        self, code_action: CodeAction, data: CodeActionData
+    ) -> Optional[CodeAction]:
         from robot.parsing.lexer import Token as RobotToken
         from robot.parsing.model.statements import (
             Fixture,
@@ -432,41 +443,65 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             TestTemplate,
         )
 
-        if range.start.line == range.end.line and range.start.character <= range.end.character:
-            document = await self.parent.documents.get(document_uri)
-            if document is None:
-                return
+        range = data.range
+        document_uri = data.document_uri
 
-            model = await self.parent.documents_cache.get_model(document, False)
-            node = await get_node_at_position(model, range.start)
+        if range.start.line != range.end.line:
+            return None
 
-            if not isinstance(node, KeywordCall) or node.assign:
-                return
+        document = await self.parent.documents.get(document_uri)
+        if document is None:
+            return None
 
-            keyword_token = (
-                node.get_token(RobotToken.NAME)
-                if isinstance(node, (TestTemplate, Template, Fixture))
-                else node.get_token(RobotToken.KEYWORD)
-            )
+        model = await self.parent.documents_cache.get_model(document, False)
+        nodes = await get_nodes_at_position(model, range.start)
+        if not nodes:
+            return None
+        node = nodes[-1]
 
-            if keyword_token is None or range.start not in range_from_token(keyword_token):
-                return
+        if not isinstance(node, KeywordCall) or node.assign:
+            return None
 
-            start = range_from_token(keyword_token).start
-            we = WorkspaceEdit(
-                document_changes=[
-                    TextDocumentEdit(
-                        OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
-                        [AnnotatedTextEdit("assign_result_to_variable", Range(start, start), "${result}    ")],
-                    )
-                ],
-                change_annotations={"assign_result_to_variable": ChangeAnnotation("Assign result to variable", False)},
-            )
+        keyword_token = (
+            node.get_token(RobotToken.NAME)
+            if isinstance(node, (TestTemplate, Template, Fixture))
+            else node.get_token(RobotToken.KEYWORD)
+        )
 
-            if (await self.parent.workspace.apply_edit(we)).applied:
-                insert_range = Range(start, start).extend(start_character=2, end_character=8)
+        if keyword_token is None or range.start not in range_from_token(keyword_token):
+            return None
 
-                await self.parent.window.show_document(str(document.uri), take_focus=True, selection=insert_range)
+        var_name = "new_variable"
+        counter = 0
+        namespace = await self.parent.documents_cache.get_namespace(document)
+        while True:
+            if await namespace.find_variable(f"${{{var_name}}}", nodes, range.start, ignore_error=True) is None:
+                break
+            counter += 1
+            var_name = f"new_variable_{counter}"
+            if counter > 100:
+                return None
+
+        start = range_from_token(keyword_token).start
+        code_action.edit = WorkspaceEdit(
+            document_changes=[
+                TextDocumentEdit(
+                    OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
+                    [AnnotatedTextEdit("assign_result_to_variable", Range(start, start), f"${{{var_name}}}    ")],
+                )
+            ],
+            change_annotations={"assign_result_to_variable": ChangeAnnotation("Assign result to variable", False)},
+        )
+
+        selection_range = Range(start, start).extend(start_character=2, end_character=len(var_name) + 2)
+
+        code_action.command = Command(
+            SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
+            SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
+            [document.document_uri, selection_range, False],
+        )
+
+        return code_action
 
     async def code_action_extract_keyword(
         self, document: TextDocument, range: Range, context: CodeActionContext
@@ -498,7 +533,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         return [
             CodeAction(
                 "Extract keyword",
-                kind=CodeActionKind.REFACTOR_EXTRACT,
+                kind=CODE_ACTION_KIND_REFACTOR_EXTRACT_FUNCTION,
                 data=as_dict(CodeActionData("refactor", "extract_keyword", document.document_uri, insert_range))
                 if insert_range
                 else None,
@@ -616,8 +651,8 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             keyword_call_text += f"    {argument_variables_text}"
 
         edits: List[Union[TextEdit, AnnotatedTextEdit]] = [
-            AnnotatedTextEdit("add_keyword_call", data.range, keyword_call_text + "\n"),
-            AnnotatedTextEdit("create_keyword", keyword_range, keyword_text),
+            AnnotatedTextEdit("replace_keyword_call", data.range, keyword_call_text + "\n"),
+            AnnotatedTextEdit("add_keyword", keyword_range, keyword_text),
         ]
 
         code_action.edit = WorkspaceEdit(
@@ -628,14 +663,14 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                 )
             ],
             change_annotations={
-                "add_keyword_call": ChangeAnnotation("add keyword call", False),
-                "create_keyword": ChangeAnnotation("create keyword", False),
+                "replace_keyword_call": ChangeAnnotation("replace as keyword call", False),
+                "add_keyword": ChangeAnnotation("add keyword", False),
             },
         )
 
         code_action.command = Command(
-            "robotcode.showDocumentAndRename",
-            "robotcode.showDocumentAndRename",
+            SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
+            SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
             [
                 document.document_uri,
                 Range(
