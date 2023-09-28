@@ -2,6 +2,12 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.59.0 (2023-09-28)
+
+### Feat
+
+- **langserver**: all refactorings and quickfixes are now previewable
+
 ## v0.58.0 (2023-09-26)
 
 ### Feat
