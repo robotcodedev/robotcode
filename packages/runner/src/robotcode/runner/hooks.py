@@ -7,5 +7,5 @@ from .cli import discover, libdoc, rebot, robot, testdoc
 
 
 @hookimpl
-def hatch_register_cli_commands() -> List[click.Command]:
+def register_cli_commands() -> List[click.Command]:
     return [robot, rebot, libdoc, testdoc, discover]

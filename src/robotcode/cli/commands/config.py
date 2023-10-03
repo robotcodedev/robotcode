@@ -7,10 +7,11 @@ from typing import Any, Dict, List, Optional
 import click
 from robotcode.core.dataclasses import encode_case
 from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
+from robotcode.plugin.manager import PluginManager
 from robotcode.robot.config.loader import (
     DiscoverdBy,
     find_project_root,
-    load_config_from_path,
+    load_robot_config_from_path,
 )
 from robotcode.robot.config.model import LibDocProfile, RebotProfile, RobotConfig, RobotProfile, TestDocProfile
 from robotcode.robot.config.utils import get_config_files
@@ -55,13 +56,13 @@ def show(
 
         if single:
             for file, _ in config_files:
-                config = load_config_from_path(file)
+                config = load_robot_config_from_path(file)
                 click.secho(f"File: {file}")
                 app.print_data(config, remove_defaults=True, default_output_format=OutputFormat.TOML)
 
             return
 
-        config = load_config_from_path(*config_files)
+        config = load_robot_config_from_path(*config_files)
 
         app.print_data(config, remove_defaults=True, default_output_format=OutputFormat.TOML)
 
@@ -201,6 +202,16 @@ def get_config_fields() -> Dict[str, Dict[str, str]]:
             "type": str(field.type),
             "description": field.metadata.get("description", "").strip(),
         }
+
+    for entry in PluginManager().config_classes:
+        for s, cls in entry:
+            if dataclasses.is_dataclass(cls):
+                for field in dataclasses.fields(cls):
+                    field_name_encoded = encode_case(TestDocProfile, field)
+                    result[f"{s}." + field_name_encoded] = {
+                        "type": str(field.type),
+                        "description": field.metadata.get("description", "").strip(),
+                    }
 
     return {k: v for k, v in sorted(result.items(), key=lambda item: item[0])}
 

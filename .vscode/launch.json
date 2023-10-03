@@ -42,9 +42,9 @@
 				// "toml",
 				// "--no-color",
 				// "--no-pager",
-				//"config", "info", "desc",
-				"discover",
-				"all"
+				"config", "info", "list",
+				// "analyze",
+				// "."
 			]
 		},
 		{

@@ -1,4 +1,4 @@
-from typing import List, cast
+from typing import List, Tuple, Type, cast
 
 import click
 import pluggy
@@ -16,5 +16,12 @@ class PluginManager:
     def cli_commands(self) -> List[List[click.Command]]:
         return cast(
             List[List[click.Command]],
-            self._plugin_manager.hook.hatch_register_cli_commands(),
+            self._plugin_manager.hook.register_cli_commands(),
+        )
+
+    @property
+    def config_classes(self) -> List[List[Tuple[str, Type[specs.TConfigClass]]]]:
+        return cast(
+            List[List[Tuple[str, Type[specs.TConfigClass]]]],
+            self._plugin_manager.hook.register_config_classes(),
         )

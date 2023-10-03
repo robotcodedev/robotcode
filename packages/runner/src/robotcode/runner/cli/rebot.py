@@ -7,7 +7,7 @@ from robot.errors import DataError, Information
 from robot.rebot import USAGE, Rebot
 from robot.version import get_full_version
 from robotcode.plugin import Application, pass_application
-from robotcode.robot.config.loader import load_config_from_path
+from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import RebotProfile
 from robotcode.robot.config.utils import get_config_files
 
@@ -77,7 +77,7 @@ def rebot(
 
     try:
         profile = (
-            load_config_from_path(*config_files)
+            load_robot_config_from_path(*config_files)
             .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose)
             .evaluated()
         )

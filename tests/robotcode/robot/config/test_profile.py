@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from robotcode.robot.config.loader import loads_config_from_robot_toml
+from robotcode.robot.config.loader import load_robot_config_from_robot_toml_str
 
 
 def test_can_parse_profiles() -> None:
@@ -19,7 +19,7 @@ def test_can_parse_profiles() -> None:
         description = "Development profile"
         args = ["devel"]
     """
-    config = loads_config_from_robot_toml(data)
+    config = load_robot_config_from_robot_toml_str(data)
     assert config.python_path == ["abc", "def"]
     assert config.profiles
     assert config.profiles["default"].description == "Default profile"
@@ -42,7 +42,7 @@ def test_options_defined_in_profile_overrides_the_default_option() -> None:
         description = "Development profile"
         args = ["devel"]
     """
-    config = loads_config_from_robot_toml(data)
+    config = load_robot_config_from_robot_toml_str(data)
 
     profile = config.combine_profiles()
     assert profile
@@ -73,7 +73,7 @@ def test_extra_options_defined_in_profile_appends_to_default_option() -> None:
         description = "Development profile"
         extra-args = ["devel"]
     """
-    config = loads_config_from_robot_toml(data)
+    config = load_robot_config_from_robot_toml_str(data)
 
     profile = config.combine_profiles()
     assert profile
@@ -108,7 +108,7 @@ def test_if_profile_is_not_defined_an_error_is_raised() -> None:
         description = "Development profile"
         extra-args = ["devel"]
     """
-    config = loads_config_from_robot_toml(data)
+    config = load_robot_config_from_robot_toml_str(data)
 
     with pytest.raises(ValueError, match="Can't find any profiles matching the pattern 'nonexistent'."):
         config.combine_profiles("nonexistent")
@@ -135,7 +135,7 @@ def test_profiles_can_be_selected_by_wildcards() -> None:
         extra-args = ["ci"]
 
     """
-    config = loads_config_from_robot_toml(data)
+    config = load_robot_config_from_robot_toml_str(data)
 
     profile = config.combine_profiles("de*")
     assert profile
@@ -168,7 +168,7 @@ def test_profiles_can_be_disabled() -> None:
         description = "CI profile"
         extra-args = ["ci"]
         """
-    config = loads_config_from_robot_toml(data)
+    config = load_robot_config_from_robot_toml_str(data)
 
     profile = config.combine_profiles("*")
     assert profile
@@ -202,7 +202,7 @@ def test_profiles_enabled_can_be_an_condition() -> None:
         description = "CI profile"
         extra-args = ["ci"]
         """
-    config = loads_config_from_robot_toml(data)
+    config = load_robot_config_from_robot_toml_str(data)
     os.environ["CI"] = "true"
     profile = config.combine_profiles("*")
     assert profile
@@ -236,7 +236,7 @@ def test_profiles_enabled_cant_be_an_invalid_condition() -> None:
         description = "CI profile"
         extra-args = ["ci"]
         """
-    config = loads_config_from_robot_toml(data)
+    config = load_robot_config_from_robot_toml_str(data)
     os.environ["CI"] = "true"
     with pytest.raises(ValueError, match=".*invalid syntax.*"):
         config.combine_profiles("*")
@@ -262,7 +262,7 @@ def test_profiles_precedence_defines_the_order() -> None:
         extra-args = ["ci"]
         precedence = 1
         """
-    config = loads_config_from_robot_toml(data)
+    config = load_robot_config_from_robot_toml_str(data)
     profile = config.combine_profiles("*")
     assert profile.args == ["orig", "ci", "another-ci", "devel", "default"]
 
@@ -272,7 +272,7 @@ def test_profiles_tag_stat_combine_generates_correct() -> None:
         tag-stat-combine = ["tag1:tag2", {"tag3" = "tag4"}]
         extra-tag-stat-combine = ["tag1:tag2", {"tag3" = "tag4"}]
         """
-    config = loads_config_from_robot_toml(data)
+    config = load_robot_config_from_robot_toml_str(data)
     cmd_line = config.combine_profiles().evaluated().build_command_line()
     assert cmd_line == ["--tagstatcombine", "tag1:tag2", "--tagstatcombine", "tag3:tag4"]
 
@@ -281,7 +281,7 @@ def test_profiles_flatten_keywords_supports_literals_and_patterns() -> None:
     data = """\
         flatten_keywords = ["for", "while", "iteration", {"name" = "tag4"}, {tag="tag5"}, "foritem"]
         """
-    config = loads_config_from_robot_toml(data)
+    config = load_robot_config_from_robot_toml_str(data)
     cmd_line = config.combine_profiles().evaluated().build_command_line()
     assert cmd_line == [
         "--flattenkeywords",

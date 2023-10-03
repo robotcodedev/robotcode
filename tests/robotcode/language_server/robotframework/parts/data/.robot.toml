@@ -8,3 +8,7 @@ description = "The overridden firefox profile"
 extra-python-path = ["./python"]
 #extra-python-path = ["./python1"]
 output-dir = "output"
+
+[tool.robotcode-analyze]
+extra-select = ["None"]
+ignore = ["Nonono"]

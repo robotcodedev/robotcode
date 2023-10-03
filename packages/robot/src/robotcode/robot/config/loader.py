@@ -1,7 +1,7 @@
 import sys
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Type, TypeVar, Union
 
 from robotcode.core.dataclasses import from_dict
 
@@ -11,7 +11,7 @@ else:
     import tomli as tomllib
 
 
-from .model import RobotConfig
+from .model import BaseOptions, RobotConfig
 
 PYPROJECT_TOML = "pyproject.toml"
 ROBOT_TOML = "robot.toml"
@@ -49,24 +49,46 @@ class ConfigTypeError(TypeError):
         self.path = path
 
 
-def loads_config_from_robot_toml(__s: str) -> RobotConfig:
+_ConfigType = TypeVar("_ConfigType", bound=BaseOptions)
+
+
+def load_robot_config_from_robot_toml_str(__s: str) -> RobotConfig:
+    return load_config_from_robot_toml_str(RobotConfig, __s)
+
+
+def load_config_from_robot_toml_str(
+    config_type: Type[_ConfigType], __s: str, tool_name: Optional[str] = None
+) -> _ConfigType:
     dict_data = tomllib.loads(__s)
-    return from_dict(dict_data, RobotConfig)
+
+    if tool_name:
+        try:
+            return from_dict(dict_data.get("tool", {}).get(tool_name, {}), config_type)
+        except ValueError as e:
+            raise ValueError(f"Reading [tool.{tool_name}] failed: {e}") from e
+        except TypeError as e:
+            raise TypeError(f"Reading [tool.{tool_name}] failed: {e}") from e
+
+    return from_dict(dict_data, config_type)
 
 
-def loads_config_from_pyproject_toml(__s: str) -> RobotConfig:
+def load_config_from_pyproject_toml_str(config_type: Type[_ConfigType], tool_name: str, __s: str) -> _ConfigType:
     dict_data = tomllib.loads(__s)
 
-    return from_dict(dict_data.get("tool", {}).get("robot", {}), RobotConfig)
+    return from_dict(dict_data.get("tool", {}).get(tool_name, {}), config_type)
 
 
-def _load_config_data_from_path(__path: Path) -> RobotConfig:
+def _load_config_data_from_path(
+    config_type: Type[_ConfigType], tool_name: str, robot_toml_tool_name: Optional[str], __path: Path
+) -> _ConfigType:
     try:
         if __path.name == PYPROJECT_TOML:
-            return loads_config_from_pyproject_toml(__path.read_text("utf-8"))
+            return load_config_from_pyproject_toml_str(config_type, tool_name, __path.read_text("utf-8"))
 
         if __path.name == ROBOT_TOML or __path.name == LOCAL_ROBOT_TOML or __path.suffix == ".toml":
-            return loads_config_from_robot_toml(__path.read_text("utf-8"))
+            return load_config_from_robot_toml_str(
+                config_type, __path.read_text("utf-8"), tool_name=robot_toml_tool_name
+            )
         raise TypeError("Unknown config file type.")
 
     except ValueError as e:
@@ -82,13 +104,26 @@ def get_default_config() -> RobotConfig:
     return result
 
 
-def load_config_from_path(*__paths: Union[Path, Tuple[Path, ConfigType]]) -> RobotConfig:
-    result = RobotConfig()
+def load_config_from_path(
+    config_type: Type[_ConfigType],
+    *__paths: Union[Path, Tuple[Path, ConfigType]],
+    tool_name: str,
+    robot_toml_tool_name: Optional[str] = None,
+) -> _ConfigType:
+    result = config_type()
 
     for __path in __paths:
-        result.add_options(_load_config_data_from_path(__path if isinstance(__path, Path) else __path[0]))
+        result.add_options(
+            _load_config_data_from_path(
+                config_type, tool_name, robot_toml_tool_name, __path if isinstance(__path, Path) else __path[0]
+            )
+        )
 
     return result
+
+
+def load_robot_config_from_path(*__paths: Union[Path, Tuple[Path, ConfigType]]) -> RobotConfig:
+    return load_config_from_path(RobotConfig, *__paths, tool_name="robot")
 
 
 def find_project_root(*sources: Union[str, Path]) -> Tuple[Optional[Path], DiscoverdBy]:

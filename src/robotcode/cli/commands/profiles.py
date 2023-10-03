@@ -5,7 +5,7 @@ import click
 from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
 from robotcode.robot.config.loader import (
     DiscoverdBy,
-    load_config_from_path,
+    load_robot_config_from_path,
 )
 from robotcode.robot.config.utils import get_config_files
 
@@ -32,7 +32,7 @@ def show(
     try:
         config_files, _, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
 
-        config = load_config_from_path(*config_files).combine_profiles(
+        config = load_robot_config_from_path(*config_files).combine_profiles(
             *(app.config.profiles or []), verbose_callback=app.verbose
         )
 
@@ -61,7 +61,7 @@ def list(
             verbose_callback=app.verbose,
         )
 
-        config = load_config_from_path(*config_files)
+        config = load_robot_config_from_path(*config_files)
         selected_profiles = [
             k for k in config.select_profiles(*(app.config.profiles or []), verbose_callback=app.verbose).keys()
         ]

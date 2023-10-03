@@ -10,7 +10,7 @@ from robot.version import get_full_version
 from robotcode.plugin import Application, pass_application
 from robotcode.plugin.click_helper.aliases import AliasedCommand
 from robotcode.plugin.click_helper.types import add_options
-from robotcode.robot.config.loader import load_config_from_path
+from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.config.utils import get_config_files
 
@@ -97,7 +97,7 @@ def handle_robot_options(
     )
     try:
         profile = (
-            load_config_from_path(*config_files)
+            load_robot_config_from_path(*config_files)
             .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose)
             .evaluated()
         )

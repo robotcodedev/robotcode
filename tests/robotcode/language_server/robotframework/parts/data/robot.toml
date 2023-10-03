@@ -52,3 +52,7 @@ APP_URL = "https://app.prod.company.com"
 [profiles.test1.extra-variables]
 API_URL = "https://api.test1.company.com"
 APP_URL = "https://app.test1.company.com"
+
+[tool.robotcode-analyze]
+select = ["all"]
+ignore = ["KeywordNotFound"]

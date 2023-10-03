@@ -1630,7 +1630,6 @@ def get_library_doc(
                     raise
                 except BaseException:
                     lib = None
-                    pass
 
         real_source = lib.source if lib is not None else source
 

@@ -370,7 +370,6 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
                 raise
             except JsonRPCErrorException as e:
                 self._logger.warning(str(e))
-                pass
 
         result = self.settings
         for sub_key in str(section).split("."):

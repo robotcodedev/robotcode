@@ -29,7 +29,6 @@ def run(title: str, *args: Any, **kwargs: Any) -> None:
         raise
     except BaseException as e:
         print(f"{title} failed: {e}", file=sys.stderr)
-        pass
 
 
 def main() -> None:
