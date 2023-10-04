@@ -3,6 +3,7 @@ import dataclasses
 import datetime
 import fnmatch
 import os
+import pathlib
 import platform
 import re
 from dataclasses import dataclass
@@ -106,6 +107,7 @@ SAFE_GLOBALS = {
     "time": datetime.time,
     "timedelta": datetime.timedelta,
     "timezone": datetime.timezone,
+    "Path": pathlib.Path,
 }
 
 
@@ -115,14 +117,27 @@ class Expression:
 
     expr: str = field(
         description="""\
-            Condition to evaluate. This must be a Python "eval" expression.
+            Expression to evaluate. This must be a Python "eval" expression.
             For security reasons, only certain expressions and functions are allowed.
 
             Examples:
             ```toml
             expr = "re.match(r'^\\d+$', environ.get('TEST_VAR', ''))"
             expr = "platform.system() == 'Linux'"
+            expr = "Path.cwd() / 'app'"
             ```
+
+            Allowed global names (the name and the corresponding python module/name):
+
+            - `environ` -> os.environ
+            - `re` -> re
+            - `platform` -> platform
+            - `datetime` -> datetime.datetime
+            - `date` -> datetime.date
+            - `time` -> datetime.time
+            - `timedelta` -> datetime.timedelta
+            - `timezone` -> datetime.timezone
+            - `Path` -> pathlib.Path
             """,
         no_default=True,
     )
@@ -159,6 +174,8 @@ class Condition:
             if = "re.match(r'^\\d+$', environ.get('TEST_VAR', ''))"
             if = "platform.system() == 'Linux'"
             ```
+
+            see also `expr` for allowed global names.
             """,
         alias="if",
         no_default=True,
