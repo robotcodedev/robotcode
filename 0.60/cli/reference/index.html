@@ -1185,32 +1185,32 @@ robotcode --format json config show
   --tcp [&lt;ADDRESS&gt;:]&lt;PORT&gt;        Run in `tcp` server mode and listen at the
                                   given port. (Equivalent to `--mode tcp
                                   --port &lt;port&gt;`) *NOTE:* This option is
-                                  mutually exclusive with options: pipe-name,
-                                  port, mode, pipe-server.
+                                  mutually exclusive with options: pipe-
+                                  server, port, mode, pipe-name.
   --pipe-server NAME              Run in `pipe-server` mode and listen at the
                                   given pipe name. (Equivalent to `--mode
                                   pipe-server --pipe-name &lt;name&gt;`) *NOTE:*
                                   This option is mutually exclusive with
-                                  options: tcp, port, mode, pipe-name, bind.
-  --mode [tcp|pipe-server]        The mode to use for the debug launch server.
+                                  options: mode, pipe-name, port, bind, tcp.
+  --mode [pipe-server|tcp]        The mode to use for the debug launch server.
                                   *NOTE:* This option is mutually exclusive
-                                  with options: tcp, pipe-server.  [default:
+                                  with options: pipe-server, tcp.  [default:
                                   tcp]
   --port PORT                     The port to listen on or connect to. (Only
                                   valid for `tcp` and `socket mode`) *NOTE:*
                                   This option is mutually exclusive with
-                                  options: pipe-name, pipe-server.  [default:
+                                  options: pipe-server, pipe-name.  [default:
                                   6612; 1&lt;=x&lt;=65535]
   --bind ADDRESS                  Specify alternate bind address. If no
                                   address is specified `localhost` is used.
                                   (Only valid for tcp and socket mode) *NOTE:*
                                   This option is mutually exclusive with
-                                  options: pipe-name, pipe-server.  [default:
+                                  options: pipe-server, pipe-name.  [default:
                                   127.0.0.1]
   --pipe-name NAME                The pipe to listen on or connect to. (Only
                                   valid in `pipe` and `pipe-server` mode)
                                   *NOTE:* This option is mutually exclusive
-                                  with options: bind, tcp, port, pipe-server.
+                                  with options: pipe-server, bind, port, tcp.
   --version                       Show the version and exit.
   --help                          Show this message and exit.
 </code></pre></div>
@@ -1340,43 +1340,43 @@ robotcode --profile regression discover tests --include regression --exclude wip
 <p><strong>Options:</strong></p>
 <div class="highlight"><pre><span></span><code>  --stdio                         Run in `stdio` mode. (Equivalent to `--mode
                                   stdio`) *NOTE:* This option is mutually
-                                  exclusive with options: pipe, tcp, port,
-                                  mode, pipe-name, socket, bind.
+                                  exclusive with options: mode, pipe-name,
+                                  pipe, socket, port, bind, tcp.
   --tcp [&lt;ADDRESS&gt;:]&lt;PORT&gt;        Run in `tcp` server mode and listen at the
                                   given port. (Equivalent to `--mode tcp
                                   --port &lt;port&gt;`) *NOTE:* This option is
-                                  mutually exclusive with options: pipe,
-                                  stdio, port, mode, pipe-name, socket.
+                                  mutually exclusive with options: mode, pipe-
+                                  name, pipe, socket, port, stdio.
   --socket [&lt;ADDRESS&gt;:]&lt;PORT&gt;     Run in `socket` mode and connect to the
                                   given port. (Equivalent to `--mode socket
                                   --port &lt;port&gt;`) *NOTE:* This option is
-                                  mutually exclusive with options: pipe, tcp,
-                                  stdio, port, mode, pipe-name.
+                                  mutually exclusive with options: mode, pipe-
+                                  name, pipe, port, tcp, stdio.
   --pipe NAME                     Run in `pipe` mode and connect to the given
                                   pipe name. (Equivalent to `--mode pipe
                                   --pipe-name &lt;name&gt;`) *NOTE:* This option is
-                                  mutually exclusive with options: tcp, stdio,
-                                  port, mode, pipe-name, socket, bind.
-  --mode [pipe|tcp|stdio|socket]  The mode to use for the debug launch server.
+                                  mutually exclusive with options: mode, pipe-
+                                  name, socket, port, bind, tcp, stdio.
+  --mode [socket|tcp|stdio|pipe]  The mode to use for the debug launch server.
                                   *NOTE:* This option is mutually exclusive
-                                  with options: stdio, pipe, tcp, socket.
+                                  with options: socket, tcp, stdio, pipe.
                                   [default: stdio]
   --port PORT                     The port to listen on or connect to. (Only
                                   valid for `tcp` and `socket mode`) *NOTE:*
                                   This option is mutually exclusive with
-                                  options: pipe-name, pipe.  [default: 6610;
+                                  options: pipe, pipe-name.  [default: 6610;
                                   1&lt;=x&lt;=65535]
   --bind ADDRESS                  Specify alternate bind address. If no
                                   address is specified `localhost` is used.
                                   (Only valid for tcp and socket mode) *NOTE:*
                                   This option is mutually exclusive with
-                                  options: pipe-name, pipe.  [default:
+                                  options: pipe, pipe-name.  [default:
                                   127.0.0.1]
   --pipe-name NAME                The pipe to listen on or connect to. (Only
                                   valid in `pipe` and `pipe-server` mode)
                                   *NOTE:* This option is mutually exclusive
-                                  with options: pipe, tcp, stdio, port,
-                                  socket, bind.
+                                  with options: pipe, socket, port, bind, tcp,
+                                  stdio.
   --version                       Show the version and exit.
   --help                          Show this message and exit.
 </code></pre></div>
