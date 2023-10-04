@@ -2382,6 +2382,30 @@ Type: Any
 
 Tool configuration.
 
+## tool.robotcode-analyze.extra-ignore
+
+Type: Optional[List[str]]
+
+Ignores which rules are run.
+
+## tool.robotcode-analyze.extra-select
+
+Type: Optional[List[Union[str, robotcode.analyze.cli.Dummy]]]
+
+Selects which rules are run.
+
+## tool.robotcode-analyze.ignore
+
+Type: Optional[List[str]]
+
+Ignores which rules are run.
+
+## tool.robotcode-analyze.select
+
+Type: Optional[List[Union[str, robotcode.analyze.cli.Dummy]]]
+
+Selects which rules are run.
+
 ## variable-files
 
 Type: Optional[List[Union[str, StringExpression]]]
@@ -2426,3 +2450,5 @@ xUnit compatible result file. Not created unless this
 option is specified.
 
 corresponds to the `-x --xunit file` option of _robot_
+
+

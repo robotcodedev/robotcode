@@ -11,7 +11,7 @@
       "description": "Condition to evaluate.",
       "properties": {
         "if": {
-          "description": "Condition to evaluate. This must be a Python \"eval\" expression.\nFor security reasons, only certain expressions and functions are allowed.\n\nExamples:\n```toml\nif = \"re.match(r'^\\d+$', environ.get('TEST_VAR', ''))\"\nif = \"platform.system() == 'Linux'\"\n```\n",
+          "description": "Condition to evaluate. This must be a Python \"eval\" expression.\nFor security reasons, only certain expressions and functions are allowed.\n\nExamples:\n```toml\nif = \"re.match(r'^\\d+$', environ.get('TEST_VAR', ''))\"\nif = \"platform.system() == 'Linux'\"\n```\n\nsee also `expr` for allowed global names.\n",
           "title": "If ",
           "type": "string"
         }
@@ -4911,7 +4911,7 @@
       "description": "Expression to evaluate to a string.",
       "properties": {
         "expr": {
-          "description": "Condition to evaluate. This must be a Python \"eval\" expression.\nFor security reasons, only certain expressions and functions are allowed.\n\nExamples:\n```toml\nif = \"re.match(r'^\\d+$', environ.get('TEST_VAR', ''))\"\nif = \"platform.system() == 'Linux'\"\n```\n",
+          "description": "Expression to evaluate. This must be a Python \"eval\" expression.\nFor security reasons, only certain expressions and functions are allowed.\n\nExamples:\n```toml\nexpr = \"re.match(r'^\\d+$', environ.get('TEST_VAR', ''))\"\nexpr = \"platform.system() == 'Linux'\"\nexpr = \"Path.cwd() / 'app'\"\n```\n\nAllowed global names (the name and the corresponding python module/name):\n\n- `environ` -> os.environ\n- `re` -> re\n- `platform` -> platform\n- `datetime` -> datetime.datetime\n- `date` -> datetime.date\n- `time` -> datetime.time\n- `timedelta` -> datetime.timedelta\n- `timezone` -> datetime.timezone\n- `Path` -> pathlib.Path\n",
           "title": "Expr",
           "type": "string"
         }

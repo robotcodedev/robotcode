@@ -112,6 +112,7 @@ fmt = ["black .", "ruff --fix .", "style", "npx eslint --fix ."]
 all = ["style", "typing"]
 
 [envs.pages]
+python = "3.11"
 #detached = true
 extra-dependencies = [
   "mkdocs>=1.4.2",
