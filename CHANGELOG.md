@@ -2,6 +2,13 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.60.0 (2023-10-04)
+
+### Feat
+
+- **robotcode**: add `Path` to allowed GLOBALS in config expressions
+- **robotcode**: introduce plugin spec for configuration classes
+
 ## v0.59.0 (2023-09-28)
 
 ### Feat
