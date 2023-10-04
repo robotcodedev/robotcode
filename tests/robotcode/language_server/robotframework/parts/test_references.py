@@ -3,7 +3,6 @@ from pathlib import Path
 
 import pytest
 import yaml
-from pytest_regtest import RegTestFixture
 from robotcode.core.lsp.types import (
     Location,
     Position,
@@ -20,6 +19,8 @@ from tests.robotcode.language_server.robotframework.tools import (
     generate_tests_from_source_document,
 )
 
+from .pytest_regtestex import RegTestFixtureEx
+
 
 @pytest.mark.parametrize(
     ("test_document", "data"),
@@ -31,7 +32,7 @@ from tests.robotcode.language_server.robotframework.tools import (
 @pytest.mark.usefixtures("protocol")
 @pytest.mark.asyncio()
 async def test(
-    regtest: RegTestFixture,
+    regtest: RegTestFixtureEx,
     protocol: RobotLanguageServerProtocol,
     test_document: TextDocument,
     data: GeneratedTestData,

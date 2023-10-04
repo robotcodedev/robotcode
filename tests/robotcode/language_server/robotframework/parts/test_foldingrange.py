@@ -4,7 +4,6 @@ from typing import Any, Iterable, Iterator, Tuple, Union
 
 import pytest
 import yaml
-from pytest_regtest import RegTestFixture
 from robotcode.core.lsp.types import (
     ClientCapabilities,
     FoldingRangeClientCapabilities,
@@ -20,6 +19,8 @@ from tests.robotcode.language_server.robotframework.tools import (
     generate_test_id,
     generate_tests_from_source_document,
 )
+
+from .pytest_regtestex import RegTestFixtureEx
 
 
 def prepend_protocol_data(
@@ -64,7 +65,7 @@ def generate_foldingrange_test_id(params: Any) -> Any:
 )
 @pytest.mark.asyncio()
 async def test(
-    regtest: RegTestFixture,
+    regtest: RegTestFixtureEx,
     protocol: RobotLanguageServerProtocol,
     test_document: TextDocument,
     data: GeneratedTestData,

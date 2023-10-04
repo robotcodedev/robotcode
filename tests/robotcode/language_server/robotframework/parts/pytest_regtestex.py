@@ -1,7 +1,8 @@
 import os
 
-from pytest_regtest import RegTestFixture
-from robotcode.language_server.robotframework.utils.version import get_robot_version
+from robotcode.robot.utils import get_robot_version
+
+from .....conftest import RegTestFixture
 
 rf_version = f"rf{get_robot_version()[0]}{get_robot_version()[1]}"
 
