@@ -3,7 +3,8 @@ from typing import Any, List, Tuple, Type
 import click
 from robotcode.plugin import hookimpl
 
-from .cli import AnalyzerConfig, analyze
+from .cli import analyze
+from .config import AnalyzerConfig
 
 
 @hookimpl

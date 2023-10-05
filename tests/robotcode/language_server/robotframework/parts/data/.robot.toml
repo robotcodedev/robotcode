@@ -5,10 +5,10 @@ default-profiles = "firefox"
 #[extra-profiles.abc]
 [extra-profiles.firefox]
 description = "The overridden firefox profile"
-extra-python-path = ["./python"]
+extend-python-path = ["./python"]
 #extra-python-path = ["./python1"]
 output-dir = "output"
 
 [tool.robotcode-analyze]
-extra-select = ["None"]
+extend-select = ["None"]
 ignore = ["Nonono"]

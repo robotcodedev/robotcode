@@ -1,27 +1,12 @@
-# ruff: noqa: RUF009
-from dataclasses import dataclass
-from typing import List, Optional, Tuple, Union
+from typing import Tuple, Union
 
 import click
+from robotcode.analyze.config import AnalyzerConfig
 from robotcode.plugin import Application, pass_application
 from robotcode.robot.config.loader import load_config_from_path
-from robotcode.robot.config.model import BaseOptions, field
 from robotcode.robot.config.utils import get_config_files
 
 from .__version__ import __version__
-
-
-@dataclass
-class Dummy:
-    some_field: Optional[str] = field(default="some value", description="Some field")
-
-
-@dataclass
-class AnalyzerConfig(BaseOptions):
-    select: Optional[List[Union[str, Dummy]]] = field(description="Selects which rules are run.")
-    extra_select: Optional[List[Union[str, Dummy]]] = field(description="Selects which rules are run.")
-    ignore: Optional[List[str]] = field(description="Ignores which rules are run.")
-    extra_ignore: Optional[List[str]] = field(description="Ignores which rules are run.")
 
 
 @click.command(
@@ -54,4 +39,5 @@ def analyze(
         raise click.ClickException(str(e)) from e
 
     app.print_data(robot_profile)
+
     return 0

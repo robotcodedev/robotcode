@@ -26,7 +26,7 @@ ANOTHER_VAR = { expr = "environ.get('CMD_VAR_LONG', 'default')" }
 [profiles.devel]
 description = "The devel profile"
 
-[profiles.devel.extra-variables]
+[profiles.devel.extend-variables]
 BROWSER = "chromium"
 API_URL = "http://localhost:8080"
 APP_URL = "http://localhost:3000"
@@ -34,22 +34,22 @@ APP_URL = "http://localhost:3000"
 [profiles.firefox]
 description = "The firefox profile"
 
-[profiles.firefox.extra-variables]
+[profiles.firefox.extend-variables]
 BROWSER = "firefox"
 
-[profiles.headless.extra-variables]
+[profiles.headless.extend-variables]
 HEADLESS = "true"
 
 [profiles.ci-browser]
 enabled = { if = 'environ.get("CI") == "true"' }
-extra-variables = { BROWSER = "chromium" }
+extend-variables = { BROWSER = "chromium" }
 
 
-[profiles.prod.extra-variables]
+[profiles.prod.extend-variables]
 API_URL = "https://api.prod.company.com"
 APP_URL = "https://app.prod.company.com"
 
-[profiles.test1.extra-variables]
+[profiles.test1.extend-variables]
 API_URL = "https://api.test1.company.com"
 APP_URL = "https://app.test1.company.com"
 

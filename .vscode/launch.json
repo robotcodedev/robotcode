@@ -42,8 +42,8 @@
 				// "toml",
 				// "--no-color",
 				// "--no-pager",
-				"config", "info", "list",
-				// "analyze",
+				//"config", "info", "list",
+				 "analyze",
 				// "."
 			]
 		},

@@ -135,7 +135,7 @@ def generate(
 
         template_name = name
         if extra:
-            template_name = name.replace("extra_", "")
+            template_name = name.replace("extend_", "")
 
         if template_name in type_templates:
             return f"Optional[{type_templates[template_name]}]"
@@ -173,7 +173,7 @@ def generate(
 
         return f"Optional[{base_type}]"
 
-    def build_class_fields(output: List[str], opts: Dict[str, Any], extra: bool = False) -> Dict[str, Any]:
+    def build_class_fields(output: List[str], opts: Dict[str, Any], extend: bool = False) -> Dict[str, Any]:
         result = {}
 
         for k, v in sorted(opts.items(), key=lambda x: x[0]):
@@ -188,15 +188,15 @@ def generate(
                 if isinstance(internal_options[long_name]["default"], (list, dict)):
                     result.update({k: v})
 
-                name = ("extra_" if extra else "") + to_snake_case(
+                name = ("extend_" if extend else "") + to_snake_case(
                     name_corrections.get(long_name, None) or internal_options[long_name]["option"]
                 )
                 output.append(
                     f"    {name}"
-                    f': {get_type(name, internal_options[long_name]["default"], v, is_flag, extra)} = field(\n'
-                    f'        description="""\\\n{create_desc(v, extra)}\n            """,'
+                    f': {get_type(name, internal_options[long_name]["default"], v, is_flag, extend)} = field(\n'
+                    f'        description="""\\\n{create_desc(v, extend)}\n            """,'
                 )
-                if not extra:
+                if not extend:
                     output.append(f'        robot_name="{long_name}",')
                     output.append("        robot_priority=500,")
                     if v["short"] is not None:
@@ -209,7 +209,7 @@ def generate(
 
         return result
 
-    return build_class_fields(output, cmd_options, extra=extra)
+    return build_class_fields(output, cmd_options, extend=extra)
 
 
 output = []
