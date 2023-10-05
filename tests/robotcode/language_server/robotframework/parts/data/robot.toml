@@ -1,4 +1,8 @@
-default-profiles = ["devel"]
+default-profiles = [
+    "devel",
+    "disabled_profile",
+    "disabled_profile_with_env_var",
+]
 paths = ["."]
 python-path = ["./lib", "./resources"]
 output-dir = { expr = "f'results/run-{datetime.now().strftime(\"%d-%m-%Y-%H.%M.%S\")}'" }
@@ -24,7 +28,13 @@ CMD_VAR_LONG = "a test"
 ANOTHER_VAR = { expr = "environ.get('CMD_VAR_LONG', 'default')" }
 
 [profiles.devel]
-description = "The devel profile"
+description = """The devel profile
+this is a second line
+this is a third line
+this is a fourth line
+this is a fifth line
+
+and this is a sixth line"""
 
 [profiles.devel.extend-variables]
 BROWSER = "chromium"
@@ -48,6 +58,13 @@ extend-variables = { BROWSER = "chromium" }
 [profiles.prod.extend-variables]
 API_URL = "https://api.prod.company.com"
 APP_URL = "https://app.prod.company.com"
+
+[profiles.disabled_profile]
+enabled = false
+
+[profiles.disabled_profile_with_env_var]
+enabled = { if = "environ.get('DISABLED_PROFILE') in ['true', '1']" }
+
 
 [profiles.test1.extend-variables]
 API_URL = "https://api.test1.company.com"

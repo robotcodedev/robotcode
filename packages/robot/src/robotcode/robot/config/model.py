@@ -189,6 +189,9 @@ class Condition:
         except Exception as e:
             raise EvaluationError(self.if_, str(e)) from e
 
+    def __bool__(self) -> bool:
+        return self.evaluate()
+
 
 @dataclass()
 class NamePattern(ValidateMixin):
@@ -348,7 +351,9 @@ class BaseOptions(ValidateMixin):
         result = dataclasses.replace(self)
         for f in dataclasses.fields(result):
             try:
-                if isinstance(getattr(result, f.name), Expression):
+                if isinstance(getattr(result, f.name), Condition):
+                    setattr(result, f.name, getattr(result, f.name).evaluate())
+                elif isinstance(getattr(result, f.name), Expression):
                     setattr(result, f.name, getattr(result, f.name).evaluate())
                 elif isinstance(getattr(result, f.name), list):
                     setattr(
@@ -2277,11 +2282,9 @@ class RobotConfig(RobotExtraBaseProfile):
 
         for profile_name, profile in sorted(selected_profiles.items(), key=lambda x: x[1].precedence or 0):
             try:
-                if profile.enabled is not None and (
-                    isinstance(profile.enabled, Condition) and not profile.enabled.evaluate() or not profile.enabled
-                ):
+                if profile.enabled is not None and not bool(profile.enabled):
                     if verbose_callback:
-                        verbose_callback(f'Skipping profile "{profile_name}" because it\'s  disabled.')
+                        verbose_callback(f'Skipping profile "{profile_name}" because it\'s disabled.')
                     continue
             except EvaluationError as e:
                 raise ValueError(f'Error evaluating "enabled" condition for profile "{profile_name}": {e}') from e

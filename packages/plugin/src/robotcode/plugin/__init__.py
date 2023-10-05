@@ -171,8 +171,23 @@ class Application:
         if self.colored:
             try:
                 from rich.console import Console, ConsoleOptions, RenderResult
-                from rich.markdown import Heading, Markdown
+                from rich.markdown import (
+                    Heading,
+                    Markdown,
+                    TableBodyElement,
+                    TableDataElement,
+                    TableElement,
+                    TableHeaderElement,
+                    TableRowElement,
+                )
                 from rich.text import Text
+
+                # this is needed because of https://github.com/Textualize/rich/issues/3027
+                TableElement.new_line = False
+                TableHeaderElement.new_line = False
+                TableBodyElement.new_line = False
+                TableRowElement.new_line = False
+                TableDataElement.new_line = False
 
                 class MyHeading(Heading):
                     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:

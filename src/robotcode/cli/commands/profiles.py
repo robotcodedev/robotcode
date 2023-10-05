@@ -7,6 +7,7 @@ from robotcode.robot.config.loader import (
     DiscoverdBy,
     load_robot_config_from_path,
 )
+from robotcode.robot.config.model import EvaluationError, RobotProfile
 from robotcode.robot.config.utils import get_config_files
 
 
@@ -66,9 +67,20 @@ def list(
             k for k in config.select_profiles(*(app.config.profiles or []), verbose_callback=app.verbose).keys()
         ]
 
+        def check_enabled(name: str, profile: RobotProfile) -> bool:
+            try:
+                return profile.enabled is None or bool(profile.enabled)
+            except EvaluationError as e:
+                raise ValueError(f"Cannot evaluate profile '{name}'.enabled: {e}") from e
+
         result: Dict[str, Any] = {
             "profiles": [
-                {"name": k, "description": v.description or "", "selected": True if k in selected_profiles else False}
+                {
+                    "name": k,
+                    "enabled": check_enabled(k, v),
+                    "description": v.description or "",
+                    "selected": True if k in selected_profiles else False,
+                }
                 for k, v in (config.profiles or {}).items()
             ]
         }
@@ -85,7 +97,30 @@ def list(
 
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
             for v in result["profiles"]:
-                app.echo(f'{"* " if v["selected"] else "  "}{v["name"]} {v["description"] if v["description"] else ""}')
+                for k in ["name", "description"]:
+                    lines = v[k].splitlines()
+                    v[k] = " ".join(lines[:1]) + (" ..." if len(lines) > 1 else "")
+
+            header = ""
+            max_name = max(*(len(profile["name"]) for profile in result["profiles"]), len("Name"))
+            max_description = max(*(len(profile["description"]) for profile in result["profiles"]), len("Description"))
+            header += (
+                f'| Active | Selected | Enabled | Name{(max_name-len("Name"))*" "} '
+                f'| Description{(max_description-len("Description"))*" "} |\n'
+            )
+            header += f"|:------:|:--------:|:-------:|:{max_name*'-'}-|:{max_description*'-'}-|\n"
+            for selected, enabled, name, description in (
+                (v["selected"], v["enabled"], v["name"], v["description"]) for v in result["profiles"]
+            ):
+                header += (
+                    f'|   {"*" if selected and enabled else " "}    '
+                    f'|    {"*" if selected else " "}     '
+                    f'|    {"*" if enabled else " "}    '
+                    f'| {name}{(max_name-len(name))*" "} '
+                    f'| {description if description else ""}{(max_description-len(description))*" "} |\n'
+                )
+
+            app.echo_as_markdown(header)
         else:
             app.print_data(result)
 

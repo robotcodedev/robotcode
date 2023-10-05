@@ -43,7 +43,8 @@
 				// "--no-color",
 				// "--no-pager",
 				//"config", "info", "list",
-				 "analyze",
+				// "analyze",
+				"profiles", "list"
 				// "."
 			]
 		},

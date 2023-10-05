@@ -1,9 +1,9 @@
-default-profiles = "firefox"
+#default-profiles = "firefox"
 
 
-#extra-args = ["--profile", "default"]
+#extends-args = ["--profile", "default"]
 #[extra-profiles.abc]
-[extra-profiles.firefox]
+[extend-profiles.firefox]
 description = "The overridden firefox profile"
 extend-python-path = ["./python"]
 #extra-python-path = ["./python1"]
