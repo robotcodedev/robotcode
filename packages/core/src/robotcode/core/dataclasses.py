@@ -1,20 +1,19 @@
 # pyright: reportMissingTypeArgument=true, reportMissingParameterType=true
 import dataclasses
 import enum
+import functools
 import inspect
 import itertools
 import json
 import re
 from typing import (
     Any,
-    Callable,
     Dict,
     Iterable,
     List,
     Literal,
     Mapping,
     Optional,
-    Protocol,
     Sequence,
     Set,
     Tuple,
@@ -25,7 +24,6 @@ from typing import (
     get_args,
     get_origin,
     get_type_hints,
-    runtime_checkable,
 )
 
 __all__ = [
@@ -48,6 +46,7 @@ __not_valid = object()
 __to_snake_case_cache: Dict[str, str] = {}
 
 
+@functools.lru_cache(maxsize=2048)
 def to_snake_case(s: str) -> str:
     result = __to_snake_case_cache.get(s, __not_valid)
     if result is __not_valid:
@@ -66,6 +65,7 @@ _RE_CAMEL_CASE_2 = re.compile(r"[\-_\.\s]([a-z])")
 __to_snake_camel_cache: Dict[str, str] = {}
 
 
+@functools.lru_cache(maxsize=2048)
 def to_camel_case(s: str) -> str:
     result = __to_snake_camel_cache.get(s, __not_valid)
     if result is __not_valid:
@@ -91,20 +91,6 @@ class CamelSnakeMixin:
         return to_snake_case(s)
 
 
-@runtime_checkable
-class HasCaseEncoder(Protocol):
-    @classmethod
-    def _encode_case(cls, s: str) -> str:  # pragma: no cover
-        ...
-
-
-@runtime_checkable
-class HasCaseDecoder(Protocol):
-    @classmethod
-    def _decode_case(cls, s: str) -> str:  # pragma: no cover
-        ...
-
-
 _T = TypeVar("_T")
 
 
@@ -118,21 +104,13 @@ class DefaultConfig:
         return s
 
 
-__default_config = DefaultConfig()
-
-
-def __get_config(obj: Any, entry_protocol: Type[_T]) -> _T:
-    if isinstance(obj, entry_protocol):
-        return obj
-    return cast(_T, __default_config)
-
-
 def encode_case(obj: Any, field: dataclasses.Field) -> str:  # type: ignore
     alias = field.metadata.get("alias", None)
     if alias:
         return str(alias)
-
-    return __get_config(obj, HasCaseEncoder)._encode_case(field.name)  # type: ignore
+    if hasattr(obj, "_encode_case"):
+        return str(obj._encode_case(field.name))
+    return field.name
 
 
 def decode_case(type: Type[_T], name: str) -> str:
@@ -144,7 +122,10 @@ def decode_case(type: Type[_T], name: str) -> str:
         if field:
             return field.name
 
-    return __get_config(type, HasCaseDecoder)._decode_case(name)  # type: ignore
+    if hasattr(type, "_decode_case"):
+        return str(type._decode_case(name))  # type: ignore[attr-defined]
+
+    return name
 
 
 def __default(o: Any) -> Any:
@@ -365,42 +346,34 @@ def as_dict(
     value: Any,
     *,
     remove_defaults: bool = False,
-    dict_factory: Callable[[Any], Dict[str, Any]] = dict,
     encode: bool = True,
 ) -> Dict[str, Any]:
     if not dataclasses.is_dataclass(value):
         raise TypeError("as_dict() should be called on dataclass instances")
 
-    return cast(Dict[str, Any], _as_dict_inner(value, remove_defaults, dict_factory, encode))
+    return cast(Dict[str, Any], _as_dict_inner(value, remove_defaults, encode))
 
 
 def _as_dict_inner(
     value: Any,
     remove_defaults: bool,
-    dict_factory: Callable[[Any], Dict[str, Any]],
     encode: bool = True,
 ) -> Any:
     if dataclasses.is_dataclass(value):
-        result = []
-        for f in dataclasses.fields(value):
-            v = _as_dict_inner(getattr(value, f.name), remove_defaults, dict_factory)
-
-            if remove_defaults and v == f.default:
-                continue
-            result.append((encode_case(value, f) if encode else f.name, v))
-        return dict_factory(result)
+        return {
+            encode_case(value, f) if encode else f.name: _as_dict_inner(getattr(value, f.name), remove_defaults)
+            for f in dataclasses.fields(value)
+            if not remove_defaults or getattr(value, f.name) != f.default
+        }
 
     if isinstance(value, tuple) and hasattr(value, "_fields"):
-        return type(value)(*[_as_dict_inner(v, remove_defaults, dict_factory) for v in value])
+        return [_as_dict_inner(v, remove_defaults) for v in value]
 
     if isinstance(value, (list, tuple)):
-        return type(value)(_as_dict_inner(v, remove_defaults, dict_factory) for v in value)
+        return [_as_dict_inner(v, remove_defaults) for v in value]
 
     if isinstance(value, dict):
-        return type(value)(
-            (_as_dict_inner(k, remove_defaults, dict_factory), _as_dict_inner(v, remove_defaults, dict_factory))
-            for k, v in value.items()
-        )
+        return {_as_dict_inner(k, remove_defaults): _as_dict_inner(v, remove_defaults) for k, v in value.items()}
 
     return value
 
