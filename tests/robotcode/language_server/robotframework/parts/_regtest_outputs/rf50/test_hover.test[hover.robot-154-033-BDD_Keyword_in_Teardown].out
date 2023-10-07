@@ -4,6 +4,6 @@ data: !GeneratedTestData
   name: BDD Keyword in Teardown
 result: !Hover
   contents:
-    kind: !MarkupKind 'MARKDOWN'
+    kind: markdown
     value: '### Keyword *Log*'
   range: null

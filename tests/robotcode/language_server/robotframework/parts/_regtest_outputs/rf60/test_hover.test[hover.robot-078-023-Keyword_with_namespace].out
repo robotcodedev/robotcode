@@ -4,6 +4,6 @@ data: !GeneratedTestData
   name: Keyword with namespace
 result: !Hover
   contents:
-    kind: !MarkupKind 'MARKDOWN'
+    kind: markdown
     value: '### Keyword *Log Dictionary*'
   range: null

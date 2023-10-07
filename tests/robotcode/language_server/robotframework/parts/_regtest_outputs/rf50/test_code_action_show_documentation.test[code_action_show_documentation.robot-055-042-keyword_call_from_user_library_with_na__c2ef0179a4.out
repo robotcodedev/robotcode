@@ -15,5 +15,5 @@ result:
   disabled: null
   edit: null
   is_preferred: null
-  kind: !CodeActionKind 'SOURCE'
+  kind: source
   title: Open Documentation

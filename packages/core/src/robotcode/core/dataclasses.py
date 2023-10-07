@@ -8,6 +8,7 @@ import json
 import re
 from typing import (
     Any,
+    Callable,
     Dict,
     Iterable,
     List,
@@ -104,13 +105,24 @@ class DefaultConfig:
         return s
 
 
+__field_name_cache: Dict[Tuple[Type[Any], dataclasses.Field[Any]], str] = {}
+__NOT_SET = object()
+
+
 def encode_case(obj: Any, field: dataclasses.Field) -> str:  # type: ignore
-    alias = field.metadata.get("alias", None)
-    if alias:
-        return str(alias)
-    if hasattr(obj, "_encode_case"):
-        return str(obj._encode_case(field.name))
-    return field.name
+    t = obj if isinstance(obj, type) else type(obj)
+    name = __field_name_cache.get((t, field), __NOT_SET)
+    if name is __NOT_SET:
+        alias = field.metadata.get("alias", None)
+        if alias:
+            name = str(alias)
+        elif hasattr(obj, "_encode_case"):
+            name = str(obj._encode_case(field.name))
+        else:
+            name = field.name
+        __field_name_cache[(t, field)] = name
+
+    return cast(str, name)
 
 
 def decode_case(type: Type[_T], name: str) -> str:
@@ -354,28 +366,106 @@ def as_dict(
     return cast(Dict[str, Any], _as_dict_inner(value, remove_defaults, encode))
 
 
+NONETYPE = type(None)
+
+
+def _handle_basic_types(value: Any, _remove_defaults: bool, _encode: bool) -> Any:
+    return value
+
+
+__dataclasses_cache: Dict[Type[Any], Tuple[dataclasses.Field[Any], ...]] = {}
+
+
+def _handle_dataclass(value: Any, remove_defaults: bool, encode: bool) -> Dict[str, Any]:
+    t = type(value)
+    fields = __dataclasses_cache.get(t, None)
+    if fields is None:
+        fields = dataclasses.fields(value)
+        __dataclasses_cache[t] = fields
+    return {
+        encode_case(t, f) if encode else f.name: _as_dict_inner(getattr(value, f.name), remove_defaults, encode)
+        for f in fields
+        if not remove_defaults or getattr(value, f.name) != f.default
+    }
+
+
+def _handle_named_tuple(value: Any, remove_defaults: bool, encode: bool) -> List[Any]:
+    return [_as_dict_inner(v, remove_defaults, encode) for v in value]
+
+
+def _handle_sequence(value: Any, remove_defaults: bool, encode: bool) -> List[Any]:
+    return [_as_dict_inner(v, remove_defaults, encode) for v in value]
+
+
+def _handle_dict(value: Any, remove_defaults: bool, encode: bool) -> Dict[Any, Any]:
+    return {
+        _as_dict_inner(k, remove_defaults, encode): _as_dict_inner(v, remove_defaults, encode) for k, v in value.items()
+    }
+
+
+def _handle_enum(value: enum.Enum, remove_defaults: bool, encode: bool) -> Any:
+    return _as_dict_inner(value.value, remove_defaults, encode)
+
+
+def _handle_unknown_type(value: Any, _remove_defaults: bool, _encode: bool) -> Any:
+    import warnings
+
+    warnings.warn(f"Can't handle type {type(value)} with value {value!r}")
+    return repr(value)
+
+
+__handlers: List[Tuple[Callable[[Any], bool], Callable[[Any, bool, bool], Any]]] = [
+    (
+        lambda value: type(value) in {int, bool, float, str, NONETYPE},
+        _handle_basic_types,
+    ),
+    (
+        lambda value: dataclasses.is_dataclass(value),
+        _handle_dataclass,
+    ),
+    (lambda value: isinstance(value, enum.Enum), _handle_enum),
+    (
+        lambda value: (isinstance(value, tuple) and hasattr(value, "_fields")),
+        _handle_named_tuple,
+    ),
+    (
+        lambda value: isinstance(value, (list, tuple, set, frozenset)),
+        _handle_sequence,
+    ),
+    (
+        lambda value: isinstance(value, dict),
+        _handle_dict,
+    ),
+    (
+        lambda _value: True,
+        _handle_unknown_type,
+    ),
+]
+
+__handlers_cache: Dict[Type[Any], Callable[[Any, bool, bool], Any]] = {}
+
+
 def _as_dict_inner(
     value: Any,
     remove_defaults: bool,
-    encode: bool = True,
+    encode: bool,
 ) -> Any:
-    if dataclasses.is_dataclass(value):
-        return {
-            encode_case(value, f) if encode else f.name: _as_dict_inner(getattr(value, f.name), remove_defaults)
-            for f in dataclasses.fields(value)
-            if not remove_defaults or getattr(value, f.name) != f.default
-        }
+    t = type(value)
+    func = __handlers_cache.get(t, None)
+    if func is None:
+        if t in __handlers_cache:
+            return __handlers_cache[t](value, remove_defaults, encode)
 
-    if isinstance(value, tuple) and hasattr(value, "_fields"):
-        return [_as_dict_inner(v, remove_defaults) for v in value]
+        for h in __handlers:
+            if h[0](value):
+                __handlers_cache[t] = h[1]
+                func = h[1]
+                break
 
-    if isinstance(value, (list, tuple)):
-        return [_as_dict_inner(v, remove_defaults) for v in value]
+    if func is None:
+        raise TypeError(f"Can't handle type {t} with value {value!r}")
 
-    if isinstance(value, dict):
-        return {_as_dict_inner(k, remove_defaults): _as_dict_inner(v, remove_defaults) for k, v in value.items()}
-
-    return value
+    return func(value, remove_defaults, encode)
 
 
 class TypeValidationError(Exception):

@@ -6,7 +6,7 @@ result: !SignatureHelp
   active_parameter: 2
   active_signature: 0
   signatures:
-  - activeParameter: 2
+  - active_parameter: 2
     documentation: null
     label: '(i: int, b: bool, l: TestEnum = A)'
     parameters:

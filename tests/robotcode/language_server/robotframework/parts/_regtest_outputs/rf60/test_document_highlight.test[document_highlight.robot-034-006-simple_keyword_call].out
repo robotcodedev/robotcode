@@ -4,7 +4,7 @@ data: !GeneratedTestData
   name: simple keyword call
 result:
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 7
@@ -13,7 +13,7 @@ result:
       character: 4
       line: 34
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 7
@@ -22,7 +22,7 @@ result:
       character: 4
       line: 41
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 11
@@ -31,7 +31,7 @@ result:
       character: 8
       line: 88
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 11
@@ -40,7 +40,7 @@ result:
       character: 8
       line: 91
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 11
@@ -49,7 +49,7 @@ result:
       character: 8
       line: 96
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 11
@@ -58,7 +58,7 @@ result:
       character: 8
       line: 99
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 19
@@ -67,7 +67,7 @@ result:
       character: 16
       line: 102
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 51
@@ -76,7 +76,7 @@ result:
       character: 48
       line: 102
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 70
@@ -85,7 +85,7 @@ result:
       character: 67
       line: 102
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 17
@@ -94,7 +94,7 @@ result:
       character: 14
       line: 106
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 47
@@ -103,7 +103,7 @@ result:
       character: 44
       line: 106
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 66
@@ -112,7 +112,7 @@ result:
       character: 63
       line: 106
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 7
@@ -121,7 +121,7 @@ result:
       character: 4
       line: 116
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 7
@@ -130,7 +130,7 @@ result:
       character: 4
       line: 118
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 7
@@ -139,7 +139,7 @@ result:
       character: 4
       line: 126
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 7
@@ -148,7 +148,7 @@ result:
       character: 4
       line: 128
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 7
@@ -157,7 +157,7 @@ result:
       character: 4
       line: 136
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 7
@@ -166,7 +166,7 @@ result:
       character: 4
       line: 138
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 7
@@ -175,7 +175,7 @@ result:
       character: 4
       line: 140
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 7

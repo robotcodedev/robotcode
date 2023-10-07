@@ -4,6 +4,6 @@ data: !GeneratedTestData
   name: duplicated keyword a with namespace
 result: !Hover
   contents:
-    kind: !MarkupKind 'MARKDOWN'
+    kind: markdown
     value: '### Keyword *A Resource Keyword A*'
   range: null

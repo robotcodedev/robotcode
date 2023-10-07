@@ -4,6 +4,6 @@ data: !GeneratedTestData
   name: keyword of lib with no error
 result: !Hover
   contents:
-    kind: !MarkupKind 'MARKDOWN'
+    kind: markdown
     value: '### Keyword *A Library Keyword*'
   range: null

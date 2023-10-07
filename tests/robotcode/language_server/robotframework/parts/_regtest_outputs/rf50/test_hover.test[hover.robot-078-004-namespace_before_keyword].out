@@ -4,7 +4,7 @@ data: !GeneratedTestData
   name: namespace before keyword
 result: !Hover
   contents:
-    kind: !MarkupKind 'MARKDOWN'
+    kind: markdown
     value: '### Library *Collections*'
   range:
     end:

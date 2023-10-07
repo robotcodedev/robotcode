@@ -4,7 +4,7 @@ data: !GeneratedTestData
   name: Test Case
 result: !Hover
   contents:
-    kind: !MarkupKind 'MARKDOWN'
+    kind: markdown
     value: '## Test Case *second*'
   range:
     end:

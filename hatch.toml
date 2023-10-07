@@ -36,7 +36,7 @@ pre-install-commands = ["install-packages"]
 cov = "pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=robotcode --cov=tests {args}"
 no-cov = "cov --no-cov {args}"
 test = "pytest {args}"
-test-reset = "test --regtest-reset"
+test-reset = "test --regtest2-reset"
 install-bundled-editable = "python ./scripts/install_bundled_editable.py"
 create-json-schema = "python ./scripts/create_robot_toml_json_schema.py"
 generate-rf-options = "python ./scripts/generate_rf_options.py"

@@ -43,4 +43,4 @@ def test_robot_config_can_created_from_dict() -> None:
     model = from_dict(data, RobotConfig)
     model_dict = as_dict(model)
     for key in data:
-        assert model_dict[key] == data[key]
+        assert model_dict[key] == data[key], key
