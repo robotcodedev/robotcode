@@ -1,0 +1,1943 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Language support for Robot Framework for Visual Studio Code">
+      
+      
+        <meta name="author" content="Daniel Biehl">
+      
+      
+        <link rel="canonical" href="https://robotcode.io/latest/cli/config/">
+      
+      <link rel="icon" href="../../assets/images/logo.png">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-8.5.10">
+    
+    
+      
+        <title>Config - RobotCode</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.975780f9.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.2505c338.min.css">
+        
+      
+      
+
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="green">
+  
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-component="outdated" hidden>
+        
+          <aside class="md-banner md-banner--warning">
+            <div class="md-banner__inner md-grid md-typeset">
+              
+You're not viewing the latest version.
+<a href="../../..">
+    <strong>Click here to go to latest.</strong>
+</a>
+
+            </div>
+            <script>var el=document.querySelector("[data-md-component=outdated]"),outdated=__md_get("__outdated",sessionStorage);!0===outdated&&el&&(el.hidden=!1)</script>
+          </aside>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="RobotCode" class="md-header__button md-logo" aria-label="RobotCode" data-md-component="logo">
+      
+  <img src="../../assets/images/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            RobotCode
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Config
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      <form class="md-header__option" data-md-component="palette">
+        
+          
+          
+          
+          <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="green"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+          
+            <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_2" hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z"/></svg>
+            </label>
+          
+        
+          
+          
+          
+          <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="green"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_2">
+          
+            <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12c0-2.42-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z"/></svg>
+            </label>
+          
+        
+      </form>
+    
+    
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/d-biehl/robotcode" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    d-biehl/robotcode
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-tabs__inner md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        Home
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../get_started/quickstart/" class="md-tabs__link">
+        Get Started
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+    
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../about/" class="md-tabs__link md-tabs__link--active">
+        CLI
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="RobotCode" class="md-nav__button md-logo" aria-label="RobotCode" data-md-component="logo">
+      
+  <img src="../../assets/images/logo.png" alt="logo">
+
+    </a>
+    RobotCode
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/d-biehl/robotcode" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    d-biehl/robotcode
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" data-md-toggle="__nav_1" type="checkbox" id="__nav_1" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_1">
+          Home
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Home" data-md-level="1">
+        <label class="md-nav__title" for="__nav_1">
+          <span class="md-nav__icon md-icon"></span>
+          Home
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        About
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../features/" class="md-nav__link">
+        Features
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        Installation
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          Get Started
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Get Started" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Get Started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../get_started/quickstart/" class="md-nav__link">
+        Quickstart
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../get_started/configuration/" class="md-nav__link">
+        Configuration
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../get_started/troubleshooting/" class="md-nav__link">
+        Troubleshooting
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3">
+          CLI
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="CLI" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          CLI
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../about/" class="md-nav__link">
+        About
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/" class="md-nav__link">
+        Reference
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Config
+      </a>
+      
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  <a href="https://github.com/d-biehl/robotcode/blob/main/docs/cli/config.md" title="Edit this page" class="md-content__button md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
+  </a>
+
+
+  <h1>Config</h1>
+
+<p>[profile].description                                                          </p>
+<p>Type: Optional[str]                                                            </p>
+<p>Description of the profile.                                                    </p>
+<p>[profile].detached                                                             </p>
+<p>Type: Optional[bool]                                                           </p>
+<p>The profile should be detached. Detached means it is not inherited from the  <br />
+main profile.                                                                  </p>
+<p>[profile].enabled                                                              </p>
+<p>Type: Union[bool, Condition, None]                                             </p>
+<p>If enabled the profile is used. You can also use and if condition to calculate 
+the enabled state.                                                             </p>
+<p>Examples:                                                                      </p>
+<p># alway disabled                                                            <br />
+ enabled = false                                                               </p>
+<p># enabled if TEST_VAR is set                                                <br />
+ enabled = { if = 'environ.get("CI") == "true"' }                              </p>
+<p>[profile].precedence                                                           </p>
+<p>Type: Optional[int]                                                            </p>
+<p>Precedence of the profile. Lower values are executed first. If not set the   <br />
+order is undefined.                                                            </p>
+<p>args                                                                           </p>
+<p>Type: Optional[List[str]]                                                      </p>
+<p>Arguments to be passed to robot.                                               </p>
+<p>Examples:                                                                      </p>
+<p>args = ["-t", "abc"]                                                          </p>
+<p>console                                                                        </p>
+<p>Type: Optional[Literal['verbose', 'dotted', 'skipped', 'quiet', 'none']]       </p>
+<p>How to report execution on the console. verbose:  report every suite and test<br />
+(default) dotted:   only show . for passed test, s for skipped tests, and F for
+failed tests quiet:    no output except for errors and warnings none:     no <br />
+output whatsoever                                                              </p>
+<p>corresponds to the --console type option of robot                              </p>
+<p>console-colors                                                                 </p>
+<p>Type: Optional[Literal['auto', 'on', 'ansi', 'off']]                           </p>
+<p>Use colors on console output or not. auto: use colors when output not        <br />
+redirected (default) on:   always use colors ansi: like on but use ANSI colors 
+also on Windows off:  disable colors altogether                                </p>
+<p>corresponds to the -C --consolecolors auto|on|ansi|off option of robot         </p>
+<p>console-markers                                                                </p>
+<p>Type: Optional[Literal['auto', 'on', 'off']]                                   </p>
+<p>Show markers on the console when top level keywords in a test case end. Values 
+have same semantics as with --consolecolors.                                   </p>
+<p>corresponds to the -K --consolemarkers auto|on|off option of robot             </p>
+<p>console-width                                                                  </p>
+<p>Type: Optional[int]                                                            </p>
+<p>Width of the console output. Default is 78.                                    </p>
+<p>corresponds to the -W --consolewidth chars option of robot                     </p>
+<p>debug-file                                                                     </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Debug file written during execution. Not created unless this option is       <br />
+specified.                                                                     </p>
+<p>corresponds to the -b --debugfile file option of robot                         </p>
+<p>default-profiles                                                               </p>
+<p>Type: Union[str, List[str], None]                                              </p>
+<p>Selects the Default profile if no profile is given at command line.            </p>
+<p>Examples:                                                                      </p>
+<p>default_profiles = "default"                                                  </p>
+<p>default_profiles = ["default", "Firefox"]                                     </p>
+<p>doc                                                                            </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Set the documentation of the top level suite. Simple formatting is supported <br />
+(e.g. bold). If the documentation contains spaces, it must be quoted. If the <br />
+value is path to an existing file, actual documentation is read from that file.</p>
+<p>Examples:                                                                      </p>
+<p>--doc "Very <em>good</em> example"                                                 <br />
+ --doc doc_from_file.txt                                                       </p>
+<p>corresponds to the -D --doc documentation option of robot                      </p>
+<p>dotted                                                                         </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>Shortcut for --console dotted.                                                 </p>
+<p>corresponds to the -. --dotted option of robot                                 </p>
+<p>dry-run                                                                        </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>Verifies test data and runs tests so that library keywords are not executed.   </p>
+<p>corresponds to the --dryrun option of robot                                    </p>
+<p>env                                                                            </p>
+<p>Type: Optional[Dict[str, str]]                                                 </p>
+<p>Define environment variables to be set before running tests.                   </p>
+<p>Examples:                                                                      </p>
+<p>[env]                                                                       <br />
+ TEST_VAR = "test"                                                           <br />
+ SECRET = "password"                                                           </p>
+<p>excludes                                                                       </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Select test cases not to run by tag. These tests are not run even if included<br />
+with --include. Tags are matched using same rules as with --include.           </p>
+<p>corresponds to the -e --exclude tag * option of robot                          </p>
+<p>exit-on-error                                                                  </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>Stops test execution if any error occurs when parsing test data, importing   <br />
+libraries, and so on.                                                          </p>
+<p>corresponds to the --exitonerror option of robot                               </p>
+<p>exit-on-failure                                                                </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>Stops test execution if any test fails.                                        </p>
+<p>corresponds to the -X --exitonfailure option of robot                          </p>
+<p>expand-keywords                                                                </p>
+<p>Type: Optional[List[Union[str, NamePattern, TagPattern]]]                      </p>
+<p>Matching keywords will be automatically expanded in the log file. Matching   <br />
+against keyword name or tags work using same rules as with --removekeywords.   </p>
+<p>Examples:                                                                      </p>
+<p>--expandkeywords name:BuiltIn.Log                                           <br />
+ --expandkeywords tag:expand                                                   </p>
+<p>corresponds to the --expandkeywords name:<pattern>|tag:<pattern> * option of <br />
+robot                                                                          </p>
+<p>extend-args                                                                    </p>
+<p>Type: Optional[List[str]]                                                      </p>
+<p>Append extra arguments to be passed to robot.                                  </p>
+<p>extend-env                                                                     </p>
+<p>Type: Optional[Dict[str, str]]                                                 </p>
+<p>Append extra environment variables to be set before tests.                     </p>
+<p>extend-excludes                                                                </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --exclude option.                                       </p>
+<p>Select test cases not to run by tag. These tests are not run even if included<br />
+with --include. Tags are matched using same rules as with --include.           </p>
+<p>corresponds to the -e --exclude tag * option of robot                          </p>
+<p>extend-expand-keywords                                                         </p>
+<p>Type: Optional[List[Union[str, NamePattern, TagPattern]]]                      </p>
+<p>Appends entries to the --expandkeywords option.                                </p>
+<p>Matching keywords will be automatically expanded in the log file. Matching   <br />
+against keyword name or tags work using same rules as with --removekeywords.   </p>
+<p>Examples:                                                                      </p>
+<p>--expandkeywords name:BuiltIn.Log                                           <br />
+ --expandkeywords tag:expand                                                   </p>
+<p>corresponds to the --expandkeywords name:<pattern>|tag:<pattern> * option of <br />
+robot                                                                          </p>
+<p>extend-flatten-keywords                                                        </p>
+<p>Type: Optional[List[Union[str, Literal['for', 'while', 'iteration'],         <br />
+NamePattern, TagPattern]]]                                                     </p>
+<p>Appends entries to the --flattenkeywords option.                               </p>
+<p>Flattens matching keywords in the generated log file. Matching keywords get all
+log messages from their child keywords and children are discarded otherwise. <br />
+for:     flatten FOR loops fully while:   flatten WHILE loops fully iteration: 
+flatten FOR/WHILE loop iterations foritem: deprecated alias for iteration    <br />
+name::  flatten matched keywords using same matching rules as with           <br />
+--removekeywords name:<pattern> tag::  flatten matched keywords using same   <br />
+matching rules as with --removekeywords tag:<pattern>                          </p>
+<p>corresponds to the --flattenkeywords                                         <br />
+for|while|iteration|name:<pattern>|tag:<pattern> * option of robot             </p>
+<p>extend-includes                                                                </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --include option.                                       </p>
+<p>Select tests by tag. Similarly as name with --test, tag is case and space    <br />
+insensitive and it is possible to use patterns with *, ? and [] as wildcards.<br />
+Tags and patterns can also be combined together with AND, OR, and NOT        <br />
+operators.                                                                     </p>
+<p>Examples:                                                                      </p>
+<p>--include foo --include bar*                                                <br />
+ --include fooANDbar*                                                          </p>
+<p>corresponds to the -i --include tag * option of robot                          </p>
+<p>extend-languages                                                               </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --language option.                                      </p>
+<p>Activate localization. lang can be a name or a code of a built-in language, or 
+a path or a module name of a custom language file.                             </p>
+<p>corresponds to the --language lang * option of rebot                           </p>
+<p>extend-listeners                                                               </p>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]                  </p>
+<p>Appends entries to the --listener option.                                      </p>
+<p>Class or module for monitoring test execution. Gets notifications e.g. when  <br />
+tests start and end. Arguments to the listener class can be given after the  <br />
+name using a colon or a semicolon as a separator.                              </p>
+<p>Examples:                                                                      </p>
+<p>--listener MyListener                                                       <br />
+ --listener path/to/Listener.py:arg1:arg2                                      </p>
+<p>corresponds to the --listener listener * option of rebot                       </p>
+<p>extend-metadata                                                                </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Appends entries to the --metadata option.                                      </p>
+<p>Set metadata of the top level suite. Value can contain formatting and be read<br />
+from a file similarly as --doc. Example: --metadata Version:1.2                </p>
+<p>corresponds to the -M --metadata name:value * option of robot                  </p>
+<p>extend-parse-include                                                           </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --parseinclude option.                                  </p>
+<p>Parse only files matching pattern. It can be:                                  </p>
+<p>ò a file name or pattern like example.robot or *.robot to parse all files   <br />
+   matching that name,                                                       <br />
+ ò a file path like path/to/example.robot, or                                <br />
+ ò a directory path like path/to/example to parse all files in that directory, 
+   recursively.                                                                </p>
+<p>corresponds to the -I --parseinclude pattern * option of robot                 </p>
+<p>extend-parsers                                                                 </p>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]                  </p>
+<p>Appends entries to the --parser option.                                        </p>
+<p>Custom parser class or module. Parser classes accept arguments the same way as 
+with --listener.                                                               </p>
+<p>corresponds to the --parser parser * option of rebot                           </p>
+<p>extend-paths                                                                   </p>
+<p>Type: Union[str, List[str], None]                                              </p>
+<p>Append extra entries to the paths argument.                                    </p>
+<p>Examples:                                                                      </p>
+<p>paths = ["tests"]                                                             </p>
+<p>extend-pre-rebot-modifiers                                                     </p>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]                  </p>
+<p>Appends entries to the --prerebotmodifier option.                              </p>
+<p>Class to programmatically modify the result model before creating reports and<br />
+logs. Accepts arguments the same way as with --listener.                       </p>
+<p>corresponds to the --prerebotmodifier modifier * option of robot               </p>
+<p>extend-pre-run-modifiers                                                       </p>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]                  </p>
+<p>Appends entries to the --prerunmodifier option.                                </p>
+<p>Class to programmatically modify the suite structure before execution. Accepts 
+arguments the same way as with --listener.                                     </p>
+<p>corresponds to the --prerunmodifier modifier * option of rebot                 </p>
+<p>extend-profiles                                                                </p>
+<p>Type: Optional[Dict[str, RobotProfile]]                                        </p>
+<p>Extra execution profiles.                                                      </p>
+<p>extend-python-path                                                             </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --pythonpath option.                                    </p>
+<p>Additional locations (directories, ZIPs) where to search libraries and other <br />
+extensions when they are imported. Multiple paths can be given by separating <br />
+them with a colon (:) or by using this option several times. Given path can  <br />
+also be a glob pattern matching multiple paths.                                </p>
+<p>Examples:                                                                      </p>
+<p>--pythonpath libs/                                                          <br />
+ --pythonpath /opt/libs:libraries.zip                                          </p>
+<p>corresponds to the -P --pythonpath path * option of robot                      </p>
+<p>extend-remove-keywords                                                         </p>
+<p>Type: Optional[List[Union[str, Literal['all', 'passed', 'for', 'wuks'],      <br />
+NamePattern, TagPattern]]]                                                     </p>
+<p>Appends entries to the --removekeywords option.                                </p>
+<p>Remove keyword data from the generated log file. Keywords containing warnings<br />
+are not removed except in the all mode. all:     remove data from all keywords 
+passed:  remove data only from keywords in passed test cases and suites for: <br />
+remove passed iterations from for loops while:   remove passed iterations from 
+while loops wuks:    remove all but the last failing keyword inside          <br />
+BuiltIn.Wait Until Keyword Succeeds name::  remove data from keywords that   <br />
+match the given pattern. The pattern is matched against the full name of the <br />
+keyword (e.g. 'MyLib.Keyword', 'resource.Second Keyword'), is case, space, and 
+underscore insensitive, and may contain *, ? and [] wildcards.                 </p>
+<p>Examples:                                                                      </p>
+<p>--removekeywords name:Lib.HugeKw                                            <br />
+ --removekeywords name:myresource.*                                            </p>
+<p>tag::  remove data from keywords that match the given pattern. Tags are case <br />
+and space insensitive and patterns can contain *, ? and [] wildcards. Tags and 
+patterns can also be combined together with AND, OR, and NOT operators.        </p>
+<p>Examples:                                                                      </p>
+<p>--removekeywords foo                                                        <br />
+ --removekeywords fooANDbar*                                                   </p>
+<p>corresponds to the --removekeywords                                          <br />
+all|passed|for|wuks|name:<pattern>|tag:<pattern> * option of robot             </p>
+<p>extend-set-tag                                                                 </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --settag option.                                        </p>
+<p>Sets given tag(s) to all executed tests.                                       </p>
+<p>corresponds to the -G --settag tag * option of robot                           </p>
+<p>extend-skip                                                                    </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --skip option.                                          </p>
+<p>Tests having given tag will be skipped. Tag can be a pattern.                  </p>
+<p>corresponds to the --skip tag * option of rebot                                </p>
+<p>extend-skip-on-failure                                                         </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --skiponfailure option.                                 </p>
+<p>Tests having given tag will be skipped if they fail. Tag can be a pattern      </p>
+<p>corresponds to the --skiponfailure tag * option of rebot                       </p>
+<p>extend-suites                                                                  </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --suite option.                                         </p>
+<p>Select suites by name. When this option is used with --test, --include or    <br />
+--exclude, only tests in matching suites and also matching other filtering   <br />
+criteria are selected. Name can be a simple pattern similarly as with --test <br />
+and it can contain parent name separated with a dot. For example, -s X.Y     <br />
+selects suite Y only if its parent is X.                                       </p>
+<p>corresponds to the -s --suite name * option of robot                           </p>
+<p>extend-tag-doc                                                                 </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Appends entries to the --tagdoc option.                                        </p>
+<p>Add documentation to tags matching the given pattern. Documentation is shown in
+Test Details and also as a tooltip in Statistics by Tag. Pattern can use *, ?<br />
+and [] as wildcards like --test. Documentation can contain formatting like   <br />
+--doc.                                                                         </p>
+<p>Examples:                                                                      </p>
+<p>--tagdoc mytag:Example                                                      <br />
+ --tagdoc "owner-*:Original author"                                            </p>
+<p>corresponds to the --tagdoc pattern:doc * option of robot                      </p>
+<p>extend-tag-stat-combine                                                        </p>
+<p>Type: Optional[List[Union[str, Dict[str, str]]]]                               </p>
+<p>Appends entries to the --tagstatcombine option.                                </p>
+<p>Create combined statistics based on tags. These statistics are added into    <br />
+Statistics by Tag. If the optional name is not given, name of the combined tag 
+is got from the specified tags. Tags are matched using the same rules as with<br />
+--include.                                                                     </p>
+<p>Examples:                                                                      </p>
+<p>--tagstatcombine requirement-*                                              <br />
+ --tagstatcombine tag1ANDtag2:My_name                                          </p>
+<p>corresponds to the --tagstatcombine tags:name * option of robot                </p>
+<p>extend-tag-stat-exclude                                                        </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --tagstatexclude option.                                </p>
+<p>Exclude matching tags from Statistics by Tag. This option can be used with   <br />
+--tagstatinclude similarly as --exclude is used with --include.                </p>
+<p>corresponds to the --tagstatexclude tag * option of robot                      </p>
+<p>extend-tag-stat-include                                                        </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --tagstatinclude option.                                </p>
+<p>Include only matching tags in Statistics by Tag in log and report. By default<br />
+all tags are shown. Given tag can be a pattern like with --include.            </p>
+<p>corresponds to the --tagstatinclude tag * option of robot                      </p>
+<p>extend-tag-stat-link                                                           </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Appends entries to the --tagstatlink option.                                   </p>
+<p>Add external links into Statistics by Tag. Pattern can use *, ? and [] as    <br />
+wildcards like --test. Characters matching to * and ? wildcards can be used in 
+link and title with syntax %N, where N is index of the match (starting from 1).</p>
+<p>Examples:                                                                      </p>
+<p>--tagstatlink mytag:<a href="http://my.domain:Title">http://my.domain:Title</a>                                  <br />
+ --tagstatlink "bug-*:<a href="http://url/id=%1:Issue">http://url/id=%1:Issue</a> Tracker"                          </p>
+<p>corresponds to the --tagstatlink pattern<img alt="🔗" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/1f517.svg" title=":link:" />title * option of robot          </p>
+<p>extend-tasks                                                                   </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --task option.                                          </p>
+<p>Alias to --test. Especially applicable with --rpa.                             </p>
+<p>corresponds to the --task name * option of robot                               </p>
+<p>extend-tests                                                                   </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --test option.                                          </p>
+<p>Select tests by name or by long name containing also parent suite name like  <br />
+Parent.Test. Name is case and space insensitive and it can also be a simple  <br />
+pattern where * matches anything, ? matches any single character, and [chars]<br />
+matches one character in brackets.                                             </p>
+<p>corresponds to the -t --test name * option of robot                            </p>
+<p>extend-variable-files                                                          </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --variablefile option.                                  </p>
+<p>Python or YAML file file to read variables from. Possible arguments to the   <br />
+variable file can be given after the path using colon or semicolon as        <br />
+separator.                                                                     </p>
+<p>Examples:                                                                      </p>
+<p>--variablefile path/vars.yaml                                               <br />
+ --variablefile environment.py:testing                                         </p>
+<p>corresponds to the -V --variablefile path * option of rebot                    </p>
+<p>extend-variables                                                               </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Appends entries to the --variable option.                                      </p>
+<p>Set variables in the test data. Only scalar variables with string value are  <br />
+supported and name is given without ${}. See --variablefile for a more powerful
+variable setting mechanism.                                                    </p>
+<p>Examples:                                                                      </p>
+<p>--variable name:Robot  =&gt;  ${name} = <code>Robot</code>                                <br />
+ -v "hello:Hello world" =&gt;  ${hello} = <code>Hello world</code>                         <br />
+ -v x: -v y:42          =&gt;  ${x} = <code>`, ${y} =</code>42`                             </p>
+<p>corresponds to the -v --variable name:value * option of rebot                  </p>
+<p>extensions                                                                     </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Parse only files with this extension when executing a directory. Has no effect 
+when running individual files or when using resource files. If more than one <br />
+extension is needed, separate them with a colon.                               </p>
+<p>Examples:                                                                      </p>
+<p><code>--extension txt</code>, <code>--extension robot:txt</code>                                    </p>
+<p>Only *.robot files are parsed by default.                                      </p>
+<p>corresponds to the -F --extension value option of robot                        </p>
+<p>flatten-keywords                                                               </p>
+<p>Type: Optional[List[Union[str, Literal['for', 'while', 'iteration'],         <br />
+NamePattern, TagPattern]]]                                                     </p>
+<p>Flattens matching keywords in the generated log file. Matching keywords get all
+log messages from their child keywords and children are discarded otherwise. <br />
+for:     flatten FOR loops fully while:   flatten WHILE loops fully iteration: 
+flatten FOR/WHILE loop iterations foritem: deprecated alias for iteration    <br />
+name::  flatten matched keywords using same matching rules as with           <br />
+--removekeywords name:<pattern> tag::  flatten matched keywords using same   <br />
+matching rules as with --removekeywords tag:<pattern>                          </p>
+<p>corresponds to the --flattenkeywords                                         <br />
+for|while|iteration|name:<pattern>|tag:<pattern> * option of robot             </p>
+<p>includes                                                                       </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Select tests by tag. Similarly as name with --test, tag is case and space    <br />
+insensitive and it is possible to use patterns with *, ? and [] as wildcards.<br />
+Tags and patterns can also be combined together with AND, OR, and NOT        <br />
+operators.                                                                     </p>
+<p>Examples:                                                                      </p>
+<p>--include foo --include bar*                                                <br />
+ --include fooANDbar*                                                          </p>
+<p>corresponds to the -i --include tag * option of robot                          </p>
+<p>languages                                                                      </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Activate localization. lang can be a name or a code of a built-in language, or 
+a path or a module name of a custom language file.                             </p>
+<p>corresponds to the --language lang * option of robot                           </p>
+<p>libdoc                                                                         </p>
+<p>Type: Optional[LibDocProfile]                                                  </p>
+<p>Options to be passed to libdoc.                                                </p>
+<p>libdoc.doc-format                                                              </p>
+<p>Type: Optional[Literal['ROBOT', 'HTML', 'TEXT', 'REST']]                       </p>
+<p>Specifies the source documentation format. Possible values are Robot         <br />
+Framework's documentation format, HTML, plain text, and reStructuredText. The<br />
+default value can be specified in library source code and the initial default<br />
+value is ROBOT.                                                                </p>
+<p>corresponds to the -F --docformat ROBOT|HTML|TEXT|REST option of libdoc        </p>
+<p>libdoc.extend-python-path                                                      </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --pythonpath option.                                    </p>
+<p>Additional locations where to search for libraries and resources.              </p>
+<p>corresponds to the -P --pythonpath path * option of libdoc                     </p>
+<p>libdoc.format                                                                  </p>
+<p>Type: Optional[Literal['HTML', 'XML', 'JSON', 'LIBSPEC']]                      </p>
+<p>Specifies whether to generate an HTML output for humans or a machine readable<br />
+spec file in XML or JSON format. The LIBSPEC format means XML spec with      <br />
+documentations converted to HTML. The default format is got from the output  <br />
+file extension.                                                                </p>
+<p>corresponds to the -f --format HTML|XML|JSON|LIBSPEC option of libdoc          </p>
+<p>libdoc.name                                                                    </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Sets the name of the documented library or resource.                           </p>
+<p>corresponds to the -n --name name option of libdoc                             </p>
+<p>libdoc.python-path                                                             </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Additional locations where to search for libraries and resources.              </p>
+<p>corresponds to the -P --pythonpath path * option of libdoc                     </p>
+<p>libdoc.quiet                                                                   </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>Do not print the path of the generated output file to the console. New in RF <br />
+4.0.                                                                           </p>
+<p>corresponds to the --quiet option of libdoc                                    </p>
+<p>libdoc.spec-doc-format                                                         </p>
+<p>Type: Optional[Literal['RAW', 'HTML']]                                         </p>
+<p>Specifies the documentation format used with XML and JSON spec files. RAW means
+preserving the original documentation format and HTML means converting       <br />
+documentation to HTML. The default is RAW with XML spec files and HTML with  <br />
+JSON specs and when using the special LIBSPEC format. New in RF 4.0.           </p>
+<p>corresponds to the -s --specdocformat RAW|HTML option of libdoc                </p>
+<p>libdoc.theme                                                                   </p>
+<p>Type: Optional[Literal['DARK', 'LIGHT', 'NONE']]                               </p>
+<p>Use dark or light HTML theme. If this option is not used, or the value is NONE,
+the theme is selected based on the browser color scheme. New in RF 6.0.        </p>
+<p>corresponds to the --theme DARK|LIGHT|NONE option of libdoc                    </p>
+<p>listeners                                                                      </p>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]                  </p>
+<p>Class or module for monitoring test execution. Gets notifications e.g. when  <br />
+tests start and end. Arguments to the listener class can be given after the  <br />
+name using a colon or a semicolon as a separator.                              </p>
+<p>Examples:                                                                      </p>
+<p>--listener MyListener                                                       <br />
+ --listener path/to/Listener.py:arg1:arg2                                      </p>
+<p>corresponds to the --listener listener * option of robot                       </p>
+<p>log                                                                            </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>HTML log file. Can be disabled by giving a special value NONE. Default:      <br />
+log.html                                                                       </p>
+<p>Examples:                                                                      </p>
+<p><code>--log mylog.html</code>, <code>-l NONE</code>                                                 </p>
+<p>corresponds to the -l --log file option of robot                               </p>
+<p>log-level                                                                      </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Threshold level for logging. Available levels: TRACE, DEBUG, INFO (default), <br />
+WARN, NONE (no logging). Use syntax LOGLEVEL:DEFAULT to define the default   <br />
+visible log level in log files.                                                </p>
+<p>Examples:                                                                      </p>
+<p>--loglevel DEBUG                                                            <br />
+ --loglevel DEBUG:INFO                                                         </p>
+<p>corresponds to the -L --loglevel level option of robot                         </p>
+<p>log-title                                                                      </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Title for the generated log file. The default title is <SuiteName> Log.        </p>
+<p>corresponds to the --logtitle title option of robot                            </p>
+<p>max-assign-length                                                              </p>
+<p>Type: Optional[int]                                                            </p>
+<p>Maximum number of characters to show in log when variables are assigned. Zero<br />
+or negative values can be used to avoid showing assigned values at all. Default
+is 200.                                                                        </p>
+<p>corresponds to the --maxassignlength characters option of robot                </p>
+<p>max-error-lines                                                                </p>
+<p>Type: Optional[int]                                                            </p>
+<p>Maximum number of error message lines to show in report when tests fail.     <br />
+Default is 40, minimum is 10 and NONE can be used to show the full message.    </p>
+<p>corresponds to the --maxerrorlines lines option of robot                       </p>
+<p>metadata                                                                       </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Set metadata of the top level suite. Value can contain formatting and be read<br />
+from a file similarly as --doc. Example: --metadata Version:1.2                </p>
+<p>corresponds to the -M --metadata name:value * option of robot                  </p>
+<p>name                                                                           </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Set the name of the top level suite. By default the name is created based on <br />
+the executed file or directory.                                                </p>
+<p>corresponds to the -N --name name option of robot                              </p>
+<p>no-status-rc                                                                   </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>Sets the return code to zero regardless of failures in test cases. Error codes 
+are returned normally.                                                         </p>
+<p>corresponds to the --nostatusrc option of robot                                </p>
+<p>output                                                                         </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>XML output file. Given path, similarly as paths given to --log, --report,    <br />
+--xunit, and --debugfile, is relative to --outputdir unless given as an      <br />
+absolute path. Other output files are created based on XML output files after<br />
+the test execution and XML outputs can also be further processed with Rebot  <br />
+tool. Can be disabled by giving a special value NONE. Default: output.xml      </p>
+<p>corresponds to the -o --output file option of robot                            </p>
+<p>output-dir                                                                     </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Where to create output files. The default is the directory where tests are run 
+from and the given path is considered relative to that unless it is absolute.  </p>
+<p>corresponds to the -d --outputdir dir option of robot                          </p>
+<p>parse-include                                                                  </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Parse only files matching pattern. It can be:                                  </p>
+<p>ò a file name or pattern like example.robot or *.robot to parse all files   <br />
+   matching that name,                                                       <br />
+ ò a file path like path/to/example.robot, or                                <br />
+ ò a directory path like path/to/example to parse all files in that directory, 
+   recursively.                                                                </p>
+<p>corresponds to the -I --parseinclude pattern * option of robot                 </p>
+<p>parsers                                                                        </p>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]                  </p>
+<p>Custom parser class or module. Parser classes accept arguments the same way as 
+with --listener.                                                               </p>
+<p>corresponds to the --parser parser * option of robot                           </p>
+<p>paths                                                                          </p>
+<p>Type: Union[str, List[str], None]                                              </p>
+<p>Specifies the paths where robot/robotcode should discover tests. If no paths <br />
+are given at the command line this value is used.                              </p>
+<p>Examples:                                                                      </p>
+<p>paths = ["tests"]                                                             </p>
+<p>Corresponds to the paths argument of robot.                                    </p>
+<p>pre-rebot-modifiers                                                            </p>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]                  </p>
+<p>Class to programmatically modify the result model before creating reports and<br />
+logs. Accepts arguments the same way as with --listener.                       </p>
+<p>corresponds to the --prerebotmodifier modifier * option of robot               </p>
+<p>pre-run-modifiers                                                              </p>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]                  </p>
+<p>Class to programmatically modify the suite structure before execution. Accepts 
+arguments the same way as with --listener.                                     </p>
+<p>corresponds to the --prerunmodifier modifier * option of robot                 </p>
+<p>profiles                                                                       </p>
+<p>Type: Optional[Dict[str, RobotProfile]]                                        </p>
+<p>Execution profiles.                                                            </p>
+<p>python-path                                                                    </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Additional locations (directories, ZIPs) where to search libraries and other <br />
+extensions when they are imported. Multiple paths can be given by separating <br />
+them with a colon (:) or by using this option several times. Given path can  <br />
+also be a glob pattern matching multiple paths.                                </p>
+<p>Examples:                                                                      </p>
+<p>--pythonpath libs/                                                          <br />
+ --pythonpath /opt/libs:libraries.zip                                          </p>
+<p>corresponds to the -P --pythonpath path * option of robot                      </p>
+<p>quiet                                                                          </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>Shortcut for --console quiet.                                                  </p>
+<p>corresponds to the --quiet option of robot                                     </p>
+<p>randomize                                                                      </p>
+<p>Type: Union[str, Literal['all', 'suites', 'tests', 'none'], None]              </p>
+<p>Randomizes the test execution order. all:    randomizes both suites and tests<br />
+suites: randomizes suites tests:  randomizes tests none:   no randomization  <br />
+(default) Use syntax VALUE:SEED to give a custom random seed. The seed must be 
+an integer.                                                                    </p>
+<p>Examples:                                                                      </p>
+<p>--randomize all                                                             <br />
+ --randomize tests:1234                                                        </p>
+<p>corresponds to the --randomize all|suites|tests|none option of robot           </p>
+<p>re-run-failed                                                                  </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Select failed tests from an earlier output file to be re-executed. Equivalent<br />
+to selecting same tests individually using --test.                             </p>
+<p>corresponds to the -R --rerunfailed output option of robot                     </p>
+<p>re-run-failed-suites                                                           </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Select failed suites from an earlier output file to be re-executed.            </p>
+<p>corresponds to the -S --rerunfailedsuites output option of robot               </p>
+<p>rebot                                                                          </p>
+<p>Type: Optional[RebotProfile]                                                   </p>
+<p>Options to be passed to rebot.                                                 </p>
+<p>rebot.console-colors                                                           </p>
+<p>Type: Optional[Literal['auto', 'on', 'ansi', 'off']]                           </p>
+<p>Use colors on console output or not. auto: use colors when output not        <br />
+redirected (default) on:   always use colors ansi: like on but use ANSI colors 
+also on Windows off:  disable colors altogether                                </p>
+<p>corresponds to the -C --consolecolors auto|on|ansi|off option of robot         </p>
+<p>rebot.doc                                                                      </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Set the documentation of the top level suite. Simple formatting is supported <br />
+(e.g. bold). If the documentation contains spaces, it must be quoted. If the <br />
+value is path to an existing file, actual documentation is read from that file.</p>
+<p>Examples:                                                                      </p>
+<p>--doc "Very <em>good</em> example"                                                 <br />
+ --doc doc_from_file.txt                                                       </p>
+<p>corresponds to the -D --doc documentation option of robot                      </p>
+<p>rebot.end-time                                                                 </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Same as --starttime but for end time. If both options are used, elapsed time of
+the suite is calculated based on them. For combined suites, it is otherwise  <br />
+calculated by adding elapsed times of the combined suites together.            </p>
+<p>corresponds to the --endtime timestamp option of rebot                         </p>
+<p>rebot.excludes                                                                 </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Select test cases not to run by tag. These tests are not run even if included<br />
+with --include. Tags are matched using same rules as with --include.           </p>
+<p>corresponds to the -e --exclude tag * option of robot                          </p>
+<p>rebot.expand-keywords                                                          </p>
+<p>Type: Optional[List[Union[str, NamePattern, TagPattern]]]                      </p>
+<p>Matching keywords will be automatically expanded in the log file. Matching   <br />
+against keyword name or tags work using same rules as with --removekeywords.   </p>
+<p>Examples:                                                                      </p>
+<p>--expandkeywords name:BuiltIn.Log                                           <br />
+ --expandkeywords tag:expand                                                   </p>
+<p>corresponds to the --expandkeywords name:<pattern>|tag:<pattern> * option of <br />
+robot                                                                          </p>
+<p>rebot.extend-excludes                                                          </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --exclude option.                                       </p>
+<p>Select test cases not to run by tag. These tests are not run even if included<br />
+with --include. Tags are matched using same rules as with --include.           </p>
+<p>corresponds to the -e --exclude tag * option of robot                          </p>
+<p>rebot.extend-expand-keywords                                                   </p>
+<p>Type: Optional[List[Union[str, NamePattern, TagPattern]]]                      </p>
+<p>Appends entries to the --expandkeywords option.                                </p>
+<p>Matching keywords will be automatically expanded in the log file. Matching   <br />
+against keyword name or tags work using same rules as with --removekeywords.   </p>
+<p>Examples:                                                                      </p>
+<p>--expandkeywords name:BuiltIn.Log                                           <br />
+ --expandkeywords tag:expand                                                   </p>
+<p>corresponds to the --expandkeywords name:<pattern>|tag:<pattern> * option of <br />
+robot                                                                          </p>
+<p>rebot.extend-flatten-keywords                                                  </p>
+<p>Type: Optional[List[Union[str, Literal['for', 'while', 'iteration'],         <br />
+NamePattern, TagPattern]]]                                                     </p>
+<p>Appends entries to the --flattenkeywords option.                               </p>
+<p>Flattens matching keywords in the generated log file. Matching keywords get all
+log messages from their child keywords and children are discarded otherwise. <br />
+for:     flatten FOR loops fully while:   flatten WHILE loops fully iteration: 
+flatten FOR/WHILE loop iterations foritem: deprecated alias for iteration    <br />
+name::  flatten matched keywords using same matching rules as with           <br />
+--removekeywords name:<pattern> tag::  flatten matched keywords using same   <br />
+matching rules as with --removekeywords tag:<pattern>                          </p>
+<p>corresponds to the --flattenkeywords                                         <br />
+for|while|iteration|name:<pattern>|tag:<pattern> * option of robot             </p>
+<p>rebot.extend-includes                                                          </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --include option.                                       </p>
+<p>Select tests by tag. Similarly as name with --test, tag is case and space    <br />
+insensitive and it is possible to use patterns with *, ? and [] as wildcards.<br />
+Tags and patterns can also be combined together with AND, OR, and NOT        <br />
+operators.                                                                     </p>
+<p>Examples:                                                                      </p>
+<p>--include foo --include bar*                                                <br />
+ --include fooANDbar*                                                          </p>
+<p>corresponds to the -i --include tag * option of robot                          </p>
+<p>rebot.extend-metadata                                                          </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Appends entries to the --metadata option.                                      </p>
+<p>Set metadata of the top level suite. Value can contain formatting and be read<br />
+from a file similarly as --doc. Example: --metadata Version:1.2                </p>
+<p>corresponds to the -M --metadata name:value * option of robot                  </p>
+<p>rebot.extend-parse-include                                                     </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --parseinclude option.                                  </p>
+<p>Parse only files matching pattern. It can be:                                  </p>
+<p>ò a file name or pattern like example.robot or *.robot to parse all files   <br />
+   matching that name,                                                       <br />
+ ò a file path like path/to/example.robot, or                                <br />
+ ò a directory path like path/to/example to parse all files in that directory, 
+   recursively.                                                                </p>
+<p>corresponds to the -I --parseinclude pattern * option of robot                 </p>
+<p>rebot.extend-pre-rebot-modifiers                                               </p>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]                  </p>
+<p>Appends entries to the --prerebotmodifier option.                              </p>
+<p>Class to programmatically modify the result model before creating reports and<br />
+logs. Accepts arguments the same way as with --listener.                       </p>
+<p>corresponds to the --prerebotmodifier modifier * option of robot               </p>
+<p>rebot.extend-python-path                                                       </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --pythonpath option.                                    </p>
+<p>Additional locations (directories, ZIPs) where to search libraries and other <br />
+extensions when they are imported. Multiple paths can be given by separating <br />
+them with a colon (:) or by using this option several times. Given path can  <br />
+also be a glob pattern matching multiple paths.                                </p>
+<p>Examples:                                                                      </p>
+<p>--pythonpath libs/                                                          <br />
+ --pythonpath /opt/libs:libraries.zip                                          </p>
+<p>corresponds to the -P --pythonpath path * option of robot                      </p>
+<p>rebot.extend-remove-keywords                                                   </p>
+<p>Type: Optional[List[Union[str, Literal['all', 'passed', 'for', 'wuks'],      <br />
+NamePattern, TagPattern]]]                                                     </p>
+<p>Appends entries to the --removekeywords option.                                </p>
+<p>Remove keyword data from the generated log file. Keywords containing warnings<br />
+are not removed except in the all mode. all:     remove data from all keywords 
+passed:  remove data only from keywords in passed test cases and suites for: <br />
+remove passed iterations from for loops while:   remove passed iterations from 
+while loops wuks:    remove all but the last failing keyword inside          <br />
+BuiltIn.Wait Until Keyword Succeeds name::  remove data from keywords that   <br />
+match the given pattern. The pattern is matched against the full name of the <br />
+keyword (e.g. 'MyLib.Keyword', 'resource.Second Keyword'), is case, space, and 
+underscore insensitive, and may contain *, ? and [] wildcards.                 </p>
+<p>Examples:                                                                      </p>
+<p>--removekeywords name:Lib.HugeKw                                            <br />
+ --removekeywords name:myresource.*                                            </p>
+<p>tag::  remove data from keywords that match the given pattern. Tags are case <br />
+and space insensitive and patterns can contain *, ? and [] wildcards. Tags and 
+patterns can also be combined together with AND, OR, and NOT operators.        </p>
+<p>Examples:                                                                      </p>
+<p>--removekeywords foo                                                        <br />
+ --removekeywords fooANDbar*                                                   </p>
+<p>corresponds to the --removekeywords                                          <br />
+all|passed|for|wuks|name:<pattern>|tag:<pattern> * option of robot             </p>
+<p>rebot.extend-set-tag                                                           </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --settag option.                                        </p>
+<p>Sets given tag(s) to all executed tests.                                       </p>
+<p>corresponds to the -G --settag tag * option of robot                           </p>
+<p>rebot.extend-suites                                                            </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --suite option.                                         </p>
+<p>Select suites by name. When this option is used with --test, --include or    <br />
+--exclude, only tests in matching suites and also matching other filtering   <br />
+criteria are selected. Name can be a simple pattern similarly as with --test <br />
+and it can contain parent name separated with a dot. For example, -s X.Y     <br />
+selects suite Y only if its parent is X.                                       </p>
+<p>corresponds to the -s --suite name * option of robot                           </p>
+<p>rebot.extend-tag-doc                                                           </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Appends entries to the --tagdoc option.                                        </p>
+<p>Add documentation to tags matching the given pattern. Documentation is shown in
+Test Details and also as a tooltip in Statistics by Tag. Pattern can use *, ?<br />
+and [] as wildcards like --test. Documentation can contain formatting like   <br />
+--doc.                                                                         </p>
+<p>Examples:                                                                      </p>
+<p>--tagdoc mytag:Example                                                      <br />
+ --tagdoc "owner-*:Original author"                                            </p>
+<p>corresponds to the --tagdoc pattern:doc * option of robot                      </p>
+<p>rebot.extend-tag-stat-combine                                                  </p>
+<p>Type: Optional[List[Union[str, Dict[str, str]]]]                               </p>
+<p>Appends entries to the --tagstatcombine option.                                </p>
+<p>Create combined statistics based on tags. These statistics are added into    <br />
+Statistics by Tag. If the optional name is not given, name of the combined tag 
+is got from the specified tags. Tags are matched using the same rules as with<br />
+--include.                                                                     </p>
+<p>Examples:                                                                      </p>
+<p>--tagstatcombine requirement-*                                              <br />
+ --tagstatcombine tag1ANDtag2:My_name                                          </p>
+<p>corresponds to the --tagstatcombine tags:name * option of robot                </p>
+<p>rebot.extend-tag-stat-exclude                                                  </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --tagstatexclude option.                                </p>
+<p>Exclude matching tags from Statistics by Tag. This option can be used with   <br />
+--tagstatinclude similarly as --exclude is used with --include.                </p>
+<p>corresponds to the --tagstatexclude tag * option of robot                      </p>
+<p>rebot.extend-tag-stat-include                                                  </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --tagstatinclude option.                                </p>
+<p>Include only matching tags in Statistics by Tag in log and report. By default<br />
+all tags are shown. Given tag can be a pattern like with --include.            </p>
+<p>corresponds to the --tagstatinclude tag * option of robot                      </p>
+<p>rebot.extend-tag-stat-link                                                     </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Appends entries to the --tagstatlink option.                                   </p>
+<p>Add external links into Statistics by Tag. Pattern can use *, ? and [] as    <br />
+wildcards like --test. Characters matching to * and ? wildcards can be used in 
+link and title with syntax %N, where N is index of the match (starting from 1).</p>
+<p>Examples:                                                                      </p>
+<p>--tagstatlink mytag:<a href="http://my.domain:Title">http://my.domain:Title</a>                                  <br />
+ --tagstatlink "bug-*:<a href="http://url/id=%1:Issue">http://url/id=%1:Issue</a> Tracker"                          </p>
+<p>corresponds to the --tagstatlink pattern<img alt="🔗" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/1f517.svg" title=":link:" />title * option of robot          </p>
+<p>rebot.extend-tasks                                                             </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --task option.                                          </p>
+<p>Alias to --test. Especially applicable with --rpa.                             </p>
+<p>corresponds to the --task name * option of robot                               </p>
+<p>rebot.extend-tests                                                             </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --test option.                                          </p>
+<p>Select tests by name or by long name containing also parent suite name like  <br />
+Parent.Test. Name is case and space insensitive and it can also be a simple  <br />
+pattern where * matches anything, ? matches any single character, and [chars]<br />
+matches one character in brackets.                                             </p>
+<p>corresponds to the -t --test name * option of robot                            </p>
+<p>rebot.flatten-keywords                                                         </p>
+<p>Type: Optional[List[Union[str, Literal['for', 'while', 'iteration'],         <br />
+NamePattern, TagPattern]]]                                                     </p>
+<p>Flattens matching keywords in the generated log file. Matching keywords get all
+log messages from their child keywords and children are discarded otherwise. <br />
+for:     flatten FOR loops fully while:   flatten WHILE loops fully iteration: 
+flatten FOR/WHILE loop iterations foritem: deprecated alias for iteration    <br />
+name::  flatten matched keywords using same matching rules as with           <br />
+--removekeywords name:<pattern> tag::  flatten matched keywords using same   <br />
+matching rules as with --removekeywords tag:<pattern>                          </p>
+<p>corresponds to the --flattenkeywords                                         <br />
+for|while|iteration|name:<pattern>|tag:<pattern> * option of robot             </p>
+<p>rebot.includes                                                                 </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Select tests by tag. Similarly as name with --test, tag is case and space    <br />
+insensitive and it is possible to use patterns with *, ? and [] as wildcards.<br />
+Tags and patterns can also be combined together with AND, OR, and NOT        <br />
+operators.                                                                     </p>
+<p>Examples:                                                                      </p>
+<p>--include foo --include bar*                                                <br />
+ --include fooANDbar*                                                          </p>
+<p>corresponds to the -i --include tag * option of robot                          </p>
+<p>rebot.log                                                                      </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>HTML log file. Can be disabled by giving a special value NONE. Default:      <br />
+log.html                                                                       </p>
+<p>Examples:                                                                      </p>
+<p><code>--log mylog.html</code>, <code>-l NONE</code>                                                 </p>
+<p>corresponds to the -l --log file option of robot                               </p>
+<p>rebot.log-level                                                                </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Threshold for selecting messages. Available levels: TRACE (default), DEBUG,  <br />
+INFO, WARN, NONE (no msgs). Use syntax LOGLEVEL:DEFAULT to define the default<br />
+visible log level in log files.                                                </p>
+<p>Examples:                                                                      </p>
+<p>--loglevel DEBUG                                                            <br />
+ --loglevel DEBUG:INFO                                                         </p>
+<p>corresponds to the -L --loglevel level option of rebot                         </p>
+<p>rebot.log-title                                                                </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Title for the generated log file. The default title is <SuiteName> Log.        </p>
+<p>corresponds to the --logtitle title option of robot                            </p>
+<p>rebot.merge                                                                    </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>When combining results, merge outputs together instead of putting them under a 
+new top level suite. Example: rebot --merge orig.xml rerun.xml                 </p>
+<p>corresponds to the -R --merge option of rebot                                  </p>
+<p>rebot.metadata                                                                 </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Set metadata of the top level suite. Value can contain formatting and be read<br />
+from a file similarly as --doc. Example: --metadata Version:1.2                </p>
+<p>corresponds to the -M --metadata name:value * option of robot                  </p>
+<p>rebot.name                                                                     </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Set the name of the top level suite. By default the name is created based on <br />
+the executed file or directory.                                                </p>
+<p>corresponds to the -N --name name option of robot                              </p>
+<p>rebot.no-status-rc                                                             </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>Sets the return code to zero regardless of failures in test cases. Error codes 
+are returned normally.                                                         </p>
+<p>corresponds to the --nostatusrc option of robot                                </p>
+<p>rebot.output                                                                   </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>XML output file. Not created unless this option is specified. Given path,    <br />
+similarly as paths given to --log, --report and --xunit, is relative to      <br />
+--outputdir unless given as an absolute path.                                  </p>
+<p>corresponds to the -o --output file option of rebot                            </p>
+<p>rebot.output-dir                                                               </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Where to create output files. The default is the directory where tests are run 
+from and the given path is considered relative to that unless it is absolute.  </p>
+<p>corresponds to the -d --outputdir dir option of robot                          </p>
+<p>rebot.parse-include                                                            </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Parse only files matching pattern. It can be:                                  </p>
+<p>ò a file name or pattern like example.robot or *.robot to parse all files   <br />
+   matching that name,                                                       <br />
+ ò a file path like path/to/example.robot, or                                <br />
+ ò a directory path like path/to/example to parse all files in that directory, 
+   recursively.                                                                </p>
+<p>corresponds to the -I --parseinclude pattern * option of robot                 </p>
+<p>rebot.pre-rebot-modifiers                                                      </p>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]                  </p>
+<p>Class to programmatically modify the result model before creating reports and<br />
+logs. Accepts arguments the same way as with --listener.                       </p>
+<p>corresponds to the --prerebotmodifier modifier * option of robot               </p>
+<p>rebot.process-empty-suite                                                      </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>Processes output also if the top level suite is empty. Useful e.g. with      <br />
+--include/--exclude when it is not an error that there are no matches. Use   <br />
+--skiponfailure when starting execution instead.                               </p>
+<p>corresponds to the --processemptysuite option of rebot                         </p>
+<p>rebot.python-path                                                              </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Additional locations (directories, ZIPs) where to search libraries and other <br />
+extensions when they are imported. Multiple paths can be given by separating <br />
+them with a colon (:) or by using this option several times. Given path can  <br />
+also be a glob pattern matching multiple paths.                                </p>
+<p>Examples:                                                                      </p>
+<p>--pythonpath libs/                                                          <br />
+ --pythonpath /opt/libs:libraries.zip                                          </p>
+<p>corresponds to the -P --pythonpath path * option of robot                      </p>
+<p>rebot.remove-keywords                                                          </p>
+<p>Type: Optional[List[Union[str, Literal['all', 'passed', 'for', 'wuks'],      <br />
+NamePattern, TagPattern]]]                                                     </p>
+<p>Remove keyword data from the generated log file. Keywords containing warnings<br />
+are not removed except in the all mode. all:     remove data from all keywords 
+passed:  remove data only from keywords in passed test cases and suites for: <br />
+remove passed iterations from for loops while:   remove passed iterations from 
+while loops wuks:    remove all but the last failing keyword inside          <br />
+BuiltIn.Wait Until Keyword Succeeds name::  remove data from keywords that   <br />
+match the given pattern. The pattern is matched against the full name of the <br />
+keyword (e.g. 'MyLib.Keyword', 'resource.Second Keyword'), is case, space, and 
+underscore insensitive, and may contain *, ? and [] wildcards.                 </p>
+<p>Examples:                                                                      </p>
+<p>--removekeywords name:Lib.HugeKw                                            <br />
+ --removekeywords name:myresource.*                                            </p>
+<p>tag::  remove data from keywords that match the given pattern. Tags are case <br />
+and space insensitive and patterns can contain *, ? and [] wildcards. Tags and 
+patterns can also be combined together with AND, OR, and NOT operators.        </p>
+<p>Examples:                                                                      </p>
+<p>--removekeywords foo                                                        <br />
+ --removekeywords fooANDbar*                                                   </p>
+<p>corresponds to the --removekeywords                                          <br />
+all|passed|for|wuks|name:<pattern>|tag:<pattern> * option of robot             </p>
+<p>rebot.report                                                                   </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>HTML report file. Can be disabled with NONE similarly as --log. Default:     <br />
+report.html                                                                    </p>
+<p>corresponds to the -r --report file option of robot                            </p>
+<p>rebot.report-background                                                        </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Background colors to use in the report file. Given in format                 <br />
+passed:failed:skipped where the :skipped part can be omitted. Both color names 
+and codes work.                                                                </p>
+<p>Examples:                                                                      </p>
+<p>--reportbackground green:red:yellow                                         <br />
+ --reportbackground #00E:#E00                                                  </p>
+<p>corresponds to the --reportbackground colors option of robot                   </p>
+<p>rebot.report-title                                                             </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Title for the generated report file. The default title is <SuiteName> Report.  </p>
+<p>corresponds to the --reporttitle title option of robot                         </p>
+<p>rebot.rpa                                                                      </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>Turn on the generic automation mode. Mainly affects terminology so that "test" 
+is replaced with "task" in logs and reports. By default the mode is got from <br />
+test/task header in data files.                                                </p>
+<p>corresponds to the --rpa option of robot                                       </p>
+<p>rebot.set-tag                                                                  </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Sets given tag(s) to all executed tests.                                       </p>
+<p>corresponds to the -G --settag tag * option of robot                           </p>
+<p>rebot.split-log                                                                </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>Split the log file into smaller pieces that open in browsers transparently.    </p>
+<p>corresponds to the --splitlog option of robot                                  </p>
+<p>rebot.start-time                                                               </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Set execution start time. Timestamp must be given in format 2007-10-01       <br />
+15:12:42.268 where all separators are optional (e.g. 20071001151242268 is ok <br />
+too) and parts from milliseconds to hours can be omitted if they are zero (e.g.
+2007-10-01). This can be used to override start time of a single suite or to <br />
+set start time for a combined suite, which would otherwise be N/A.             </p>
+<p>corresponds to the --starttime timestamp option of rebot                       </p>
+<p>rebot.suite-stat-level                                                         </p>
+<p>Type: Optional[int]                                                            </p>
+<p>How many levels to show in Statistics by Suite in log and report. By default <br />
+all suite levels are shown. Example:  --suitestatlevel 3                       </p>
+<p>corresponds to the --suitestatlevel level option of robot                      </p>
+<p>rebot.suites                                                                   </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Select suites by name. When this option is used with --test, --include or    <br />
+--exclude, only tests in matching suites and also matching other filtering   <br />
+criteria are selected. Name can be a simple pattern similarly as with --test <br />
+and it can contain parent name separated with a dot. For example, -s X.Y     <br />
+selects suite Y only if its parent is X.                                       </p>
+<p>corresponds to the -s --suite name * option of robot                           </p>
+<p>rebot.tag-doc                                                                  </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Add documentation to tags matching the given pattern. Documentation is shown in
+Test Details and also as a tooltip in Statistics by Tag. Pattern can use *, ?<br />
+and [] as wildcards like --test. Documentation can contain formatting like   <br />
+--doc.                                                                         </p>
+<p>Examples:                                                                      </p>
+<p>--tagdoc mytag:Example                                                      <br />
+ --tagdoc "owner-*:Original author"                                            </p>
+<p>corresponds to the --tagdoc pattern:doc * option of robot                      </p>
+<p>rebot.tag-stat-combine                                                         </p>
+<p>Type: Optional[List[Union[str, Dict[str, str]]]]                               </p>
+<p>Create combined statistics based on tags. These statistics are added into    <br />
+Statistics by Tag. If the optional name is not given, name of the combined tag 
+is got from the specified tags. Tags are matched using the same rules as with<br />
+--include.                                                                     </p>
+<p>Examples:                                                                      </p>
+<p>--tagstatcombine requirement-*                                              <br />
+ --tagstatcombine tag1ANDtag2:My_name                                          </p>
+<p>corresponds to the --tagstatcombine tags:name * option of robot                </p>
+<p>rebot.tag-stat-exclude                                                         </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Exclude matching tags from Statistics by Tag. This option can be used with   <br />
+--tagstatinclude similarly as --exclude is used with --include.                </p>
+<p>corresponds to the --tagstatexclude tag * option of robot                      </p>
+<p>rebot.tag-stat-include                                                         </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Include only matching tags in Statistics by Tag in log and report. By default<br />
+all tags are shown. Given tag can be a pattern like with --include.            </p>
+<p>corresponds to the --tagstatinclude tag * option of robot                      </p>
+<p>rebot.tag-stat-link                                                            </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Add external links into Statistics by Tag. Pattern can use *, ? and [] as    <br />
+wildcards like --test. Characters matching to * and ? wildcards can be used in 
+link and title with syntax %N, where N is index of the match (starting from 1).</p>
+<p>Examples:                                                                      </p>
+<p>--tagstatlink mytag:<a href="http://my.domain:Title">http://my.domain:Title</a>                                  <br />
+ --tagstatlink "bug-*:<a href="http://url/id=%1:Issue">http://url/id=%1:Issue</a> Tracker"                          </p>
+<p>corresponds to the --tagstatlink pattern<img alt="🔗" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/1f517.svg" title=":link:" />title * option of robot          </p>
+<p>rebot.tasks                                                                    </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Alias to --test. Especially applicable with --rpa.                             </p>
+<p>corresponds to the --task name * option of robot                               </p>
+<p>rebot.tests                                                                    </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Select tests by name or by long name containing also parent suite name like  <br />
+Parent.Test. Name is case and space insensitive and it can also be a simple  <br />
+pattern where * matches anything, ? matches any single character, and [chars]<br />
+matches one character in brackets.                                             </p>
+<p>corresponds to the -t --test name * option of robot                            </p>
+<p>rebot.timestamp-outputs                                                        </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>When this option is used, timestamp in a format YYYYMMDD-hhmmss is added to all
+generated output files between their basename and extension. For example -T -o 
+output.xml -r report.html -l none creates files like output-20070503-154410.xml
+and report-20070503-154410.html.                                               </p>
+<p>corresponds to the -T --timestampoutputs option of robot                       </p>
+<p>rebot.xunit                                                                    </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>xUnit compatible result file. Not created unless this option is specified.     </p>
+<p>corresponds to the -x --xunit file option of robot                             </p>
+<p>remove-keywords                                                                </p>
+<p>Type: Optional[List[Union[str, Literal['all', 'passed', 'for', 'wuks'],      <br />
+NamePattern, TagPattern]]]                                                     </p>
+<p>Remove keyword data from the generated log file. Keywords containing warnings<br />
+are not removed except in the all mode. all:     remove data from all keywords 
+passed:  remove data only from keywords in passed test cases and suites for: <br />
+remove passed iterations from for loops while:   remove passed iterations from 
+while loops wuks:    remove all but the last failing keyword inside          <br />
+BuiltIn.Wait Until Keyword Succeeds name::  remove data from keywords that   <br />
+match the given pattern. The pattern is matched against the full name of the <br />
+keyword (e.g. 'MyLib.Keyword', 'resource.Second Keyword'), is case, space, and 
+underscore insensitive, and may contain *, ? and [] wildcards.                 </p>
+<p>Examples:                                                                      </p>
+<p>--removekeywords name:Lib.HugeKw                                            <br />
+ --removekeywords name:myresource.*                                            </p>
+<p>tag::  remove data from keywords that match the given pattern. Tags are case <br />
+and space insensitive and patterns can contain *, ? and [] wildcards. Tags and 
+patterns can also be combined together with AND, OR, and NOT operators.        </p>
+<p>Examples:                                                                      </p>
+<p>--removekeywords foo                                                        <br />
+ --removekeywords fooANDbar*                                                   </p>
+<p>corresponds to the --removekeywords                                          <br />
+all|passed|for|wuks|name:<pattern>|tag:<pattern> * option of robot             </p>
+<p>report                                                                         </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>HTML report file. Can be disabled with NONE similarly as --log. Default:     <br />
+report.html                                                                    </p>
+<p>corresponds to the -r --report file option of robot                            </p>
+<p>report-background                                                              </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Background colors to use in the report file. Given in format                 <br />
+passed:failed:skipped where the :skipped part can be omitted. Both color names 
+and codes work.                                                                </p>
+<p>Examples:                                                                      </p>
+<p>--reportbackground green:red:yellow                                         <br />
+ --reportbackground #00E:#E00                                                  </p>
+<p>corresponds to the --reportbackground colors option of robot                   </p>
+<p>report-title                                                                   </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Title for the generated report file. The default title is <SuiteName> Report.  </p>
+<p>corresponds to the --reporttitle title option of robot                         </p>
+<p>rpa                                                                            </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>Turn on the generic automation mode. Mainly affects terminology so that "test" 
+is replaced with "task" in logs and reports. By default the mode is got from <br />
+test/task header in data files.                                                </p>
+<p>corresponds to the --rpa option of robot                                       </p>
+<p>run-empty-suite                                                                </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>Executes suite even if it contains no tests. Useful e.g. with                <br />
+--include/--exclude when it is not an error that no test matches the condition.</p>
+<p>corresponds to the --runemptysuite option of robot                             </p>
+<p>set-tag                                                                        </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Sets given tag(s) to all executed tests.                                       </p>
+<p>corresponds to the -G --settag tag * option of robot                           </p>
+<p>skip                                                                           </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Tests having given tag will be skipped. Tag can be a pattern.                  </p>
+<p>corresponds to the --skip tag * option of robot                                </p>
+<p>skip-on-failure                                                                </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Tests having given tag will be skipped if they fail. Tag can be a pattern      </p>
+<p>corresponds to the --skiponfailure tag * option of robot                       </p>
+<p>skip-teardown-on-exit                                                          </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>Causes teardowns to be skipped if test execution is stopped prematurely.       </p>
+<p>corresponds to the --skipteardownonexit option of robot                        </p>
+<p>split-log                                                                      </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>Split the log file into smaller pieces that open in browsers transparently.    </p>
+<p>corresponds to the --splitlog option of robot                                  </p>
+<p>suite-stat-level                                                               </p>
+<p>Type: Optional[int]                                                            </p>
+<p>How many levels to show in Statistics by Suite in log and report. By default <br />
+all suite levels are shown. Example:  --suitestatlevel 3                       </p>
+<p>corresponds to the --suitestatlevel level option of robot                      </p>
+<p>suites                                                                         </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Select suites by name. When this option is used with --test, --include or    <br />
+--exclude, only tests in matching suites and also matching other filtering   <br />
+criteria are selected. Name can be a simple pattern similarly as with --test <br />
+and it can contain parent name separated with a dot. For example, -s X.Y     <br />
+selects suite Y only if its parent is X.                                       </p>
+<p>corresponds to the -s --suite name * option of robot                           </p>
+<p>tag-doc                                                                        </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Add documentation to tags matching the given pattern. Documentation is shown in
+Test Details and also as a tooltip in Statistics by Tag. Pattern can use *, ?<br />
+and [] as wildcards like --test. Documentation can contain formatting like   <br />
+--doc.                                                                         </p>
+<p>Examples:                                                                      </p>
+<p>--tagdoc mytag:Example                                                      <br />
+ --tagdoc "owner-*:Original author"                                            </p>
+<p>corresponds to the --tagdoc pattern:doc * option of robot                      </p>
+<p>tag-stat-combine                                                               </p>
+<p>Type: Optional[List[Union[str, Dict[str, str]]]]                               </p>
+<p>Create combined statistics based on tags. These statistics are added into    <br />
+Statistics by Tag. If the optional name is not given, name of the combined tag 
+is got from the specified tags. Tags are matched using the same rules as with<br />
+--include.                                                                     </p>
+<p>Examples:                                                                      </p>
+<p>--tagstatcombine requirement-*                                              <br />
+ --tagstatcombine tag1ANDtag2:My_name                                          </p>
+<p>corresponds to the --tagstatcombine tags:name * option of robot                </p>
+<p>tag-stat-exclude                                                               </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Exclude matching tags from Statistics by Tag. This option can be used with   <br />
+--tagstatinclude similarly as --exclude is used with --include.                </p>
+<p>corresponds to the --tagstatexclude tag * option of robot                      </p>
+<p>tag-stat-include                                                               </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Include only matching tags in Statistics by Tag in log and report. By default<br />
+all tags are shown. Given tag can be a pattern like with --include.            </p>
+<p>corresponds to the --tagstatinclude tag * option of robot                      </p>
+<p>tag-stat-link                                                                  </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Add external links into Statistics by Tag. Pattern can use *, ? and [] as    <br />
+wildcards like --test. Characters matching to * and ? wildcards can be used in 
+link and title with syntax %N, where N is index of the match (starting from 1).</p>
+<p>Examples:                                                                      </p>
+<p>--tagstatlink mytag:<a href="http://my.domain:Title">http://my.domain:Title</a>                                  <br />
+ --tagstatlink "bug-*:<a href="http://url/id=%1:Issue">http://url/id=%1:Issue</a> Tracker"                          </p>
+<p>corresponds to the --tagstatlink pattern<img alt="🔗" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/1f517.svg" title=":link:" />title * option of robot          </p>
+<p>tasks                                                                          </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Alias to --test. Especially applicable with --rpa.                             </p>
+<p>corresponds to the --task name * option of robot                               </p>
+<p>testdoc                                                                        </p>
+<p>Type: Optional[TestDocProfile]                                                 </p>
+<p>Options to be passed to testdoc.                                               </p>
+<p>testdoc.doc                                                                    </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Override the documentation of the top level suite.                             </p>
+<p>corresponds to the -D --doc document option of testdoc                         </p>
+<p>testdoc.excludes                                                               </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Exclude tests by tags.                                                         </p>
+<p>corresponds to the -e --exclude tag * option of testdoc                        </p>
+<p>testdoc.extend-excludes                                                        </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --exclude option.                                       </p>
+<p>Exclude tests by tags.                                                         </p>
+<p>corresponds to the -e --exclude tag * option of testdoc                        </p>
+<p>testdoc.extend-includes                                                        </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --include option.                                       </p>
+<p>Include tests by tags.                                                         </p>
+<p>corresponds to the -i --include tag * option of testdoc                        </p>
+<p>testdoc.extend-metadata                                                        </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Appends entries to the --metadata option.                                      </p>
+<p>Set/override metadata of the top level suite.                                  </p>
+<p>corresponds to the -M --metadata name:value * option of testdoc                </p>
+<p>testdoc.extend-set-tag                                                         </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --settag option.                                        </p>
+<p>Set given tag(s) to all test cases.                                            </p>
+<p>corresponds to the -G --settag tag * option of testdoc                         </p>
+<p>testdoc.extend-suites                                                          </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --suite option.                                         </p>
+<p>Include suites by name.                                                        </p>
+<p>corresponds to the -s --suite name * option of testdoc                         </p>
+<p>testdoc.extend-tests                                                           </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Appends entries to the --test option.                                          </p>
+<p>Include tests by name.                                                         </p>
+<p>corresponds to the -t --test name * option of testdoc                          </p>
+<p>testdoc.includes                                                               </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Include tests by tags.                                                         </p>
+<p>corresponds to the -i --include tag * option of testdoc                        </p>
+<p>testdoc.metadata                                                               </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Set/override metadata of the top level suite.                                  </p>
+<p>corresponds to the -M --metadata name:value * option of testdoc                </p>
+<p>testdoc.name                                                                   </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Override the name of the top level suite.                                      </p>
+<p>corresponds to the -N --name name option of testdoc                            </p>
+<p>testdoc.set-tag                                                                </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Set given tag(s) to all test cases.                                            </p>
+<p>corresponds to the -G --settag tag * option of testdoc                         </p>
+<p>testdoc.suites                                                                 </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Include suites by name.                                                        </p>
+<p>corresponds to the -s --suite name * option of testdoc                         </p>
+<p>testdoc.tests                                                                  </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Include tests by name.                                                         </p>
+<p>corresponds to the -t --test name * option of testdoc                          </p>
+<p>testdoc.title                                                                  </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>Set the title of the generated documentation. Underscores in the title are   <br />
+converted to spaces. The default title is the name of the top level suite.     </p>
+<p>corresponds to the -T --title title option of testdoc                          </p>
+<p>tests                                                                          </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Select tests by name or by long name containing also parent suite name like  <br />
+Parent.Test. Name is case and space insensitive and it can also be a simple  <br />
+pattern where * matches anything, ? matches any single character, and [chars]<br />
+matches one character in brackets.                                             </p>
+<p>corresponds to the -t --test name * option of robot                            </p>
+<p>timestamp-outputs                                                              </p>
+<p>Type: Union[bool, Flag, None]                                                  </p>
+<p>When this option is used, timestamp in a format YYYYMMDD-hhmmss is added to all
+generated output files between their basename and extension. For example -T -o 
+output.xml -r report.html -l none creates files like output-20070503-154410.xml
+and report-20070503-154410.html.                                               </p>
+<p>corresponds to the -T --timestampoutputs option of robot                       </p>
+<p>tool                                                                           </p>
+<p>Type: Any                                                                      </p>
+<p>Tool configurations.                                                           </p>
+<p>tool.robotcode-analyze.extend-ignore                                           </p>
+<p>Type: Optional[List[str]]                                                      </p>
+<p>Ignores which rules are run.                                                   </p>
+<p>tool.robotcode-analyze.extend-select                                           </p>
+<p>Type: Optional[List[Union[str, robotcode.analyze.config.Dummy]]]               </p>
+<p>Selects which rules are run.                                                   </p>
+<p>tool.robotcode-analyze.ignore                                                  </p>
+<p>Type: Optional[List[str]]                                                      </p>
+<p>Ignores which rules are run.                                                   </p>
+<p>tool.robotcode-analyze.select                                                  </p>
+<p>Type: Optional[List[Union[str, robotcode.analyze.config.Dummy]]]               </p>
+<p>Selects which rules are run.                                                   </p>
+<p>variable-files                                                                 </p>
+<p>Type: Optional[List[Union[str, StringExpression]]]                             </p>
+<p>Python or YAML file file to read variables from. Possible arguments to the   <br />
+variable file can be given after the path using colon or semicolon as        <br />
+separator.                                                                     </p>
+<p>Examples:                                                                      </p>
+<p>--variablefile path/vars.yaml                                               <br />
+ --variablefile environment.py:testing                                         </p>
+<p>corresponds to the -V --variablefile path * option of robot                    </p>
+<p>variables                                                                      </p>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]                        </p>
+<p>Set variables in the test data. Only scalar variables with string value are  <br />
+supported and name is given without ${}. See --variablefile for a more powerful
+variable setting mechanism.                                                    </p>
+<p>Examples:                                                                      </p>
+<p>--variable name:Robot  =&gt;  ${name} = <code>Robot</code>                                <br />
+ -v "hello:Hello world" =&gt;  ${hello} = <code>Hello world</code>                         <br />
+ -v x: -v y:42          =&gt;  ${x} = <code>`, ${y} =</code>42`                             </p>
+<p>corresponds to the -v --variable name:value * option of robot                  </p>
+<p>xunit                                                                          </p>
+<p>Type: Union[str, StringExpression, None]                                       </p>
+<p>xUnit compatible result file. Not created unless this option is specified.     </p>
+<p>corresponds to the -x --xunit file option of robot                             </p>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+    <nav class="md-footer__inner md-grid" aria-label="Footer" >
+      
+        
+        <a href="../reference/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Reference" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Reference
+            </div>
+          </div>
+        </a>
+      
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      <p>'Copyright &copy; Daniel Biehl 2022-present'</p> <p><a href="#__consent">Change cookie settings</a></p>
+
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-consent" data-md-component="consent" id="__consent" hidden>
+        <div class="md-consent__overlay"></div>
+        <aside class="md-consent__inner">
+          <form class="md-consent__form md-grid md-typeset" name="consent">
+            
+
+
+  
+    
+  
+
+
+
+
+<h4>Cookie consent</h4>
+<p>We use cookies to recognize your repeated visits and preferences, as well as to measure the effectiveness of our documentation and whether users find what they're searching for. With your consent, you're helping us to make our documentation better.</p>
+<input class="md-toggle" type="checkbox" id="__settings" >
+<div class="md-consent__settings">
+  <ul class="task-list">
+    
+      
+      
+        
+        
+      
+      <li class="task-list-item">
+        <label class="task-list-control">
+          <input type="checkbox" name="github" checked>
+          <span class="task-list-indicator"></span>
+          GitHub
+        <label>
+      </li>
+    
+  </ul>
+</div>
+<div class="md-consent__controls">
+  
+    
+      <button class="md-button md-button--primary">Accept</button>
+    
+    
+    
+  
+    
+    
+      <button type="reset" class="md-button md-button--primary">Reject</button>
+    
+    
+  
+    
+    
+    
+      <label class="md-button" for="__settings">Manage settings</label>
+    
+  
+</div>
+          </form>
+        </aside>
+      </div>
+      <script>var consent=__md_get("__consent");if(consent)for(var input of document.forms.consent.elements)input.name&&(input.checked=consent[input.name]||!1);else"file:"!==location.protocol&&setTimeout(function(){document.querySelector("[data-md-component=consent]").hidden=!1},250);var action,form=document.forms.consent;for(action of["submit","reset"])form.addEventListener(action,function(e){if(e.preventDefault(),"reset"===e.type)for(var n of document.forms.consent.elements)n.name&&(n.checked=!1);__md_set("__consent",Object.fromEntries(Array.from(new FormData(form).keys()).map(function(e){return[e,!0]}))),location.hash="",location.reload()})</script>
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["content.action.edit", "navigation.sections", "navigation.expand", "navigation.tabs", "navigation.tabs.sticky", "navigation.instant"], "search": "../../assets/javascripts/workers/search.16e2a7d4.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.5a2dcb6a.min.js"></script>
+      
+    
+    
+  </body>
+</html>
