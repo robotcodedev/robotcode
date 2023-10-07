@@ -2,6 +2,16 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.61.1 (2023-10-07)
+
+### Fix
+
+- **langserver**: correct handling of `robotcode.robocop.configurations` setting
+
+### Perf
+
+- some more performance corrections for as_dict
+
 ## v0.61.0 (2023-10-07)
 
 ### Feat
