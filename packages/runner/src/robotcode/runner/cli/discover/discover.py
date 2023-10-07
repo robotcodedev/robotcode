@@ -190,6 +190,7 @@ class TestItem:
     longname: str
     uri: Optional[DocumentUri] = None
     rel_source: Optional[str] = None
+    source: Optional[str] = None
     needs_parse_include: bool = False
     children: Optional[List["TestItem"]] = None
     description: Optional[str] = None
@@ -260,6 +261,7 @@ class Collector(SuiteVisitor):
                 name=suite.name,
                 longname=suite.longname,
                 uri=str(Uri.from_path(Path(suite.source).resolve())) if suite.source else None,
+                source=str(suite.source),
                 rel_source=get_rel_source(suite.source),
                 range=Range(
                     start=Position(line=0, character=0),
@@ -311,6 +313,7 @@ class Collector(SuiteVisitor):
                 name=test.name,
                 longname=test.longname,
                 uri=str(Uri.from_path(Path(test.source).resolve())) if test.source else None,
+                source=str(test.source),
                 rel_source=get_rel_source(test.source),
                 range=Range(
                     start=Position(line=test.lineno - 1, character=0),
@@ -504,6 +507,7 @@ DIAGOSTICS_OPTIONS = {
         "--diagnostics / --no-diagnostics",
         "show_diagnostics",
         default=True,
+        show_default=True,
         help="Display `robot` parsing errors and warning that occur during discovering.",
     )
 }
@@ -593,12 +597,28 @@ def all(
     add_help_option=True,
     epilog='Use "-- --help" to see `robot` help.',
 )
+@click.option(
+    "--tags / --no-tags",
+    "show_tags",
+    default=False,
+    show_default=True,
+    help="Show the tags that are present.",
+)
+@click.option(
+    "--full-paths / --no-full-paths",
+    "full_paths",
+    default=False,
+    show_default=True,
+    help="Show full paths instead of releative.",
+)
 @add_options(*DIAGOSTICS_OPTIONS)
 @add_options(*ROBOT_OPTIONS)
 @pass_application
 def tests(
     app: Application,
     show_diagnostics: bool,
+    full_paths: bool,
+    show_tags: bool,
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
@@ -627,7 +647,14 @@ def tests(
 
             def print(items: List[TestItem]) -> Iterable[str]:
                 for item in items:
-                    yield f"{item.longname}{os.linesep}"
+                    yield click.style(f"{item.longname}", bold=True, fg="green" if show_tags else None)
+                    yield click.style(
+                        f" ({item.source if full_paths else item.rel_source}"
+                        f":{item.range.start.line + 1 if item.range is not None else 1}){os.linesep}"
+                    )
+                    if show_tags and item.tags:
+                        yield click.style("    Tags:", bold=True)
+                        yield f" {', '. join(normalize(str(tag), ignore='_') for tag in item.tags)}{os.linesep}"
 
             if collector.tests:
                 app.echo_via_pager(print(collector.tests))
@@ -704,7 +731,22 @@ class TagsResult:
     "--normalized / --not-normalized",
     "normalized",
     default=True,
+    show_default=True,
     help="Whether or not normalized tags are shown.",
+)
+@click.option(
+    "--tests / --no-tests",
+    "show_tests",
+    default=False,
+    show_default=True,
+    help="Show tests where the tag is present.",
+)
+@click.option(
+    "--full-paths / --no-full-paths",
+    "full_paths",
+    default=False,
+    show_default=True,
+    help="Show full paths instead of releative.",
 )
 @add_options(*DIAGOSTICS_OPTIONS)
 @add_options(*ROBOT_OPTIONS)
@@ -713,6 +755,8 @@ def tags(
     app: Application,
     show_diagnostics: bool,
     normalized: bool,
+    show_tests: bool,
+    full_paths: bool,
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
@@ -729,7 +773,7 @@ def tags(
     robotcode discover tags
     robotcode --profile regression discover tags
 
-    robotcode --profile regression discover tags -i wip
+    robotcode --profile regression discover tags --tests -i wip
     ```
     """
 
@@ -742,9 +786,13 @@ def tags(
 
             def print(tags: Dict[str, List[TestItem]]) -> Iterable[str]:
                 for tag, items in tags.items():
-                    yield f"{tag}{os.linesep}"
-                    # for t in items:
-                    #     yield f"    {t.longname}{os.linesep}"
+                    yield click.style(f"{tag}{os.linesep}", bold=show_tests, fg="green" if show_tests else None)
+                    if show_tests:
+                        for t in items:
+                            yield click.style(f"    {t.longname}", bold=True) + click.style(
+                                f" ({t.source if full_paths else t.rel_source}"
+                                f":{t.range.start.line + 1 if t.range is not None else 1}){os.linesep}"
+                            )
 
             if collector.normalized_tags:
                 app.echo_via_pager(print(collector.normalized_tags if normalized else collector.tags))
