@@ -2,6 +2,18 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.61.0 (2023-10-07)
+
+### Feat
+
+- **discovery**: add more options for discovering tags and tests
+- **robotcode**: better formatting and include active, selected, enabled state of a profile in `profile list` command
+- **robotcode**: rename `extra-` prefix to `extend-` in robot.toml files
+
+### Perf
+
+- optimize performance of as_dict for dataclasses
+
 ## v0.60.0 (2023-10-04)
 
 ### Feat
