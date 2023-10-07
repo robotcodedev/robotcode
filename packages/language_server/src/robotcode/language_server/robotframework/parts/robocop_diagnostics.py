@@ -99,7 +99,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             if extension_config.exclude:
                 config.exclude = set(extension_config.exclude)
             if extension_config.configurations:
-                config.configure = set(extension_config.configurations)
+                config.configure = extension_config.configurations
 
             class MyRobocop(Robocop):
                 async def run_check(self, ast_model, filename, source=None):  # type: ignore
