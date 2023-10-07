@@ -4,7 +4,7 @@ data: !GeneratedTestData
   name: namespace reference with resource
 result:
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 61
@@ -13,7 +13,7 @@ result:
       character: 16
       line: 6
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 17

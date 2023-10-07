@@ -4,6 +4,6 @@ data: !GeneratedTestData
   name: Keyword from Library
 result: !Hover
   contents:
-    kind: !MarkupKind 'MARKDOWN'
+    kind: markdown
     value: '### Keyword *Log*'
   range: null

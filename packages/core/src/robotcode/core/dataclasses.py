@@ -105,7 +105,7 @@ class DefaultConfig:
         return s
 
 
-__field_name_cache: Dict[Tuple[Type[Any], dataclasses.Field[Any]], str] = {}
+__field_name_cache: Dict[Tuple[Type[Any], dataclasses.Field], str] = {}  # type: ignore
 __NOT_SET = object()
 
 
@@ -373,7 +373,7 @@ def _handle_basic_types(value: Any, _remove_defaults: bool, _encode: bool) -> An
     return value
 
 
-__dataclasses_cache: Dict[Type[Any], Tuple[dataclasses.Field[Any], ...]] = {}
+__dataclasses_cache: Dict[Type[Any], Tuple[dataclasses.Field, ...]] = {}  # type: ignore
 
 
 def _handle_dataclass(value: Any, remove_defaults: bool, encode: bool) -> Dict[str, Any]:

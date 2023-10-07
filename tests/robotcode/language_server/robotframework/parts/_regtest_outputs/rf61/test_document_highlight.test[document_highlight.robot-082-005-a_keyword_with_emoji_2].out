@@ -4,7 +4,7 @@ data: !GeneratedTestData
   name: a keyword with emoji 2
 result:
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 6
@@ -13,7 +13,7 @@ result:
       character: 4
       line: 80
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 6

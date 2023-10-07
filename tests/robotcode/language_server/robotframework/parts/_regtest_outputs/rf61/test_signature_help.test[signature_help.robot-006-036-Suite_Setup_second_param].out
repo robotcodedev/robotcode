@@ -6,7 +6,7 @@ result: !SignatureHelp
   active_parameter: 1
   active_signature: 0
   signatures:
-  - activeParameter: 1
+  - active_parameter: 1
     documentation: null
     label: '(i: int, b: bool, l: List[int] | None = ${None})'
     parameters:

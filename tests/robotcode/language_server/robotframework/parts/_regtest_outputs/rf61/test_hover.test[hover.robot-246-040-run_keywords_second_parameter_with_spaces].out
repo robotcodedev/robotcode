@@ -4,6 +4,6 @@ data: !GeneratedTestData
   name: run keywords second parameter with spaces
 result: !Hover
   contents:
-    kind: !MarkupKind 'MARKDOWN'
+    kind: markdown
     value: '### Keyword *sleep a while*'
   range: null

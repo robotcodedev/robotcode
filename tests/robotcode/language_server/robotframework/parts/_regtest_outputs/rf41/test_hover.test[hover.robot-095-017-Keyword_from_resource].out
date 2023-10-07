@@ -4,6 +4,6 @@ data: !GeneratedTestData
   name: Keyword from resource
 result: !Hover
   contents:
-    kind: !MarkupKind 'MARKDOWN'
+    kind: markdown
     value: '### Keyword *do something in a resource*'
   range: null

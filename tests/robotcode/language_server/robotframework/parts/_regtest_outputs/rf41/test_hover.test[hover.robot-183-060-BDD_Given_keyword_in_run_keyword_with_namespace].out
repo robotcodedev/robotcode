@@ -4,6 +4,6 @@ data: !GeneratedTestData
   name: BDD Given keyword in run keyword with namespace
 result: !Hover
   contents:
-    kind: !MarkupKind 'MARKDOWN'
+    kind: markdown
     value: '### Keyword *Log*'
   range: null

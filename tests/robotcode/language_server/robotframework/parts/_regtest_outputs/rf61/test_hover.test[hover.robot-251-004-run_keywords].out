@@ -4,6 +4,6 @@ data: !GeneratedTestData
   name: run keywords
 result: !Hover
   contents:
-    kind: !MarkupKind 'MARKDOWN'
+    kind: markdown
     value: '### Keyword *Run Keywords*'
   range: null

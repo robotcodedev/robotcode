@@ -4,6 +4,6 @@ data: !GeneratedTestData
   name: BuiltIn Keyword
 result: !Hover
   contents:
-    kind: !MarkupKind 'MARKDOWN'
+    kind: markdown
     value: '### Keyword *Log*'
   range: null

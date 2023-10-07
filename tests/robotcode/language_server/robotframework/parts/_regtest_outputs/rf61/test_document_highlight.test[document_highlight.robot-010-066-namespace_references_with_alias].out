@@ -4,7 +4,7 @@ data: !GeneratedTestData
   name: namespace references with alias
 result:
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 24
@@ -13,7 +13,7 @@ result:
       character: 16
       line: 10
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 70
@@ -22,7 +22,7 @@ result:
       character: 63
       line: 10
 - !DocumentHighlight
-  kind: !DocumentHighlightKind 'TEXT'
+  kind: 1
   range:
     end:
       character: 25

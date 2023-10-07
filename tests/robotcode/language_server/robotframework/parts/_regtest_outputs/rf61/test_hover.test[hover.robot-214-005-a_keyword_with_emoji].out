@@ -4,6 +4,6 @@ data: !GeneratedTestData
   name: a keyword with emoji
 result: !Hover
   contents:
-    kind: !MarkupKind 'MARKDOWN'
+    kind: markdown
     value: "### Keyword *\U0001F916\U0001F916*"
   range: null
