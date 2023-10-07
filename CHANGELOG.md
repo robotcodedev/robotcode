@@ -2,6 +2,12 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.61.2 (2023-10-08)
+
+### Fix
+
+- some regression tests
+
 ## v0.61.1 (2023-10-07)
 
 ### Fix
