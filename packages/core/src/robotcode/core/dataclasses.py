@@ -140,8 +140,20 @@ def decode_case(type: Type[_T], name: str) -> str:
     return name
 
 
+NONETYPE = type(None)
+
+__dataclasses_cache: Dict[Type[Any], Tuple[dataclasses.Field, ...]] = {}  # type: ignore
+__handlers_cache: Dict[Type[Any], Callable[[Any, bool, bool], Any]] = {}
+
+
 def __default(o: Any) -> Any:
     if dataclasses.is_dataclass(o):
+        t = type(o)
+        fields = __dataclasses_cache.get(t, None)
+        if fields is None:
+            fields = dataclasses.fields(t)
+            __dataclasses_cache[t] = fields
+
         return {
             name: value
             for name, value, field in (
@@ -150,7 +162,7 @@ def __default(o: Any) -> Any:
                     getattr(o, field.name),
                     field,
                 )
-                for field in dataclasses.fields(o)
+                for field in fields
                 if (field.init or field.metadata.get("force_json", False)) and not field.metadata.get("nosave", False)
             )
             if value is not None or field.default == dataclasses.MISSING
@@ -366,21 +378,15 @@ def as_dict(
     return cast(Dict[str, Any], _as_dict_inner(value, remove_defaults, encode))
 
 
-NONETYPE = type(None)
-
-
 def _handle_basic_types(value: Any, _remove_defaults: bool, _encode: bool) -> Any:
     return value
-
-
-__dataclasses_cache: Dict[Type[Any], Tuple[dataclasses.Field, ...]] = {}  # type: ignore
 
 
 def _handle_dataclass(value: Any, remove_defaults: bool, encode: bool) -> Dict[str, Any]:
     t = type(value)
     fields = __dataclasses_cache.get(t, None)
     if fields is None:
-        fields = dataclasses.fields(value)
+        fields = dataclasses.fields(t)
         __dataclasses_cache[t] = fields
     return {
         encode_case(t, f) if encode else f.name: _as_dict_inner(getattr(value, f.name), remove_defaults, encode)
@@ -441,8 +447,6 @@ __handlers: List[Tuple[Callable[[Any], bool], Callable[[Any, bool, bool], Any]]]
         _handle_unknown_type,
     ),
 ]
-
-__handlers_cache: Dict[Type[Any], Callable[[Any, bool, bool], Any]] = {}
 
 
 def _as_dict_inner(
