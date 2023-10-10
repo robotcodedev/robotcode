@@ -411,7 +411,6 @@ def from_dict(
                 continue
 
             cased_value: Dict[str, Any] = {_decode_case_for_member_name(t, k): v for k, v in value.items()}
-            # cased_value: Dict[str, Any] = value
 
             type_hints = _get_type_hints_cached(origin or t)
             try:
@@ -462,18 +461,6 @@ def from_dict(
                 return match_(**params)
             except TypeError as ex:
                 raise TypeError(f"Can't initialize class {match_!r} with parameters {params!r}: {ex}") from ex
-
-    # for t in types:
-    #     args = get_args_cached(t)
-    #     origin = get_origin_cached(t)
-
-    #     if (origin or t) is Literal:
-    #         continue
-
-    #     if issubclass(origin or t, enum.Enum):
-    #         for v in cast(Iterable[Any], t):
-    #             if v.value == value:
-    #                 return cast(_T, v)
 
     raise TypeError(
         "Value must be of type `"
