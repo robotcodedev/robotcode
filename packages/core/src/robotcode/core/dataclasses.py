@@ -47,7 +47,7 @@ __not_valid = object()
 __to_snake_case_cache: Dict[str, str] = {}
 
 
-@functools.lru_cache(maxsize=2048)
+@functools.lru_cache(maxsize=None)
 def to_snake_case(s: str) -> str:
     result = __to_snake_case_cache.get(s, __not_valid)
     if result is __not_valid:
@@ -66,7 +66,7 @@ _RE_CAMEL_CASE_2 = re.compile(r"[\-_\.\s]([a-z])")
 __to_snake_camel_cache: Dict[str, str] = {}
 
 
-@functools.lru_cache(maxsize=2048)
+@functools.lru_cache(maxsize=None)
 def to_camel_case(s: str) -> str:
     result = __to_snake_camel_cache.get(s, __not_valid)
     if result is __not_valid:
@@ -109,7 +109,7 @@ __field_name_cache: Dict[Tuple[Type[Any], dataclasses.Field], str] = {}  # type:
 __NOT_SET = object()
 
 
-def encode_case(obj: Any, field: dataclasses.Field) -> str:  # type: ignore
+def encode_case_for_field_name(obj: Any, field: dataclasses.Field) -> str:  # type: ignore
     t = obj if isinstance(obj, type) else type(obj)
     name = __field_name_cache.get((t, field), __NOT_SET)
     if name is __NOT_SET:
@@ -125,19 +125,29 @@ def encode_case(obj: Any, field: dataclasses.Field) -> str:  # type: ignore
     return cast(str, name)
 
 
-def decode_case(type: Type[_T], name: str) -> str:
-    if dataclasses.is_dataclass(type):
-        field = next(
-            (f for f in dataclasses.fields(type) if f.metadata.get("alias", None) == name),
-            None,
-        )
-        if field:
-            return field.name
+__decode_case_cache: Dict[Tuple[Type[Any], str], str] = {}
 
-    if hasattr(type, "_decode_case"):
-        return str(type._decode_case(name))  # type: ignore[attr-defined]
 
-    return name
+def _decode_case_for_member_name(type: Type[_T], name: str) -> str:
+    r = __decode_case_cache.get((type, name), __NOT_SET)
+    if r is __NOT_SET:
+        if dataclasses.is_dataclass(type):
+            field = next(
+                (f for f in get_dataclass_fields(type) if f.metadata.get("alias", None) == name),
+                None,
+            )
+            if field:
+                r = field.name
+
+        if r is __NOT_SET:
+            if hasattr(type, "_decode_case"):
+                r = str(type._decode_case(name))  # type: ignore[attr-defined]
+            else:
+                r = name
+
+        __decode_case_cache[(type, name)] = cast(str, r)
+
+    return cast(str, r)
 
 
 NONETYPE = type(None)
@@ -146,23 +156,25 @@ __dataclasses_cache: Dict[Type[Any], Tuple[dataclasses.Field, ...]] = {}  # type
 __handlers_cache: Dict[Type[Any], Callable[[Any, bool, bool], Any]] = {}
 
 
-def __default(o: Any) -> Any:
-    if dataclasses.is_dataclass(o):
-        t = type(o)
-        fields = __dataclasses_cache.get(t, None)
-        if fields is None:
-            fields = dataclasses.fields(t)
-            __dataclasses_cache[t] = fields
+def get_dataclass_fields(t: Type[Any]) -> Tuple[dataclasses.Field, ...]:  # type: ignore
+    fields = __dataclasses_cache.get(t, None)
+    if fields is None:
+        fields = __dataclasses_cache[t] = dataclasses.fields(t)
+        return fields
+    return fields
 
+
+def _default(o: Any) -> Any:
+    if dataclasses.is_dataclass(o):
         return {
             name: value
             for name, value, field in (
                 (
-                    encode_case(o, field),
+                    encode_case_for_field_name(o, field),
                     getattr(o, field.name),
                     field,
                 )
-                for field in fields
+                for field in get_dataclass_fields(type(o))
                 if (field.init or field.metadata.get("force_json", False)) and not field.metadata.get("nosave", False)
             )
             if value is not None or field.default == dataclasses.MISSING
@@ -178,7 +190,7 @@ def __default(o: Any) -> Any:
 def as_json(obj: Any, indent: Optional[bool] = None, compact: Optional[bool] = None) -> str:
     return json.dumps(
         obj,
-        default=__default,
+        default=_default,
         indent=4 if indent else None,
         separators=(",", ":") if compact else None,
     )
@@ -189,6 +201,52 @@ class NamedTypeError(TypeError):
         super().__init__(f'Invalid value for "{name}": {message}')
         self.name = name
         self.message = message
+
+
+__get_args_cache: Dict[Type[Any], Tuple[Any, ...]] = {}
+
+
+def _get_args_cached(t: Type[Any]) -> Tuple[Any, ...]:
+    r = __get_args_cache.get(t, __NOT_SET)
+    if r is __NOT_SET:
+        r = get_args(t)
+        __get_args_cache[t] = r
+    return cast(Tuple[Any, ...], r)
+
+
+__get_origin_cache: Dict[Type[Any], Optional[Any]] = {}
+
+
+def _get_origin_cached(t: Type[Any]) -> Optional[Any]:
+    r = __get_origin_cache.get(t, __NOT_SET)
+    if r is __NOT_SET:
+        r = __get_origin_cache[t] = get_origin(t)
+    return r
+
+
+__get_type_hints_cache: Dict[Type[Any], Dict[str, Any]] = {}
+
+
+def _get_type_hints_cached(t: Type[Any]) -> Dict[str, Any]:
+    r = __get_type_hints_cache.get(t, __NOT_SET)
+    if r is __NOT_SET:
+        r = __get_type_hints_cache[t] = get_type_hints(t)
+    return cast(Dict[str, Any], r)
+
+
+__signature_cache: Dict[Type[Any], inspect.Signature] = {}
+
+
+def add_type_signature_to_cache(t: Type[Any]) -> None:
+    origin = _get_origin_cached(t)
+    _get_signature_cached(origin or t)
+
+
+def _get_signature_cached(t: Type[Any]) -> inspect.Signature:
+    r = __signature_cache.get(t, __NOT_SET)
+    if r is __NOT_SET:
+        r = __signature_cache[t] = inspect.signature(t)
+    return cast(inspect.Signature, r)
 
 
 def _from_dict_with_name(
@@ -207,6 +265,105 @@ def _from_dict_with_name(
         raise NamedTypeError(name, str(e)) from e
 
 
+__is_class_cache: Dict[Type[Any], bool] = {}
+
+
+def is_class_cached(t: Type[Any]) -> bool:
+    r = __is_class_cache.get(t, __NOT_SET)
+    if r is __NOT_SET:
+        r = __is_class_cache[t] = inspect.isclass(t)
+    return cast(bool, r)
+
+
+__is_subclass_cache: Dict[Tuple[Type[Any], Type[Any]], bool] = {}
+
+
+def is_subclass_cached(t: Type[Any], base: Type[Any]) -> bool:
+    r = __is_subclass_cache.get((t, base), __NOT_SET)
+    if r is __NOT_SET:
+        r = inspect.isclass(t) and issubclass(t, base)
+        __is_subclass_cache[(t, base)] = r
+    return cast(bool, r)
+
+
+def __from_dict_handle_union(value: Any, t: Type[Any], strict: bool) -> Tuple[Any, bool]:
+    return from_dict(value, _get_args_cached(t), strict=strict), True
+
+
+def __from_dict_handle_literal(value: Any, t: Type[Any], strict: bool) -> Tuple[Any, bool]:
+    args = _get_args_cached(t)
+    if value in args:
+        return value, True
+
+    return None, False
+
+
+def __is_enum(t: Type[Any]) -> bool:
+    origin = _get_origin_cached(t)
+    return is_class_cached(origin or t) and is_subclass_cached(origin or t, enum.Enum)
+
+
+def __from_dict_handle_enum(value: Any, t: Type[Any], strict: bool) -> Tuple[Any, bool]:
+    for v in cast(Iterable[Any], t):
+        if v.value == value:
+            return v, True
+    return None, False
+
+
+def __from_dict_handle_basic_types(value: Any, t: Type[Any], strict: bool) -> Tuple[Any, bool]:
+    if isinstance(value, t):
+        return value, True
+    return None, False
+
+
+def __from_dict_handle_sequence(value: Any, t: Type[Any], strict: bool) -> Tuple[Any, bool]:
+    if isinstance(value, Sequence):
+        args = _get_args_cached(t)
+        return (_get_origin_cached(t) or t)(from_dict(v, args, strict=strict) for v in value), True
+    return None, False
+
+
+def __from_dict_handle_mapping(value: Any, t: Type[Any], strict: bool) -> Tuple[Any, bool]:
+    if isinstance(value, Mapping):
+        args = _get_args_cached(t)
+        return {n: _from_dict_with_name(n, v, args[1] if args else None, strict=strict) for n, v in value.items()}, True
+    return None, False
+
+
+__from_dict_handlers: List[Tuple[Callable[[Type[Any]], bool], Callable[[Any, Type[Any], bool], Tuple[Any, bool]]]] = [
+    (lambda t: t in {int, bool, float, str, NONETYPE}, __from_dict_handle_basic_types),
+    (lambda t: _get_origin_cached(t) is Union, __from_dict_handle_union),
+    (lambda t: _get_origin_cached(t) is Literal, __from_dict_handle_literal),
+    (__is_enum, __from_dict_handle_enum),
+    (lambda t: is_subclass_cached(_get_origin_cached(t) or t, Sequence), __from_dict_handle_sequence),
+    (lambda t: is_subclass_cached(_get_origin_cached(t) or t, Mapping), __from_dict_handle_mapping),
+    (lambda t: t is Any or t is Ellipsis, lambda v, _t, _: (v, True)),  # type: ignore
+]
+
+__from_dict_handlers_cache: Dict[Type[Any], Optional[Callable[[Any, Type[Any], bool], Tuple[Any, bool]]]] = {}
+
+__non_default_parameters_cache: Dict[Type[Any], Set[str]] = {}
+
+
+def __get_non_default_parameter(t: Type[Any], signature: inspect.Signature) -> Set[str]:
+    r = __non_default_parameters_cache.get(t, None)
+    if r is None:
+        r = __non_default_parameters_cache[t] = {
+            k for k, v in signature.parameters.items() if v.default == inspect.Parameter.empty
+        }
+    return r
+
+
+__signature_keys_cache: Dict[Type[Any], Set[str]] = {}
+
+
+def __get_signature_keys_cached(t: Type[Any], signature: inspect.Signature) -> Set[str]:
+    r = __signature_keys_cache.get(t, None)
+    if r is None:
+        r = __signature_keys_cache[t] = set(signature.parameters.keys())
+    return r
+
+
 def from_dict(
     value: Any,
     types: Union[Type[_T], Tuple[Type[_T], ...], None] = None,
@@ -219,80 +376,62 @@ def from_dict(
 
     if not isinstance(types, tuple):
         types = (types,)
+    if not types:
+        return cast(_T, value)
 
     for t in types:
-        args = get_args(t)
-        origin = get_origin(t)
+        func = __from_dict_handlers_cache.get(t, __NOT_SET)
+        if func is __NOT_SET:
+            func = None
+            for h in __from_dict_handlers:
+                if h[0](t):
+                    func = h[1]
+                    break
 
-        if origin is Union:
-            return cast(_T, from_dict(value, args))
+            __from_dict_handlers_cache[t] = func
 
-        if origin is Literal:
-            if value in args:
-                return cast(_T, value)
-
+        if func is None:
             continue
 
-        if inspect.isclass(origin or t) and issubclass(origin or t, enum.Enum):
-            for v in cast(Iterable[Any], t):
-                if v.value == value:
-                    return cast(_T, v)
-
-        if (
-            t is Any
-            or t is Ellipsis  # type: ignore
-            or isinstance(value, origin or t)
-            or (
-                isinstance(value, Sequence)
-                and args
-                and issubclass(origin or t, Sequence)
-                and not isinstance(value, str)
-            )
-        ):
-            if isinstance(value, Mapping):
-                return cast(
-                    _T,
-                    {n: _from_dict_with_name(n, v, args[1] if args else None) for n, v in value.items()},
-                )
-            if isinstance(value, Sequence) and args:
-                return cast(_T, (origin or t)(from_dict(v, args) for v in value))  # type: ignore
-
-            return cast(_T, value)
+        r, ok = func(value, t, strict)  # type: ignore
+        if ok:
+            return cast(_T, r)
 
     if isinstance(value, Mapping):
         match_: Optional[Type[_T]] = None
-        match_same_keys: Optional[List[str]] = None
+        match_same_keys: Optional[Set[str]] = None
         match_value: Optional[Dict[str, Any]] = None
         match_signature: Optional[inspect.Signature] = None
         match_type_hints: Optional[Dict[str, Any]] = None
 
         for t in types:
-            args = get_args(t)
-            origin = get_origin(t)
+            origin = _get_origin_cached(t)
 
             if origin is Literal:
                 continue
 
-            cased_value: Dict[str, Any] = {decode_case(t, k): v for k, v in value.items()}
-            type_hints = get_type_hints(origin or t)
+            cased_value: Dict[str, Any] = {_decode_case_for_member_name(t, k): v for k, v in value.items()}
+            # cased_value: Dict[str, Any] = value
+
+            type_hints = _get_type_hints_cached(origin or t)
             try:
-                signature = inspect.signature(origin or t)
+                signature = _get_signature_cached(origin or t)
             except ValueError:
                 continue
 
-            non_default_parameters = {
-                k: v for k, v in signature.parameters.items() if v.default == inspect.Parameter.empty
-            }
+            non_default_parameters = __get_non_default_parameter(origin or t, signature)
 
             if len(value) == 0 and non_default_parameters:
                 continue
 
-            same_keys = [k for k in cased_value.keys() if k in signature.parameters.keys()]
+            sig_keys = __get_signature_keys_cached(origin or t, signature)
 
-            if strict and any(k for k in cased_value.keys() if k not in signature.parameters.keys()):
+            same_keys = cased_value.keys() & sig_keys
+
+            if strict and any(k for k in cased_value.keys() if k not in sig_keys):
                 continue
 
-            if not all(k in same_keys for k in non_default_parameters.keys()):
+            if not all(k in same_keys for k in non_default_parameters):
                 continue
 
             if match_same_keys is None or len(match_same_keys) < len(same_keys):
@@ -314,7 +453,7 @@ def from_dict(
             and match_type_hints is not None
         ):
             params: Dict[str, Any] = {
-                k: _from_dict_with_name(k, v, match_type_hints[k])
+                k: _from_dict_with_name(k, v, match_type_hints[k], strict=strict)
                 for k, v in match_value.items()
                 if k in match_type_hints
             }
@@ -322,19 +461,19 @@ def from_dict(
             try:
                 return match_(**params)
             except TypeError as ex:
-                raise TypeError(f"Can't initialize class {match_!r} with parameters {params!r}.") from ex
+                raise TypeError(f"Can't initialize class {match_!r} with parameters {params!r}: {ex}") from ex
 
-    for t in types:
-        args = get_args(t)
-        origin = get_origin(t)
+    # for t in types:
+    #     args = get_args_cached(t)
+    #     origin = get_origin_cached(t)
 
-        if (origin or t) is Literal:
-            continue
+    #     if (origin or t) is Literal:
+    #         continue
 
-        if issubclass(origin or t, enum.Enum):
-            for v in cast(Iterable[Any], t):
-                if v.value == value:
-                    return cast(_T, v)
+    #     if issubclass(origin or t, enum.Enum):
+    #         for v in cast(Iterable[Any], t):
+    #             if v.value == value:
+    #                 return cast(_T, v)
 
     raise TypeError(
         "Value must be of type `"
@@ -344,7 +483,7 @@ def from_dict(
             else " | ".join(
                 (
                     (getattr(e, "__name__", None) or str(e) if e is not type(None) else "None")
-                    if get_origin(e) is not Literal
+                    if _get_origin_cached(e) is not Literal
                     else repr(e).replace("typing.", "")
                     if e is not None
                     else "None"
@@ -389,38 +528,40 @@ def _handle_dataclass(value: Any, remove_defaults: bool, encode: bool) -> Dict[s
         fields = dataclasses.fields(t)
         __dataclasses_cache[t] = fields
     return {
-        encode_case(t, f) if encode else f.name: _as_dict_inner(getattr(value, f.name), remove_defaults, encode)
+        encode_case_for_field_name(t, f)
+        if encode
+        else f.name: _as_dict_inner(getattr(value, f.name), remove_defaults, encode)
         for f in fields
         if not remove_defaults or getattr(value, f.name) != f.default
     }
 
 
-def _handle_named_tuple(value: Any, remove_defaults: bool, encode: bool) -> List[Any]:
+def _as_dict_handle_named_tuple(value: Any, remove_defaults: bool, encode: bool) -> List[Any]:
     return [_as_dict_inner(v, remove_defaults, encode) for v in value]
 
 
-def _handle_sequence(value: Any, remove_defaults: bool, encode: bool) -> List[Any]:
+def _as_dict_handle_sequence(value: Any, remove_defaults: bool, encode: bool) -> List[Any]:
     return [_as_dict_inner(v, remove_defaults, encode) for v in value]
 
 
-def _handle_dict(value: Any, remove_defaults: bool, encode: bool) -> Dict[Any, Any]:
+def _as_dict_handle_dict(value: Any, remove_defaults: bool, encode: bool) -> Dict[Any, Any]:
     return {
         _as_dict_inner(k, remove_defaults, encode): _as_dict_inner(v, remove_defaults, encode) for k, v in value.items()
     }
 
 
-def _handle_enum(value: enum.Enum, remove_defaults: bool, encode: bool) -> Any:
+def _as_dict_handle_enum(value: enum.Enum, remove_defaults: bool, encode: bool) -> Any:
     return _as_dict_inner(value.value, remove_defaults, encode)
 
 
-def _handle_unknown_type(value: Any, _remove_defaults: bool, _encode: bool) -> Any:
+def _as_dict_handle_unknown_type(value: Any, _remove_defaults: bool, _encode: bool) -> Any:
     import warnings
 
     warnings.warn(f"Can't handle type {type(value)} with value {value!r}")
     return repr(value)
 
 
-__handlers: List[Tuple[Callable[[Any], bool], Callable[[Any, bool, bool], Any]]] = [
+__as_dict_handlers: List[Tuple[Callable[[Any], bool], Callable[[Any, bool, bool], Any]]] = [
     (
         lambda value: type(value) in {int, bool, float, str, NONETYPE},
         _handle_basic_types,
@@ -429,22 +570,22 @@ __handlers: List[Tuple[Callable[[Any], bool], Callable[[Any, bool, bool], Any]]]
         lambda value: dataclasses.is_dataclass(value),
         _handle_dataclass,
     ),
-    (lambda value: isinstance(value, enum.Enum), _handle_enum),
+    (lambda value: isinstance(value, enum.Enum), _as_dict_handle_enum),
     (
         lambda value: (isinstance(value, tuple) and hasattr(value, "_fields")),
-        _handle_named_tuple,
+        _as_dict_handle_named_tuple,
     ),
     (
         lambda value: isinstance(value, (list, tuple, set, frozenset)),
-        _handle_sequence,
+        _as_dict_handle_sequence,
     ),
     (
         lambda value: isinstance(value, dict),
-        _handle_dict,
+        _as_dict_handle_dict,
     ),
     (
         lambda _value: True,
-        _handle_unknown_type,
+        _as_dict_handle_unknown_type,
     ),
 ]
 
@@ -460,7 +601,7 @@ def _as_dict_inner(
         if t in __handlers_cache:
             return __handlers_cache[t](value, remove_defaults, encode)
 
-        for h in __handlers:
+        for h in __as_dict_handlers:
             if h[0](value):
                 __handlers_cache[t] = h[1]
                 func = h[1]
@@ -501,8 +642,8 @@ def validate_types(expected_types: Union[type, Tuple[type, ...], None], value: A
     result = []
 
     for t in expected_types:
-        args = get_args(t)
-        origin = get_origin(t)
+        args = _get_args_cached(t)
+        origin = _get_origin_cached(t)
 
         if origin is Union:
             r = validate_types(args, value)
@@ -526,7 +667,7 @@ def validate_types(expected_types: Union[type, Tuple[type, ...], None], value: A
             or (
                 isinstance(value, Sequence)
                 and args
-                and issubclass(origin or t, Sequence)
+                and is_subclass_cached(origin or t, Sequence)
                 and not isinstance(value, str)
             )
         ):
@@ -593,9 +734,9 @@ class ValidateMixin:
 
         errors = {}
 
-        type_hints = get_type_hints(self.__class__)
+        type_hints = _get_type_hints_cached(type(self))
 
-        for f in dataclasses.fields(self):
+        for f in get_dataclass_fields(type(self)):
             validate = f.metadata.get("validate")
             if validate is not None:
                 ers = validate(self, getattr(self, f.name))

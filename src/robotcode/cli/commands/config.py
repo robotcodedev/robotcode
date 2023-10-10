@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import click
-from robotcode.core.dataclasses import encode_case
+from robotcode.core.dataclasses import encode_case_for_field_name
 from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
 from robotcode.plugin.manager import PluginManager
 from robotcode.robot.config.loader import (
@@ -166,14 +166,14 @@ def info(app: Application) -> None:
 def get_config_fields() -> Dict[str, Dict[str, str]]:
     result = {}
     for field in dataclasses.fields(RobotConfig):
-        field_name_encoded = encode_case(RobotConfig, field)
+        field_name_encoded = encode_case_for_field_name(RobotConfig, field)
         result[field_name_encoded] = {
             "type": str(field.type),
             "description": field.metadata.get("description", "").strip(),
         }
 
     for field in dataclasses.fields(RobotProfile):
-        field_name_encoded = encode_case(RobotProfile, field)
+        field_name_encoded = encode_case_for_field_name(RobotProfile, field)
         if field_name_encoded in result:
             continue
 
@@ -183,21 +183,21 @@ def get_config_fields() -> Dict[str, Dict[str, str]]:
         }
 
     for field in dataclasses.fields(RebotProfile):
-        field_name_encoded = encode_case(RebotProfile, field)
+        field_name_encoded = encode_case_for_field_name(RebotProfile, field)
         result["rebot." + field_name_encoded] = {
             "type": str(field.type),
             "description": field.metadata.get("description", "").strip(),
         }
 
     for field in dataclasses.fields(LibDocProfile):
-        field_name_encoded = encode_case(LibDocProfile, field)
+        field_name_encoded = encode_case_for_field_name(LibDocProfile, field)
         result["libdoc." + field_name_encoded] = {
             "type": str(field.type),
             "description": field.metadata.get("description", "").strip(),
         }
 
     for field in dataclasses.fields(TestDocProfile):
-        field_name_encoded = encode_case(TestDocProfile, field)
+        field_name_encoded = encode_case_for_field_name(TestDocProfile, field)
         result["testdoc." + field_name_encoded] = {
             "type": str(field.type),
             "description": field.metadata.get("description", "").strip(),
@@ -207,7 +207,7 @@ def get_config_fields() -> Dict[str, Dict[str, str]]:
         for s, cls in entry:
             if dataclasses.is_dataclass(cls):
                 for field in dataclasses.fields(cls):
-                    field_name_encoded = encode_case(TestDocProfile, field)
+                    field_name_encoded = encode_case_for_field_name(TestDocProfile, field)
                     result[f"{s}." + field_name_encoded] = {
                         "type": str(field.type),
                         "description": field.metadata.get("description", "").strip(),

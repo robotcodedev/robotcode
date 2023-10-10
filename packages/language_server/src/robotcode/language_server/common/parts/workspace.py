@@ -362,7 +362,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
                             )
                         ]
                     ),
-                    list,
+                    List[Any],
                 )
 
                 return r[0] if r else None
