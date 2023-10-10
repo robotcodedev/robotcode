@@ -2,6 +2,13 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.61.3 (2023-10-10)
+
+### Perf
+
+- **core**: increase performance of dataclasses.from_dict
+- **core**: improve perfomance of converting dataclasses to json
+
 ## v0.61.2 (2023-10-08)
 
 ### Fix
