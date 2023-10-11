@@ -319,7 +319,7 @@ class Collector(SuiteVisitor):
                     start=Position(line=test.lineno - 1, character=0),
                     end=Position(line=test.lineno - 1, character=0),
                 ),
-                tags=list(test.tags) if test.tags else None,
+                tags=list(set(normalize(str(t), ignore="_") for t in test.tags)) if test.tags else None,
             )
         except ValueError as e:
             raise ValueError(f"Error while parsing suite {test.source}: {e}") from e
@@ -654,7 +654,7 @@ def tests(
                     )
                     if show_tags and item.tags:
                         yield click.style("    Tags:", bold=True)
-                        yield f" {', '. join(normalize(str(tag), ignore='_') for tag in item.tags)}{os.linesep}"
+                        yield f" {', '. join(normalize(str(tag), ignore='_') for tag in sorted(item.tags))}{os.linesep}"
 
             if collector.tests:
                 app.echo_via_pager(print(collector.tests))
@@ -785,7 +785,7 @@ def tags(
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
 
             def print(tags: Dict[str, List[TestItem]]) -> Iterable[str]:
-                for tag, items in tags.items():
+                for tag, items in sorted(tags.items()):
                     yield click.style(f"{tag}{os.linesep}", bold=show_tests, fg="green" if show_tests else None)
                     if show_tests:
                         for t in items:
