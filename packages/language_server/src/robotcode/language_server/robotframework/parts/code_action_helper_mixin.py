@@ -29,6 +29,7 @@ class CodeActionDataBase:
 
 class FindSectionsVisitor(Visitor):
     def __init__(self) -> None:
+        super().__init__()
         self.keyword_sections: List[ast.AST] = []
         self.variable_sections: List[ast.AST] = []
         self.setting_sections: List[ast.AST] = []

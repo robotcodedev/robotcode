@@ -75,6 +75,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
     ) -> None:
         from robot.parsing.model.statements import Template, TestTemplate
 
+        super().__init__()
+
         self.model = model
         self.namespace = namespace
         self.finder = finder

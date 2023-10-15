@@ -120,6 +120,7 @@ def range_from_token(token: Token) -> Range:
 
 class FirstAndLastRealStatementFinder(async_ast.Visitor):
     def __init__(self) -> None:
+        super().__init__()
         self.first_statement: Optional[ast.AST] = None
         self.last_statement: Optional[ast.AST] = None
 

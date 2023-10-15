@@ -1,5 +1,5 @@
 import ast
-from typing import Any, AsyncIterator, Callable, Iterator, Optional, Type, cast
+from typing import Any, AsyncIterator, Callable, Dict, Iterator, Optional, Type
 
 __all__ = ["iter_fields", "iter_child_nodes", "AsyncVisitor"]
 
@@ -47,19 +47,30 @@ async def iter_nodes(node: ast.AST) -> AsyncIterator[ast.AST]:
 
 
 class VisitorFinder:
-    def _find_visitor(self, cls: Type[Any]) -> Optional[Callable[..., Any]]:
+    __NOT_SET = object()
+
+    def __init__(self) -> None:
+        self.__cache: Dict[Type[Any], Optional[Callable[..., Any]]] = {}
+
+    def __find_visitor(self, cls: Type[Any]) -> Optional[Callable[..., Any]]:
         if cls is ast.AST:
             return None
         method_name = "visit_" + cls.__name__
         if hasattr(self, method_name):
             method = getattr(self, method_name)
             if callable(method):
-                return cast("Callable[..., Any]", method)
+                return method  # type: ignore
         for base in cls.__bases__:
             method = self._find_visitor(base)
             if method:
-                return cast("Callable[..., Any]", method)
+                return method  # type: ignore
         return None
+
+    def _find_visitor(self, cls: Type[Any]) -> Optional[Callable[..., Any]]:
+        r = self.__cache.get(cls, self.__NOT_SET)
+        if r is self.__NOT_SET:
+            self.__cache[cls] = r = self.__find_visitor(cls)
+        return r  # type: ignore
 
 
 class AsyncVisitor(VisitorFinder):
