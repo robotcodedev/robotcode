@@ -13,6 +13,6 @@ class Dummy:
 @dataclass
 class AnalyzerConfig(BaseOptions):
     select: Optional[List[Union[str, Dummy]]] = field(description="Selects which rules are run.")
-    extend_select: Optional[List[Union[str, Dummy]]] = field(description="Selects which rules are run.")
-    ignore: Optional[List[str]] = field(description="Ignores which rules are run.")
-    extend_ignore: Optional[List[str]] = field(description="Ignores which rules are run.")
+    extend_select: Optional[List[Union[str, Dummy]]] = field(description="Extends the rules which are run.")
+    ignore: Optional[List[str]] = field(description="Defines which rules are ignored.")
+    extend_ignore: Optional[List[str]] = field(description="Extends the rules which are ignored.")
