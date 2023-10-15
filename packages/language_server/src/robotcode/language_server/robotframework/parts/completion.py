@@ -745,8 +745,10 @@ class CompletionCollector(ModelHelperMixin):
                     library_name = next(
                         (e for e in libraries.keys() if library_name_matcher == KeywordMatcher(e)), library_name
                     )
-
+                    valid_namespace = False
                     if library_name in libraries:
+                        valid_namespace = True
+
                         r.start.character = lib_name_index + 1
                         for kw in libraries[library_name].library_doc.keywords.values():
                             if kw.is_error_handler:
@@ -787,6 +789,7 @@ class CompletionCollector(ModelHelperMixin):
                     }
 
                     if resources:
+                        valid_namespace = True
                         r.start.character = lib_name_index + 1
                         for res in resources.values():
                             for kw in res.library_doc.keywords.values():
@@ -819,8 +822,8 @@ class CompletionCollector(ModelHelperMixin):
                                         ),
                                     )
                                 )
-
-                    return result
+                    if result and valid_namespace:
+                        return result
 
         if r is None:
             r = Range(position, position)
