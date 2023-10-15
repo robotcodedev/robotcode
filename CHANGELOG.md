@@ -2,6 +2,17 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.61.4 (2023-10-15)
+
+### Fix
+
+- **langserver**: complete keywords containing `.` if there is no namespace with the name before the dot
+- **discover**: normalize tags in tests command and sort tags
+
+### Perf
+
+- **langserver**: speedup Visitor and AsyncVisitor a little bit
+
 ## v0.61.3 (2023-10-10)
 
 ### Perf
