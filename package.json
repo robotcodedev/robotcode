@@ -1307,8 +1307,8 @@
   "devDependencies": {
     "@types/node": "^18.15.11",
     "@types/vscode": "^1.82.0",
-    "@typescript-eslint/eslint-plugin": "^6.7.5",
-    "@typescript-eslint/parser": "^6.7.5",
+    "@typescript-eslint/eslint-plugin": "^6.8.0",
+    "@typescript-eslint/parser": "^6.8.0",
     "@vscode/test-electron": "^2.3.5",
     "@vscode/vsce": "^2.21.1",
     "eslint": "^8.51.0",
@@ -1321,7 +1321,7 @@
     "prettier": "^3.0.3",
     "ts-loader": "^9.5.0",
     "typescript": "^5.2.2",
-    "webpack": "^5.88.2",
+    "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
   }
 }
