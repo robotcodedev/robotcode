@@ -51,7 +51,7 @@ from robotcode.language_server.robotframework.utils.ast_utils import (
     tokenize_variables,
 )
 from robotcode.language_server.robotframework.utils.async_ast import Visitor
-from robotcode.language_server.robotframework.utils.match import eq
+from robotcode.language_server.robotframework.utils.match import eq_namespace
 from robotcode.language_server.robotframework.utils.variables import BUILTIN_VARIABLES
 from robotcode.language_server.robotframework.utils.version import get_robot_version
 
@@ -740,7 +740,7 @@ class Namespace:
     async def get_libraries_matchers(self) -> Dict[KeywordMatcher, LibraryEntry]:
         if self._libraries_matchers is None:
             self._libraries_matchers = {
-                KeywordMatcher(v.alias or v.name or v.import_name, False): v
+                KeywordMatcher(v.alias or v.name or v.import_name, is_namespace=True): v
                 for v in (await self.get_libraries()).values()
             }
         return self._libraries_matchers
@@ -753,7 +753,7 @@ class Namespace:
     async def get_resources_matchers(self) -> Dict[KeywordMatcher, ResourceEntry]:
         if self._resources_matchers is None:
             self._resources_matchers = {
-                KeywordMatcher(v.alias or v.name or v.import_name, False): v
+                KeywordMatcher(v.alias or v.name or v.import_name, is_namespace=True): v
                 for v in (await self.get_resources()).values()
             }
         return self._resources_matchers
@@ -1839,13 +1839,13 @@ class KeywordFinder:
         if get_robot_version() >= (6, 0):
             result: List[Tuple[LibraryEntry, KeywordDoc]] = []
             for v in self._all_keywords:
-                if eq(v.alias or v.name, owner_name):
+                if eq_namespace(v.alias or v.name, owner_name):
                     result.extend((v, kw) for kw in v.library_doc.keywords.get_all(name))
             return result
 
         result = []
         for v in self._all_keywords:
-            if eq(v.alias or v.name, owner_name):
+            if eq_namespace(v.alias or v.name, owner_name):
                 kw = v.library_doc.keywords.get(name, None)
                 if kw is not None:
                     result.append((v, kw))
@@ -1973,7 +1973,7 @@ class KeywordFinder:
     ) -> List[Tuple[Optional[LibraryEntry], KeywordDoc]]:
         for libname in self.namespace.search_order:
             for e in entries:
-                if e[0] is not None and eq(libname, e[0].alias or e[0].name):
+                if e[0] is not None and eq_namespace(libname, e[0].alias or e[0].name):
                     return [e]
 
         return entries

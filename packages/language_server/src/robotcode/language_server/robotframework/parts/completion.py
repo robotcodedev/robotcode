@@ -720,6 +720,10 @@ class CompletionCollector(ModelHelperMixin):
             if not has_bdd and token is not None:
                 token = old_token
 
+        namespace_name = None
+        namespace_matcher = None
+        valid_namespace = False
+
         if token is not None:
             r = range_from_token(token)
 
@@ -737,20 +741,21 @@ class CompletionCollector(ModelHelperMixin):
                         lib_name_index = e
 
                 if lib_name_index >= 0:
-                    library_name = token.value[0 : lib_name_index - r.start.character]
+                    namespace_name = token.value[0 : lib_name_index - r.start.character]
 
                     libraries = await self.namespace.get_libraries()
 
-                    library_name_matcher = KeywordMatcher(library_name)
-                    library_name = next(
-                        (e for e in libraries.keys() if library_name_matcher == KeywordMatcher(e)), library_name
+                    namespace_matcher = KeywordMatcher(namespace_name, is_namespace=True)
+                    namespace_name = next(
+                        (e for e in libraries.keys() if namespace_matcher == KeywordMatcher(e, is_namespace=True)),
+                        namespace_name,
                     )
-                    valid_namespace = False
-                    if library_name in libraries:
+
+                    if namespace_name in libraries:
                         valid_namespace = True
 
                         r.start.character = lib_name_index + 1
-                        for kw in libraries[library_name].library_doc.keywords.values():
+                        for kw in libraries[namespace_name].library_doc.keywords.values():
                             if kw.is_error_handler:
                                 continue
                             result.append(
@@ -759,7 +764,7 @@ class CompletionCollector(ModelHelperMixin):
                                     kind=CompletionItemKind.FUNCTION,
                                     detail=f"{CompleteResultKind.KEYWORD.value} "
                                     f"{f'({kw.libname})' if kw.libname is not None else ''}",
-                                    sort_text=f"020_{kw.name}",
+                                    sort_text=f"019_{kw.name}",
                                     insert_text_format=InsertTextFormat.PLAIN_TEXT
                                     if not kw.is_embedded
                                     else InsertTextFormat.SNIPPET,
@@ -785,7 +790,7 @@ class CompletionCollector(ModelHelperMixin):
                     resources = {
                         k: v
                         for k, v in (await self.namespace.get_resources()).items()
-                        if library_name_matcher == KeywordMatcher(v.name)
+                        if namespace_matcher == KeywordMatcher(v.name, is_namespace=True)
                     }
 
                     if resources:
@@ -802,7 +807,7 @@ class CompletionCollector(ModelHelperMixin):
                                         kind=CompletionItemKind.FUNCTION,
                                         detail=f"{CompleteResultKind.KEYWORD.value} "
                                         f"{f'({kw.libname})' if kw.libname is not None else ''}",
-                                        sort_text=f"020_{kw.name}",
+                                        sort_text=f"019_{kw.name}",
                                         insert_text_format=InsertTextFormat.PLAIN_TEXT
                                         if not kw.is_embedded
                                         else InsertTextFormat.SNIPPET,
@@ -822,14 +827,24 @@ class CompletionCollector(ModelHelperMixin):
                                         ),
                                     )
                                 )
-                    if result and valid_namespace:
-                        return result
+
+        if token is not None:
+            r = range_from_token(token)
 
         if r is None:
             r = Range(position, position)
 
+        if namespace_matcher is not None:
+            namespace_matcher = KeywordMatcher(namespace_matcher.name)
+
         for kw in await self.namespace.get_keywords():
             if kw.is_error_handler:
+                continue
+            if (
+                valid_namespace
+                and namespace_matcher is not None
+                and not kw.matcher.normalized_name.startswith(namespace_matcher.normalized_name)
+            ):
                 continue
 
             result.append(
@@ -854,6 +869,9 @@ class CompletionCollector(ModelHelperMixin):
                     ),
                 )
             )
+
+        if valid_namespace and namespace_matcher is not None:
+            return result
 
         for k, v in (await self.namespace.get_libraries()).items():
             result.append(

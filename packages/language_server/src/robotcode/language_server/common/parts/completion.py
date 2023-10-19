@@ -12,6 +12,7 @@ from robotcode.core.lsp.types import (
     CompletionItem,
     CompletionList,
     CompletionOptions,
+    CompletionOptionsCompletionItemType,
     CompletionParams,
     CompletionTriggerKind,
     InsertReplaceEdit,
@@ -78,6 +79,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 all_commit_characters=commit_chars if commit_chars else None,
                 resolve_provider=len(self.resolve) > 0,
                 work_done_progress=True,
+                completion_item=CompletionOptionsCompletionItemType(label_details_support=True),
             )
 
     @rpc_method(name="textDocument/completion", param_type=CompletionParams)

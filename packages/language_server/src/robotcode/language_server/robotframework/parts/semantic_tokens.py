@@ -261,7 +261,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     )
     BDD_TOKEN_REGEX = re.compile(r"^(Given|When|Then|And|But)\s", flags=re.IGNORECASE)
 
-    BUILTIN_MATCHER = KeywordMatcher("BuiltIn")
+    BUILTIN_MATCHER = KeywordMatcher("BuiltIn", is_namespace=True)
 
     @classmethod
     async def generate_sem_sub_tokens(
@@ -382,11 +382,20 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
                 kw_namespace: Optional[str] = None
                 kw: str = token.value
+                kw_doc = await namespace.find_keyword(token.value, raise_keyword_error=False)
 
                 for lib, name in iter_over_keyword_names_and_owners(token.value):
                     if lib is not None and (
-                        any(k for k in libraries_matchers.keys() if k == lib)
-                        or any(k for k in resources_matchers.keys() if k == lib)
+                        any(
+                            k
+                            for k, v in libraries_matchers.items()
+                            if k == lib and (kw_doc is None or kw_doc.parent == v.library_doc)
+                        )
+                        or any(
+                            k
+                            for k, v in resources_matchers.items()
+                            if k == lib and (kw_doc is None or kw_doc.parent == v.library_doc)
+                        )
                     ):
                         kw_namespace = lib
                         if name:
@@ -411,13 +420,11 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                     )
 
                 if builtin_library_doc is not None and kw in builtin_library_doc.keywords:
-                    doc = await namespace.find_keyword(token.value)
-                    if doc is not None and doc.libname == cls.BUILTIN_MATCHER and doc.matcher == kw:
+                    if kw_doc is not None and kw_doc.libname == cls.BUILTIN_MATCHER and kw_doc.matcher == kw:
                         if not sem_mod:
                             sem_mod = set()
                         sem_mod.add(RobotSemTokenModifiers.BUILTIN)
 
-                kw_doc = await namespace.find_keyword(token.value, raise_keyword_error=False)
                 if kw_doc is not None and kw_doc.is_embedded:
                     if get_robot_version() >= (6, 0):
                         m = kw_doc.matcher.embedded_arguments.match(kw)

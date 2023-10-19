@@ -44,7 +44,7 @@ from robotcode.language_server.robotframework.utils.ast_utils import (
 from robotcode.language_server.robotframework.utils.markdownformatter import (
     MarkDownFormatter,
 )
-from robotcode.language_server.robotframework.utils.match import normalize
+from robotcode.language_server.robotframework.utils.match import normalize, normalize_namespace
 from robotcode.language_server.robotframework.utils.version import get_robot_version
 
 from .entities import (
@@ -150,16 +150,17 @@ def is_embedded_keyword(name: str) -> bool:
 
 
 class KeywordMatcher:
-    def __init__(self, name: str, can_have_embedded: bool = True) -> None:
+    def __init__(self, name: str, can_have_embedded: bool = True, is_namespace: bool = False) -> None:
         self.name = name
-        self._can_have_embedded = can_have_embedded
+        self._can_have_embedded = can_have_embedded and not is_namespace
+        self._is_namespace = is_namespace
         self._normalized_name: Optional[str] = None
         self._embedded_arguments: Any = None
 
     @property
     def normalized_name(self) -> str:
         if self._normalized_name is None:
-            self._normalized_name = str(normalize(self.name))
+            self._normalized_name = str(normalize_namespace(self.name) if self._is_namespace else normalize(self.name))
 
         return self._normalized_name
 
@@ -198,7 +199,7 @@ class KeywordMatcher:
 
             return self.embedded_arguments.name.match(o) is not None
 
-        return self.normalized_name == str(normalize(o))
+        return self.normalized_name == str(normalize_namespace(o) if self._is_namespace else normalize(o))
 
     @single_call
     def __hash__(self) -> int:

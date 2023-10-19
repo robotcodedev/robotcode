@@ -426,28 +426,11 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 result is not None
                 and lib_entry is not None
                 and kw_namespace
-                and result.parent_digest is not None
-                and result.parent_digest != lib_entry.library_doc.digest
+                and result.parent is not None
+                and result.parent != lib_entry.library_doc
             ):
-                entry = next(
-                    (
-                        v
-                        for v in (await self.namespace.get_libraries()).values()
-                        if v.library_doc.digest == result.parent_digest
-                    ),
-                    None,
-                )
-                if entry is None:
-                    entry = next(
-                        (
-                            v
-                            for v in (await self.namespace.get_resources()).values()
-                            if v.library_doc.digest == result.parent_digest
-                        ),
-                        None,
-                    )
-                if entry is not None:
-                    lib_entry = entry
+                lib_entry = None
+                kw_range = range_from_token(keyword_token)
 
             if kw_namespace and lib_entry is not None and lib_range is not None:
                 if self.namespace.document is not None:
