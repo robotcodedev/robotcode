@@ -2,6 +2,12 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.61.5 (2023-10-19)
+
+### Fix
+
+- **langserver**: correct highlight, completion, analyze, etc. keyword calls with `.` that are also valid namespaces
+
 ## v0.61.4 (2023-10-15)
 
 ### Fix

@@ -49,7 +49,7 @@ classifiers = [
   "Framework :: Robot Framework :: Tool",
 ]
 requires-python = ">=3.8"
-dependencies = ["robotcode-plugin==0.61.4"]
+dependencies = ["robotcode-plugin==0.61.5"]
 dynamic = ["version"]
 
 
@@ -66,20 +66,20 @@ robotcode = "robotcode.cli.__main__:main"
 
 
 [project.optional-dependencies]
-debugger = ["robotcode-debugger==0.61.4"]
-languageserver = ["robotcode-language-server==0.61.4"]
-runner = ["robotcode-runner==0.61.4"]
-analyze = ["robotcode-analyze==0.61.4"]
+debugger = ["robotcode-debugger==0.61.5"]
+languageserver = ["robotcode-language-server==0.61.5"]
+runner = ["robotcode-runner==0.61.5"]
+analyze = ["robotcode-analyze==0.61.5"]
 yaml = ["PyYAML>=5.4"]
 lint = ["robotframework-robocop>=2.0.0"]
 tidy = ["robotframework-tidy>=2.0.0"]
 rest = ["docutils"]
 colored = ["rich"]
 all = [
-  "robotcode-debugger==0.61.4",
-  "robotcode-language-server==0.61.4",
-  "robotcode-runner==0.61.4",
-  "robotcode-analyze==0.61.4",
+  "robotcode-debugger==0.61.5",
+  "robotcode-language-server==0.61.5",
+  "robotcode-runner==0.61.5",
+  "robotcode-analyze==0.61.5",
   "PyYAML>=5.4",
   "robotframework-robocop>=2.0.0",
   "robotframework-tidy>=2.0.0",
