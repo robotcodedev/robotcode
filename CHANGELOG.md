@@ -2,6 +2,16 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.61.6 (2023-10-20)
+
+### Fix
+
+- **langserver**: correct handling of imports with the same namespace name
+
+### Refactor
+
+- **langserver**: make package import relativ
+
 ## v0.61.5 (2023-10-19)
 
 ### Fix
