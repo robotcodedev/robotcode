@@ -337,7 +337,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
             ):
                 keyword_token = self.strip_bdd_prefix(namespace, keyword_token)
 
-            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword_token(namespace, keyword_token)
 
             kw_range = range_from_token(keyword_token)
 
@@ -451,7 +451,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
             ):
                 keyword_token = self.strip_bdd_prefix(namespace, keyword_token)
 
-            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword_token(namespace, keyword_token)
 
             kw_range = range_from_token(keyword_token)
 
@@ -510,7 +510,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
                     (
                         lib_entry,
                         kw_namespace,
-                    ) = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+                    ) = await self.get_namespace_info_from_keyword_token(namespace, keyword_token)
 
                     kw_range = range_from_token(keyword_token)
 

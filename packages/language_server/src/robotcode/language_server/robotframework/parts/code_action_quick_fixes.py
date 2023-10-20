@@ -147,7 +147,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                     if bdd_token is not None and token is not None:
                         keyword_token = token
 
-                    lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+                    lib_entry, kw_namespace = await self.get_namespace_info_from_keyword_token(namespace, keyword_token)
 
                     if lib_entry is not None and lib_entry.library_doc.type == "LIBRARY":
                         disabled = CodeActionDisabledType("Keyword is from a library")
@@ -208,7 +208,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             if bdd_token is not None and token is not None:
                 keyword_token = token
 
-            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword_token(namespace, keyword_token)
 
             if lib_entry is not None and lib_entry.library_doc.type == "LIBRARY":
                 return None

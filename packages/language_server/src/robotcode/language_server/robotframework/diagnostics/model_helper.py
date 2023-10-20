@@ -8,7 +8,6 @@ from tokenize import TokenError, generate_tokens
 from typing import (
     Any,
     AsyncIterator,
-    Dict,
     Iterator,
     List,
     Optional,
@@ -21,7 +20,6 @@ from typing import (
 from robotcode.core.lsp.types import Position
 from robotcode.language_server.robotframework.diagnostics.entities import (
     LibraryEntry,
-    ResourceEntry,
     VariableDefinition,
     VariableNotFoundDefinition,
 )
@@ -29,7 +27,6 @@ from robotcode.language_server.robotframework.diagnostics.library_doc import (
     ArgumentInfo,
     KeywordArgumentKind,
     KeywordDoc,
-    KeywordMatcher,
     LibraryDoc,
 )
 from robotcode.language_server.robotframework.diagnostics.namespace import (
@@ -214,32 +211,24 @@ class ModelHelperMixin:
 
         return None
 
-    async def get_namespace_info_from_keyword(
-        self,
-        namespace: Namespace,
-        keyword_token: Token,
-        libraries_matchers: Optional[Dict[KeywordMatcher, LibraryEntry]] = None,
-        resources_matchers: Optional[Dict[KeywordMatcher, ResourceEntry]] = None,
+    @classmethod
+    async def get_namespace_info_from_keyword_token(
+        cls, namespace: Namespace, keyword_token: Token
     ) -> Tuple[Optional[LibraryEntry], Optional[str]]:
         lib_entry: Optional[LibraryEntry] = None
-
         kw_namespace: Optional[str] = None
 
-        if libraries_matchers is None:
-            libraries_matchers = await namespace.get_libraries_matchers()
-        if resources_matchers is None:
-            resources_matchers = await namespace.get_resources_matchers()
-
-        for lib, _ in iter_over_keyword_names_and_owners(keyword_token.value):
+        for lib, keyword in iter_over_keyword_names_and_owners(keyword_token.value):
             if lib is not None:
-                lib_entry = next((v for k, v in libraries_matchers.items() if k == lib), None)
-                if lib_entry is not None:
+                lib_entries = next((v for k, v in (await namespace.get_namespaces()).items() if k == lib), None)
+                if lib_entries is not None:
                     kw_namespace = lib
+                    lib_entry = next(
+                        (v for v in lib_entries if keyword in v.library_doc.keywords),
+                        lib_entries[0] if lib_entries else None,
+                    )
                     break
-                lib_entry = next((v for k, v in resources_matchers.items() if k == lib), None)
-                if lib_entry is not None:
-                    kw_namespace = lib
-                    break
+
         return lib_entry, kw_namespace
 
     __match_extended = re.compile(

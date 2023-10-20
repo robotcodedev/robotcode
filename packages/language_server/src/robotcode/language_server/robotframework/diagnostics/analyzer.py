@@ -25,7 +25,6 @@ from ..utils.ast_utils import (
     Statement,
     Token,
     is_not_variable_token,
-    iter_over_keyword_names_and_owners,
     range_from_node,
     range_from_node_or_token,
     range_from_token,
@@ -40,13 +39,12 @@ from .entities import (
     EnvironmentVariableDefinition,
     LibraryEntry,
     LocalVariableDefinition,
-    ResourceEntry,
     VariableDefinition,
     VariableDefinitionType,
     VariableNotFoundDefinition,
 )
 from .errors import DIAGNOSTICS_SOURCE_NAME, Error
-from .library_doc import KeywordDoc, KeywordMatcher, is_embedded_keyword
+from .library_doc import KeywordDoc, is_embedded_keyword
 from .model_helper import ModelHelperMixin
 from .namespace import (
     KeywordFinder,
@@ -70,8 +68,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         namespace: Namespace,
         finder: KeywordFinder,
         ignored_lines: List[int],
-        libraries_matchers: Dict[KeywordMatcher, LibraryEntry],
-        resources_matchers: Dict[KeywordMatcher, ResourceEntry],
     ) -> None:
         from robot.parsing.model.statements import Template, TestTemplate
 
@@ -81,8 +77,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         self.namespace = namespace
         self.finder = finder
         self._ignored_lines = ignored_lines
-        self.libraries_matchers = libraries_matchers
-        self.resources_matchers = resources_matchers
 
         self.current_testcase_or_keyword_name: Optional[str] = None
         self.test_template: Optional[TestTemplate] = None
@@ -404,26 +398,16 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             result = self.finder.find_keyword(keyword, raise_keyword_error=False)
 
             if keyword is not None:
-                for lib, name in iter_over_keyword_names_and_owners(keyword):
-                    if (
-                        lib is not None
-                        and not any(k for k in self.libraries_matchers.keys() if k == lib)
-                        and not any(k for k in self.resources_matchers.keys() if k == lib)
-                    ):
-                        continue
+                lib_entry, kw_namespace = await self.get_namespace_info_from_keyword_token(
+                    self.namespace, keyword_token
+                )
 
-                    lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(
-                        self.namespace, keyword_token, self.libraries_matchers, self.resources_matchers
-                    )
-                    if lib_entry and kw_namespace:
-                        r = range_from_token(keyword_token)
-                        lib_range = r
-                        r.end.character = r.start.character + len(kw_namespace)
-                        kw_range.start.character = r.end.character + 1
-                        lib_range.end.character = kw_range.start.character - 1
-
-                        if result is not None and result.parent == lib_entry.library_doc:
-                            break
+                if lib_entry and kw_namespace:
+                    r = range_from_token(keyword_token)
+                    lib_range = r
+                    r.end.character = r.start.character + len(kw_namespace)
+                    kw_range.start.character = r.end.character + 1
+                    lib_range.end.character = kw_range.start.character - 1
 
             if (
                 result is not None
@@ -437,7 +421,14 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
             if kw_namespace and lib_entry is not None and lib_range is not None:
                 if self.namespace.document is not None:
-                    self._namespace_references[lib_entry].add(Location(self.namespace.document.document_uri, lib_range))
+                    entries = [lib_entry]
+                    if self.finder.multiple_keywords_result is not None:
+                        entries = next(
+                            (v for k, v in (await self.namespace.get_namespaces()).items() if k == kw_namespace),
+                            entries,
+                        )
+                    for entry in entries:
+                        self._namespace_references[entry].add(Location(self.namespace.document.document_uri, lib_range))
 
             if not ignore_errors_if_contains_variables or is_not_variable_token(keyword_token):
                 for e in self.finder.diagnostics:

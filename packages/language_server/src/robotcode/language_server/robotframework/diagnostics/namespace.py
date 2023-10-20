@@ -8,7 +8,7 @@ import logging
 import re
 import time
 import weakref
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from itertools import chain
 from pathlib import Path
 from typing import (
@@ -539,6 +539,7 @@ class Namespace:
         self.workspace_languages = workspace_languages
 
         self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
+        self._namespaces: Optional[Dict[KeywordMatcher, List[LibraryEntry]]] = None
         self._libraries_matchers: Optional[Dict[KeywordMatcher, LibraryEntry]] = None
         self._resources: OrderedDict[str, ResourceEntry] = OrderedDict()
         self._resources_matchers: Optional[Dict[KeywordMatcher, ResourceEntry]] = None
@@ -662,6 +663,7 @@ class Namespace:
     async def _invalidate(self) -> None:
         self._initialized = False
 
+        self._namespaces = None
         self._libraries = OrderedDict()
         self._libraries_matchers = None
         self._resources = OrderedDict()
@@ -732,32 +734,25 @@ class Namespace:
 
         return self._import_entries
 
-    @_logger.call
     async def get_libraries(self) -> OrderedDict[str, LibraryEntry]:
         await self.ensure_initialized()
 
         return self._libraries
 
-    async def get_libraries_matchers(self) -> Dict[KeywordMatcher, LibraryEntry]:
-        if self._libraries_matchers is None:
-            self._libraries_matchers = {
-                KeywordMatcher(v.alias or v.name or v.import_name, is_namespace=True): v
-                for v in (await self.get_libraries()).values()
-            }
-        return self._libraries_matchers
+    async def get_namespaces(self) -> Dict[KeywordMatcher, List[LibraryEntry]]:
+        if self._namespaces is None:
+            self._namespaces = defaultdict(list)
+
+            for v in (await self.get_libraries()).values():
+                self._namespaces[KeywordMatcher(v.alias or v.name or v.import_name, is_namespace=True)].append(v)
+            for v in (await self.get_resources()).values():
+                self._namespaces[KeywordMatcher(v.alias or v.name or v.import_name, is_namespace=True)].append(v)
+        return self._namespaces
 
     async def get_resources(self) -> OrderedDict[str, ResourceEntry]:
         await self.ensure_initialized()
 
         return self._resources
-
-    async def get_resources_matchers(self) -> Dict[KeywordMatcher, ResourceEntry]:
-        if self._resources_matchers is None:
-            self._resources_matchers = {
-                KeywordMatcher(v.alias or v.name or v.import_name, is_namespace=True): v
-                for v in (await self.get_resources()).values()
-            }
-        return self._resources_matchers
 
     async def get_imported_variables(self) -> OrderedDict[str, VariablesEntry]:
         await self.ensure_initialized()
@@ -1579,8 +1574,6 @@ class Namespace:
                         self,
                         await self.create_finder(),
                         self.get_ignored_lines(self.document) if self.document is not None else [],
-                        await self.get_libraries_matchers(),
-                        await self.get_resources_matchers(),
                     ).run()
 
                     self._diagnostics += result.diagnostics

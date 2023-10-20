@@ -172,7 +172,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
                     )
 
         if keyword_token is not None and config.namespaces:
-            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword(namespace, keyword_token)
+            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword_token(namespace, keyword_token)
             if lib_entry is None and kw_namespace is None:
                 if kw_doc.libtype == "LIBRARY":
                     lib = next(

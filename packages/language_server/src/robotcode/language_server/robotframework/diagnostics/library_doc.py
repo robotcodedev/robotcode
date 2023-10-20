@@ -185,6 +185,9 @@ class KeywordMatcher:
 
     def __eq__(self, o: Any) -> bool:
         if isinstance(o, KeywordMatcher):
+            if self._is_namespace != o._is_namespace:
+                return False
+
             if not self.embedded_arguments:
                 return self.normalized_name == o.normalized_name
 
@@ -206,7 +209,7 @@ class KeywordMatcher:
         return hash(
             (self.embedded_arguments.name, tuple(self.embedded_arguments.args))
             if self.embedded_arguments
-            else (self.normalized_name,)
+            else (self.normalized_name, self._is_namespace),
         )
 
     def __str__(self) -> str:
