@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from robotcode.jsonrpc2.protocol import GenericJsonRPCProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import (
+    from ..protocol import (
         RobotLanguageServerProtocol,
     )
 

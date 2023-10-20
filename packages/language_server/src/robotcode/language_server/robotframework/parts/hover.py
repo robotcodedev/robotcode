@@ -17,20 +17,20 @@ from typing import (
 
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import Hover, MarkupContent, MarkupKind, Position, Range
-from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.utils.ast_utils import (
+
+from ...common.decorators import language_id
+from ...common.text_document import TextDocument
+from ..diagnostics.model_helper import ModelHelperMixin
+from ..utils.ast_utils import (
     get_nodes_at_position,
     range_from_node,
     range_from_token,
 )
-from robotcode.language_server.robotframework.utils.markdownformatter import MarkDownFormatter
+from ..utils.markdownformatter import MarkDownFormatter
+from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
-
-from .model_helper import ModelHelperMixin
-from .protocol_part import RobotLanguageServerProtocolPart
+    from ..protocol import RobotLanguageServerProtocol
 
 _HoverMethod = Callable[[ast.AST, List[ast.AST], TextDocument, Position], Awaitable[Optional[Hover]]]
 

@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import FoldingRange
-from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.utils.async_ast import AsyncVisitor
 
+from ...common.decorators import language_id
+from ...common.text_document import TextDocument
+from ..utils.async_ast import AsyncVisitor
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

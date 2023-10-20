@@ -32,10 +32,11 @@ from robotcode.core.lsp.types import (
     SemanticTokensPartialResult,
     SemanticTokenTypes,
 )
-from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.text_document import TextDocument, range_to_utf16
-from robotcode.language_server.robotframework.diagnostics.entities import LibraryEntry, ResourceEntry
-from robotcode.language_server.robotframework.diagnostics.library_doc import (
+
+from ...common.decorators import language_id
+from ...common.text_document import TextDocument, range_to_utf16
+from ..diagnostics.entities import LibraryEntry, ResourceEntry
+from ..diagnostics.library_doc import (
     ALL_RUN_KEYWORDS_MATCHERS,
     BUILTIN_LIBRARY_NAME,
     KeywordArgumentKind,
@@ -43,25 +44,16 @@ from robotcode.language_server.robotframework.diagnostics.library_doc import (
     KeywordMatcher,
     LibraryDoc,
 )
-from robotcode.language_server.robotframework.diagnostics.namespace import (
-    DEFAULT_BDD_PREFIXES,
-    Namespace,
-)
-from robotcode.language_server.robotframework.utils import async_ast
-from robotcode.language_server.robotframework.utils.ast_utils import (
-    HasTokens,
-    Token,
-    iter_over_keyword_names_and_owners,
-    token_in_range,
-)
-from robotcode.language_server.robotframework.utils.version import get_robot_version
-
-from .model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.namespace import DEFAULT_BDD_PREFIXES, Namespace
+from ..utils import async_ast
+from ..utils.ast_utils import HasTokens, Token, iter_over_keyword_names_and_owners, token_in_range
+from ..utils.version import get_robot_version
+from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
     from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
 
-from .protocol_part import RobotLanguageServerProtocolPart
 
 ROBOT_KEYWORD_INNER = "KEYWORD_INNER"
 ROBOT_NAMED_ARGUMENT = "NAMED_ARGUMENT"

@@ -19,21 +19,20 @@ from typing import (
 from robotcode.core.async_tools import Lock, async_tasking_event, check_canceled_sync
 from robotcode.core.lsp.types import MessageType
 from robotcode.core.uri import Uri
-from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.parts.workspace import WorkspaceFolder
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.configuration import RobotCodeConfig, RobotConfig
-from robotcode.language_server.robotframework.diagnostics.imports_manager import ImportsManager
-from robotcode.language_server.robotframework.diagnostics.namespace import DocumentType, Namespace
-from robotcode.language_server.robotframework.utils.ast_utils import Token
-from robotcode.language_server.robotframework.utils.version import get_robot_version
+
+from ...common.decorators import language_id_filter
+from ...common.parts.workspace import WorkspaceFolder
+from ...common.text_document import TextDocument
+from ..configuration import RobotCodeConfig, RobotConfig
+from ..diagnostics.imports_manager import ImportsManager
+from ..diagnostics.namespace import DocumentType, Namespace
+from ..languages import Languages
+from ..utils.ast_utils import Token
+from ..utils.version import get_robot_version
+from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
-
-from robotcode.language_server.robotframework.languages import Languages
-
-from .protocol_part import RobotLanguageServerProtocolPart
+    from ..protocol import RobotLanguageServerProtocol
 
 
 class UnknownFileTypeError(Exception):

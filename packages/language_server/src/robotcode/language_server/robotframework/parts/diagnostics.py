@@ -8,13 +8,14 @@ from robotcode.core.async_tools import check_canceled, create_sub_task, threaded
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, DiagnosticTag, Position, Range
 from robotcode.core.uri import Uri
-from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.parts.diagnostics import DiagnosticsResult
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.configuration import AnalysisConfig
-from robotcode.language_server.robotframework.diagnostics.entities import ArgumentDefinition
-from robotcode.language_server.robotframework.diagnostics.namespace import Namespace
-from robotcode.language_server.robotframework.utils.ast_utils import (
+
+from ...common.decorators import language_id
+from ...common.parts.diagnostics import DiagnosticsResult
+from ...common.text_document import TextDocument
+from ..configuration import AnalysisConfig
+from ..diagnostics.entities import ArgumentDefinition
+from ..diagnostics.namespace import Namespace
+from ..utils.ast_utils import (
     HeaderAndBodyBlock,
     Token,
     range_from_node,
@@ -22,7 +23,7 @@ from robotcode.language_server.robotframework.utils.ast_utils import (
 )
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
+    from ..protocol import RobotLanguageServerProtocol
 
 from .protocol_part import RobotLanguageServerProtocolPart
 

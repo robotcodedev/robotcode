@@ -39,18 +39,15 @@ from robotcode.core.lsp.types import (
     Range,
     TextEdit,
 )
-from robotcode.language_server.common.decorators import language_id, trigger_characters
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.configuration import CompletionConfig
-from robotcode.language_server.robotframework.diagnostics.entities import VariableDefinitionType
-from robotcode.language_server.robotframework.diagnostics.library_doc import (
-    CompleteResultKind,
-    KeywordArgumentKind,
-    KeywordDoc,
-    KeywordMatcher,
-)
-from robotcode.language_server.robotframework.diagnostics.namespace import DocumentType, Namespace
-from robotcode.language_server.robotframework.utils.ast_utils import (
+
+from ...common.decorators import language_id, trigger_characters
+from ...common.text_document import TextDocument
+from ..configuration import CompletionConfig
+from ..diagnostics.entities import VariableDefinitionType
+from ..diagnostics.library_doc import CompleteResultKind, KeywordArgumentKind, KeywordDoc, KeywordMatcher
+from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.namespace import DocumentType, Namespace
+from ..utils.ast_utils import (
     HasTokens,
     Token,
     get_nodes_at_position,
@@ -60,13 +57,11 @@ from robotcode.language_server.robotframework.utils.ast_utils import (
     whitespace_at_begin_of_token,
     whitespace_from_begin_of_token,
 )
-from robotcode.language_server.robotframework.utils.version import get_robot_version
-
-from .model_helper import ModelHelperMixin
+from ..utils.version import get_robot_version
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
+    from ..protocol import RobotLanguageServerProtocol
 
 
 DEFAULT_HEADER_STYLE = "*** {name}s ***"

@@ -19,8 +19,8 @@ from robotcode.core.lsp.types import (
     Range,
 )
 from robotcode.core.uri import Uri
-from robotcode.language_server.robotframework.parts.model_helper import ModelHelperMixin
-from robotcode.language_server.robotframework.utils.ast_utils import (
+
+from ..utils.ast_utils import (
     HasTokens,
     Statement,
     Token,
@@ -32,9 +32,8 @@ from robotcode.language_server.robotframework.utils.ast_utils import (
     strip_variable_token,
     tokenize_variables,
 )
-from robotcode.language_server.robotframework.utils.async_ast import AsyncVisitor
-from robotcode.language_server.robotframework.utils.version import get_robot_version
-
+from ..utils.async_ast import AsyncVisitor
+from ..utils.version import get_robot_version
 from .entities import (
     ArgumentDefinition,
     CommandLineVariableDefinition,
@@ -48,6 +47,7 @@ from .entities import (
 )
 from .errors import DIAGNOSTICS_SOURCE_NAME, Error
 from .library_doc import KeywordDoc, KeywordMatcher, is_embedded_keyword
+from .model_helper import ModelHelperMixin
 from .namespace import (
     KeywordFinder,
     Namespace,
@@ -401,6 +401,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             lib_range = None
             kw_namespace = None
 
+            result = self.finder.find_keyword(keyword, raise_keyword_error=False)
+
             if keyword is not None:
                 for lib, name in iter_over_keyword_names_and_owners(keyword):
                     if (
@@ -420,7 +422,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         kw_range.start.character = r.end.character + 1
                         lib_range.end.character = kw_range.start.character - 1
 
-            result = self.finder.find_keyword(keyword, raise_keyword_error=False)
+                        if result is not None and result.parent == lib_entry.library_doc:
+                            break
 
             if (
                 result is not None

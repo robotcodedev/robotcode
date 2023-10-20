@@ -6,18 +6,19 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Type
 
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import InlayHint, InlayHintKind, Range
-from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.configuration import InlayHintsConfig
-from robotcode.language_server.robotframework.diagnostics.library_doc import KeywordArgumentKind, KeywordDoc, LibraryDoc
-from robotcode.language_server.robotframework.diagnostics.namespace import Namespace
-from robotcode.language_server.robotframework.utils.ast_utils import Token, range_from_node, range_from_token
-from robotcode.language_server.robotframework.utils.async_ast import iter_nodes
+
+from ...common.decorators import language_id
+from ...common.text_document import TextDocument
+from ..configuration import InlayHintsConfig
+from ..diagnostics.library_doc import KeywordArgumentKind, KeywordDoc, LibraryDoc
+from ..diagnostics.namespace import Namespace
+from ..utils.ast_utils import Token, range_from_node, range_from_token
+from ..utils.async_ast import iter_nodes
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
+    from ..protocol import RobotLanguageServerProtocol
 
-from .model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
 _HandlerMethod = Callable[

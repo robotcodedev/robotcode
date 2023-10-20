@@ -19,34 +19,34 @@ from robotcode.core.async_tools import async_event, threaded
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import FileEvent, Location, Position, Range, ReferenceContext, WatchKind
 from robotcode.core.uri import Uri
-from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.diagnostics.entities import (
+
+from ...common.decorators import language_id
+from ...common.text_document import TextDocument
+from ..diagnostics.entities import (
     LibraryEntry,
     LocalVariableDefinition,
     ResourceEntry,
     VariableDefinition,
 )
-from robotcode.language_server.robotframework.diagnostics.library_doc import (
+from ..diagnostics.library_doc import (
     RESOURCE_FILE_EXTENSION,
     ROBOT_FILE_EXTENSION,
     KeywordDoc,
     LibraryDoc,
 )
-from robotcode.language_server.robotframework.utils.ast_utils import (
+from ..diagnostics.model_helper import ModelHelperMixin
+from ..utils.ast_utils import (
     HasTokens,
     get_nodes_at_position,
     get_tokens_at_position,
     range_from_token,
 )
-from robotcode.language_server.robotframework.utils.async_ast import iter_nodes
-from robotcode.language_server.robotframework.utils.match import normalize
+from ..utils.async_ast import iter_nodes
+from ..utils.match import normalize
+from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
-
-from .model_helper import ModelHelperMixin
-from .protocol_part import RobotLanguageServerProtocolPart
+    from ..protocol import RobotLanguageServerProtocol
 
 _ReferencesMethod = Callable[[ast.AST, TextDocument, Position, ReferenceContext], Awaitable[Optional[List[Location]]]]
 

@@ -23,21 +23,16 @@ from robotcode.core.lsp.types import (
     SignatureHelpContext,
     SignatureInformation,
 )
-from robotcode.language_server.common.decorators import language_id, retrigger_characters, trigger_characters
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.diagnostics.library_doc import KeywordDoc, LibraryDoc
-from robotcode.language_server.robotframework.parts.model_helper import ModelHelperMixin
-from robotcode.language_server.robotframework.parts.protocol_part import RobotLanguageServerProtocolPart
-from robotcode.language_server.robotframework.utils.ast_utils import (
-    Statement,
-    Token,
-    get_node_at_position,
-    get_tokens_at_position,
-    range_from_token,
-)
+
+from ...common.decorators import language_id, retrigger_characters, trigger_characters
+from ...common.text_document import TextDocument
+from ..diagnostics.library_doc import KeywordDoc, LibraryDoc
+from ..diagnostics.model_helper import ModelHelperMixin
+from ..utils.ast_utils import Statement, Token, get_node_at_position, get_tokens_at_position, range_from_token
+from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
+    from ..protocol import RobotLanguageServerProtocol
 
 _SignatureHelpMethod = Callable[
     [ast.AST, TextDocument, Position, Optional[SignatureHelpContext]], Awaitable[Optional[SignatureHelp]]

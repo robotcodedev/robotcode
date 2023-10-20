@@ -5,15 +5,12 @@ from typing import TYPE_CHECKING, Any, Iterator, List, Optional, Tuple
 
 from robotcode.core.async_itertools import async_dropwhile, async_takewhile
 from robotcode.core.logging import LoggingDescriptor
-from robotcode.core.lsp.types import (
-    InlineValue,
-    InlineValueContext,
-    InlineValueEvaluatableExpression,
-    Range,
-)
-from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.utils.ast_utils import (
+from robotcode.core.lsp.types import InlineValue, InlineValueContext, InlineValueEvaluatableExpression, Range
+
+from ...common.decorators import language_id
+from ...common.text_document import TextDocument
+from ..diagnostics.model_helper import ModelHelperMixin
+from ..utils.ast_utils import (
     HasTokens,
     Token,
     get_nodes_at_position,
@@ -21,8 +18,6 @@ from robotcode.language_server.robotframework.utils.ast_utils import (
     range_from_node,
     range_from_token,
 )
-
-from .model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

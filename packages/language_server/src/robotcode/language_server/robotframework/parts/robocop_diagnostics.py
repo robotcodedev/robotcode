@@ -13,12 +13,12 @@ from robotcode.core.lsp.types import (
     Range,
 )
 from robotcode.core.utils.version import Version, create_version_from_str
-from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.parts.diagnostics import DiagnosticsResult
-from robotcode.language_server.common.parts.workspace import WorkspaceFolder
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.configuration import RoboCopConfig
 
+from ...common.decorators import language_id
+from ...common.parts.diagnostics import DiagnosticsResult
+from ...common.parts.workspace import WorkspaceFolder
+from ...common.text_document import TextDocument
+from ..configuration import RoboCopConfig
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

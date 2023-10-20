@@ -14,20 +14,19 @@ from robotcode.core.lsp.types import (
     Range,
     TextEdit,
 )
-from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.utils.version import get_robot_version
+from robotcode.core.utils.version import create_version_from_str
+
+from ...common.decorators import language_id
+from ...common.text_document import TextDocument
+from ..configuration import RoboTidyConfig
+from ..diagnostics.model_helper import ModelHelperMixin
+from ..utils.version import get_robot_version
+from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
     from robotcode.language_server.robotframework.protocol import (
         RobotLanguageServerProtocol,
     )
-
-from robotcode.core.utils.version import create_version_from_str
-from robotcode.language_server.robotframework.configuration import RoboTidyConfig
-
-from .model_helper import ModelHelperMixin
-from .protocol_part import RobotLanguageServerProtocolPart
 
 
 def robotidy_installed() -> bool:

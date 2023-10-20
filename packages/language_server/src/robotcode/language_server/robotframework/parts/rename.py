@@ -30,23 +30,14 @@ from robotcode.core.lsp.types import (
     TextDocumentEdit,
     WorkspaceEdit,
 )
-from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.parts.rename import CantRenameError
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.diagnostics.entities import (
-    VariableDefinition,
-    VariableDefinitionType,
-)
-from robotcode.language_server.robotframework.diagnostics.library_doc import KeywordDoc
-from robotcode.language_server.robotframework.utils.ast_utils import (
-    HasTokens,
-    Token,
-    get_nodes_at_position,
-    get_tokens_at_position,
-    range_from_token,
-)
 
-from .model_helper import ModelHelperMixin
+from ...common.decorators import language_id
+from ...common.parts.rename import CantRenameError
+from ...common.text_document import TextDocument
+from ..diagnostics.entities import VariableDefinition, VariableDefinitionType
+from ..diagnostics.library_doc import KeywordDoc
+from ..diagnostics.model_helper import ModelHelperMixin
+from ..utils.ast_utils import HasTokens, Token, get_nodes_at_position, get_tokens_at_position, range_from_token
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

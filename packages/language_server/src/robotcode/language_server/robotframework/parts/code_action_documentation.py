@@ -30,31 +30,31 @@ from robotcode.core.lsp.types import (
 from robotcode.core.uri import Uri
 from robotcode.core.utils.net import find_free_port
 from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.common.decorators import code_action_kinds, language_id
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.configuration import (
+
+from ...common.decorators import code_action_kinds, language_id
+from ...common.text_document import TextDocument
+from ..configuration import (
     DocumentationServerConfig,
 )
-from robotcode.language_server.robotframework.diagnostics.entities import LibraryEntry
-from robotcode.language_server.robotframework.diagnostics.library_doc import (
+from ..diagnostics.entities import LibraryEntry
+from ..diagnostics.library_doc import (
     get_library_doc,
     get_robot_library_html_doc_str,
     resolve_robot_variables,
 )
-from robotcode.language_server.robotframework.diagnostics.namespace import (
+from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.namespace import (
     Namespace,
 )
-from robotcode.language_server.robotframework.utils.ast_utils import (
+from ..utils.ast_utils import (
     Token,
     get_node_at_position,
     range_from_token,
 )
-
-from .model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import (
+    from ..protocol import (
         RobotLanguageServerProtocol,
     )
 

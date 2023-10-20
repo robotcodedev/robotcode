@@ -23,10 +23,12 @@ from robotcode.core.lsp.types import (
     WorkspaceEdit,
 )
 from robotcode.core.utils.inspect import iter_methods
-from robotcode.language_server.common.decorators import code_action_kinds, language_id
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.diagnostics.errors import DIAGNOSTICS_SOURCE_NAME, Error
-from robotcode.language_server.robotframework.utils.ast_utils import (
+
+from ...common.decorators import code_action_kinds, language_id
+from ...common.text_document import TextDocument
+from ..diagnostics.errors import DIAGNOSTICS_SOURCE_NAME, Error
+from ..diagnostics.model_helper import ModelHelperMixin
+from ..utils.ast_utils import (
     FirstAndLastRealStatementFinder,
     Token,
     get_node_at_position,
@@ -35,18 +37,16 @@ from robotcode.language_server.robotframework.utils.ast_utils import (
     range_from_node,
     range_from_token,
 )
-
 from .code_action_helper_mixin import (
     SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
     CodeActionDataBase,
     CodeActionHelperMixin,
     FindSectionsVisitor,
 )
-from .model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol  # pragma: no cover
+    from ..protocol import RobotLanguageServerProtocol  # pragma: no cover
 
 
 @dataclass

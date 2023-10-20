@@ -191,7 +191,8 @@ class BlockVariableVisitor(Visitor):
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordName
         from robot.variables.search import search_variable
-        from robotcode.language_server.robotframework.parts.model_helper import ModelHelperMixin
+
+        from .model_helper import ModelHelperMixin
 
         n = cast(KeywordName, node)
         name_token = cast(Token, n.get_token(RobotToken.KEYWORD_NAME))

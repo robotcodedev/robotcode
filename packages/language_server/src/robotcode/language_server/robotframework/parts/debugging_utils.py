@@ -9,18 +9,18 @@ from robotcode.core.dataclasses import CamelSnakeMixin
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import Position, Range, TextDocumentIdentifier
 from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.robotframework.utils.ast_utils import (
+
+from ..diagnostics.model_helper import ModelHelperMixin
+from ..utils.ast_utils import (
     HasTokens,
     get_nodes_at_position,
     get_tokens_at_position,
     range_from_token,
 )
-
-from .model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
+    from ..protocol import RobotLanguageServerProtocol
 
 
 @dataclass(repr=False)
