@@ -58,6 +58,10 @@ extra-dependencies = [
 python = "3.11"
 post-install-commands = ["pip install -U -e {root:uri}/../robotframework"]
 
+[envs.rfdevel38]
+python = "3.8"
+post-install-commands = ["pip install -U -e {root:uri}/../robotframework"]
+
 [envs.devel]
 python = "3.8"
 

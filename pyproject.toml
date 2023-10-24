@@ -162,7 +162,7 @@ fail_under = 40
 [tool.ruff]
 line-length = 120
 target-version = "py38"
-extend-exclude = ["bundled/libs"]
+extend-exclude = ["bundled/libs", ".hatch"]
 ignore = ["E741", "N805", "N999", "RUF012"]
 select = [
   "E",
@@ -220,15 +220,15 @@ implicit_optional = true
 disallow_untyped_decorators = false
 disallow_subclassing_any = false
 exclude = [
-  '\.mypy_cache',
-  '\.venv',
-  '\.hatch',
-  'build',
-  'dist',
-  'out',
-  'playground',
-  'scripts',
-  'bundled/libs',
+  '^\.mypy_cache/',
+  '^\.venv/',
+  '^\.hatch/',
+  "^build/",
+  "^dist/",
+  "^out/",
+  "^playground/",
+  "^scripts/",
+  "^bundled/libs/",
 ]
 mypy_path = [
   "typings",
