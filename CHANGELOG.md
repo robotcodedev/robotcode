@@ -2,6 +2,12 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.61.7 (2023-10-25)
+
+### Perf
+
+- **langserver**: increase performance of visitor a little bit more
+
 ## v0.61.6 (2023-10-20)
 
 ### Fix
