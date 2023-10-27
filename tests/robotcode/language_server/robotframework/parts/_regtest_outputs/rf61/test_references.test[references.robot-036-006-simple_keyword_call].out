@@ -70,6 +70,24 @@ result:
   range:
     end:
       character: 7
+      line: 3
+    start:
+      character: 4
+      line: 3
+  uri: folder_a/duplicated.resource
+- !Location
+  range:
+    end:
+      character: 7
+      line: 6
+    start:
+      character: 4
+      line: 6
+  uri: folder_a/duplicated.resource
+- !Location
+  range:
+    end:
+      character: 7
       line: 6
     start:
       character: 4
@@ -83,6 +101,24 @@ result:
     start:
       character: 4
       line: 3
+  uri: folder_b/duplicated.resource
+- !Location
+  range:
+    end:
+      character: 7
+      line: 3
+    start:
+      character: 4
+      line: 3
+  uri: folder_b/duplicated.resource
+- !Location
+  range:
+    end:
+      character: 7
+      line: 6
+    start:
+      character: 4
+      line: 6
   uri: folder_b/duplicated.resource
 - !Location
   range:
