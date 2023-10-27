@@ -128,9 +128,9 @@ def load_robot_config_from_path(*__paths: Union[Path, Tuple[Path, ConfigType]]) 
 
 def find_project_root(*sources: Union[str, Path]) -> Tuple[Optional[Path], DiscoverdBy]:
     if not sources:
-        sources = (str(Path.cwd().resolve()),)
+        sources = (str(Path.cwd().absolute()),)
 
-    path_srcs = [Path(Path.cwd(), src).resolve() for src in sources]
+    path_srcs = [Path(Path.cwd(), src).absolute() for src in sources]
 
     src_parents = [list(path.parents) + ([path] if path.is_dir() else []) for path in path_srcs]
 

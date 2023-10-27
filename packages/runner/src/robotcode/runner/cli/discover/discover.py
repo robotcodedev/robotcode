@@ -224,12 +224,13 @@ def get_rel_source(source: Optional[str]) -> Optional[str]:
 class Collector(SuiteVisitor):
     def __init__(self) -> None:
         super().__init__()
+        absolute_path = Path.cwd()
         self.all: TestItem = TestItem(
             type="workspace",
-            id=str(Path.cwd().resolve()),
-            name=Path.cwd().name,
-            longname=Path.cwd().name,
-            uri=str(Uri.from_path(Path.cwd())),
+            id=str(absolute_path),
+            name=absolute_path.name,
+            longname=absolute_path.name,
+            uri=str(Uri.from_path(absolute_path)),
             needs_parse_include=get_robot_version() >= (6, 1),
         )
         self._current = self.all
@@ -255,12 +256,13 @@ class Collector(SuiteVisitor):
         self._collected[-1][suite.name] = True
         self._collected.append(NormalizedDict(ignore="_"))
         try:
+            absolute_path = Path(suite.source).absolute() if suite.source else None
             item = TestItem(
                 type="suite",
-                id=f"{Path(suite.source).resolve() if suite.source is not None else ''};{suite.longname}",
+                id=f"{absolute_path or ''};{suite.longname}",
                 name=suite.name,
                 longname=suite.longname,
-                uri=str(Uri.from_path(Path(suite.source).resolve())) if suite.source else None,
+                uri=str(Uri.from_path(absolute_path)) if absolute_path else None,
                 source=str(suite.source),
                 rel_source=get_rel_source(suite.source),
                 range=Range(
@@ -307,12 +309,13 @@ class Collector(SuiteVisitor):
         if self._current.children is None:
             self._current.children = []
         try:
+            absolute_path = Path(test.source).absolute() if test.source is not None else None
             item = TestItem(
                 type="test",
-                id=f"{Path(test.source).resolve() if test.source is not None else ''};{test.longname};{test.lineno}",
+                id=f"{absolute_path or ''};{test.longname};{test.lineno}",
                 name=test.name,
                 longname=test.longname,
-                uri=str(Uri.from_path(Path(test.source).resolve())) if test.source else None,
+                uri=str(Uri.from_path(absolute_path)) if absolute_path else None,
                 source=str(test.source),
                 rel_source=get_rel_source(test.source),
                 range=Range(
@@ -383,7 +386,7 @@ def build_diagnostics(messages: List[Message]) -> Dict[str, List[Diagnostic]]:
         line: Optional[int] = None,
         text: Optional[str] = None,
     ) -> None:
-        source_uri = str(Uri.from_path(Path(source_uri).resolve() if source_uri else Path.cwd()))
+        source_uri = str(Uri.from_path(Path(source_uri).absolute() if source_uri else Path.cwd()))
 
         if source_uri not in result:
             result[source_uri] = []

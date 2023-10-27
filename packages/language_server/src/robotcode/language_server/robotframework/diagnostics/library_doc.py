@@ -2200,9 +2200,9 @@ def complete_library_import(
     if name is None or (is_file_like(name) and (name.endswith(("/", os.sep)))):
         name_path = Path(name if name else base_dir)
         if name_path.is_absolute():
-            path = name_path.resolve()
+            path = name_path.absolute()
         else:
-            path = Path(base_dir, name if name else base_dir).resolve()
+            path = Path(base_dir, name if name else base_dir).absolute()
 
         if path.exists() and path.is_dir():
             result += [
@@ -2263,9 +2263,9 @@ def complete_resource_import(
     if name is None or name.startswith((".", "/", os.sep)):
         name_path = Path(name if name else base_dir)
         if name_path.is_absolute():
-            path = name_path.resolve()
+            path = name_path.absolute()
         else:
-            path = Path(base_dir, name if name else base_dir).resolve()
+            path = Path(base_dir, name if name else base_dir).absolute()
 
         if path.exists() and (path.is_dir()):
             result += [
@@ -2359,9 +2359,9 @@ def complete_variables_import(
     if name is None or name.startswith((".", "/", os.sep)):
         name_path = Path(name if name else base_dir)
         if name_path.is_absolute():
-            path = name_path.resolve()
+            path = name_path.absolute()
         else:
-            path = Path(base_dir, name if name else base_dir).resolve()
+            path = Path(base_dir, name if name else base_dir).absolute()
 
         if path.exists() and (path.is_dir()):
             result += [

@@ -181,6 +181,6 @@ class Uri(Mapping[str, str]):
 
     def normalized(self) -> Uri:
         if self.scheme == "file":
-            return Uri.from_path(self.to_path().resolve())
+            return Uri.from_path(self.to_path().absolute())
 
         return Uri(str(self))

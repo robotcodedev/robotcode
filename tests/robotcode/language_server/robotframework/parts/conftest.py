@@ -32,7 +32,7 @@ from .pytest_regtestex import RegTestFixtureEx
 
 @pytest_asyncio.fixture(scope="package", ids=generate_test_id)
 async def protocol(request: Any) -> AsyncIterator[RobotLanguageServerProtocol]:
-    root_path = Path(Path(__file__).resolve().parent, "data")
+    root_path = Path(Path(__file__).absolute().parent, "data")
     robotcode_cache_path = root_path / ".robotcode_cache"
 
     if robotcode_cache_path.exists():

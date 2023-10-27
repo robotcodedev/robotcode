@@ -142,9 +142,9 @@ class ListenerV2:
             item_id = next(
                 (
                     (
-                        f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname}"
+                        f"{Path(item.source).absolute() if item.source is not None else ''};{item.longname}"
                         if item.type == "SUITE"
-                        else f"{Path(item.source).resolve() if item.source is not None else ''};"
+                        else f"{Path(item.source).absolute() if item.source is not None else ''};"
                         f"{item.longname};{item.line}"
                     )
                     for item in Debugger.instance().full_stack_frames
@@ -189,9 +189,9 @@ class ListenerV2:
             item_id = next(
                 (
                     (
-                        f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname}"
+                        f"{Path(item.source).absolute() if item.source is not None else ''};{item.longname}"
                         if item.type == "SUITE"
-                        else f"{Path(item.source).resolve() if item.source is not None else ''};"
+                        else f"{Path(item.source).absolute() if item.source is not None else ''};"
                         f"{item.longname};{item.line}"
                     )
                     for item in Debugger.instance().full_stack_frames
@@ -264,7 +264,7 @@ class ListenerV3:
 
         def enqueue(item: Union[running.TestSuite, running.TestCase]) -> Iterator[str]:
             if isinstance(item, running.TestSuite):
-                yield f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname}"
+                yield f"{Path(item.source).absolute() if item.source is not None else ''};{item.longname}"
 
                 for s in item.suites:
                     yield from enqueue(s)
@@ -272,7 +272,7 @@ class ListenerV3:
                     yield from enqueue(s)
                 return
 
-            yield f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname};{item.lineno}"
+            yield f"{Path(item.source).absolute() if item.source is not None else ''};{item.longname};{item.lineno}"
 
         if self._event_sended:
             return
