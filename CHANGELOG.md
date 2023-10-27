@@ -2,6 +2,13 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.62.0 (2023-10-27)
+
+### Feat
+
+- **langserver**: support for importing libraries of multiple classes from a module
+- do not use pathlib.Path.resolve because it is slow and we don't need to resolve links
+
 ## v0.61.7 (2023-10-25)
 
 ### Perf
