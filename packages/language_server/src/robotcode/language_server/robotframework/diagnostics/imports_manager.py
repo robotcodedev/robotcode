@@ -471,6 +471,7 @@ class _VariablesEntry(_ImportEntry):
 class LibraryMetaData:
     meta_version: str
     name: Optional[str]
+    member_name: Optional[str]
     origin: Optional[str]
     submodule_search_locations: Optional[List[str]]
     by_path: bool
@@ -478,15 +479,15 @@ class LibraryMetaData:
     mtimes: Optional[Dict[str, int]] = None
 
     @property
-    def filepath_base(self) -> Path:
+    def filepath_base(self) -> str:
         if self.by_path:
             if self.origin is not None:
                 p = Path(self.origin)
 
-                return Path(f"{zlib.adler32(str(p.parent).encode('utf-8')):08x}_{p.stem}")
+                return f"{zlib.adler32(str(p.parent).encode('utf-8')):08x}_{p.stem}"
         else:
             if self.name is not None:
-                return Path(self.name.replace(".", "/"))
+                return self.name.replace(".", "/") + (f".{self.member_name}" if self.member_name else "")
 
         raise ValueError("Cannot determine filepath base.")
 
@@ -832,13 +833,14 @@ class ImportsManager:
             module_spec: Optional[ModuleSpec] = None
             if is_library_by_path(import_name):
                 if (p := Path(import_name)).exists():
-                    result = LibraryMetaData(__version__, p.stem, import_name, None, True)
+                    result = LibraryMetaData(__version__, p.stem, None, import_name, None, True)
             else:
                 module_spec = get_module_spec(import_name)
                 if module_spec is not None and module_spec.origin is not None:
                     result = LibraryMetaData(
                         __version__,
                         module_spec.name,
+                        module_spec.member_name,
                         module_spec.origin,
                         module_spec.submodule_search_locations,
                         False,
@@ -900,13 +902,14 @@ class ImportsManager:
             module_spec: Optional[ModuleSpec] = None
             if is_variables_by_path(import_name):
                 if (p := Path(import_name)).exists():
-                    result = LibraryMetaData(__version__, p.stem, import_name, None, True)
+                    result = LibraryMetaData(__version__, p.stem, None, import_name, None, True)
             else:
                 module_spec = get_module_spec(import_name)
                 if module_spec is not None and module_spec.origin is not None:
                     result = LibraryMetaData(
                         __version__,
                         module_spec.name,
+                        module_spec.member_name,
                         module_spec.origin,
                         module_spec.submodule_search_locations,
                         False,
@@ -1059,15 +1062,16 @@ class ImportsManager:
             )
 
             self._logger.debug(lambda: f"Load Library {source}{args!r}")
+
             if meta is not None:
-                meta_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
+                meta_file = Path(self.lib_doc_cache_path, meta.filepath_base + ".meta.json")
                 if meta_file.exists():
                     try:
                         try:
                             saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
                             spec_path = None
                             if saved_meta == meta:
-                                spec_path = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".spec.json"))
+                                spec_path = Path(self.lib_doc_cache_path, meta.filepath_base + ".spec.json")
                                 return from_json(
                                     spec_path.read_text("utf-8"),
                                     LibraryDoc,
@@ -1110,8 +1114,8 @@ class ImportsManager:
                 self._logger.warning(lambda: f"stdout captured at loading library {name}{args!r}:\n{result.stdout}")
             try:
                 if meta is not None:
-                    meta_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
-                    spec_file = Path(self.lib_doc_cache_path, meta.filepath_base.with_suffix(".spec.json"))
+                    meta_file = Path(self.lib_doc_cache_path, meta.filepath_base + ".meta.json")
+                    spec_file = Path(self.lib_doc_cache_path, meta.filepath_base + ".spec.json")
                     spec_file.parent.mkdir(parents=True, exist_ok=True)
 
                     try:
@@ -1202,16 +1206,14 @@ class ImportsManager:
 
             self._logger.debug(lambda: f"Load variables {source}{args!r}")
             if meta is not None:
-                meta_file = Path(self.variables_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
+                meta_file = Path(self.variables_doc_cache_path, meta.filepath_base + ".meta.json")
                 if meta_file.exists():
                     try:
                         try:
                             saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
                             spec_path = None
                             if saved_meta == meta:
-                                spec_path = Path(
-                                    self.variables_doc_cache_path, meta.filepath_base.with_suffix(".spec.json")
-                                )
+                                spec_path = Path(self.variables_doc_cache_path, meta.filepath_base + ".spec.json")
                                 return from_json(
                                     spec_path.read_text("utf-8"),
                                     VariablesDoc,
@@ -1255,8 +1257,8 @@ class ImportsManager:
 
             try:
                 if meta is not None:
-                    meta_file = Path(self.variables_doc_cache_path, meta.filepath_base.with_suffix(".meta.json"))
-                    spec_file = Path(self.variables_doc_cache_path, meta.filepath_base.with_suffix(".spec.json"))
+                    meta_file = Path(self.variables_doc_cache_path, meta.filepath_base + ".meta.json")
+                    spec_file = Path(self.variables_doc_cache_path, meta.filepath_base + ".spec.json")
                     spec_file.parent.mkdir(parents=True, exist_ok=True)
 
                     try:

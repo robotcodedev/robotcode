@@ -1321,6 +1321,7 @@ class Namespace:
                             e
                             for e in self._libraries.values()
                             if e.library_doc.source == entry.library_doc.source
+                            and e.library_doc.member_name == entry.library_doc.member_name
                             and e.alias == entry.alias
                             and e.args == entry.args
                         ]

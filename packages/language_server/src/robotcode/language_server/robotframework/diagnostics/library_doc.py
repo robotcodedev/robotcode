@@ -835,6 +835,7 @@ class ModuleSpec:
     name: str
     origin: Optional[str]
     submodule_search_locations: Optional[List[str]]
+    member_name: Optional[str]
 
 
 class LibraryType(Enum):
@@ -866,6 +867,7 @@ class LibraryDoc:
     _keywords: KeywordStore = field(default_factory=KeywordStore, compare=False)
     types: List[TypeDoc] = field(default_factory=list)
     module_spec: Optional[ModuleSpec] = None
+    member_name: Optional[str] = None
     errors: Optional[List[Error]] = field(default=None, compare=False)
     python_path: Optional[List[str]] = None
     stdout: Optional[str] = field(default=None, compare=False)
@@ -1149,6 +1151,7 @@ def get_module_spec(module_name: str) -> Optional[ModuleSpec]:
     import importlib.util
 
     result = None
+    member_name: Optional[str] = None
     while result is None:
         try:
             result = importlib.util.find_spec(module_name)
@@ -1160,7 +1163,9 @@ def get_module_spec(module_name: str) -> Optional[ModuleSpec]:
             splitted = module_name.rsplit(".", 1)
             if len(splitted) <= 1:
                 break
-            module_name = splitted[0]
+            module_name, m = splitted
+            if m:
+                member_name = m + "." + member_name if m and member_name is not None else m
 
     if result is not None:
         return ModuleSpec(  # type: ignore
@@ -1169,6 +1174,7 @@ def get_module_spec(module_name: str) -> Optional[ModuleSpec]:
             submodule_search_locations=list(result.submodule_search_locations)
             if result.submodule_search_locations
             else None,
+            member_name=member_name,
         )
     return None
 
@@ -1651,6 +1657,7 @@ def get_library_doc(
             version=str(lib.version) if lib is not None else "",
             scope=str(lib.scope) if lib is not None else ROBOT_DEFAULT_SCOPE,
             doc_format=(str(lib.doc_format) or ROBOT_DOC_FORMAT) if lib is not None else ROBOT_DOC_FORMAT,
+            member_name=module_spec.member_name if module_spec is not None else None,
         )
 
         if lib is not None:
