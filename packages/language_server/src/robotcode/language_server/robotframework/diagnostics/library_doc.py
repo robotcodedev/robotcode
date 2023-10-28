@@ -1376,8 +1376,8 @@ def resolve_robot_variables(
     result: Variables = _get_default_variables().copy()
 
     for k, v in {
-        "${CURDIR}": str(Path(base_dir).resolve()),
-        "${EXECDIR}": str(Path(working_dir).resolve()),
+        "${CURDIR}": str(Path(base_dir).absolute()),
+        "${EXECDIR}": str(Path(working_dir).absolute()),
     }.items():
         result[k] = v
 
