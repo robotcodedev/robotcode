@@ -256,7 +256,7 @@ class Collector(SuiteVisitor):
         self._collected[-1][suite.name] = True
         self._collected.append(NormalizedDict(ignore="_"))
         try:
-            absolute_path = Path(suite.source).absolute() if suite.source else None
+            absolute_path = Path(suite.source).resolve() if suite.source else None
             item = TestItem(
                 type="suite",
                 id=f"{absolute_path or ''};{suite.longname}",
@@ -309,7 +309,7 @@ class Collector(SuiteVisitor):
         if self._current.children is None:
             self._current.children = []
         try:
-            absolute_path = Path(test.source).absolute() if test.source is not None else None
+            absolute_path = Path(test.source).resolve() if test.source is not None else None
             item = TestItem(
                 type="test",
                 id=f"{absolute_path or ''};{test.longname};{test.lineno}",
@@ -386,7 +386,7 @@ def build_diagnostics(messages: List[Message]) -> Dict[str, List[Diagnostic]]:
         line: Optional[int] = None,
         text: Optional[str] = None,
     ) -> None:
-        source_uri = str(Uri.from_path(Path(source_uri).absolute() if source_uri else Path.cwd()))
+        source_uri = str(Uri.from_path(Path(source_uri).resolve() if source_uri else Path.cwd()))
 
         if source_uri not in result:
             result[source_uri] = []

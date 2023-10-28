@@ -190,7 +190,7 @@ class _LibrariesEntry(_ImportEntry):
                         self._lib_doc.module_spec is not None
                         and self._lib_doc.module_spec.submodule_search_locations is not None
                         and any(
-                            path_is_relative_to(path, Path(e).absolute())
+                            path_is_relative_to(path, Path(e).resolve())
                             for e in self._lib_doc.module_spec.submodule_search_locations
                         )
                     )
@@ -204,7 +204,7 @@ class _LibrariesEntry(_ImportEntry):
                         self._lib_doc.module_spec is None
                         and not self._lib_doc.source
                         and self._lib_doc.python_path
-                        and any(path_is_relative_to(path, Path(e).absolute()) for e in self._lib_doc.python_path)
+                        and any(path_is_relative_to(path, Path(e).resolve()) for e in self._lib_doc.python_path)
                     )
                 ):
                     await self._invalidate()
@@ -230,14 +230,14 @@ class _LibrariesEntry(_ImportEntry):
                 await self.parent.parent_protocol.workspace.add_file_watchers(
                     self.parent.did_change_watched_files,
                     [
-                        str(Path(location).absolute().joinpath("**"))
+                        str(Path(location).resolve().joinpath("**"))
                         for location in self._lib_doc.module_spec.submodule_search_locations
                     ],
                 )
             )
 
             if source_or_origin is not None and Path(source_or_origin).parent in [
-                Path(loc).absolute() for loc in self._lib_doc.module_spec.submodule_search_locations
+                Path(loc).resolve() for loc in self._lib_doc.module_spec.submodule_search_locations
             ]:
                 return
 
@@ -315,7 +315,7 @@ class _ResourcesEntry(_ImportEntry):
                 path = uri.to_path()
                 if (
                     self._document is not None
-                    and (path.absolute() == self._document.uri.to_path().absolute())
+                    and (path.resolve() == self._document.uri.to_path().resolve())
                     or self._document is None
                 ):
                     await self._invalidate()
@@ -423,11 +423,7 @@ class _VariablesEntry(_ImportEntry):
                     continue
 
                 path = uri.to_path()
-                if (
-                    self._lib_doc.source
-                    and path.exists()
-                    and path.absolute().samefile(Path(self._lib_doc.source).absolute())
-                ):
+                if self._lib_doc.source and path.exists() and path.samefile(Path(self._lib_doc.source)):
                     await self._invalidate()
 
                     return change.type
@@ -859,14 +855,14 @@ class ImportsManager:
                     return None, import_name
 
                 if result.origin is not None:
-                    result.mtimes = {result.origin: Path(result.origin).absolute().stat().st_mtime_ns}
+                    result.mtimes = {result.origin: Path(result.origin).stat().st_mtime_ns}
 
                 if result.submodule_search_locations:
                     if result.mtimes is None:
                         result.mtimes = {}
                     result.mtimes.update(
                         {
-                            str(f): f.absolute().stat().st_mtime_ns
+                            str(f): f.stat().st_mtime_ns
                             for f in itertools.chain(
                                 *(iter_files(loc, "**/*.py") for loc in result.submodule_search_locations)
                             )
@@ -928,14 +924,14 @@ class ImportsManager:
                     return None, import_name
 
                 if result.origin is not None:
-                    result.mtimes = {result.origin: Path(result.origin).absolute().stat().st_mtime_ns}
+                    result.mtimes = {result.origin: Path(result.origin).stat().st_mtime_ns}
 
                 if result.submodule_search_locations:
                     if result.mtimes is None:
                         result.mtimes = {}
                     result.mtimes.update(
                         {
-                            str(f): f.absolute().stat().st_mtime_ns
+                            str(f): f.stat().st_mtime_ns
                             for f in itertools.chain(
                                 *(iter_files(loc, "**/*.py") for loc in result.submodule_search_locations)
                             )
@@ -1309,7 +1305,7 @@ class ImportsManager:
         async def _get_document() -> TextDocument:
             self._logger.debug(lambda: f"Load resource {name} from source {source}")
 
-            source_path = Path(source).absolute()
+            source_path = Path(source).resolve()
             extension = source_path.suffix
             if extension.lower() not in RESOURCE_EXTENSIONS:
                 raise ImportError(

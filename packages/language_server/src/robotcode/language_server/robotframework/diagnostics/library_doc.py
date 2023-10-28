@@ -1327,7 +1327,7 @@ def _get_default_variables() -> Any:
     if __default_variables is None:
         __default_variables = Variables()
         for k, v in {
-            "${TEMPDIR}": str(Path(tempfile.gettempdir()).absolute()),
+            "${TEMPDIR}": str(Path(tempfile.gettempdir()).resolve()),
             "${/}": os.sep,
             "${:}": os.pathsep,
             "${\\n}": os.linesep,
@@ -1376,8 +1376,8 @@ def resolve_robot_variables(
     result: Variables = _get_default_variables().copy()
 
     for k, v in {
-        "${CURDIR}": str(Path(base_dir).absolute()),
-        "${EXECDIR}": str(Path(working_dir).absolute()),
+        "${CURDIR}": str(Path(base_dir).resolve()),
+        "${EXECDIR}": str(Path(working_dir).resolve()),
     }.items():
         result[k] = v
 
@@ -2207,9 +2207,11 @@ def complete_library_import(
     if name is None or (is_file_like(name) and (name.endswith(("/", os.sep)))):
         name_path = Path(name if name else base_dir)
         if name_path.is_absolute():
-            path = name_path.absolute()
+            path = name_path
         else:
-            path = Path(base_dir, name if name else base_dir).absolute()
+            path = Path(base_dir, name) if name else Path(base_dir)
+
+        path = path.resolve()
 
         if path.exists() and path.is_dir():
             result += [
@@ -2270,9 +2272,9 @@ def complete_resource_import(
     if name is None or name.startswith((".", "/", os.sep)):
         name_path = Path(name if name else base_dir)
         if name_path.is_absolute():
-            path = name_path.absolute()
+            path = name_path.resolve()
         else:
-            path = Path(base_dir, name if name else base_dir).absolute()
+            path = Path(base_dir, name if name else base_dir).resolve()
 
         if path.exists() and (path.is_dir()):
             result += [
@@ -2366,9 +2368,9 @@ def complete_variables_import(
     if name is None or name.startswith((".", "/", os.sep)):
         name_path = Path(name if name else base_dir)
         if name_path.is_absolute():
-            path = name_path.absolute()
+            path = name_path.resolve()
         else:
-            path = Path(base_dir, name if name else base_dir).absolute()
+            path = Path(base_dir, name if name else base_dir).resolve()
 
         if path.exists() and (path.is_dir()):
             result += [
