@@ -2,6 +2,12 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.62.2 (2023-10-28)
+
+### Fix
+
+- **langserver**: resolving of ${EXECDIR} and ${CURDIR} corrected
+
 ## v0.62.1 (2023-10-28)
 
 ### Fix
