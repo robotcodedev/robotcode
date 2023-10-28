@@ -2,6 +2,12 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.62.1 (2023-10-28)
+
+### Fix
+
+- **langserver**: single resource file with different relative paths is not seen as same file
+
 ## v0.62.0 (2023-10-27)
 
 ### Feat
