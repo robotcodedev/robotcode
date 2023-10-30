@@ -283,7 +283,7 @@
             "punctuation.definition.variable.end.robotframework"
           ],
           "escape": [
-            "string.unquoted.character.escape.robotframework"
+            "constant.character.escape.robotframework"
           ],
           "namespace": [
             "entity.other.namespace.robotframework"

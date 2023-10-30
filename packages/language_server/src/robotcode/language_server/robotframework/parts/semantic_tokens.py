@@ -248,7 +248,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         return cls.__mapping
 
     ESCAPE_REGEX = re.compile(
-        r"(?P<t>[^\\]+)|(?P<x>\\([^xuU]|x[0-0a-f]{2}|u[0-9a-f]{4}|U[0-9a-f]{8}){0,1})", re.MULTILINE | re.DOTALL
+        r"(?P<t>[^\\]+)|(?P<x>\\(?:[\\nrt]|x[0-9A-Fa-f]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}))|(?P<e>\\(?:[^\\nrt\\xuU]|[\\xuU][^0-9a-fA-F]))",
+        re.MULTILINE | re.DOTALL,
     )
     BDD_TOKEN_REGEX = re.compile(r"^(Given|When|Then|And|But)\s", flags=re.IGNORECASE)
 
@@ -324,7 +325,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 for g in cls.ESCAPE_REGEX.finditer(token.value):
                     yield SemTokenInfo.from_token(
                         token,
-                        sem_type if g.group("x") is None or g.end() - g.start() == 1 else RobotSemTokenTypes.ESCAPE,
+                        sem_type if g.group("x") is None else RobotSemTokenTypes.ESCAPE,
                         sem_mod,
                         col_offset + g.start(),
                         g.end() - g.start(),
@@ -433,7 +434,20 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 else:
                     yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset + kw_index, len(kw))
             elif token.type == RobotToken.NAME and isinstance(node, (LibraryImport, ResourceImport, VariablesImport)):
-                yield SemTokenInfo.from_token(token, RobotSemTokenTypes.NAMESPACE, sem_mod, col_offset, length)
+                if "\\" in token.value:
+                    if col_offset is None:
+                        col_offset = token.col_offset
+
+                    for g in cls.ESCAPE_REGEX.finditer(token.value):
+                        yield SemTokenInfo.from_token(
+                            token,
+                            RobotSemTokenTypes.NAMESPACE if g.group("x") is None else RobotSemTokenTypes.ESCAPE,
+                            sem_mod,
+                            col_offset + g.start(),
+                            g.end() - g.start(),
+                        )
+                else:
+                    yield SemTokenInfo.from_token(token, RobotSemTokenTypes.NAMESPACE, sem_mod, col_offset, length)
             elif get_robot_version() >= (5, 0) and token.type == RobotToken.OPTION:
                 from robot.parsing.model.statements import ExceptHeader, WhileHeader
 
@@ -479,10 +493,14 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         builtin_library_doc: Optional[LibraryDoc],
     ) -> AsyncIterator[SemTokenInfo]:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Arguments, Variable
+        from robot.parsing.model.statements import Arguments, LibraryImport, ResourceImport, Variable, VariablesImport
         from robot.utils.escaping import split_from_equals
 
-        if token.type in {RobotToken.ARGUMENT, RobotToken.TESTCASE_NAME, RobotToken.KEYWORD_NAME}:
+        if (
+            token.type in {RobotToken.ARGUMENT, RobotToken.TESTCASE_NAME, RobotToken.KEYWORD_NAME}
+            or token.type == RobotToken.NAME
+            and isinstance(node, (VariablesImport, LibraryImport, ResourceImport))
+        ):
             if (
                 isinstance(node, Variable) and token.type == RobotToken.ARGUMENT and node.name and node.name[0] == "&"
             ) or (isinstance(node, Arguments)):
