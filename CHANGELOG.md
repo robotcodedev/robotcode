@@ -2,6 +2,13 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.62.3 (2023-10-31)
+
+### Fix
+
+- **langserver**: correct handling of imports containing backslashes, in RobotFramework you have to escape them
+- **langserver**: correction of escaped characters and variables highlighting in import names
+
 ## v0.62.2 (2023-10-28)
 
 ### Fix

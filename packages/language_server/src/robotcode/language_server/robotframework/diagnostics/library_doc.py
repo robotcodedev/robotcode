@@ -2034,13 +2034,13 @@ def get_variables_doc(
                 # TODO: add type information of the value including dict key names and member names
                 libdoc.variables = [
                     ImportedVariableDefinition(
-                        1,
-                        0,
-                        1,
-                        0,
-                        source or (module_spec.origin if module_spec is not None else None) or "",
-                        name,
-                        None,
+                        line_no=1,
+                        col_offset=0,
+                        end_line_no=1,
+                        end_col_offset=0,
+                        source=source or (module_spec.origin if module_spec is not None else None) or "",
+                        name=name,
+                        name_token=None,
                         value=NativeValue(value)
                         if value is None or isinstance(value, (int, float, bool, str))
                         else None,
