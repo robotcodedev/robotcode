@@ -1520,16 +1520,36 @@ class CompletionCollector(ModelHelperMixin):
             if text_before_position != "" and all(c == "." for c in text_before_position):
                 return None
 
+            if "/" in name_token.value or os.sep in name_token.value:
+                part_splitter = ["/", os.sep]
+            else:
+                part_splitter = ["."]
+
+            reversed_text_before_position = list(reversed(text_before_position))
             last_separator_index = (
                 len(text_before_position)
-                - next((i for i, c in enumerate(reversed(text_before_position)) if c in [".", "/", os.sep]), -1)
+                - next(
+                    (
+                        i
+                        for i, c in enumerate(reversed_text_before_position)
+                        if c in part_splitter
+                        and (
+                            c != "\\"
+                            or (
+                                c == "\\"
+                                and len(reversed_text_before_position) > i + 1
+                                and reversed_text_before_position[i + 1] == "\\"
+                            )
+                        )
+                    ),
+                    -1,
+                )
                 - 1
             )
 
             first_part = (
                 text_before_position[
-                    : last_separator_index
-                    + (1 if text_before_position[last_separator_index] in [".", "/", os.sep] else 0)
+                    : last_separator_index + (1 if text_before_position[last_separator_index] in part_splitter else 0)
                 ]
                 if last_separator_index < len(text_before_position)
                 else None
@@ -1693,9 +1713,25 @@ class CompletionCollector(ModelHelperMixin):
         if text_before_position != "" and all(c == "." for c in text_before_position):
             return None
 
+        reversed_text_before_position = list(reversed(text_before_position))
         last_separator_index = (
             len(text_before_position)
-            - next((i for i, c in enumerate(reversed(text_before_position)) if c in ["/", os.sep]), -1)
+            - next(
+                (
+                    i
+                    for i, c in enumerate(reversed_text_before_position)
+                    if c in ["/", os.sep]
+                    and (
+                        c != "\\"
+                        or (
+                            c == "\\"
+                            and len(reversed_text_before_position) > i + 1
+                            and reversed_text_before_position[i + 1] == "\\"
+                        )
+                    )
+                ),
+                -1,
+            )
             - 1
         )
 
@@ -1795,9 +1831,30 @@ class CompletionCollector(ModelHelperMixin):
             if text_before_position != "" and all(c == "." for c in text_before_position):
                 return None
 
+            if "/" in name_token.value or os.sep in name_token.value:
+                part_splitter = ["/", os.sep]
+            else:
+                part_splitter = ["."]
+
+            reversed_text_before_position = list(reversed(text_before_position))
             last_separator_index = (
                 len(text_before_position)
-                - next((i for i, c in enumerate(reversed(text_before_position)) if c in ["/", os.sep]), -1)
+                - next(
+                    (
+                        i
+                        for i, c in enumerate(reversed_text_before_position)
+                        if c in part_splitter
+                        and (
+                            c != "\\"
+                            or (
+                                c == "\\"
+                                and len(reversed_text_before_position) > i + 1
+                                and reversed_text_before_position[i + 1] == "\\"
+                            )
+                        )
+                    ),
+                    -1,
+                )
                 - 1
             )
 

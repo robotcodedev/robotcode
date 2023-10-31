@@ -1454,7 +1454,7 @@ def _find_library_internal(
     robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
     try:
-        name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=False)
+        name = robot_variables.replace_string(name, ignore_errors=False)
     except DataError as error:
         raise DataError(f"Replacing variables from setting 'Library' failed: {error}")
 
@@ -1518,6 +1518,7 @@ def get_library_doc(
 ) -> LibraryDoc:
     import robot.running.testlibraries
     from robot.libdocpkg.robotbuilder import KeywordDocBuilder
+    from robot.libraries import STDLIBS
     from robot.output import LOGGER
     from robot.output.loggerhelper import AbstractLogger
     from robot.running.outputcapture import OutputCapturer
@@ -1604,7 +1605,14 @@ def get_library_doc(
                 python_path=sys.path,
             )
 
-        library_name = name
+        if name in STDLIBS and import_name.startswith(ROBOT_LIBRARY_PACKAGE + "."):
+            library_name = name
+        else:
+            if import_name.startswith(ROBOT_LIBRARY_PACKAGE + "."):
+                library_name = import_name[len(ROBOT_LIBRARY_PACKAGE + ".") :]
+            else:
+                library_name = import_name
+
         library_name_path = Path(import_name)
         if library_name_path.exists():
             library_name = library_name_path.stem
@@ -1821,7 +1829,7 @@ def _find_variables_internal(
     robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
     try:
-        name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=False)
+        name = robot_variables.replace_string(name, ignore_errors=False)
     except DataError as error:
         raise DataError(f"Replacing variables from setting 'Variables' failed: {error}")
 
@@ -2094,7 +2102,7 @@ def find_file(
 
     robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
     try:
-        name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=False)
+        name = robot_variables.replace_string(name, ignore_errors=False)
     except DataError as error:
         raise DataError(f"Replacing variables from setting '{file_type}' failed: {error}")
 
@@ -2118,7 +2126,11 @@ class CompleteResult(NamedTuple):
 
 
 def is_file_like(name: Optional[str]) -> bool:
-    return name is not None and (name.startswith((".", "/", os.sep)) or "/" in name or os.sep in name)
+    if name is None:
+        return False
+
+    base, filename = os.path.split(name)
+    return name.startswith(".") or bool(base) and filename != name
 
 
 def iter_module_names(name: Optional[str] = None) -> Iterator[str]:
@@ -2154,13 +2166,18 @@ def iter_modules_from_python_path(
 
     path = path.replace(".", os.sep) if path is not None and not path.startswith((".", "/", os.sep)) else path
 
+    needs_init = False
     if path is None:
         paths = sys.path
     else:
         paths = [str(Path(s, path)) for s in sys.path]
+        needs_init = True
 
     for e in [Path(p) for p in set(paths)]:
         if e.is_dir():
+            if needs_init and not (e / "__init__.py").is_file():
+                continue
+
             for f in e.iterdir():
                 if not f.name.startswith(("_", ".")) and (
                     f.is_file()
@@ -2199,12 +2216,14 @@ def complete_library_import(
     if name is not None:
         robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
-        name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
+        name = robot_variables.replace_string(name, ignore_errors=True)
 
-    if name is None or not name.startswith((".", "/", os.sep)):
+    file_like = is_file_like(name)
+
+    if name is None or not file_like:
         result += list(iter_modules_from_python_path(name))
 
-    if name is None or (is_file_like(name) and (name.endswith(("/", os.sep)))):
+    if name is None or file_like:
         name_path = Path(name if name else base_dir)
         if name_path.is_absolute():
             path = name_path
@@ -2264,7 +2283,7 @@ def complete_resource_import(
     if name is not None:
         robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
-        name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
+        name = robot_variables.replace_string(name, ignore_errors=True)
 
     if name is None or not name.startswith(".") and not name.startswith("/") and not name.startswith(os.sep):
         result += list(iter_resources_from_python_path(name))
@@ -2299,14 +2318,18 @@ def iter_variables_from_python_path(
 
         path = path.replace(".", os.sep) if path is not None and not path.startswith((".", "/", os.sep)) else path
 
+        needs_init = False
         if path is None:
             paths = sys.path
         else:
             paths = [str(Path(s, path)) for s in sys.path]
+            needs_init = True
 
         for e in [Path(p) for p in set(paths)]:
             if e.is_dir():
                 for f in e.iterdir():
+                    if needs_init and not (e / "__init__.py").is_file():
+                        continue
                     if not f.name.startswith(("_", ".")) and (
                         f.is_file()
                         and f.suffix in ALLOWED_VARIABLES_FILE_EXTENSIONS
@@ -2360,12 +2383,14 @@ def complete_variables_import(
     if name is not None:
         robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
-        name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=True)
+        name = robot_variables.replace_string(name, ignore_errors=True)
 
-    if name is None or not name.startswith(".") and not name.startswith("/") and not name.startswith(os.sep):
+    file_like = is_file_like(name)
+
+    if name is None or not file_like:
         result += list(iter_variables_from_python_path(name))
 
-    if name is None or name.startswith((".", "/", os.sep)):
+    if name is None or file_like:
         name_path = Path(name if name else base_dir)
         if name_path.is_absolute():
             path = name_path.resolve()

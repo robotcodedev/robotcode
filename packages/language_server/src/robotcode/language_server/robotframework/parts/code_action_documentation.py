@@ -412,9 +412,9 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
             variables=await namespace.get_resolvable_variables(),
         )
         try:
-            name = robot_variables.replace_string(name.replace("\\", "\\\\"), ignore_errors=False)
+            name = robot_variables.replace_string(name, ignore_errors=False)
 
-            args = tuple(robot_variables.replace_string(v.replace("\\", "\\\\"), ignore_errors=False) for v in args)
+            args = tuple(robot_variables.replace_string(v, ignore_errors=False) for v in args)
 
         except (SystemExit, KeyboardInterrupt):
             raise
