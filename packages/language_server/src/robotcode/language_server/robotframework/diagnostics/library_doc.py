@@ -1759,7 +1759,7 @@ def get_library_doc(
                     from robot.libdocpkg.datatypes import TypeDoc as RobotTypeDoc
                     from robot.running.arguments.argumentspec import TypeInfo
 
-                    def _yield_type_info(info: TypeInfo) -> TypeInfo:
+                    def _yield_type_info(info: TypeInfo) -> Iterable[TypeInfo]:
                         if not info.is_union:
                             yield info
                         for nested in info.nested:

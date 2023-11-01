@@ -307,6 +307,12 @@ export class TestControllerManager {
     folder: vscode.WorkspaceFolder,
     profiles?: string[],
   ): Promise<RobotCodeProfilesResult> {
+    if (!(await this.languageClientsManager.isValidRobotEnvironmentInFolder(folder))) {
+      return {
+        profiles: [],
+        messages: [],
+      } as RobotCodeProfilesResult;
+    }
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
     const paths = config.get<string[] | undefined>("robot.paths", undefined);
 
@@ -523,6 +529,10 @@ export class TestControllerManager {
     stdioData?: string,
     token?: vscode.CancellationToken,
   ): Promise<RobotCodeDiscoverResult> {
+    if (!(await this.languageClientsManager.isValidRobotEnvironmentInFolder(folder))) {
+      return {};
+    }
+
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
     const profiles = config.get<string[]>("profiles", []);
     const pythonPath = config.get<string[]>("robot.pythonPath", []);

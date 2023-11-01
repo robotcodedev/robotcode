@@ -21,6 +21,11 @@ if __name__ == "__main__":
         os.fspath(pathlib.Path(__file__).parent.parent.parent / "libs"),
         os.getenv("LS_IMPORT_STRATEGY", "useBundled"),
     )
+    try:
+        __import__("robot")
+    except ModuleNotFoundError:
+        print("Robot Framework not installed", file=sys.stderr)
+        sys.exit(1)
 
     from robotcode.robot.utils import get_robot_version
 
