@@ -11,6 +11,7 @@ from robotcode.jsonrpc2.protocol import JsonRPCErrorException, JsonRPCErrors, Pr
 from robotcode.language_server.common.parts.document_symbols import symbol_information_label
 from robotcode.language_server.common.protocol import LanguageDefinition, LanguageServerProtocol
 from robotcode.robot.config.model import RobotBaseProfile
+from robotcode.robot.utils import get_robot_version
 
 from ..__version__ import __version__
 from .configuration import RobotConfig
@@ -37,7 +38,6 @@ from .parts.robot_workspace import RobotWorkspaceProtocolPart
 from .parts.selection_range import RobotSelectionRangeProtocolPart
 from .parts.semantic_tokens import RobotSemanticTokenProtocolPart
 from .parts.signature_help import RobotSignatureHelpProtocolPart
-from .utils.version import get_robot_version
 
 if TYPE_CHECKING:
     from .server import RobotLanguageServer

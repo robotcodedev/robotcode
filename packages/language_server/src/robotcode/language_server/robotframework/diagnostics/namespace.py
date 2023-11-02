@@ -41,20 +41,20 @@ from robotcode.core.lsp.types import (
     Range,
 )
 from robotcode.core.uri import Uri
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.languages import Languages
-from robotcode.language_server.robotframework.utils.ast_utils import (
+from robotcode.robot.utils import get_robot_version
+
+from ...common.text_document import TextDocument
+from ..languages import Languages
+from ..utils.ast_utils import (
     Token,
     range_from_node,
     range_from_token,
     strip_variable_token,
     tokenize_variables,
 )
-from robotcode.language_server.robotframework.utils.async_ast import Visitor
-from robotcode.language_server.robotframework.utils.match import eq_namespace
-from robotcode.language_server.robotframework.utils.variables import BUILTIN_VARIABLES
-from robotcode.language_server.robotframework.utils.version import get_robot_version
-
+from ..utils.async_ast import Visitor
+from ..utils.match import eq_namespace
+from ..utils.variables import BUILTIN_VARIABLES
 from .entities import (
     ArgumentDefinition,
     BuiltInVariableDefinition,

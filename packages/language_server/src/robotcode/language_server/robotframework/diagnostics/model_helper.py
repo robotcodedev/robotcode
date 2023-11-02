@@ -18,22 +18,9 @@ from typing import (
 )
 
 from robotcode.core.lsp.types import Position
-from robotcode.language_server.robotframework.diagnostics.entities import (
-    LibraryEntry,
-    VariableDefinition,
-    VariableNotFoundDefinition,
-)
-from robotcode.language_server.robotframework.diagnostics.library_doc import (
-    ArgumentInfo,
-    KeywordArgumentKind,
-    KeywordDoc,
-    LibraryDoc,
-)
-from robotcode.language_server.robotframework.diagnostics.namespace import (
-    DEFAULT_BDD_PREFIXES,
-    Namespace,
-)
-from robotcode.language_server.robotframework.utils.ast_utils import (
+from robotcode.robot.utils import get_robot_version
+
+from ..utils.ast_utils import (
     Token,
     iter_over_keyword_names_and_owners,
     range_from_token,
@@ -42,7 +29,21 @@ from robotcode.language_server.robotframework.utils.ast_utils import (
     whitespace_at_begin_of_token,
     whitespace_from_begin_of_token,
 )
-from robotcode.language_server.robotframework.utils.version import get_robot_version
+from .entities import (
+    LibraryEntry,
+    VariableDefinition,
+    VariableNotFoundDefinition,
+)
+from .library_doc import (
+    ArgumentInfo,
+    KeywordArgumentKind,
+    KeywordDoc,
+    LibraryDoc,
+)
+from .namespace import (
+    DEFAULT_BDD_PREFIXES,
+    Namespace,
+)
 
 
 class ModelHelperMixin:

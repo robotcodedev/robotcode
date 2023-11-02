@@ -15,12 +15,12 @@ from robotcode.core.lsp.types import (
     TextEdit,
 )
 from robotcode.core.utils.version import create_version_from_str
+from robotcode.robot.utils import get_robot_version
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
 from ..configuration import RoboTidyConfig
 from ..diagnostics.model_helper import ModelHelperMixin
-from ..utils.version import get_robot_version
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

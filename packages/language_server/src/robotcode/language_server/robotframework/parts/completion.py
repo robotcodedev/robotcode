@@ -39,6 +39,7 @@ from robotcode.core.lsp.types import (
     Range,
     TextEdit,
 )
+from robotcode.robot.utils import get_robot_version
 
 from ...common.decorators import language_id, trigger_characters
 from ...common.text_document import TextDocument
@@ -57,7 +58,6 @@ from ..utils.ast_utils import (
     whitespace_at_begin_of_token,
     whitespace_from_begin_of_token,
 )
-from ..utils.version import get_robot_version
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

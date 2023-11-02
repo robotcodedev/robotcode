@@ -32,6 +32,7 @@ from robotcode.core.lsp.types import (
     SemanticTokensPartialResult,
     SemanticTokenTypes,
 )
+from robotcode.robot.utils import get_robot_version
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument, range_to_utf16
@@ -47,7 +48,6 @@ from ..diagnostics.model_helper import ModelHelperMixin
 from ..diagnostics.namespace import DEFAULT_BDD_PREFIXES, Namespace
 from ..utils import async_ast
 from ..utils.ast_utils import HasTokens, Token, iter_over_keyword_names_and_owners, token_in_range
-from ..utils.version import get_robot_version
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

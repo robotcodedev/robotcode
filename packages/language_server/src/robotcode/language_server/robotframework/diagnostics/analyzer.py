@@ -19,6 +19,7 @@ from robotcode.core.lsp.types import (
     Range,
 )
 from robotcode.core.uri import Uri
+from robotcode.robot.utils import get_robot_version
 
 from ..utils.ast_utils import (
     HasTokens,
@@ -32,7 +33,6 @@ from ..utils.ast_utils import (
     tokenize_variables,
 )
 from ..utils.async_ast import AsyncVisitor
-from ..utils.version import get_robot_version
 from .entities import (
     ArgumentDefinition,
     CommandLineVariableDefinition,

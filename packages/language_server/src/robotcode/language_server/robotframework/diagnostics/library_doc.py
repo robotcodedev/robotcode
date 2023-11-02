@@ -33,7 +33,12 @@ from typing import (
 )
 
 from robotcode.core.lsp.types import Position, Range
-from robotcode.language_server.robotframework.utils.ast_utils import (
+from robotcode.language_server.robotframework.utils.markdownformatter import (
+    MarkDownFormatter,
+)
+from robotcode.robot.utils import get_robot_version
+
+from ..utils.ast_utils import (
     HasError,
     HasErrors,
     Token,
@@ -41,12 +46,7 @@ from robotcode.language_server.robotframework.utils.ast_utils import (
     range_from_token,
     strip_variable_token,
 )
-from robotcode.language_server.robotframework.utils.markdownformatter import (
-    MarkDownFormatter,
-)
-from robotcode.language_server.robotframework.utils.match import normalize, normalize_namespace
-from robotcode.language_server.robotframework.utils.version import get_robot_version
-
+from ..utils.match import normalize, normalize_namespace
 from .entities import (
     ArgumentDefinition,
     ImportedVariableDefinition,

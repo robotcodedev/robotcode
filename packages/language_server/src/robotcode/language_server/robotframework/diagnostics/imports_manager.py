@@ -40,7 +40,7 @@ from robotcode.language_server.common.parts.workspace import FileWatcherEntry, W
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import CacheSaveLocation, RobotCodeConfig
 from robotcode.language_server.robotframework.utils.robot_path import find_file_ex
-from robotcode.language_server.robotframework.utils.version import get_robot_version, get_robot_version_str
+from robotcode.robot.utils import get_robot_version, get_robot_version_str
 
 from ...__version__ import __version__
 from .entities import CommandLineVariableDefinition, VariableDefinition
