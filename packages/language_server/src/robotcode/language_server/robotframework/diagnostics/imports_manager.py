@@ -1360,7 +1360,7 @@ class ImportsManager:
 
     async def complete_library_import(
         self, name: Optional[str], base_dir: str = ".", variables: Optional[Dict[str, Any]] = None
-    ) -> Optional[List[CompleteResult]]:
+    ) -> List[CompleteResult]:
         return complete_library_import(
             name,
             str(self.folder.to_path()),

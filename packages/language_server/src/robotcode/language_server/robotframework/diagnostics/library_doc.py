@@ -2155,44 +2155,33 @@ def iter_module_names(name: Optional[str] = None) -> Iterator[str]:
             yield e.name
 
 
-NOT_WANTED_FILE_EXTENSIONS = [".dist-info"]
+NOT_WANTED_DIR_EXTENSIONS = [".dist-info"]
 
 
 def iter_modules_from_python_path(
     path: Optional[str] = None,
 ) -> Iterator[CompleteResult]:
-    allow_modules = True if not path or not ("/" in path or os.sep in path) else False
-    allow_files = True if not path or "/" in path or os.sep in path else False
-
     path = path.replace(".", os.sep) if path is not None and not path.startswith((".", "/", os.sep)) else path
 
-    needs_init = False
     if path is None:
         paths = sys.path
     else:
         paths = [str(Path(s, path)) for s in sys.path]
-        needs_init = True
 
     for e in [Path(p) for p in set(paths)]:
         if e.is_dir():
-            if needs_init and not (e / "__init__.py").is_file():
-                continue
-
             for f in e.iterdir():
                 if not f.name.startswith(("_", ".")) and (
                     f.is_file()
                     and f.suffix in ALLOWED_LIBRARY_FILE_EXTENSIONS
                     or f.is_dir()
-                    and f.suffix not in NOT_WANTED_FILE_EXTENSIONS
+                    and f.suffix not in NOT_WANTED_DIR_EXTENSIONS
                 ):
                     if f.is_dir():
                         yield CompleteResult(f.name, CompleteResultKind.MODULE)
 
                     if f.is_file():
-                        if allow_modules:
-                            yield CompleteResult(f.stem, CompleteResultKind.MODULE)
-                        if allow_files:
-                            yield CompleteResult(f.name, CompleteResultKind.FILE)
+                        yield CompleteResult(f.stem, CompleteResultKind.MODULE)
 
 
 def complete_library_import(
@@ -2201,7 +2190,7 @@ def complete_library_import(
     base_dir: str = ".",
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
-) -> Optional[List[CompleteResult]]:
+) -> List[CompleteResult]:
     _update_env(working_dir)
 
     result: List[CompleteResult] = []
@@ -2225,23 +2214,32 @@ def complete_library_import(
 
     if name is None or file_like:
         name_path = Path(name if name else base_dir)
-        if name_path.is_absolute():
-            path = name_path
+        if name and name_path.is_absolute():
+            paths = [name_path]
         else:
-            path = Path(base_dir, name) if name else Path(base_dir)
-
-        path = path.resolve()
-
-        if path.exists() and path.is_dir():
-            result += [
-                CompleteResult(
-                    str(f.name),
-                    CompleteResultKind.FILE if f.is_file() else CompleteResultKind.FOLDER,
-                )
-                for f in path.iterdir()
-                if not f.name.startswith(("_", "."))
-                and (f.is_dir() or (f.is_file() and f.suffix in ALLOWED_LIBRARY_FILE_EXTENSIONS))
+            paths = [
+                Path(base_dir, name) if name else Path(base_dir),
+                *((Path(s) for s in sys.path) if not name else []),
+                *((Path(s, name) for s in sys.path) if name and not name.startswith(".") else []),
             ]
+
+        for p in paths:
+            path = p.resolve()
+
+            if path.exists() and path.is_dir():
+                result += [
+                    CompleteResult(
+                        str(f.name),
+                        CompleteResultKind.FILE if f.is_file() else CompleteResultKind.FOLDER,
+                    )
+                    for f in path.iterdir()
+                    if not f.name.startswith(("_", "."))
+                    and (
+                        (f.is_file() and f.suffix in ALLOWED_LIBRARY_FILE_EXTENSIONS)
+                        or f.is_dir()
+                        and f.suffix not in NOT_WANTED_DIR_EXTENSIONS
+                    )
+                ]
 
     return list(set(result))
 
@@ -2261,7 +2259,7 @@ def iter_resources_from_python_path(
                     f.is_file()
                     and f.suffix in ALLOWED_RESOURCE_FILE_EXTENSIONS
                     or f.is_dir()
-                    and f.suffix not in NOT_WANTED_FILE_EXTENSIONS
+                    and f.suffix not in NOT_WANTED_DIR_EXTENSIONS
                 ):
                     yield CompleteResult(
                         f.name,
@@ -2309,66 +2307,6 @@ def complete_resource_import(
     return list(set(result))
 
 
-def iter_variables_from_python_path(
-    path: Optional[str] = None,
-) -> Iterator[CompleteResult]:
-    if get_robot_version() >= (5, 0):
-        allow_modules = True if not path or not ("/" in path or os.sep in path) else False
-        allow_files = True if not path or "/" in path or os.sep in path else False
-
-        path = path.replace(".", os.sep) if path is not None and not path.startswith((".", "/", os.sep)) else path
-
-        needs_init = False
-        if path is None:
-            paths = sys.path
-        else:
-            paths = [str(Path(s, path)) for s in sys.path]
-            needs_init = True
-
-        for e in [Path(p) for p in set(paths)]:
-            if e.is_dir():
-                for f in e.iterdir():
-                    if needs_init and not (e / "__init__.py").is_file():
-                        continue
-                    if not f.name.startswith(("_", ".")) and (
-                        f.is_file()
-                        and f.suffix in ALLOWED_VARIABLES_FILE_EXTENSIONS
-                        or f.is_dir()
-                        and f.suffix not in NOT_WANTED_FILE_EXTENSIONS
-                    ):
-                        if f.is_dir():
-                            yield CompleteResult(f.name, CompleteResultKind.MODULE)
-
-                        if f.is_file():
-                            if allow_modules and f.suffix.lower() not in [
-                                ".yaml",
-                                ".yml",
-                                *[".json" if get_robot_version() >= (6, 1) else []],
-                            ]:
-                                yield CompleteResult(f.stem, CompleteResultKind.VARIABLES_MODULE)
-                            if allow_files:
-                                yield CompleteResult(f.name, CompleteResultKind.VARIABLES)
-    else:
-        if path is None:
-            paths = sys.path
-        else:
-            paths = [str(Path(s, path)) for s in sys.path]
-
-        for e in [Path(p) for p in set(paths)]:
-            if e.is_dir():
-                for f in e.iterdir():
-                    if not f.name.startswith(("_", ".")) and (
-                        f.is_file()
-                        and f.suffix in ALLOWED_VARIABLES_FILE_EXTENSIONS
-                        or f.is_dir()
-                        and f.suffix not in NOT_WANTED_FILE_EXTENSIONS
-                    ):
-                        yield CompleteResult(
-                            f.name,
-                            CompleteResultKind.VARIABLES if f.is_file() else CompleteResultKind.FOLDER,
-                        )
-
-
 def complete_variables_import(
     name: Optional[str],
     working_dir: str = ".",
@@ -2385,28 +2323,39 @@ def complete_variables_import(
 
         name = robot_variables.replace_string(name, ignore_errors=True)
 
-    file_like = is_file_like(name)
+    file_like = get_robot_version() < (5, 0) or is_file_like(name)
 
-    if name is None or not file_like:
-        result += list(iter_variables_from_python_path(name))
+    if get_robot_version() >= (5, 0) and (name is None or not file_like):
+        result += list(iter_modules_from_python_path(name))
 
     if name is None or file_like:
         name_path = Path(name if name else base_dir)
-        if name_path.is_absolute():
-            path = name_path.resolve()
+        if name and name_path.is_absolute():
+            paths = [name_path]
         else:
-            path = Path(base_dir, name if name else base_dir).resolve()
-
-        if path.exists() and (path.is_dir()):
-            result += [
-                CompleteResult(
-                    str(f.name),
-                    CompleteResultKind.VARIABLES if f.is_file() else CompleteResultKind.FOLDER,
-                )
-                for f in path.iterdir()
-                if not f.name.startswith(("_", "."))
-                and (f.is_dir() or (f.is_file() and f.suffix in ALLOWED_VARIABLES_FILE_EXTENSIONS))
+            paths = [
+                Path(base_dir, name) if name else Path(base_dir),
+                *((Path(s) for s in sys.path) if not name else []),
+                *((Path(s, name) for s in sys.path) if name and not name.startswith(".") else []),
             ]
+
+        for p in paths:
+            path = p.resolve()
+
+            if path.exists() and path.is_dir():
+                result += [
+                    CompleteResult(
+                        str(f.name),
+                        CompleteResultKind.FILE if f.is_file() else CompleteResultKind.FOLDER,
+                    )
+                    for f in path.iterdir()
+                    if not f.name.startswith(("_", "."))
+                    and (
+                        (f.is_file() and f.suffix in ALLOWED_VARIABLES_FILE_EXTENSIONS)
+                        or f.is_dir()
+                        and f.suffix not in NOT_WANTED_DIR_EXTENSIONS
+                    )
+                ]
 
     return list(set(result))
 
