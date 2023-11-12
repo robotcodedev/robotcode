@@ -79,7 +79,7 @@ class _HasLoggerEntries:
     __logging_entries__: List[_LoggerEntry]
 
 
-_FUNC_TYPE = Union[Callable[[], logging.Logger], Callable[[], None], staticmethod, None]
+_FUNC_TYPE = Union[Callable[[], logging.Logger], Callable[[], None], None]
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 

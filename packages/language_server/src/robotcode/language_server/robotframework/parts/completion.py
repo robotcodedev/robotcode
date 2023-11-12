@@ -646,31 +646,53 @@ class CompletionCollector(ModelHelperMixin):
         ]
 
     def get_keyword_snipped_text(self, kw: KeywordDoc, in_template: bool) -> str:
-        from robot.variables.search import VariableIterator
+        result = ""
+        after: Optional[str] = None
 
         if not kw.is_embedded:
             return kw.name
 
-        result = ""
-        after: Optional[str] = None
-        for index, (before, variable, after) in enumerate(
-            VariableIterator(kw.name, identifiers="$", ignore_errors=True)
-        ):
-            var_name = variable[2:-1].split(":", 1)[0]
-            result += before
-            result += "${" + str(index + 1) + ":"
-            if in_template:
-                result += "\\${"
+        if get_robot_version() < (7, 0):
+            from robot.variables.search import VariableIterator
 
-            result += var_name
+            for index, (before, variable, after) in enumerate(
+                VariableIterator(kw.name, identifiers="$", ignore_errors=True)
+            ):
+                var_name = variable[2:-1].split(":", 1)[0]
+                result += before
+                result += "${" + str(index + 1) + ":"
+                if in_template:
+                    result += "\\${"
 
-            if in_template:
-                result += "\\}"
+                result += var_name
 
-            result += "}"
+                if in_template:
+                    result += "\\}"
 
-        if after:
-            result += after
+                result += "}"
+
+            if after:
+                result += after
+
+        else:
+            from robot.variables.search import VariableMatches
+
+            for index, match in enumerate(VariableMatches(kw.name, identifiers="$", ignore_errors=True)):
+                var_name = variable[2:-1].split(":", 1)[0]
+                result += match.before
+                result += "${" + str(index + 1) + ":"
+                if in_template:
+                    result += "\\${"
+
+                result += var_name
+
+                if in_template:
+                    result += "\\}"
+
+                result += "}"
+
+            if after:
+                result += match.after
 
         return result
 

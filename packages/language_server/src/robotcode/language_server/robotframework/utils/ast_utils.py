@@ -9,6 +9,7 @@ from typing import (
     List,
     Optional,
     Protocol,
+    Sequence,
     Set,
     Tuple,
     cast,
@@ -16,6 +17,7 @@ from typing import (
 )
 
 from robotcode.core.lsp.types import Position, Range
+from robotcode.robot.utils import get_robot_version
 
 from . import async_ast
 
@@ -53,7 +55,7 @@ class Token(Protocol):
 
 @runtime_checkable
 class HasTokens(Protocol):
-    tokens: Tuple[Token, ...]
+    tokens: Sequence[Token]
 
 
 @runtime_checkable
@@ -163,7 +165,7 @@ def _get_non_data_range_from_node(
         )
 
         if only_start and start_token is not None:
-            end_tokens = tuple(t for t in node.tokens if start_token.lineno == t.lineno)
+            end_tokens: Sequence[Token] = [t for t in node.tokens if start_token.lineno == t.lineno]
         else:
             end_tokens = node.tokens
 
@@ -306,7 +308,11 @@ def tokenize_variables(
     token: Token, identifiers: str = "$@&%", ignore_errors: bool = False, *, extra_types: Optional[Set[str]] = None
 ) -> Iterator[Token]:
     from robot.api.parsing import Token as RobotToken
-    from robot.variables import VariableIterator
+
+    if get_robot_version() < (7, 0):
+        from robot.variables import VariableIterator
+    else:
+        from robot.variables import VariableMatches as VariableIterator
 
     if token.type not in {
         *RobotToken.ALLOW_VARIABLES,
@@ -321,10 +327,28 @@ def tokenize_variables(
     variables = VariableIterator(value, identifiers=identifiers, ignore_errors=ignore_errors)
     if not variables:
         return _tokenize_no_variables(token)
+    if get_robot_version() < (7, 0):
+        return _tokenize_variables_old(token, variables)
     return _tokenize_variables(token, variables)
 
 
-def _tokenize_variables(token: Token, variables: Any) -> Iterator[Token]:
+def _tokenize_variables(token: Token, matches: Any) -> Iterator[Token]:
+    from robot.api.parsing import Token as RobotToken
+
+    lineno = token.lineno
+    col_offset = token.col_offset
+    after = ""
+    for match in matches:
+        if match.before:
+            yield RobotToken(token.type, match.before, lineno, col_offset)
+        yield RobotToken(RobotToken.VARIABLE, match.match, lineno, col_offset + match.start)
+        col_offset += match.end
+        after = match.after
+    if after:
+        yield RobotToken(token.type, after, lineno, col_offset)
+
+
+def _tokenize_variables_old(token: Token, variables: Any) -> Iterator[Token]:
     from robot.api.parsing import Token as RobotToken
 
     lineno = token.lineno

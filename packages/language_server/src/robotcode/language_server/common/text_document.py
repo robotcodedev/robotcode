@@ -286,7 +286,7 @@ class TextDocument:
         except KeyError:
             pass
 
-    def get_data(self, key: Any, default: Optional[_T] = None) -> _T:
+    def get_data(self, key: Any, default: Optional[Any] = None) -> Any:
         return self._data.get(key, default)
 
     def _clear(self) -> None:

@@ -8,6 +8,7 @@ from typing import (
     Awaitable,
     Callable,
     Optional,
+    Sequence,
     Tuple,
     Type,
     cast,
@@ -138,7 +139,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     def _get_signature_help(
         self,
         keyword_doc: KeywordDoc,
-        tokens: Tuple[Token, ...],
+        tokens: Sequence[Token],
         token_at_position: Token,
         position: Position,
     ) -> Optional[SignatureHelp]:

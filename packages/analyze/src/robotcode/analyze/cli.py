@@ -3,7 +3,7 @@ from typing import Tuple, Union
 import click
 from robotcode.analyze.config import AnalyzerConfig
 from robotcode.plugin import Application, pass_application
-from robotcode.robot.config.loader import load_config_from_path
+from robotcode.robot.config.loader import load_config_from_path, load_robot_config_from_path
 from robotcode.robot.config.utils import get_config_files
 
 from .__version__ import __version__
@@ -32,12 +32,18 @@ def analyze(
     config_files, root_folder, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
 
     try:
-        robot_profile = load_config_from_path(
+        analizer_config = load_config_from_path(
             AnalyzerConfig, *config_files, tool_name="robotcode-analyze", robot_toml_tool_name="robotcode-analyze"
         ).evaluated()
+
+        robot_config = (
+            load_robot_config_from_path(*config_files).combine_profiles(*(app.config.profiles or [])).evaluated()
+        )
+
     except (TypeError, ValueError) as e:
         raise click.ClickException(str(e)) from e
 
-    app.print_data(robot_profile)
+    app.print_data(analizer_config)
+    app.print_data(robot_config)
 
     return 0

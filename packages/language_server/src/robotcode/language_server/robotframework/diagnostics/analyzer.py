@@ -914,16 +914,29 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             self.current_testcase_or_keyword_name = None
 
     def _format_template(self, template: str, arguments: Tuple[str, ...]) -> Tuple[str, Tuple[str, ...]]:
-        from robot.variables import VariableIterator
+        if get_robot_version() < (7, 0):
+            from robot.variables import VariableIterator
 
-        variables = VariableIterator(template, identifiers="$")
+            variables = VariableIterator(template, identifiers="$")
+            count = len(variables)
+            if count == 0 or count != len(arguments):
+                return template, arguments
+            temp = []
+            for (before, _, after), arg in zip(variables, arguments):
+                temp.extend([before, arg])
+            temp.append(after)
+            return "".join(temp), ()
+
+        from robot.variables import VariableMatches
+
+        variables = VariableMatches(template, identifiers="$")
         count = len(variables)
         if count == 0 or count != len(arguments):
             return template, arguments
         temp = []
-        for (before, _, after), arg in zip(variables, arguments):
-            temp.extend([before, arg])
-        temp.append(after)
+        for var, arg in zip(variables, arguments):
+            temp.extend([var.before, arg])
+        temp.append(var.after)
         return "".join(temp), ()
 
     async def visit_TemplateArguments(self, node: ast.AST) -> None:  # noqa: N802
@@ -981,22 +994,23 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     message="`Force Tags` is deprecated in favour of new `Test Tags` setting.",
                     severity=DiagnosticSeverity.INFORMATION,
                     tags=[DiagnosticTag.DEPRECATED],
-                    code=Error.DEPRECATED_HYPHEN_TAG,
+                    code=Error.DEPRECATED_FORCE_TAG,
                 )
 
-    async def visit_DefaultTags(self, node: ast.AST) -> None:  # noqa: N802
+    async def visit_TestTags(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import ForceTags
+        from robot.parsing.model.statements import TestTags
 
         if get_robot_version() >= (6, 0):
-            tag = cast(ForceTags, node).get_token(RobotToken.DEFAULT_TAGS)
-            self.append_diagnostics(
-                range=range_from_node_or_token(node, tag),
-                message="`Force Tags` is deprecated in favour of new `Test Tags` setting.",
-                severity=DiagnosticSeverity.INFORMATION,
-                tags=[DiagnosticTag.DEPRECATED],
-                code=Error.DEPRECATED_HYPHEN_TAG,
-            )
+            tag = cast(TestTags, node).get_token(RobotToken.FORCE_TAGS)
+            if tag is not None and tag.value.upper() == "FORCE TAGS":
+                self.append_diagnostics(
+                    range=range_from_node_or_token(node, tag),
+                    message="`Force Tags` is deprecated in favour of new `Test Tags` setting.",
+                    severity=DiagnosticSeverity.INFORMATION,
+                    tags=[DiagnosticTag.DEPRECATED],
+                    code=Error.DEPRECATED_FORCE_TAG,
+                )
 
     async def visit_Tags(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken

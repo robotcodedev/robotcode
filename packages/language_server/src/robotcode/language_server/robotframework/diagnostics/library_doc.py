@@ -10,6 +10,7 @@ import pkgutil
 import re
 import sys
 import tempfile
+import traceback
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
@@ -93,7 +94,12 @@ ALL_RUN_KEYWORDS = [
 
 BUILTIN_LIBRARY_NAME = "BuiltIn"
 RESERVED_LIBRARY_NAME = "Reserved"
-DEFAULT_LIBRARIES = (BUILTIN_LIBRARY_NAME, RESERVED_LIBRARY_NAME, "Easter")
+
+if get_robot_version() < (7, 0):
+    DEFAULT_LIBRARIES = {BUILTIN_LIBRARY_NAME, RESERVED_LIBRARY_NAME, "Easter"}
+else:
+    DEFAULT_LIBRARIES = {BUILTIN_LIBRARY_NAME, "Easter"}
+
 ROBOT_LIBRARY_PACKAGE = "robot.libraries"
 
 ALLOWED_LIBRARY_FILE_EXTENSIONS = [".py"]
@@ -310,11 +316,19 @@ class TypeDoc:
 
 
 @dataclass
+class SourceAndLineInfo:
+    source: str
+    line_no: int
+
+
+@dataclass
 class Error:
     message: str
     type_name: str
     source: Optional[str] = None
     line_no: Optional[int] = None
+    message_traceback: Optional[List[SourceAndLineInfo]] = None
+    traceback: Optional[List[SourceAndLineInfo]] = None
 
 
 class KeywordArgumentKind(Enum):
@@ -330,9 +344,14 @@ class KeywordArgumentKind(Enum):
 def robot_arg_repr(arg: Any) -> Optional[str]:
     from robot.running.arguments.argumentspec import ArgInfo
 
+    if get_robot_version() >= (7, 0):
+        from robot.utils import NOT_SET as robot_notset  # noqa: N811
+    else:
+        robot_notset = ArgInfo.NOTSET
+
     robot_arg = cast(ArgInfo, arg)
 
-    if robot_arg.default is ArgInfo.NOTSET:
+    if robot_arg.default is robot_notset:
         return None
 
     if robot_arg.default is None:
@@ -369,7 +388,11 @@ class ArgumentInfo:
             name=robot_arg.name,
             default_value=robot_arg_repr(robot_arg),
             str_repr=str(arg),
-            types=robot_arg.types_reprs,
+            types=robot_arg.types_reprs
+            if get_robot_version() < (7, 0)
+            else [str(robot_arg.type)]
+            if robot_arg.type
+            else None,
             kind=KeywordArgumentKind[robot_arg.kind],
             required=robot_arg.required,
         )
@@ -418,6 +441,7 @@ class ArgumentSpec:
     var_positional: Any
     named_only: Any
     var_named: Any
+    embedded: Any
     defaults: Any
     types: Any
 
@@ -431,6 +455,7 @@ class ArgumentSpec:
             var_positional=spec.var_positional,
             named_only=spec.named_only,
             var_named=spec.var_named,
+            embedded=spec.embedded if get_robot_version() >= (7, 0) else None,
             defaults={k: str(v) for k, v in spec.defaults.items()} if spec.defaults else {},
             types=None,
         )
@@ -455,17 +480,31 @@ class ArgumentSpec:
         )
 
         if not hasattr(self, "__robot_arguments"):
-            self.__robot_arguments = RobotArgumentSpec(
-                self.name,
-                self.type,
-                self.positional_only,
-                self.positional_or_named,
-                self.var_positional,
-                self.named_only,
-                self.var_named,
-                self.defaults,
-                self.types,
-            )
+            if get_robot_version() < (7, 0):
+                self.__robot_arguments = RobotArgumentSpec(
+                    self.name,
+                    self.type,
+                    self.positional_only,
+                    self.positional_or_named,
+                    self.var_positional,
+                    self.named_only,
+                    self.var_named,
+                    self.defaults,
+                    self.types,
+                )
+            else:
+                self.__robot_arguments = RobotArgumentSpec(
+                    self.name,
+                    self.type,
+                    self.positional_only,
+                    self.positional_or_named,
+                    self.var_positional,
+                    self.named_only,
+                    self.var_named,
+                    self.embedded,
+                    self.defaults,
+                    self.types,
+                )
         self.__robot_arguments.name = self.name
         if validate:
             resolver = ArgumentResolver(
@@ -481,7 +520,12 @@ class ArgumentSpec:
                 pass
 
         positional, named = MyNamedArgumentResolver(self.__robot_arguments).resolve(arguments, variables)
-        positional, named = VariableReplacer(resolve_variables_until).replace(positional, named, variables)
+        if get_robot_version() < (7, 0):
+            positional, named = VariableReplacer(resolve_variables_until).replace(positional, named, variables)
+        else:
+            positional, named = VariableReplacer(self.__robot_arguments, resolve_variables_until).replace(
+                positional, named, variables
+            )
         positional, named = DictToKwargs(self.__robot_arguments, dict_to_kwargs).handle(positional, named)
         return positional, named
 
@@ -710,7 +754,10 @@ class KeywordDoc(SourceEntity):
         )
 
     def is_reserved(self) -> bool:
-        return self.libname == RESERVED_LIBRARY_NAME
+        if get_robot_version() < (7, 0):
+            return self.libname == RESERVED_LIBRARY_NAME
+
+        return False
 
     def is_any_run_keyword(self) -> bool:
         return self.libname == BUILTIN_LIBRARY_NAME and self.name in ALL_RUN_KEYWORDS
@@ -1261,14 +1308,9 @@ class KeywordWrapper:
         return None
 
 
-class Traceback(NamedTuple):
-    source: str
-    line_no: int
-
-
 class MessageAndTraceback(NamedTuple):
     message: str
-    traceback: List[Traceback]
+    traceback: List[SourceAndLineInfo]
 
 
 __RE_MESSAGE = re.compile(r"^Traceback.*$", re.MULTILINE)
@@ -1280,7 +1322,7 @@ def get_message_and_traceback_from_exception_text(text: str) -> MessageAndTraceb
 
     return MessageAndTraceback(
         message=splitted[0].strip(),
-        traceback=[Traceback(t.group(1), int(t.group(2))) for t in __RE_TRACEBACK.finditer(splitted[1])]
+        traceback=[SourceAndLineInfo(t.group(1), int(t.group(2))) for t in __RE_TRACEBACK.finditer(splitted[1])]
         if len(splitted) > 1
         else [],
     )
@@ -1295,13 +1337,19 @@ def error_from_exception(ex: BaseException, default_source: Optional[str], defau
             type_name=type(ex).__qualname__,
             source=tr.source,
             line_no=tr.line_no,
+            message_traceback=message_and_traceback.traceback,
         )
+
+    exc_type, exc_value, tb_type = sys.exc_info()
+    txt = "".join(traceback.format_exception(exc_type, exc_value, tb_type))
+    message_and_traceback = get_message_and_traceback_from_exception_text(txt)
 
     return Error(
         message=str(ex),
         type_name=type(ex).__qualname__,
         source=default_source,
         line_no=default_line_no,
+        traceback=message_and_traceback.traceback if message_and_traceback else None,
     )
 
 
@@ -1312,6 +1360,7 @@ class _Variable(object):
     source: Optional[str] = None
     lineno: Optional[int] = None
     error: Optional[str] = None
+    separator: Optional[str] = None
 
     def report_invalid_syntax(self, message: str, level: str = "ERROR") -> None:
         pass
@@ -1387,7 +1436,10 @@ def resolve_robot_variables(
 
     if variables is not None:
         vars = [_Variable(k, v) for k, v in variables.items() if v is not None and not isinstance(v, NativeValue)]
-        result.set_from_variable_table(vars)
+        if get_robot_version() < (7, 0):
+            result.set_from_variable_table(vars)
+        else:
+            result.set_from_variable_section(vars)
 
         for k2, v2 in variables.items():
             if isinstance(v2, NativeValue):
@@ -1771,10 +1823,11 @@ def get_library_doc(
                             for arg in kw.args:
                                 kw.type_docs[arg.name] = {}
                                 for type_info in _yield_type_info(arg.type):
-                                    type_doc = RobotTypeDoc.for_type(type_info.type, custom_converters)
-                                    if type_doc:
-                                        kw.type_docs[arg.name][type_info.name] = type_doc.name
-                                        type_docs.setdefault(type_doc, set()).add(kw.name)
+                                    if type_info.type is not None:
+                                        type_doc = RobotTypeDoc.for_type(type_info.type, custom_converters)
+                                        if type_doc:
+                                            kw.type_docs[arg.name][type_info.name] = type_doc.name
+                                            type_docs.setdefault(type_doc, set()).add(kw.name)
                         for type_doc, usages in type_docs.items():
                             type_doc.usages = sorted(usages, key=str.lower)
                         return set(type_docs)
@@ -1933,7 +1986,7 @@ def get_variables_doc(
                         return self._get_variables(self.var_file, args)
 
                     def is_dynamic(self) -> bool:
-                        return bool(self._is_dynamic(self.var_file))
+                        return hasattr(self.var_file, "get_variables") or hasattr(self.var_file, "getVariables")
 
                 module_importer = Importer("variable file", LOGGER)
 
@@ -2039,7 +2092,7 @@ def get_variables_doc(
                         end_line_no=1,
                         end_col_offset=0,
                         source=source or (module_spec.origin if module_spec is not None else None) or "",
-                        name=name,
+                        name=name if get_robot_version() < (7, 0) else f"${{{name}}}",
                         name_token=None,
                         value=NativeValue(value)
                         if value is None or isinstance(value, (int, float, bool, str))

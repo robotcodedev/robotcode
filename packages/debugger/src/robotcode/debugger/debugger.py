@@ -219,15 +219,31 @@ class PathMapping(NamedTuple):
     remote_root: Optional[str]
 
 
-class DebugLogger:
-    def __init__(self) -> None:
-        self.steps: List[Any] = []
+if get_robot_version() < (7, 0):
 
-    def start_keyword(self, kw: Any) -> None:
-        self.steps.append(kw)
+    class DebugLogger:
+        def __init__(self) -> None:
+            self.steps: List[Any] = []
 
-    def end_keyword(self, kw: Any) -> None:
-        self.steps.pop()
+        def start_keyword(self, kw: Any) -> None:
+            self.steps.append(kw)
+
+        def end_keyword(self, kw: Any) -> None:
+            self.steps.pop()
+
+else:
+    from robot import result, running
+    from robot.output.loggerapi import LoggerApi
+
+    class DebugLogger(LoggerApi):  # type: ignore[no-redef]
+        def __init__(self) -> None:
+            self.steps: List[Any] = []
+
+        def start_keyword(self, data: "running.Keyword", result: "result.Keyword") -> None:
+            self.steps.append(data)
+
+        def end_keyword(self, data: "running.Keyword", result: "result.Keyword") -> None:
+            self.steps.pop()
 
 
 class Debugger:

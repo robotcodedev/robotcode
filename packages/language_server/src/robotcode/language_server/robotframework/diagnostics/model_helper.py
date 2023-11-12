@@ -11,6 +11,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Sequence,
     Set,
     Tuple,
     Type,
@@ -632,7 +633,7 @@ class ModelHelperMixin:
     def get_argument_info_at_position(
         self,
         keyword_doc: KeywordDoc,
-        tokens: Tuple[Token, ...],
+        tokens: Sequence[Token],
         token_at_position: Token,
         position: Position,
     ) -> Tuple[int, Optional[List[ArgumentInfo]], Optional[Token]]:

@@ -581,7 +581,7 @@ class ImportsManager:
                     name, args = split_args_from_name_or_path(str(variable_file))
                     try:
                         lib_doc = await self.get_libdoc_for_variables_import(
-                            name,
+                            name.replace("\\", "\\\\"),
                             tuple(args),
                             str(self.folder.to_path()),
                             self,

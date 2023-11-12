@@ -19,6 +19,7 @@ from robotcode.core.async_tools import async_event, threaded
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import FileEvent, Location, Position, Range, ReferenceContext, WatchKind
 from robotcode.core.uri import Uri
+from robotcode.robot.utils import get_robot_version
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
@@ -533,7 +534,20 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self, doc: TextDocument, tag: str, is_normalized: bool = False
     ) -> List[Location]:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import DefaultTags, ForceTags, Tags
+        from robot.parsing.model import statements
+
+        tag_statments = (
+            (statements.Tags, statements.ForceTags, statements.DefaultTags)
+            if get_robot_version() < (6, 0)
+            else (
+                statements.Tags,
+                statements.ForceTags,
+                statements.DefaultTags,
+                statements.KeywordTags,
+            )
+            if get_robot_version() < (7, 0)
+            else (statements.Tags, statements.TestTags, statements.DefaultTags, statements.KeywordTags)
+        )
 
         model = await self.parent.documents_cache.get_model(doc)
 
@@ -542,14 +556,14 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             tag = normalize(tag)
 
         async for node in iter_nodes(model):
-            if isinstance(node, (ForceTags, DefaultTags, Tags)):
+            if isinstance(node, tag_statments):
                 for token in node.get_tokens(RobotToken.ARGUMENT):
                     if token.value and normalize(token.value) == tag:
                         result.append(Location(str(doc.uri), range_from_token(token)))
 
         return result
 
-    async def _references_ForceTags_DefaultTags_Tags(  # noqa: N802
+    async def _references_tags(
         self, node: ast.AST, document: TextDocument, position: Position, context: ReferenceContext
     ) -> Optional[List[Location]]:
         from robot.parsing.lexer.tokens import Token as RobotToken
@@ -573,14 +587,19 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def references_ForceTags(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position, context: ReferenceContext
     ) -> Optional[List[Location]]:
-        return await self._references_ForceTags_DefaultTags_Tags(node, document, position, context)
+        return await self._references_tags(node, document, position, context)
 
     async def references_DefaultTags(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position, context: ReferenceContext
     ) -> Optional[List[Location]]:
-        return await self._references_ForceTags_DefaultTags_Tags(node, document, position, context)
+        return await self._references_tags(node, document, position, context)
 
     async def references_Tags(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position, context: ReferenceContext
     ) -> Optional[List[Location]]:
-        return await self._references_ForceTags_DefaultTags_Tags(node, document, position, context)
+        return await self._references_tags(node, document, position, context)
+
+    async def references_TestTags(  # noqa: N802
+        self, node: ast.AST, document: TextDocument, position: Position, context: ReferenceContext
+    ) -> Optional[List[Location]]:
+        return await self._references_tags(node, document, position, context)
