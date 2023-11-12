@@ -2,6 +2,21 @@
 
 All notable changes to "robotcode" are documented in this file.
 
+## v0.63.0 (2023-11-13)
+
+### Feat
+
+- first support for RF 7
+
+### Fix
+
+- **langserver**: simplify code for variables and library completions
+
+### Refactor
+
+- remove unused code and update dependencies
+- **vscode**:  detection and running of python from vscode
+
 ## v0.62.3 (2023-10-31)
 
 ### Fix
