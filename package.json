@@ -296,6 +296,9 @@
           ],
           "namedArgument": [
             "variable.parameter.function-call.robotframework"
+          ],
+          "var": [
+            "storage.type.robotframework"
           ]
         }
       }

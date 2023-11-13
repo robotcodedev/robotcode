@@ -91,6 +91,7 @@ class RobotSemTokenTypes(Enum):
     ERROR = "error"
     CONFIG = "config"
     NAMED_ARGUMENT = "namedArgument"
+    VAR = "var"
 
 
 class RobotSemTokenModifiers(Enum):
@@ -231,7 +232,16 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                     ): (RobotSemTokenTypes.HEADER_TASK, None),
                 }
             )
-
+        if get_robot_version() >= (7, 0):
+            definition.update(
+                {
+                    frozenset(
+                        {
+                            RobotToken.VAR,
+                        }
+                    ): (RobotSemTokenTypes.VAR, None),
+                }
+            )
         result: Dict[str, Tuple[Enum, Optional[Set[Enum]]]] = {}
         for k, v in definition.items():
             for e in k:
