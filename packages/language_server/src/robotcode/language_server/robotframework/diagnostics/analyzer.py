@@ -8,6 +8,26 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union, cast
 
+from robot.parsing.lexer.tokens import Token
+from robot.parsing.model.blocks import Keyword, TestCase
+from robot.parsing.model.statements import (
+    Arguments,
+    DocumentationOrMetadata,
+    Fixture,
+    KeywordCall,
+    KeywordName,
+    LibraryImport,
+    ResourceImport,
+    Statement,
+    Template,
+    TemplateArguments,
+    TestCaseName,
+    TestTemplate,
+    Variable,
+    VariablesImport,
+)
+from robot.utils.escaping import split_from_equals, unescape
+from robot.variables.search import contains_variable, search_variable
 from robotcode.core.lsp.types import (
     CodeDescription,
     Diagnostic,
@@ -20,11 +40,7 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.uri import Uri
 from robotcode.robot.utils import get_robot_version
-
-from ..utils.ast_utils import (
-    HasTokens,
-    Statement,
-    Token,
+from robotcode.robot.utils.ast import (
     is_not_variable_token,
     range_from_node,
     range_from_node_or_token,
@@ -32,6 +48,7 @@ from ..utils.ast_utils import (
     strip_variable_token,
     tokenize_variables,
 )
+
 from ..utils.async_ast import AsyncVisitor
 from .entities import (
     ArgumentDefinition,
@@ -51,6 +68,11 @@ from .namespace import (
     Namespace,
 )
 
+if get_robot_version() < (7, 0):
+    from robot.variables.search import VariableIterator
+else:
+    from robot.variables.search import VariableMatches
+
 
 @dataclass
 class AnalyzerResult:
@@ -69,8 +91,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         finder: KeywordFinder,
         ignored_lines: List[int],
     ) -> None:
-        from robot.parsing.model.statements import Template, TestTemplate
-
         super().__init__()
 
         self.model = model
@@ -103,18 +123,15 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         )
 
     def yield_argument_name_and_rest(self, node: ast.AST, token: Token) -> Iterator[Token]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Arguments
-
-        if isinstance(node, Arguments) and token.type == RobotToken.ARGUMENT:
+        if isinstance(node, Arguments) and token.type == Token.ARGUMENT:
             argument = next(
                 (
                     v
                     for v in itertools.dropwhile(
-                        lambda t: t.type in RobotToken.NON_DATA_TOKENS,
+                        lambda t: t.type in Token.NON_DATA_TOKENS,
                         tokenize_variables(token, ignore_errors=True),
                     )
-                    if v.type == RobotToken.VARIABLE
+                    if v.type == Token.VARIABLE
                 ),
                 None,
             )
@@ -125,20 +142,16 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 i = len(argument.value)
 
                 for t in self.yield_argument_name_and_rest(
-                    node, RobotToken(token.type, token.value[i:], token.lineno, token.col_offset + i, token.error)
+                    node, Token(token.type, token.value[i:], token.lineno, token.col_offset + i, token.error)
                 ):
                     yield t
         else:
             yield token
 
     async def visit_Variable(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Variable
-        from robot.variables import search_variable
-
         variable = cast(Variable, node)
 
-        name_token = variable.get_token(RobotToken.VARIABLE)
+        name_token = variable.get_token(Token.VARIABLE)
         if name_token is None:
             return
 
@@ -154,7 +167,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
             r = range_from_token(
                 strip_variable_token(
-                    RobotToken(name_token.type, name, name_token.lineno, name_token.col_offset, name_token.error)
+                    Token(name_token.type, name, name_token.lineno, name_token.col_offset, name_token.error)
                 )
             )
 
@@ -181,17 +194,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 self._variable_references[var_def] = set()
 
     async def visit(self, node: ast.AST) -> None:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import (
-            Arguments,
-            DocumentationOrMetadata,
-            KeywordCall,
-            Template,
-            TestTemplate,
-            Variable,
-        )
-        from robot.variables.search import contains_variable
-
         self.node_stack.append(node)
         try:
             severity = (
@@ -203,11 +205,11 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 if kw_doc is not None and kw_doc.longname in ["BuiltIn.Comment"]:
                     severity = DiagnosticSeverity.HINT
 
-            if isinstance(node, HasTokens) and not isinstance(node, (TestTemplate, Template)):
+            if isinstance(node, Statement) and not isinstance(node, (TestTemplate, Template)):
                 for token1 in (
                     t
                     for t in node.tokens
-                    if not (isinstance(node, Variable) and t.type == RobotToken.VARIABLE)
+                    if not (isinstance(node, Variable) and t.type == Token.VARIABLE)
                     and t.error is None
                     and contains_variable(t.value, "$@&%")
                 ):
@@ -269,15 +271,15 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                             self._variable_references[suite_var].add(
                                                 Location(self.namespace.document.document_uri, var_range)
                                             )
-                                        if token1.type in [RobotToken.ASSIGN] and isinstance(
+                                        if token1.type in [Token.ASSIGN] and isinstance(
                                             var, (LocalVariableDefinition, ArgumentDefinition)
                                         ):
                                             self._local_variable_assignments[var].add(var_range)
 
                                     elif var not in self._variable_references and token1.type in [
-                                        RobotToken.ASSIGN,
-                                        RobotToken.ARGUMENT,
-                                        RobotToken.VARIABLE,
+                                        Token.ASSIGN,
+                                        Token.ARGUMENT,
+                                        Token.VARIABLE,
                                     ]:
                                         self._variable_references[var] = set()
                                         if suite_var is not None:
@@ -286,7 +288,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             if (
                 isinstance(node, Statement)
                 and isinstance(node, self.get_expression_statement_types())
-                and (token := node.get_token(RobotToken.ARGUMENT)) is not None
+                and (token := node.get_token(Token.ARGUMENT)) is not None
             ):
                 async for var_token, var in self.iter_expression_variables_from_token(
                     token,
@@ -376,10 +378,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         allow_variables: bool = False,
         ignore_errors_if_contains_variables: bool = False,
     ) -> Optional[KeywordDoc]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Template, TestTemplate
-        from robot.utils.escaping import split_from_equals
-
         result: Optional[KeywordDoc] = None
 
         try:
@@ -611,7 +609,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                             None,
                         )
                         if arg_def is not None:
-                            name_token = RobotToken(RobotToken.ARGUMENT, name, arg.lineno, arg.col_offset)
+                            name_token = Token(Token.ARGUMENT, name, arg.lineno, arg.col_offset)
                             self._variable_references[arg_def].add(
                                 Location(self.namespace.document.document_uri, range_from_token(name_token))
                             )
@@ -624,8 +622,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
     async def _analyse_run_keyword(
         self, keyword_doc: Optional[KeywordDoc], node: ast.AST, argument_tokens: List[Token]
     ) -> List[Token]:
-        from robot.utils.escaping import unescape
-
         if keyword_doc is None or not keyword_doc.is_any_run_keyword():
             return argument_tokens
 
@@ -767,11 +763,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         return argument_tokens
 
     async def visit_Fixture(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Fixture
-
         value = cast(Fixture, node)
-        keyword_token = cast(Token, value.get_token(RobotToken.NAME))
+        keyword_token = cast(Token, value.get_token(Token.NAME))
 
         # TODO: calculate possible variables in NAME
 
@@ -784,7 +777,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 value.name,
                 value,
                 keyword_token,
-                [cast(Token, e) for e in value.get_tokens(RobotToken.ARGUMENT)],
+                [cast(Token, e) for e in value.get_tokens(Token.ARGUMENT)],
                 allow_variables=True,
                 ignore_errors_if_contains_variables=True,
             )
@@ -792,11 +785,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         await self.generic_visit(node)
 
     async def visit_TestTemplate(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import TestTemplate
-
         value = cast(TestTemplate, node)
-        keyword_token = cast(Token, value.get_token(RobotToken.NAME))
+        keyword_token = cast(Token, value.get_token(Token.NAME))
 
         if keyword_token is not None and keyword_token.value.upper() not in ("", "NONE"):
             await self._analyze_keyword_call(
@@ -807,11 +797,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         await self.generic_visit(node)
 
     async def visit_Template(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Template
-
         value = cast(Template, node)
-        keyword_token = cast(Token, value.get_token(RobotToken.NAME))
+        keyword_token = cast(Token, value.get_token(Token.NAME))
 
         if keyword_token is not None and keyword_token.value.upper() not in ("", "NONE"):
             await self._analyze_keyword_call(
@@ -821,27 +808,24 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         await self.generic_visit(node)
 
     async def visit_KeywordCall(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import KeywordCall
-
         value = cast(KeywordCall, node)
-        keyword_token = cast(RobotToken, value.get_token(RobotToken.KEYWORD))
+        keyword_token = cast(Token, value.get_token(Token.KEYWORD))
 
         if value.assign and not value.keyword:
             self.append_diagnostics(
-                range=range_from_node_or_token(value, value.get_token(RobotToken.ASSIGN)),
+                range=range_from_node_or_token(value, value.get_token(Token.ASSIGN)),
                 message="Keyword name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
                 code=Error.KEYWORD_NAME_EMPTY,
             )
         else:
             await self._analyze_keyword_call(
-                value.keyword, value, keyword_token, [cast(Token, e) for e in value.get_tokens(RobotToken.ARGUMENT)]
+                value.keyword, value, keyword_token, [cast(Token, e) for e in value.get_tokens(Token.ARGUMENT)]
             )
 
         if not self.current_testcase_or_keyword_name:
             self.append_diagnostics(
-                range=range_from_node_or_token(value, value.get_token(RobotToken.ASSIGN)),
+                range=range_from_node_or_token(value, value.get_token(Token.ASSIGN)),
                 message="Code is unreachable.",
                 severity=DiagnosticSeverity.HINT,
                 tags=[DiagnosticTag.UNNECESSARY],
@@ -851,14 +835,10 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         await self.generic_visit(node)
 
     async def visit_TestCase(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.blocks import TestCase
-        from robot.parsing.model.statements import TestCaseName
-
         testcase = cast(TestCase, node)
 
         if not testcase.name:
-            name_token = cast(TestCaseName, testcase.header).get_token(RobotToken.TESTCASE_NAME)
+            name_token = cast(TestCaseName, testcase.header).get_token(Token.TESTCASE_NAME)
             self.append_diagnostics(
                 range=range_from_node_or_token(testcase, name_token),
                 message="Test case name cannot be empty.",
@@ -874,14 +854,10 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             self.template = None
 
     async def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.blocks import Keyword
-        from robot.parsing.model.statements import Arguments, KeywordName
-
         keyword = cast(Keyword, node)
 
         if keyword.name:
-            name_token = cast(KeywordName, keyword.header).get_token(RobotToken.KEYWORD_NAME)
+            name_token = cast(KeywordName, keyword.header).get_token(Token.KEYWORD_NAME)
             kw_doc = self.get_keyword_definition_at_token(await self.namespace.get_library_doc(), name_token)
 
             if kw_doc is not None and kw_doc not in self._keyword_references:
@@ -899,7 +875,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     code=Error.KEYWORD_CONTAINS_NORMAL_AND_EMBBEDED_ARGUMENTS,
                 )
         else:
-            name_token = cast(KeywordName, keyword.header).get_token(RobotToken.KEYWORD_NAME)
+            name_token = cast(KeywordName, keyword.header).get_token(Token.KEYWORD_NAME)
             self.append_diagnostics(
                 range=range_from_node_or_token(keyword, name_token),
                 message="Keyword name cannot be empty.",
@@ -915,8 +891,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
     def _format_template(self, template: str, arguments: Tuple[str, ...]) -> Tuple[str, Tuple[str, ...]]:
         if get_robot_version() < (7, 0):
-            from robot.variables import VariableIterator
-
             variables = VariableIterator(template, identifiers="$")
             count = len(variables)
             if count == 0 or count != len(arguments):
@@ -926,8 +900,6 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 temp.extend([before, arg])
             temp.append(after)
             return "".join(temp), ()
-
-        from robot.variables import VariableMatches
 
         variables = VariableMatches(template, identifiers="$")
         count = len(variables)
@@ -940,14 +912,11 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         return "".join(temp), ()
 
     async def visit_TemplateArguments(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import TemplateArguments
-
         arguments = cast(TemplateArguments, node)
 
         template = self.template or self.test_template
         if template is not None and template.value is not None and template.value.upper() not in ("", "NONE"):
-            argument_tokens = arguments.get_tokens(RobotToken.ARGUMENT)
+            argument_tokens = arguments.get_tokens(Token.ARGUMENT)
             args = tuple(t.value for t in argument_tokens)
             keyword = template.value
             keyword, args = self._format_template(keyword, args)
@@ -982,12 +951,9 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         await self.generic_visit(node)
 
-    async def visit_ForceTags(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import ForceTags
-
+    async def visit_ForceTags(self, node: Statement) -> None:  # noqa: N802
         if get_robot_version() >= (6, 0):
-            tag = cast(ForceTags, node).get_token(RobotToken.FORCE_TAGS)
+            tag = node.get_token(Token.FORCE_TAGS)
             if tag.value.upper() == "FORCE TAGS":
                 self.append_diagnostics(
                     range=range_from_node_or_token(node, tag),
@@ -997,12 +963,9 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     code=Error.DEPRECATED_FORCE_TAG,
                 )
 
-    async def visit_TestTags(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import TestTags
-
+    async def visit_TestTags(self, node: Statement) -> None:  # noqa: N802
         if get_robot_version() >= (6, 0):
-            tag = cast(TestTags, node).get_token(RobotToken.FORCE_TAGS)
+            tag = node.get_token(Token.FORCE_TAGS)
             if tag is not None and tag.value.upper() == "FORCE TAGS":
                 self.append_diagnostics(
                     range=range_from_node_or_token(node, tag),
@@ -1012,14 +975,9 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     code=Error.DEPRECATED_FORCE_TAG,
                 )
 
-    async def visit_Tags(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Tags
-
+    async def visit_Tags(self, node: Statement) -> None:  # noqa: N802
         if get_robot_version() >= (6, 0):
-            tags = cast(Tags, node)
-
-            for tag in tags.get_tokens(RobotToken.ARGUMENT):
+            for tag in node.get_tokens(Token.ARGUMENT):
                 if tag.value and tag.value.startswith("-"):
                     self.append_diagnostics(
                         range=range_from_node_or_token(node, tag),
@@ -1042,15 +1000,12 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             )
 
     async def visit_VariablesImport(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import VariablesImport
-
         if get_robot_version() >= (6, 1):
             import_node = cast(VariablesImport, node)
             self._check_import_name(import_node.name, node, "Variables")
 
         n = cast(VariablesImport, node)
-        name_token = cast(RobotToken, n.get_token(RobotToken.NAME))
+        name_token = n.get_token(Token.NAME)
         if name_token is None:
             return
 
@@ -1062,15 +1017,12 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         self._namespace_references[v] = set()
 
     async def visit_ResourceImport(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import ResourceImport
-
         if get_robot_version() >= (6, 1):
             import_node = cast(ResourceImport, node)
             self._check_import_name(import_node.name, node, "Resource")
 
         n = cast(ResourceImport, node)
-        name_token = cast(RobotToken, n.get_token(RobotToken.NAME))
+        name_token = n.get_token(Token.NAME)
         if name_token is None:
             return
 
@@ -1082,15 +1034,12 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         self._namespace_references[v] = set()
 
     async def visit_LibraryImport(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import LibraryImport
-
         if get_robot_version() >= (6, 1):
             import_node = cast(LibraryImport, node)
             self._check_import_name(import_node.name, node, "Library")
 
         n = cast(LibraryImport, node)
-        name_token = cast(RobotToken, n.get_token(RobotToken.NAME))
+        name_token = n.get_token(Token.NAME)
         if name_token is None:
             return
 

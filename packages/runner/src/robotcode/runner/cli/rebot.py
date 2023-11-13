@@ -33,11 +33,11 @@ class RebotEx(Rebot):
 
         return options, arguments
 
-    def main(self, arguments: Any, **options: Any) -> Any:
+    def main(self, datasources: Any, **options: Any) -> Any:
         if self.root_folder is not None:
             os.chdir(self.root_folder)
 
-        return super().main(arguments, **options)
+        return super().main(datasources, **options)
 
 
 @click.command(

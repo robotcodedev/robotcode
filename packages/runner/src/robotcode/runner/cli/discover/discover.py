@@ -6,7 +6,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from io import IOBase
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, MutableMapping, Optional, Tuple, Union
 
 import click
 import robot.running.model as running_model
@@ -239,7 +239,7 @@ class Collector(SuiteVisitor):
         self.tags: Dict[str, List[TestItem]] = defaultdict(list)
         self.normalized_tags: Dict[str, List[TestItem]] = defaultdict(list)
         self.statistics = Statistics()
-        self._collected = [NormalizedDict(ignore="_")]
+        self._collected: List[MutableMapping[str, Any]] = [NormalizedDict(ignore="_")]
 
     def visit_suite(self, suite: TestSuite) -> None:
         if suite.name in self._collected[-1] and suite.parent.source:

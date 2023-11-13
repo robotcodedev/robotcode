@@ -18,11 +18,13 @@ from typing import (
     Union,
 )
 
+from robot.parsing.lexer.tokens import Token
+from robot.utils.escaping import split_from_equals, unescape
+from robot.variables.finders import NOT_FOUND, NumberFinder
+from robot.variables.search import contains_variable, search_variable
 from robotcode.core.lsp.types import Position
 from robotcode.robot.utils import get_robot_version
-
-from ..utils.ast_utils import (
-    Token,
+from robotcode.robot.utils.ast import (
     iter_over_keyword_names_and_owners,
     range_from_token,
     strip_variable_token,
@@ -30,6 +32,7 @@ from ..utils.ast_utils import (
     whitespace_at_begin_of_token,
     whitespace_from_begin_of_token,
 )
+
 from .entities import (
     LibraryEntry,
     VariableDefinition,
@@ -56,8 +59,6 @@ class ModelHelperMixin:
         namespace: Namespace,
         position: Position,
     ) -> Tuple[Optional[Tuple[Optional[KeywordDoc], Token]], List[Token]]:
-        from robot.utils.escaping import unescape
-
         if keyword_doc is None or not keyword_doc.is_any_run_keyword():
             return None, argument_tokens
 
@@ -250,8 +251,6 @@ class ModelHelperMixin:
         skip_commandline_variables: bool = False,
         return_not_found: bool = False,
     ) -> AsyncIterator[Tuple[Token, VariableDefinition]]:
-        from robot.api.parsing import Token as RobotToken
-
         variable_started = False
         try:
             for toknum, tokval, (_, tokcol), _, _ in generate_tokens(StringIO(expression.value).readline):
@@ -264,7 +263,7 @@ class ModelHelperMixin:
                             skip_commandline_variables=skip_commandline_variables,
                             ignore_error=True,
                         )
-                        sub_token = RobotToken(
+                        sub_token = Token(
                             expression.type,
                             tokval,
                             expression.lineno,
@@ -291,12 +290,10 @@ class ModelHelperMixin:
 
     @staticmethod
     def remove_index_from_variable_token(token: Token) -> Tuple[Token, Optional[Token]]:
-        from robot.parsing.lexer import Token as RobotToken
-
         def escaped(i: int) -> bool:
-            return token.value[-i - 3 : -i - 2] == "\\"
+            return bool(token.value[-i - 3 : -i - 2] == "\\")
 
-        if token.type != RobotToken.VARIABLE or not token.value.endswith("]"):
+        if token.type != Token.VARIABLE or not token.value.endswith("]"):
             return (token, None)
 
         braces = 1
@@ -322,9 +319,9 @@ class ModelHelperMixin:
             return (token, None)
 
         value = token.value[: -index - 2]
-        var = RobotToken(token.type, value, token.lineno, token.col_offset, token.error) if len(value) > 0 else None
-        rest = RobotToken(
-            RobotToken.ARGUMENT,
+        var = Token(token.type, value, token.lineno, token.col_offset, token.error) if len(value) > 0 else None
+        rest = Token(
+            Token.ARGUMENT,
             token.value[-index - 2 :],
             token.lineno,
             token.col_offset + len(value),
@@ -342,10 +339,8 @@ class ModelHelperMixin:
         *,
         extra_types: Optional[Set[str]] = None,
     ) -> Iterator[Token]:
-        from robot.api.parsing import Token as RobotToken
-
         for t in tokenize_variables(token, identifiers, ignore_errors, extra_types=extra_types):
-            if t.type == RobotToken.VARIABLE:
+            if t.type == Token.VARIABLE:
                 var, rest = cls.remove_index_from_variable_token(t)
                 if var is not None:
                     yield var
@@ -364,12 +359,7 @@ class ModelHelperMixin:
         skip_commandline_variables: bool = False,
         return_not_found: bool = False,
     ) -> AsyncIterator[Tuple[Token, VariableDefinition]]:
-        from robot.api.parsing import Token as RobotToken
-        from robot.variables.search import contains_variable, search_variable
-
         def is_number(name: str) -> bool:
-            from robot.variables.finders import NOT_FOUND, NumberFinder
-
             if name.startswith("$"):
                 finder = NumberFinder()
                 return bool(finder.find(name) != NOT_FOUND)
@@ -379,13 +369,13 @@ class ModelHelperMixin:
             to: Token, ignore_errors: bool = False
         ) -> AsyncIterator[Union[Token, Tuple[Token, VariableDefinition]]]:
             for sub_token in cls._tokenize_variables(to, ignore_errors=ignore_errors):
-                if sub_token.type == RobotToken.VARIABLE:
+                if sub_token.type == Token.VARIABLE:
                     base = sub_token.value[2:-1]
                     if base and not (base[0] == "{" and base[-1] == "}"):
                         yield sub_token
                     elif base:
                         async for v in cls.iter_expression_variables_from_token(
-                            RobotToken(
+                            Token(
                                 sub_token.type,
                                 base[1:-1],
                                 sub_token.lineno,
@@ -413,7 +403,7 @@ class ModelHelperMixin:
 
                     if contains_variable(base, "$@&%"):
                         async for sub_token_or_var in iter_token(
-                            RobotToken(
+                            Token(
                                 to.type,
                                 base,
                                 sub_token.lineno,
@@ -422,17 +412,17 @@ class ModelHelperMixin:
                             ignore_errors=ignore_errors,
                         ):
                             if isinstance(sub_token_or_var, Token):
-                                if sub_token_or_var.type == RobotToken.VARIABLE:
+                                if sub_token_or_var.type == Token.VARIABLE:
                                     yield sub_token_or_var
                             else:
                                 yield sub_token_or_var
 
-        if token.type == RobotToken.VARIABLE and token.value.endswith("="):
+        if token.type == Token.VARIABLE and token.value.endswith("="):
             match = search_variable(token.value, ignore_errors=True)
             if not match.is_assign(allow_assign_mark=True):
                 return
 
-            token = RobotToken(
+            token = Token(
                 token.type,
                 token.value[:-1].strip(),
                 token.lineno,
@@ -459,7 +449,7 @@ class ModelHelperMixin:
                     continue
 
                 if (
-                    sub_token.type == RobotToken.VARIABLE
+                    sub_token.type == Token.VARIABLE
                     and sub_token.value[:1] in "$@&%"
                     and sub_token.value[1:2] == "{"
                     and sub_token.value[-1:] == "}"
@@ -475,7 +465,7 @@ class ModelHelperMixin:
                             skip_commandline_variables=skip_commandline_variables,
                             ignore_error=True,
                         )
-                        sub_sub_token = RobotToken(sub_token.type, name, sub_token.lineno, sub_token.col_offset)
+                        sub_sub_token = Token(sub_token.type, name, sub_token.lineno, sub_token.col_offset)
                         if var is not None:
                             yield strip_variable_token(sub_sub_token), var
                             continue
@@ -529,8 +519,6 @@ class ModelHelperMixin:
 
     @classmethod
     def split_bdd_prefix(cls, namespace: Namespace, token: Token) -> Tuple[Optional[Token], Optional[Token]]:
-        from robot.parsing.lexer import Token as RobotToken
-
         bdd_token = None
 
         parts = token.value.split()
@@ -543,7 +531,7 @@ class ModelHelperMixin:
                 namespace.languages.bdd_prefixes if namespace.languages is not None else DEFAULT_BDD_PREFIXES
             ):
                 bdd_len = len(prefix)
-                bdd_token = RobotToken(
+                bdd_token = Token(
                     token.type,
                     token.value[:bdd_len],
                     token.lineno,
@@ -551,7 +539,7 @@ class ModelHelperMixin:
                     token.error,
                 )
 
-                token = RobotToken(
+                token = Token(
                     token.type,
                     token.value[bdd_len + 1 :],
                     token.lineno,
@@ -564,14 +552,12 @@ class ModelHelperMixin:
 
     @classmethod
     def strip_bdd_prefix(cls, namespace: Namespace, token: Token) -> Token:
-        from robot.parsing.lexer import Token as RobotToken
-
         if get_robot_version() < (6, 0):
             bdd_match = cls.BDD_TOKEN_REGEX.match(token.value)
             if bdd_match:
                 bdd_len = len(bdd_match.group(1))
 
-                token = RobotToken(
+                token = Token(
                     token.type,
                     token.value[bdd_len + 1 :],
                     token.lineno,
@@ -590,7 +576,7 @@ class ModelHelperMixin:
                 namespace.languages.bdd_prefixes if namespace.languages is not None else DEFAULT_BDD_PREFIXES
             ):
                 bdd_len = len(prefix)
-                token = RobotToken(
+                token = Token(
                     token.type,
                     token.value[bdd_len + 1 :],
                     token.lineno,
@@ -637,9 +623,6 @@ class ModelHelperMixin:
         token_at_position: Token,
         position: Position,
     ) -> Tuple[int, Optional[List[ArgumentInfo]], Optional[Token]]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.utils.escaping import split_from_equals
-
         argument_index = -1
         named_arg = False
 
@@ -656,9 +639,9 @@ class ModelHelperMixin:
         token_at_position_index = tokens.index(token_at_position)
 
         if (
-            token_at_position.type in [RobotToken.EOL, RobotToken.SEPARATOR]
+            token_at_position.type in [Token.EOL, Token.SEPARATOR]
             and token_at_position_index > 2
-            and tokens[token_at_position_index - 1].type == RobotToken.CONTINUATION
+            and tokens[token_at_position_index - 1].type == Token.CONTINUATION
             and position.character < range_from_token(tokens[token_at_position_index - 1]).end.character + 2
         ):
             return -1, None, None
@@ -666,25 +649,25 @@ class ModelHelperMixin:
         token_at_position_index = tokens.index(token_at_position)
 
         argument_token_index = token_at_position_index
-        while argument_token_index >= 0 and tokens[argument_token_index].type != RobotToken.ARGUMENT:
+        while argument_token_index >= 0 and tokens[argument_token_index].type != Token.ARGUMENT:
             argument_token_index -= 1
 
         if (
-            token_at_position.type == RobotToken.EOL
+            token_at_position.type == Token.EOL
             and len(tokens) > 1
-            and tokens[argument_token_index - 1].type == RobotToken.CONTINUATION
+            and tokens[argument_token_index - 1].type == Token.CONTINUATION
         ):
             argument_token_index -= 2
-            while argument_token_index >= 0 and tokens[argument_token_index].type != RobotToken.ARGUMENT:
+            while argument_token_index >= 0 and tokens[argument_token_index].type != Token.ARGUMENT:
                 argument_token_index -= 1
 
-        arguments = [a for a in tokens if a.type == RobotToken.ARGUMENT]
+        arguments = [a for a in tokens if a.type == Token.ARGUMENT]
 
         argument_token: Optional[Token] = None
 
         if argument_token_index >= 0:
             argument_token = tokens[argument_token_index]
-            if argument_token is not None and argument_token.type == RobotToken.ARGUMENT:
+            if argument_token is not None and argument_token.type == Token.ARGUMENT:
                 argument_index = arguments.index(argument_token)
             else:
                 argument_index = 0
@@ -705,19 +688,19 @@ class ModelHelperMixin:
                 r.end.character = r.start.character + whitespace_at_begin_of_token(token_at_position) - 3
                 if not position.is_in_range(r, False):
                     argument_token_index += 2
-                    if argument_token_index < len(tokens) and tokens[argument_token_index].type == RobotToken.ARGUMENT:
+                    if argument_token_index < len(tokens) and tokens[argument_token_index].type == Token.ARGUMENT:
                         argument_token = tokens[argument_token_index]
 
         if (
             argument_index < 0
             or argument_token is not None
-            and argument_token.type == RobotToken.ARGUMENT
+            and argument_token.type == Token.ARGUMENT
             and argument_token.value.startswith(("@{", "&{"))
             and argument_token.value.endswith("}")
         ):
             return -1, kw_arguments, argument_token
 
-        if argument_token is not None and argument_token.type == RobotToken.ARGUMENT:
+        if argument_token is not None and argument_token.type == Token.ARGUMENT:
             arg_name_or_value, arg_value = split_from_equals(argument_token.value)
             if arg_value is not None:
                 old_argument_index = argument_index

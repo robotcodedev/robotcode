@@ -133,7 +133,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
 
     def get_valid_nodes_in_range(self, model: ast.AST, range: Range, also_return: bool = False) -> List[ast.AST]:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.blocks import Block, Keyword, TestCase, Try
+        from robot.parsing.model.blocks import Block, Keyword, TestCase
         from robot.parsing.model.statements import (
             Comment,
             Documentation,
@@ -141,8 +141,6 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             ElseIfHeader,
             EmptyLine,
             End,
-            ExceptHeader,
-            FinallyHeader,
             Fixture,
             ForHeader,
             IfHeader,
@@ -151,12 +149,14 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             SingleValue,
             TemplateArguments,
             TestCaseName,
-            TryHeader,
-            WhileHeader,
         )
 
         if get_robot_version() >= (5, 0, 0):
-            from robot.parsing.model.statements import Break, Continue, ReturnStatement
+            from robot.parsing.model.statements import Break, Continue, ReturnStatement, WhileHeader
+
+        if get_robot_version() >= (6, 0, 0):
+            from robot.parsing.model.blocks import Try
+            from robot.parsing.model.statements import ExceptHeader, FinallyHeader, TryHeader
 
         if not isinstance(model, (Keyword, TestCase)):
             return []
@@ -206,6 +206,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                 return []
 
         results = []
+
         for block in [model, *blocks]:
             sub = [n for n in result if n in ast_utils.iter_nodes(block, False)]
             if sub:
@@ -228,12 +229,12 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                     ElseHeader,
                     ForHeader,
                     End,
-                    TryHeader,
-                    ExceptHeader,
-                    FinallyHeader,
-                    WhileHeader,
                 ),
             )
+            or get_robot_version() >= (5, 0)
+            and isinstance(n, WhileHeader)
+            or get_robot_version() >= (6, 0)
+            and isinstance(n, (TryHeader, ExceptHeader, FinallyHeader))
         ):
             return []
 

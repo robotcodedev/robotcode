@@ -2,9 +2,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, TypeVar, cast
 
+from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import Position, Range
-
-from ..utils.ast_utils import Token, range_from_token
+from robotcode.robot.utils.ast import range_from_token
 
 if TYPE_CHECKING:
     from .library_doc import KeywordDoc, LibraryDoc
