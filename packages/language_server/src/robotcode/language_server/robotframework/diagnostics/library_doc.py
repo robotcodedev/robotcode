@@ -263,7 +263,6 @@ class TypeDoc:
     usages: List[str] = field(default_factory=list)
     members: Optional[List[EnumMember]] = None
     items: Optional[List[TypedDictItem]] = None
-
     libname: Optional[str] = None
     libtype: Optional[str] = None
 
@@ -391,6 +390,8 @@ class ArgumentInfo:
             types=robot_arg.types_reprs
             if get_robot_version() < (7, 0)
             else [str(robot_arg.type)]
+            if not robot_arg.type.is_union
+            else [str(t) for t in robot_arg.type.nested]
             if robot_arg.type
             else None,
             kind=KeywordArgumentKind[robot_arg.kind],
@@ -1824,7 +1825,10 @@ def get_library_doc(
                                 kw.type_docs[arg.name] = {}
                                 for type_info in _yield_type_info(arg.type):
                                     if type_info.type is not None:
-                                        type_doc = RobotTypeDoc.for_type(type_info.type, custom_converters)
+                                        if get_robot_version() < (7, 0):
+                                            type_doc = RobotTypeDoc.for_type(type_info.type, custom_converters)
+                                        else:
+                                            type_doc = RobotTypeDoc.for_type(type_info, custom_converters)
                                         if type_doc:
                                             kw.type_docs[arg.name][type_info.name] = type_doc.name
                                             type_docs.setdefault(type_doc, set()).add(kw.name)

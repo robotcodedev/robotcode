@@ -24,6 +24,29 @@ from typing import (
     cast,
 )
 
+from robot.parsing.lexer.settings import (
+    InitFileSettings,
+    KeywordSettings,
+    ResourceFileSettings,
+    Settings,
+    TestCaseSettings,
+)
+from robot.parsing.lexer.tokens import Token
+from robot.parsing.model.blocks import File, SettingSection, TestCase
+from robot.parsing.model.statements import (
+    Arguments,
+    Fixture,
+    KeywordName,
+    LibraryImport,
+    ResourceImport,
+    SectionHeader,
+    Statement,
+    Template,
+    TestCaseName,
+    TestTemplate,
+    VariablesImport,
+)
+from robot.utils.escaping import split_from_equals
 from robotcode.core.async_itertools import async_chain, async_chain_iterator
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
@@ -40,6 +63,14 @@ from robotcode.core.lsp.types import (
     TextEdit,
 )
 from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils.ast import (
+    get_nodes_at_position,
+    get_tokens_at_position,
+    range_from_token,
+    tokenize_variables,
+    whitespace_at_begin_of_token,
+    whitespace_from_begin_of_token,
+)
 
 from ...common.decorators import language_id, trigger_characters
 from ...common.text_document import TextDocument
@@ -48,20 +79,20 @@ from ..diagnostics.entities import VariableDefinitionType
 from ..diagnostics.library_doc import CompleteResultKind, KeywordArgumentKind, KeywordDoc, KeywordMatcher
 from ..diagnostics.model_helper import ModelHelperMixin
 from ..diagnostics.namespace import DocumentType, Namespace
-from ..utils.ast_utils import (
-    HasTokens,
-    Token,
-    get_nodes_at_position,
-    get_tokens_at_position,
-    range_from_token,
-    tokenize_variables,
-    whitespace_at_begin_of_token,
-    whitespace_from_begin_of_token,
-)
 from .protocol_part import RobotLanguageServerProtocolPart
+
+if get_robot_version() >= (6, 1):
+    from robot.parsing.lexer.settings import SuiteFileSettings
+else:
+    from robot.parsing.lexer.settings import TestCaseFileSettings as SuiteFileSettings
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
+
+if get_robot_version() < (7, 0):
+    from robot.variables.search import VariableIterator
+else:
+    from robot.variables.search import VariableMatches
 
 
 DEFAULT_HEADER_STYLE = "*** {name}s ***"
@@ -495,19 +526,9 @@ class CompletionCollector(ModelHelperMixin):
         ]
 
     async def create_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
-        from robot.parsing.lexer.settings import (
-            InitFileSettings,
-            ResourceFileSettings,
-        )
-
-        if get_robot_version() >= (6, 1):
-            from robot.parsing.lexer.settings import SuiteFileSettings
-        else:
-            from robot.parsing.lexer.settings import TestCaseFileSettings as SuiteFileSettings
-
         doc_type = await self.parent.documents_cache.get_document_type(self.document)
 
-        settings_class = SuiteFileSettings
+        settings_class: Type[Settings] = SuiteFileSettings
         if doc_type == DocumentType.RESOURCE:
             settings_class = ResourceFileSettings
         elif doc_type == DocumentType.INIT:
@@ -558,8 +579,6 @@ class CompletionCollector(ModelHelperMixin):
         ]
 
     async def create_testcase_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
-        from robot.parsing.lexer.settings import TestCaseSettings
-
         settings = {*TestCaseSettings.names, *TestCaseSettings.aliases.keys()}
 
         if self.namespace.languages is not None:
@@ -613,8 +632,6 @@ class CompletionCollector(ModelHelperMixin):
         ]
 
     async def create_keyword_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
-        from robot.parsing.lexer.settings import KeywordSettings
-
         settings = {*KeywordSettings.names, *KeywordSettings.aliases.keys()}
 
         if self.namespace.languages is not None:
@@ -653,8 +670,6 @@ class CompletionCollector(ModelHelperMixin):
             return kw.name
 
         if get_robot_version() < (7, 0):
-            from robot.variables.search import VariableIterator
-
             for index, (before, variable, after) in enumerate(
                 VariableIterator(kw.name, identifiers="$", ignore_errors=True)
             ):
@@ -675,8 +690,6 @@ class CompletionCollector(ModelHelperMixin):
                 result += after
 
         else:
-            from robot.variables.search import VariableMatches
-
             for index, match in enumerate(VariableMatches(kw.name, identifiers="$", ignore_errors=True)):
                 var_name = variable[2:-1].split(":", 1)[0]
                 result += match.before
@@ -975,16 +988,14 @@ class CompletionCollector(ModelHelperMixin):
         return result
 
     def get_variable_token(self, token: Token) -> Optional[Token]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-
         return next(
             (
                 v
                 for v in itertools.dropwhile(
-                    lambda t: t.type in RobotToken.NON_DATA_TOKENS,
+                    lambda t: t.type in Token.NON_DATA_TOKENS,
                     tokenize_variables(token, ignore_errors=True),
                 )
-                if v.type == RobotToken.VARIABLE
+                if v.type == Token.VARIABLE
             ),
             None,
         )
@@ -995,14 +1006,10 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Optional[List[CompletionItem]]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.blocks import SettingSection
-        from robot.parsing.model.statements import Arguments, Statement
-
         if len(nodes_at_position) > 1 and isinstance(nodes_at_position[0], Statement):
             statement_node = nodes_at_position[0]
             if len(statement_node.tokens) > 0:
-                token = cast(Token, statement_node.tokens[0])
+                token = statement_node.tokens[0]
                 r = range_from_token(token)
                 value = token.value.strip()
                 only_stars = value is not None and "*" in value and all(v == "*" for v in value)
@@ -1032,7 +1039,7 @@ class CompletionCollector(ModelHelperMixin):
 
             return await self.create_headers_completion_items(None)
 
-        if len(nodes_at_position) > 1 and isinstance(nodes_at_position[0], HasTokens):
+        if len(nodes_at_position) > 1 and isinstance(nodes_at_position[0], Statement):
             node = nodes_at_position[0]
 
             tokens_at_position = get_tokens_at_position(node, position, True)
@@ -1047,17 +1054,17 @@ class CompletionCollector(ModelHelperMixin):
                     return None
 
             token_at_position_index = tokens_at_position.index(token_at_position)
-            while token_at_position.type in [RobotToken.EOL]:
+            while token_at_position.type in [Token.EOL]:
                 token_at_position_index -= 1
                 if token_at_position_index < 0:
                     break
                 token_at_position = tokens_at_position[token_at_position_index]
 
             if token_at_position.type not in [
-                RobotToken.NAME,
-                RobotToken.ARGUMENT,
-                RobotToken.KEYWORD,
-                RobotToken.ASSIGN,
+                Token.NAME,
+                Token.ARGUMENT,
+                Token.KEYWORD,
+                Token.ASSIGN,
             ]:
                 return None
 
@@ -1104,13 +1111,11 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.model.statements import SectionHeader, Statement
-
         if nodes_at_position.index(node) > 0 and not isinstance(nodes_at_position[0], SectionHeader):
             node_at_pos = nodes_at_position[0]
             if (
                 position.character > 0
-                and isinstance(node_at_pos, HasTokens)
+                and isinstance(node_at_pos, Statement)
                 and node_at_pos.tokens
                 and node_at_pos.tokens[0].value
                 and whitespace_at_begin_of_token(node_at_pos.tokens[0]) > 0
@@ -1119,7 +1124,7 @@ class CompletionCollector(ModelHelperMixin):
 
             statement_node = cast(Statement, nodes_at_position[0])
             if len(statement_node.tokens) > 0:
-                token = cast(Token, statement_node.tokens[0])
+                token = statement_node.tokens[0]
                 r = range_from_token(token)
                 if position.is_in_range(r):
                     return await self.create_settings_completion_items(r)
@@ -1138,22 +1143,21 @@ class CompletionCollector(ModelHelperMixin):
             Awaitable[Union[List[CompletionItem], CompletionList, None]],
         ],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import KeywordName, Statement, TestCaseName
-
         index = 0
         in_assign = False
 
-        statement_node = cast(Statement, nodes_at_position[0])
+        if not isinstance(nodes_at_position[0], Statement):
+            return None
+
+        statement_node = nodes_at_position[0]
+
         if isinstance(statement_node, (TestCaseName, KeywordName)):
             index += 1
-        if not isinstance(statement_node, HasTokens):
-            return None
 
         while index < len(statement_node.tokens):
             if len(statement_node.tokens) > index:
                 token = statement_node.tokens[index]
-                if token.type == RobotToken.ASSIGN:
+                if token.type == Token.ASSIGN:
                     index += 1
                     in_assign = True
                     r = range_from_token(token)
@@ -1187,7 +1191,7 @@ class CompletionCollector(ModelHelperMixin):
 
             if len(statement_node.tokens) > index:
                 token = statement_node.tokens[index]
-                if token.type == RobotToken.ASSIGN:
+                if token.type == Token.ASSIGN:
                     continue
 
             if len(statement_node.tokens) > index:
@@ -1222,9 +1226,6 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.model.blocks import File, SettingSection, TestCase
-        from robot.parsing.model.statements import Template, TestTemplate
-
         async def create_items(
             in_assign: bool, in_template: bool, r: Optional[Range], token: Optional[Token], pos: Position
         ) -> Union[List[CompletionItem], CompletionList, None]:
@@ -1299,11 +1300,9 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.model.statements import Statement, TestTemplate
-
         statement_node = cast(Statement, node)
         if len(statement_node.tokens) > 1:
-            token = cast(Token, statement_node.tokens[1])
+            token = statement_node.tokens[1]
             r = range_from_token(token)
             ws = whitespace_at_begin_of_token(token)
             if ws < 2:
@@ -1322,7 +1321,7 @@ class CompletionCollector(ModelHelperMixin):
                 )
 
         if len(statement_node.tokens) > 2:
-            token = cast(Token, statement_node.tokens[2])
+            token = statement_node.tokens[2]
 
             token = self.strip_bdd_prefix(self.namespace, token)
 
@@ -1416,11 +1415,9 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.model.statements import Statement, Template
-
         statement_node = cast(Statement, node)
         if len(statement_node.tokens) > 2:
-            token = cast(Token, statement_node.tokens[2])
+            token = statement_node.tokens[2]
 
             r = range_from_token(token)
             ws = whitespace_at_begin_of_token(token)
@@ -1440,7 +1437,7 @@ class CompletionCollector(ModelHelperMixin):
                 )
 
         if len(statement_node.tokens) > 3:
-            token = cast(Token, statement_node.tokens[3])
+            token = statement_node.tokens[3]
 
             token = self.strip_bdd_prefix(self.namespace, token)
 
@@ -1502,11 +1499,8 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import LibraryImport, Statement
-
         import_node = cast(LibraryImport, node)
-        import_token = import_node.get_token(RobotToken.LIBRARY)
+        import_token = import_node.get_token(Token.LIBRARY)
         if import_token is None:
             return []
 
@@ -1620,13 +1614,12 @@ class CompletionCollector(ModelHelperMixin):
             ]
 
         async def complete_arguments() -> Optional[List[CompletionItem]]:
-            if (
-                not import_node.name
-                or position <= range_from_token(import_node.get_token(RobotToken.NAME)).extend(end_character=1).end
-            ):
+            if (t := import_node.get_token(Token.NAME)) is None or position <= range_from_token(t).extend(
+                end_character=1
+            ).end:
                 return None
 
-            with_name_token = next((v for v in import_node.tokens if v.type == RobotToken.WITH_NAME), None)
+            with_name_token = next((v for v in import_node.tokens if v.type == Token.WITH_NAME), None)
             if with_name_token is not None and position >= range_from_token(with_name_token).start:
                 return None
 
@@ -1639,7 +1632,7 @@ class CompletionCollector(ModelHelperMixin):
 
             token_at_position = tokens_at_position[-1]
 
-            name_token = import_node.get_token(RobotToken.NAME)
+            name_token = import_node.get_token(Token.NAME)
             if name_token is None or position.character < range_from_token(name_token).end.character:
                 return None
 
@@ -1663,13 +1656,14 @@ class CompletionCollector(ModelHelperMixin):
             return None
 
         async def complete_with_name() -> Optional[List[CompletionItem]]:
-            with_name_token = next((v for v in import_node.tokens if v.type == RobotToken.WITH_NAME), None)
+            with_name_token = next((v for v in import_node.tokens if v.type == Token.WITH_NAME), None)
             if with_name_token is not None and position < range_from_token(with_name_token).start:
                 return None
 
-            if import_node.name and not any(v for v in import_node.tokens if v.type == RobotToken.WITH_NAME):
-                name_token = import_node.get_token(RobotToken.NAME)
-                arg_tokens = import_node.get_tokens(RobotToken.ARGUMENT)
+            if (name_token := import_node.get_token(Token.NAME)) is not None and not any(
+                v for v in import_node.tokens if v.type == Token.WITH_NAME
+            ):
+                arg_tokens = import_node.get_tokens(Token.ARGUMENT)
                 if position >= range_from_token(name_token).extend(end_character=2).end and (
                     not arg_tokens or position >= range_from_token(arg_tokens[-1]).extend(end_character=2).end
                 ):
@@ -1697,9 +1691,6 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.lexer.tokens import Token
-        from robot.parsing.model.statements import ResourceImport
-
         import_node = cast(ResourceImport, node)
         import_token = import_node.get_token(Token.RESOURCE)
         if import_token is None:
@@ -1813,11 +1804,8 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Statement, VariablesImport
-
         import_node = cast(VariablesImport, node)
-        import_token = import_node.get_token(RobotToken.VARIABLES)
+        import_token = import_node.get_token(Token.VARIABLES)
 
         if import_token is None:
             return []
@@ -1930,10 +1918,9 @@ class CompletionCollector(ModelHelperMixin):
             ]
 
         async def complete_arguments() -> Optional[List[CompletionItem]]:
-            if (
-                not import_node.name
-                or position <= range_from_token(import_node.get_token(RobotToken.NAME)).extend(end_character=1).end
-            ):
+            if (t := import_node.get_token(Token.NAME)) is None or position <= range_from_token(t).extend(
+                end_character=1
+            ).end:
                 return None
 
             kw_node = cast(Statement, node)
@@ -1945,7 +1932,7 @@ class CompletionCollector(ModelHelperMixin):
 
             token_at_position = tokens_at_position[-1]
 
-            name_token = import_node.get_token(RobotToken.NAME)
+            name_token = import_node.get_token(Token.NAME)
             if name_token is None or position.character < range_from_token(name_token).end.character:
                 return None
 
@@ -1980,9 +1967,6 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Statement
-
         kw_node = cast(Statement, node)
 
         keyword_token = kw_node.get_token(keyword_name_token_type)
@@ -1996,10 +1980,10 @@ class CompletionCollector(ModelHelperMixin):
 
         token_at_position = tokens_at_position[-1]
 
-        if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
+        if token_at_position.type not in [Token.ARGUMENT, Token.EOL, Token.SEPARATOR]:
             return None
 
-        if len(tokens_at_position) > 1 and tokens_at_position[-2].type == RobotToken.KEYWORD:
+        if len(tokens_at_position) > 1 and tokens_at_position[-2].type == Token.KEYWORD:
             return None
 
         keyword_doc_and_token: Optional[Tuple[Optional[KeywordDoc], Token]] = None
@@ -2011,7 +1995,7 @@ class CompletionCollector(ModelHelperMixin):
         keyword_doc_and_token = await self.get_keyworddoc_and_token_from_position(
             keyword_token.value,
             keyword_token,
-            [t for t in kw_node.get_tokens(RobotToken.ARGUMENT)],
+            [t for t in kw_node.get_tokens(Token.ARGUMENT)],
             self.namespace,
             range_from_token(keyword_token).start,
             analyse_run_keywords=False,
@@ -2037,9 +2021,6 @@ class CompletionCollector(ModelHelperMixin):
     def _complete_keyword_arguments_at_position(
         self, keyword_doc: KeywordDoc, tokens: Tuple[Token, ...], token_at_position: Token, position: Position
     ) -> Optional[List[CompletionItem]]:
-        from robot.api.parsing import Token as RobotToken
-        from robot.utils.escaping import split_from_equals
-
         if keyword_doc.is_any_run_keyword():
             return None
 
@@ -2058,7 +2039,7 @@ class CompletionCollector(ModelHelperMixin):
         if (w := whitespace_at_begin_of_token(token_at_position)) > 0:
             if w > 1 and range_from_token(token_at_position).start.character + 1 < position.character:
                 completion_range.start = position
-                if token_at_position.type == RobotToken.SEPARATOR:
+                if token_at_position.type == Token.SEPARATOR:
                     completion_range.end = position
             elif completion_range.start != position:
                 return None
@@ -2078,11 +2059,11 @@ class CompletionCollector(ModelHelperMixin):
 
         arg_index_before = tokens.index(argument_token or token_at_position) - 1
         if arg_index_before >= 0:
-            while arg_index_before >= 0 and tokens[arg_index_before].type != RobotToken.ARGUMENT:
+            while arg_index_before >= 0 and tokens[arg_index_before].type != Token.ARGUMENT:
                 arg_index_before -= 1
 
         before_is_named = False
-        if arg_index_before >= 0 and tokens[arg_index_before].type == RobotToken.ARGUMENT:
+        if arg_index_before >= 0 and tokens[arg_index_before].type == Token.ARGUMENT:
             name_or_value, value = split_from_equals((tokens[arg_index_before]).value)
             before_is_named = (
                 value is not None and name_or_value and any(k for k in kw_arguments if k.name == name_or_value)
@@ -2198,14 +2179,16 @@ class CompletionCollector(ModelHelperMixin):
                     snippets = [
                         "{"
                         + ", ".join(
-                            (str(m.key) + ": ${" + str(i + 1) + "}")
+                            (f'"{m.key}"' + ": ${" + str(i + 1) + "}")
                             for i, m in enumerate(type_info.items)
                             if m.required
                         )
                         + "}"
                         if any(m.required for m in type_info.items) and any(not m.required for m in type_info.items)
                         else "",
-                        f"{{{', '.join((str(m.key)+': ${'+str(i+1)+'}') for i, m in enumerate(type_info.items))}}}",
+                        "{"
+                        + ", ".join((f'"{m.key}"' + ": ${" + str(i + 1) + "}") for i, m in enumerate(type_info.items))
+                        + "}",
                     ]
                     for i, snippet in enumerate(snippets):
                         if snippet:
@@ -2227,14 +2210,14 @@ class CompletionCollector(ModelHelperMixin):
         if complete_argument_names:
             known_names = []
 
-            if (argument_token or token_at_position).type == RobotToken.ARGUMENT and position == range_from_token(
+            if (argument_token or token_at_position).type == Token.ARGUMENT and position == range_from_token(
                 (argument_token or token_at_position)
             ).start:
                 completion_range = Range(position, position)
 
             elif keyword_doc.arguments_spec is not None:
                 positional, named = keyword_doc.arguments_spec.resolve(
-                    [a.value for a in [t for t in tokens if t.type == RobotToken.ARGUMENT]],
+                    [a.value for a in [t for t in tokens if t.type == Token.ARGUMENT]],
                     None,
                     resolve_variables_until=keyword_doc.args_to_process,
                     resolve_named=not keyword_doc.is_any_run_keyword(),
@@ -2286,11 +2269,7 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-
-        return await self._complete_KeywordCall_or_Fixture(
-            RobotToken.KEYWORD, node, nodes_at_position, position, context
-        )
+        return await self._complete_KeywordCall_or_Fixture(Token.KEYWORD, node, nodes_at_position, position, context)
 
     async def complete_Fixture(  # noqa: N802
         self,
@@ -2299,14 +2278,11 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Fixture
-
-        name_token = cast(Fixture, node).get_token(RobotToken.NAME)
+        name_token = cast(Fixture, node).get_token(Token.NAME)
         if name_token is None or name_token.value is None or name_token.value.upper() in ("", "NONE"):
             return None
 
-        return await self._complete_KeywordCall_or_Fixture(RobotToken.NAME, node, nodes_at_position, position, context)
+        return await self._complete_KeywordCall_or_Fixture(Token.NAME, node, nodes_at_position, position, context)
 
     async def create_tags_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
         built_in_tags = {
@@ -2348,19 +2324,16 @@ class CompletionCollector(ModelHelperMixin):
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Statement
-
         statement = cast(Statement, node)
         tokens = get_tokens_at_position(statement, position, True)
 
         if not tokens:
             return None
 
-        if tokens[-1].type == RobotToken.ARGUMENT:
+        if tokens[-1].type == Token.ARGUMENT:
             return await self.create_tags_completion_items(range_from_token(tokens[-1]))
 
-        if len(tokens) > 1 and tokens[-2].type == RobotToken.ARGUMENT:
+        if len(tokens) > 1 and tokens[-2].type == Token.ARGUMENT:
             return await self.create_tags_completion_items(range_from_token(tokens[-2]))
 
         if whitespace_at_begin_of_token(tokens[-1]) >= 2:
