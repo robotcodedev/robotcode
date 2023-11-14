@@ -389,9 +389,7 @@ class ArgumentInfo:
             str_repr=str(arg),
             types=robot_arg.types_reprs
             if get_robot_version() < (7, 0)
-            else [str(robot_arg.type)]
-            if not robot_arg.type.is_union
-            else [str(t) for t in robot_arg.type.nested]
+            else ([str(robot_arg.type)] if not robot_arg.type.is_union else [str(t) for t in robot_arg.type.nested])
             if robot_arg.type
             else None,
             kind=KeywordArgumentKind[robot_arg.kind],
