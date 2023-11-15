@@ -156,7 +156,10 @@ def robot(
 
     \b
     ```
-    robotcode run
+    robotcode robot
+    robotcode robot tests
+    robotcode robot -i regression -e wip tests
+    robotcode --profile ci robot -i regression -e wip tests
     ```
     """
 
