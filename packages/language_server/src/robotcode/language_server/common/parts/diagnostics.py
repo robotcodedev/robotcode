@@ -146,6 +146,19 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
         self._workspace_diagnostics_task = create_sub_task(self.run_workspace_diagnostics(), loop=self.diagnostics_loop)
 
+    def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
+        if (
+            self.parent.client_capabilities is not None
+            and self.parent.client_capabilities.text_document is not None
+            and self.parent.client_capabilities.text_document.diagnostic is not None
+        ):
+            capabilities.diagnostic_provider = DiagnosticOptions(
+                inter_file_dependencies=True,
+                workspace_diagnostics=False,
+                identifier=f"robotcodelsp_{uuid.uuid4()}",
+                work_done_progress=True,
+            )
+
     @property
     def diagnostics_loop(self) -> asyncio.AbstractEventLoop:
         if self._diagnostics_loop is None:
@@ -213,19 +226,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
                 if not self._diagnostics_started.wait(10) or not self._single_diagnostics_started.wait(10):
                     raise RuntimeError("Can't start diagnostics worker threads.")
-
-    def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
-        if (
-            self.parent.client_capabilities is not None
-            and self.parent.client_capabilities.text_document is not None
-            and self.parent.client_capabilities.text_document.diagnostic is not None
-        ):
-            capabilities.diagnostic_provider = DiagnosticOptions(
-                inter_file_dependencies=True,
-                workspace_diagnostics=False,
-                identifier=f"robotcodelsp_{uuid.uuid4()}",
-                work_done_progress=True,
-            )
 
     @async_tasking_event_iterator
     async def collect(sender, document: TextDocument) -> Optional[DiagnosticsResult]:  # NOSONAR
@@ -298,14 +298,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                     await asyncio.sleep(0.001)
 
         finally:
-            self.parent.send_notification(
-                "textDocument/publishDiagnostics",
-                PublishDiagnosticsParams(
-                    uri=document.document_uri,
-                    version=document._version,
-                    diagnostics=[],
-                ),
-            )
+            self.publish_diagnostics(document, diagnostics=[])
 
     async def cancel_workspace_diagnostics_task(self, sender: Any) -> None:
         if self._workspace_diagnostics_task is not None:
@@ -472,15 +465,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                     collected_keys.append(result.key)
 
                 if data.entries and send_diagnostics:
-                    self.parent.send_notification(
-                        "textDocument/publishDiagnostics",
-                        PublishDiagnosticsParams(
-                            uri=document.document_uri,
-                            version=document._version,
-                            diagnostics=[
-                                l for l in itertools.chain(*[i for i in data.entries.values() if i is not None])
-                            ],
-                        ),
+                    self.publish_diagnostics(
+                        document,
+                        diagnostics=[l for l in itertools.chain(*[i for i in data.entries.values() if i is not None])],
                     )
 
         except asyncio.CancelledError:
@@ -488,6 +475,16 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         finally:
             for k in set(data.entries.keys()) - set(collected_keys):
                 data.entries.pop(k)
+
+    def publish_diagnostics(self, document: TextDocument, diagnostics: List[Diagnostic]) -> None:
+        self.parent.send_notification(
+            "textDocument/publishDiagnostics",
+            PublishDiagnosticsParams(
+                uri=document.document_uri,
+                version=document.version,
+                diagnostics=diagnostics,
+            ),
+        )
 
     @rpc_method(name="textDocument/diagnostic", param_type=DocumentDiagnosticParams)
     @threaded()

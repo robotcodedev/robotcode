@@ -113,6 +113,7 @@ from .commands import config, profiles
     "--debugpy",
     is_flag=True,
     hidden=show_hidden_arguments(),
+    show_envvar=True,
     help="Starts a debugpy session. "
     "**This is an internal option and should only be use if you want to debug _RobotCode_.**",
 )
@@ -121,6 +122,7 @@ from .commands import config, profiles
     type=int,
     default=5678,
     show_default=True,
+    show_envvar=True,
     hidden=show_hidden_arguments(),
     help="Defines the port to use for the debugpy session.",
 )
