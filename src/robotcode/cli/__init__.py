@@ -130,6 +130,7 @@ from .commands import config, profiles
     "--debugpy-wait-for-client",
     is_flag=True,
     hidden=show_hidden_arguments(),
+    show_envvar=True,
     help="Waits for a debugpy client to connect before starting the debugpy session.",
 )
 @click.version_option(version=__version__, prog_name="robotcode")

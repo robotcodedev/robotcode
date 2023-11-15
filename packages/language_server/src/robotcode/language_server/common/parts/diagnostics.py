@@ -141,10 +141,17 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
         self.refresh_task: Optional[asyncio.Task[Any]] = None
 
+        self.client_supports_pull = False
+
     async def initialized(self, sender: Any) -> None:
         self._ensure_diagnostics_thread_started()
 
         self._workspace_diagnostics_task = create_sub_task(self.run_workspace_diagnostics(), loop=self.diagnostics_loop)
+
+        if not self.client_supports_pull:
+            self.parent.documents.did_open.add(self.update_document_diagnostics)
+            self.parent.documents.did_change.add(self.update_document_diagnostics)
+            self.parent.documents.did_save.add(self.update_document_diagnostics)
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if (
@@ -158,6 +165,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                 identifier=f"robotcodelsp_{uuid.uuid4()}",
                 work_done_progress=True,
             )
+            self.client_supports_pull = True
 
     @property
     def diagnostics_loop(self) -> asyncio.AbstractEventLoop:
@@ -485,6 +493,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                 diagnostics=diagnostics,
             ),
         )
+
+    async def update_document_diagnostics(self, sender: Any, document: TextDocument) -> None:
+        self.create_document_diagnostics_task(document, True)
 
     @rpc_method(name="textDocument/diagnostic", param_type=DocumentDiagnosticParams)
     @threaded()
