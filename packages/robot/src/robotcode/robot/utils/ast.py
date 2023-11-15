@@ -11,7 +11,6 @@ from typing import (
     Sequence,
     Set,
     Tuple,
-    cast,
 )
 
 from robotcode.core.lsp.types import Position, Range
@@ -302,9 +301,7 @@ def strip_variable_token(token: Token) -> Token:
 
         stripped_value = value.lstrip()
         stripped_offset = len(value) - len(stripped_value)
-        return cast(
-            Token, Token(token.type, stripped_value.rstrip(), token.lineno, token.col_offset + 2 + stripped_offset)
-        )
+        return Token(token.type, stripped_value.rstrip(), token.lineno, token.col_offset + 2 + stripped_offset)
 
     return token
 
