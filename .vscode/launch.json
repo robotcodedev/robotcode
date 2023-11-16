@@ -20,7 +20,8 @@
 			"request": "launch",
 			"module": "robotcode.cli",
 			"justMyCode": false,
-			"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data/tests",
+			//"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data/tests",
+			"cwd": "E:\\tmp\\rfalpha",
 			//"cwd": "C:\\develop\\robot\\robotframework",
 			// "env": {
 			// 	"ROBOTCODE_COLOR": "1",
@@ -43,8 +44,8 @@
 				// "--no-color",
 				// "--no-pager",
 				//"config", "info", "list",
-				"analyze",
-				// "profiles", "list"
+				// "analyze",
+				"profiles", "list"
 				// "discover", "tests", "--tags"
 				// "."
 			]

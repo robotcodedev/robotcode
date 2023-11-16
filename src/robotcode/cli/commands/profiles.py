@@ -15,7 +15,7 @@ from robotcode.robot.config.utils import get_config_files
     invoke_without_command=False,
 )
 def profiles() -> None:
-    """View _robot_ profile informations."""
+    """Shows information on defined profiles."""
 
 
 @profiles.command
@@ -29,7 +29,7 @@ def show(
     no_evaluate: bool,
     paths: List[Path],
 ) -> None:
-    """Shows the given _robot_ profile."""
+    """Shows the given profile configuration."""
     try:
         config_files, _, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
 
@@ -53,7 +53,7 @@ def list(
     app: Application,
     paths: List[Path],
 ) -> None:
-    """Lists the defined profiles in the current _robot_ configuration."""
+    """Lists the defined profiles in the current configuration."""
 
     try:
         config_files, _, discovered_by = get_config_files(
@@ -102,8 +102,10 @@ def list(
                     v[k] = " ".join(lines[:1]) + (" ..." if len(lines) > 1 else "")
 
             header = ""
-            max_name = max(*(len(profile["name"]) for profile in result["profiles"]), len("Name"))
-            max_description = max(*(len(profile["description"]) for profile in result["profiles"]), len("Description"))
+            max_name = max(0, len("Name"), *(len(profile["name"]) for profile in result["profiles"]))
+            max_description = max(
+                0, len("Description"), *(len(profile["description"]) for profile in result["profiles"])
+            )
             header += (
                 f'| Active | Selected | Enabled | Name{(max_name-len("Name"))*" "} '
                 f'| Description{(max_description-len("Description"))*" "} |\n'
