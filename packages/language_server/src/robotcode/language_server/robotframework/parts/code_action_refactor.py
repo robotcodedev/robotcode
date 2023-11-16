@@ -152,11 +152,16 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         )
 
         if get_robot_version() >= (5, 0, 0):
-            from robot.parsing.model.statements import Break, Continue, ReturnStatement, WhileHeader
-
-        if get_robot_version() >= (6, 0, 0):
             from robot.parsing.model.blocks import Try
-            from robot.parsing.model.statements import ExceptHeader, FinallyHeader, TryHeader
+            from robot.parsing.model.statements import (
+                Break,
+                Continue,
+                ExceptHeader,
+                FinallyHeader,
+                ReturnStatement,
+                TryHeader,
+                WhileHeader,
+            )
 
         if not isinstance(model, (Keyword, TestCase)):
             return []
@@ -232,9 +237,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                 ),
             )
             or get_robot_version() >= (5, 0)
-            and isinstance(n, WhileHeader)
-            or get_robot_version() >= (6, 0)
-            and isinstance(n, (TryHeader, ExceptHeader, FinallyHeader))
+            and isinstance(n, (WhileHeader, TryHeader, ExceptHeader, FinallyHeader))
         ):
             return []
 
