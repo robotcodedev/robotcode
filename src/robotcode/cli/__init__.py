@@ -178,6 +178,9 @@ def robotcode(
     app.config.output_format = format
     app.config.launcher_script = launcher_script
     app.config.default_paths = default_path
+    app.config.log_enabled = log
+    app.config.log_level = log_level
+    app.config.log_calls = log_calls
 
     if log:
         if log_calls:

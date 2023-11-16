@@ -531,8 +531,8 @@ export class LanguageClientsManager {
             e.newState === State.Starting
               ? ClientState.Starting
               : e.newState === State.Stopped
-              ? ClientState.Stopped
-              : ClientState.Running,
+                ? ClientState.Stopped
+                : ClientState.Running,
         });
       });
 

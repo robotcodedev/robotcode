@@ -622,7 +622,7 @@ export class TestControllerManager {
 
       const result = await this.discoverTests(
         folder,
-        ["discover", "--read-from-stdin", "all"],
+        ["discover", "--no-diagnostics", "--read-from-stdin", "all"],
         [],
         JSON.stringify(o),
         token,

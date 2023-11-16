@@ -59,11 +59,23 @@ class CommonConfig:
     launcher_script: Optional[str] = None
     output_format: Optional[OutputFormat] = None
     pager: Optional[bool] = None
+    log_enabled: bool = False
+    log_level: Optional[str] = None
+    log_calls: bool = False
 
 
 class Application:
     def __init__(self) -> None:
         self.config = CommonConfig()
+        self._show_diagnostics = True
+
+    @property
+    def show_diagnostics(self) -> bool:
+        return self._show_diagnostics
+
+    @show_diagnostics.setter
+    def show_diagnostics(self, value: bool) -> None:
+        self._show_diagnostics = value
 
     @property
     def colored(self) -> bool:
