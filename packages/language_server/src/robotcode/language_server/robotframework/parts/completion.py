@@ -200,6 +200,14 @@ def get_snippets() -> Dict[str, List[str]]:
                     "WHILE": [r"WHILE  ${1:expression}", "    $0", "END", ""],
                 }
             )
+        if get_robot_version() >= (7, 0):
+            __snippets.update(
+                {
+                    "VAR ${}": [r"VAR    \${${0}}"],
+                    "VAR @{}": [r"VAR    @{${0}}"],
+                    "VAR &{}": [r"VAR    &{${0}}"],
+                }
+            )
     return __snippets
 
 
@@ -227,6 +235,10 @@ def get_reserved_keywords() -> List[str]:
                 "BREAK",
                 "CONTINUE",
                 "RETURN",
+            ]
+        if get_robot_version() >= (7, 0):
+            __reserved_keywords += [
+                "VAR",
             ]
 
         __reserved_keywords = sorted(__reserved_keywords)
