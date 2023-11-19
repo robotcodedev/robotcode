@@ -18,7 +18,7 @@
 		{
 			"label": "robotcode: bump version",
 			"type": "shell",
-			"command": "hatch run build:cz bump",
+			"command": "hatch run build:bump",
 			"problemMatcher": []
 		},
 		{
