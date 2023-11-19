@@ -470,8 +470,9 @@ export class DebugManager {
     excluded: string[],
     runId?: string,
     options?: vscode.DebugSessionOptions,
-    dryRun?: boolean,
     topLevelSuiteName?: string,
+    profiles?: string[],
+    testConfiguration?: { [Key: string]: unknown },
   ): Promise<boolean> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
@@ -509,6 +510,7 @@ export class DebugManager {
     }
 
     const testLaunchConfig: { [Key: string]: unknown } =
+      testConfiguration ??
       vscode.workspace
         .getConfiguration("launch", folder)
         ?.get<{ [Key: string]: unknown }[]>("configurations")
@@ -516,7 +518,8 @@ export class DebugManager {
           (v) =>
             v?.type === "robotcode" &&
             (v?.purpose === "test" || (Array.isArray(v?.purpose) && v?.purpose?.indexOf("test") > -1)),
-        ) ?? {};
+        ) ??
+      {};
 
     if (!("target" in testLaunchConfig)) {
       testLaunchConfig.target = "";
@@ -525,13 +528,15 @@ export class DebugManager {
     let paths = config.get<string[]>("robot.paths", []);
     paths = "paths" in testLaunchConfig ? [...(testLaunchConfig.paths as string[]), ...paths] : paths;
 
+    if (profiles) testLaunchConfig.profiles = profiles;
+
     return vscode.debug.startDebugging(
       folder,
       {
         ...testLaunchConfig,
         ...{
           type: "robotcode",
-          name: `RobotCode: Run Tests ${folder.name}`,
+          name: (testLaunchConfig?.name as string) ?? `RobotCode: Run Tests ${folder.name}`,
           request: "launch",
           cwd: folder?.uri.fsPath,
           paths: paths?.length > 0 ? paths : ["."],
@@ -541,7 +546,6 @@ export class DebugManager {
               ? testLaunchConfig.console
               : config.get("debug.defaultConsole", "integratedTerminal"),
           runId: runId,
-          dryRun,
         },
       },
       options,

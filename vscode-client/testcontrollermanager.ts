@@ -135,10 +135,10 @@ class WorkspaceFolderEntry {
 export class TestControllerManager {
   private _disposables: vscode.Disposable;
   public readonly testController: vscode.TestController;
-  public readonly runProfile: vscode.TestRunProfile;
-  public readonly debugProfile: vscode.TestRunProfile;
-  public readonly dryRunProfile: vscode.TestRunProfile;
-  public readonly dryRunDebugProfile: vscode.TestRunProfile;
+
+  private readonly runProfilesMutex = new Mutex();
+  public runProfiles: vscode.TestRunProfile[] = [];
+
   private readonly refreshMutex = new Mutex();
   private readonly debugSessions = new Set<vscode.DebugSession>();
   private readonly didChangedTimer = new Map<string, DidChangeEntry>();
@@ -161,46 +161,9 @@ export class TestControllerManager {
       await this.refreshWorkspace(undefined, undefined, token);
     };
 
-    this.runProfile = this.testController.createRunProfile(
-      "Run",
-      vscode.TestRunProfileKind.Run,
-      async (request, token) => this.runTests(request, token),
-      true,
-    );
-
-    this.runProfile.configureHandler = () => {
-      this.configureRunProfile().then(
-        (_) => undefined,
-        (_) => undefined,
-      );
-    };
-
-    this.dryRunProfile = this.testController.createRunProfile(
-      "Dry Run",
-      vscode.TestRunProfileKind.Run,
-      async (request, token) => this.runTests(request, token, true),
-      false,
-    );
-
-    this.debugProfile = this.testController.createRunProfile(
-      "Debug",
-      vscode.TestRunProfileKind.Debug,
-      async (request, token) => this.runTests(request, token),
-      true,
-    );
-
-    this.debugProfile.configureHandler = () => {
-      this.configureRunProfile().then(
-        (_) => undefined,
-        (_) => undefined,
-      );
-    };
-
-    this.dryRunDebugProfile = this.testController.createRunProfile(
-      "Dry Debug",
-      vscode.TestRunProfileKind.Debug,
-      async (request, token) => this.runTests(request, token, true),
-      false,
+    this.updateRunProfiles().then(
+      (_) => undefined,
+      (_) => undefined,
     );
 
     const fileWatcher = vscode.workspace.createFileSystemWatcher(
@@ -235,6 +198,8 @@ export class TestControllerManager {
         this.refreshDocument(event.document);
       }),
       vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
+        await this.updateRunProfiles();
+
         for (const r of event.removed) {
           this.removeWorkspaceFolderItems(r);
         }
@@ -300,7 +265,102 @@ export class TestControllerManager {
       vscode.commands.registerCommand("robotcode.selectExecutionProfiles", async () => {
         await this.configureRunProfile();
       }),
+      vscode.workspace.onDidChangeConfiguration(async (event) => {
+        for (const s of ["launch.configurations"]) {
+          if (event.affectsConfiguration(s)) {
+            await this.updateRunProfiles();
+          }
+        }
+      }),
     );
+  }
+
+  private getFolderTag(folder: vscode.WorkspaceFolder | undefined): vscode.TestTag | undefined {
+    if (folder === undefined) return undefined;
+    return this.createTag(`_robotFolder:${folder.uri.toString()}`);
+  }
+
+  private async updateRunProfiles(): Promise<void> {
+    await this.runProfilesMutex.dispatch(() => {
+      for (const a of this.runProfiles) {
+        a.dispose();
+      }
+      this.runProfiles = [];
+
+      const multiFolders = (vscode.workspace.workspaceFolders?.length ?? 0) > 1;
+
+      for (const folder of vscode.workspace.workspaceFolders ?? []) {
+        const folderTag = this.getFolderTag(folder);
+
+        const folderName = multiFolders ? ` (${folder.name})` : "";
+
+        if (multiFolders) {
+          const runProfile = this.testController.createRunProfile(
+            "Run" + folderName,
+            vscode.TestRunProfileKind.Run,
+            async (request, token) => this.runTests(request, token, undefined),
+            false,
+            folderTag,
+          );
+
+          runProfile.configureHandler = () => {
+            this.configureRunProfile().then(
+              (_) => undefined,
+              (_) => undefined,
+            );
+          };
+
+          this.runProfiles.push(runProfile);
+
+          const debugProfile = this.testController.createRunProfile(
+            "Debug" + folderName,
+            vscode.TestRunProfileKind.Debug,
+            async (request, token) => this.runTests(request, token, undefined),
+            false,
+            folderTag,
+          );
+
+          debugProfile.configureHandler = () => {
+            this.configureRunProfile().then(
+              (_) => undefined,
+              (_) => undefined,
+            );
+          };
+
+          this.runProfiles.push(debugProfile);
+        }
+
+        const configurations = vscode.workspace
+          .getConfiguration("launch", folder)
+          ?.get<{ [Key: string]: unknown }[]>("configurations");
+
+        configurations?.forEach((config, index) => {
+          if (config.type === "robotcode" && config.purpose == "test-profile") {
+            const name = ((config.name || `Profile ${index}`) as string) + folderName;
+
+            const runProfile = this.testController.createRunProfile(
+              "Run " + name,
+              vscode.TestRunProfileKind.Run,
+              async (request, token) => this.runTests(request, token, undefined, config),
+              false,
+              folderTag,
+            );
+
+            this.runProfiles.push(runProfile);
+
+            const debugProfile = this.testController.createRunProfile(
+              "Debug " + name,
+              vscode.TestRunProfileKind.Debug,
+              async (request, token) => this.runTests(request, token, undefined, config),
+              false,
+              folderTag,
+            );
+
+            this.runProfiles.push(debugProfile);
+          }
+        });
+      }
+    });
   }
 
   public async getRobotCodeProfiles(
@@ -351,7 +411,7 @@ export class TestControllerManager {
               folders.map((v) => {
                 return {
                   label: v.name,
-                  description: v.uri.toString(),
+                  description: v.uri.fsPath.toString(),
                   value: v,
                 };
               }),
@@ -376,7 +436,7 @@ export class TestControllerManager {
       });
 
       const profiles = await vscode.window.showQuickPick([...options], {
-        title: `Select Execution Profiles for folder "${folder.name}"`,
+        title: `Select Configuration Profiles for folder "${folder.name}"`,
         canPickMany: true,
       });
       if (profiles === undefined) return;
@@ -586,7 +646,7 @@ export class TestControllerManager {
     return result;
   }
 
-  public async getTestsFromWorkspace(
+  public async getTestsFromWorkspaceFolder(
     folder: vscode.WorkspaceFolder,
     token?: vscode.CancellationToken,
   ): Promise<RobotTestItem[] | undefined> {
@@ -766,7 +826,7 @@ export class TestControllerManager {
         if (this.robotTestItems.get(folder) === undefined || !this.robotTestItems.get(folder)?.valid) {
           this.robotTestItems.set(
             folder,
-            new WorkspaceFolderEntry(true, await this.getTestsFromWorkspace(folder, token)),
+            new WorkspaceFolderEntry(true, await this.getTestsFromWorkspaceFolder(folder, token)),
           );
         }
 
@@ -821,8 +881,12 @@ export class TestControllerManager {
       testItem.error = robotTestItem.error;
     }
 
-    const tags = this.convertTags(robotTestItem.tags);
+    const tags = this.convertTags(robotTestItem.tags) ?? [];
+
+    const folderTag = this.getFolderTag(this.findWorkspaceFolderForItem(testItem));
+    if (folderTag !== undefined) tags?.push(folderTag);
     if (tags) testItem.tags = tags;
+
     return testItem;
   }
 
@@ -850,16 +914,22 @@ export class TestControllerManager {
 
   private testTags = new WeakValueMap<string, vscode.TestTag>();
 
+  private createTag(tag: string): vscode.TestTag | undefined {
+    if (!this.testTags.has(tag)) {
+      this.testTags.set(tag, new vscode.TestTag(tag));
+    }
+    const vstag = this.testTags.get(tag);
+
+    return vstag;
+  }
+
   private convertTags(tags: string[] | undefined): vscode.TestTag[] | undefined {
     if (tags === undefined) return undefined;
 
     const result: vscode.TestTag[] = [];
 
     for (const tag of tags) {
-      if (!this.testTags.has(tag)) {
-        this.testTags.set(tag, new vscode.TestTag(tag));
-      }
-      const vstag = this.testTags.get(tag);
+      const vstag = this.createTag(tag);
       if (vstag !== undefined) result.push(vstag);
     }
 
@@ -940,7 +1010,7 @@ export class TestControllerManager {
     }
   }
 
-  private findWorkspaceForItem(item: vscode.TestItem): vscode.WorkspaceFolder | undefined {
+  private findWorkspaceFolderForItem(item: vscode.TestItem): vscode.WorkspaceFolder | undefined {
     if (item.uri !== undefined) {
       return vscode.workspace.getWorkspaceFolder(item.uri);
     }
@@ -964,10 +1034,10 @@ export class TestControllerManager {
 
   private readonly testRuns = new Map<string, vscode.TestRun>();
 
-  private mapTestItemsToWorkspace(items: vscode.TestItem[]): Map<vscode.WorkspaceFolder, vscode.TestItem[]> {
+  private mapTestItemsToWorkspaceFolder(items: vscode.TestItem[]): Map<vscode.WorkspaceFolder, vscode.TestItem[]> {
     const folders = new Map<vscode.WorkspaceFolder, vscode.TestItem[]>();
     for (const i of items) {
-      const ws = this.findWorkspaceForItem(i);
+      const ws = this.findWorkspaceFolderForItem(i);
       if (ws !== undefined) {
         if (!folders.has(ws)) {
           folders.set(ws, []);
@@ -998,12 +1068,12 @@ export class TestControllerManager {
   public async runTests(
     request: vscode.TestRunRequest,
     token: vscode.CancellationToken,
-    dryRun?: boolean,
+    profiles?: string[],
+    testConfiguration?: { [Key: string]: unknown },
   ): Promise<void> {
     const includedItems: vscode.TestItem[] = [];
 
     if (request.include) {
-      //includedItems = Array.from(request.include);
       request.include.forEach((v) => {
         const robotTest = this.findRobotItem(v);
         if (robotTest?.type === "workspace") {
@@ -1025,8 +1095,8 @@ export class TestControllerManager {
       });
     }
 
-    const included = this.mapTestItemsToWorkspace(includedItems);
-    const excluded = this.mapTestItemsToWorkspace(request.exclude ? Array.from(request.exclude) : []);
+    const included = this.mapTestItemsToWorkspaceFolder(includedItems);
+    const excluded = this.mapTestItemsToWorkspaceFolder(request.exclude ? Array.from(request.exclude) : []);
 
     if (included.size === 0) return;
 
@@ -1043,7 +1113,14 @@ export class TestControllerManager {
       }
     });
 
-    for (const [workspace, testItems] of included) {
+    for (const [folder, testItems] of included) {
+      if (
+        request.profile !== undefined &&
+        request.profile.tag !== undefined &&
+        request.profile.tag !== this.getFolderTag(folder)
+      )
+        continue;
+
       const runId = TestControllerManager.runId.next().value;
       this.testRuns.set(runId, run);
 
@@ -1054,7 +1131,7 @@ export class TestControllerManager {
         };
       }
 
-      let workspaceItem = this.findTestItemByUri(workspace.uri.toString());
+      let workspaceItem = this.findTestItemByUri(folder.uri.toString());
       const workspaceRobotItem = workspaceItem ? this.findRobotItem(workspaceItem) : undefined;
 
       if (workspaceRobotItem?.type == "workspace" && workspaceRobotItem.children?.length) {
@@ -1063,7 +1140,7 @@ export class TestControllerManager {
 
       if (testItems.length === 1 && testItems[0] === workspaceItem && excluded.size === 0) {
         const started = await DebugManager.runTests(
-          workspace,
+          folder,
           [],
           [],
           workspaceRobotItem?.needs_parse_include ?? false,
@@ -1071,7 +1148,9 @@ export class TestControllerManager {
           [],
           runId,
           options,
-          dryRun,
+          undefined,
+          profiles,
+          testConfiguration,
         );
         run_started = run_started || started;
       } else {
@@ -1086,7 +1165,7 @@ export class TestControllerManager {
           .filter((i) => i !== undefined) as string[];
         const excludedInWs =
           (excluded
-            .get(workspace)
+            .get(folder)
             ?.map((i) => {
               const ritem = this.findRobotItem(i);
               if (ritem?.type == "workspace" && ritem.children?.length) {
@@ -1099,7 +1178,7 @@ export class TestControllerManager {
         const suites = new Set<string>();
         const rel_sources = new Set<string>();
 
-        for (const testItem of [...testItems, ...(excluded.get(workspace) || [])]) {
+        for (const testItem of [...testItems, ...(excluded.get(folder) || [])]) {
           if (!testItem?.canResolveChildren) {
             if (testItem?.parent) {
               const ritem = this.findRobotItem(testItem?.parent);
@@ -1130,7 +1209,7 @@ export class TestControllerManager {
         }
 
         const started = await DebugManager.runTests(
-          workspace,
+          folder,
           Array.from(suites),
           Array.from(rel_sources),
           workspaceRobotItem?.needs_parse_include ?? false,
@@ -1138,8 +1217,9 @@ export class TestControllerManager {
           excludedInWs,
           runId,
           options,
-          dryRun,
           suiteName,
+          profiles,
+          testConfiguration,
         );
 
         run_started = run_started || started;

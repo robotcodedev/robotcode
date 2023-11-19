@@ -1130,22 +1130,26 @@
                 ],
                 "enum": [
                   "default",
-                  "test"
+                  "test",
+                  "test-profile"
                 ],
-                "enumDescriptions": [
-                  "Use this configuration as default for all other configurations.",
-                  "Use this configuration when running or debugging tests."
+                "markdownEnumDescriptions": [
+                  "Configuration is uses as default for all other configurations.",
+                  "Default configuration for running or debugging tests.",
+                  "Defines a test profile that you can select in the test explorer or via the play button during a test. This configuration is used instead of the configuration with the purpose `test`."
                 ],
                 "default": [],
                 "description": "Defines what purpose this configuration has.",
                 "items": {
                   "enum": [
                     "default",
-                    "test"
+                    "test",
+                    "test-profile"
                   ],
-                  "enumDescriptions": [
-                    "Use this configuration as default for all other configurations.",
-                    "Use this configuration when running or debugging tests."
+                  "markdownEnumDescriptions": [
+                    "Configuration is uses as default for all other configurations.",
+                    "Default configuration for running or debugging tests.",
+                    "Defines a test profile that you can select in the test explorer or via the play button during a test. This configuration is used instead of the configuration with the purpose `test`."
                   ]
                 }
               },
@@ -1237,6 +1241,19 @@
                 "hidden": true
               },
               "purpose": "test"
+            }
+          },
+          {
+            "label": "RobotCode: Test Profile",
+            "description": "Create a new test profile that is displayed in the test explorer.",
+            "body": {
+              "name": "RobotCode: Test Profile",
+              "type": "robotcode",
+              "request": "launch",
+              "presentation": {
+                "hidden": true
+              },
+              "purpose": "test-profile"
             }
           },
           {
