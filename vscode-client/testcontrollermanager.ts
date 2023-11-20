@@ -294,41 +294,39 @@ export class TestControllerManager {
 
         const folderName = multiFolders ? ` (${folder.name})` : "";
 
-        if (multiFolders) {
-          const runProfile = this.testController.createRunProfile(
-            "Run" + folderName,
-            vscode.TestRunProfileKind.Run,
-            async (request, token) => this.runTests(request, token, undefined),
-            false,
-            folderTag,
+        const runProfile = this.testController.createRunProfile(
+          "Run" + folderName,
+          vscode.TestRunProfileKind.Run,
+          async (request, token) => this.runTests(request, token, undefined),
+          false,
+          folderTag,
+        );
+
+        runProfile.configureHandler = () => {
+          this.configureRunProfile().then(
+            (_) => undefined,
+            (_) => undefined,
           );
+        };
 
-          runProfile.configureHandler = () => {
-            this.configureRunProfile().then(
-              (_) => undefined,
-              (_) => undefined,
-            );
-          };
+        this.runProfiles.push(runProfile);
 
-          this.runProfiles.push(runProfile);
+        const debugProfile = this.testController.createRunProfile(
+          "Debug" + folderName,
+          vscode.TestRunProfileKind.Debug,
+          async (request, token) => this.runTests(request, token, undefined),
+          false,
+          folderTag,
+        );
 
-          const debugProfile = this.testController.createRunProfile(
-            "Debug" + folderName,
-            vscode.TestRunProfileKind.Debug,
-            async (request, token) => this.runTests(request, token, undefined),
-            false,
-            folderTag,
+        debugProfile.configureHandler = () => {
+          this.configureRunProfile().then(
+            (_) => undefined,
+            (_) => undefined,
           );
+        };
 
-          debugProfile.configureHandler = () => {
-            this.configureRunProfile().then(
-              (_) => undefined,
-              (_) => undefined,
-            );
-          };
-
-          this.runProfiles.push(debugProfile);
-        }
+        this.runProfiles.push(debugProfile);
 
         const configurations = vscode.workspace
           .getConfiguration("launch", folder)
