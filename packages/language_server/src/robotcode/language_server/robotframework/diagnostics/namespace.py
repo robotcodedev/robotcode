@@ -34,7 +34,7 @@ from robot.parsing.model.statements import Arguments, KeywordCall, KeywordName, 
 from robot.parsing.model.statements import LibraryImport as RobotLibraryImport
 from robot.parsing.model.statements import ResourceImport as RobotResourceImport
 from robot.parsing.model.statements import VariablesImport as RobotVariablesImport
-from robot.variables.search import is_scalar_assign, search_variable
+from robot.variables.search import is_scalar_assign, is_variable, search_variable
 from robotcode.core.async_tools import Lock, async_event
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
@@ -227,7 +227,7 @@ class BlockVariableVisitor(Visitor):
                 v
                 for v in itertools.dropwhile(
                     lambda t: t.type in Token.NON_DATA_TOKENS,
-                    tokenize_variables(token, ignore_errors=True),
+                    tokenize_variables(token, ignore_errors=True, extra_types={Token.VARIABLE}),
                 )
                 if v.type == Token.VARIABLE
             ),
@@ -359,6 +359,27 @@ class BlockVariableVisitor(Visitor):
                     end_col_offset=variable_token.end_col_offset,
                     source=self.source,
                 )
+
+    def visit_Var(self, node: Statement) -> None:  # noqa: N802
+        variable = node.get_token(Token.VARIABLE)
+        if variable is None:
+            return
+        try:
+            if not is_variable(variable.value):
+                return
+
+            self._results[variable.value] = LocalVariableDefinition(
+                name=variable.value,
+                name_token=strip_variable_token(variable),
+                line_no=variable.lineno,
+                col_offset=variable.col_offset,
+                end_line_no=variable.lineno,
+                end_col_offset=variable.end_col_offset,
+                source=self.source,
+            )
+
+        except VariableError:
+            pass
 
 
 class ImportVisitor(Visitor):
