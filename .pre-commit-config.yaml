@@ -10,6 +10,7 @@ repos:
         entry: hatch run lint:install-packages
         pass_filenames: false
         language: system
+        stages: [commit]
         types:
           - "python"
       - id: python_style
@@ -17,6 +18,7 @@ repos:
         entry: hatch run lint:style
         pass_filenames: false
         language: system
+        stages: [commit]
         types:
           - "python"
       - id: python_typing
@@ -24,6 +26,7 @@ repos:
         entry: hatch run lint:typing
         pass_filenames: false
         language: system
+        stages: [commit]
         types:
           - "python"
       - id: eslint
@@ -31,11 +34,6 @@ repos:
         entry: npm run lint
         pass_filenames: false
         language: system
+        stages: [commit]
         types:
           - "javascript"
-  - repo: https://github.com/commitizen-tools/commitizen
-    rev: 3.12.0
-    hooks:
-      - id: commitizen
-      - id: commitizen-branch
-        stages: [push]
