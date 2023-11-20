@@ -35,7 +35,7 @@ def main() -> None:
 
     run(
         "create changelog",
-        f"git-cliff --verbose --bump -t {current_version} -o CHANGELOG.md",
+        f"git-cliff --bump -t v{current_version} -o CHANGELOG.md",
         shell=True,
         timeout=600,
     )
