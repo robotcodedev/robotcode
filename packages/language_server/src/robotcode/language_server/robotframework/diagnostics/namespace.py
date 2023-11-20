@@ -24,9 +24,17 @@ from typing import (
     Set,
     Tuple,
     Union,
-    cast,
 )
 
+from robot.errors import VariableError
+from robot.libraries import STDLIBS
+from robot.parsing.lexer.tokens import Token
+from robot.parsing.model.blocks import Keyword, SettingSection, TestCase, VariableSection
+from robot.parsing.model.statements import Arguments, KeywordCall, KeywordName, Statement, Variable
+from robot.parsing.model.statements import LibraryImport as RobotLibraryImport
+from robot.parsing.model.statements import ResourceImport as RobotResourceImport
+from robot.parsing.model.statements import VariablesImport as RobotVariablesImport
+from robot.variables.search import is_scalar_assign, search_variable
 from robotcode.core.async_tools import Lock, async_event
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
@@ -42,16 +50,15 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.uri import Uri
 from robotcode.robot.utils import get_robot_version
-
-from ...common.text_document import TextDocument
-from ..languages import Languages
-from ..utils.ast_utils import (
-    Token,
+from robotcode.robot.utils.ast import (
     range_from_node,
     range_from_token,
     strip_variable_token,
     tokenize_variables,
 )
+
+from ...common.text_document import TextDocument
+from ..languages import Languages
 from ..utils.async_ast import Visitor
 from ..utils.match import eq_namespace
 from ..utils.variables import BUILTIN_VARIABLES
@@ -111,19 +118,14 @@ class VariablesVisitor(Visitor):
         return self._results
 
     def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.model.blocks import VariableSection
-
         if isinstance(node, VariableSection):
             self.generic_visit(node)
 
-    def visit_Variable(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Variable
-        from robot.variables import search_variable
+    def visit_Variable(self, node: Variable) -> None:  # noqa: N802
+        name_token = node.get_token(Token.VARIABLE)
+        if name_token is None:
+            return
 
-        variable = cast(Variable, node)
-
-        name_token = variable.get_token(RobotToken.VARIABLE)
         name = name_token.value
 
         if name is not None:
@@ -134,21 +136,21 @@ class VariablesVisitor(Visitor):
             if name.endswith("="):
                 name = name[:-1].rstrip()
 
-            has_value = bool(variable.value)
+            has_value = bool(node.value)
             value = tuple(
-                s.replace("${CURDIR}", str(Path(self.source).parent).replace("\\", "\\\\")) for s in variable.value
+                s.replace("${CURDIR}", str(Path(self.source).parent).replace("\\", "\\\\")) for s in node.value
             )
 
             self._results.append(
                 VariableDefinition(
-                    name=variable.name,
+                    name=node.name,
                     name_token=strip_variable_token(
-                        RobotToken(name_token.type, name, name_token.lineno, name_token.col_offset, name_token.error)
+                        Token(name_token.type, name, name_token.lineno, name_token.col_offset, name_token.error)
                     ),
-                    line_no=variable.lineno,
-                    col_offset=variable.col_offset,
-                    end_line_no=variable.lineno,
-                    end_col_offset=variable.end_col_offset,
+                    line_no=node.lineno,
+                    col_offset=node.col_offset,
+                    end_line_no=node.lineno,
+                    end_col_offset=node.end_col_offset,
                     source=self.source,
                     has_value=has_value,
                     resolvable=True,
@@ -187,22 +189,17 @@ class BlockVariableVisitor(Visitor):
         finally:
             self.current_kw_doc = None
 
-    def visit_KeywordName(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import KeywordName
-        from robot.variables.search import search_variable
-
+    def visit_KeywordName(self, node: KeywordName) -> None:  # noqa: N802
         from .model_helper import ModelHelperMixin
 
-        n = cast(KeywordName, node)
-        name_token = cast(Token, n.get_token(RobotToken.KEYWORD_NAME))
+        name_token = node.get_token(Token.KEYWORD_NAME)
 
         if name_token is not None and name_token.value:
             keyword = ModelHelperMixin.get_keyword_definition_at_token(self.library_doc, name_token)
             self.current_kw_doc = keyword
 
             for variable_token in filter(
-                lambda e: e.type == RobotToken.VARIABLE,
+                lambda e: e.type == Token.VARIABLE,
                 tokenize_variables(name_token, identifiers="$", ignore_errors=True),
             ):
                 if variable_token.value:
@@ -225,30 +222,24 @@ class BlockVariableVisitor(Visitor):
                     )
 
     def get_variable_token(self, token: Token) -> Optional[Token]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-
         return next(
             (
                 v
                 for v in itertools.dropwhile(
-                    lambda t: t.type in RobotToken.NON_DATA_TOKENS,
+                    lambda t: t.type in Token.NON_DATA_TOKENS,
                     tokenize_variables(token, ignore_errors=True),
                 )
-                if v.type == RobotToken.VARIABLE
+                if v.type == Token.VARIABLE
             ),
             None,
         )
 
-    def visit_Arguments(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.errors import VariableError
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Arguments
-
+    def visit_Arguments(self, node: Arguments) -> None:  # noqa: N802
         args: List[str] = []
-        n = cast(Arguments, node)
-        arguments = n.get_tokens(RobotToken.ARGUMENT)
 
-        for argument_token in (cast(RobotToken, e) for e in arguments):
+        arguments = node.get_tokens(Token.ARGUMENT)
+
+        for argument_token in arguments:
             try:
                 argument = self.get_variable_token(argument_token)
 
@@ -278,14 +269,8 @@ class BlockVariableVisitor(Visitor):
             except VariableError:
                 pass
 
-    def visit_ExceptHeader(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.errors import VariableError
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import ExceptHeader
-        from robot.variables import is_scalar_assign
-
-        n = cast(ExceptHeader, node)
-        variables = n.get_tokens(RobotToken.VARIABLE)[:1]
+    def visit_ExceptHeader(self, node: Statement) -> None:  # noqa: N802
+        variables = node.get_tokens(Token.VARIABLE)[:1]
         if variables and is_scalar_assign(variables[0].value):
             try:
                 variable = self.get_variable_token(variables[0])
@@ -304,23 +289,17 @@ class BlockVariableVisitor(Visitor):
             except VariableError:
                 pass
 
-    def visit_KeywordCall(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.errors import VariableError
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import KeywordCall
-
+    def visit_KeywordCall(self, node: KeywordCall) -> None:  # noqa: N802
         # TODO  analyze "Set Local/Global/Suite Variable"
 
-        n = cast(KeywordCall, node)
-
-        for assign_token in n.get_tokens(RobotToken.ASSIGN):
+        for assign_token in node.get_tokens(Token.ASSIGN):
             variable_token = self.get_variable_token(assign_token)
 
             try:
                 if variable_token is not None:
                     if (
                         self.position is not None
-                        and self.position in range_from_node(n)
+                        and self.position in range_from_node(node)
                         and self.position > range_from_token(variable_token).end
                     ):
                         continue
@@ -339,21 +318,15 @@ class BlockVariableVisitor(Visitor):
             except VariableError:
                 pass
 
-    def visit_InlineIfHeader(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.errors import VariableError
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import InlineIfHeader
-
-        n = cast(InlineIfHeader, node)
-
-        for assign_token in n.get_tokens(RobotToken.ASSIGN):
+    def visit_InlineIfHeader(self, node: Statement) -> None:  # noqa: N802
+        for assign_token in node.get_tokens(Token.ASSIGN):
             variable_token = self.get_variable_token(assign_token)
 
             try:
                 if variable_token is not None:
                     if (
                         self.position is not None
-                        and self.position in range_from_node(n)
+                        and self.position in range_from_node(node)
                         and self.position > range_from_token(variable_token).end
                     ):
                         continue
@@ -372,12 +345,8 @@ class BlockVariableVisitor(Visitor):
             except VariableError:
                 pass
 
-    def visit_ForHeader(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import ForHeader
-
-        n = cast(ForHeader, node)
-        variables = n.get_tokens(RobotToken.VARIABLE)
+    def visit_ForHeader(self, node: Statement) -> None:  # noqa: N802
+        variables = node.get_tokens(Token.VARIABLE)
         for variable in variables:
             variable_token = self.get_variable_token(variable)
             if variable_token is not None and variable_token.value and variable_token.value not in self._results:
@@ -400,31 +369,23 @@ class ImportVisitor(Visitor):
         return self._results
 
     def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.model.blocks import SettingSection
-
         if isinstance(node, SettingSection):
             self.generic_visit(node)
 
-    def visit_LibraryImport(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import LibraryImport as RobotLibraryImport
+    def visit_LibraryImport(self, node: RobotLibraryImport) -> None:  # noqa: N802
+        name = node.get_token(Token.NAME)
 
-        n = cast(RobotLibraryImport, node)
-        name = cast(RobotToken, n.get_token(RobotToken.NAME))
+        separator = node.get_token(Token.WITH_NAME)
+        alias_token = node.get_tokens(Token.NAME)[-1] if separator else None
 
-        separator = n.get_token(RobotToken.WITH_NAME)
-        alias_token = n.get_tokens(RobotToken.NAME)[-1] if separator else None
-
-        last_data_token = cast(
-            RobotToken, next(v for v in reversed(n.tokens) if v.type not in RobotToken.NON_DATA_TOKENS)
-        )
-        if n.name:
+        last_data_token = next(v for v in reversed(node.tokens) if v.type not in Token.NON_DATA_TOKENS)
+        if node.name:
             self._results.append(
                 LibraryImport(
-                    name=n.name,
+                    name=node.name,
                     name_token=name if name is not None else None,
-                    args=n.args,
-                    alias=n.alias,
+                    args=node.args,
+                    alias=node.alias,
                     alias_token=alias_token,
                     line_no=node.lineno,
                     col_offset=node.col_offset,
@@ -442,20 +403,14 @@ class ImportVisitor(Visitor):
                 )
             )
 
-    def visit_ResourceImport(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import ResourceImport as RobotResourceImport
+    def visit_ResourceImport(self, node: RobotResourceImport) -> None:  # noqa: N802
+        name = node.get_token(Token.NAME)
 
-        n = cast(RobotResourceImport, node)
-        name = cast(RobotToken, n.get_token(RobotToken.NAME))
-
-        last_data_token = cast(
-            RobotToken, next(v for v in reversed(n.tokens) if v.type not in RobotToken.NON_DATA_TOKENS)
-        )
-        if n.name:
+        last_data_token = next(v for v in reversed(node.tokens) if v.type not in Token.NON_DATA_TOKENS)
+        if node.name:
             self._results.append(
                 ResourceImport(
-                    name=n.name,
+                    name=node.name,
                     name_token=name if name is not None else None,
                     line_no=node.lineno,
                     col_offset=node.col_offset,
@@ -473,22 +428,16 @@ class ImportVisitor(Visitor):
                 )
             )
 
-    def visit_VariablesImport(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import VariablesImport as RobotVariablesImport
+    def visit_VariablesImport(self, node: RobotVariablesImport) -> None:  # noqa: N802
+        name = node.get_token(Token.NAME)
 
-        n = cast(RobotVariablesImport, node)
-        name = cast(RobotToken, n.get_token(RobotToken.NAME))
-
-        last_data_token = cast(
-            RobotToken, next(v for v in reversed(n.tokens) if v.type not in RobotToken.NON_DATA_TOKENS)
-        )
-        if n.name:
+        last_data_token = next(v for v in reversed(node.tokens) if v.type not in Token.NON_DATA_TOKENS)
+        if node.name:
             self._results.append(
                 VariablesImport(
-                    name=n.name,
+                    name=node.name,
                     name_token=name if name is not None else None,
-                    args=n.args,
+                    args=node.args,
                     line_no=node.lineno,
                     col_offset=node.col_offset,
                     end_line_no=last_data_token.lineno
@@ -926,9 +875,6 @@ class Namespace:
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
     ) -> AsyncIterator[Tuple[VariableMatcher, VariableDefinition]]:
-        from robot.parsing.model.blocks import Keyword, TestCase
-        from robot.parsing.model.statements import Arguments
-
         yielded: Dict[VariableMatcher, VariableDefinition] = {}
 
         test_or_keyword_nodes = list(
@@ -2020,8 +1966,6 @@ class KeywordFinder:
     def _filter_stdlib_runner(
         self, entry1: Tuple[Optional[LibraryEntry], KeywordDoc], entry2: Tuple[Optional[LibraryEntry], KeywordDoc]
     ) -> List[Tuple[Optional[LibraryEntry], KeywordDoc]]:
-        from robot.libraries import STDLIBS
-
         stdlibs_without_remote = STDLIBS - {"Remote"}
         if entry1[0] is not None and entry1[0].name in stdlibs_without_remote:
             standard, custom = entry1, entry2

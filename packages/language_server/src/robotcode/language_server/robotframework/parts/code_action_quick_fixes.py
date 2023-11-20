@@ -34,6 +34,7 @@ from ..utils.ast_utils import (
     get_node_at_position,
     get_nodes_at_position,
     get_tokens_at_position,
+    iter_nodes,
     range_from_node,
     range_from_token,
 )
@@ -655,7 +656,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     ) -> Optional[CodeAction]:
         from robot.parsing.lexer.tokens import Token
         from robot.parsing.model.blocks import Keyword
-        from robot.parsing.model.statements import Arguments, Documentation
+        from robot.parsing.model.statements import Arguments, Documentation, KeywordName, Statement
 
         if data.range.start.line == data.range.end.line and data.range.start.character <= data.range.end.character:
             document = await self.parent.documents.get(data.document_uri)
@@ -676,14 +677,16 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             arguments = next((n for n in keyword.body if isinstance(n, Arguments)), None)
 
             if arguments is None:
-                i = 0
-                first_stmt = keyword.body[i]
+                first_stmt = next(
+                    (
+                        n
+                        for n in iter_nodes(keyword)
+                        if isinstance(n, Statement) and not isinstance(n, (KeywordName, Documentation))
+                    ),
+                    None,
+                )
 
-                while isinstance(first_stmt, Documentation) and i < len(keyword.body):
-                    i += 1
-                    first_stmt = keyword.body[i]
-
-                if i >= len(keyword.body):
+                if first_stmt is None:
                     return None
 
                 spaces = (

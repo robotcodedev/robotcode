@@ -2,7 +2,7 @@ import contextlib
 import sys
 from pathlib import Path
 
-if __name__ == "__main__" and __package__ is None or __package__ == "":
+if __name__ == "__main__" and not __package__:
     file = Path(__file__).resolve()
     parent, top = file.parent, file.parents[1]
 

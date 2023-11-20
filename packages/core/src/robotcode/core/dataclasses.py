@@ -128,7 +128,7 @@ def encode_case_for_field_name(obj: Any, field: dataclasses.Field) -> str:  # ty
 __decode_case_cache: Dict[Tuple[Type[Any], str], str] = {}
 
 
-def _decode_case_for_member_name(type: Type[_T], name: str) -> str:
+def _decode_case_for_member_name(type: Type[Any], name: str) -> str:
     r = __decode_case_cache.get((type, name), __NOT_SET)
     if r is __NOT_SET:
         if dataclasses.is_dataclass(type):
@@ -141,7 +141,7 @@ def _decode_case_for_member_name(type: Type[_T], name: str) -> str:
 
         if r is __NOT_SET:
             if hasattr(type, "_decode_case"):
-                r = str(type._decode_case(name))  # type: ignore[attr-defined]
+                r = str(type._decode_case(name))
             else:
                 r = name
 
