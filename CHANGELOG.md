@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.64.1](https://github.com/d-biehl/robotcode/compare/v0.64.0..v0.64.1) - 2023-11-20
+
+### Bug Fixes
+
+- Correct creating run profiles if you use a single workspace folder ([e5430ec](https://github.com/d-biehl/robotcode/commit/e5430ec4311b03165bf984eac02ee7f636d6ef9a))
+
+
 ## [0.64.0](https://github.com/d-biehl/robotcode/compare/v0.63.0..v0.64.0) - 2023-11-19
 
 ### Bug Fixes
