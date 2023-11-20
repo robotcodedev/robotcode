@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
-## [0.64.0](https://github.com/d-biehl/robotcode/compare/v0.63.0..0.64.0) - 2023-11-19
+## [0.64.0](https://github.com/d-biehl/robotcode/compare/v0.63.0..v0.64.0) - 2023-11-19
 
 ### Bug Fixes
 
