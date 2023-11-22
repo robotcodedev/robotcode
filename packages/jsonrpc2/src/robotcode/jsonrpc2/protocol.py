@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import inspect
 import json
 import re
 import threading
-import time
 import weakref
 from abc import ABC, abstractmethod
 from collections import OrderedDict
@@ -36,7 +36,6 @@ from typing import (
 from robotcode.core.async_tools import (
     HasThreaded,
     async_event,
-    create_sub_future,
     create_sub_task,
     run_coroutine_in_thread,
 )
@@ -336,7 +335,7 @@ class RpcRegistry:
 
 
 class SendedRequestEntry(NamedTuple):
-    future: asyncio.Future[Any]
+    future: concurrent.futures.Future[Any]
     result_type: Optional[Type[Any]]
 
 
@@ -546,9 +545,9 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         method: str,
         params: Optional[Any] = None,
         return_type_or_converter: Optional[Type[_TResult]] = None,
-    ) -> asyncio.Future[Optional[_TResult]]:
+    ) -> concurrent.futures.Future[_TResult]:
         with self._sended_request_lock:
-            result: asyncio.Future[Optional[_TResult]] = create_sub_future()
+            result: concurrent.futures.Future[_TResult] = concurrent.futures.Future()
             self._sended_request_count += 1
             id = self._sended_request_count
 
@@ -559,13 +558,13 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
         return result
 
-    async def send_request_async(
+    def send_request_async(
         self,
         method: str,
         params: Optional[Any] = None,
         return_type: Optional[Type[_TResult]] = None,
-    ) -> Optional[_TResult]:
-        return await self.send_request(method, params, return_type)
+    ) -> asyncio.Future[_TResult]:
+        return asyncio.wrap_future(self.send_request(method, params, return_type))
 
     @__logger.call
     def send_notification(self, method: str, params: Any) -> None:
@@ -590,44 +589,17 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
         try:
             if not entry.future.done():
-                res = None
-                if message.result is not None:
-                    res = from_dict(message.result, entry.result_type)
-                if entry.future.get_loop() == asyncio.get_running_loop():
-                    entry.future.set_result(res)
-                else:
-                    if entry.future.get_loop().is_running():
-
-                        def set_result(f: asyncio.Future[Any], r: Any, ev: threading.Event) -> None:
-                            try:
-                                if not f.done() and f.get_loop().is_running():
-                                    f.set_result(r)
-                            finally:
-                                ev.set()
-
-                        done = threading.Event()
-
-                        entry.future.get_loop().call_soon_threadsafe(set_result, entry.future, res, done)
-
-                        start = time.monotonic()
-                        while not done.is_set():
-                            if time.monotonic() - start > 120:
-                                raise TimeoutError("Can't set future result.")
-
-                            await asyncio.sleep(0)
-
-                    else:
-                        self.__logger.warning(lambda: f"Response {entry!r} loop is not running.")
+                entry.future.set_result(
+                    from_dict(message.result, entry.result_type) if message.result is not None else None
+                )
+            else:
+                self.__logger.warning(lambda: f"Response for {message} is already done.")
 
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             if not entry.future.done():
-                if entry.future.get_loop() == asyncio.get_running_loop():
-                    entry.future.set_exception(e)
-                else:
-                    if entry.future.get_loop().is_running():
-                        entry.future.get_loop().call_soon_threadsafe(entry.future.set_exception, e)
+                entry.future.set_exception(e)
 
     @__logger.call
     async def handle_error(self, message: JsonRPCError) -> None:
@@ -646,50 +618,17 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
         try:
             if not entry.future.done():
-                res = None
-                if message.result is not None:
-                    res = from_dict(message.result, entry.result_type)
-                if entry.future.get_loop() == asyncio.get_running_loop():
-                    entry.future.set_exception(
-                        JsonRPCErrorException(message.error.code, message.error.message, message.error.data)
-                    )
-                else:
-                    if entry.future.get_loop().is_running():
-
-                        def set_result(f: asyncio.Future[Any], r: Any, ev: threading.Event) -> None:
-                            try:
-                                if not f.done() and f.get_loop().is_running():
-                                    f.set_exception(
-                                        JsonRPCErrorException(
-                                            message.error.code, message.error.message, message.error.data
-                                        )
-                                    )
-                            finally:
-                                ev.set()
-
-                        done = threading.Event()
-
-                        entry.future.get_loop().call_soon_threadsafe(set_result, entry.future, res, done)
-
-                        start = time.monotonic()
-                        while not done.is_set():
-                            if time.monotonic() - start > 120:
-                                raise TimeoutError("Can't set future result.")
-
-                            await asyncio.sleep(0)
-
-                    else:
-                        self.__logger.warning(lambda: f"Response {entry!r} loop is not running.")
+                entry.future.set_exception(
+                    JsonRPCErrorException(message.error.code, message.error.message, message.error.data)
+                )
+            else:
+                self.__logger.warning(lambda: f"Response for {message} is already done.")
 
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             if not entry.future.done():
-                if entry.future.get_loop() == asyncio.get_running_loop():
-                    entry.future.set_exception(e)
-                else:
-                    if entry.future.get_loop().is_running():
-                        entry.future.get_loop().call_soon_threadsafe(entry.future.set_exception, e)
+                entry.future.set_exception(e)
 
     @staticmethod
     def _convert_params(

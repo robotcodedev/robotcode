@@ -143,7 +143,7 @@ async def test_receive_response_should_work() -> None:
     data = header + json_message
     await protocol.data_received_async(data)
 
-    a = await asyncio.wait_for(r, 10)
+    a = r.result(10)
 
     assert a == ["dummy", "data"]
 
@@ -176,7 +176,7 @@ async def test_send_request_receive_response_should_work_without_param_type_work
     data = header + json_message
     await protocol.data_received_async(data)
 
-    a = await asyncio.wait_for(r, 10)
+    a = r.result(10)
 
     assert isinstance(a, dict)
     assert a == {"title": "hi there"}
@@ -196,7 +196,7 @@ async def test_receive_response_should_work_with_dataclass() -> None:
     data = header + json_message
     await protocol.data_received_async(data)
 
-    a = await asyncio.wait_for(r, 10)
+    a = r.result(10)
 
     assert a == MessageActionItem(title="hi there")
 
@@ -215,7 +215,7 @@ async def test_receive_response_should_work_with_generic_list() -> None:
     data = header + json_message
     await protocol.data_received_async(data)
 
-    a = await asyncio.wait_for(r, 10)
+    a = r.result(10)
 
     assert a == [MessageActionItem(title="hi there")]
 
@@ -234,6 +234,6 @@ async def test_receive_response_with_generic_dict_should_return_unchanged() -> N
     data = header + json_message
     await protocol.data_received_async(data)
 
-    a = await asyncio.wait_for(r, 10)
+    a = r.result(10)
 
     assert a == [as_dict(MessageActionItem(title="hi there"))]

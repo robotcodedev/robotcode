@@ -109,4 +109,4 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         ):
             return
 
-        await self.parent.send_request("workspace/codeLens/refresh")
+        await self.parent.send_request_async("workspace/codeLens/refresh")
