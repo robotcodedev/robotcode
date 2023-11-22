@@ -34,10 +34,8 @@ from typing import (
 )
 
 from robotcode.core.lsp.types import Position, Range
-from robotcode.language_server.robotframework.utils.markdownformatter import (
-    MarkDownFormatter,
-)
 from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 
 from ..utils.ast_utils import (
     HasError,

@@ -17,6 +17,7 @@ from typing import (
 
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import Hover, MarkupContent, MarkupKind, Position, Range
+from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
@@ -26,7 +27,6 @@ from ..utils.ast_utils import (
     range_from_node,
     range_from_token,
 )
-from ..utils.markdownformatter import MarkDownFormatter
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
