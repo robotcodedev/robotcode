@@ -442,7 +442,8 @@ class ArgumentSpec:
     var_named: Any
     embedded: Any
     defaults: Any
-    types: Any
+    types: Optional[Dict[str, str]] = None
+    return_type: Optional[str] = None
 
     @staticmethod
     def from_robot_argument_spec(spec: Any) -> ArgumentSpec:
@@ -456,7 +457,8 @@ class ArgumentSpec:
             var_named=spec.var_named,
             embedded=spec.embedded if get_robot_version() >= (7, 0) else None,
             defaults={k: str(v) for k, v in spec.defaults.items()} if spec.defaults else {},
-            types=None,
+            types={k: str(v) for k, v in spec.types.items()} if get_robot_version() > (7, 0) and spec.types else None,
+            return_type=str(spec.return_type) if get_robot_version() > (7, 0) and spec.return_type else None,
         )
 
     def resolve(
@@ -489,7 +491,7 @@ class ArgumentSpec:
                     self.named_only,
                     self.var_named,
                     self.defaults,
-                    self.types,
+                    None,
                 )
             else:
                 self.__robot_arguments = RobotArgumentSpec(
@@ -502,7 +504,7 @@ class ArgumentSpec:
                     self.var_named,
                     self.embedded,
                     self.defaults,
-                    self.types,
+                    None,
                 )
         self.__robot_arguments.name = self.name
         if validate:
@@ -553,6 +555,7 @@ class KeywordDoc(SourceEntity):
     is_registered_run_keyword: bool = field(default=False, compare=False)
     args_to_process: Optional[int] = field(default=None, compare=False)
     deprecated: bool = field(default=False, compare=False)
+    return_type: Optional[str] = field(default=None, compare=False)
 
     parent_digest: Optional[str] = field(default=None, init=False, metadata={"nosave": True})
     parent: Optional[LibraryDoc] = field(default=None, init=False, metadata={"nosave": True})
@@ -719,6 +722,11 @@ class KeywordDoc(SourceEntity):
                     f"| {'=' if a.default_value is not None else ''} "
                     f"| {f'`{a.default_value!s}`' if a.default_value else ''} |"
                 )
+        if self.return_type:
+            if result:
+                result += "\n\n"
+
+            result += f"**Return Type**: `{self.return_type}`\n"
 
         if self.tags:
             if result:
@@ -1801,6 +1809,7 @@ def get_library_doc(
                             arguments_spec=ArgumentSpec.from_robot_argument_spec(kw[1].arguments)
                             if not kw[1].is_error_handler
                             else None,
+                            return_type=str(kw[1].arguments.return_type) if get_robot_version() >= (7, 0) else None,
                         )
                         for kw in keyword_docs
                     ],
