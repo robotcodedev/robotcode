@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.65.0](https://github.com/d-biehl/robotcode/compare/v0.64.1..v0.65.0) - 2023-11-22
+
+### Features
+
+- **langserver:** Support for new VAR statement in RF7 ([2678884](https://github.com/d-biehl/robotcode/commit/2678884fedce733a3c6a52589c4b5f55fb2beda4))
+- **langserver:** Added new return type information of keyword from libdoc to documentation hover ([b91f2ff](https://github.com/d-biehl/robotcode/commit/b91f2ff5b5a369ac65f36f0222954e29c56ca2f7))
+
+
+### Refactor
+
+- **jsonrpc:** Use concurrent.Futures instead of asyncio.Futures for request ([50384dc](https://github.com/d-biehl/robotcode/commit/50384dcc94b676c4c8b3a6a7f1e4881104d99999))
+- Some code cleanup and simplifications ([f799fb4](https://github.com/d-biehl/robotcode/commit/f799fb44090ded0fb0d12b0d4dbef8dbfdc28706))
+- Move markdown formatter to robotcode.robot.utils ([5a22bef](https://github.com/d-biehl/robotcode/commit/5a22bef05d015576742506423b13cd773a4d9c70))
+
+
 ## [0.64.1](https://github.com/d-biehl/robotcode/compare/v0.64.0..v0.64.1) - 2023-11-20
 
 ### Bug Fixes
