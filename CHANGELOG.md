@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.66.0](https://github.com/d-biehl/robotcode/compare/v0.65.1..v0.66.0) - 2023-11-23
+
+### Bug Fixes
+
+- **langserver:** Handle unwanted warning messages at libdoc generation for robot files ([ce20bf5](https://github.com/d-biehl/robotcode/commit/ce20bf5124705a4a84de694430ea37a8df64b86f))
+
+
+### Features
+
+- **langserver:** Implemented deprecation warning for old [RETURN] setting for RF 7 ([40a5e42](https://github.com/d-biehl/robotcode/commit/40a5e429f9b73dc834f9693a034bace3ff51d7e9))
+
+
 ## [0.65.1](https://github.com/d-biehl/robotcode/compare/v0.65.0..v0.65.1) - 2023-11-23
 
 ### Refactor
