@@ -2431,6 +2431,7 @@ def get_model_doc(
 ) -> LibraryDoc:
     from robot.errors import DataError, VariableError
     from robot.libdocpkg.robotbuilder import KeywordDocBuilder
+    from robot.output.logger import LOGGER
     from robot.parsing.lexer.tokens import Token as RobotToken
     from robot.parsing.model.blocks import Keyword
     from robot.parsing.model.statements import Arguments, KeywordName
@@ -2502,7 +2503,8 @@ def get_model_doc(
 
     res = ResourceFile(source=source)
 
-    ResourceBuilder(res).visit(model)
+    with LOGGER.cache_only:
+        ResourceBuilder(res).visit(model)
 
     class MyUserLibrary(UserLibrary):
         current_kw: Any = None
