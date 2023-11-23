@@ -84,6 +84,7 @@ commit_parsers = [
   { message = "^chore\\(deps\\)", skip = true },
   { message = "^chore\\(pr\\)", skip = true },
   { message = "^chore\\(pull\\)", skip = true },
+  { message = "^chore\\(build\\)", skip = true },
   { message = "^chore|ci", group = "Miscellaneous Tasks", skip = true },
   { message = "^bump", skip = true },
   { body = ".*security", group = "Security" },

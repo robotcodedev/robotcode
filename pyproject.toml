@@ -256,7 +256,6 @@ module = [
   "debugpy.*",
   "robotidy.*",
   "robocop.*",
-  "pytest_regtest.*",
   "pluggy",
 ]
 ignore_missing_imports = true
@@ -287,6 +286,7 @@ pythonVersion = "3.8"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
+bump_message = "chore(release): bump version $current_version → $new_version"
 tag_format = "v$version"
 version_scheme = "semver"
 version_provider = "scm"
