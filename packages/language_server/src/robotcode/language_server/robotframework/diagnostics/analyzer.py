@@ -954,7 +954,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
     async def visit_ForceTags(self, node: Statement) -> None:  # noqa: N802
         if get_robot_version() >= (6, 0):
             tag = node.get_token(Token.FORCE_TAGS)
-            if tag.value.upper() == "FORCE TAGS":
+            if tag is not None and tag.value.upper() == "FORCE TAGS":
                 self.append_diagnostics(
                     range=range_from_node_or_token(node, tag),
                     message="`Force Tags` is deprecated in favour of new `Test Tags` setting.",
@@ -989,6 +989,18 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         tags=[DiagnosticTag.DEPRECATED],
                         code=Error.DEPRECATED_HYPHEN_TAG,
                     )
+
+    async def visit_ReturnSetting(self, node: Statement) -> None:  # noqa: N802
+        if get_robot_version() >= (7, 0):
+            token = node.get_token(Token.RETURN_SETTING)
+            if token is not None and token.error:
+                self.append_diagnostics(
+                    range=range_from_node_or_token(node, token),
+                    message=token.error,
+                    severity=DiagnosticSeverity.WARNING,
+                    tags=[DiagnosticTag.DEPRECATED],
+                    code=Error.DEPRECATED_RETURN_SETTING,
+                )
 
     def _check_import_name(self, value: Optional[str], node: ast.AST, type: str) -> None:
         if not value:

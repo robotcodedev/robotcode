@@ -27,6 +27,7 @@ class Error:
     TESTCASE_NAME_EMPTY = "TestCaseNameEmpty"
     KEYWORD_CONTAINS_NORMAL_AND_EMBBEDED_ARGUMENTS = "KeywordContainsNormalAndEmbbededArguments"
     DEPRECATED_HYPHEN_TAG = "DeprecatedHyphenTag"
+    DEPRECATED_RETURN_SETTING = "DeprecatedReturnSetting"
     DEPRECATED_FORCE_TAG = "DeprecatedForceTag"
     IMPORT_REQUIRES_VALUE = "ImportRequiresValue"
     KEYWORD_ERROR = "KeywordError"
