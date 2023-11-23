@@ -105,13 +105,25 @@ matrix.rf.dependencies = [
 [envs.lint]
 #skip-install = true
 #extra-dependencies = ["tomli>=2.0.0"]
+extra-dependencies = [
+  "types-PyYAML",
+  "types-Pygments",
+  "types-colorama",
+  "types-docutils",
+  "types-setuptools",
+]
 features = ["all"]
 
+
 [envs.lint.scripts]
-typing = ["mypy --install-types --non-interactive {args:.}", "npm run compile"]
+typing-py = "mypy --no-incremental --cache-dir /dev/null {args:.}"
+typing = ["typing-py", "npm run compile"]
 style = ["ruff .", "black --check --diff .", "npx eslint ."]
 fmt = ["black .", "ruff --fix .", "style", "npx eslint --fix ."]
 all = ["style", "typing"]
+
+[envs.lint.overrides]
+platform.windows.scripts = ["typing-py=mypy --no-incremental --cache-dir nul {args:.}"]
 
 [envs.pages]
 python = "3.11"
