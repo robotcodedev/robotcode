@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import inspect
 import json
 import threading
@@ -291,12 +292,13 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
             Response(request_seq=request_seq, command=command, success=success, message=message, body=result)
         )
 
+    @_logger.call
     def send_request(
         self,
         request: Request,
         return_type: Optional[Type[TResult]] = None,
-    ) -> asyncio.Future[TResult]:
-        result: asyncio.Future[TResult] = asyncio.get_event_loop().create_future()
+    ) -> concurrent.futures.Future[TResult]:
+        result: concurrent.futures.Future[TResult] = concurrent.futures.Future()
 
         with self._sended_request_lock:
             self._sended_request[request.seq] = SendedRequestEntry(result, return_type)
@@ -305,12 +307,13 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
 
         return result
 
-    async def send_request_async(
+    @_logger.call
+    def send_request_async(
         self,
         request: Request,
         return_type: Optional[Type[TResult]] = None,
-    ) -> TResult:
-        return await self.send_request(request, return_type)
+    ) -> asyncio.Future[TResult]:
+        return asyncio.wrap_future(self.send_request(request, return_type))
 
     @_logger.call
     def send_event(self, event: Event) -> None:
