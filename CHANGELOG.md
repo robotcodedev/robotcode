@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.65.1](https://github.com/d-biehl/robotcode/compare/v0.65.0..v0.65.1) - 2023-11-23
+
+### Refactor
+
+- **debugger:** Use concurrent.futures for sending request instead of asyncio.Futures ([dc06c2c](https://github.com/d-biehl/robotcode/commit/dc06c2c5ac079248a6116f1d01cf6da4b8860481))
+
+
 ## [0.65.0](https://github.com/d-biehl/robotcode/compare/v0.64.1..v0.65.0) - 2023-11-22
 
 ### Features
