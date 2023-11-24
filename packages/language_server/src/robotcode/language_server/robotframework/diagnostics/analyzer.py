@@ -6,7 +6,7 @@ import itertools
 import os
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union
 
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import Keyword, TestCase
@@ -15,7 +15,6 @@ from robot.parsing.model.statements import (
     DocumentationOrMetadata,
     Fixture,
     KeywordCall,
-    KeywordName,
     LibraryImport,
     ResourceImport,
     Statement,
@@ -148,10 +147,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         else:
             yield token
 
-    async def visit_Variable(self, node: ast.AST) -> None:  # noqa: N802
-        variable = cast(Variable, node)
-
-        name_token = variable.get_token(Token.VARIABLE)
+    async def visit_Variable(self, node: Variable) -> None:  # noqa: N802
+        name_token = node.get_token(Token.VARIABLE)
         if name_token is None:
             return
 
@@ -197,7 +194,9 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         self.node_stack.append(node)
         try:
             severity = (
-                DiagnosticSeverity.HINT if isinstance(node, DocumentationOrMetadata) else DiagnosticSeverity.ERROR
+                DiagnosticSeverity.HINT
+                if isinstance(node, (DocumentationOrMetadata, TestCaseName))
+                else DiagnosticSeverity.ERROR
             )
 
             if isinstance(node, KeywordCall) and node.keyword:
@@ -762,9 +761,8 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         return argument_tokens
 
-    async def visit_Fixture(self, node: ast.AST) -> None:  # noqa: N802
-        value = cast(Fixture, node)
-        keyword_token = cast(Token, value.get_token(Token.NAME))
+    async def visit_Fixture(self, node: Fixture) -> None:  # noqa: N802
+        keyword_token = node.get_token(Token.NAME)
 
         # TODO: calculate possible variables in NAME
 
@@ -774,58 +772,55 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             and keyword_token.value.upper() not in ("", "NONE")
         ):
             await self._analyze_keyword_call(
-                value.name,
-                value,
+                node.name,
+                node,
                 keyword_token,
-                [cast(Token, e) for e in value.get_tokens(Token.ARGUMENT)],
+                [e for e in node.get_tokens(Token.ARGUMENT)],
                 allow_variables=True,
                 ignore_errors_if_contains_variables=True,
             )
 
         await self.generic_visit(node)
 
-    async def visit_TestTemplate(self, node: ast.AST) -> None:  # noqa: N802
-        value = cast(TestTemplate, node)
-        keyword_token = cast(Token, value.get_token(Token.NAME))
+    async def visit_TestTemplate(self, node: TestTemplate) -> None:  # noqa: N802
+        keyword_token = node.get_token(Token.NAME)
 
         if keyword_token is not None and keyword_token.value.upper() not in ("", "NONE"):
             await self._analyze_keyword_call(
-                value.value, value, keyword_token, [], analyse_run_keywords=False, allow_variables=True
+                node.value, node, keyword_token, [], analyse_run_keywords=False, allow_variables=True
             )
 
-        self.test_template = value
+        self.test_template = node
         await self.generic_visit(node)
 
-    async def visit_Template(self, node: ast.AST) -> None:  # noqa: N802
-        value = cast(Template, node)
-        keyword_token = cast(Token, value.get_token(Token.NAME))
+    async def visit_Template(self, node: Template) -> None:  # noqa: N802
+        keyword_token = node.get_token(Token.NAME)
 
         if keyword_token is not None and keyword_token.value.upper() not in ("", "NONE"):
             await self._analyze_keyword_call(
-                value.value, value, keyword_token, [], analyse_run_keywords=False, allow_variables=True
+                node.value, node, keyword_token, [], analyse_run_keywords=False, allow_variables=True
             )
-        self.template = value
+        self.template = node
         await self.generic_visit(node)
 
-    async def visit_KeywordCall(self, node: ast.AST) -> None:  # noqa: N802
-        value = cast(KeywordCall, node)
-        keyword_token = cast(Token, value.get_token(Token.KEYWORD))
+    async def visit_KeywordCall(self, node: KeywordCall) -> None:  # noqa: N802
+        keyword_token = node.get_token(Token.KEYWORD)
 
-        if value.assign and not value.keyword:
+        if node.assign and keyword_token is None:
             self.append_diagnostics(
-                range=range_from_node_or_token(value, value.get_token(Token.ASSIGN)),
+                range=range_from_node_or_token(node, node.get_token(Token.ASSIGN)),
                 message="Keyword name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
                 code=Error.KEYWORD_NAME_EMPTY,
             )
         else:
             await self._analyze_keyword_call(
-                value.keyword, value, keyword_token, [cast(Token, e) for e in value.get_tokens(Token.ARGUMENT)]
+                node.keyword, node, keyword_token, [e for e in node.get_tokens(Token.ARGUMENT)]
             )
 
         if not self.current_testcase_or_keyword_name:
             self.append_diagnostics(
-                range=range_from_node_or_token(value, value.get_token(Token.ASSIGN)),
+                range=range_from_node_or_token(node, node.get_token(Token.ASSIGN)),
                 message="Code is unreachable.",
                 severity=DiagnosticSeverity.HINT,
                 tags=[DiagnosticTag.UNNECESSARY],
@@ -834,30 +829,26 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         await self.generic_visit(node)
 
-    async def visit_TestCase(self, node: ast.AST) -> None:  # noqa: N802
-        testcase = cast(TestCase, node)
-
-        if not testcase.name:
-            name_token = cast(TestCaseName, testcase.header).get_token(Token.TESTCASE_NAME)
+    async def visit_TestCase(self, node: TestCase) -> None:  # noqa: N802
+        if not node.name:
+            name_token = node.header.get_token(Token.TESTCASE_NAME)
             self.append_diagnostics(
-                range=range_from_node_or_token(testcase, name_token),
+                range=range_from_node_or_token(node, name_token),
                 message="Test case name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
                 code=Error.TESTCASE_NAME_EMPTY,
             )
 
-        self.current_testcase_or_keyword_name = testcase.name
+        self.current_testcase_or_keyword_name = node.name
         try:
             await self.generic_visit(node)
         finally:
             self.current_testcase_or_keyword_name = None
             self.template = None
 
-    async def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
-        keyword = cast(Keyword, node)
-
-        if keyword.name:
-            name_token = cast(KeywordName, keyword.header).get_token(Token.KEYWORD_NAME)
+    async def visit_Keyword(self, node: Keyword) -> None:  # noqa: N802
+        if node.name:
+            name_token = node.header.get_token(Token.KEYWORD_NAME)
             kw_doc = self.get_keyword_definition_at_token(await self.namespace.get_library_doc(), name_token)
 
             if kw_doc is not None and kw_doc not in self._keyword_references:
@@ -865,25 +856,25 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
             if (
                 get_robot_version() < (6, 1)
-                and is_embedded_keyword(keyword.name)
-                and any(isinstance(v, Arguments) and len(v.values) > 0 for v in keyword.body)
+                and is_embedded_keyword(node.name)
+                and any(isinstance(v, Arguments) and len(v.values) > 0 for v in node.body)
             ):
                 self.append_diagnostics(
-                    range=range_from_node_or_token(keyword, name_token),
+                    range=range_from_node_or_token(node, name_token),
                     message="Keyword cannot have both normal and embedded arguments.",
                     severity=DiagnosticSeverity.ERROR,
                     code=Error.KEYWORD_CONTAINS_NORMAL_AND_EMBBEDED_ARGUMENTS,
                 )
         else:
-            name_token = cast(KeywordName, keyword.header).get_token(Token.KEYWORD_NAME)
+            name_token = node.header.get_token(Token.KEYWORD_NAME)
             self.append_diagnostics(
-                range=range_from_node_or_token(keyword, name_token),
+                range=range_from_node_or_token(node, name_token),
                 message="Keyword name cannot be empty.",
                 severity=DiagnosticSeverity.ERROR,
                 code=Error.KEYWORD_NAME_EMPTY,
             )
 
-        self.current_testcase_or_keyword_name = keyword.name
+        self.current_testcase_or_keyword_name = node.name
         try:
             await self.generic_visit(node)
         finally:
@@ -911,12 +902,10 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         temp.append(var.after)
         return "".join(temp), ()
 
-    async def visit_TemplateArguments(self, node: ast.AST) -> None:  # noqa: N802
-        arguments = cast(TemplateArguments, node)
-
+    async def visit_TemplateArguments(self, node: TemplateArguments) -> None:  # noqa: N802
         template = self.template or self.test_template
         if template is not None and template.value is not None and template.value.upper() not in ("", "NONE"):
-            argument_tokens = arguments.get_tokens(Token.ARGUMENT)
+            argument_tokens = node.get_tokens(Token.ARGUMENT)
             args = tuple(t.value for t in argument_tokens)
             keyword = template.value
             keyword, args = self._format_template(keyword, args)
@@ -935,7 +924,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     raise
                 except BaseException as e:
                     self.append_diagnostics(
-                        range=range_from_node(arguments, skip_non_data=True),
+                        range=range_from_node(node, skip_non_data=True),
                         message=str(e),
                         severity=DiagnosticSeverity.ERROR,
                         code=type(e).__qualname__,
@@ -943,7 +932,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
             for d in self.finder.diagnostics:
                 self.append_diagnostics(
-                    range=range_from_node(arguments, skip_non_data=True),
+                    range=range_from_node(node, skip_non_data=True),
                     message=d.message,
                     severity=d.severity,
                     code=d.code,
@@ -1011,13 +1000,11 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 code=Error.IMPORT_REQUIRES_VALUE,
             )
 
-    async def visit_VariablesImport(self, node: ast.AST) -> None:  # noqa: N802
+    async def visit_VariablesImport(self, node: VariablesImport) -> None:  # noqa: N802
         if get_robot_version() >= (6, 1):
-            import_node = cast(VariablesImport, node)
-            self._check_import_name(import_node.name, node, "Variables")
+            self._check_import_name(node.name, node, "Variables")
 
-        n = cast(VariablesImport, node)
-        name_token = n.get_token(Token.NAME)
+        name_token = node.get_token(Token.NAME)
         if name_token is None:
             return
 
@@ -1028,13 +1015,11 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     if v not in self._namespace_references:
                         self._namespace_references[v] = set()
 
-    async def visit_ResourceImport(self, node: ast.AST) -> None:  # noqa: N802
+    async def visit_ResourceImport(self, node: ResourceImport) -> None:  # noqa: N802
         if get_robot_version() >= (6, 1):
-            import_node = cast(ResourceImport, node)
-            self._check_import_name(import_node.name, node, "Resource")
+            self._check_import_name(node.name, node, "Resource")
 
-        n = cast(ResourceImport, node)
-        name_token = n.get_token(Token.NAME)
+        name_token = node.get_token(Token.NAME)
         if name_token is None:
             return
 
@@ -1045,13 +1030,11 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     if v not in self._namespace_references:
                         self._namespace_references[v] = set()
 
-    async def visit_LibraryImport(self, node: ast.AST) -> None:  # noqa: N802
+    async def visit_LibraryImport(self, node: LibraryImport) -> None:  # noqa: N802
         if get_robot_version() >= (6, 1):
-            import_node = cast(LibraryImport, node)
-            self._check_import_name(import_node.name, node, "Library")
+            self._check_import_name(node.name, node, "Library")
 
-        n = cast(LibraryImport, node)
-        name_token = n.get_token(Token.NAME)
+        name_token = node.get_token(Token.NAME)
         if name_token is None:
             return
 

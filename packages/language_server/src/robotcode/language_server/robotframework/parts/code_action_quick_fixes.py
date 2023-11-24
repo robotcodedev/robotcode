@@ -356,7 +356,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
         from robot.parsing.model.blocks import Keyword, TestCase
-        from robot.parsing.model.statements import Documentation, Fixture, Statement, Template
+        from robot.parsing.model.statements import Documentation, Fixture, Statement, Template, TestCaseName
 
         result: List[Union[Command, CodeAction]] = []
 
@@ -380,7 +380,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                         continue
 
                     node = nodes[-1] if nodes else None
-                    if node is None or isinstance(node, (Documentation, Fixture, Template)):
+                    if node is None or isinstance(node, (Documentation, Fixture, Template, TestCaseName)):
                         continue
 
                     if not isinstance(node, Statement):
