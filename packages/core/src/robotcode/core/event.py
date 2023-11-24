@@ -16,19 +16,21 @@ from typing import (
     cast,
 )
 
-__all__ = ["EventIterator", "Event"]
+from typing_extensions import ParamSpec
+
+__all__ = ["event_iterator", "event"]
 
 _TResult = TypeVar("_TResult")
-_TCallable = TypeVar("_TCallable", bound=Callable[..., Any])
+_TParams = ParamSpec("_TParams")
 
 
-class EventResultIteratorBase(Generic[_TCallable, _TResult]):
+class EventResultIteratorBase(Generic[_TParams, _TResult]):
     def __init__(self) -> None:
         self._lock = threading.RLock()
 
         self._listeners: MutableSet[weakref.ref[Any]] = set()
 
-    def add(self, callback: _TCallable) -> None:
+    def add(self, callback: Callable[_TParams, _TResult]) -> None:
         def remove_listener(ref: Any) -> None:
             with self._lock:
                 self._listeners.remove(ref)
@@ -39,7 +41,7 @@ class EventResultIteratorBase(Generic[_TCallable, _TResult]):
             else:
                 self._listeners.add(weakref.ref(callback, remove_listener))
 
-    def remove(self, callback: _TCallable) -> None:
+    def remove(self, callback: Callable[_TParams, _TResult]) -> None:
         with self._lock:
             try:
                 if inspect.ismethod(callback):
@@ -61,33 +63,37 @@ class EventResultIteratorBase(Generic[_TCallable, _TResult]):
     def __bool__(self) -> bool:
         return len(self._listeners) > 0
 
-    def __iter__(self) -> Iterator[_TCallable]:
+    def __iter__(self) -> Iterator[Callable[_TParams, _TResult]]:
         for r in self._listeners:
             c = r()
             if c is not None:
                 yield c
 
-    def _notify(self, *args: Any, **kwargs: Any) -> Iterator[_TResult]:
+    def _notify(self, *__args: _TParams.args, **__kwargs: _TParams.kwargs) -> Iterator[_TResult]:
         for method in set(self):
-            yield method(*args, **kwargs)
+            yield method(*__args, **__kwargs)
 
 
-class EventIterator(EventResultIteratorBase[_TCallable, _TResult]):
-    def __call__(self, *args: Any, **kwargs: Any) -> Iterator[_TResult]:
-        return self._notify(*args, **kwargs)
+class EventIterator(EventResultIteratorBase[_TParams, _TResult]):
+    def __call__(self, *__args: _TParams.args, **__kwargs: _TParams.kwargs) -> Iterator[_TResult]:
+        return self._notify(*__args, **__kwargs)
 
 
-class Event(EventResultIteratorBase[_TCallable, _TResult]):
-    def __call__(self, *args: Any, **kwargs: Any) -> List[_TResult]:
-        return list(self._notify(*args, **kwargs))
+class Event(EventResultIteratorBase[_TParams, _TResult]):
+    def __call__(self, *__args: _TParams.args, **__kwargs: _TParams.kwargs) -> List[_TResult]:
+        return list(self._notify(*__args, **__kwargs))
 
 
 _TEvent = TypeVar("_TEvent")
 
 
-class EventDescriptorBase(Generic[_TCallable, _TResult, _TEvent]):
+class EventDescriptorBase(Generic[_TParams, _TResult, _TEvent]):
     def __init__(
-        self, _func: _TCallable, factory: Callable[..., _TEvent], *factory_args: Any, **factory_kwargs: Any
+        self,
+        _func: Callable[_TParams, _TResult],
+        factory: Callable[..., _TEvent],
+        *factory_args: Any,
+        **factory_kwargs: Any,
     ) -> None:
         self._func = _func
         self.__factory = factory
@@ -111,11 +117,11 @@ class EventDescriptorBase(Generic[_TCallable, _TResult, _TEvent]):
         return cast("_TEvent", getattr(obj, name))
 
 
-class event_iterator(EventDescriptorBase[_TCallable, Any, EventIterator[_TCallable, Any]]):  # noqa: N801
-    def __init__(self, _func: _TCallable) -> None:
-        super().__init__(_func, EventIterator[_TCallable, Any])
+class event_iterator(EventDescriptorBase[_TParams, _TResult, EventIterator[_TParams, _TResult]]):  # noqa: N801
+    def __init__(self, _func: Callable[_TParams, _TResult]) -> None:
+        super().__init__(_func, EventIterator[_TParams, _TResult])
 
 
-class event(EventDescriptorBase[_TCallable, Any, Event[_TCallable, Any]]):  # noqa: N801
-    def __init__(self, _func: _TCallable) -> None:
-        super().__init__(_func, Event[_TCallable, Any])
+class event(EventDescriptorBase[_TParams, _TResult, Event[_TParams, _TResult]]):  # noqa: N801
+    def __init__(self, _func: Callable[_TParams, _TResult]) -> None:
+        super().__init__(_func, Event[_TParams, _TResult])

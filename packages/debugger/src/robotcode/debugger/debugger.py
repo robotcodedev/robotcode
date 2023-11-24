@@ -22,12 +22,14 @@ from typing import (
     List,
     Literal,
     Mapping,
+    MutableMapping,
     NamedTuple,
     Optional,
     Sequence,
     Set,
     Tuple,
     Union,
+    cast,
 )
 
 from robot.api.parsing import get_model
@@ -482,7 +484,7 @@ class Debugger:
             self.condition.notify_all()
 
     @event
-    def send_event(sender, event: Event) -> None:  # NOSONAR
+    def send_event(sender: Any, event: Event) -> None:  # NOSONAR
         ...
 
     def set_breakpoints(
@@ -1295,7 +1297,7 @@ class Debugger:
         count: Optional[int] = None,
         format: Optional[ValueFormat] = None,
     ) -> List[Variable]:
-        result = NormalizedDict(ignore="_")
+        result: MutableMapping[str, Any] = NormalizedDict(ignore="_")
 
         if filter is None:
             entry = next(
@@ -1514,7 +1516,7 @@ class Debugger:
 
                         model = get_model(suite_str)
                         suite: TestSuite = TestSuite.from_model(model)
-                        return suite.tests[0]
+                        return cast(TestCase, suite.tests[0])
 
                     def run_kw() -> Any:
                         test = get_test_body_from_string(expression)

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.66.1](https://github.com/d-biehl/robotcode/compare/v0.66.0..v0.66.1) - 2023-11-24
+
+### Bug Fixes
+
+- **langserver:** Show a hint instead an error if there are variables used in a test case name ([6589b71](https://github.com/d-biehl/robotcode/commit/6589b712c12efc570ab5d395752b3e0acce8fac8))
+
+
 ## [0.66.0](https://github.com/d-biehl/robotcode/compare/v0.65.1..v0.66.0) - 2023-11-23
 
 ### Bug Fixes

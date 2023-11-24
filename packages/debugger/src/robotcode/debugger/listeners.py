@@ -277,7 +277,7 @@ class ListenerV3:
         if self._event_sended:
             return
 
-        items = list(reversed(list(enqueue(cast(running.TestSuite, data)))))
+        items = list(reversed(list(enqueue(cast(running.model.TestSuite, data)))))
 
         Debugger.instance().send_event(
             self,
