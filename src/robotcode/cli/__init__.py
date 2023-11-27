@@ -89,6 +89,14 @@ from .commands import config, profiles
     show_envvar=True,
 )
 @click.option(
+    "--log-filename",
+    type=click.Path(file_okay=True, dir_okay=False, writable=True, exists=False, path_type=str),
+    help="Write log output to a file instead to console.",
+    default=None,
+    show_default=True,
+    show_envvar=True,
+)
+@click.option(
     "--log-calls",
     is_flag=True,
     help="Enables logging of method/function calls.",
@@ -146,6 +154,7 @@ def robotcode(
     pager: Optional[bool],
     log: bool,
     log_level: str,
+    log_filename: Optional[str],
     log_calls: bool,
     default_path: Optional[List[str]],
     launcher_script: Optional[str] = None,
@@ -186,7 +195,7 @@ def robotcode(
         if log_calls:
             LoggingDescriptor.set_call_tracing(True)
 
-        logging.basicConfig(level=log_level, format="%(name)s:%(levelname)s: %(message)s")
+        logging.basicConfig(level=log_level, format="%(name)s:%(levelname)s: %(message)s", filename=log_filename)
 
     if debugpy:
         from robotcode.core.utils.debugpy import start_debugpy, wait_for_debugpy_connected
