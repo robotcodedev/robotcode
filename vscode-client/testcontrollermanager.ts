@@ -732,7 +732,7 @@ export class TestControllerManager {
 
       const result = await this.discoverTests(
         folder,
-        ["discover", "--read-from-stdin", "tests"],
+        ["discover", "--no-diagnostics", "--read-from-stdin", "tests"],
         [
           ...(robotWorkspaceItem?.needs_parse_include && testItem.rel_source
             ? ["--parse-include", testItem.rel_source]
