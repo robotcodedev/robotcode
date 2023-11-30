@@ -537,6 +537,69 @@ result:
 - !Location
   range:
     end:
+      character: 11
+      line: 56
+    start:
+      character: 8
+      line: 56
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 62
+    start:
+      character: 8
+      line: 62
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 65
+    start:
+      character: 8
+      line: 65
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 15
+      line: 67
+    start:
+      character: 12
+      line: 67
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 15
+      line: 69
+    start:
+      character: 12
+      line: 69
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 73
+    start:
+      character: 8
+      line: 73
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 76
+    start:
+      character: 8
+      line: 76
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
       character: 7
       line: 43
     start:

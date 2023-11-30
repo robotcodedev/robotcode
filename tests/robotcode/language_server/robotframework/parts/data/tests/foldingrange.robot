@@ -1,51 +1,79 @@
 *** Settings ***
-#^ Settings Start
+#^ Settings start
 Documentation       Hallo Welt
 ...                 was geht
 
 *** Test Cases ***
-#^ Settings End
-#^ Test Cases Start
+#^ Settings end
+#^ Test Cases start
 First
-#^ Testcase Start
+#^ Testcase start
     Log    Hello from testcase
     a keyword
     FOR    ${i}    IN    1    2    3
-#^ For Start
+#^ For start
         IF    ${i}==1
-#^ If Start
+#^ If start
             Log    "one"
         ELSE IF    ${i}==2
-#^ If Start
+#^ If start
             Log    "two"
         ELSE
-#^ If Start
+#^ If start
             Log    "more then two"
         END
-#^ If End
+#^ If end
 
         Log    ${i}
 
     END
-#^ For End
+#^ For end
 
 🚐🚓🛺🚙
-#^ Testcase Start
-#^ Testcase End
+#^ Testcase start
+#^ Testcase end
     Log    🥴
 
 *** Keywords ***
-#^ Test Cases End
-#^ Testcase End
+#^ Test Cases end
+#^ Testcase end
 a keyword
-#^ Keyword Start
+#^ Keyword start
     Log    Hello from keyword
 
 *** Comments ***
-#^ Keyword End
-#^ Comment Start
+#^ Keyword end
+#^ Comment start
 this is a long long
 long long long
 long long comment section
 
-#^ Comment End
+*** Test Cases ***
+#^ Comment end
+IF statements
+    ${a}    Set Variable    2
+    IF    $a==1
+#^ simple if start
+        Log    hello
+    END
+#^ simple if end
+
+    IF  $a==1
+#^ complex if start
+        Log    hello
+    ELSE IF    $a>2 and $a<10
+#^ complex else if start
+        Log    greater 2
+        IF  $a==3
+            Log    blo
+        ELSE
+            Log    no
+        END
+    ELSE IF    $a==100
+#^ complex second else if start
+        Log  aaahhhh
+    ELSE
+#^ else start
+        Log    to much
+    END
+#^ else end

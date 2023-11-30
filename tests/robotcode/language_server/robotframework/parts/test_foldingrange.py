@@ -73,5 +73,14 @@ async def test(
     result = await asyncio.wait_for(
         protocol.robot_folding_ranges.collect(protocol.robot_folding_ranges, test_document), 60
     )
-
+    if result is not None:
+        result = [
+            r
+            for r in result
+            if "start" in data.name.lower()
+            and r.start_line == data.line
+            or "end" in data.name.lower()
+            and r.end_line == data.line - (0 if ("if" in data.name.lower() or "for" in data.name.lower()) else 1)
+        ]
+    assert result
     regtest.write(yaml.dump({"data": data, "result": result}))

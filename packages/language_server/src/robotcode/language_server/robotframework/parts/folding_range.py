@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import ast
-from typing import TYPE_CHECKING, Any, List, Optional, cast
+import time
+from typing import TYPE_CHECKING, Any, List, Optional
 
+from robot.parsing.model.blocks import If, Keyword, TestCase
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import FoldingRange
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
-from ..utils.async_ast import AsyncVisitor
+from ..utils.async_ast import Visitor
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -17,7 +19,7 @@ if TYPE_CHECKING:
     )
 
 
-class _Visitor(AsyncVisitor):
+class _Visitor(Visitor):
     def __init__(self, parent: RobotFoldingRangeProtocolPart) -> None:
         super().__init__()
         self.parent = parent
@@ -33,72 +35,83 @@ class _Visitor(AsyncVisitor):
             )
 
         self.result: List[FoldingRange] = []
+        self.current_if: List[ast.AST] = []
 
-    async def visit(self, node: ast.AST) -> None:
-        await super().visit(node)
+    def visit(self, node: ast.AST) -> None:
+        super().visit(node)
 
     @classmethod
-    async def find_from(cls, model: ast.AST, parent: RobotFoldingRangeProtocolPart) -> Optional[List[FoldingRange]]:
+    def find_from(cls, model: ast.AST, parent: RobotFoldingRangeProtocolPart) -> Optional[List[FoldingRange]]:
         finder = cls(parent)
 
-        await finder.visit(model)
+        finder.visit(model)
 
         return finder.result if finder.result else None
 
-    def __append(self, node: ast.AST, kind: str) -> None:
+    def __append(self, start_node: ast.AST, kind: str, end_node: Optional[ast.AST] = None) -> None:
+        if end_node is None:
+            end_node = start_node
         if not self.line_folding_only:
             self.result.append(
                 FoldingRange(
-                    start_line=node.lineno - 1,
-                    end_line=node.end_lineno - 1 if node.end_lineno is not None else node.lineno - 1,
-                    start_character=node.col_offset if not self.line_folding_only else None,
-                    end_character=node.end_col_offset if not self.line_folding_only else None,
+                    start_line=start_node.lineno - 1,
+                    end_line=end_node.end_lineno - 1 if end_node.end_lineno is not None else end_node.lineno - 1,
+                    start_character=start_node.col_offset if not self.line_folding_only else None,
+                    end_character=end_node.end_col_offset if not self.line_folding_only else None,
                     kind=kind,
                 )
             )
         else:
             self.result.append(
                 FoldingRange(
-                    start_line=node.lineno - 1,
-                    end_line=node.end_lineno - 1 if node.end_lineno is not None else node.lineno - 1,
+                    start_line=start_node.lineno - 1,
+                    end_line=end_node.end_lineno - 1 if end_node.end_lineno is not None else end_node.lineno - 1,
                     kind=kind,
                 )
             )
 
-    async def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
         self.__append(node, kind="section")
 
-        await self.generic_visit(node)
+        self.generic_visit(node)
 
-    async def visit_CommentSection(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_CommentSection(self, node: ast.AST) -> None:  # noqa: N802
         self.__append(node, kind="comment")
-        await self.generic_visit(node)
+        self.generic_visit(node)
 
-    async def visit_TestCase(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.model.blocks import TestCase
-
-        if cast(TestCase, node).name:
+    def visit_TestCase(self, node: TestCase) -> None:  # noqa: N802
+        if node.name:
             self.__append(node, kind="testcase")
-            await self.generic_visit(node)
+            self.generic_visit(node)
 
-    async def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.model.blocks import Keyword
-
-        if cast(Keyword, node).name:
+    def visit_Keyword(self, node: Keyword) -> None:  # noqa: N802
+        if node.name:
             self.__append(node, kind="keyword")
-            await self.generic_visit(node)
+            self.generic_visit(node)
 
-    async def visit_ForLoop(self, node: ast.AST) -> None:  # noqa: N802, pragma: no cover
+    def visit_ForLoop(self, node: ast.AST) -> None:  # noqa: N802
         self.__append(node, kind="for_loop")
-        await self.generic_visit(node)
+        self.generic_visit(node)
 
-    async def visit_For(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_For(self, node: ast.AST) -> None:  # noqa: N802
         self.__append(node, kind="for")
-        await self.generic_visit(node)
+        self.generic_visit(node)
 
-    async def visit_If(self, node: ast.AST) -> None:  # noqa: N802
-        self.__append(node, kind="if")
-        await self.generic_visit(node)
+    def visit_If(self, node: If) -> None:  # noqa: N802
+        if node.orelse is not None and node.body[-1]:
+            self.__append(node, kind="if", end_node=node.body[-1])
+        elif node.orelse is None and node.type == "ELSE":
+            self.__append(node, kind="if", end_node=self.current_if[-1] if self.current_if else None)
+        else:
+            self.__append(node, kind="if")
+
+        if node.type == "IF":
+            self.current_if.append(node)
+
+        self.generic_visit(node)
+
+        if node.type == "IF":
+            self.current_if.remove(node)
 
 
 class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
@@ -112,4 +125,10 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     async def collect(self, sender: Any, document: TextDocument) -> Optional[List[FoldingRange]]:
-        return await _Visitor.find_from(await self.parent.documents_cache.get_model(document, False), self)
+        start = time.monotonic()
+        try:
+            return _Visitor.find_from(await self.parent.documents_cache.get_model(document, False), self)
+        finally:
+            self._logger.critical(
+                lambda: f"Folding ranges collected in {(time.monotonic() - start) * 1000} ms",
+            )
