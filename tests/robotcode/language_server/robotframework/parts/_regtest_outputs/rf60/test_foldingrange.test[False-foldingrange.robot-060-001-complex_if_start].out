@@ -5,8 +5,8 @@ data: !GeneratedTestData
 result:
 - !FoldingRange
   collapsed_text: null
-  end_character: 8
-  end_line: 77
+  end_character: 21
+  end_line: 62
   kind: if
   start_character: 0
   start_line: 60

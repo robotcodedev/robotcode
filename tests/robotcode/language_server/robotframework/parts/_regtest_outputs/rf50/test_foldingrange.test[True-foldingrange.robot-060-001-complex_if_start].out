@@ -6,7 +6,7 @@ result:
 - !FoldingRange
   collapsed_text: null
   end_character: null
-  end_line: 77
+  end_line: 62
   kind: if
   start_character: null
   start_line: 60
