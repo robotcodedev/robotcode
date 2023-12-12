@@ -50,11 +50,11 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         self.parent.diagnostics.load_workspace_documents.add(self._load_workspace_documents)
         self.parent.diagnostics.on_get_diagnostics_mode.add(self.on_get_diagnostics_mode)
         self.parent.diagnostics.on_get_analysis_progress_mode.add(self.on_get_analysis_progress_mode)
-        self.parent.on_initialized.add(self.on_initialized)
+        self.parent.on_initialized.add(self.server_initialized)
         self.documents_loaded = Event()
 
-    async def on_initialized(self, sender: Any) -> None:
-        await self.parent.workspace.add_file_watcher(
+    def server_initialized(self, sender: Any) -> None:
+        self.parent.workspace.add_file_watcher(
             self.on_file_changed,
             f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}",
             WatchKind.CREATE,
@@ -81,11 +81,11 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
             return str(reader.read())
 
     async def on_get_diagnostics_mode(self, sender: Any, uri: Uri) -> Optional[DiagnosticsMode]:
-        config = await self.parent.workspace.get_configuration(AnalysisConfig, uri)
+        config = await self.parent.workspace.get_configuration_async(AnalysisConfig, uri)
         return config.diagnostic_mode
 
     async def on_get_analysis_progress_mode(self, sender: Any, uri: Uri) -> Optional[AnalysisProgressMode]:
-        config = await self.parent.workspace.get_configuration(AnalysisConfig, uri)
+        config = await self.parent.workspace.get_configuration_async(AnalysisConfig, uri)
         return config.progress_mode
 
     @threaded()
@@ -95,7 +95,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
             result: List[WorkspaceDocumentsResult] = []
 
             for folder in self.parent.workspace.workspace_folders:
-                config = await self.parent.workspace.get_configuration(RobotCodeConfig, folder.uri)
+                config = await self.parent.workspace.get_configuration_async(RobotCodeConfig, folder.uri)
 
                 async with self.parent.window.progress("Collect sources", cancellable=False):
                     files = list(

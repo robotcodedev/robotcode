@@ -129,15 +129,10 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         self.profile = profile if profile is not None else RobotBaseProfile()
         self.options = Options()
         self.on_initialize.add(self._on_initialize)
-        self.on_initialized.add(self._on_initialized)
-        self.on_shutdown.add(self._on_shutdown)
+        self.on_initialized.add(self.server_initialized)
 
     @_logger.call
-    async def _on_shutdown(self, sender: Any) -> None:
-        pass
-
-    @_logger.call
-    async def _on_initialize(self, sender: Any, initialization_options: Optional[Any] = None) -> None:
+    def _on_initialize(self, sender: Any, initialization_options: Optional[Any] = None) -> None:
         if initialization_options is not None:
             self.options = from_dict(initialization_options, Options)
 
@@ -170,9 +165,9 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     async def _on_did_change_configuration(self, sender: Any, settings: Dict[str, Any]) -> None:
         pass
 
-    async def _on_initialized(self, sender: Any) -> None:
+    def server_initialized(self, sender: Any) -> None:
         for folder in self.workspace.workspace_folders:
-            config: RobotConfig = await self.workspace.get_configuration(RobotConfig, folder.uri, request=False)
+            config: RobotConfig = self.workspace.get_configuration(RobotConfig, folder.uri, request=False).result()
             for k, v in (self.profile.env or {}).items():
                 os.environ[k] = v
 

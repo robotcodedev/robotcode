@@ -39,7 +39,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
         if folder is None:
             return None
 
-        return await self.parent.workspace.get_configuration(InlayHintsConfig, folder.uri)
+        return await self.parent.workspace.get_configuration_async(InlayHintsConfig, folder.uri)
 
     def _find_method(self, cls: Type[Any]) -> Optional[_HandlerMethod]:
         if cls is ast.AST:

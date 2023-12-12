@@ -246,7 +246,7 @@ class RegTestFixture:
         return False  # don't suppress exception
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def regtest(request: pytest.FixtureRequest):
     item = request.node
 

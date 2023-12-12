@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-import time
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from robot.parsing.model.blocks import If, Keyword, TestCase
@@ -125,10 +124,4 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     async def collect(self, sender: Any, document: TextDocument) -> Optional[List[FoldingRange]]:
-        start = time.monotonic()
-        try:
-            return _Visitor.find_from(await self.parent.documents_cache.get_model(document, False), self)
-        finally:
-            self._logger.critical(
-                lambda: f"Folding ranges collected in {(time.monotonic() - start) * 1000} ms",
-            )
+        return _Visitor.find_from(await self.parent.documents_cache.get_model(document, False), self)

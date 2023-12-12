@@ -59,7 +59,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         if folder is None:
             return RoboTidyConfig()
 
-        return await self.parent.workspace.get_configuration(RoboTidyConfig, folder.uri)
+        return await self.parent.workspace.get_configuration_async(RoboTidyConfig, folder.uri)
 
     @language_id("robotframework")
     @_logger.call

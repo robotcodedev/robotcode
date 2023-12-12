@@ -4,13 +4,8 @@ from typing import Iterator
 import pytest
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
-    import asyncio.runners
-
     loop = asyncio.new_event_loop()
-    # loop.set_debug(True)
-    try:
-        yield loop
-    finally:
-        loop.close()
+    yield loop
+    loop.close()

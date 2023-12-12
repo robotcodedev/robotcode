@@ -61,7 +61,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self._keyword_reference_cache = AsyncSimpleLRUCache(max_items=None)
         self._variable_reference_cache = AsyncSimpleLRUCache(max_items=None)
 
-        parent.on_initialized.add(self.on_initialized)
+        parent.on_initialized.add(self.server_initialized)
 
         parent.references.collect.add(self.collect)
         parent.documents.did_change.add(self.document_did_change)
@@ -70,14 +70,14 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def cache_cleared(sender) -> None:  # NOSONAR
         ...
 
-    async def on_initialized(self, sender: Any) -> None:
-        await self.parent.workspace.add_file_watcher(
-            self.on_file_changed,
+    def server_initialized(self, sender: Any) -> None:
+        self.parent.workspace.add_file_watcher(
+            self.do_on_file_changed,
             f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}",
             WatchKind.CREATE | WatchKind.DELETE,
         )
 
-    async def on_file_changed(self, sender: Any, files: List[FileEvent]) -> None:
+    async def do_on_file_changed(self, sender: Any, files: List[FileEvent]) -> None:
         await self.clear_cache()
 
     @language_id("robotframework")

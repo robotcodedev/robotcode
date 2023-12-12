@@ -23,7 +23,7 @@ from .pytest_regtestex import RegTestFixtureEx
     generate_tests_from_source_document(Path(Path(__file__).parent, "data/tests/document_highlight.robot")),
     indirect=["test_document"],
     ids=generate_test_id,
-    scope="package",
+    scope="module",
 )
 @pytest.mark.usefixtures("protocol")
 @pytest.mark.asyncio()

@@ -1,7 +1,8 @@
+import asyncio
 import dataclasses
 import shutil
 from pathlib import Path
-from typing import Any, AsyncIterator, cast
+from typing import AsyncIterator, Iterator, cast
 
 import pytest
 import pytest_asyncio
@@ -30,8 +31,15 @@ from tests.robotcode.language_server.robotframework.tools import generate_test_i
 from .pytest_regtestex import RegTestFixtureEx
 
 
-@pytest_asyncio.fixture(scope="package", ids=generate_test_id)
-async def protocol(request: Any) -> AsyncIterator[RobotLanguageServerProtocol]:
+@pytest.fixture(scope="session")
+def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest_asyncio.fixture(scope="session", ids=generate_test_id)
+async def protocol(request: pytest.FixtureRequest) -> AsyncIterator[RobotLanguageServerProtocol]:
     root_path = Path(Path(__file__).absolute().parent, "data")
     robotcode_cache_path = root_path / ".robotcode_cache"
 
@@ -88,9 +96,8 @@ async def protocol(request: Any) -> AsyncIterator[RobotLanguageServerProtocol]:
         server.close()
 
 
-@pytest_asyncio.fixture(scope="module")
-@pytest.mark.usefixtures("event_loop")
-async def test_document(request: Any) -> AsyncIterator[TextDocument]:
+@pytest.fixture(scope="module")
+async def test_document(request: pytest.FixtureRequest) -> AsyncIterator[TextDocument]:
     data_path = Path(request.param)
     data = data_path.read_text("utf-8")
 
@@ -104,7 +111,7 @@ async def test_document(request: Any) -> AsyncIterator[TextDocument]:
 
 
 @pytest.fixture()
-def regtest(request: Any) -> RegTestFixtureEx:
+def regtest(request: pytest.FixtureRequest) -> RegTestFixtureEx:
     item = request.node
 
     return RegTestFixtureEx(request, item.nodeid)

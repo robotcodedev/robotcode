@@ -264,7 +264,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         if not self.parent.diagnostics.workspace_loaded_event.is_set():
             return DiagnosticsResult(self.collect_unused_keyword_references, None)
 
-        config = await self.parent.workspace.get_configuration(AnalysisConfig, document.uri)
+        config = await self.parent.workspace.get_configuration_async(AnalysisConfig, document.uri)
 
         if not config.find_unused_references:
             return DiagnosticsResult(self.collect_unused_keyword_references, [])
@@ -323,7 +323,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         if not self.parent.diagnostics.workspace_loaded_event.is_set():
             return DiagnosticsResult(self.collect_unused_variable_references, None)
 
-        config = await self.parent.workspace.get_configuration(AnalysisConfig, document.uri)
+        config = await self.parent.workspace.get_configuration_async(AnalysisConfig, document.uri)
 
         if not config.find_unused_references:
             return DiagnosticsResult(self.collect_unused_variable_references, [])

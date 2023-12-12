@@ -91,7 +91,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
 
     @language_id("robotframework")
     async def collect(self, sender: Any, document: TextDocument) -> Optional[List[CodeLens]]:
-        if not (await self.parent.workspace.get_configuration(AnalysisConfig, document.uri)).references_code_lens:
+        if not (await self.parent.workspace.get_configuration_async(AnalysisConfig, document.uri)).references_code_lens:
             return None
 
         return await _Visitor.find_from(await self.parent.documents_cache.get_model(document), self, document)
@@ -105,7 +105,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         if document is None:
             return None
 
-        if not (await self.parent.workspace.get_configuration(AnalysisConfig, document.uri)).references_code_lens:
+        if not (await self.parent.workspace.get_configuration_async(AnalysisConfig, document.uri)).references_code_lens:
             return None
 
         namespace = await self.parent.documents_cache.get_namespace(document)

@@ -109,21 +109,21 @@ class _ImportEntry(ABC):
         self._lock = Lock()
 
     @staticmethod
-    async def __remove_filewatcher(workspace: Workspace, entry: FileWatcherEntry) -> None:
-        await workspace.remove_file_watcher_entry(entry)
+    def __remove_filewatcher(workspace: Workspace, entry: FileWatcherEntry) -> None:
+        workspace.remove_file_watcher_entry(entry)
 
     def __del__(self) -> None:
         try:
             if self.file_watchers is not None and asyncio.get_running_loop():
                 for watcher in self.file_watchers:
-                    create_sub_task(_ImportEntry.__remove_filewatcher(self.parent.parent_protocol.workspace, watcher))
+                    _ImportEntry.__remove_filewatcher(self.parent.parent_protocol.workspace, watcher)
         except RuntimeError:
             pass
 
-    async def _remove_file_watcher(self) -> None:
+    def _remove_file_watcher(self) -> None:
         if self.file_watchers is not None:
             for watcher in self.file_watchers:
-                await self.parent.parent_protocol.workspace.remove_file_watcher_entry(watcher)
+                self.parent.parent_protocol.workspace.remove_file_watcher_entry(watcher)
         self.file_watchers = []
 
     @abstractmethod
@@ -227,7 +227,7 @@ class _LibrariesEntry(_ImportEntry):
         # we are a module, so add the module path into file watchers
         if self._lib_doc.module_spec is not None and self._lib_doc.module_spec.submodule_search_locations is not None:
             self.file_watchers.append(
-                await self.parent.parent_protocol.workspace.add_file_watchers(
+                self.parent.parent_protocol.workspace.add_file_watchers(
                     self.parent.did_change_watched_files,
                     [
                         str(Path(location).resolve().joinpath("**"))
@@ -244,7 +244,7 @@ class _LibrariesEntry(_ImportEntry):
         # we are a file, so put the parent path to filewatchers
         if source_or_origin is not None:
             self.file_watchers.append(
-                await self.parent.parent_protocol.workspace.add_file_watchers(
+                self.parent.parent_protocol.workspace.add_file_watchers(
                     self.parent.did_change_watched_files, [str(Path(source_or_origin).parent.joinpath("**"))]
                 )
             )
@@ -254,7 +254,7 @@ class _LibrariesEntry(_ImportEntry):
         # we are not found, so put the pythonpath to filewatchers
         if self._lib_doc.python_path is not None:
             self.file_watchers.append(
-                await self.parent.parent_protocol.workspace.add_file_watchers(
+                self.parent.parent_protocol.workspace.add_file_watchers(
                     self.parent.did_change_watched_files,
                     [str(Path(s).joinpath("**")) for s in self._lib_doc.python_path],
                 )
@@ -264,7 +264,7 @@ class _LibrariesEntry(_ImportEntry):
         if self._lib_doc is None and len(self.file_watchers) == 0:
             return
 
-        await self._remove_file_watcher()
+        self._remove_file_watcher()
         self._lib_doc = None
 
     async def is_valid(self) -> bool:
@@ -329,7 +329,7 @@ class _ResourcesEntry(_ImportEntry):
 
         if self._document._version is None:
             self.file_watchers.append(
-                await self.parent.parent_protocol.workspace.add_file_watchers(
+                self.parent.parent_protocol.workspace.add_file_watchers(
                     self.parent.did_change_watched_files,
                     [str(self._document.uri.to_path())],
                 )
@@ -339,7 +339,7 @@ class _ResourcesEntry(_ImportEntry):
         if self._document is None and len(self.file_watchers) == 0:
             return
 
-        await self._remove_file_watcher()
+        self._remove_file_watcher()
 
         self._document = None
         self._lib_doc = None
@@ -435,7 +435,7 @@ class _VariablesEntry(_ImportEntry):
 
         if self._lib_doc is not None:
             self.file_watchers.append(
-                await self.parent.parent_protocol.workspace.add_file_watchers(
+                self.parent.parent_protocol.workspace.add_file_watchers(
                     self.parent.did_change_watched_files,
                     [str(self._lib_doc.source)],
                 )
@@ -445,7 +445,7 @@ class _VariablesEntry(_ImportEntry):
         if self._lib_doc is None and len(self.file_watchers) == 0:
             return
 
-        await self._remove_file_watcher()
+        self._remove_file_watcher()
 
         self._lib_doc = None
 
@@ -1085,19 +1085,28 @@ class ImportsManager:
 
             executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
             try:
-                result = await asyncio.wait_for(
-                    asyncio.get_running_loop().run_in_executor(
-                        executor,
-                        get_library_doc,
-                        name,
-                        args,
-                        working_dir,
-                        base_dir,
-                        await self.get_resolvable_command_line_variables(),
-                        variables,
-                    ),
-                    LOAD_LIBRARY_TIME_OUT,
-                )
+                result = executor.submit(
+                    get_library_doc,
+                    name,
+                    args,
+                    working_dir,
+                    base_dir,
+                    await self.get_resolvable_command_line_variables(),
+                    variables,
+                ).result(LOAD_LIBRARY_TIME_OUT)
+                # result = await asyncio.wait_for(
+                #     asyncio.get_running_loop().run_in_executor(
+                #         executor,
+                #         get_library_doc,
+                #         name,
+                #         args,
+                #         working_dir,
+                #         base_dir,
+                #         await self.get_resolvable_command_line_variables(),
+                #         variables,
+                #     ),
+                #     LOAD_LIBRARY_TIME_OUT,
+                # )
             except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
                 raise
             except BaseException as e:

@@ -5,6 +5,7 @@ import asyncio
 import builtins
 import itertools
 import os
+import time
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -110,7 +111,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
 
     async def get_config(self, document: TextDocument) -> CompletionConfig:
         if (folder := self.parent.workspace.get_workspace_folder(document.uri)) is not None:
-            return await self.parent.workspace.get_configuration(CompletionConfig, folder.uri)
+            return await self.parent.workspace.get_configuration_async(CompletionConfig, folder.uri)
 
         return CompletionConfig()
 
@@ -284,7 +285,14 @@ class CompletionCollector(ModelHelperMixin):
         self.namespace = namespace
         self.config = config
 
+    _method_cache: Dict[Type[Any], List[_CompleteMethod]] = {}
+
     async def _find_methods(self, cls: Type[Any]) -> AsyncIterator[_CompleteMethod]:
+        if cls in self._method_cache:
+            for m in self._method_cache[cls]:
+                yield m
+
+        methods = []
         if cls is ast.AST:
             return
 
@@ -292,34 +300,44 @@ class CompletionCollector(ModelHelperMixin):
         if hasattr(self, method_name):
             method = getattr(self, method_name)
             if callable(method):
+                methods.append(method)
                 yield cast(_CompleteMethod, method)
         for base in cls.__bases__:
             async for m in self._find_methods(base):
+                methods.append(m)
                 yield m
+
+        self._method_cache[cls] = methods
 
     async def collect(
         self, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        result_nodes = await get_nodes_at_position(self.model, position, include_end=True)
+        start = time.monotonic()
+        try:
+            result_nodes = await get_nodes_at_position(self.model, position, include_end=True)
 
-        result_nodes.reverse()
+            result_nodes.reverse()
 
-        async def iter_results() -> AsyncIterator[List[CompletionItem]]:
-            for result_node in result_nodes:
-                async for method in self._find_methods(type(result_node)):
-                    r = await method(result_node, result_nodes, position, context)
-                    if r is not None:
-                        yield r
+            async def iter_results() -> AsyncIterator[List[CompletionItem]]:
+                for result_node in result_nodes:
+                    async for method in self._find_methods(type(result_node)):
+                        r = await method(result_node, result_nodes, position, context)
+                        if r is not None:
+                            yield r
 
-            r = await self.complete_default(result_nodes, position, context)
-            if r is not None:
-                yield r
+                r = await self.complete_default(result_nodes, position, context)
+                if r is not None:
+                    yield r
 
-        items = [e async for e in async_chain_iterator(iter_results())]
-        result = CompletionList(is_incomplete=False, items=items)
-        if not result.items:
-            return None
-        return result
+            items = [e async for e in async_chain_iterator(iter_results())]
+            result = CompletionList(is_incomplete=False, items=items)
+            if not result.items:
+                return None
+            return result
+        finally:
+            self._logger.critical(
+                lambda: f"Collect completion for {self.document.uri} took {time.monotonic() - start:.2f} seconds"
+            )
 
     async def resolve(self, completion_item: CompletionItem) -> CompletionItem:
         data = cast(CompletionItemData, completion_item.data)

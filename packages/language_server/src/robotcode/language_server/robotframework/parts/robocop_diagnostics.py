@@ -51,7 +51,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         if folder is None:
             return None
 
-        return await self.parent.workspace.get_configuration(RoboCopConfig, folder.uri)
+        return await self.parent.workspace.get_configuration_async(RoboCopConfig, folder.uri)
 
     @language_id("robotframework")
     @threaded()

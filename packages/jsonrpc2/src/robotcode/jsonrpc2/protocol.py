@@ -553,10 +553,10 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
             self._sended_request[id] = SendedRequestEntry(result, return_type_or_converter)
 
-        request = JsonRPCRequest(id=id, method=method, params=params)
-        self.send_message(request)
+            request = JsonRPCRequest(id=id, method=method, params=params)
+            self.send_message(request)
 
-        return result
+            return result
 
     def send_request_async(
         self,

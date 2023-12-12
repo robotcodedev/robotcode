@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 import uuid
 import weakref
+from concurrent.futures import Future
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -27,7 +29,6 @@ from typing import (
 from robotcode.core.async_tools import (
     Lock,
     async_tasking_event,
-    create_sub_task,
     threaded,
 )
 from robotcode.core.dataclasses import CamelSnakeMixin, from_dict
@@ -68,7 +69,7 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.uri import Uri
 from robotcode.core.utils.path import path_is_relative_to
-from robotcode.jsonrpc2.protocol import JsonRPCErrorException, rpc_method
+from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.has_extend_capabilities import (
     HasExtendCapabilities,
 )
@@ -172,18 +173,18 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         self._settings: Dict[str, Any] = {}
 
         self._file_watchers: weakref.WeakSet[FileWatcherEntry] = weakref.WeakSet()
-        self._file_watchers_lock = Lock()
+        self._file_watchers_lock = threading.RLock()
 
-        self.parent.on_shutdown.add(self._on_shutdown)
+        self.parent.on_shutdown.add(self.server_shutdown)
 
     @property
     def workspace_folders(self) -> List[WorkspaceFolder]:
         return self._workspace_folders
 
     @_logger.call
-    async def _on_shutdown(self, sender: Any) -> None:
+    def server_shutdown(self, sender: Any) -> None:
         for e in self._file_watchers.copy():
-            await self.remove_file_watcher_entry(e)
+            self.remove_file_watcher_entry(e)
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         capabilities.workspace = ServerCapabilitiesWorkspaceType(
@@ -325,51 +326,72 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
     async def _workspace_did_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
         await self.did_delete_files(self, [f.uri for f in files])
 
-    async def get_configuration(
+    def get_configuration_async(
         self,
         section: Type[_TConfig],
         scope_uri: Union[str, Uri, None] = None,
         request: bool = True,
-    ) -> _TConfig:
-        config = await self.get_configuration_raw(
+    ) -> asyncio.Future[_TConfig]:
+        return asyncio.wrap_future(self.get_configuration(section, scope_uri, request))
+
+    def get_configuration(
+        self,
+        section: Type[_TConfig],
+        scope_uri: Union[str, Uri, None] = None,
+        request: bool = True,
+    ) -> Future[_TConfig]:
+        result_future: Future[_TConfig] = Future()
+
+        def _get_configuration_done(f: Future[Optional[Any]]) -> None:
+            try:
+                if result_future.cancelled():
+                    return
+
+                if f.cancelled():
+                    result_future.cancel()
+                    return
+
+                if f.exception():
+                    result_future.set_exception(f.exception())
+                    return
+
+                result = f.result()
+                result_future.set_result(from_dict(result[0] if result else {}, section))
+            except Exception as e:
+                result_future.set_exception(e)
+
+        self.get_configuration_raw(
             section=cast(HasConfigSection, section).__config_section__,
             scope_uri=scope_uri,
             request=request,
-        )
+        ).add_done_callback(_get_configuration_done)
 
-        return from_dict(config if config is not None else {}, section)
+        return result_future
 
-    async def get_configuration_raw(
+    def get_configuration_raw(
         self,
         section: Optional[str],
         scope_uri: Union[str, Uri, None] = None,
         request: bool = True,
-    ) -> Optional[Any]:
+    ) -> Future[Optional[Any]]:
         if (
             self.parent.client_capabilities
             and self.parent.client_capabilities.workspace
             and self.parent.client_capabilities.workspace.configuration
             and request
         ):
-            try:
-                r = await self.parent.send_request_async(
-                    "workspace/configuration",
-                    ConfigurationParams(
-                        items=[
-                            ConfigurationItem(
-                                scope_uri=str(scope_uri) if isinstance(scope_uri, Uri) else scope_uri,
-                                section=section,
-                            )
-                        ]
-                    ),
-                    List[Any],
-                )
-
-                return r[0] if r else None
-            except asyncio.CancelledError:
-                raise
-            except JsonRPCErrorException as e:
-                self._logger.warning(str(e))
+            return self.parent.send_request(
+                "workspace/configuration",
+                ConfigurationParams(
+                    items=[
+                        ConfigurationItem(
+                            scope_uri=str(scope_uri) if isinstance(scope_uri, Uri) else scope_uri,
+                            section=section,
+                        )
+                    ]
+                ),
+                List[Any],
+            )
 
         result = self.settings
         for sub_key in str(section).split("."):
@@ -378,7 +400,9 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
             else:
                 result = {}
                 break
-        return result
+        result_future: Future[Optional[Any]] = Future()
+        result_future.set_result([result])
+        return result_future
 
     def get_workspace_folder(self, uri: Union[Uri, str]) -> Optional[WorkspaceFolder]:
         if isinstance(uri, str):
@@ -428,21 +452,21 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         if changes:
             await self.did_change_watched_files(self, changes)
 
-    async def add_file_watcher(
+    def add_file_watcher(
         self,
         callback: Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
         glob_pattern: str,
         kind: Optional[WatchKind] = None,
     ) -> FileWatcherEntry:
-        return await self.add_file_watchers(callback, [(glob_pattern, kind)])
+        return self.add_file_watchers(callback, [(glob_pattern, kind)])
 
     @_logger.call
-    async def add_file_watchers(
+    def add_file_watchers(
         self,
         callback: Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
         watchers: List[Union[FileWatcher, str, Tuple[str, Optional[WatchKind]]]],
     ) -> FileWatcherEntry:
-        async with self._file_watchers_lock:
+        with self._file_watchers_lock:
             _watchers = [
                 e if isinstance(e, FileWatcher) else FileWatcher(*e) if isinstance(e, tuple) else FileWatcher(e)
                 for e in watchers
@@ -469,21 +493,29 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
                     and self.parent.client_capabilities.workspace.did_change_watched_files
                     and self.parent.client_capabilities.workspace.did_change_watched_files.dynamic_registration
                 ):
-                    await self.parent.register_capability(
+
+                    def _done(f: Future[None]) -> None:
+                        if f.cancelled():
+                            return
+                        exception = f.exception()
+                        if exception is not None:
+                            self._logger.exception(exception)
+
+                    self.parent.register_capability(
                         entry.id,
                         "workspace/didChangeWatchedFiles",
                         DidChangeWatchedFilesRegistrationOptions(
                             watchers=[FileSystemWatcher(glob_pattern=w.glob_pattern, kind=w.kind) for w in _watchers]
                         ),
-                    )
+                    ).add_done_callback(_done)
+
                 else:
                     # TODO: implement own filewatcher if not supported by language server client
                     self._logger.warning("client did not support workspace/didChangeWatchedFiles.")
 
             def remove() -> None:
                 try:
-                    if asyncio.get_running_loop():
-                        create_sub_task(self.remove_file_watcher_entry(entry))
+                    self.remove_file_watcher_entry(entry)
                 except RuntimeError:
                     pass
 
@@ -494,8 +526,8 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
             return entry
 
     @_logger.call
-    async def remove_file_watcher_entry(self, entry: FileWatcherEntry) -> None:
-        async with self._file_watchers_lock:
+    def remove_file_watcher_entry(self, entry: FileWatcherEntry) -> None:
+        with self._file_watchers_lock:
             if entry in self._file_watchers:
                 self._file_watchers.remove(entry)
 
@@ -511,7 +543,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
                     and self.parent.client_capabilities.workspace.did_change_watched_files
                     and self.parent.client_capabilities.workspace.did_change_watched_files.dynamic_registration
                 ):
-                    await self.parent.unregister_capability(entry.id, "workspace/didChangeWatchedFiles")
+                    self.parent.unregister_capability(entry.id, "workspace/didChangeWatchedFiles")
                 # TODO: implement own filewatcher if not supported by language server client
 
     async def apply_edit(self, edit: WorkspaceEdit, label: Optional[str] = None) -> ApplyWorkspaceEditResult:

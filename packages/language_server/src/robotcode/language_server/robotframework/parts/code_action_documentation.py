@@ -7,7 +7,7 @@ import socket
 import threading
 import traceback
 import urllib.parse
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import Future, ProcessPoolExecutor
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -206,8 +206,8 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         super().__init__(parent)
 
         parent.code_action.collect.add(self.collect)
-        self.parent.on_initialized.add(self.initialized)
-        self.parent.on_shutdown.add(self.shutdown)
+        self.parent.on_initialized.add(self.server_initialized)
+        self.parent.on_shutdown.add(self.server_shutdown)
 
         self._documentation_server: Optional[ThreadingHTTPServer] = None
         self._documentation_server_lock = threading.RLock()
@@ -215,10 +215,10 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
 
         self.parent.commands.register_all(self)
 
-    async def initialized(self, sender: Any) -> None:
-        await self._ensure_http_server_started()
+    def server_initialized(self, sender: Any) -> None:
+        self._ensure_http_server_started()
 
-    async def shutdown(self, sender: Any) -> None:
+    def server_shutdown(self, sender: Any) -> None:
         with self._documentation_server_lock:
             if self._documentation_server is not None:
                 self._documentation_server.shutdown()
@@ -237,18 +237,20 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                 self._documentation_server = None
                 raise
 
-    async def _ensure_http_server_started(self) -> None:
-        config = await self.parent.workspace.get_configuration(DocumentationServerConfig)
+    def _ensure_http_server_started(self) -> None:
+        def _start_server(f: Future[DocumentationServerConfig]) -> None:
+            config = f.result()
+            with self._documentation_server_lock:
+                if self._documentation_server is None:
+                    self._server_thread = Thread(
+                        name="documentation_server",
+                        target=self._run_server,
+                        args=(config.start_port, config.end_port),
+                        daemon=True,
+                    )
+                    self._server_thread.start()
 
-        with self._documentation_server_lock:
-            if self._documentation_server is None:
-                self._server_thread = Thread(
-                    name="documentation_server",
-                    target=self._run_server,
-                    args=(config.start_port, config.end_port),
-                    daemon=True,
-                )
-                self._server_thread.start()
+        self.parent.workspace.get_configuration(DocumentationServerConfig).add_done_callback(_start_server)
 
     @language_id("robotframework")
     @code_action_kinds(

@@ -131,7 +131,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         self._diagnostics_server_thread: Optional[threading.Thread] = None
         self._single_diagnostics_server_thread: Optional[threading.Thread] = None
 
-        self.parent.on_initialized.add(self.initialized)
+        self.parent.on_initialized.add(self.server_initialized)
 
         self.parent.on_exit.add(self.cancel_workspace_diagnostics_task)
 
@@ -143,7 +143,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
         self.client_supports_pull = False
 
-    async def initialized(self, sender: Any) -> None:
+    def server_initialized(self, sender: Any) -> None:
         self._ensure_diagnostics_thread_started()
 
         self._workspace_diagnostics_task = create_sub_task(self.run_workspace_diagnostics(), loop=self.diagnostics_loop)
@@ -308,7 +308,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         finally:
             self.publish_diagnostics(document, diagnostics=[])
 
-    async def cancel_workspace_diagnostics_task(self, sender: Any) -> None:
+    def cancel_workspace_diagnostics_task(self, sender: Any) -> None:
         if self._workspace_diagnostics_task is not None:
             self._workspace_diagnostics_task.get_loop().call_soon_threadsafe(self._workspace_diagnostics_task.cancel)
 

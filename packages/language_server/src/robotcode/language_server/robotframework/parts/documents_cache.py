@@ -67,7 +67,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         result = self._workspace_languages.get(folder, None)
         if result is None:
-            config = await self.parent.workspace.get_configuration(RobotConfig, folder.uri)
+            config = await self.parent.workspace.get_configuration_async(RobotConfig, folder.uri)
 
             languages = [str(v) for v in self.parent.profile.languages or []]
             languages += config.languages or []
@@ -445,7 +445,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         async with self._imports_managers_lock:
             if folder not in self._imports_managers:
-                config = await self.parent.workspace.get_configuration(RobotCodeConfig, folder.uri)
+                config = await self.parent.workspace.get_configuration_async(RobotCodeConfig, folder.uri)
 
                 self._imports_managers[folder] = ImportsManager(self.parent, folder.uri, config)
 

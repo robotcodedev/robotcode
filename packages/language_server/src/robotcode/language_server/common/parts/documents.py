@@ -75,12 +75,12 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
     def documents(self) -> List[TextDocument]:
         return list(self._documents.values())
 
-    async def _protocol_initialized(self, sender: Any) -> None:
-        await self._update_filewatchers()
+    def _protocol_initialized(self, sender: Any) -> None:
+        self._update_filewatchers()
 
-    async def _update_filewatchers(self) -> None:
+    def _update_filewatchers(self) -> None:
         if self.parent.file_extensions:
-            await self.parent.workspace.add_file_watcher(
+            self.parent.workspace.add_file_watcher(
                 self._file_watcher,
                 f"**/*.{{{','.join(self.parent.file_extensions)}}}",
                 WatchKind.CREATE | WatchKind.CHANGE | WatchKind.DELETE,

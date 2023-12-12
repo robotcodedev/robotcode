@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import Future
 from typing import Any, ClassVar, Final, List, NamedTuple, Optional, Set, Union
 
-from robotcode.core.async_tools import Event, async_event
+from robotcode.core.async_tools import Event
+from robotcode.core.event import event
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
     CancelParams,
@@ -135,12 +137,12 @@ class LanguageServerProtocol(JsonRPCProtocol):
         self._trace = TraceValues.OFF
         self.is_initialized = Event()
 
-    @async_event
-    async def on_shutdown(sender) -> None:  # pragma: no cover, NOSONAR
+    @event
+    def on_shutdown(sender) -> None:  # pragma: no cover, NOSONAR
         ...
 
-    @async_event
-    async def on_exit(sender) -> None:  # pragma: no cover, NOSONAR
+    @event
+    def on_exit(sender) -> None:  # pragma: no cover, NOSONAR
         ...
 
     @property
@@ -234,7 +236,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
                 ):
                     self.capabilities.position_encoding = PositionEncodingKind.UTF16
 
-                await self.on_initialize(self, initialization_options)
+                self.on_initialize(self, initialization_options)
             except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
                 raise
             except JsonRPCErrorException:
@@ -255,18 +257,18 @@ class LanguageServerProtocol(JsonRPCProtocol):
         finally:
             self.window.progress_end(work_done_token)
 
-    @async_event
-    async def on_initialize(sender, initialization_options: Optional[Any] = None) -> None:  # pragma: no cover, NOSONAR
+    @event
+    def on_initialize(sender, initialization_options: Optional[Any] = None) -> None:  # pragma: no cover, NOSONAR
         ...
 
     @rpc_method(name="initialized", param_type=InitializedParams)
     async def _initialized(self, params: InitializedParams, *args: Any, **kwargs: Any) -> None:
-        await self.on_initialized(self)
+        self.on_initialized(self)
 
         self.is_initialized.set()
 
-    @async_event
-    async def on_initialized(sender) -> None:  # pragma: no cover, NOSONAR
+    @event
+    def on_initialized(sender) -> None:  # pragma: no cover, NOSONAR
         ...
 
     @rpc_method(name="shutdown", cancelable=False)
@@ -282,12 +284,12 @@ class LanguageServerProtocol(JsonRPCProtocol):
         except BaseException as e:  # NOSONAR
             self.__logger.exception(e)
 
-        await self.on_shutdown(self)
+        self.on_shutdown(self)
 
     @rpc_method(name="exit")
     @__logger.call
     async def _exit(self, *args: Any, **kwargs: Any) -> None:
-        await self.on_exit(self)
+        self.on_exit(self)
 
         exit(0 if self.shutdown_received else 1)
 
@@ -301,20 +303,22 @@ class LanguageServerProtocol(JsonRPCProtocol):
     async def _cancel_request(self, id: Union[int, str], **kwargs: Any) -> None:
         self.cancel_request(id)
 
-    async def register_capability(self, id: str, method: str, register_options: Optional[Any]) -> None:
-        await self.register_capabilities([Registration(id=id, method=method, register_options=register_options)])
+    def register_capability(self, id: str, method: str, register_options: Optional[Any]) -> Future[None]:
+        return self.register_capabilities([Registration(id=id, method=method, register_options=register_options)])
 
-    async def register_capabilities(self, registrations: List[Registration]) -> None:
+    def register_capabilities(self, registrations: List[Registration]) -> Future[None]:
         if not registrations:
-            return
-        await self.send_request_async("client/registerCapability", RegistrationParams(registrations=registrations))
+            result: Future[None] = Future()
+            result.set_result(None)
+            return result
+        return self.send_request("client/registerCapability", RegistrationParams(registrations=registrations))
 
-    async def unregister_capability(self, id: str, method: str) -> None:
-        await self.unregister_capabilities([Unregistration(id=id, method=method)])
+    def unregister_capability(self, id: str, method: str) -> Future[None]:
+        return self.unregister_capabilities([Unregistration(id=id, method=method)])
 
-    async def unregister_capabilities(self, unregisterations: List[Unregistration]) -> None:
+    def unregister_capabilities(self, unregisterations: List[Unregistration]) -> Future[None]:
         if not unregisterations:
-            return
-        await self.send_request_async(
-            "client/unregisterCapability", UnregistrationParams(unregisterations=unregisterations)
-        )
+            result: Future[None] = Future()
+            result.set_result(None)
+            return result
+        return self.send_request("client/unregisterCapability", UnregistrationParams(unregisterations=unregisterations))

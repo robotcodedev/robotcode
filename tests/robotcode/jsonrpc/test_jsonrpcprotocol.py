@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Dict, Iterator, List, Optional, cast
+from typing import Any, Dict, List, Optional, cast
 
 import pytest
 from robotcode.core.dataclasses import as_dict, as_json
@@ -32,13 +32,6 @@ class DummyJsonRPCProtocol(JsonRPCProtocol):
     async def data_received_async(self, data: bytes) -> None:
         self.data_received(data)
         await asyncio.sleep(0)
-
-
-@pytest.fixture(scope="module")
-def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
 
 
 @pytest.mark.asyncio()
