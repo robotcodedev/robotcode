@@ -1063,9 +1063,9 @@ class ImportsManager:
                 meta_file = Path(self.lib_doc_cache_path, meta.filepath_base + ".meta.json")
                 if meta_file.exists():
                     try:
+                        spec_path = None
                         try:
                             saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
-                            spec_path = None
                             if saved_meta == meta:
                                 spec_path = Path(self.lib_doc_cache_path, meta.filepath_base + ".spec.json")
                                 return from_json(
@@ -1214,9 +1214,9 @@ class ImportsManager:
                 meta_file = Path(self.variables_doc_cache_path, meta.filepath_base + ".meta.json")
                 if meta_file.exists():
                     try:
+                        spec_path = None
                         try:
                             saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
-                            spec_path = None
                             if saved_meta == meta:
                                 spec_path = Path(self.variables_doc_cache_path, meta.filepath_base + ".spec.json")
                                 return from_json(
