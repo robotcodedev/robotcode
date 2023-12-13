@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.67.0](https://github.com/d-biehl/robotcode/compare/v0.66.1..v0.67.0) - 2023-12-13
+
+### Bug Fixes
+
+- **langserver:** Correted folding of IF blocks with multiple ELSE/ELSE IF's ([536db5e](https://github.com/d-biehl/robotcode/commit/536db5e7038ada87f37a6dce8fbf6d4c0d9fb0a0))
+- **langserver:** Unbound local variable in imports manager ([6d7b3d2](https://github.com/d-biehl/robotcode/commit/6d7b3d2e53b9e8766891332318b5085a797f40ca))
+- **vscode:** Don't show diagnostics when discover tests from a single file ([25024ac](https://github.com/d-biehl/robotcode/commit/25024ac4151571448b3ca465f90823d1761c336e))
+
+
+### Features
+
+- **cli:** Introduce a command line switch to log to a file ([7a6b8af](https://github.com/d-biehl/robotcode/commit/7a6b8af39989b5c49e3350fea65f46ed496d0db8))
+- **debugger:** Lighter color for timestamps and respect the `--no-color' command line switch to disable colored output ([6f12eed](https://github.com/d-biehl/robotcode/commit/6f12eed78b03f5efc19a87c69c46254a8f1b1cc8))
+
+
+### Refactor
+
+- **langserver:** Make documents handling synchronous and more threadsafe ([d1c72c2](https://github.com/d-biehl/robotcode/commit/d1c72c21b8fd7851c9743c23e3b98cd67d0e53dd))
+- **langserver,jsonrpc:** Use concurrent.futures.Future to send request, make register_capabilities syncronous ([41f495b](https://github.com/d-biehl/robotcode/commit/41f495b6d01300400365009d50123f2cf83914e3))
+
+
+### Testing
+
+- **langserver:** Fix some regression tests ([0016ef6](https://github.com/d-biehl/robotcode/commit/0016ef6318b6587fb8e9f193d80e8a5da370538c))
+- **langserver:** Fix some regression tests ([fec9542](https://github.com/d-biehl/robotcode/commit/fec954287c534d2e98f8a798d7058426231a86ed))
+- **langserver:** Fix some more regression tests ([a399bd6](https://github.com/d-biehl/robotcode/commit/a399bd6e1bd9fae2f15a198ec1c75b49b814947b))
+
+
 ## [0.66.1](https://github.com/d-biehl/robotcode/compare/v0.66.0..v0.66.1) - 2023-11-24
 
 ### Bug Fixes
