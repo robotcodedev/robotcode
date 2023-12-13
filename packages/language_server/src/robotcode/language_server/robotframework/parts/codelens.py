@@ -101,7 +101,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         if code_lens.data is None:
             return code_lens
 
-        document = await self.parent.documents.get(code_lens.data.get("uri", None))
+        document = self.parent.documents.get(code_lens.data.get("uri", None))
         if document is None:
             return None
 

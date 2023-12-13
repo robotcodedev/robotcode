@@ -49,7 +49,7 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Optional[List[CodeLens]]:
         results: List[CodeLens] = []
-        document = await self.parent.documents.get(text_document.uri)
+        document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 

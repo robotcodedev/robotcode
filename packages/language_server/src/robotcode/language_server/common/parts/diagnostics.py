@@ -281,7 +281,10 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
     @_logger.call
     @threaded()
-    async def on_did_close(self, sender: Any, document: TextDocument) -> None:
+    def on_did_close(self, sender: Any, document: TextDocument) -> None:
+        create_sub_task(self._close_diagnostics_for_document(document), loop=self.diagnostics_loop)
+
+    async def _close_diagnostics_for_document(self, document: TextDocument) -> None:
         if await self.get_diagnostics_mode(document.uri) == DiagnosticsMode.WORKSPACE:
             return
 
@@ -464,7 +467,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                         d.range = document.range_to_utf16(d.range)
 
                         for r in d.related_information or []:
-                            doc = await self.parent.documents.get(r.location.uri)
+                            doc = self.parent.documents.get(r.location.uri)
                             if doc is not None:
                                 r.location.range = doc.range_to_utf16(r.location.range)
 
@@ -494,7 +497,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             ),
         )
 
-    async def update_document_diagnostics(self, sender: Any, document: TextDocument) -> None:
+    def update_document_diagnostics(self, sender: Any, document: TextDocument) -> None:
         self.create_document_diagnostics_task(document, True)
 
     @rpc_method(name="textDocument/diagnostic", param_type=DocumentDiagnosticParams)
@@ -513,7 +516,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
                     LSPErrorCodes.SERVER_CANCELLED, "Server not initialized.", DiagnosticServerCancellationData(True)
                 )
 
-            document = await self.parent.documents.get(text_document.uri)
+            document = self.parent.documents.get(text_document.uri)
             if document is None:
                 raise JsonRPCErrorException(LSPErrorCodes.SERVER_CANCELLED, f"Document {text_document!r} not found.")
 

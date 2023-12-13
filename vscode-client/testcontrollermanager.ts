@@ -151,7 +151,7 @@ export class TestControllerManager {
     public readonly debugManager: DebugManager,
     public readonly outputChannel: vscode.OutputChannel,
   ) {
-    this.testController = vscode.tests.createTestController("robotCode.RobotFramework", "Robot Framework");
+    this.testController = vscode.tests.createTestController("robotCode.RobotFramework", "Robot Framework Tests/Tasks");
 
     this.testController.resolveHandler = async (item) => {
       await this.refresh(item);

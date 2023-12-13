@@ -189,7 +189,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
         from robot.utils.escaping import split_from_equals
         from robot.variables.search import contains_variable
 
-        document = await self.parent.documents.get(data.document_uri)
+        document = self.parent.documents.get(data.document_uri)
         if document is None:
             return None
 
@@ -238,7 +238,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             )
 
             if lib_entry is not None and lib_entry.library_doc.type == "RESOURCE" and lib_entry.library_doc.source:
-                dest_document = await self.parent.documents.get_or_open_document(lib_entry.library_doc.source)
+                dest_document = self.parent.documents.get_or_open_document(lib_entry.library_doc.source)
             else:
                 dest_document = document
 
@@ -319,7 +319,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
         self, code_action: CodeAction, data: CodeActionData
     ) -> Optional[CodeAction]:
         if data.range.start.line == data.range.end.line and data.range.start.character <= data.range.end.character:
-            document = await self.parent.documents.get(data.document_uri)
+            document = self.parent.documents.get(data.document_uri)
             if document is None:
                 return None
 
@@ -417,7 +417,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
         from robot.parsing.model.statements import Documentation, Fixture, Statement, Template
 
         if data.range.start.line == data.range.end.line and data.range.start.character <= data.range.end.character:
-            document = await self.parent.documents.get(data.document_uri)
+            document = self.parent.documents.get(data.document_uri)
             if document is None:
                 return None
 
@@ -514,7 +514,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
         from robot.parsing.model.statements import Variable
 
         if data.range.start.line == data.range.end.line and data.range.start.character <= data.range.end.character:
-            document = await self.parent.documents.get(data.document_uri)
+            document = self.parent.documents.get(data.document_uri)
             if document is None:
                 return None
 
@@ -659,7 +659,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
         from robot.parsing.model.statements import Arguments, Documentation, KeywordName, Statement
 
         if data.range.start.line == data.range.end.line and data.range.start.character <= data.range.end.character:
-            document = await self.parent.documents.get(data.document_uri)
+            document = self.parent.documents.get(data.document_uri)
             if document is None:
                 return None
 

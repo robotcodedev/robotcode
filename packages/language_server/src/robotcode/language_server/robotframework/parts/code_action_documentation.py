@@ -7,7 +7,7 @@ import socket
 import threading
 import traceback
 import urllib.parse
-from concurrent.futures import Future, ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -224,8 +224,10 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                 self._documentation_server.shutdown()
                 self._documentation_server = None
 
-    def _run_server(self, start_port: int, end_port: int) -> None:
-        self._documentation_server_port = find_free_port(start_port, end_port)
+    def _run_server(self) -> None:
+        config = self.parent.workspace.get_configuration(DocumentationServerConfig)
+
+        self._documentation_server_port = find_free_port(config.start_port, config.end_port)
 
         self._logger.debug(lambda: f"Start documentation server on port {self._documentation_server_port}")
 
@@ -238,19 +240,14 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                 raise
 
     def _ensure_http_server_started(self) -> None:
-        def _start_server(f: Future[DocumentationServerConfig]) -> None:
-            config = f.result()
-            with self._documentation_server_lock:
-                if self._documentation_server is None:
-                    self._server_thread = Thread(
-                        name="documentation_server",
-                        target=self._run_server,
-                        args=(config.start_port, config.end_port),
-                        daemon=True,
-                    )
-                    self._server_thread.start()
-
-        self.parent.workspace.get_configuration(DocumentationServerConfig).add_done_callback(_start_server)
+        with self._documentation_server_lock:
+            if self._documentation_server is None:
+                self._server_thread = Thread(
+                    name="documentation_server",
+                    target=self._run_server,
+                    daemon=True,
+                )
+                self._server_thread.start()
 
     @language_id("robotframework")
     @code_action_kinds(

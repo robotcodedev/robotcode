@@ -60,7 +60,7 @@ async def protocol(request: pytest.FixtureRequest) -> AsyncIterator[RobotLanguag
     }
 
     protocol = RobotLanguageServerProtocol(server)
-    await protocol._initialize(
+    protocol._initialize(
         dataclasses.replace(
             client_capas,
             **({k: v for k, v in vars(request.param).items() if v is not None} if hasattr(request, "param") else {}),
@@ -88,11 +88,11 @@ async def protocol(request: pytest.FixtureRequest) -> AsyncIterator[RobotLanguag
         )
     }
 
-    await protocol._initialized(InitializedParams())
+    protocol._initialized(InitializedParams())
     try:
         yield protocol
     finally:
-        await protocol._shutdown()
+        protocol._shutdown()
         server.close()
 
 

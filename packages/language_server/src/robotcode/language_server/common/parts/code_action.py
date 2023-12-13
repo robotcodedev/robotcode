@@ -71,7 +71,7 @@ class CodeActionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     ) -> Optional[List[Union[Command, CodeAction]]]:
         results: List[Union[Command, CodeAction]] = []
 
-        document = await self.parent.documents.get(text_document.uri)
+        document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 

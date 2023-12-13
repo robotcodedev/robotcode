@@ -69,19 +69,37 @@ class EventResultIteratorBase(Generic[_TParams, _TResult]):
             if c is not None:
                 yield c
 
-    def _notify(self, *__args: _TParams.args, **__kwargs: _TParams.kwargs) -> Iterator[_TResult]:
-        for method in set(self):
+    def _notify(
+        self,
+        *__args: _TParams.args,
+        callback_filter: Optional[Callable[[Callable[..., Any]], bool]] = None,
+        **__kwargs: _TParams.kwargs,
+    ) -> Iterator[_TResult]:
+        for method in filter(
+            lambda x: callback_filter(x) if callback_filter is not None else True,
+            set(self),
+        ):
             yield method(*__args, **__kwargs)
 
 
 class EventIterator(EventResultIteratorBase[_TParams, _TResult]):
-    def __call__(self, *__args: _TParams.args, **__kwargs: _TParams.kwargs) -> Iterator[_TResult]:
-        return self._notify(*__args, **__kwargs)
+    def __call__(
+        self,
+        *__args: _TParams.args,
+        callback_filter: Optional[Callable[[Callable[..., Any]], bool]] = None,
+        **__kwargs: _TParams.kwargs,
+    ) -> Iterator[_TResult]:
+        return self._notify(*__args, callback_filter=callback_filter, **__kwargs)
 
 
 class Event(EventResultIteratorBase[_TParams, _TResult]):
-    def __call__(self, *__args: _TParams.args, **__kwargs: _TParams.kwargs) -> List[_TResult]:
-        return list(self._notify(*__args, **__kwargs))
+    def __call__(
+        self,
+        *__args: _TParams.args,
+        callback_filter: Optional[Callable[[Callable[..., Any]], bool]] = None,
+        **__kwargs: _TParams.kwargs,
+    ) -> List[_TResult]:
+        return list(self._notify(*__args, callback_filter=callback_filter, **__kwargs))
 
 
 _TEvent = TypeVar("_TEvent")
@@ -125,31 +143,3 @@ class event_iterator(EventDescriptorBase[_TParams, _TResult, EventIterator[_TPar
 class event(EventDescriptorBase[_TParams, _TResult, Event[_TParams, _TResult]]):  # noqa: N801
     def __init__(self, _func: Callable[_TParams, _TResult]) -> None:
         super().__init__(_func, Event[_TParams, _TResult])
-
-
-class ThreadedEventResultIteratorBase(EventResultIteratorBase[_TParams, _TResult]):
-    def _notify(self, *__args: _TParams.args, **__kwargs: _TParams.kwargs) -> Iterator[_TResult]:
-        for method in set(self):
-            yield method(*__args, **__kwargs)
-
-
-class ThreadedEventIterator(ThreadedEventResultIteratorBase[_TParams, _TResult]):
-    def __call__(self, *__args: _TParams.args, **__kwargs: _TParams.kwargs) -> Iterator[_TResult]:
-        return self._notify(*__args, **__kwargs)
-
-
-class ThreadedEvent(ThreadedEventResultIteratorBase[_TParams, _TResult]):
-    def __call__(self, *__args: _TParams.args, **__kwargs: _TParams.kwargs) -> List[_TResult]:
-        return list(self._notify(*__args, **__kwargs))
-
-
-class threaded_event_iterator(  # noqa: N801
-    EventDescriptorBase[_TParams, _TResult, ThreadedEventIterator[_TParams, _TResult]]
-):
-    def __init__(self, _func: Callable[_TParams, _TResult]) -> None:
-        super().__init__(_func, ThreadedEventIterator[_TParams, _TResult])
-
-
-class threaded_event(EventDescriptorBase[_TParams, _TResult, ThreadedEvent[_TParams, _TResult]]):  # noqa: N801
-    def __init__(self, _func: Callable[_TParams, _TResult]) -> None:
-        super().__init__(_func, ThreadedEvent[_TParams, _TResult])

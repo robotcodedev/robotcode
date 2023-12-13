@@ -193,7 +193,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     @rpc_method(name="initialize", param_type=InitializeParams)
     @__logger.call
-    async def _initialize(
+    def _initialize(
         self,
         capabilities: ClientCapabilities,
         root_path: Optional[str] = None,
@@ -262,7 +262,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         ...
 
     @rpc_method(name="initialized", param_type=InitializedParams)
-    async def _initialized(self, params: InitializedParams, *args: Any, **kwargs: Any) -> None:
+    def _initialized(self, params: InitializedParams, *args: Any, **kwargs: Any) -> None:
         self.on_initialized(self)
 
         self.is_initialized.set()
@@ -273,14 +273,14 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     @rpc_method(name="shutdown", cancelable=False)
     @__logger.call
-    async def _shutdown(self, *args: Any, **kwargs: Any) -> None:
+    def _shutdown(self, *args: Any, **kwargs: Any) -> None:
         if self.shutdown_received:
             return
 
         self.shutdown_received = True
 
         try:
-            await asyncio.wait_for(self.cancel_all_received_request(), 1)
+            self.cancel_all_received_request()
         except BaseException as e:  # NOSONAR
             self.__logger.exception(e)
 
@@ -288,19 +288,19 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     @rpc_method(name="exit")
     @__logger.call
-    async def _exit(self, *args: Any, **kwargs: Any) -> None:
+    def _exit(self, *args: Any, **kwargs: Any) -> None:
         self.on_exit(self)
 
         exit(0 if self.shutdown_received else 1)
 
     @rpc_method(name="$/setTrace", param_type=SetTraceParams)
     @__logger.call
-    async def _set_trace(self, value: TraceValues, *args: Any, **kwargs: Any) -> None:
+    def _set_trace(self, value: TraceValues, *args: Any, **kwargs: Any) -> None:
         self.trace = value
 
     @rpc_method(name="$/cancelRequest", param_type=CancelParams)
     @__logger.call
-    async def _cancel_request(self, id: Union[int, str], **kwargs: Any) -> None:
+    def _cancel_request(self, id: Union[int, str], **kwargs: Any) -> None:
         self.cancel_request(id)
 
     def register_capability(self, id: str, method: str, register_options: Optional[Any]) -> Future[None]:

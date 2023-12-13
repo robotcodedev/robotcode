@@ -144,11 +144,20 @@ class InvalidProtocolVersionError(JsonRPCParseError):
     pass
 
 
-class RpcMethodEntry(NamedTuple):
+@dataclass
+class RpcMethodEntry:
     name: str
     method: Callable[..., Any]
     param_type: Optional[Type[Any]]
     cancelable: bool
+
+    _is_coroutine: Optional[bool] = field(default=None, init=False)
+
+    @property
+    def is_coroutine(self) -> bool:
+        if self._is_coroutine is None:
+            self._is_coroutine = inspect.iscoroutinefunction(self.method)
+        return self._is_coroutine
 
 
 @runtime_checkable
@@ -622,7 +631,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                     JsonRPCErrorException(message.error.code, message.error.message, message.error.data)
                 )
             else:
-                self.__logger.warning(lambda: f"Response for {message} is already done.")
+                self.__logger.warning(lambda: f"Error Response for {message} is already done.")
 
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -707,77 +716,9 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
         params = self._convert_params(e.method, e.param_type, message.params)
 
-        if (
-            isinstance(e.method, HasThreaded)
-            and e.method.__threaded__
-            or inspect.ismethod(e.method)
-            and isinstance(e.method.__func__, HasThreaded)
-            and e.method.__func__.__threaded__
-        ):
-            task = run_coroutine_in_thread(
-                ensure_coroutine(cast(Callable[..., Any], e.method)), *params[0], **params[1]
-            )
+        if not e.is_coroutine:
+            self.send_response(message.id, e.method(*params[0], **params[1]))
         else:
-            task = create_sub_task(
-                ensure_coroutine(e.method)(*params[0], **params[1]),
-                name=message.method,
-            )
-
-        with self._received_request_lock:
-            self._received_request[message.id] = ReceivedRequestEntry(task, message, e.cancelable)
-
-        def done(t: asyncio.Future[Any]) -> None:
-            try:
-                if not t.cancelled():
-                    ex = t.exception()
-                    if ex is not None:
-                        self.__logger.exception(ex, exc_info=ex)
-                        raise JsonRPCErrorException(JsonRPCErrors.INTERNAL_ERROR, f"{type(ex).__name__}: {ex}") from ex
-
-                self.send_response(message.id, t.result())
-            except asyncio.CancelledError:
-                self.__logger.debug(lambda: f"request message {message!r} canceled")
-                self.send_error(JsonRPCErrors.REQUEST_CANCELLED, "Request canceled.", id=message.id)
-            except (SystemExit, KeyboardInterrupt):
-                raise
-            except JsonRPCErrorException as e:
-                self.send_error(e.code, e.message or f"{type(e).__name__}: {e}", id=message.id, data=e.data)
-            except BaseException as e:
-                self.__logger.exception(e)
-                self.send_error(JsonRPCErrors.INTERNAL_ERROR, f"{type(e).__name__}: {e}", id=message.id)
-            finally:
-                with self._received_request_lock:
-                    self._received_request.pop(message.id, None)
-
-        task.add_done_callback(done)
-
-        await task
-
-    @__logger.call
-    def cancel_request(self, id: Union[int, str, None]) -> None:
-        with self._received_request_lock:
-            entry = self._received_request.get(id, None)
-
-        if entry is not None and entry.future is not None and not entry.future.cancelled():
-            self.__logger.debug(lambda: f"try to cancel request {entry.request if entry is not None else ''}")
-            entry.future.cancel()
-
-    @__logger.call
-    async def cancel_all_received_request(self) -> None:
-        for entry in self._received_request.values():
-            if entry is not None and entry.cancelable and entry.future is not None and not entry.future.cancelled():
-                entry.future.cancel()
-
-    @__logger.call
-    async def handle_notification(self, message: JsonRPCNotification) -> None:
-        e = self.registry.get_entry(message.method)
-
-        if e is None or not callable(e.method):
-            self.__logger.warning(lambda: f"Unknown method: {message.method}")
-            return
-        try:
-            params = self._convert_params(e.method, e.param_type, message.params)
-
             if (
                 isinstance(e.method, HasThreaded)
                 and e.method.__threaded__
@@ -794,7 +735,81 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                     name=message.method,
                 )
 
+            with self._received_request_lock:
+                self._received_request[message.id] = ReceivedRequestEntry(task, message, e.cancelable)
+
+            def done(t: asyncio.Future[Any]) -> None:
+                try:
+                    if not t.cancelled():
+                        ex = t.exception()
+                        if ex is not None:
+                            self.__logger.exception(ex, exc_info=ex)
+                            raise JsonRPCErrorException(
+                                JsonRPCErrors.INTERNAL_ERROR, f"{type(ex).__name__}: {ex}"
+                            ) from ex
+
+                    self.send_response(message.id, t.result())
+                except asyncio.CancelledError:
+                    self.__logger.debug(lambda: f"request message {message!r} canceled")
+                    self.send_error(JsonRPCErrors.REQUEST_CANCELLED, "Request canceled.", id=message.id)
+                except (SystemExit, KeyboardInterrupt):
+                    raise
+                except JsonRPCErrorException as e:
+                    self.send_error(e.code, e.message or f"{type(e).__name__}: {e}", id=message.id, data=e.data)
+                except BaseException as e:
+                    self.__logger.exception(e)
+                    self.send_error(JsonRPCErrors.INTERNAL_ERROR, f"{type(e).__name__}: {e}", id=message.id)
+                finally:
+                    with self._received_request_lock:
+                        self._received_request.pop(message.id, None)
+
+            task.add_done_callback(done)
+
             await task
+
+    def cancel_request(self, id: Union[int, str, None]) -> None:
+        with self._received_request_lock:
+            entry = self._received_request.get(id, None)
+
+        if entry is not None and entry.future is not None and not entry.future.cancelled():
+            self.__logger.debug(lambda: f"try to cancel request {entry.request if entry is not None else ''}")
+            entry.future.cancel()
+
+    def cancel_all_received_request(self) -> None:
+        for entry in self._received_request.values():
+            if entry is not None and entry.cancelable and entry.future is not None and not entry.future.cancelled():
+                entry.future.cancel()
+
+    @__logger.call
+    async def handle_notification(self, message: JsonRPCNotification) -> None:
+        e = self.registry.get_entry(message.method)
+
+        if e is None or not callable(e.method):
+            self.__logger.warning(lambda: f"Unknown method: {message.method}")
+            return
+        try:
+            params = self._convert_params(e.method, e.param_type, message.params)
+
+            if not e.is_coroutine:
+                e.method(*params[0], **params[1])
+            else:
+                if (
+                    isinstance(e.method, HasThreaded)
+                    and e.method.__threaded__
+                    or inspect.ismethod(e.method)
+                    and isinstance(e.method.__func__, HasThreaded)
+                    and e.method.__func__.__threaded__
+                ):
+                    task = run_coroutine_in_thread(
+                        ensure_coroutine(cast(Callable[..., Any], e.method)), *params[0], **params[1]
+                    )
+                else:
+                    task = create_sub_task(
+                        ensure_coroutine(e.method)(*params[0], **params[1]),
+                        name=message.method,
+                    )
+
+                await task
         except asyncio.CancelledError:
             pass
         except (SystemExit, KeyboardInterrupt):

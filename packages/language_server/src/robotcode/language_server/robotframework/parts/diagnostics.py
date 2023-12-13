@@ -56,7 +56,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 resources = (await namespace.get_resources()).values()
                 for r in resources:
                     if r.library_doc.source:
-                        doc = await self.parent.documents.get(Uri.from_path(r.library_doc.source).normalized())
+                        doc = self.parent.documents.get(Uri.from_path(r.library_doc.source).normalized())
                         if doc is not None:
                             refresh |= doc.opened_in_editor
                             await self.parent.diagnostics.force_refresh_document(doc, False)

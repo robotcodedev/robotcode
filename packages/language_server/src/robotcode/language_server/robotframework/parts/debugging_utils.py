@@ -53,7 +53,7 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
     ) -> Optional[EvaluatableExpression]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
-        document = await self.parent.documents.get(text_document.uri)
+        document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 

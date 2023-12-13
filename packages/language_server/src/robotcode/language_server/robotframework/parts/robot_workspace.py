@@ -66,7 +66,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
             try:
                 path = doc_uri.to_path()
                 if path.suffix in [ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION]:
-                    document = await self.parent.documents.get_or_open_document(path)
+                    document = self.parent.documents.get_or_open_document(path)
                     if not document.opened_in_editor:
                         await (await self.parent.documents_cache.get_namespace(document)).ensure_initialized()
 
@@ -74,7 +74,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                 pass
 
     @language_id("robotframework")
-    async def _on_read_document_text(self, sender: Any, uri: Uri) -> Optional[str]:
+    def _on_read_document_text(self, sender: Any, uri: Uri) -> Optional[str]:
         from robot.utils import FileReader
 
         with FileReader(uri.to_path()) as reader:
@@ -118,7 +118,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                     try:
                         for i, f in enumerate(files):
                             try:
-                                await self.parent.documents.get_or_open_document(f)
+                                self.parent.documents.get_or_open_document(f)
 
                                 if config.analysis.progress_mode != AnalysisProgressMode.OFF:
                                     name = f.relative_to(folder.uri.to_path())
@@ -158,7 +158,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                             if not f.exists():
                                 continue
 
-                            document = await self.parent.documents.get_or_open_document(f, "robotframework")
+                            document = self.parent.documents.get_or_open_document(f, "robotframework")
 
                             if not document.opened_in_editor:
                                 await (await self.parent.documents_cache.get_namespace(document)).ensure_initialized()

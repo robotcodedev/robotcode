@@ -159,7 +159,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         if completion_item.data is not None:
             document_uri = completion_item.data.get("document_uri", None)
             if document_uri is not None:
-                document = await self.parent.documents.get(document_uri)
+                document = self.parent.documents.get(document_uri)
                 if document is not None:
                     namespace = await self.parent.documents_cache.get_namespace(document)
                     model = await self.parent.documents_cache.get_model(document, False)
@@ -335,7 +335,7 @@ class CompletionCollector(ModelHelperMixin):
                 return None
             return result
         finally:
-            self._logger.critical(
+            self._logger.trace(
                 lambda: f"Collect completion for {self.document.uri} took {time.monotonic() - start:.2f} seconds"
             )
 
@@ -345,7 +345,7 @@ class CompletionCollector(ModelHelperMixin):
         if data is not None:
             document_uri = data.get("document_uri", None)
             if document_uri is not None:
-                document = await self.parent.documents.get(document_uri)
+                document = self.parent.documents.get(document_uri)
                 if document is not None and (comp_type := data.get("type", None)) is not None:
                     if comp_type in [
                         CompleteResultKind.MODULE.name,

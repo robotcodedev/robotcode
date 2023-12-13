@@ -327,7 +327,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         if not insert_range:
             return None
 
-        document = await self.parent.documents.get(data.document_uri)
+        document = self.parent.documents.get(data.document_uri)
         if document is None:
             return None
 
@@ -453,7 +453,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         if range.start.line != range.end.line:
             return None
 
-        document = await self.parent.documents.get(document_uri)
+        document = self.parent.documents.get(document_uri)
         if document is None:
             return None
 
@@ -550,7 +550,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
     ) -> Optional[CodeAction]:
         from robot.parsing.model.blocks import Keyword, TestCase
 
-        document = await self.parent.documents.get(data.document_uri)
+        document = self.parent.documents.get(data.document_uri)
         if document is None:
             return None
 

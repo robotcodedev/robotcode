@@ -103,7 +103,7 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilit
         document_symbols: List[DocumentSymbol] = []
         symbol_informations: List[SymbolInformation] = []
 
-        document = await self.parent.documents.get(text_document.uri)
+        document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 
@@ -134,7 +134,7 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilit
 
         if symbol_informations:
             for symbol_information in symbol_informations:
-                doc = await self.parent.documents.get(symbol_information.location.uri)
+                doc = self.parent.documents.get(symbol_information.location.uri)
                 if doc is not None:
                     symbol_information.location.range = doc.range_to_utf16(symbol_information.location.range)
 

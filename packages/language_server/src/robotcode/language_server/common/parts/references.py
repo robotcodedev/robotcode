@@ -55,7 +55,7 @@ class ReferencesProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
         locations: List[Location] = []
 
-        document = await self.parent.documents.get(text_document.uri)
+        document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 
@@ -77,7 +77,7 @@ class ReferencesProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             return None
 
         for location in locations:
-            doc = await self.parent.documents.get(location.uri)
+            doc = self.parent.documents.get(location.uri)
             if doc is not None:
                 location.range = doc.range_to_utf16(location.range)
 

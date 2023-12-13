@@ -647,11 +647,11 @@ class ImportsManager:
     async def imports_changed(sender, uri: DocumentUri) -> None:  # NOSONAR
         ...
 
-    async def _do_imports_changed(self, sender: Any, uri: DocumentUri) -> None:  # NOSONAR
+    def _do_imports_changed(self, sender: Any, uri: DocumentUri) -> None:  # NOSONAR
         create_sub_task(self.imports_changed(self, uri), loop=self.parent_protocol.diagnostics.diagnostics_loop)
 
     @language_id("robotframework")
-    async def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
+    def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
         create_sub_task(
             self.__resource_document_changed(document), loop=self.parent_protocol.diagnostics.diagnostics_loop
         )
@@ -1322,7 +1322,7 @@ class ImportsManager:
                     f"Supported extensions are {', '.join(repr(s) for s in RESOURCE_EXTENSIONS)}."
                 )
 
-            return await self.parent_protocol.documents.get_or_open_document(source_path)
+            return self.parent_protocol.documents.get_or_open_document(source_path)
 
         entry_key = _ResourcesEntryKey(source)
 

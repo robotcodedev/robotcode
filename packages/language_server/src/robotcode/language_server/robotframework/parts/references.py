@@ -15,7 +15,7 @@ from typing import (
 )
 
 from robotcode.core.async_cache import AsyncSimpleLRUCache
-from robotcode.core.async_tools import async_event, threaded
+from robotcode.core.async_tools import async_event, create_sub_task, threaded
 from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import FileEvent, Location, Position, Range, ReferenceContext, WatchKind
 from robotcode.core.uri import Uri
@@ -82,8 +82,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
     @language_id("robotframework")
     @threaded()
-    async def document_did_change(self, sender: Any, document: TextDocument) -> None:
-        await self.clear_cache()
+    def document_did_change(self, sender: Any, document: TextDocument) -> None:
+        create_sub_task(self.clear_cache(), loop=self.parent.loop)
 
     async def clear_cache(self) -> None:
         await self._keyword_reference_cache.clear()

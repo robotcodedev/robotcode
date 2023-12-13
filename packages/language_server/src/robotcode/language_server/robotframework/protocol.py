@@ -167,7 +167,8 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
     def server_initialized(self, sender: Any) -> None:
         for folder in self.workspace.workspace_folders:
-            config: RobotConfig = self.workspace.get_configuration(RobotConfig, folder.uri, request=False).result()
+            config: RobotConfig = self.workspace.get_configuration(RobotConfig, folder.uri, request=False)
+
             for k, v in (self.profile.env or {}).items():
                 os.environ[k] = v
 

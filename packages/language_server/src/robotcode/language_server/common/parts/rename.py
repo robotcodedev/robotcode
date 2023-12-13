@@ -72,7 +72,7 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     ) -> Optional[WorkspaceEdit]:
         edits: List[WorkspaceEdit] = []
 
-        document = await self.parent.documents.get(text_document.uri)
+        document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 
@@ -97,13 +97,13 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             if we.changes:
                 for uri, changes in we.changes.items():
                     if changes:
-                        doc = await self.parent.documents.get(uri)
+                        doc = self.parent.documents.get(uri)
                         for change in changes:
                             if doc is not None:
                                 change.range = doc.range_to_utf16(change.range)
             if we.document_changes:
                 for doc_change in [v for v in we.document_changes if isinstance(v, TextDocumentEdit)]:
-                    doc = await self.parent.documents.get(doc_change.text_document.uri)
+                    doc = self.parent.documents.get(doc_change.text_document.uri)
                     if doc is not None:
                         for edit in doc_change.edits:
                             edit.range = doc.range_to_utf16(edit.range)
@@ -138,7 +138,7 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     ) -> Optional[PrepareRenameResult]:
         results: List[PrepareRenameResult] = []
 
-        document = await self.parent.documents.get(text_document.uri)
+        document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 

@@ -97,7 +97,10 @@ class FileWatcherEntry:
     def __init__(
         self,
         id: str,
-        callback: Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
+        callback: Union[
+            Callable[[Any, List[FileEvent]], None],
+            Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
+        ],
         watchers: List[FileWatcher],
     ) -> None:
         self.id = id
@@ -332,9 +335,17 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         scope_uri: Union[str, Uri, None] = None,
         request: bool = True,
     ) -> asyncio.Future[_TConfig]:
-        return asyncio.wrap_future(self.get_configuration(section, scope_uri, request))
+        return asyncio.wrap_future(self.get_configuration_future(section, scope_uri, request))
 
     def get_configuration(
+        self,
+        section: Type[_TConfig],
+        scope_uri: Union[str, Uri, None] = None,
+        request: bool = True,
+    ) -> _TConfig:
+        return self.get_configuration_future(section, scope_uri, request).result(30)
+
+    def get_configuration_future(
         self,
         section: Type[_TConfig],
         scope_uri: Union[str, Uri, None] = None,
@@ -454,7 +465,10 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
 
     def add_file_watcher(
         self,
-        callback: Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
+        callback: Union[
+            Callable[[Any, List[FileEvent]], None],
+            Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
+        ],
         glob_pattern: str,
         kind: Optional[WatchKind] = None,
     ) -> FileWatcherEntry:
@@ -463,7 +477,10 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
     @_logger.call
     def add_file_watchers(
         self,
-        callback: Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
+        callback: Union[
+            Callable[[Any, List[FileEvent]], None],
+            Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
+        ],
         watchers: List[Union[FileWatcher, str, Tuple[str, Optional[WatchKind]]]],
     ) -> FileWatcherEntry:
         with self._file_watchers_lock:
@@ -550,13 +567,13 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         if edit.changes:
             for uri, changes in edit.changes.items():
                 if changes:
-                    doc = await self.parent.documents.get(uri)
+                    doc = self.parent.documents.get(uri)
                     for change in changes:
                         if doc is not None:
                             change.range = doc.range_to_utf16(change.range)
         if edit.document_changes:
             for doc_change in [v for v in edit.document_changes if isinstance(v, TextDocumentEdit)]:
-                doc = await self.parent.documents.get(doc_change.text_document.uri)
+                doc = self.parent.documents.get(doc_change.text_document.uri)
                 if doc is not None:
                     for e in doc_change.edits:
                         e.range = doc.range_to_utf16(e.range)

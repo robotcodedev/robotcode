@@ -87,7 +87,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         results: List[Union[SemanticTokens, SemanticTokensPartialResult]] = []
 
-        document = await self.parent.documents.get(text_document.uri)
+        document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 
@@ -124,7 +124,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
     ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None]:
         results: List[Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult]] = []
 
-        document = await self.parent.documents.get(text_document.uri)
+        document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 
@@ -159,7 +159,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         results: List[Union[SemanticTokens, SemanticTokensPartialResult]] = []
 
-        document = await self.parent.documents.get(text_document.uri)
+        document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 

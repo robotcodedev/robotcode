@@ -141,7 +141,7 @@ class WindowProtocolPart(LanguageServerProtocolPart):
         selection: Optional[Range] = None,
     ) -> bool:
         if selection is not None:
-            doc = await self.parent.documents.get(uri)
+            doc = self.parent.documents.get(uri)
             if doc is not None:
                 selection = doc.range_to_utf16(selection)
 

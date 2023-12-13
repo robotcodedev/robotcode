@@ -61,7 +61,7 @@ class DeclarationProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         locations: List[Location] = []
         location_links: List[LocationLink] = []
 
-        document = await self.parent.documents.get(text_document.uri)
+        document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 
@@ -85,13 +85,13 @@ class DeclarationProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
 
         if locations:
             for location in locations:
-                doc = await self.parent.documents.get(location.uri)
+                doc = self.parent.documents.get(location.uri)
                 if doc is not None:
                     location.range = doc.range_to_utf16(location.range)
 
         if location_links:
             for location_link in location_links:
-                doc = await self.parent.documents.get(location_link.target_uri)
+                doc = self.parent.documents.get(location_link.target_uri)
                 if doc is not None:
                     location_link.target_range = doc.range_to_utf16(location_link.target_range)
                     location_link.target_selection_range = doc.range_to_utf16(location_link.target_selection_range)

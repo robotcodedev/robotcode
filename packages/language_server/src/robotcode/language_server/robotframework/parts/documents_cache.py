@@ -382,7 +382,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
                 callback_filter=language_id_filter(document),
             )
 
-    async def __document_cache_invalidate(self, sender: TextDocument) -> None:
+    async def __document_cache_invalidated(self, sender: TextDocument) -> None:
         namespace: Optional[Namespace] = sender.get_cache_value(self.__get_namespace)
         if namespace is not None:
             await self.namespace_invalidated(
@@ -415,7 +415,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         result.has_invalidated.add(self.__invalidate_namespace)
         result.has_imports_changed.add(self.__invalidate_namespace)
 
-        document.cache_invalidate.add(self.__document_cache_invalidate)
+        document.cache_invalidated.add(self.__document_cache_invalidated)
 
         return result
 

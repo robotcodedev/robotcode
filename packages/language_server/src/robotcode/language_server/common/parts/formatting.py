@@ -75,7 +75,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     ) -> Optional[List[TextEdit]]:
         results: List[TextEdit] = []
 
-        document = await self.parent.documents.get(text_document.uri)
+        document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 
@@ -111,7 +111,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         **kwargs: Any,
     ) -> Optional[List[TextEdit]]:
         results: List[TextEdit] = []
-        document = await self.parent.documents.get(text_document.uri)
+        document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 

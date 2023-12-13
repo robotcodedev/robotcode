@@ -42,7 +42,7 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Optional[List[FoldingRange]]:
         results: List[FoldingRange] = []
-        document = await self.parent.documents.get(text_document.uri)
+        document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 

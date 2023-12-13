@@ -83,7 +83,7 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilitie
     ) -> Optional[SignatureHelp]:
         results: List[SignatureHelp] = []
 
-        document = await self.parent.documents.get(text_document.uri)
+        document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 
