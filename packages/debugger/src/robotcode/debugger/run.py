@@ -197,6 +197,7 @@ async def run_debugger(
         Debugger.instance().output_log = output_log
         Debugger.instance().group_output = group_output
         Debugger.instance().output_timestamps = output_timestamps
+        Debugger.instance().colored_output = app.colored
         Debugger.instance().debug = debug
         Debugger.instance().set_main_thread(threading.current_thread())
         Debugger.instance().server_loop = server.loop

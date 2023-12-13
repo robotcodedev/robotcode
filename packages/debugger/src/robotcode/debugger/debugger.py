@@ -298,6 +298,7 @@ class Debugger:
         self.output_messages: bool = False
         self.output_log: bool = False
         self.output_timestamps: bool = False
+        self.colored_output: bool = True
         self.group_output: bool = False
         self.hit_counts: Dict[HitCountEntry, int] = {}
         self.last_fail_message: Optional[str] = None
@@ -1195,9 +1196,16 @@ class Debugger:
         )
 
     def _build_output(self, level: str, msg: str, timestamp: str) -> str:
+        if self.colored_output:
+            return (
+                (f"\u001b[38;5;243m{timestamp.split(' ', 1)[1]}\u001b[0m " if self.output_timestamps else "")
+                + (f"[ {self.MESSAGE_COLORS.get(level, '')}{level}\u001b[0m ] " if level != "INFO" else "")
+                + f"{msg}\n"
+            )
+
         return (
-            (f"\u001b[38;5;237m{timestamp.split(' ', 1)[1]}\u001b[0m " if self.output_timestamps else "")
-            + (f"[ {self.MESSAGE_COLORS.get(level, '')}{level}\u001b[0m ] " if level != "INFO" else "")
+            (f"{timestamp.split(' ', 1)[1]} " if self.output_timestamps else "")
+            + (f"[ {level} ] " if level != "INFO" else "")
             + f"{msg}\n"
         )
 
