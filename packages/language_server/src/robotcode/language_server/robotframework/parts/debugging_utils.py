@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from robotcode.core.async_itertools import async_next
 from robotcode.core.async_tools import threaded
-from robotcode.core.dataclasses import CamelSnakeMixin
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import Position, Range, TextDocumentIdentifier
+from robotcode.core.utils.dataclasses import CamelSnakeMixin
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
 
 from ..diagnostics.model_helper import ModelHelperMixin

@@ -4,9 +4,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Final, List, Optional, Set
 
-from robotcode.core.dataclasses import CamelSnakeMixin, from_dict
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import InitializeError
+from robotcode.core.utils.dataclasses import CamelSnakeMixin, from_dict
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import JsonRPCErrorException, JsonRPCErrors, ProtocolPartDescriptor
 from robotcode.language_server.common.parts.document_symbols import symbol_information_label
 from robotcode.language_server.common.protocol import LanguageDefinition, LanguageServerProtocol

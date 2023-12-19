@@ -6,7 +6,6 @@ from typing import Any, ClassVar, Final, List, NamedTuple, Optional, Set, Union
 
 from robotcode.core.async_tools import Event
 from robotcode.core.event import event
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
     CancelParams,
     ClientCapabilities,
@@ -30,6 +29,7 @@ from robotcode.core.lsp.types import (
     UnregistrationParams,
     WorkspaceFolder,
 )
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.process import pid_exists
 from robotcode.jsonrpc2.protocol import (
     JsonRPCErrorException,

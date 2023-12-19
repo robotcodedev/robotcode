@@ -1,6 +1,6 @@
 from typing import Optional, Sequence, Tuple, Union
 
-from ..logging import LoggingDescriptor
+from .logging import LoggingDescriptor
 from .net import find_free_port
 
 _logger = LoggingDescriptor(name=__name__)

@@ -18,13 +18,13 @@ from robotcode.core.async_tools import (
     run_coroutine_from_thread_async,
     run_coroutine_in_thread,
 )
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.types import ServerMode, TcpParams
 from robotcode.core.utils.debugpy import (
     enable_debugpy,
     is_debugpy_installed,
     wait_for_debugpy_connected,
 )
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.net import find_free_port
 from robotcode.plugin import Application
 

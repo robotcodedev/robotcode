@@ -5,7 +5,6 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, List, Optional, cast
 
 from robotcode.core.async_tools import async_tasking_event, threaded
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
     Position,
     ServerCapabilities,
@@ -15,6 +14,7 @@ from robotcode.core.lsp.types import (
     SignatureHelpParams,
     TextDocumentIdentifier,
 )
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import (
     RETRIGGER_CHARACTERS_ATTR,

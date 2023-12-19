@@ -8,9 +8,9 @@ import weakref
 from typing import Any, Awaitable, Callable, Dict, Final, List, Optional, TypeVar, Union, cast
 
 from robotcode.core.async_tools import async_event, create_sub_task
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import DocumentUri, Position, Range
 from robotcode.core.uri import Uri
+from robotcode.core.utils.logging import LoggingDescriptor
 
 
 def is_multibyte_char(char: str) -> bool:

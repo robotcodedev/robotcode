@@ -7,8 +7,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Final, List, Optional, cast
 
 from robotcode.core.async_tools import threaded
-from robotcode.core.dataclasses import from_dict
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
     ErrorCodes,
     ExecuteCommandOptions,
@@ -16,6 +14,8 @@ from robotcode.core.lsp.types import (
     LSPAny,
     ServerCapabilities,
 )
+from robotcode.core.utils.dataclasses import from_dict
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import JsonRPCErrorException, rpc_method
 from robotcode.language_server.common.decorators import get_command_id, is_command
 from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities

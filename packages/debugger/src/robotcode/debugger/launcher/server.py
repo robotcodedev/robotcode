@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.types import ServerMode, TcpParams
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.jsonrpc2.server import JsonRPCServer
 from robotcode.robot.utils import get_robot_version

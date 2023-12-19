@@ -5,8 +5,6 @@ from dataclasses import dataclass
 from string import Template
 from typing import TYPE_CHECKING, Any, List, Mapping, Optional, Tuple, Union, cast
 
-from robotcode.core.dataclasses import as_dict, from_dict
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
     AnnotatedTextEdit,
     ChangeAnnotation,
@@ -22,7 +20,9 @@ from robotcode.core.lsp.types import (
     TextDocumentEdit,
     WorkspaceEdit,
 )
+from robotcode.core.utils.dataclasses import as_dict, from_dict
 from robotcode.core.utils.inspect import iter_methods
+from robotcode.core.utils.logging import LoggingDescriptor
 
 from ...common.decorators import code_action_kinds, language_id
 from ...common.text_document import TextDocument

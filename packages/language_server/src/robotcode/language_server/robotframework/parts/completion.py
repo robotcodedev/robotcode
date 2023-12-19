@@ -49,7 +49,6 @@ from robot.parsing.model.statements import (
 )
 from robot.utils.escaping import split_from_equals
 from robotcode.core.async_itertools import async_chain, async_chain_iterator
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
     Command,
     CompletionContext,
@@ -63,6 +62,7 @@ from robotcode.core.lsp.types import (
     Range,
     TextEdit,
 )
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,

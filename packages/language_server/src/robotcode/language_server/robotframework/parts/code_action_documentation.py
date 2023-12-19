@@ -18,8 +18,6 @@ from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
 from urllib.parse import parse_qs, urlparse
 
 from robotcode.core.async_tools import threaded
-from robotcode.core.dataclasses import CamelSnakeMixin
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
     CodeAction,
     CodeActionContext,
@@ -28,6 +26,8 @@ from robotcode.core.lsp.types import (
     Range,
 )
 from robotcode.core.uri import Uri
+from robotcode.core.utils.dataclasses import CamelSnakeMixin
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.net import find_free_port
 from robotcode.jsonrpc2.protocol import rpc_method
 

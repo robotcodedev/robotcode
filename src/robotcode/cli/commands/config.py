@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import click
-from robotcode.core.dataclasses import encode_case_for_field_name
+from robotcode.core.utils.dataclasses import encode_case_for_field_name
 from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
 from robotcode.plugin.manager import PluginManager
 from robotcode.robot.config.loader import (

@@ -6,7 +6,6 @@ import os
 import re
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
     FormattingOptions,
     MessageType,
@@ -14,6 +13,7 @@ from robotcode.core.lsp.types import (
     Range,
     TextEdit,
 )
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.version import create_version_from_str
 from robotcode.robot.utils import get_robot_version
 

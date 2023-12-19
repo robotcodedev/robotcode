@@ -3,7 +3,6 @@ from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
 import pytest
-from robotcode.core.dataclasses import as_json, from_json, to_camel_case, to_snake_case
 from robotcode.core.lsp.types import (
     CallHierarchyClientCapabilities,
     ClientCapabilities,
@@ -78,6 +77,7 @@ from robotcode.core.lsp.types import (
     WorkspaceSymbolClientCapabilitiesSymbolKindType,
     WorkspaceSymbolClientCapabilitiesTagSupportType,
 )
+from robotcode.core.utils.dataclasses import as_json, from_json, to_camel_case, to_snake_case
 
 
 class EnumData(Enum):

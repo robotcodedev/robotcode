@@ -4,8 +4,8 @@ import ast
 from typing import TYPE_CHECKING, Any, Iterator, List, Optional, Tuple
 
 from robotcode.core.async_itertools import async_dropwhile, async_takewhile
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import InlineValue, InlineValueContext, InlineValueEvaluatableExpression, Range
+from robotcode.core.utils.logging import LoggingDescriptor
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument

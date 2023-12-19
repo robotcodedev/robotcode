@@ -19,7 +19,6 @@ from robot.running.builder import TestSuiteBuilder
 from robot.running.builder.builders import SuiteStructureParser
 from robot.utils import NormalizedDict, normalize
 from robot.utils.filereader import FileReader
-from robotcode.core.dataclasses import from_json
 from robotcode.core.lsp.types import (
     Diagnostic,
     DiagnosticSeverity,
@@ -29,6 +28,7 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.uri import Uri
 from robotcode.core.utils.cli import show_hidden_arguments
+from robotcode.core.utils.dataclasses import from_json
 from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
 from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.utils import get_robot_version
@@ -816,7 +816,7 @@ def info(
     """
 
     from robot.version import get_version as get_version
-    from robotcode.core.dataclasses import as_dict
+    from robotcode.core.utils.dataclasses import as_dict
 
     from ...__version__ import __version__
 

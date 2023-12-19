@@ -16,9 +16,9 @@ from typing import (
 
 from robotcode.core.async_cache import AsyncSimpleLRUCache
 from robotcode.core.async_tools import async_event, create_sub_task, threaded
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import FileEvent, Location, Position, Range, ReferenceContext, WatchKind
 from robotcode.core.uri import Uri
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils import get_robot_version
 
 from ...common.decorators import language_id

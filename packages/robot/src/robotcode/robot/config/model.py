@@ -22,7 +22,7 @@ from typing import (
 )
 
 import tomli_w
-from robotcode.core.dataclasses import TypeValidationError, ValidateMixin, as_dict, validate_types
+from robotcode.core.utils.dataclasses import TypeValidationError, ValidateMixin, as_dict, validate_types
 from robotcode.core.utils.safe_eval import safe_eval
 from typing_extensions import Self
 

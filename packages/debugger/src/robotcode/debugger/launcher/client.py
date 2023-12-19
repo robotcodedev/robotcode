@@ -4,8 +4,8 @@ import asyncio
 from typing import Any, Optional, Sequence
 
 from robotcode.core.event import event
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.types import TcpParams
+from robotcode.core.utils.logging import LoggingDescriptor
 
 from ..dap_types import Event
 from ..protocol import DebugAdapterProtocol

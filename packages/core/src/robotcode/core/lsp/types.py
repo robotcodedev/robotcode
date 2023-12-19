@@ -13,7 +13,7 @@ import functools
 from dataclasses import dataclass
 from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union
 
-from robotcode.core.dataclasses import CamelSnakeMixin
+from robotcode.core.utils.dataclasses import CamelSnakeMixin
 
 __lsp_version__ = "3.17.0"
 

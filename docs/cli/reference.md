@@ -4,3 +4,4 @@
     :prog_name: robotcode
     :remove_ascii_art: true
     :list_subcommands: true
+    :style: table

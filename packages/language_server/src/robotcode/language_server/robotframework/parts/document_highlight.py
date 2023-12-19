@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import DocumentHighlight, DocumentHighlightKind, Position, Range
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.language_server.common.decorators import language_id
 from robotcode.language_server.common.text_document import TextDocument
 

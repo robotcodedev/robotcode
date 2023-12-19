@@ -9,9 +9,9 @@ from typing import (
     cast,
 )
 
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import Location, LocationLink, Position, Range
 from robotcode.core.uri import Uri
+from robotcode.core.utils.logging import LoggingDescriptor
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument

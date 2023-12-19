@@ -39,9 +39,9 @@ from robotcode.core.async_tools import (
     create_sub_task,
     run_coroutine_in_thread,
 )
-from robotcode.core.dataclasses import as_json, from_dict
-from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.utils.dataclasses import as_json, from_dict
 from robotcode.core.utils.inspect import ensure_coroutine, iter_methods
+from robotcode.core.utils.logging import LoggingDescriptor
 
 __all__ = [
     "JsonRPCErrors",

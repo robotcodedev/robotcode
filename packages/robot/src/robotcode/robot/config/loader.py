@@ -3,7 +3,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple, Type, TypeVar, Union
 
-from robotcode.core.dataclasses import from_dict
+from robotcode.core.utils.dataclasses import from_dict
 
 if sys.version_info >= (3, 11):
     import tomllib

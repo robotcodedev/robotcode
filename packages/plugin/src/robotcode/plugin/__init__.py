@@ -8,7 +8,7 @@ from typing import IO, Any, AnyStr, Callable, Iterable, Optional, Sequence, Type
 import click
 import pluggy
 import tomli_w
-from robotcode.core.dataclasses import as_dict, as_json
+from robotcode.core.utils.dataclasses import as_dict, as_json
 
 __all__ = [
     "hookimpl",

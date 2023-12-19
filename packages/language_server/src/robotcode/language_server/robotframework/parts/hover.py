@@ -15,8 +15,8 @@ from typing import (
     cast,
 )
 
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import Hover, MarkupContent, MarkupKind, Position, Range
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 
 from ...common.decorators import language_id

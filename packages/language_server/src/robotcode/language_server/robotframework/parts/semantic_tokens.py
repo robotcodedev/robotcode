@@ -38,7 +38,6 @@ from robot.parsing.model.statements import (
 from robot.utils.escaping import split_from_equals, unescape
 from robot.variables.search import is_variable
 from robotcode.core.async_itertools import async_dropwhile, async_takewhile
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
     Position,
     Range,
@@ -49,6 +48,7 @@ from robotcode.core.lsp.types import (
     SemanticTokensPartialResult,
     SemanticTokenTypes,
 )
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import iter_over_keyword_names_and_owners, token_in_range
 

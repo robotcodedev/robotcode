@@ -139,7 +139,7 @@ extra-dependencies = [
   "mkdocs-glightbox",
 
   # Extensions
-  "mkdocs-click~=0.8.0",
+  "mkdocs-click~=0.8.1",
   "pymdown-extensions~=9.6.0",
   # Necessary for syntax highlighting in code blocks
   "pygments",

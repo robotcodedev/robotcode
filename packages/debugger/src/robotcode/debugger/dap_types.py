@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, Iterator, List, Literal, Optional, Union
 
-from robotcode.core.dataclasses import to_camel_case, to_snake_case
+from robotcode.core.utils.dataclasses import to_camel_case, to_snake_case
 
 
 @dataclass

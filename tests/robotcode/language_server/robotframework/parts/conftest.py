@@ -6,7 +6,6 @@ from typing import AsyncIterator, Iterator, cast
 
 import pytest
 import pytest_asyncio
-from robotcode.core.dataclasses import as_dict
 from robotcode.core.lsp.types import (
     ClientCapabilities,
     FoldingRangeClientCapabilities,
@@ -17,6 +16,7 @@ from robotcode.core.lsp.types import (
     TextDocumentClientCapabilities,
     WorkspaceFolder,
 )
+from robotcode.core.utils.dataclasses import as_dict
 from robotcode.language_server.common.parts.diagnostics import DiagnosticsMode
 from robotcode.language_server.common.parts.workspace import HasConfigSection
 from robotcode.language_server.common.text_document import TextDocument

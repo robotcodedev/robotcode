@@ -3,8 +3,8 @@ from pathlib import Path
 from typing import List, Optional
 
 import click
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.utils.cli import show_hidden_arguments
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.plugin import Application, ColoredOutput, OutputFormat, pass_application
 from robotcode.plugin.click_helper.aliases import AliasedGroup
 from robotcode.plugin.click_helper.types import EnumChoice

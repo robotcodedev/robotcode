@@ -16,7 +16,6 @@ from typing import (
 )
 
 from robotcode.core.async_itertools import async_next
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
     AnnotatedTextEdit,
     ChangeAnnotation,
@@ -30,6 +29,7 @@ from robotcode.core.lsp.types import (
     TextDocumentEdit,
     WorkspaceEdit,
 )
+from robotcode.core.utils.logging import LoggingDescriptor
 
 from ...common.decorators import language_id
 from ...common.parts.rename import CantRenameError

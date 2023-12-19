@@ -36,7 +36,6 @@ from robot.parsing.model.statements import ResourceImport as RobotResourceImport
 from robot.parsing.model.statements import VariablesImport as RobotVariablesImport
 from robot.variables.search import is_scalar_assign, is_variable, search_variable
 from robotcode.core.async_tools import Lock, async_event
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
     CodeDescription,
     Diagnostic,
@@ -49,6 +48,7 @@ from robotcode.core.lsp.types import (
     Range,
 )
 from robotcode.core.uri import Uri
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import (
     range_from_node,

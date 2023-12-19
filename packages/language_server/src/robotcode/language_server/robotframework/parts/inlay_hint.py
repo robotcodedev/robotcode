@@ -4,8 +4,8 @@ import ast
 import asyncio
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Type, cast
 
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import InlayHint, InlayHintKind, Range
+from robotcode.core.utils.logging import LoggingDescriptor
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument

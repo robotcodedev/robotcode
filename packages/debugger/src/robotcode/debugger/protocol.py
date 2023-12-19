@@ -21,9 +21,9 @@ from typing import (
     Union,
 )
 
-from robotcode.core.dataclasses import as_dict, as_json, from_dict
-from robotcode.core.logging import LoggingDescriptor
+from robotcode.core.utils.dataclasses import as_dict, as_json, from_dict
 from robotcode.core.utils.inspect import ensure_coroutine
+from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import JsonRPCException, JsonRPCProtocolBase, SendedRequestEntry
 
 from .dap_types import (

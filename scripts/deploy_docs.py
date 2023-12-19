@@ -28,7 +28,7 @@ def main() -> None:
         alias = "dev"
 
     run(
-        "mike deploy --push --update-aliases --rebase --force "
+        "mike deploy --push --update-aliases "
         f'--title "v{version.major}.{version.minor}.x ({alias})" {version.major}.{version.minor} {alias}',
         shell=True,
     ).check_returncode()

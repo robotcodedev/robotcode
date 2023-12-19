@@ -18,8 +18,8 @@ from typing import (
     cast,
 )
 
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.types import ServerMode, TcpParams
+from robotcode.core.utils.logging import LoggingDescriptor
 from typing_extensions import Self
 
 from .protocol import JsonRPCException

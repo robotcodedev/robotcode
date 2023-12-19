@@ -14,7 +14,6 @@ from typing import (
     cast,
 )
 
-from robotcode.core.logging import LoggingDescriptor
 from robotcode.core.lsp.types import (
     MarkupContent,
     MarkupKind,
@@ -24,6 +23,7 @@ from robotcode.core.lsp.types import (
     SignatureHelpContext,
     SignatureInformation,
 )
+from robotcode.core.utils.logging import LoggingDescriptor
 
 from ...common.decorators import language_id, retrigger_characters, trigger_characters
 from ...common.text_document import TextDocument

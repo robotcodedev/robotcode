@@ -16,7 +16,6 @@ from types import TracebackType
 from typing import (
     Any,
     AsyncIterator,
-    Awaitable,
     Callable,
     Coroutine,
     Deque,
@@ -26,6 +25,7 @@ from typing import (
     MutableSet,
     Optional,
     Protocol,
+    Set,
     Type,
     TypeVar,
     Union,
@@ -559,14 +559,19 @@ class RLock(Lock):
             self._task = None
 
 
+_global_futures_set: Set[asyncio.Future[Any]] = set()
+
+
 class FutureInfo:
     def __init__(self, future: asyncio.Future[Any]) -> None:
         self.task: weakref.ref[asyncio.Future[Any]] = weakref.ref(future)
         self.children: weakref.WeakSet[asyncio.Future[Any]] = weakref.WeakSet()
-
+        _global_futures_set.add(future)
         future.add_done_callback(self._done)
 
     def _done(self, future: asyncio.Future[Any]) -> None:
+        _global_futures_set.discard(future)
+
         if future.cancelled():
             for t in self.children.copy():
                 if not t.done() and not t.cancelled() and t.get_loop().is_running():
@@ -626,19 +631,6 @@ def create_sub_task(
 
     _running_tasks[result] = FutureInfo(result)
     return result
-
-
-def create_delayed_sub_task(
-    coro: Awaitable[_T], *, delay: float, name: Optional[str] = None, loop: Optional[asyncio.AbstractEventLoop] = None
-) -> asyncio.Task[Optional[_T]]:
-    async def run() -> Optional[_T]:
-        try:
-            await asyncio.sleep(delay)
-            return await coro
-        except asyncio.CancelledError:
-            return None
-
-    return create_sub_task(run(), name=name, loop=loop)
 
 
 def create_sub_future(loop: Optional[asyncio.AbstractEventLoop] = None) -> asyncio.Future[Any]:
