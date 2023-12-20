@@ -174,7 +174,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
 
 
 _CompleteMethod = Callable[
-    [ast.AST, List[ast.AST], Position, Optional[CompletionContext]],
+    [Any, ast.AST, List[ast.AST], Position, Optional[CompletionContext]],
     Awaitable[Optional[Optional[List[CompletionItem]]]],
 ]
 
@@ -287,27 +287,29 @@ class CompletionCollector(ModelHelperMixin):
 
     _method_cache: Dict[Type[Any], List[_CompleteMethod]] = {}
 
-    async def _find_methods(self, cls: Type[Any]) -> AsyncIterator[_CompleteMethod]:
-        if cls in self._method_cache:
-            for m in self._method_cache[cls]:
+    @classmethod
+    def _find_methods(cls, visitor_cls: Type[Any]) -> Iterator[_CompleteMethod]:
+        if visitor_cls in cls._method_cache:
+            for m in cls._method_cache[visitor_cls]:
                 yield m
-
-        methods = []
-        if cls is ast.AST:
             return
 
-        method_name = "complete_" + cls.__name__
-        if hasattr(self, method_name):
-            method = getattr(self, method_name)
+        methods = []
+        if visitor_cls is ast.AST:
+            return
+
+        method_name = "complete_" + visitor_cls.__name__
+        if hasattr(cls, method_name):
+            method = getattr(cls, method_name)
             if callable(method):
                 methods.append(method)
                 yield cast(_CompleteMethod, method)
-        for base in cls.__bases__:
-            async for m in self._find_methods(base):
+        for base in visitor_cls.__bases__:
+            for m in cls._find_methods(base):
                 methods.append(m)
                 yield m
 
-        self._method_cache[cls] = methods
+        cls._method_cache[visitor_cls] = methods
 
     async def collect(
         self, position: Position, context: Optional[CompletionContext]
@@ -320,8 +322,8 @@ class CompletionCollector(ModelHelperMixin):
 
             async def iter_results() -> AsyncIterator[List[CompletionItem]]:
                 for result_node in result_nodes:
-                    async for method in self._find_methods(type(result_node)):
-                        r = await method(result_node, result_nodes, position, context)
+                    for method in self._find_methods(type(result_node)):
+                        r = await method(self, result_node, result_nodes, position, context)
                         if r is not None:
                             yield r
 
@@ -721,20 +723,23 @@ class CompletionCollector(ModelHelperMixin):
 
         else:
             for index, match in enumerate(VariableMatches(kw.name, identifiers="$", ignore_errors=True)):
-                var_name = variable[2:-1].split(":", 1)[0]
+                var_name = match.base.split(":", 1)[0] if match.base else ""
                 result += match.before
-                result += "${" + str(index + 1) + ":"
-                if in_template:
-                    result += "\\${"
+                result += "${" + str(index + 1)
 
-                result += var_name
+                if var_name:
+                    result += ":"
+                    if in_template:
+                        result += "\\${"
 
-                if in_template:
-                    result += "\\}"
+                    result += var_name
+
+                    if in_template:
+                        result += "\\}"
 
                 result += "}"
 
-            if after:
+            if match.after:
                 result += match.after
 
         return result
