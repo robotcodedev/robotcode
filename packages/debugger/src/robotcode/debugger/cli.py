@@ -11,7 +11,6 @@ from robotcode.plugin.click_helper.types import (
 )
 
 from .__version__ import __version__
-from .run import run_debugger
 
 DEBUGGER_DEFAULT_PORT = 6612
 DEBUGPY_DEFAULT_PORT = 5678
@@ -136,6 +135,7 @@ def debug(
     robot_options_and_args: Tuple[str, ...],
 ) -> None:
     """Starts a Robot Framework debug session and waits for incomming connections."""
+    from .run import run_debugger
 
     mode, port, bind, pipe_name = resolve_server_options(
         ctx, app, mode, port, bind, pipe_name, tcp, None, None, None, pipe_server
