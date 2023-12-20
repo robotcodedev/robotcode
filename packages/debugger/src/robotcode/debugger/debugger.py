@@ -36,7 +36,6 @@ from robot.api.parsing import get_model
 from robot.errors import VariableError
 from robot.output import LOGGER
 from robot.running import EXECUTION_CONTEXTS, Keyword, TestCase, TestSuite
-from robot.running.userkeyword import UserKeywordHandler
 from robot.utils import NormalizedDict
 from robot.variables import evaluate_expression
 from robotcode.core.event import event
@@ -71,6 +70,11 @@ from .dap_types import (
     Variable,
     VariablePresentationHint,
 )
+
+if get_robot_version() >= (7, 0):
+    from robot.running.invalidkeyword import InvalidKeywordRunner as UserKeywordHandler
+else:
+    from robot.running.userkeyword import UserKeywordHandler
 
 if get_robot_version() >= (6, 1):
 

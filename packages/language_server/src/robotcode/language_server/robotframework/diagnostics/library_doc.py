@@ -500,18 +500,26 @@ class ArgumentSpec:
                     self.var_positional,
                     self.named_only,
                     self.var_named,
-                    self.embedded,
                     self.defaults,
+                    self.embedded,
                     None,
                 )
         self.__robot_arguments.name = self.name
         if validate:
-            resolver = ArgumentResolver(
-                self.__robot_arguments,
-                resolve_named=resolve_named,
-                resolve_variables_until=resolve_variables_until,
-                dict_to_kwargs=dict_to_kwargs,
-            )
+            if get_robot_version() < (7, 0):
+                resolver = ArgumentResolver(
+                    self.__robot_arguments,
+                    resolve_named=resolve_named,
+                    resolve_variables_until=resolve_variables_until,
+                    dict_to_kwargs=dict_to_kwargs,
+                )
+            else:
+                resolver = ArgumentResolver(
+                    self.__robot_arguments,
+                    resolve_named=resolve_named,
+                    resolve_args_until=resolve_variables_until,
+                    dict_to_kwargs=dict_to_kwargs,
+                )
             return cast(Tuple[List[Any], List[Tuple[str, Any]]], resolver.resolve(arguments, variables))
 
         class MyNamedArgumentResolver(NamedArgumentResolver):
@@ -1300,17 +1308,34 @@ class KeywordWrapper:
 
     @property
     def is_error_handler(self) -> bool:
-        from robot.running.usererrorhandler import UserErrorHandler
+        if get_robot_version() < (7, 0):
+            from robot.running.usererrorhandler import UserErrorHandler
 
-        return isinstance(self.kw, UserErrorHandler)
+            return isinstance(self.kw, UserErrorHandler)
+
+        from robot.running.invalidkeyword import InvalidKeyword
+
+        return isinstance(self.kw, InvalidKeyword)
 
     @property
     def error_handler_message(self) -> Optional[str]:
-        from robot.running.usererrorhandler import UserErrorHandler
-
         if self.is_error_handler:
-            return str(cast(UserErrorHandler, self.kw).error)
+            return str(self.kw.error)
+
         return None
+
+    @property
+    def error(self) -> Any:
+        return self.kw.error
+
+    @property
+    def args(self) -> Any:
+        try:
+            return self.kw.args
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException:
+            return None
 
 
 class MessageAndTraceback(NamedTuple):
@@ -1580,7 +1605,6 @@ def get_library_doc(
     from robot.output.loggerhelper import AbstractLogger
     from robot.running.outputcapture import OutputCapturer
     from robot.running.runkwregister import RUN_KW_REGISTER
-    from robot.running.testlibraries import _get_lib_class
     from robot.utils import Importer
 
     class Logger(AbstractLogger):
@@ -1607,10 +1631,21 @@ def get_library_doc(
         create_handlers: bool = True,
         logger: Any = LOGGER,
     ) -> Any:
-        libclass = _get_lib_class(libcode)
-        lib = libclass(libcode, name, args or [], source, logger, variables)
-        if create_handlers:
-            lib.create_handlers()
+        if get_robot_version() < (7, 0):
+            libclass = robot.running.testlibraries._get_lib_class(libcode)
+            lib = libclass(libcode, name, args or [], source, logger, variables)
+            if create_handlers:
+                lib.create_handlers()
+        else:
+            lib = robot.running.testlibraries.TestLibrary.from_code(
+                libcode,
+                name,
+                source=Path(source),
+                args=args or [],
+                variables=variables,
+                create_keywords=create_handlers,
+                logger=logger,
+            )
 
         return lib
 
@@ -1684,7 +1719,10 @@ def get_library_doc(
                 create_handlers=False,
                 variables=robot_variables,
             )
-            lib.get_instance()
+            if get_robot_version() < (7, 0):
+                _ = lib.get_instance()
+            else:
+                _ = lib.instance
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -1700,13 +1738,16 @@ def get_library_doc(
             if args:
                 try:
                     lib = get_test_library(libcode, source, library_name, (), create_handlers=False)
-                    lib.get_instance()
+                    if get_robot_version() < (7, 0):
+                        _ = lib.get_instance()
+                    else:
+                        _ = lib.instance
                 except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException:
                     lib = None
 
-        real_source = lib.source if lib is not None else source
+        real_source = str(lib.source) if lib is not None else source
 
         libdoc = LibraryDoc(
             name=library_name,
@@ -1727,16 +1768,28 @@ def get_library_doc(
 
         if lib is not None:
             try:
-                libdoc.has_listener = lib.has_listener
+                if get_robot_version() < (7, 0):
+                    libdoc.has_listener = lib.has_listener
 
-                if isinstance(lib, robot.running.testlibraries._ModuleLibrary):
-                    libdoc.library_type = LibraryType.MODULE
-                elif isinstance(lib, robot.running.testlibraries._ClassLibrary):
-                    libdoc.library_type = LibraryType.CLASS
-                elif isinstance(lib, robot.running.testlibraries._DynamicLibrary):
-                    libdoc.library_type = LibraryType.DYNAMIC
-                elif isinstance(lib, robot.running.testlibraries._HybridLibrary):
-                    libdoc.library_type = LibraryType.HYBRID
+                    if isinstance(lib, robot.running.testlibraries._ModuleLibrary):
+                        libdoc.library_type = LibraryType.MODULE
+                    elif isinstance(lib, robot.running.testlibraries._ClassLibrary):
+                        libdoc.library_type = LibraryType.CLASS
+                    elif isinstance(lib, robot.running.testlibraries._DynamicLibrary):
+                        libdoc.library_type = LibraryType.DYNAMIC
+                    elif isinstance(lib, robot.running.testlibraries._HybridLibrary):
+                        libdoc.library_type = LibraryType.HYBRID
+                else:
+                    libdoc.has_listener = bool(lib.listeners)
+
+                    if isinstance(lib, robot.running.testlibraries.ModuleLibrary):
+                        libdoc.library_type = LibraryType.MODULE
+                    elif isinstance(lib, robot.running.testlibraries.ClassLibrary):
+                        libdoc.library_type = LibraryType.CLASS
+                    elif isinstance(lib, robot.running.testlibraries.DynamicLibrary):
+                        libdoc.library_type = LibraryType.DYNAMIC
+                    elif isinstance(lib, robot.running.testlibraries.HybridLibrary):
+                        libdoc.library_type = LibraryType.HYBRID
 
                 init_wrappers = [KeywordWrapper(lib.init, source)]
                 init_keywords = [(KeywordDocBuilder().build_keyword(k), k) for k in init_wrappers]
@@ -1758,7 +1811,9 @@ def get_library_doc(
                             longname=f"{libdoc.name}.{kw[0].name}",
                             doc_format=str(lib.doc_format) or ROBOT_DOC_FORMAT,
                             is_initializer=True,
-                            arguments_spec=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
+                            arguments_spec=ArgumentSpec.from_robot_argument_spec(
+                                kw[1].arguments if get_robot_version() < (7, 0) else kw[1].args
+                            ),
                         )
                         for kw in init_keywords
                     ]
@@ -1766,7 +1821,12 @@ def get_library_doc(
 
                 logger = Logger()
                 lib.logger = logger
-                lib.create_handlers()
+
+                if get_robot_version() < (7, 0):
+                    lib.create_handlers()
+                else:
+                    lib.create_keywords()
+
                 for m in logger.messages:
                     if m[1] == "ERROR":
                         errors.append(
@@ -1778,7 +1838,18 @@ def get_library_doc(
                             )
                         )
 
-                keyword_wrappers = [KeywordWrapper(k, source) for k in lib.handlers]
+                if get_robot_version() < (7, 0):
+                    keyword_wrappers = [KeywordWrapper(k, source) for k in lib.handlers]
+                else:
+                    keyword_wrappers = [KeywordWrapper(k, source) for k in lib.keywords]
+
+                def get_args_to_process(libdoc_name: str, kw_name: str) -> Any:
+                    result = RUN_KW_REGISTER.get_args_to_process(libdoc_name, kw_name)
+                    if result == -1:
+                        return None
+
+                    return result
+
                 keyword_docs = [(KeywordDocBuilder().build_keyword(k), k) for k in keyword_wrappers]
                 libdoc.keywords = KeywordStore(
                     source=libdoc.name,
@@ -1802,12 +1873,14 @@ def get_library_doc(
                             is_error_handler=kw[1].is_error_handler,
                             error_handler_message=kw[1].error_handler_message,
                             is_registered_run_keyword=RUN_KW_REGISTER.is_run_keyword(libdoc.name, kw[0].name),
-                            args_to_process=RUN_KW_REGISTER.get_args_to_process(libdoc.name, kw[0].name),
+                            args_to_process=get_args_to_process(libdoc.name, kw[0].name),
                             deprecated=kw[0].deprecated,
-                            arguments_spec=ArgumentSpec.from_robot_argument_spec(kw[1].arguments)
+                            arguments_spec=ArgumentSpec.from_robot_argument_spec(
+                                kw[1].arguments if get_robot_version() < (7, 0) else kw[1].args
+                            )
                             if not kw[1].is_error_handler
                             else None,
-                            return_type=str(kw[1].arguments.return_type) if get_robot_version() >= (7, 0) else None,
+                            return_type=str(kw[1].args.return_type) if get_robot_version() >= (7, 0) else None,
                         )
                         for kw in keyword_docs
                     ],
@@ -2436,9 +2509,14 @@ def get_model_doc(
     from robot.parsing.model.blocks import Keyword
     from robot.parsing.model.statements import Arguments, KeywordName
     from robot.running.builder.transformers import ResourceBuilder
-    from robot.running.model import ResourceFile
-    from robot.running.usererrorhandler import UserErrorHandler
-    from robot.running.userkeyword import UserLibrary
+
+    if get_robot_version() < (7, 0):
+        from robot.running.model import ResourceFile
+        from robot.running.usererrorhandler import UserErrorHandler
+        from robot.running.userkeyword import UserLibrary
+    else:
+        from robot.running.invalidkeyword import InvalidKeyword as UserErrorHandler
+        from robot.running.resourcemodel import ResourceFile
 
     errors: List[Error] = []
     keyword_name_nodes: List[KeywordName] = []
@@ -2506,41 +2584,45 @@ def get_model_doc(
     with LOGGER.cache_only:
         ResourceBuilder(res).visit(model)
 
-    class MyUserLibrary(UserLibrary):
-        current_kw: Any = None
+    if get_robot_version() < (7, 0):
 
-        def _log_creating_failed(self, handler: UserErrorHandler, error: BaseException) -> None:
-            err = Error(
-                message=f"Creating keyword '{handler.name}' failed: {error!s}",
-                type_name=type(error).__qualname__,
-                source=self.current_kw.source if self.current_kw is not None else None,
-                line_no=self.current_kw.lineno if self.current_kw is not None else None,
-            )
-            errors.append(err)
+        class MyUserLibrary(UserLibrary):
+            current_kw: Any = None
 
-        def _create_handler(self, kw: Any) -> Any:
-            self.current_kw = kw
-            try:
-                handler = super()._create_handler(kw)
-                setattr(handler, "errors", None)
-            except DataError as e:
+            def _log_creating_failed(self, handler: UserErrorHandler, error: BaseException) -> None:
                 err = Error(
-                    message=str(e),
-                    type_name=type(e).__qualname__,
-                    source=kw.source,
-                    line_no=kw.lineno,
+                    message=f"Creating keyword '{handler.name}' failed: {error!s}",
+                    type_name=type(error).__qualname__,
+                    source=self.current_kw.source if self.current_kw is not None else None,
+                    line_no=self.current_kw.lineno if self.current_kw is not None else None,
                 )
                 errors.append(err)
 
-                handler = UserErrorHandler(e, kw.name, self.name)
-                handler.source = kw.source
-                handler.lineno = kw.lineno
+            def _create_handler(self, kw: Any) -> Any:
+                self.current_kw = kw
+                try:
+                    handler = super()._create_handler(kw)
+                    setattr(handler, "errors", None)
+                except DataError as e:
+                    err = Error(
+                        message=str(e),
+                        type_name=type(e).__qualname__,
+                        source=kw.source,
+                        line_no=kw.lineno,
+                    )
+                    errors.append(err)
 
-                setattr(handler, "errors", [err])
+                    handler = UserErrorHandler(e, kw.name, self.name)
+                    handler.source = kw.source
+                    handler.lineno = kw.lineno
 
-            return handler
+                    setattr(handler, "errors", [err])
 
-    lib = MyUserLibrary(res)
+                return handler
+
+        lib = MyUserLibrary(res)
+    else:
+        lib = res
 
     libdoc = LibraryDoc(
         name=lib.name or "",
@@ -2551,6 +2633,21 @@ def get_model_doc(
         line_no=1,
         errors=errors,
     )
+
+    def get_kw_errors(kw: Any) -> Any:
+        r = getattr(kw, "errors") if hasattr(kw, "errors") else None
+        if get_robot_version() >= (7, 0) and kw.error:
+            if not r:
+                r = []
+            r.append(
+                Error(
+                    message=str(kw.error),
+                    type_name="KeywordError",
+                    source=kw.source,
+                    line_no=kw.lineno,
+                )
+            )
+        return r
 
     libdoc.keywords = KeywordStore(
         source=libdoc.name,
@@ -2571,15 +2668,20 @@ def get_model_doc(
                 libtype=libdoc.type,
                 longname=f"{libdoc.name}.{kw[0].name}",
                 is_embedded=is_embedded_keyword(kw[0].name),
-                errors=getattr(kw[1], "errors") if hasattr(kw[1], "errors") else None,
+                errors=get_kw_errors(kw[1]),
                 is_error_handler=isinstance(kw[1], UserErrorHandler),
                 error_handler_message=str(cast(UserErrorHandler, kw[1]).error)
                 if isinstance(kw[1], UserErrorHandler)
                 else None,
-                arguments_spec=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
+                arguments_spec=ArgumentSpec.from_robot_argument_spec(
+                    kw[1].arguments if get_robot_version() < (7, 0) else kw[1].args
+                ),
                 argument_definitions=get_argument_definitions_from_line(kw[0].lineno),
             )
-            for kw in [(KeywordDocBuilder(resource=True).build_keyword(lw), lw) for lw in lib.handlers]
+            for kw in [
+                (KeywordDocBuilder(resource=True).build_keyword(lw), lw)
+                for lw in (lib.handlers if get_robot_version() < (7, 0) else lib.keywords)
+            ]
         ],
     )
 
