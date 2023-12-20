@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.68.0](https://github.com/d-biehl/robotcode/compare/v0.67.0..v0.68.0) - 2023-12-20
+
+### Bug Fixes
+
+- **langserver:** Correct duplicate items in completions ([023bfd7](https://github.com/d-biehl/robotcode/commit/023bfd7d9b8784f2c5d4095c408207cffdebba73))
+
+
+### Features
+
+- Support for new keyword model changes in RFW 7 ([cb306cb](https://github.com/d-biehl/robotcode/commit/cb306cb48e4c0d6849324241b944de4d408fbc9e))
+
+
+### Refactor
+
+- **core:** Move some files from core to utils ([92c1911](https://github.com/d-biehl/robotcode/commit/92c1911b9da41d1368d25e694b84c04bcb56e4b0))
+- **debugger:** Move import in cli handler in to cli function ([c96a321](https://github.com/d-biehl/robotcode/commit/c96a3210459a018679f1beac2176182c4d493284))
+
+
 ## [0.67.0](https://github.com/d-biehl/robotcode/compare/v0.66.1..v0.67.0) - 2023-12-13
 
 ### Bug Fixes
