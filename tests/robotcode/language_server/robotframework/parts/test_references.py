@@ -27,7 +27,7 @@ from .pytest_regtestex import RegTestFixtureEx
     generate_tests_from_source_document(Path(Path(__file__).parent, "data/tests/references.robot")),
     indirect=["test_document"],
     ids=generate_test_id,
-    scope="session",
+    scope="module",
 )
 @pytest.mark.usefixtures("protocol")
 @pytest.mark.asyncio()
@@ -40,7 +40,7 @@ async def test(
     def split(location: Location) -> Location:
         return Location("/".join(location.uri.split("/")[-2:]), location.range)
 
-    await protocol.diagnostics.ensure_workspace_loaded()
+    await protocol.diagnostics.workspace_loaded_event.wait(1200)
 
     result = await asyncio.wait_for(
         protocol.robot_references.collect(
