@@ -22,8 +22,12 @@ def get_user_config_file(
 
     if verbose_callback:
         verbose_callback(f"User configuration file not found, try to create it at:\n    {result}")
-
-    get_default_config().save(result)
+    try:
+        get_default_config().save(result)
+    except OSError as e:
+        if verbose_callback:
+            verbose_callback(f"Cannot create user configuration file `{result}`:\n    {e}")
+        return None
 
     return result
 
