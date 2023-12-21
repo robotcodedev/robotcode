@@ -24,16 +24,15 @@ from typing import (
     List,
     MutableSet,
     Optional,
-    Protocol,
     Set,
     Type,
     TypeVar,
     Union,
     cast,
-    runtime_checkable,
 )
 
-from robotcode.core.utils.inspect import ensure_coroutine
+from .utils.inspect import ensure_coroutine
+from .utils.threading import is_threaded_callable
 
 _T = TypeVar("_T")
 
@@ -155,11 +154,6 @@ class async_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncEvent[_TCallabl
         super().__init__(_func, AsyncEvent[_TCallable, Any])
 
 
-@runtime_checkable
-class HasThreaded(Protocol):
-    __threaded__: bool
-
-
 class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallable, _TResult]):
     def __init__(self, *, task_name_prefix: Optional[str] = None) -> None:
         super().__init__()
@@ -189,8 +183,8 @@ class AsyncTaskingEventResultIteratorBase(AsyncEventResultIteratorBase[_TCallabl
             set(self),
         ):
             if method is not None:
-                if threaded and isinstance(method, HasThreaded) and method.__threaded__:  # type: ignore
-                    future = run_coroutine_in_thread(ensure_coroutine(method), *args, **kwargs)  # type: ignore
+                if threaded and is_threaded_callable(method):
+                    future = run_coroutine_in_thread(ensure_coroutine(method), *args, **kwargs)
                 else:
                     future = create_sub_task(ensure_coroutine(method)(*args, **kwargs))
                 awaitables.append(future)
