@@ -29,7 +29,6 @@ from typing import (
 from robotcode.core.async_tools import (
     Lock,
     async_tasking_event,
-    threaded,
 )
 from robotcode.core.lsp.types import (
     ApplyWorkspaceEditParams,
@@ -69,6 +68,7 @@ from robotcode.core.uri import Uri
 from robotcode.core.utils.dataclasses import CamelSnakeMixin, from_dict
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.path import path_is_relative_to
+from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.has_extend_capabilities import (
     HasExtendCapabilities,

@@ -4,10 +4,11 @@ import ast
 import asyncio
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from robotcode.core.async_tools import check_canceled, create_sub_task, threaded
+from robotcode.core.async_tools import check_canceled, create_sub_task
 from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, DiagnosticTag, Position, Range
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.core.utils.threading import threaded
 
 from ...common.decorators import language_id
 from ...common.parts.diagnostics import DiagnosticsResult

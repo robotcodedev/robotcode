@@ -155,17 +155,6 @@ class async_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncEvent[_TCallabl
         super().__init__(_func, AsyncEvent[_TCallable, Any])
 
 
-_F = TypeVar("_F", bound=Callable[..., Any])
-
-
-def threaded(enabled: bool = True) -> Callable[[_F], _F]:
-    def decorator(func: _F) -> _F:
-        setattr(func, "__threaded__", enabled)
-        return func
-
-    return decorator
-
-
 @runtime_checkable
 class HasThreaded(Protocol):
     __threaded__: bool

@@ -34,7 +34,6 @@ from typing import (
 )
 
 from robotcode.core.async_tools import (
-    HasThreaded,
     async_event,
     create_sub_task,
     run_coroutine_in_thread,
@@ -42,6 +41,7 @@ from robotcode.core.async_tools import (
 from robotcode.core.utils.dataclasses import as_json, from_dict
 from robotcode.core.utils.inspect import ensure_coroutine, iter_methods
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.core.utils.threading import is_threaded_callable
 
 __all__ = [
     "JsonRPCErrors",
@@ -719,13 +719,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         if not e.is_coroutine:
             self.send_response(message.id, e.method(*params[0], **params[1]))
         else:
-            if (
-                isinstance(e.method, HasThreaded)
-                and e.method.__threaded__
-                or inspect.ismethod(e.method)
-                and isinstance(e.method.__func__, HasThreaded)
-                and e.method.__func__.__threaded__
-            ):
+            if is_threaded_callable(e.method) or inspect.ismethod(e.method) and is_threaded_callable(e.method.__func__):
                 task = run_coroutine_in_thread(
                     ensure_coroutine(cast(Callable[..., Any], e.method)), *params[0], **params[1]
                 )
@@ -794,11 +788,9 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 e.method(*params[0], **params[1])
             else:
                 if (
-                    isinstance(e.method, HasThreaded)
-                    and e.method.__threaded__
+                    is_threaded_callable(e.method)
                     or inspect.ismethod(e.method)
-                    and isinstance(e.method.__func__, HasThreaded)
-                    and e.method.__func__.__threaded__
+                    and is_threaded_callable(e.method.__func__)
                 ):
                     task = run_coroutine_in_thread(
                         ensure_coroutine(cast(Callable[..., Any], e.method)), *params[0], **params[1]
